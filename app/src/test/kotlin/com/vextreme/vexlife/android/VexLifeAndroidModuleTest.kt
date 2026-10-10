@@ -21,6 +21,10 @@ class VexLifeAndroidModuleTest : KoinTest {
 
     @After
     fun stopComposition() {
+        runCatching {
+            get<VexLogger>().close()
+        }
+
         stopKoin()
     }
 

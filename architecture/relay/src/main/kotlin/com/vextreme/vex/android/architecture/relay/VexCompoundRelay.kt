@@ -5,11 +5,13 @@ import com.vextreme.vex.android.architecture.execution.VexExecutionOwner
 import com.vextreme.vex.android.architecture.observability.VexLogEvent
 import com.vextreme.vex.android.architecture.observability.VexLogRef
 import com.vextreme.vex.android.architecture.observability.VexLogSink
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 enum class VexCompoundActivationState {
     INACTIVE,
@@ -309,12 +311,14 @@ abstract class VexCompoundRelay<
         started: List<VexCoroutineHandle>,
         reason: String,
     ) {
-        started.forEach { handle ->
-            handle.forceStop(reason)
-        }
+        withContext(NonCancellable) {
+            started.forEach { handle ->
+                handle.forceStop(reason)
+            }
 
-        started.forEach { handle ->
-            handle.join()
+            started.forEach { handle ->
+                handle.join()
+            }
         }
     }
 
