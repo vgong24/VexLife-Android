@@ -6,8 +6,11 @@
 
 ```text
 sourceState=FORMED
-hostProof=NOT_YET_RUN
-deviceProof=NOT_YET_RUN
+hostSyncBuildInstallLaunch=PASS_BY_LIVED_DEVICE_RUN
+deviceProof=PASS_VISIBLE_F0_SURFACE
+postRunGitSourceState=USER_REPORTED_CLEAN
+unitTestCommand=NOT_YET_OBSERVED
+checkpoint=[Foundation: F0 Gradle/Manifest/Base]
 foundationStatus=INCOMPLETE
 ```
 
@@ -132,6 +135,32 @@ A fresh checkout must eventually establish:
 
 A screenshot proves the visible surface. Build output proves the build. Git status proves source
 cleanliness. Do not collapse those claims.
+
+## Lived checkpoint — 2026-10-10
+
+Victor ran the standalone repository on the physical Samsung SM-S908U after the daemon-JVM and theme corrections.
+
+Observed visible result:
+
+```text
+VexLife Android
+Standalone foundation
+Source foundation formed; host and device proof in progress.
+```
+
+This establishes that the current standalone source could Sync/build/install/launch far enough to render the intended F0 Compose surface on the physical device. Victor also reported no local changes in GitHub Desktop after this round, supporting the intended machine-residue boundary.
+
+Evidence boundary:
+
+- the visible device screenshot proves the rendered F0 surface;
+- successful launch implies the build/install path executed sufficiently for that run;
+- the clean Git state is Victor's explicit host report;
+- `./gradlew :app:testDebugUnitTest` was not separately observed and remains pending;
+- this checkpoint is not evidence for later architecture modules.
+
+Stable checkpoint name:
+
+`[Foundation: F0 Gradle/Manifest/Base]`
 
 ## What F0 still does not prove
 

@@ -32,11 +32,35 @@ The temporary incomplete notice can be removed when a fresh worker with reposito
 Removal means the **repository foundation is established enough to build outward**, not that every
 feature, integration, or future architecture question is settled.
 
+## Foundation checkpoint convention
+
+When a foundation threshold has enough real proof to be a trustworthy place to build from, preserve it with a commit subject shaped as:
+
+```text
+[Foundation: <short threshold name>] <what became stable>
+```
+
+The prefix is a Git-history locator, not a claim that the whole repository or even the whole named foundation is complete. Each checkpoint must say what was actually proved and what remains open.
+
+### [Foundation: F0 Gradle/Manifest/Base]
+
+```text
+provenSourceHead=81d6319af3a52a1b28c5d7bdd812a4a72b9e95fc
+device=Samsung SM-S908U
+sync/build/install/launch=OBSERVED_BY_LIVED_DEVICE_RUN
+visibleSurface=VexLife Android / Standalone foundation
+postRunGitSourceState=USER_REPORTED_CLEAN
+unitTestCommand=NOT_YET_OBSERVED
+foundationComplete=false
+```
+
+This checkpoint establishes a stable standalone Android base: repository-owned Gradle wrapper, daemon JVM 17 criteria, Java/Kotlin JVM 17 compatibility, app manifest/theme, package identity, physical-device launch, and local-state ignore boundary. It deliberately does not claim State Relay, SDK/module extraction, Home/model integration, or the standalone unit-test command.
+
 ## Current sequence
 
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
-| F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **NEXT** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | clean clone -> Sync -> debug APK -> physical-device launch |
+| F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
 | F2_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
 | F3_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
