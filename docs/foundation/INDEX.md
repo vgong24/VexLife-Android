@@ -2,11 +2,35 @@
 
 [VXG RealForever]
 
+> **TEMPORARY FOUNDATION STATUS: INCOMPLETE**
+>
+> The standalone repository is still establishing its build, architecture, proof, and source
+> boundaries. While this notice exists, current structures are evidence-backed starting points, not
+> a claim that the repository foundation is finished. Remove this notice only after the
+> establishment criteria below are met.
+
 This is the architecture map, not a requirement to read every foundation on every task.
 
 A foundation earns a dedicated entry when it has a real recurring consumer, invariant, or proof
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
+
+## Foundation establishment criteria
+
+The temporary incomplete notice can be removed when a fresh worker with repository access can:
+
+- enter through README / AGENTS / culture / this index without private chat reconstruction;
+- clean-clone, Sync, build, test, install, and launch the baseline Android app from repository-owned
+  toolchain/source contracts;
+- run that workflow without machine-local Android Studio/Gradle residue appearing as source;
+- locate each accepted foundational building block through this index and its owning source/tests;
+- distinguish portable VexLife meaning from Android-native ownership without relying on the old
+  monorepo checkout;
+- recover from an ordinary failed build or environment mismatch without undocumented local ritual;
+- identify the currently provisional/held foundations rather than assuming examples are canonical.
+
+Removal means the **repository foundation is established enough to build outward**, not that every
+feature, integration, or future architecture question is settled.
 
 ## Current sequence
 
