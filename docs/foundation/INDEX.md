@@ -78,9 +78,12 @@ Canonical source/readme:
 The first public shape is intentionally tiny:
 
 ```text
-component input
--> VexRelay
--> VexCompositeState<InputState, OutputState>
+named partial component changes
+-> component-specific VexRelay subclass
+-> one InputState family
+-> processLatestState(...)
+-> one OutputState family
+-> VexRelayState<InputState, OutputState>
 -> observer
 ```
 
@@ -93,8 +96,20 @@ ENTER / EXIT
 -> Compose reads current output
 ```
 
-A component can later make its `InputState` relational (for example Tooltip screen presence +
-target availability) without changing the Relay into a giant runtime API.
+A component can later make its InputState relational (for example Tooltip screen + events +
+interaction + target) without changing the Relay into a giant runtime API.
+
+The component subclass exposes meaningful send methods rather than a public replace-whole-state API.
+The base Relay serializes those partial transformations against the latest aggregate input and
+requires explicit defensive snapshot/deep-copy rules for InputState and OutputState.
+
+This F1 review therefore tests both:
+- human organization: one Relay family answers state-of-what;
+- mechanical safety: concurrent sibling updates cannot overwrite each other by starting from a
+  stale whole input object.
+
+External freshness remains component-local: serial arrival order is not automatically semantic
+truth order.
 
 The previous draft `:sdk:state` direction was explicitly superseded because it made an
 implementation fragment the top-level concept. State projection, observation identity,

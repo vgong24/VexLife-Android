@@ -17,37 +17,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.vextreme.vex.android.architecture.relay.VexRelay
 
 class MainActivity : ComponentActivity() {
-    private val screenPresenceRelay: VexRelay<FoundationScreenEvent, FoundationScreenPresence> =
-        FoundationContract.screenPresenceRelay()
+    private val screenRelay = FoundationScreenRelay()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val screenState by screenPresenceRelay.state.collectAsState()
+            val relayState by screenRelay.state.collectAsState()
 
             VexLifeAndroidFoundation(
-                screenPresence = screenState.output,
+                screenPresence = relayState.outputState.screenPresence,
+                inputRevision = relayState.inputRevision,
+                outputRevision = relayState.outputRevision,
             )
         }
     }
 
     override fun onStart() {
         super.onStart()
-        screenPresenceRelay.accept(FoundationScreenEvent.ENTER)
+        screenRelay.screenEntered()
     }
 
     override fun onStop() {
-        screenPresenceRelay.accept(FoundationScreenEvent.EXIT)
+        screenRelay.screenExited()
         super.onStop()
     }
 }
 
 @Composable
 private fun VexLifeAndroidFoundation(
-    screenPresence: FoundationScreenPresence,
+    screenPresence: FoundationScreenRelay.ScreenPresence,
+    inputRevision: Long,
+    outputRevision: Long,
 ) {
     MaterialTheme {
         Surface(
@@ -72,6 +74,13 @@ private fun VexLifeAndroidFoundation(
                     text = stringResource(
                         R.string.relay_screen_presence,
                         screenPresence.name,
+                    ),
+                )
+                Text(
+                    text = stringResource(
+                        R.string.relay_revisions,
+                        inputRevision,
+                        outputRevision,
                     ),
                 )
             }

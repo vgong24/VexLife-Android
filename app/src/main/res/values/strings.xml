@@ -2,7 +2,8 @@
 <resources>
     <string name="app_name">VexLife Android</string>
     <string name="foundation_title">VexLife Android</string>
-    <string name="foundation_stage">Relay first principles</string>
-    <string name="foundation_body">A small VexRelay now owns the screen enter/exit relationship.</string>
+    <string name="foundation_stage">Relay family template</string>
+    <string name="foundation_body">The screen Relay owns one InputState / OutputState family and receives partial changes through named send methods.</string>
     <string name="relay_screen_presence">Relay screen presence: %1$s</string>
+    <string name="relay_revisions">Input revision %1$d · output revision %2$d</string>
 </resources>

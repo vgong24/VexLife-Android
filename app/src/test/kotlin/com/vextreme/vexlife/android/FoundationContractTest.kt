@@ -11,15 +11,24 @@ class FoundationContractTest {
     }
 
     @Test
-    fun sampleAppStartsWithTheSmallestRelayRelationship() {
-        val relay = FoundationContract.screenPresenceRelay()
+    fun sampleAppUsesAnExtendedRelayFamilyInsteadOfReplacingWholeInputState() {
+        val relay = FoundationScreenRelay()
 
-        assertEquals(FoundationScreenPresence.EXITED, relay.current.output)
+        assertEquals(
+            FoundationScreenRelay.ScreenPresence.EXITED,
+            relay.current.outputState.screenPresence,
+        )
 
-        relay.accept(FoundationScreenEvent.ENTER)
-        assertEquals(FoundationScreenPresence.ENTERED, relay.current.output)
+        relay.screenEntered()
+        assertEquals(
+            FoundationScreenRelay.ScreenPresence.ENTERED,
+            relay.current.outputState.screenPresence,
+        )
 
-        relay.accept(FoundationScreenEvent.EXIT)
-        assertEquals(FoundationScreenPresence.EXITED, relay.current.output)
+        relay.screenExited()
+        assertEquals(
+            FoundationScreenRelay.ScreenPresence.EXITED,
+            relay.current.outputState.screenPresence,
+        )
     }
 }
