@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.VexLifeAndroid" parent="@android:style/Theme.Material.Light.NoActionBar" />
+</resources>

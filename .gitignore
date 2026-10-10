@@ -1,0 +1,41 @@
+# VexLife-Android local/build state
+#
+# Keep source, contracts, and intentional configuration in Git.
+# Keep machine-local IDE, SDK, cache, build, and signing state out.
+
+# Gradle / Kotlin local state
+.gradle/
+.kotlin/
+**/build/
+
+# Android SDK / machine-local configuration
+local.properties
+
+# Android Studio / IntelliJ local project state
+.idea/
+*.iml
+
+# Native/build intermediates
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Packaged outputs
+*.apk
+*.aab
+output-metadata.json
+
+# Local logs / profiles
+*.log
+*.hprof
+
+# Signing / machine credentials
+*.jks
+*.keystore
+
+# Optional service configuration must be admitted deliberately
+google-services.json
+
+# OS residue
+.DS_Store
+Thumbs.db
