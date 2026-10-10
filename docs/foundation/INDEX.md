@@ -62,9 +62,10 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **SOURCE_REFORMED / VICTOR REVIEW PENDING** | Reconstruct simple Source-of-Truth Relay + composable Compound Relay before mature runtime machinery | `:architecture:relay:test` + app screen Relay device proof |
-| F2_RELAY_OBSERVATION_IDENTITY | Relay depth: observation/snapshot identity | HELD_UNTIL_F1_APPROVED | Add UNOBSERVED/EMPTY/PRESENT and state/instance/revision/transition identity without changing the parent mental model | prove only after F1 shape is accepted |
-| F3_RELAY_OPERATION_EFFECT | Relay depth: accepted work/effect admission | HELD_UNTIL_REAL_CONSUMER | Preserve operation != attempt != coroutine and explicit result admission when a real component needs effect work | component-driven proof |
-| F4_VIEWS_CONTAINERS | `views/container` family | DESIGN_LINEAGE_ONLY | Reuse container/anchor behavior for Tooltip/Snackbar without hiding component meaning inside generic utilities | source-place after Relay review |
+| F2_EXECUTION_OWNERSHIP | `architecture/execution` | **SOURCE_FORMED / VICTOR REVIEW PENDING** | Own named asynchronous work, cancellation, failure visibility, supervision and explicit bounded restart outside Relay | `:architecture:execution:test` + Relay dependency-observation proof |
+| F3_RELAY_OBSERVATION_IDENTITY | Relay depth: observation/snapshot identity | HELD_UNTIL_F1_APPROVED | Add UNOBSERVED/EMPTY/PRESENT and state/instance/revision/transition identity without changing the parent mental model | prove only after F1 shape is accepted |
+| F4_RELAY_OPERATION_EFFECT | Relay depth: accepted work/effect admission | HELD_UNTIL_REAL_CONSUMER | Preserve operation != attempt != coroutine and explicit result admission when a real component needs effect work | component-driven proof |
+| F5_VIEWS_CONTAINERS | `views/container` family | DESIGN_LINEAGE_ONLY | Reuse container/anchor behavior for Tooltip/Snackbar without hiding component meaning inside generic utilities | source-place after Relay/execution review |
 | F5_DESIGN_LAB | debug/developer component gallery | REFERENCE_PROVEN | Provide a native place to exercise building blocks and inspect bounded local results | port only after F0-F4 provide its dependencies |
 | F6_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F7_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
@@ -163,6 +164,51 @@ views/
 ```
 
 Do not implement these until Victor approves the Relay/Compound Relay parent pattern.
+
+## F2 — Execution ownership
+
+Canonical source/readme:
+
+`architecture/execution/README.md`
+
+Question:
+
+> I started asynchronous work. What is it called, who owns it, how do I cancel it, how do I know
+> it failed, and when may it restart?
+
+First slice:
+
+```text
+VexExecutionScope
+  -> named VexExecutionHandle
+  -> observable execution registry
+  -> SupervisorJob sibling isolation
+  -> cancellation
+  -> failure state
+  -> opt-in bounded restart
+```
+
+This replaces anonymous `dependencyJobs` inside Compound Relay.
+
+Relay dependency collectors now become named executions such as:
+
+```text
+relay.event-screen.observe.screen
+relay.event-screen.observe.items
+relay.event-screen.observe.interaction
+```
+
+Permanent boundary preserved from the accepted Android architecture:
+
+```text
+COROUTINE != OPERATION
+JOB != DURABLE_IDENTITY
+HAS_A_COROUTINE_SCOPE != OWNS_THE_SEMANTIC_OPERATION
+RESTART_COROUTINE != RETRY_SEMANTIC_OPERATION
+```
+
+Koin may retain the application `VexExecutionScope` as a `single`; execution semantics remain
+framework-neutral.
 
 ## F0 — Standalone Build Foundation
 

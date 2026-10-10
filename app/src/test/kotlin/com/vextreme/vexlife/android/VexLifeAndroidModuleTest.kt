@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android
 
+import com.vextreme.vex.android.architecture.execution.VexExecutionScope
 import org.junit.After
 import org.junit.Assert.assertSame
 import org.junit.Before
@@ -34,6 +35,14 @@ class VexLifeAndroidModuleTest : KoinTest {
             FoundationScreenVexState.ScreenPresence.ENTERED,
             second.current.screenPresence,
         )
+    }
+
+    @Test
+    fun applicationExecutionScopeIsOneCompositionOwner() {
+        val first = get<VexExecutionScope>()
+        val second = get<VexExecutionScope>()
+
+        assertSame(first, second)
     }
 }
 

@@ -1,17 +1,13 @@
 package com.vextreme.vex.android.architecture.relay
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import com.vextreme.vex.android.architecture.execution.VexExecutionHandle
+import com.vextreme.vex.android.architecture.execution.VexExecutionScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Relay for one organized component relationship with a separate input family and output family.
- *
- * Incoming InputState is allowed to be a partial patch (for example only screen != null).
- * [processStates] receives both that incoming patch and one deep-copied current compound state.
- * The subclass merges the patch with current input, derives output, and returns the next totality.
  */
 abstract class VexCompoundRelay<
     InputState : VexInputState<InputState>,
@@ -22,7 +18,7 @@ abstract class VexCompoundRelay<
 ) : VexObservableRelay<VexCompoundState<InputState, OutputState>> {
     private val lock = Any()
     private var processing = false
-    private var dependencyJobs: List<Job>? = null
+    private var dependenciesObserved = false
 
     private val mutableCurrentState =
         MutableStateFlow(
@@ -35,57 +31,37 @@ abstract class VexCompoundRelay<
     override val currentState: StateFlow<VexCompoundState<InputState, OutputState>> =
         DefensiveVexStateFlow(mutableCurrentState.asStateFlow())
 
-    /**
-     * Component-specific reconciliation.
-     *
-     * Typical pattern:
-     * 1. name currentInputState once;
-     * 2. resolve each incoming nullable field against currentInputState;
-     * 3. form one next InputState;
-     * 4. process component logic;
-     * 5. form one OutputState;
-     * 6. return currentState.copy(inputState = ..., outputState = ...).
-     */
     protected abstract fun processStates(
         inputState: InputState,
         currentState: VexCompoundState<InputState, OutputState>,
     ): VexCompoundState<InputState, OutputState>
 
     /**
-     * Start this Compound Relay's child observations exactly once.
+     * Start child Relay observation exactly once.
      *
-     * The lifetime is supplied from outside (for example an application/session Koin scope).
-     * VexCompoundRelay never invents a GlobalScope and never reaches into Koin itself.
+     * VexCompoundRelay does not retain anonymous Job objects. Each collector is a named execution
+     * owned and monitored by VexExecutionScope.
      */
     protected fun observeDependencies(
-        scope: CoroutineScope,
+        executionScope: VexExecutionScope,
         vararg dependencies: VexRelayDependency<InputState>,
-    ): List<Job> =
+    ): List<VexExecutionHandle> =
         synchronized(lock) {
-            check(dependencyJobs == null) {
+            check(!dependenciesObserved) {
                 "VexCompoundRelay dependencies are already being observed"
             }
+            dependenciesObserved = true
 
-            dependencies
-                .map { dependency ->
-                    dependency.observe(
-                        scope = scope,
-                        sendInput = { inputState ->
-                            send(inputState)
-                        },
-                    )
-                }
-                .also { jobs ->
-                    dependencyJobs = jobs
-                }
+            dependencies.map { dependency ->
+                dependency.observe(
+                    executionScope = executionScope,
+                    sendInput = { inputState ->
+                        send(inputState)
+                    },
+                )
+            }
         }
 
-    /**
-     * Send a partial input family update.
-     *
-     * All senders share one serialization boundary, so screen/event/item updates cannot overwrite
-     * sibling fields when processStates follows the merge-with-current contract.
-     */
     protected fun send(
         inputState: InputState,
     ): VexCompoundState<InputState, OutputState> =

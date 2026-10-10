@@ -14,6 +14,7 @@ kotlin {
 }
 
 dependencies {
+    api(project(":architecture:execution"))
     api(libs.kotlinxCoroutinesCore)
     testImplementation(kotlin("test"))
 }

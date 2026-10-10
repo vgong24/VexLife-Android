@@ -509,28 +509,40 @@ manual construction, tests, another DI backend, or generated composition.
 
 ### Observation lifetime
 
-A Compound Relay must not invent a hidden GlobalScope.
+A Compound Relay must not invent or own anonymous coroutine Jobs.
 
-Its dependency observer receives a CoroutineScope from the composition owner. The current
-VexCompoundRelay helper:
+Dependency collectors are named executions owned by architecture/execution:
+
+~~~text
+VexExecutionScope("vexlife.application")
+
+  relay.event-screen.observe.screen
+  relay.event-screen.observe.items
+  relay.event-screen.observe.interaction
+~~~
+
+The current helper:
 
 ~~~text
 observeDependencies(
-  ownerScope,
-  vexRelayDependency(screenRelay) { partial screen input },
-  vexRelayDependency(itemRelay) { partial item input },
+  executionScope,
+  vexRelayDependency(
+    executionName = ...,
+    relay = screenRelay,
+  ) { partial screen input },
   ...
 )
 ~~~
 
-starts each child collection exactly once.
+starts each child observation exactly once.
 
-If the Compound Relay is application-singleton truth, give it an application-owned Relay scope.
+Relay owns the state relationship.
+Execution owns coroutine names, cancellation, supervision, failure visibility and explicit restart.
 
-If it is session-scoped truth, give it that session's scope.
+If a Compound Relay is application-singleton truth, give it the application execution scope.
+If it is session-scoped truth, give it that session's execution scope.
 
-When the owner scope ends, the collectors end with it. Child Relays do not hold Activity, Fragment,
-Composable, or ViewModel references.
+Child Relays do not hold Activity, Fragment, Composable, ViewModel or parent references.
 
 ### Lazy versus eager Koin construction
 

@@ -3,10 +3,8 @@ package com.vextreme.vex.android.architecture.relay
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import com.vextreme.vex.android.architecture.execution.VexExecutionName
+import com.vextreme.vex.android.architecture.execution.VexExecutionScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -148,7 +146,7 @@ class VexRelayFirstPrinciplesTest {
      * This Compound Relay listens to their latest accepted state and reconciles one screen output.
      */
     private class EventScreenVexCompoundRelay(
-        dependencyScope: CoroutineScope,
+        dependencyScope: VexExecutionScope,
         screenRelay: ScreenVexRelay,
         itemRelay: ItemVexRelay,
         interactionRelay: InteractionVexRelay,
@@ -204,18 +202,27 @@ class VexRelayFirstPrinciplesTest {
 
         init {
             observeDependencies(
-                scope = dependencyScope,
-                vexRelayDependency(screenRelay) { screenState ->
+                executionScope = dependencyScope,
+                vexRelayDependency(
+                    executionName = VexExecutionName("relay.event-screen.observe.screen"),
+                    relay = screenRelay,
+                ) { screenState ->
                     EventScreenInputState(
                         screen = screenState.deepCopy(),
                     )
                 },
-                vexRelayDependency(itemRelay) { itemState ->
+                vexRelayDependency(
+                    executionName = VexExecutionName("relay.event-screen.observe.items"),
+                    relay = itemRelay,
+                ) { itemState ->
                     EventScreenInputState(
                         items = itemState.deepCopy(),
                     )
                 },
-                vexRelayDependency(interactionRelay) { interactionState ->
+                vexRelayDependency(
+                    executionName = VexExecutionName("relay.event-screen.observe.interaction"),
+                    relay = interactionRelay,
+                ) { interactionState ->
                     EventScreenInputState(
                         interaction = interactionState.deepCopy(),
                     )
@@ -274,16 +281,16 @@ class VexRelayFirstPrinciplesTest {
 
     @Test
     fun compoundRelayMergesNullableInputPatchesAgainstCurrentInput() = runBlocking {
-        val scope =
-            CoroutineScope(
-                SupervisorJob() + Dispatchers.Default,
+        val executionScope =
+            VexExecutionScope.root(
+                name = VexExecutionName("test.event-screen"),
             )
         val screenRelay = ScreenVexRelay()
         val itemRelay = ItemVexRelay()
         val interactionRelay = InteractionVexRelay()
         val compoundRelay =
             EventScreenVexCompoundRelay(
-                dependencyScope = scope,
+                dependencyScope = executionScope,
                 screenRelay = screenRelay,
                 itemRelay = itemRelay,
                 interactionRelay = interactionRelay,
@@ -318,22 +325,22 @@ class VexRelayFirstPrinciplesTest {
             assertEquals(2, state.outputState.itemCount)
             assertEquals("button.more", state.outputState.lastButtonId)
         } finally {
-            scope.cancel()
+            executionScope.cancelAll("test complete")
         }
     }
 
     @Test
     fun concurrentChildRelaysDoNotOverwriteSiblingCompoundInput() = runBlocking {
-        val scope =
-            CoroutineScope(
-                SupervisorJob() + Dispatchers.Default,
+        val executionScope =
+            VexExecutionScope.root(
+                name = VexExecutionName("test.event-screen"),
             )
         val screenRelay = ScreenVexRelay()
         val itemRelay = ItemVexRelay()
         val interactionRelay = InteractionVexRelay()
         val compoundRelay =
             EventScreenVexCompoundRelay(
-                dependencyScope = scope,
+                dependencyScope = executionScope,
                 screenRelay = screenRelay,
                 itemRelay = itemRelay,
                 interactionRelay = interactionRelay,
@@ -403,7 +410,7 @@ class VexRelayFirstPrinciplesTest {
             assertEquals(1L, state.inputState.interaction?.clickRevision)
             assertEquals(OutputAvailability.READY, state.outputState.availability)
         } finally {
-            scope.cancel()
+            executionScope.cancelAll("test complete")
         }
     }
 }
