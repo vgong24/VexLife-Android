@@ -31,6 +31,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":sdk:state"))
     implementation(libs.activityCompose)
     implementation(platform(libs.composeBom))
     implementation(libs.composeMaterial3)

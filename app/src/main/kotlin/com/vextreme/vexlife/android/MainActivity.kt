@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -27,6 +28,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun VexLifeAndroidFoundation() {
+    val foundationStatus = remember {
+        FoundationContract.statusProjection()
+    }.state.value.valueOrNull ?: FoundationContract.STATUS
+
     MaterialTheme {
         Surface(
             modifier = Modifier
@@ -46,6 +51,7 @@ private fun VexLifeAndroidFoundation() {
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(text = stringResource(R.string.foundation_body))
+                Text(text = stringResource(R.string.foundation_sdk_state, foundationStatus))
             }
         }
     }

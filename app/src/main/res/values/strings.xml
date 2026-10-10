@@ -3,5 +3,6 @@
     <string name="app_name">VexLife Android</string>
     <string name="foundation_title">VexLife Android</string>
     <string name="foundation_stage">Standalone foundation</string>
-    <string name="foundation_body">Source foundation formed; host and device proof in progress.</string>
+    <string name="foundation_body">Source foundation formed; reusable SDK extraction in progress.</string>
+    <string name="foundation_sdk_state">SDK state projection: %1$s</string>
 </resources>

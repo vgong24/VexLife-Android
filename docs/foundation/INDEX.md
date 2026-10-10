@@ -61,7 +61,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
-| F1_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
+| F1_STATE_PROJECTION | StateFlow/state projection kernel | **SOURCE_FORMED / HOST PROOF PENDING** | Preserve one-owner observable semantic state and emission discipline | sdk/state tests + sample app/device consumption |
 | F2_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
 | F3_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
 | F4_LOCALIZATION_PRESENTATION | localization IDs + native presentation primitives | PORT_CANDIDATE | Keep visible language and component identity source-addressable | resource/localization + Compose tests |
@@ -103,6 +103,14 @@ fresh repository checkout
 -> APK installs/launches on Victor's physical device
 -> rerun leaves Git source state clean
 ~~~
+
+## F1 — State Projection
+
+Canonical detail: [`F1-STATE-PROJECTION.md`](F1-STATE-PROJECTION.md)
+
+Reusable module: `:sdk:state`
+
+The sample `:app` is the first proving consumer. The module remains a latest-state projection adapter rather than a product-state owner or event ledger.
 
 ## Port-candidate foundations
 
