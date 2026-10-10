@@ -47,6 +47,8 @@ feature, integration, or future architecture question is settled.
 
 ## F0 — Standalone Build Foundation
 
+Canonical detail: [`F0-STANDALONE-BUILD.md`](F0-STANDALONE-BUILD.md)
+
 ### Intention
 
 A developer or AI should be able to clone this repository and know **which build contract the

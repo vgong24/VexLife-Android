@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VexLife Android</string>
+    <string name="foundation_title">VexLife Android</string>
+    <string name="foundation_stage">Standalone foundation</string>
+    <string name="foundation_body">Build and physical-device path ready for foundation porting.</string>
+</resources>
