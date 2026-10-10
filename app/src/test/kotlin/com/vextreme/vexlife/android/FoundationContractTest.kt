@@ -9,4 +9,17 @@ class FoundationContractTest {
         assertEquals("foundation.vexlife.android.standalone-build/v1", FoundationContract.REF)
         assertEquals("FOUNDATION_INCOMPLETE", FoundationContract.STATUS)
     }
+
+    @Test
+    fun sampleAppStartsWithTheSmallestRelayRelationship() {
+        val relay = FoundationContract.screenPresenceRelay()
+
+        assertEquals(FoundationScreenPresence.EXITED, relay.current.output)
+
+        relay.accept(FoundationScreenEvent.ENTER)
+        assertEquals(FoundationScreenPresence.ENTERED, relay.current.output)
+
+        relay.accept(FoundationScreenEvent.EXIT)
+        assertEquals(FoundationScreenPresence.EXITED, relay.current.output)
+    }
 }

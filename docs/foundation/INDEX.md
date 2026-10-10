@@ -61,13 +61,66 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
-| F1_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
-| F2_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
-| F3_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
-| F4_LOCALIZATION_PRESENTATION | localization IDs + native presentation primitives | PORT_CANDIDATE | Keep visible language and component identity source-addressable | resource/localization + Compose tests |
+| F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **SOURCE_FORMED / VICTOR REVIEW PENDING** | Give one component a small readable input -> current output relationship before adding mature runtime machinery | `:architecture:relay:test` + app screen-enter/exit device proof |
+| F2_RELAY_OBSERVATION_IDENTITY | Relay depth: observation/snapshot identity | HELD_UNTIL_F1_APPROVED | Add UNOBSERVED/EMPTY/PRESENT and state/instance/revision/transition identity without changing the parent mental model | prove only after F1 shape is accepted |
+| F3_RELAY_OPERATION_EFFECT | Relay depth: accepted work/effect admission | HELD_UNTIL_REAL_CONSUMER | Preserve operation != attempt != coroutine and explicit result admission when a real component needs effect work | component-driven proof |
+| F4_VIEWS_CONTAINERS | `views/container` family | DESIGN_LINEAGE_ONLY | Reuse container/anchor behavior for Tooltip/Snackbar without hiding component meaning inside generic utilities | source-place after Relay review |
 | F5_DESIGN_LAB | debug/developer component gallery | REFERENCE_PROVEN | Provide a native place to exercise building blocks and inspect bounded local results | port only after F0-F4 provide its dependencies |
 | F6_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F7_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+
+## F1 — Relay from first principles
+
+Canonical source/readme:
+
+`architecture/relay/README.md`
+
+The first public shape is intentionally tiny:
+
+```text
+component input
+-> VexRelay
+-> VexCompositeState<InputState, OutputState>
+-> observer
+```
+
+The sample app uses Activity `onStart/onStop` as the smallest real relationship:
+
+```text
+ENTER / EXIT
+-> VexRelay
+-> ENTERED / EXITED
+-> Compose reads current output
+```
+
+A component can later make its `InputState` relational (for example Tooltip screen presence +
+target availability) without changing the Relay into a giant runtime API.
+
+The previous draft `:sdk:state` direction was explicitly superseded because it made an
+implementation fragment the top-level concept. State projection, observation identity,
+operation/effect admission, durability, and surface projection remain deeper Relay concerns to add
+only when their concrete relationship earns them.
+
+### Next component lineage after Relay review
+
+These are recognized design scopes, **not source-implemented modules yet**:
+
+```text
+views/
+  container/
+    base/
+    tooltip/
+    snackbar/
+  list/
+    base/
+```
+
+The design lineage already supports this direction: Tooltip geometry separates semantic arbitration
+from physical placement; VexContainer/VexTransientHost/Tooltip/Snackbar were proposed as reusable
+Compose primitives; repeated-item identity remains item/occurrence/slot based rather than position
+based.
+
+Do not implement these until Victor has reviewed the Relay parent shape.
 
 ## F0 — Standalone Build Foundation
 

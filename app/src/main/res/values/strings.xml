@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">VexLife Android</string>
     <string name="foundation_title">VexLife Android</string>
-    <string name="foundation_stage">Standalone foundation</string>
-    <string name="foundation_body">Source foundation formed; host and device proof in progress.</string>
+    <string name="foundation_stage">Relay first principles</string>
+    <string name="foundation_body">A small VexRelay now owns the screen enter/exit relationship.</string>
+    <string name="relay_screen_presence">Relay screen presence: %1$s</string>
 </resources>

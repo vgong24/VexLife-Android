@@ -31,6 +31,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":architecture:relay"))
     implementation(libs.activityCompose)
     implementation(platform(libs.composeBom))
     implementation(libs.composeMaterial3)
