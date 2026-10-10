@@ -60,16 +60,18 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
-| F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without monorepo or IDE-local state | standalone test proof + later foundation extraction |
-| F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **SOURCE_REFORMED / VICTOR REVIEW PENDING** | Reconstruct Source-of-Truth Relay + composable Compound Relay from the readable parent pattern | `:architecture:relay:test` + app screen Relay device proof |
-| F2_VEX_APP_SCOPE | `architecture/execution` / `VexAppScope` | **SOURCE_REFORMED / VICTOR REVIEW PENDING** | Own app-lifetime named coroutines, parent supervision, cancellation, failure visibility and opt-in restart outside Relay | `:architecture:execution:test` + Relay dependency-observer proof |
-| F3_STARTUP_READINESS | startup/readiness sequencing | **DESIGN CAPTURED / NOT IMPLEMENTED** | Prevent DI-construction from being mistaken for asynchronous dependency readiness | first real async SDK/service bootstrap consumer |
-| F4_RELAY_OBSERVATION_IDENTITY | Relay depth: observation/snapshot identity | HELD_UNTIL_F1_APPROVED | Add UNOBSERVED/EMPTY/PRESENT and state/instance/revision/transition identity without changing the parent mental model | prove after F1 shape is accepted |
-| F5_RELAY_OPERATION_EFFECT | Relay depth: accepted work/effect admission | HELD_UNTIL_REAL_CONSUMER | Preserve operation != attempt != coroutine and explicit result admission when a real component needs effect work | component-driven proof |
-| F6_VIEWS_CONTAINERS | `views/container` family | DESIGN_LINEAGE_ONLY | Reuse container/anchor behavior for Tooltip/Snackbar without hiding component meaning inside generic utilities | source-place after Relay/AppScope review |
-| F7_DESIGN_LAB | debug/developer component gallery | REFERENCE_PROVEN | Exercise named foundations/components visually and inspect bounded receipts | port after foundation shapes stabilize |
-| F8_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit transport, identity, permission and failure contracts | not part of bootstrap |
-| F9_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+| F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Reproducible standalone Android build/device base | architecture regression + remaining F0 unit proof |
+| F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **SOURCE_CORRECTED / REVIEW+PROOF PENDING** | Source-of-Truth Relay + transactional Compound Relay composition | `:architecture:relay:test` + reviewer re-pass |
+| F2_VEX_APP_SCOPE | `architecture/execution` | **SOURCE_CORRECTED / REVIEW+PROOF PENDING** | Structured named coroutine ownership, supervision, cancellation and bounded restart | `:architecture:execution:test` + reviewer re-pass |
+| F3_VEX_LOGGER | `architecture/observability` | **SOURCE_FORMED / REVIEW+PROOF PENDING** | Ordered structured architecture visibility without turning logs into truth | `:architecture:observability:test` + cross-foundation proof |
+| F4_CODE_COVERAGE | test/coverage foundation | **NEXT AFTER F1-F3 CHECKPOINT** | Make untested architecture branches perceivable before broad Compose construction | select current compatible tooling + repeatable reports |
+| F5_STARTUP_READINESS | startup/readiness sequencing | **HELD_FOR_REAL_ASYNC_CONSUMER** | Keep DI construction distinct from initialization/readiness/accepting work | first real SDK/service bootstrap consumer |
+| F6_RELAY_OBSERVATION_IDENTITY | Relay depth | **HELD_FOR_EXTERNAL_TRUTH_CONSUMER** | Distinguish UNOBSERVED/EMPTY/PRESENT/HELD/UNAVAILABLE | Home/network/database/sensor-backed truth |
+| F7_DURABLE_OPERATION_REENTRY | operation/effect/recovery depth | **HELD_FOR_REAL_EFFECT_CONSUMER** | Preserve operation != attempt != coroutine across process/lifetime loss | real durable effect/re-entry consumer |
+| F8_VIEWS_CONTAINERS | `views/container`, `views/list` | **NEXT PRODUCT PHASE AFTER COVERAGE** | Recursive Compose containers, Tooltip/Snackbar anchoring and reusable screen cells | base container + Tooltip Design Lab proof |
+| F9_DESIGN_LAB | executable architecture/component gallery | REFERENCE_PROVEN | Visual proof/examples for reusable foundations and views | rebuild from accepted standalone foundations |
+| F10_HOME_TRANSPORT | real Home/network/session integration | HELD | Explicit transport/identity/permission/failure contracts | later |
+| F11_MODEL_COMPANION | model/AI companion integration | HELD | Separate model/runtime ownership and real integration contracts | later |
 
 ## F1 — Relay from first principles
 
@@ -174,84 +176,89 @@ Do not implement these until Victor approves the Relay/Compound Relay parent pat
 
 ## F2 — VexAppScope / execution ownership
 
-Canonical source/readme:
+Canonical:
 
-`architecture/execution/README.md`
+- architecture/execution/README.md
+- architecture/execution/examples/APP_SCOPE.md
+- architecture/execution/src/test/.../VexAppScopeTest.kt
 
-Question:
+Current corrections ensure:
 
-> I started asynchronous work. What is it called, who owns it, how do I cancel it, how do I know
-> it failed, and when may it restart?
+~~~text
+named execution owns nested coroutine descendants
+cancel during restart delay -> CANCELLED
+stopApplication closes admission before cancelling tree
+post-stop launch fails closed
+registry exposure is defensive
+external observers/loggers run outside registry lock
+~~~
 
-Current first-principles shape:
+## F3 — VexLogger / structured observability
 
-```text
-Koin single
--> VexAppScope
-     parentJob = SupervisorJob()
-     application coroutineContext
-     LinkedHashMap<VexCoroutineRef, Job>
-     observable coroutine state registry
+Canonical:
 
-launchCoroutine(stable ref, restartPolicy = Never)
--> one managed child Job
--> RUNNING / RESTARTING / COMPLETED / CANCELLED / FAILED
+- docs/foundation/F3-OBSERVABILITY.md
+- architecture/observability/README.md
+- architecture/observability/examples/LOGGER_AND_INTERCEPTOR.md
+- architecture/observability/src/test/.../VexLoggerTest.kt
 
-forceStop(ref)
--> cancellation
--> CANCELLED
--> no restart
-```
+Current shape:
 
-Stable coroutine refs are explicit authored identity rather than Kotlin class/lambda names, preserving
-meaning across obfuscation/refactor.
+~~~text
+VexLogger singleton
+-> injectable VexLogExecutor
+-> production single-thread executor
+-> structured stable refs
+-> bounded recent records
+-> filters
 
-VexAppScopeObserver is the narrow future VexLogger/BulkDataLogging adapter seam. VexAppScope is not
-the logging/storage owner.
+Relay + VexAppScope emit owner facts automatically
+Flow.vexLog(...) optionally records observer receipt
+~~~
 
-Compound Relay dependency collectors now run as named VexAppScope executions instead of anonymous
-Job handles.
+## What remains after F1-F3
 
-Permanent boundaries:
+Read:
 
-```text
-COROUTINE != OPERATION
-JOB != DURABLE_IDENTITY
-HAS_A_COROUTINE_SCOPE != OWNS_THE_SEMANTIC_OPERATION
-RESTART_COROUTINE != RETRY_SEMANTIC_OPERATION
-```
+docs/foundation/POST-F1-F3-GAPS.md
 
-## F3 — Startup/readiness sequencing (design captured)
+The existence of held gaps does not automatically prevent an F1-F3 checkpoint. The review/proof
+question is whether these three modules correctly enforce the contracts they claim.
 
-Victor recovered an important prior SDK failure mode:
+## F4 — Code coverage (next tooling phase)
 
-```text
-dependency exists in Koin
-!= asynchronous dependency initialized
-!= dependency READY
-```
+After F1-F3 reviewer clearance and Gradle proof, establish coverage before broad Compose work.
 
-A constructor-injected object can still be null/unusable internally while its boot coroutine is
-running.
+Coverage is a test-perception tool, not semantic acceptance.
 
-Do not hide this inside VexAppScope or Koin.
+Do not pin a coverage plugin/version until current Kotlin/AGP compatibility is freshly checked.
 
-Future first real async SDK/service consumer should earn a small startup/readiness architecture that
-can explicitly sequence:
+## Held — startup/readiness
 
-```text
-construct
--> start named initialization
--> await declared readiness
--> READY | FAILED | HELD
--> start dependent execution
-```
+~~~text
+KOIN_RESOLVED != INITIALIZED != READY != ACCEPTING_WORK
+~~~
 
-Current law:
+Do not hide readiness inside Koin, Relay, or VexAppScope.
 
-```text
-KOIN_RESOLVED != INITIALIZED != READY
-```
+## Held — observation identity
+
+StateFlow initial/default value may not prove a real source has been observed.
+
+Preserve room for:
+
+~~~text
+UNOBSERVED / EMPTY / PRESENT / HELD / UNAVAILABLE
+~~~
+
+## Held — durable operation/re-entry
+
+~~~text
+COROUTINE != OPERATION != ATTEMPT != DURABLE_IDENTITY
+~~~
+
+Do not make Relay or VexAppScope persistence machinery.
+
 
 ## F0 — Standalone Build Foundation
 

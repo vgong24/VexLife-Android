@@ -4,20 +4,18 @@ import com.vextreme.vex.android.architecture.execution.VexCoroutineHandle
 import com.vextreme.vex.android.architecture.execution.VexCoroutineRef
 import com.vextreme.vex.android.architecture.execution.VexCoroutineRestartPolicy
 import com.vextreme.vex.android.architecture.execution.VexExecutionOwner
+import com.vextreme.vex.android.architecture.observability.VexLogRef
 import kotlinx.coroutines.flow.collect
 
-/**
- * One observable child Relay mapped into one partial Compound InputState patch.
- *
- * The child keeps ownership of its own state. The execution owner owns the named collector
- * lifetime. The Compound Relay only receives defensive snapshots of the child's current truth.
- */
 interface VexRelayDependency<InputState : VexInputState<InputState>> {
     val coroutineRef: VexCoroutineRef
 
     fun observe(
         executionOwner: VexExecutionOwner,
-        sendInput: (InputState) -> Unit,
+        sendInput: (
+            inputState: InputState,
+            originRef: VexLogRef,
+        ) -> Unit,
     ): VexCoroutineHandle
 }
 
@@ -36,7 +34,10 @@ fun <
 
         override fun observe(
             executionOwner: VexExecutionOwner,
-            sendInput: (InputState) -> Unit,
+            sendInput: (
+                inputState: InputState,
+                originRef: VexLogRef,
+            ) -> Unit,
         ): VexCoroutineHandle =
             executionOwner.launchCoroutine(
                 coroutineRef = coroutineRef,
@@ -47,6 +48,7 @@ fun <
                         toInputState(
                             childState.deepCopy(),
                         ).deepCopy(),
+                        VexLogRef(coroutineRef.value),
                     )
                 }
             }

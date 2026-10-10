@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android
 
 import com.vextreme.vex.android.architecture.execution.VexAppScope
+import com.vextreme.vex.android.architecture.observability.VexLogger
 import org.junit.After
 import org.junit.Assert.assertSame
 import org.junit.Before
@@ -39,10 +40,18 @@ class VexLifeAndroidModuleTest : KoinTest {
 
     @Test
     fun vexAppScopeIsOneApplicationExecutionOwner() {
-        val first = get<VexAppScope>()
-        val second = get<VexAppScope>()
+        assertSame(
+            get<VexAppScope>(),
+            get<VexAppScope>(),
+        )
+    }
 
-        assertSame(first, second)
+    @Test
+    fun vexLoggerIsOneApplicationObservabilityOwner() {
+        assertSame(
+            get<VexLogger>(),
+            get<VexLogger>(),
+        )
     }
 }
 

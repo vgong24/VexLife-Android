@@ -1,7 +1,11 @@
 package com.vextreme.vex.android.architecture.execution
 
+import com.vextreme.vex.android.architecture.observability.VexLogEvent
+import com.vextreme.vex.android.architecture.observability.VexLogRef
+import com.vextreme.vex.android.architecture.observability.VexLogSink
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -9,18 +13,14 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Explicit stable identity for managed coroutine work.
- *
- * Do not derive this from Kotlin class/lambda names. R8/obfuscation may rename implementation
- * symbols; this ref is authored semantic/debug identity.
- */
 @JvmInline
 value class VexCoroutineRef(
     val value: String,
@@ -42,6 +42,11 @@ enum class VexCoroutineStatus {
     CANCELLED,
     FAILED,
 }
+
+private fun VexCoroutineStatus.isTerminal(): Boolean =
+    this == VexCoroutineStatus.COMPLETED ||
+        this == VexCoroutineStatus.CANCELLED ||
+        this == VexCoroutineStatus.FAILED
 
 sealed interface VexCoroutineRestartPolicy {
     data object Never : VexCoroutineRestartPolicy
@@ -99,12 +104,6 @@ interface VexCoroutineHandle {
     suspend fun join()
 }
 
-/**
- * Minimal execution-owner contract used by architecture modules such as Relay.
- *
- * VexAppScope is the application-wide implementation. A narrower future session/feature execution
- * owner may implement the same contract if a real lifetime earns it.
- */
 interface VexExecutionOwner {
     val executions: StateFlow<Map<VexCoroutineRef, VexCoroutineState>>
 
@@ -129,6 +128,7 @@ interface VexExecutionOwner {
 class VexAppScope(
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val observer: VexAppScopeObserver = VexAppScopeObserver.None,
+    private val logSink: VexLogSink = VexLogSink.None,
 ) : CoroutineScope,
     VexExecutionOwner {
 
@@ -144,6 +144,18 @@ class VexAppScope(
                     failure = failure,
                 )
             }
+
+            logSink.log(
+                VexLogEvent(
+                    sourceRef = APP_SCOPE_LOG_REF,
+                    eventRef = VexLogRef("scope.unhandled.failure"),
+                    fields =
+                        mapOf(
+                            "failureClass" to
+                                (failure::class.simpleName ?: "unknown"),
+                        ),
+                ),
+            )
         }
 
     override val coroutineContext =
@@ -153,13 +165,9 @@ class VexAppScope(
             exceptionHandler
 
     private val registryLock = Any()
+    private var acceptingWork = true
 
-    /**
-     * Active work only. LinkedHashMap preserves stable diagnostic/start ordering.
-     *
-     * Access is guarded by registryLock; a coroutine Mutex is unnecessary for these short,
-     * non-suspending registry critical sections.
-     */
+    /** Active jobs only; registryLock owns every access. */
     private val jobMap =
         LinkedHashMap<VexCoroutineRef, Job>()
 
@@ -169,7 +177,9 @@ class VexAppScope(
         )
 
     override val executions: StateFlow<Map<VexCoroutineRef, VexCoroutineState>> =
-        mutableExecutions.asStateFlow()
+        DefensiveExecutionRegistryFlow(
+            mutableExecutions.asStateFlow(),
+        )
 
     override fun launchCoroutine(
         coroutineRef: VexCoroutineRef,
@@ -189,6 +199,10 @@ class VexAppScope(
         lateinit var job: Job
 
         synchronized(registryLock) {
+            check(acceptingWork && parentJob.isActive) {
+                "VexAppScope is stopped and cannot accept new work"
+            }
+
             val existing = jobMap[coroutineRef]
             check(existing == null || !existing.isActive) {
                 "Coroutine " + coroutineRef.value + " is already active"
@@ -211,10 +225,36 @@ class VexAppScope(
                 }
 
             jobMap[coroutineRef] = job
-            publishLocked(mutableState.value)
+            updateRegistryLocked(mutableState.value)
         }
 
-        job.invokeOnCompletion {
+        notifyStateChanged(mutableState.value)
+
+        job.invokeOnCompletion { cause ->
+            val fallbackState =
+                if (
+                    cause is CancellationException &&
+                    !mutableState.value.status.isTerminal()
+                ) {
+                    VexCoroutineState(
+                        ref = coroutineRef,
+                        status = VexCoroutineStatus.CANCELLED,
+                        attempt = mutableState.value.attempt,
+                        restartCount = mutableState.value.restartCount,
+                        failureClass = cause::class.simpleName,
+                        failureMessage = cause.message,
+                    )
+                } else {
+                    null
+                }
+
+            if (fallbackState != null) {
+                publish(
+                    mutableState = mutableState,
+                    state = fallbackState,
+                )
+            }
+
             synchronized(registryLock) {
                 if (jobMap[coroutineRef] === job) {
                     jobMap.remove(coroutineRef)
@@ -243,10 +283,6 @@ class VexAppScope(
         }
     }
 
-    /**
-     * Force-stop never recursively relaunches the coroutine.
-     * Restart only occurs for non-cancellation failure inside the same managed Job.
-     */
     override fun forceStop(
         coroutineRef: VexCoroutineRef,
         reason: String,
@@ -257,16 +293,33 @@ class VexAppScope(
             }
                 ?: return false
 
+        logSink.log(
+            VexLogEvent(
+                sourceRef = APP_SCOPE_LOG_REF,
+                eventRef = VexLogRef("coroutine.cancel.requested"),
+                originRef = VexLogRef(coroutineRef.value),
+            ),
+        )
+
         job.cancel(
             CancellationException(reason),
         )
         return true
     }
 
-    /** Terminal application shutdown. After this call VexAppScope cannot launch new work. */
+    /**
+     * Stop admission first, then cancel/join the whole supervised tree.
+     *
+     * launchCoroutine and this admission fence share registryLock, so a launch either becomes an
+     * admitted child that shutdown cancels or it fails closed after admission stops.
+     */
     suspend fun stopApplication(
         reason: String = "application scope stopped",
     ) {
+        synchronized(registryLock) {
+            acceptingWork = false
+        }
+
         parentJob.cancel(
             CancellationException(reason),
         )
@@ -282,88 +335,98 @@ class VexAppScope(
         var attempt = 0
         var restartCount = 0
 
-        while (true) {
-            attempt += 1
-
-            publish(
-                mutableState = mutableState,
-                state =
-                    VexCoroutineState(
-                        ref = coroutineRef,
-                        status = VexCoroutineStatus.RUNNING,
-                        attempt = attempt,
-                        restartCount = restartCount,
-                    ),
-            )
-
-            try {
-                block()
+        try {
+            while (true) {
+                attempt += 1
 
                 publish(
                     mutableState = mutableState,
                     state =
                         VexCoroutineState(
                             ref = coroutineRef,
-                            status = VexCoroutineStatus.COMPLETED,
+                            status = VexCoroutineStatus.RUNNING,
                             attempt = attempt,
                             restartCount = restartCount,
                         ),
                 )
-                return
-            } catch (cancelled: CancellationException) {
-                publish(
-                    mutableState = mutableState,
-                    state =
-                        VexCoroutineState(
-                            ref = coroutineRef,
-                            status = VexCoroutineStatus.CANCELLED,
-                            attempt = attempt,
-                            restartCount = restartCount,
-                            failureClass = cancelled::class.simpleName,
-                            failureMessage = cancelled.message,
-                        ),
-                )
-                throw cancelled
-            } catch (failure: Throwable) {
-                if (!restartPolicy.canRestart(restartCount)) {
+
+                try {
+                    /**
+                     * The block receives the managed attempt's structured scope, not VexAppScope.
+                     * Any nested launch is therefore a descendant of this named execution.
+                     */
+                    coroutineScope {
+                        block()
+                    }
+
                     publish(
                         mutableState = mutableState,
                         state =
                             VexCoroutineState(
                                 ref = coroutineRef,
-                                status = VexCoroutineStatus.FAILED,
+                                status = VexCoroutineStatus.COMPLETED,
+                                attempt = attempt,
+                                restartCount = restartCount,
+                            ),
+                    )
+                    return
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Throwable) {
+                    if (!restartPolicy.canRestart(restartCount)) {
+                        publish(
+                            mutableState = mutableState,
+                            state =
+                                VexCoroutineState(
+                                    ref = coroutineRef,
+                                    status = VexCoroutineStatus.FAILED,
+                                    attempt = attempt,
+                                    restartCount = restartCount,
+                                    failureClass = failure::class.simpleName,
+                                    failureMessage = failure.message,
+                                ),
+                        )
+                        return
+                    }
+
+                    restartCount += 1
+
+                    publish(
+                        mutableState = mutableState,
+                        state =
+                            VexCoroutineState(
+                                ref = coroutineRef,
+                                status = VexCoroutineStatus.RESTARTING,
                                 attempt = attempt,
                                 restartCount = restartCount,
                                 failureClass = failure::class.simpleName,
                                 failureMessage = failure.message,
                             ),
                     )
-                    return
-                }
 
-                restartCount += 1
+                    val delayMillis =
+                        (restartPolicy as VexCoroutineRestartPolicy.OnFailure)
+                            .delayMillis
 
-                publish(
-                    mutableState = mutableState,
-                    state =
-                        VexCoroutineState(
-                            ref = coroutineRef,
-                            status = VexCoroutineStatus.RESTARTING,
-                            attempt = attempt,
-                            restartCount = restartCount,
-                            failureClass = failure::class.simpleName,
-                            failureMessage = failure.message,
-                        ),
-                )
-
-                val delayMillis =
-                    (restartPolicy as VexCoroutineRestartPolicy.OnFailure)
-                        .delayMillis
-
-                if (delayMillis > 0L) {
-                    delay(delayMillis)
+                    if (delayMillis > 0L) {
+                        delay(delayMillis)
+                    }
                 }
             }
+        } catch (cancelled: CancellationException) {
+            publish(
+                mutableState = mutableState,
+                state =
+                    VexCoroutineState(
+                        ref = coroutineRef,
+                        status = VexCoroutineStatus.CANCELLED,
+                        attempt = attempt,
+                        restartCount = restartCount,
+                        failureClass = cancelled::class.simpleName,
+                        failureMessage = cancelled.message,
+                    ),
+            )
+            throw cancelled
         }
     }
 
@@ -374,21 +437,55 @@ class VexAppScope(
         mutableState.value = state
 
         synchronized(registryLock) {
-            publishLocked(state)
+            updateRegistryLocked(state)
         }
+
+        notifyStateChanged(state)
     }
 
-    private fun publishLocked(
+    private fun updateRegistryLocked(
         state: VexCoroutineState,
     ) {
         mutableExecutions.value =
             LinkedHashMap(mutableExecutions.value).apply {
                 this[state.ref] = state
             }
+    }
 
+    /**
+     * External observers never execute under registryLock.
+     */
+    private fun notifyStateChanged(
+        state: VexCoroutineState,
+    ) {
         safelyObserve {
             observer.onCoroutineStateChanged(state)
         }
+
+        logSink.log(
+            VexLogEvent(
+                sourceRef = APP_SCOPE_LOG_REF,
+                eventRef = state.status.logEventRef(),
+                originRef = VexLogRef(state.ref.value),
+                fields =
+                    buildMap {
+                        put(
+                            "attempt",
+                            state.attempt.toString(),
+                        )
+                        put(
+                            "restartCount",
+                            state.restartCount.toString(),
+                        )
+                        state.failureClass?.let { failureClass ->
+                            put(
+                                "failureClass",
+                                failureClass,
+                            )
+                        }
+                    },
+            ),
+        )
     }
 
     private fun safelyObserve(
@@ -396,6 +493,22 @@ class VexAppScope(
     ) {
         runCatching(observation)
     }
+
+    private fun VexCoroutineStatus.logEventRef(): VexLogRef =
+        when (this) {
+            VexCoroutineStatus.STARTING ->
+                VexLogRef("coroutine.starting")
+            VexCoroutineStatus.RUNNING ->
+                VexLogRef("coroutine.running")
+            VexCoroutineStatus.RESTARTING ->
+                VexLogRef("coroutine.restarting")
+            VexCoroutineStatus.COMPLETED ->
+                VexLogRef("coroutine.completed")
+            VexCoroutineStatus.CANCELLED ->
+                VexLogRef("coroutine.cancelled")
+            VexCoroutineStatus.FAILED ->
+                VexLogRef("coroutine.failed")
+        }
 
     private fun VexCoroutineRestartPolicy.canRestart(
         restartCount: Int,
@@ -411,7 +524,30 @@ class VexAppScope(
     companion object {
         const val APP_SCOPE_NAME: String =
             "vex.app"
+
+        val APP_SCOPE_LOG_REF: VexLogRef =
+            VexLogRef("execution.vex.app")
     }
+}
+
+@OptIn(ExperimentalForInheritanceCoroutinesApi::class)
+private class DefensiveExecutionRegistryFlow(
+    private val source: StateFlow<Map<VexCoroutineRef, VexCoroutineState>>,
+) : StateFlow<Map<VexCoroutineRef, VexCoroutineState>> {
+    override val replayCache: List<Map<VexCoroutineRef, VexCoroutineState>>
+        get() = listOf(value)
+
+    override val value: Map<VexCoroutineRef, VexCoroutineState>
+        get() = LinkedHashMap(source.value)
+
+    override suspend fun collect(
+        collector: FlowCollector<Map<VexCoroutineRef, VexCoroutineState>>,
+    ): Nothing =
+        source.collect { value ->
+            collector.emit(
+                LinkedHashMap(value),
+            )
+        }
 }
 
 // [VXG RealForever]

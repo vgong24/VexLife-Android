@@ -1,8 +1,14 @@
 package com.vextreme.vex.android.architecture.execution
 
+import com.vextreme.vex.android.architecture.observability.VexImmediateLogExecutor
+import com.vextreme.vex.android.architecture.observability.VexLogFilter
+import com.vextreme.vex.android.architecture.observability.VexLogger
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
@@ -12,6 +18,54 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class VexAppScopeTest {
+
+    @Test
+    fun coroutineLifecycleIsEmittedToStructuredLogger() = runBlocking {
+        val logger =
+            VexLogger(
+                executor = VexImmediateLogExecutor(),
+            )
+        val appScope =
+            VexAppScope(
+                logSink = logger,
+            )
+
+        try {
+            val handle =
+                appScope.launchCoroutine(
+                    coroutineRef = VexCoroutineRef("logging.sample"),
+                ) {}
+
+            handle.join()
+
+            val records =
+                logger.snapshot(
+                    VexLogFilter(
+                        sourcePrefix = "execution.vex.app",
+                        eventPrefix = "coroutine.",
+                    ),
+                )
+
+            assertEquals(
+                listOf(
+                    "coroutine.starting",
+                    "coroutine.running",
+                    "coroutine.completed",
+                ),
+                records.map {
+                    it.event.eventRef.value
+                },
+            )
+            assertTrue(
+                records.all {
+                    it.event.originRef?.value == "logging.sample"
+                },
+            )
+        } finally {
+            appScope.stopApplication("test complete")
+        }
+    }
+
     @Test
     fun namedCoroutineCanBeObservedAndForceStopped() = runBlocking {
         val appScope = VexAppScope()
@@ -23,7 +77,7 @@ class VexAppScopeTest {
                     coroutineRef = VexCoroutineRef("server.alpha"),
                 ) {
                     started.complete(Unit)
-                    CompletableDeferred<Unit>().await()
+                    awaitCancellation()
                 }
 
             withTimeout(2_000L) {
@@ -65,7 +119,7 @@ class VexAppScopeTest {
                     coroutineRef = VexCoroutineRef("server.healthy"),
                 ) {
                     siblingStarted.complete(Unit)
-                    CompletableDeferred<Unit>().await()
+                    awaitCancellation()
                 }
 
             val failed =
@@ -91,6 +145,47 @@ class VexAppScopeTest {
 
             sibling.forceStop("test sibling stop")
             sibling.join()
+        } finally {
+            appScope.stopApplication("test complete")
+        }
+    }
+
+    @Test
+    fun managedExecutionContainsNestedChildren() = runBlocking {
+        val appScope = VexAppScope()
+        val childStarted = CompletableDeferred<Unit>()
+        val childStopped = CompletableDeferred<Unit>()
+
+        try {
+            val handle =
+                appScope.launchCoroutine(
+                    coroutineRef = VexCoroutineRef("structured.parent"),
+                ) {
+                    launch {
+                        try {
+                            childStarted.complete(Unit)
+                            awaitCancellation()
+                        } finally {
+                            childStopped.complete(Unit)
+                        }
+                    }
+                }
+
+            withTimeout(2_000L) {
+                childStarted.await()
+            }
+
+            handle.forceStop("stop whole managed tree")
+
+            withTimeout(2_000L) {
+                handle.join()
+                childStopped.await()
+            }
+
+            assertEquals(
+                VexCoroutineStatus.CANCELLED,
+                handle.state.value.status,
+            )
         } finally {
             appScope.stopApplication("test complete")
         }
@@ -126,6 +221,41 @@ class VexAppScopeTest {
             )
             assertEquals(2, handle.state.value.attempt)
             assertEquals(1, handle.state.value.restartCount)
+        } finally {
+            appScope.stopApplication("test complete")
+        }
+    }
+
+    @Test
+    fun forceStopDuringRestartDelayBecomesCancelled() = runBlocking {
+        val appScope = VexAppScope()
+
+        try {
+            val handle =
+                appScope.launchCoroutine(
+                    coroutineRef = VexCoroutineRef("server.restart-delay"),
+                    restartPolicy =
+                        VexCoroutineRestartPolicy.OnFailure(
+                            maxRestarts = 5,
+                            delayMillis = 60_000L,
+                        ),
+                ) {
+                    error("fail into restart delay")
+                }
+
+            withTimeout(2_000L) {
+                handle.state.first { state ->
+                    state.status == VexCoroutineStatus.RESTARTING
+                }
+            }
+
+            handle.forceStop("cancel during restart delay")
+            handle.join()
+
+            assertEquals(
+                VexCoroutineStatus.CANCELLED,
+                handle.state.value.status,
+            )
         } finally {
             appScope.stopApplication("test complete")
         }
@@ -183,7 +313,7 @@ class VexAppScopeTest {
                     coroutineRef = VexCoroutineRef("listener.same"),
                 ) {
                     started.complete(Unit)
-                    CompletableDeferred<Unit>().await()
+                    awaitCancellation()
                 }
 
             withTimeout(2_000L) {
@@ -201,6 +331,58 @@ class VexAppScopeTest {
 
             first.forceStop()
             first.join()
+        } finally {
+            appScope.stopApplication("test complete")
+        }
+    }
+
+    @Test
+    fun launchAfterApplicationStopFailsClosed() = runBlocking {
+        val appScope = VexAppScope()
+
+        appScope.stopApplication("terminal test stop")
+
+        val launchAccepted =
+            runCatching {
+                appScope.launchCoroutine(
+                    coroutineRef = VexCoroutineRef("after.stop"),
+                ) {}
+            }.isSuccess
+
+        assertFalse(launchAccepted)
+    }
+
+    @Test
+    fun executionRegistryExposureCannotMutateRetainedRegistry() = runBlocking {
+        val appScope = VexAppScope()
+        val started = CompletableDeferred<Unit>()
+        val ref = VexCoroutineRef("registry.safe")
+
+        try {
+            val handle =
+                appScope.launchCoroutine(
+                    coroutineRef = ref,
+                ) {
+                    started.complete(Unit)
+                    awaitCancellation()
+                }
+
+            withTimeout(2_000L) {
+                started.await()
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            val exposed =
+                appScope.executions.value as MutableMap<VexCoroutineRef, VexCoroutineState>
+
+            exposed.clear()
+
+            assertNotNull(
+                appScope.executions.value[ref],
+            )
+
+            handle.forceStop()
+            handle.join()
         } finally {
             appScope.stopApplication("test complete")
         }

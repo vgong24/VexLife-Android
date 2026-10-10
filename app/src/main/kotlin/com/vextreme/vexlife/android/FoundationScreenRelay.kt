@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android
 
+import com.vextreme.vex.android.architecture.observability.VexLogRef
+import com.vextreme.vex.android.architecture.observability.VexLogSink
 import com.vextreme.vex.android.architecture.relay.VexRelay
 import com.vextreme.vex.android.architecture.relay.VexState
 
@@ -16,15 +18,17 @@ data class FoundationScreenVexState(
         copy()
 }
 
-/**
- * Smallest lived Relay: one state type, default replacement processing, named partial updates.
- */
-class FoundationScreenRelay :
-    VexRelay<FoundationScreenVexState>(
-        initialState = FoundationScreenVexState(),
-    ) {
+class FoundationScreenRelay(
+    logSink: VexLogSink = VexLogSink.None,
+) : VexRelay<FoundationScreenVexState>(
+    relayRef = VexLogRef("relay.foundation.screen"),
+    initialState = FoundationScreenVexState(),
+    logSink = logSink,
+) {
     fun screenEntered() {
-        update { current ->
+        update(
+            originRef = VexLogRef("android.activity.onStart"),
+        ) { current ->
             if (current.screenPresence == FoundationScreenVexState.ScreenPresence.ENTERED) {
                 current
             } else {
@@ -37,7 +41,9 @@ class FoundationScreenRelay :
     }
 
     fun screenExited() {
-        update { current ->
+        update(
+            originRef = VexLogRef("android.activity.onStop"),
+        ) { current ->
             if (current.screenPresence == FoundationScreenVexState.ScreenPresence.EXITED) {
                 current
             } else {

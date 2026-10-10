@@ -26,19 +26,35 @@ not required to recover the Android architecture or development posture.
 
 ## Current milestone
 
-`F0_STANDALONE_BUILD_FOUNDATION`
+The standalone build foundation is established enough to support architecture work.
 
-The first source milestone is deliberately small:
+Current review slice:
 
-```text
-clean clone
--> deterministic Gradle/JDK/SDK contract
--> Gradle Sync
--> assemble debug APK
--> install/run on Victor's physical Android device
--> no IDE/build residue appears as source changes
-```
+~~~text
+F1 architecture/relay
+   VexRelay + VexCompoundRelay
 
-Product features come after the build foundation is real and reproducible.
+F2 architecture/execution
+   VexAppScope
+
+F3 architecture/observability
+   VexLogger
+~~~
+
+These three foundations are being reviewed/proved as one reusable Android architecture threshold.
+
+Read:
+
+1. docs/foundation/INDEX.md
+2. architecture/relay/README.md
+3. architecture/execution/README.md
+4. architecture/observability/README.md
+5. docs/foundation/POST-F1-F3-GAPS.md
+
+The next tooling phase after an accepted F1-F3 checkpoint is code coverage. Component-first Compose
+construction (container/list/Tooltip/Snackbar/Design Lab) follows after that.
+
+The repository foundation remains explicitly incomplete; current architecture must still pass its
+focused/full Gradle proof and review before checkpoint/merge.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][FRONT-DOOR] -->

@@ -1,22 +1,38 @@
 package com.vextreme.vexlife.android
 
 import com.vextreme.vex.android.architecture.execution.VexAppScope
+import com.vextreme.vex.android.architecture.observability.VexLogger
+import com.vextreme.vex.android.architecture.observability.VexSingleThreadLogExecutor
 import org.koin.dsl.module
 
 /**
- * Android composition owns application cardinality/lifetime.
+ * Application composition for the current foundation.
  *
- * Source-of-Truth Relays that represent app-wide current truth are singles.
- * VexAppScope is also a single application execution owner.
+ * - VexLogger: one ordered application diagnostic owner.
+ * - VexAppScope: one application coroutine owner using that logger.
+ * - FoundationScreenRelay: one app-wide Source-of-Truth Relay using that logger.
  */
 val vexLifeAndroidModule =
     module {
         single {
-            VexAppScope()
+            VexLogger(
+                executor =
+                    VexSingleThreadLogExecutor(
+                        threadName = "vex.logger",
+                    ),
+            )
         }
 
         single {
-            FoundationScreenRelay()
+            VexAppScope(
+                logSink = get<VexLogger>(),
+            )
+        }
+
+        single {
+            FoundationScreenRelay(
+                logSink = get<VexLogger>(),
+            )
         }
     }
 

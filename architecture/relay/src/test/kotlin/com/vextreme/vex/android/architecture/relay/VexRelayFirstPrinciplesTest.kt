@@ -1,15 +1,22 @@
 package com.vextreme.vex.android.architecture.relay
 
+import com.vextreme.vex.android.architecture.execution.VexAppScope
+import com.vextreme.vex.android.architecture.execution.VexCoroutineRef
+import com.vextreme.vex.android.architecture.observability.VexImmediateLogExecutor
+import com.vextreme.vex.android.architecture.observability.VexLogFilter
+import com.vextreme.vex.android.architecture.observability.VexLogRef
+import com.vextreme.vex.android.architecture.observability.VexLogSink
+import com.vextreme.vex.android.architecture.observability.VexLogger
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import com.vextreme.vex.android.architecture.execution.VexAppScope
-import com.vextreme.vex.android.architecture.execution.VexCoroutineRef
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotSame
 import kotlin.test.assertTrue
 
@@ -27,10 +34,13 @@ class VexRelayFirstPrinciplesTest {
             copy()
     }
 
-    private class ScreenVexRelay :
-        VexRelay<ScreenVexState>(
-            initialState = ScreenVexState(),
-        ) {
+    private class ScreenVexRelay(
+        logSink: VexLogSink = VexLogSink.None,
+    ) : VexRelay<ScreenVexState>(
+        relayRef = VexLogRef("relay.test.screen"),
+        initialState = ScreenVexState(),
+        logSink = logSink,
+    ) {
         fun screenChanged(screen: ScreenName) {
             update { current ->
                 if (current.screen == screen) {
@@ -70,6 +80,7 @@ class VexRelayFirstPrinciplesTest {
 
     private class ItemVexRelay :
         VexRelay<ItemVexState>(
+            relayRef = VexLogRef("relay.test.items"),
             initialState = ItemVexState(),
         ) {
         override fun processState(
@@ -105,6 +116,7 @@ class VexRelayFirstPrinciplesTest {
 
     private class InteractionVexRelay :
         VexRelay<InteractionVexState>(
+            relayRef = VexLogRef("relay.test.interaction"),
             initialState = InteractionVexState(),
         ) {
         fun buttonClicked(buttonId: String) {
@@ -118,7 +130,6 @@ class VexRelayFirstPrinciplesTest {
     }
 
     private data class EventScreenInputState(
-        // Top-level null means "this incoming patch did not change this child state."
         val screen: ScreenVexState? = null,
         val items: ItemVexState? = null,
         val interaction: InteractionVexState? = null,
@@ -145,29 +156,52 @@ class VexRelayFirstPrinciplesTest {
             copy()
     }
 
-    /**
-     * One organized complex-screen family.
-     *
-     * The child Relays own their own truth/admission rules.
-     * This Compound Relay listens to their latest accepted state and reconciles one screen output.
-     */
     private class EventScreenVexCompoundRelay(
-        dependencyScope: VexAppScope,
-        screenRelay: ScreenVexRelay,
-        itemRelay: ItemVexRelay,
-        interactionRelay: InteractionVexRelay,
+        private val screenRelay: ScreenVexRelay,
+        private val itemRelay: ItemVexRelay,
+        private val interactionRelay: InteractionVexRelay,
+        logSink: VexLogSink = VexLogSink.None,
     ) : VexCompoundRelay<EventScreenInputState, EventScreenOutputState>(
+        relayRef = VexLogRef("relay.test.event-screen"),
         initialInputState = EventScreenInputState(),
         initialOutputState = EventScreenOutputState(),
+        logSink = logSink,
     ) {
+        override fun relayDependencies(): List<VexRelayDependency<EventScreenInputState>> =
+            listOf(
+                vexRelayDependency(
+                    coroutineRef = SCREEN_OBSERVER,
+                    relay = screenRelay,
+                ) { screenState ->
+                    EventScreenInputState(
+                        screen = screenState.deepCopy(),
+                    )
+                },
+                vexRelayDependency(
+                    coroutineRef = ITEM_OBSERVER,
+                    relay = itemRelay,
+                ) { itemState ->
+                    EventScreenInputState(
+                        items = itemState.deepCopy(),
+                    )
+                },
+                vexRelayDependency(
+                    coroutineRef = INTERACTION_OBSERVER,
+                    relay = interactionRelay,
+                ) { interactionState ->
+                    EventScreenInputState(
+                        interaction = interactionState.deepCopy(),
+                    )
+                },
+            )
+
         override fun processStates(
             inputState: EventScreenInputState,
             currentState: VexCompoundState<EventScreenInputState, EventScreenOutputState>,
         ): VexCompoundState<EventScreenInputState, EventScreenOutputState> {
-            // Name the current input once; do not repeat currentState.inputState.* everywhere.
-            val currentInputState = currentState.inputState
+            val currentInputState =
+                currentState.inputState
 
-            // Incoming nullable fields are partial updates. Unspecified siblings stay current.
             val screen =
                 inputState.screen
                     ?: currentInputState.screen
@@ -185,8 +219,6 @@ class VexRelayFirstPrinciplesTest {
                     interaction = interaction?.deepCopy(),
                 )
 
-            // First emissions may arrive independently. Output stays explicitly EMPTY until the
-            // screen's required Source-of-Truth child states have both been observed.
             val nextOutputState =
                 if (screen == null || items == null) {
                     EventScreenOutputState(
@@ -206,39 +238,56 @@ class VexRelayFirstPrinciplesTest {
             )
         }
 
-        init {
-            observeDependencies(
-                executionOwner = dependencyScope,
-                vexRelayDependency(
-                    coroutineRef = VexCoroutineRef("relay.event-screen.observe.screen"),
-                    relay = screenRelay,
-                ) { screenState ->
-                    EventScreenInputState(
-                        screen = screenState.deepCopy(),
-                    )
-                },
-                vexRelayDependency(
-                    coroutineRef = VexCoroutineRef("relay.event-screen.observe.items"),
-                    relay = itemRelay,
-                ) { itemState ->
-                    EventScreenInputState(
-                        items = itemState.deepCopy(),
-                    )
-                },
-                vexRelayDependency(
-                    coroutineRef = VexCoroutineRef("relay.event-screen.observe.interaction"),
-                    relay = interactionRelay,
-                ) { interactionState ->
-                    EventScreenInputState(
-                        interaction = interactionState.deepCopy(),
-                    )
-                },
-            )
+        companion object {
+            val SCREEN_OBSERVER =
+                VexCoroutineRef("relay.event-screen.observe.screen")
+            val ITEM_OBSERVER =
+                VexCoroutineRef("relay.event-screen.observe.items")
+            val INTERACTION_OBSERVER =
+                VexCoroutineRef("relay.event-screen.observe.interaction")
         }
     }
 
+
     @Test
-    fun simpleRelayCanUseDefaultProcessingAndDeepCopyContract() {
+    fun relayEmitsBoundedOwnerLogsWithoutDumpingState() {
+        val logger =
+            VexLogger(
+                executor = VexImmediateLogExecutor(),
+            )
+        val relay =
+            ScreenVexRelay(
+                logSink = logger,
+            )
+
+        relay.screenChanged(ScreenName.EVENTS)
+
+        val records =
+            logger.snapshot(
+                VexLogFilter(
+                    sourcePrefix = "relay.test.screen",
+                    eventPrefix = "relay.",
+                ),
+            )
+
+        assertEquals(
+            listOf(
+                "relay.input.received",
+                "relay.state.changed",
+            ),
+            records.map {
+                it.event.eventRef.value
+            },
+        )
+        assertTrue(
+            records.all {
+                it.event.fields.isEmpty()
+            },
+        )
+    }
+
+    @Test
+    fun simpleRelayCanUseDefaultProcessingAndTransitiveDeepCopyContract() {
         val mutableTags =
             mutableListOf("original")
 
@@ -256,6 +305,7 @@ class VexRelayFirstPrinciplesTest {
             sourceRevision = 1L,
             items = mutableItems,
         )
+
         mutableItems +=
             SomeItem(
                 itemId = "caller.mutation",
@@ -295,21 +345,62 @@ class VexRelayFirstPrinciplesTest {
     }
 
     @Test
+    fun compoundConstructionIsInertUntilExplicitActivation() = runBlocking {
+        val appScope = VexAppScope()
+        val compoundRelay =
+            EventScreenVexCompoundRelay(
+                screenRelay = ScreenVexRelay(),
+                itemRelay = ItemVexRelay(),
+                interactionRelay = InteractionVexRelay(),
+            )
+
+        try {
+            assertEquals(
+                VexCompoundActivationState.INACTIVE,
+                compoundRelay.activationState.value,
+            )
+            assertTrue(appScope.executions.value.isEmpty())
+
+            compoundRelay.activate(appScope)
+
+            assertEquals(
+                VexCompoundActivationState.ACTIVE,
+                compoundRelay.activationState.value,
+            )
+            assertEquals(
+                setOf(
+                    EventScreenVexCompoundRelay.SCREEN_OBSERVER,
+                    EventScreenVexCompoundRelay.ITEM_OBSERVER,
+                    EventScreenVexCompoundRelay.INTERACTION_OBSERVER,
+                ),
+                appScope.executions.value.keys,
+            )
+
+            compoundRelay.deactivate()
+            assertEquals(
+                VexCompoundActivationState.INACTIVE,
+                compoundRelay.activationState.value,
+            )
+        } finally {
+            appScope.stopApplication("test complete")
+        }
+    }
+
+    @Test
     fun compoundRelayMergesNullableInputPatchesAgainstCurrentInput() = runBlocking {
-        val appScope =
-            VexAppScope()
+        val appScope = VexAppScope()
         val screenRelay = ScreenVexRelay()
         val itemRelay = ItemVexRelay()
         val interactionRelay = InteractionVexRelay()
         val compoundRelay =
             EventScreenVexCompoundRelay(
-                dependencyScope = appScope,
                 screenRelay = screenRelay,
                 itemRelay = itemRelay,
                 interactionRelay = interactionRelay,
             )
 
         try {
+            compoundRelay.activate(appScope)
 
             screenRelay.screenChanged(ScreenName.EVENTS)
             itemRelay.itemsArrived(
@@ -337,6 +428,8 @@ class VexRelayFirstPrinciplesTest {
             assertEquals(OutputAvailability.READY, state.outputState.availability)
             assertEquals(2, state.outputState.itemCount)
             assertEquals("button.more", state.outputState.lastButtonId)
+
+            compoundRelay.deactivate()
         } finally {
             appScope.stopApplication("test complete")
         }
@@ -344,20 +437,19 @@ class VexRelayFirstPrinciplesTest {
 
     @Test
     fun concurrentChildRelaysDoNotOverwriteSiblingCompoundInput() = runBlocking {
-        val appScope =
-            VexAppScope()
+        val appScope = VexAppScope()
         val screenRelay = ScreenVexRelay()
         val itemRelay = ItemVexRelay()
         val interactionRelay = InteractionVexRelay()
         val compoundRelay =
             EventScreenVexCompoundRelay(
-                dependencyScope = appScope,
                 screenRelay = screenRelay,
                 itemRelay = itemRelay,
                 interactionRelay = interactionRelay,
             )
 
         try {
+            compoundRelay.activate(appScope)
 
             val executor = Executors.newFixedThreadPool(3)
             val ready = CountDownLatch(3)
@@ -420,6 +512,72 @@ class VexRelayFirstPrinciplesTest {
             )
             assertEquals(1L, state.inputState.interaction?.clickRevision)
             assertEquals(OutputAvailability.READY, state.outputState.availability)
+
+            compoundRelay.deactivate()
+        } finally {
+            appScope.stopApplication("test complete")
+        }
+    }
+
+    @Test
+    fun partialDependencyActivationRollsBackAndCanRetry() = runBlocking {
+        val appScope = VexAppScope()
+        val conflictStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val conflict =
+            appScope.launchCoroutine(
+                coroutineRef = EventScreenVexCompoundRelay.ITEM_OBSERVER,
+            ) {
+                conflictStarted.complete(Unit)
+                awaitCancellation()
+            }
+
+        val compoundRelay =
+            EventScreenVexCompoundRelay(
+                screenRelay = ScreenVexRelay(),
+                itemRelay = ItemVexRelay(),
+                interactionRelay = InteractionVexRelay(),
+            )
+
+        try {
+            withTimeout(2_000L) {
+                conflictStarted.await()
+            }
+
+            assertFailsWith<IllegalStateException> {
+                compoundRelay.activate(appScope)
+            }
+
+            assertEquals(
+                VexCompoundActivationState.INACTIVE,
+                compoundRelay.activationState.value,
+            )
+            assertEquals(
+                EventScreenInputState(),
+                compoundRelay.current.inputState,
+            )
+            assertEquals(
+                EventScreenOutputState(),
+                compoundRelay.current.outputState,
+            )
+
+            withTimeout(2_000L) {
+                appScope.executions.first { states ->
+                    states[EventScreenVexCompoundRelay.SCREEN_OBSERVER]
+                        ?.status == com.vextreme.vex.android.architecture.execution.VexCoroutineStatus.CANCELLED
+                }
+            }
+
+            conflict.forceStop("release activation conflict")
+            conflict.join()
+
+            compoundRelay.activate(appScope)
+
+            assertEquals(
+                VexCompoundActivationState.ACTIVE,
+                compoundRelay.activationState.value,
+            )
+
+            compoundRelay.deactivate()
         } finally {
             appScope.stopApplication("test complete")
         }

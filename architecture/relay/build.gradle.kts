@@ -15,6 +15,7 @@ kotlin {
 
 dependencies {
     api(project(":architecture:execution"))
+    api(project(":architecture:observability"))
     api(libs.kotlinxCoroutinesCore)
     testImplementation(kotlin("test"))
 }

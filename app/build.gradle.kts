@@ -31,6 +31,8 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":architecture:observability"))
+    implementation(project(":architecture:execution"))
     implementation(project(":architecture:relay"))
     implementation(libs.koinAndroid)
     implementation(libs.activityCompose)
