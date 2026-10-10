@@ -127,6 +127,25 @@ InteractionVexRelay ──┘
 
 and requires concurrent child updates to survive without sibling-state overwrite.
 
+Android composition now places Koin above Relay rather than inside it:
+
+```text
+Koin single / declared scope
+-> Relay owner instances
+-> Compound Relay observes child Relay currentState
+-> bounded parent currentState
+-> Compose/ViewModel observes leaf projection
+```
+
+Canonical app-wide Source-of-Truth Relays are singleton-composed by default. A narrower semantic
+owner may later use an explicit Koin scope. Factory-created Relays are not the default truth owner
+because each resolution would create an independent state universe.
+
+The Relay architecture remains Koin-free. Koin decides cardinality/lifetime; Relay owns state
+semantics. Compound dependency observation always receives an explicit owner CoroutineScope so
+collectors end with the owning application/session/feature scope instead of leaking a hidden global
+lifetime.
+
 The prior fragment-first `:sdk:state` PR remains closed/superseded.
 
 ### Next component lineage after Relay review

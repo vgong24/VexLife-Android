@@ -5,8 +5,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 
 /**
  * Relay for one organized component relationship with a separate input family and output family.
@@ -24,6 +22,7 @@ abstract class VexCompoundRelay<
 ) : VexObservableRelay<VexCompoundState<InputState, OutputState>> {
     private val lock = Any()
     private var processing = false
+    private var dependencyJobs: List<Job>? = null
 
     private val mutableCurrentState =
         MutableStateFlow(
@@ -51,6 +50,35 @@ abstract class VexCompoundRelay<
         inputState: InputState,
         currentState: VexCompoundState<InputState, OutputState>,
     ): VexCompoundState<InputState, OutputState>
+
+    /**
+     * Start this Compound Relay's child observations exactly once.
+     *
+     * The lifetime is supplied from outside (for example an application/session Koin scope).
+     * VexCompoundRelay never invents a GlobalScope and never reaches into Koin itself.
+     */
+    protected fun observeDependencies(
+        scope: CoroutineScope,
+        vararg dependencies: VexRelayDependency<InputState>,
+    ): List<Job> =
+        synchronized(lock) {
+            check(dependencyJobs == null) {
+                "VexCompoundRelay dependencies are already being observed"
+            }
+
+            dependencies
+                .map { dependency ->
+                    dependency.observe(
+                        scope = scope,
+                        sendInput = { inputState ->
+                            send(inputState)
+                        },
+                    )
+                }
+                .also { jobs ->
+                    dependencyJobs = jobs
+                }
+        }
 
     /**
      * Send a partial input family update.
@@ -95,27 +123,6 @@ abstract class VexCompoundRelay<
                 nextState.deepCopy()
             } finally {
                 processing = false
-            }
-        }
-
-    /**
-     * Make another Relay one input source of this compound Relay.
-     *
-     * The caller supplies the CoroutineScope so Relay composition never invents a hidden lifetime.
-     * StateFlow here means "latest child truth". It is not an event ledger.
-     */
-    protected fun <ChildState : VexState<ChildState>> bindRelay(
-        scope: CoroutineScope,
-        relay: VexObservableRelay<ChildState>,
-        toInputState: (ChildState) -> InputState,
-    ): Job =
-        scope.launch {
-            relay.currentState.collect { childState ->
-                send(
-                    toInputState(
-                        childState.deepCopy(),
-                    ).deepCopy(),
-                )
             }
         }
 }

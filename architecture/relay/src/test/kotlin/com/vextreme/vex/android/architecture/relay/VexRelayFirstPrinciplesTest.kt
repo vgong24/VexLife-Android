@@ -147,11 +147,15 @@ class VexRelayFirstPrinciplesTest {
      * The child Relays own their own truth/admission rules.
      * This Compound Relay listens to their latest accepted state and reconciles one screen output.
      */
-    private class EventScreenVexCompoundRelay :
-        VexCompoundRelay<EventScreenInputState, EventScreenOutputState>(
-            initialInputState = EventScreenInputState(),
-            initialOutputState = EventScreenOutputState(),
-        ) {
+    private class EventScreenVexCompoundRelay(
+        dependencyScope: CoroutineScope,
+        screenRelay: ScreenVexRelay,
+        itemRelay: ItemVexRelay,
+        interactionRelay: InteractionVexRelay,
+    ) : VexCompoundRelay<EventScreenInputState, EventScreenOutputState>(
+        initialInputState = EventScreenInputState(),
+        initialOutputState = EventScreenOutputState(),
+    ) {
         override fun processStates(
             inputState: EventScreenInputState,
             currentState: VexCompoundState<EventScreenInputState, EventScreenOutputState>,
@@ -198,38 +202,26 @@ class VexRelayFirstPrinciplesTest {
             )
         }
 
-        fun connect(
-            scope: CoroutineScope,
-            screenRelay: ScreenVexRelay,
-            itemRelay: ItemVexRelay,
-            interactionRelay: InteractionVexRelay,
-        ): List<kotlinx.coroutines.Job> =
-            listOf(
-                bindRelay(
-                    scope = scope,
-                    relay = screenRelay,
-                ) { screenState ->
+        init {
+            observeDependencies(
+                scope = dependencyScope,
+                vexRelayDependency(screenRelay) { screenState ->
                     EventScreenInputState(
                         screen = screenState.deepCopy(),
                     )
                 },
-                bindRelay(
-                    scope = scope,
-                    relay = itemRelay,
-                ) { itemState ->
+                vexRelayDependency(itemRelay) { itemState ->
                     EventScreenInputState(
                         items = itemState.deepCopy(),
                     )
                 },
-                bindRelay(
-                    scope = scope,
-                    relay = interactionRelay,
-                ) { interactionState ->
+                vexRelayDependency(interactionRelay) { interactionState ->
                     EventScreenInputState(
                         interaction = interactionState.deepCopy(),
                     )
                 },
             )
+        }
     }
 
     @Test
@@ -289,15 +281,15 @@ class VexRelayFirstPrinciplesTest {
         val screenRelay = ScreenVexRelay()
         val itemRelay = ItemVexRelay()
         val interactionRelay = InteractionVexRelay()
-        val compoundRelay = EventScreenVexCompoundRelay()
-
-        try {
-            compoundRelay.connect(
-                scope = scope,
+        val compoundRelay =
+            EventScreenVexCompoundRelay(
+                dependencyScope = scope,
                 screenRelay = screenRelay,
                 itemRelay = itemRelay,
                 interactionRelay = interactionRelay,
             )
+
+        try {
 
             screenRelay.screenChanged(ScreenName.EVENTS)
             itemRelay.itemsArrived(
@@ -339,15 +331,15 @@ class VexRelayFirstPrinciplesTest {
         val screenRelay = ScreenVexRelay()
         val itemRelay = ItemVexRelay()
         val interactionRelay = InteractionVexRelay()
-        val compoundRelay = EventScreenVexCompoundRelay()
-
-        try {
-            compoundRelay.connect(
-                scope = scope,
+        val compoundRelay =
+            EventScreenVexCompoundRelay(
+                dependencyScope = scope,
                 screenRelay = screenRelay,
                 itemRelay = itemRelay,
                 interactionRelay = interactionRelay,
             )
+
+        try {
 
             val executor = Executors.newFixedThreadPool(3)
             val ready = CountDownLatch(3)

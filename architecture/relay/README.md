@@ -462,6 +462,102 @@ The parent tells a human state of what.
 
 ---
 
+## 12. Koin composes Relay owners; it does not own Relay semantics
+
+For Android app composition, inject Relay owners themselves:
+
+~~~text
+Koin
+  ScreenVexRelay          single
+  ItemVexRelay            single
+  InteractionVexRelay     single
+  EventScreenCompoundRelay single / explicitly scoped owner
+~~~
+
+Do not inject frozen snapshots:
+
+~~~text
+WRONG:
+EventScreenCompoundRelay(
+  screenState = screenRelay.current
+)
+
+RIGHT:
+EventScreenCompoundRelay(
+  screenRelay = screenRelay,
+  itemRelay = itemRelay,
+  interactionRelay = interactionRelay,
+  dependencyScope = applicationOrSessionRelayScope,
+)
+~~~
+
+The Compound Relay observes those child owners and receives their future currentState changes.
+
+For canonical app-wide Source-of-Truth Relays, application-level singleton composition is the normal
+shape. If a truth is explicitly session/account/feature bounded, the Relay can instead be one
+instance in that declared scope.
+
+A factory is not the ordinary owner of canonical truth because requesting it again would create
+another independent Relay state universe.
+
+~~~text
+CARDINALITY + SCOPE > "make everything singleton"
+~~~
+
+Koin stays above architecture/relay. The Relay module has no Koin imports and remains reusable with
+manual construction, tests, another DI backend, or generated composition.
+
+### Observation lifetime
+
+A Compound Relay must not invent a hidden GlobalScope.
+
+Its dependency observer receives a CoroutineScope from the composition owner. The current
+VexCompoundRelay helper:
+
+~~~text
+observeDependencies(
+  ownerScope,
+  vexRelayDependency(screenRelay) { partial screen input },
+  vexRelayDependency(itemRelay) { partial item input },
+  ...
+)
+~~~
+
+starts each child collection exactly once.
+
+If the Compound Relay is application-singleton truth, give it an application-owned Relay scope.
+
+If it is session-scoped truth, give it that session's scope.
+
+When the owner scope ends, the collectors end with it. Child Relays do not hold Activity, Fragment,
+Composable, or ViewModel references.
+
+### Lazy versus eager Koin construction
+
+A Koin single may be created lazily when first requested.
+
+If a particular Compound Relay must observe app-wide dependencies before any screen asks for it,
+that definition may be deliberately eager (created at application start). Do this only for Relays
+whose semantics actually require pre-UI observation; eager construction has startup cost.
+
+Compose remains the leaf observer:
+
+~~~text
+Source-of-Truth child Relays
+        ↓
+Compound Relay
+        ↓
+currentState StateFlow
+        ↓
+ViewModel/plain holder if useful
+        ↓
+Compose collectAsState()
+~~~
+
+No layer above reaches downward to mutate another Relay's retained state directly.
+
+---
+
 ## Historical lineage
 
 The durable VexLife foundation preserved:

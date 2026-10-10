@@ -17,9 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
-    private val screenRelay = FoundationScreenRelay()
+    // Koin returns the same app-wide Source-of-Truth Relay across Activity recreation.
+    private val screenRelay: FoundationScreenRelay by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

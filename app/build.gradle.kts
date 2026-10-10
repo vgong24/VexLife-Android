@@ -32,6 +32,7 @@ kotlin {
 
 dependencies {
     implementation(project(":architecture:relay"))
+    implementation(libs.koinAndroid)
     implementation(libs.activityCompose)
     implementation(platform(libs.composeBom))
     implementation(libs.composeMaterial3)
@@ -39,4 +40,5 @@ dependencies {
     debugImplementation(libs.composeUiTooling)
 
     testImplementation(libs.junit)
+    testImplementation(libs.koinTestJunit4)
 }
