@@ -3,5 +3,5 @@
     <string name="app_name">VexLife Android</string>
     <string name="foundation_title">VexLife Android</string>
     <string name="foundation_stage">Standalone foundation</string>
-    <string name="foundation_body">Build and physical-device path ready for foundation porting.</string>
+    <string name="foundation_body">Source foundation formed; host and device proof in progress.</string>
 </resources>

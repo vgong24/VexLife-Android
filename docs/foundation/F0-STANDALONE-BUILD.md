@@ -20,7 +20,17 @@ The VexLife reference Android tree proved that the product can Sync, build, inst
 show the Design Lab on Victor's physical device. It also exposed that Java compilation could inherit
 the IDE's JDK 25 while Kotlin targeted JVM 17.
 
-F0 turns that lesson into repository-owned build intent.
+The first standalone F0 host attempt exposed a second, newer Android Studio behavior: the IDE uses
+Gradle Daemon JVM criteria and generated gradle/gradle-daemon-jvm.properties with
+toolchainVersion=25. That criteria outranks the older Gradle JDK selection, so choosing 17 in the UI
+was immediately overwritten on Sync.
+
+F0 therefore owns both layers explicitly:
+
+- Gradle daemon JVM criteria = 17
+- Java/Kotlin compile toolchain/target = 17
+
+F0 turns those lessons into repository-owned build intent.
 
 ## Toolchain
 
@@ -73,6 +83,16 @@ PR847 reference. The wrapper properties select Gradle 9.6.0 and bind the distrib
 
 This reuses a known carrier while removing the monorepo-relative build topology.
 
+## Daemon JVM criteria
+
+`gradle/gradle-daemon-jvm.properties` is intentional shared build configuration, not Gradle cache
+residue. It pins the Gradle daemon requirement to JVM 17 so Android Studio cannot silently rewrite
+the build runtime to its bundled JBR version on project Sync.
+
+This is separate from the compile toolchain. The daemon executes Gradle; the module toolchain
+executes Java/Kotlin compilation. Both are explicit because they solve different reproducibility
+problems.
+
 ## Repository-local topology
 
 The standalone repository uses normal Gradle project-relative outputs. It does **not** port:
@@ -88,6 +108,13 @@ local.properties
 
 If a later generator is justified by a real recurring Android need, add it under its own source and
 proof contract.
+
+## First source correction from host proof
+
+The first standalone build also exposed an invalid framework theme reference:
+`Theme.DeviceDefault.DayNight.NoActionBar`. F0 now owns a tiny app theme whose parent is the
+platform-provided `Theme.Material.Light.NoActionBar`. This keeps the bootstrap dependency surface
+small; product theming remains a later foundation.
 
 ## First proof sequence
 
