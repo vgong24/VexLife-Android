@@ -11,24 +11,15 @@ class FoundationContractTest {
     }
 
     @Test
-    fun sampleAppUsesAnExtendedRelayFamilyInsteadOfReplacingWholeInputState() {
+    fun screenRelayProcessesBeforeComposeEverCollectsIt() {
         val relay = FoundationScreenRelay()
 
-        assertEquals(
-            FoundationScreenRelay.ScreenPresence.EXITED,
-            relay.current.outputState.screenPresence,
-        )
-
         relay.screenEntered()
-        assertEquals(
-            FoundationScreenRelay.ScreenPresence.ENTERED,
-            relay.current.outputState.screenPresence,
-        )
 
-        relay.screenExited()
         assertEquals(
-            FoundationScreenRelay.ScreenPresence.EXITED,
-            relay.current.outputState.screenPresence,
+            FoundationScreenVexState.ScreenPresence.ENTERED,
+            relay.current.screenPresence,
         )
+        assertEquals(1L, relay.current.revision)
     }
 }

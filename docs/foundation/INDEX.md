@@ -61,7 +61,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
-| F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **SOURCE_FORMED / VICTOR REVIEW PENDING** | Give one component a small readable input -> current output relationship before adding mature runtime machinery | `:architecture:relay:test` + app screen-enter/exit device proof |
+| F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **SOURCE_REFORMED / VICTOR REVIEW PENDING** | Reconstruct simple Source-of-Truth Relay + composable Compound Relay before mature runtime machinery | `:architecture:relay:test` + app screen Relay device proof |
 | F2_RELAY_OBSERVATION_IDENTITY | Relay depth: observation/snapshot identity | HELD_UNTIL_F1_APPROVED | Add UNOBSERVED/EMPTY/PRESENT and state/instance/revision/transition identity without changing the parent mental model | prove only after F1 shape is accepted |
 | F3_RELAY_OPERATION_EFFECT | Relay depth: accepted work/effect admission | HELD_UNTIL_REAL_CONSUMER | Preserve operation != attempt != coroutine and explicit result admission when a real component needs effect work | component-driven proof |
 | F4_VIEWS_CONTAINERS | `views/container` family | DESIGN_LINEAGE_ONLY | Reuse container/anchor behavior for Tooltip/Snackbar without hiding component meaning inside generic utilities | source-place after Relay review |
@@ -75,50 +75,63 @@ Canonical source/readme:
 
 `architecture/relay/README.md`
 
-The first public shape is intentionally tiny:
+Current review shape:
 
 ```text
-named partial component changes
--> component-specific VexRelay subclass
--> one InputState family
--> processLatestState(...)
--> one OutputState family
--> VexRelayState<InputState, OutputState>
--> observer
+VexState<Self>
+  -> explicit deepCopy contract
+
+VexRelay<State>
+  -> one Source-of-Truth state
+  -> serialized send/update
+  -> overridable processState only when the state owns a special admission rule
+  -> currentState: StateFlow for latest observation
+
+VexCompoundState<InputState, OutputState>
+  -> retained resolved input family + derived output family
+
+VexCompoundRelay<InputState, OutputState>
+  -> nullable partial input patches
+  -> merge against currentInputState
+  -> processStates(...)
+  -> one next compound totality
+  -> can bind smaller VexRelays as child sources
 ```
 
-The sample app uses Activity `onStart/onStop` as the smallest real relationship:
+Small child Relays own their own freshness/admission meaning. The Compound Relay composes their
+latest accepted states instead of duplicating those rules.
+
+Top-level nullable Compound InputState fields mean "no new update for this field." If null is real
+domain meaning, model it inside the nested state rather than overloading the patch marker.
+
+The processing path is serialized directly and does not depend on Compose collection. StateFlow is
+the latest-state read projection, not an event ledger. An every-transition channel remains held
+until a concrete consumer requires declared buffering/backpressure/replay semantics.
+
+The sample app keeps the smallest real Relay:
 
 ```text
-ENTER / EXIT
--> VexRelay
--> ENTERED / EXITED
--> Compose reads current output
+Activity onStart/onStop
+-> FoundationScreenRelay
+-> FoundationScreenVexState
+-> Compose collectAsState()
 ```
 
-A component can later make its InputState relational (for example Tooltip screen + events +
-interaction + target) without changing the Relay into a giant runtime API.
+The architecture test builds upward into:
 
-The component subclass exposes meaningful send methods rather than a public replace-whole-state API.
-The base Relay serializes those partial transformations against the latest aggregate input and
-requires explicit defensive snapshot/deep-copy rules for InputState and OutputState.
+```text
+ScreenVexRelay ───────┐
+ItemVexRelay ─────────┼─> EventScreenVexCompoundRelay
+InteractionVexRelay ──┘
+```
 
-This F1 review therefore tests both:
-- human organization: one Relay family answers state-of-what;
-- mechanical safety: concurrent sibling updates cannot overwrite each other by starting from a
-  stale whole input object.
+and requires concurrent child updates to survive without sibling-state overwrite.
 
-External freshness remains component-local: serial arrival order is not automatically semantic
-truth order.
-
-The previous draft `:sdk:state` direction was explicitly superseded because it made an
-implementation fragment the top-level concept. State projection, observation identity,
-operation/effect admission, durability, and surface projection remain deeper Relay concerns to add
-only when their concrete relationship earns them.
+The prior fragment-first `:sdk:state` PR remains closed/superseded.
 
 ### Next component lineage after Relay review
 
-These are recognized design scopes, **not source-implemented modules yet**:
+Recognized design scopes, not source-implemented modules yet:
 
 ```text
 views/
@@ -130,12 +143,7 @@ views/
     base/
 ```
 
-The design lineage already supports this direction: Tooltip geometry separates semantic arbitration
-from physical placement; VexContainer/VexTransientHost/Tooltip/Snackbar were proposed as reusable
-Compose primitives; repeated-item identity remains item/occurrence/slot based rather than position
-based.
-
-Do not implement these until Victor has reviewed the Relay parent shape.
+Do not implement these until Victor approves the Relay/Compound Relay parent pattern.
 
 ## F0 — Standalone Build Foundation
 

@@ -1,54 +1,51 @@
 package com.vextreme.vexlife.android
 
-import com.vextreme.vex.android.architecture.relay.VexInputState
-import com.vextreme.vex.android.architecture.relay.VexOutputState
 import com.vextreme.vex.android.architecture.relay.VexRelay
-import com.vextreme.vex.android.architecture.relay.VexStateSnapshotter
+import com.vextreme.vex.android.architecture.relay.VexState
 
-/**
- * Smallest lived Relay family: the screen owns one input family and one output family.
- *
- * The public API speaks in screen meaning. Callers never replace the full InputState.
- */
-class FoundationScreenRelay :
-    VexRelay<FoundationScreenRelay.InputState, FoundationScreenRelay.OutputState>(
-        initialInputState = InputState(),
-        inputSnapshotter = VexStateSnapshotter { state -> state.copy() },
-        outputSnapshotter = VexStateSnapshotter { state -> state.copy() },
-    ) {
-    data class InputState(
-        val screenPresence: ScreenPresence = ScreenPresence.EXITED,
-    ) : VexInputState
-
-    data class OutputState(
-        val screenPresence: ScreenPresence,
-    ) : VexOutputState
-
+data class FoundationScreenVexState(
+    val screenPresence: ScreenPresence = ScreenPresence.EXITED,
+    val revision: Long = 0L,
+) : VexState<FoundationScreenVexState> {
     enum class ScreenPresence {
         ENTERED,
         EXITED,
     }
 
-    override fun processLatestState(
-        inputState: InputState,
-    ): OutputState =
-        OutputState(
-            screenPresence = inputState.screenPresence,
-        )
+    override fun deepCopy(): FoundationScreenVexState =
+        copy()
+}
 
+/**
+ * Smallest lived Relay: one state type, default replacement processing, named partial updates.
+ */
+class FoundationScreenRelay :
+    VexRelay<FoundationScreenVexState>(
+        initialState = FoundationScreenVexState(),
+    ) {
     fun screenEntered() {
-        send { inputState ->
-            inputState.copy(
-                screenPresence = ScreenPresence.ENTERED,
-            )
+        update { current ->
+            if (current.screenPresence == FoundationScreenVexState.ScreenPresence.ENTERED) {
+                current
+            } else {
+                current.copy(
+                    screenPresence = FoundationScreenVexState.ScreenPresence.ENTERED,
+                    revision = current.revision + 1L,
+                )
+            }
         }
     }
 
     fun screenExited() {
-        send { inputState ->
-            inputState.copy(
-                screenPresence = ScreenPresence.EXITED,
-            )
+        update { current ->
+            if (current.screenPresence == FoundationScreenVexState.ScreenPresence.EXITED) {
+                current
+            } else {
+                current.copy(
+                    screenPresence = FoundationScreenVexState.ScreenPresence.EXITED,
+                    revision = current.revision + 1L,
+                )
+            }
         }
     }
 }

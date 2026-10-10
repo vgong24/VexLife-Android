@@ -24,12 +24,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val relayState by screenRelay.state.collectAsState()
+            val screenState by screenRelay.currentState.collectAsState()
 
             VexLifeAndroidFoundation(
-                screenPresence = relayState.outputState.screenPresence,
-                inputRevision = relayState.inputRevision,
-                outputRevision = relayState.outputRevision,
+                screenPresence = screenState.screenPresence,
+                relayRevision = screenState.revision,
             )
         }
     }
@@ -47,9 +46,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun VexLifeAndroidFoundation(
-    screenPresence: FoundationScreenRelay.ScreenPresence,
-    inputRevision: Long,
-    outputRevision: Long,
+    screenPresence: FoundationScreenVexState.ScreenPresence,
+    relayRevision: Long,
 ) {
     MaterialTheme {
         Surface(
@@ -78,9 +76,8 @@ private fun VexLifeAndroidFoundation(
                 )
                 Text(
                     text = stringResource(
-                        R.string.relay_revisions,
-                        inputRevision,
-                        outputRevision,
+                        R.string.relay_revision,
+                        relayRevision,
                     ),
                 )
             }

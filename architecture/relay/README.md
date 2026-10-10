@@ -2,322 +2,481 @@
 
 [VXG RealForever]
 
-## The question comes first
+## What question does this architecture answer?
 
-> This component has several things changing around it. How do I keep those changes in one family,
-> process the latest family state safely, and expose what the component currently means?
+> A component has information changing from one or more places. How do I keep each source reliable,
+> combine only the states that belong to this component, process one current relationship, and let
+> other components observe the result?
 
-Use a VexRelay.
+The answer grows in three small pieces:
 
 ~~~text
-named component changes
-        |
-        v
-component Relay
-  InputState family
-        |
-        | processLatestState(...)
-        v
-  OutputState family
-        |
-        v
-observers
+VexState
+  a copy-safe state value
+
+VexRelay<State>
+  one Source-of-Truth state relationship
+
+VexCompoundRelay<InputState, OutputState>
+  several related Source-of-Truth states -> one component relationship
 ~~~
 
-The important boundary is not "all state in the app." It is one scoped component relationship.
+Do not start with Compound Relay when one Relay is enough.
 
-## The template pattern
+---
 
-A Relay is meant to be extended. The component owns its nested state family.
+## 1. VexState — the copy contract
 
 ~~~kotlin
-class EventTooltipRelay :
-    VexRelay<EventTooltipRelay.InputState, EventTooltipRelay.OutputState>(...) {
+interface VexState<Self : VexState<Self>> {
+    fun deepCopy(): Self
+}
+~~~
 
-    data class InputState(
-        val screen: ScreenState,
-        val events: EventState,
-        val interaction: InteractionState,
-        val target: TargetState,
-    ) : VexInputState
+Example:
 
-    data class OutputState(
-        val tooltip: TooltipOutput,
-        val snackbar: SnackbarOutput,
-    ) : VexOutputState
+~~~kotlin
+data class ItemVexState(
+    val items: List<Item>,
+) : VexState<ItemVexState> {
 
-    override fun processLatestState(
-        inputState: InputState,
-    ): OutputState {
-        // one synchronous reconciliation of this component family
-    }
+    override fun deepCopy(): ItemVexState =
+        copy(
+            items = items.map { it.copy() },
+        )
+}
+~~~
 
-    fun screenEntered() {
-        send { input ->
-            input.copy(screen = input.screen.copy(...))
-        }
-    }
+The self generic means ItemVexState.deepCopy() must return ItemVexState.
 
-    fun eventArrived(event: Event) {
-        send { input ->
-            input.copy(events = input.events.with(event))
-        }
-    }
+Only the state container needs this contract. Nested properties may be primitives, immutable data
+classes, lists, enums, or other VexStates as the component requires.
 
-    fun buttonClicked(button: UiElementRef) {
-        send { input ->
-            input.copy(interaction = input.interaction.clicked(button))
+---
+
+## 2. VexRelay — one Source of Truth
+
+Use VexRelay when one state family can own its own current truth.
+
+~~~kotlin
+class ScreenVexRelay :
+    VexRelay<ScreenVexState>(
+        initialState = ScreenVexState(),
+    ) {
+
+    fun screenChanged(screen: ScreenName) {
+        update { current ->
+            current.copy(
+                screen = screen,
+                revision = current.revision + 1,
+            )
         }
     }
 }
 ~~~
 
-Callers do not replace the whole InputState.
+The default processState simply admits the incoming state.
 
-They send the part that changed through a meaningful component method. The Relay applies that
-partial transformation to the latest aggregate InputState while it owns the serialization lock.
+A state that has its own freshness rule can override processing:
 
-That is how a screen change, event arrival, and button click can happen without overwriting sibling
-state.
+~~~kotlin
+class ItemVexRelay :
+    VexRelay<ItemVexState>(ItemVexState()) {
 
-## Level 0 — screen enter / exit
-
-The sample app starts with the smallest useful family:
-
-~~~text
-FoundationScreenRelay
-  InputState
-    screenPresence
-
-  OutputState
-    screenPresence
+    override fun processState(
+        inputState: ItemVexState,
+        currentState: ItemVexState,
+    ): ItemVexState =
+        if (inputState.sourceRevision > currentState.sourceRevision) {
+            inputState.deepCopy()
+        } else {
+            currentState.deepCopy()
+        }
+}
 ~~~
 
-Its public API is screenEntered() and screenExited(). Nothing outside the Relay constructs a
-replacement whole state.
+That keeps "is this item update stale?" inside the Item Source of Truth rather than making every
+screen that consumes items reinvent the rule.
 
-## Level 1 — several nested input states
+---
 
-A complex screen can still be one understandable family:
-
-~~~text
-EventTooltipRelay
-  InputState
-    screen
-    events
-    interaction
-    target
-
-  processLatestState
-
-  OutputState
-    tooltip
-    snackbar
-~~~
-
-This is organized complexity, not a God class, when all of those facts participate in one scoped
-screen/component relationship.
-
-If a state does not belong to that relationship, it should not be placed in that Relay.
-
-## Race condition rule 1 — mechanical concurrency
-
-Suppose these arrive at almost the same time:
+## 3. VexCompoundState — input and output stay together
 
 ~~~text
-screenEntered()
-eventArrived(...)
-buttonClicked(...)
+VexCompoundState
+  inputState
+  outputState
+  revision
 ~~~
 
-The base Relay serializes send.
+The input and output remain in one current totality.
 
-Each transformation:
+That matters because a consumer may need to inspect current input context without duplicating those
+same fields into OutputState.
 
-~~~text
-lock Relay
--> read latest aggregate InputState
--> give the transform a defensive copy
--> change only its nested piece
--> snapshot the result
--> process latest state synchronously
--> commit one new Relay state
--> unlock
-~~~
+---
 
-So three callers cannot all read the same old whole-state object and overwrite one another.
-
-The contract test runs screen/event/button changes concurrently and requires all three results to
-survive.
-
-## Race condition rule 2 — semantic ordering
-
-Serialization answers "which update entered this Relay first?"
-
-It does not answer "which external fact is semantically newer?"
+## 4. VexCompoundRelay — combine only the family that belongs together
 
 Example:
 
 ~~~text
-event source revision 20 arrives
-event source revision 10 arrives later
+EventScreenVexCompoundRelay
+
+InputState
+  screen?
+  items?
+  interaction?
+
+OutputState
+  availability
+  itemCount
+  lastButtonId
 ~~~
 
-The Event Tooltip nested EventState owns that source-ordering rule and rejects revision 10.
-
-Another component may use a timestamp, operation identity, generation, or no ordering at all.
+The nullable top-level InputState fields are partial updates:
 
 ~~~text
-MECHANICAL_SERIALIZATION != SEMANTIC_FRESHNESS
+screen = null
+means:
+"this incoming patch says nothing new about screen"
+
+screen = ScreenVexState(...)
+means:
+"screen changed; reconcile with this state"
 ~~~
 
-## Repeated identical actions
-
-The same button can be clicked twice. If both clicks matter, the component interaction state must
-make that distinction visible, for example:
+Important rule:
 
 ~~~text
-buttonId = same
-clickRevision = 1 -> 2
+TOP_LEVEL_NULL_IN_COMPOUND_INPUT = NO_UPDATE
 ~~~
 
-The Relay does not guess whether equal-looking values mean "no event."
+If null itself has domain meaning, put that meaning inside the nested state instead of using the
+top-level null marker for both purposes.
+
+The processing shape is intentionally repetitive and readable:
+
+~~~kotlin
+override fun processStates(
+    inputState: EventScreenInputState,
+    currentState: VexCompoundState<
+        EventScreenInputState,
+        EventScreenOutputState,
+    >,
+): VexCompoundState<EventScreenInputState, EventScreenOutputState> {
+
+    val currentInputState = currentState.inputState
+
+    val screen =
+        inputState.screen
+            ?: currentInputState.screen
+
+    val items =
+        inputState.items
+            ?: currentInputState.items
+
+    val interaction =
+        inputState.interaction
+            ?: currentInputState.interaction
+
+    val nextInputState =
+        EventScreenInputState(
+            screen = screen,
+            items = items,
+            interaction = interaction,
+        )
+
+    val nextOutputState =
+        if (screen == null || items == null) {
+            EventScreenOutputState.empty()
+        } else {
+            EventScreenOutputState(
+                availability = READY,
+                itemCount = items.items.size,
+                lastButtonId = interaction?.lastButtonId,
+            )
+        }
+
+    return currentState.copy(
+        inputState = nextInputState,
+        outputState = nextOutputState,
+    )
+}
+~~~
+
+This is the pattern Victor was recalling:
+
+~~~text
+incoming partial InputState
++ currentInputState
+-> resolve variables once
+-> process logic
+-> form OutputState
+-> return next CompoundState
+~~~
+
+It avoids repeated currentState.inputState.someNestedField chains throughout the business logic.
+
+---
+
+## 5. A Relay can be an input to another Relay
+
+A Compound Relay can listen to smaller Source-of-Truth Relays:
+
+~~~text
+ScreenVexRelay ───────┐
+ItemVexRelay ─────────┼─> EventScreenVexCompoundRelay
+InteractionVexRelay ──┘
+~~~
+
+The base provides bindRelay(...).
+
+The component maps each child state into one nullable input patch:
+
+~~~kotlin
+bindRelay(scope, screenRelay) { screenState ->
+    EventScreenInputState(
+        screen = screenState,
+    )
+}
+
+bindRelay(scope, itemRelay) { itemState ->
+    EventScreenInputState(
+        items = itemState,
+    )
+}
+~~~
+
+This is the compositional foundation:
+
+~~~text
+small Relay
+-> can stand alone
+
+small Relay output
+-> can become Compound Relay input
+
+Compound Relay output
+-> can later become another bounded parent's input
+~~~
+
+Do not duplicate the child's freshness/admission logic in the parent.
+
+---
+
+## 6. Race conditions
+
+### Mechanical concurrency
+
+Screen, item, and interaction updates may arrive concurrently.
+
+Each Relay serializes its own processing.
+
+The Compound Relay also serializes incoming child patches.
+
+Therefore:
+
+~~~text
+screen patch
+items patch
+button patch
+~~~
+
+cannot each start from one stale aggregate state and overwrite the others.
+
+Each Compound processing pass receives the latest retained CompoundState and merges only the fields
+supplied by that patch.
+
+### Semantic freshness
+
+Serialization does not decide whether an external fact is semantically newer.
+
+That belongs to the Source-of-Truth child Relay.
+
+Example:
+
+~~~text
+ItemVexRelay current sourceRevision = 20
+incoming sourceRevision = 10
+
+-> ItemVexRelay rejects it
+-> Compound Relay never needs to rediscover that rule
+~~~
 
 This preserves:
 
 ~~~text
-SAME_VALUE != SAME_TRANSITION
+ARRIVAL_ORDER != SEMANTIC_ORDER
+~~~
+
+---
+
+## 7. Deep-copy boundary
+
+Every VexState implements deepCopy().
+
+The Relay copies before retention and before exposure.
+
+That means:
+
+~~~text
+caller mutable object
+!= Relay retained state
+
+consumer exposed state
+!= Relay retained state
+~~~
+
+Prefer immutable Kotlin state whenever practical. deepCopy remains the explicit safety boundary for
+nested mutable ownership such as lists containing mutable objects.
+
+---
+
+## 8. Processing is not activated by Compose
+
+Compose may observe:
+
+~~~kotlin
+val screenState by
+    screenRelay.currentState.collectAsState()
+~~~
+
+But collectAsState() is an observer, not the semantic engine.
+
+~~~text
+send/update/process
+  happens at the Relay
+
+StateFlow
+  projects latest current state
+
+collectAsState()
+  observes latest current state for Compose
+~~~
+
+This is intentional.
+
+A Source-of-Truth Relay must not stop processing merely because a screen is not currently collecting
+it.
+
+For Compound Relay-to-Relay composition, bindRelay() collects a child StateFlow using an explicitly
+provided CoroutineScope. The owner of that scope owns the binding lifetime; Relay does not invent a
+hidden global scope.
+
+Koin/Hilt/manual composition may later supply those Relay instances and scopes. The DI framework
+does not own their semantics.
+
+---
+
+## 9. Why there is not a SharedFlow event buffer in the base yet
+
+Victor remembers an earlier design using a SharedFlow/replay/buffer path so fast changes would not
+disappear.
+
+The durable source recovered for this rebuild proves the required intention, but not that exact
+Kotlin buffering implementation.
+
+This reconstruction therefore separates two responsibilities:
+
+~~~text
+Relay processing path
+  serialized directly
+  every send/update is processed before it returns
+
+currentState: StateFlow
+  current-state projection
+  a slow observer may see latest state rather than every intermediate state
+~~~
+
+That is safe for Source-of-Truth current state and preserves:
+
+~~~text
 STATEFLOW != EVENT_LEDGER
 ~~~
 
-without requiring a full event ledger in the base Relay.
+If a future component requires every transition to be delivered to another consumer, that should
+earn an explicit transition/intention channel with declared buffering/backpressure/replay semantics.
+Do not silently turn StateFlow into that channel.
 
-## Defensive snapshots / deep copy
+---
 
-The original State Relay protected against mutable ownership sharing. This Relay keeps that
-contract.
+## 10. First-emission / EMPTY behavior
 
-Every Relay requires an InputState snapshotter and OutputState snapshotter. The component owns those
-copy rules because only the component knows its nested values.
-
-The base Relay copies:
-
-- initial input immediately;
-- current input before a send transform receives it;
-- transformed input before retention;
-- input again before processLatestState;
-- output before retention;
-- input and output on every exposed current / StateFlow read.
-
-Prefer immutable component state anyway. The snapshot boundary prevents accidental mutable
-ownership from silently crossing the Relay boundary.
-
-## Input revision versus output revision
-
-VexRelayState exposes inputRevision and outputRevision.
+Compound child states may arrive independently.
 
 Example:
 
 ~~~text
-Tooltip screen = EXITED
-targetAvailable changes false -> true
-
-inputRevision  0 -> 1
-outputRevision 0 -> 0
-visible        false
+screen observed
+items not observed yet
 ~~~
 
-A real input relationship changed, but reconciled output meaning did not.
+The Compound Relay can retain the known screen input while OutputState remains EMPTY.
 
-Later:
+When items arrive:
 
 ~~~text
-screen EXITED -> ENTERED
-
-inputRevision  1 -> 2
-outputRevision 0 -> 1
-visible        false -> true
+screen current
++ items current
+-> process latest coherent component input
+-> READY output
 ~~~
 
-This is the simple first step toward the deeper historical distinction between received input,
-coherent state, and emitted semantic output.
-
-## processLatestState is intentionally synchronous
-
-The subclass implements processLatestState(inputState).
-
-It answers:
-
-> Given this component's latest admitted input family, what is its current output family?
-
-It must not launch network work, retry, perform long-running repository effects, or recursively send
-another Relay input.
-
-Those deeper behaviors can later surround Relay through the accepted operation/effect architecture.
-
-## State family, not state junk drawer
-
-Many component folders may contain InputState, OutputState, or nested state types.
-
-That is good. The parent tells you state of what.
+Later Relay depth can restore the full historical observation vocabulary:
 
 ~~~text
-architecture/relay
-views/container/tooltip
-views/container/snackbar
-views/list
-conversation
-media
+UNOBSERVED
+EMPTY
+PRESENT
+HELD
+UNAVAILABLE
 ~~~
 
-Do not centralize every state type into one global state directory merely because they all contain
-the word "state."
+without changing the simple parent pattern.
+
+---
+
+## 11. Component-first organization
+
+Do not create one global state directory.
+
+A future repository can look like:
+
+~~~text
+architecture/
+  relay/
+
+views/
+  container/
+    base/
+    tooltip/
+    snackbar/
+  list/
+    base/
+~~~
+
+Each component may contain its own Relay/state types.
+
+The parent tells a human state of what.
+
+---
 
 ## Historical lineage
 
-This restores the shape preserved by the original VexLife State Relay:
+The durable VexLife foundation preserved:
 
 ~~~text
 StateCell
 -> VexCompoundState<InputState, OutputState>
--> latest coherent reconciliation
--> output
--> Android projection
+-> serialized latest-coherent reconciliation
+-> Android StateFlow projection
 ~~~
 
-The later Android Architecture Studio correctly expanded this into operation identity, effects,
-result admission, durable re-entry, scoped runtimes, and bounded projections.
+and later expanded Relay/runtime ownership into operations, effects, durable re-entry, and bounded
+presentation projections.
 
-The prior Android implementation preserved many of those rules, but the parent idea became hard to
-see because the pieces were spread across runtime/admission/executor/projection types.
-
-This repository rebuilds from the readable parent outward.
-
-## Not in the base Relay yet
-
-- observation enum / unobserved-empty-held-unavailable;
-- stateRef / instanceRef / transitionRef;
-- multiple independently versioned producer snapshots;
-- operation / attempt / result contracts;
-- effect execution;
-- retry / durability;
-- WorkManager re-entry;
-- ViewModel policy;
-- Tooltip placement;
-- Snackbar arbitration.
-
-Those are real historical concerns. Add them beneath Relay or within a component when the next
-concrete relationship needs them.
-
-## Naming collision
-
-This Android architecture VexRelay is unrelated to the Vextreme-SDK repository-task protocol that
-is also named VexRelay.
-
-Android package:
-
-~~~text
-com.vextreme.vex.android.architecture.relay
-~~~
+This repository is rebuilding that architecture from the smallest reusable pattern outward rather
+than starting from the mature runtime's implementation fragments.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][RELAY] -->
