@@ -1,7 +1,7 @@
 package com.vextreme.vex.android.architecture.relay
 
-import com.vextreme.vex.android.architecture.execution.VexExecutionHandle
-import com.vextreme.vex.android.architecture.execution.VexExecutionScope
+import com.vextreme.vex.android.architecture.execution.VexCoroutineHandle
+import com.vextreme.vex.android.architecture.execution.VexExecutionOwner
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,13 +39,14 @@ abstract class VexCompoundRelay<
     /**
      * Start child Relay observation exactly once.
      *
-     * VexCompoundRelay does not retain anonymous Job objects. Each collector is a named execution
-     * owned and monitored by VexExecutionScope.
+     * VexCompoundRelay does not retain anonymous Job objects. Each collector is a named coroutine
+     * owned and monitored by the provided VexExecutionOwner (normally VexAppScope for app-wide
+     * Source-of-Truth composition).
      */
     protected fun observeDependencies(
-        executionScope: VexExecutionScope,
+        executionOwner: VexExecutionOwner,
         vararg dependencies: VexRelayDependency<InputState>,
-    ): List<VexExecutionHandle> =
+    ): List<VexCoroutineHandle> =
         synchronized(lock) {
             check(!dependenciesObserved) {
                 "VexCompoundRelay dependencies are already being observed"
@@ -54,7 +55,7 @@ abstract class VexCompoundRelay<
 
             dependencies.map { dependency ->
                 dependency.observe(
-                    executionScope = executionScope,
+                    executionOwner = executionOwner,
                     sendInput = { inputState ->
                         send(inputState)
                     },

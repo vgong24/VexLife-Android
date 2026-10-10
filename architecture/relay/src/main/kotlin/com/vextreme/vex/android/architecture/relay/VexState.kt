@@ -5,17 +5,22 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * A Relay-owned state value that knows how to detach itself from mutable caller/consumer ownership.
+ * Explicit transitive copy contract.
  *
- * The self type keeps deepCopy type-safe:
+ * Kotlin data-class copy() is shallow. If an object contains mutable nested ownership, its
+ * deepCopy() must recursively detach that ownership instead of assuming child copy() is sufficient.
  *
- * data class ItemVexState(...) : VexState<ItemVexState> {
- *     override fun deepCopy(): ItemVexState = ...
- * }
+ * Not every deep-copyable value is independently observable state, so this contract is separate
+ * from VexState.
  */
-interface VexState<Self : VexState<Self>> {
+interface VexDeepCopyable<Self : VexDeepCopyable<Self>> {
     fun deepCopy(): Self
 }
+
+/**
+ * A Relay-owned state value that knows how to detach itself from mutable caller/consumer ownership.
+ */
+interface VexState<Self : VexState<Self>> : VexDeepCopyable<Self>
 
 /**
  * Input family for a compound Relay.

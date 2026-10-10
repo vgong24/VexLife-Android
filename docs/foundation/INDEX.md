@@ -60,15 +60,16 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
-| F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
-| F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **SOURCE_REFORMED / VICTOR REVIEW PENDING** | Reconstruct simple Source-of-Truth Relay + composable Compound Relay before mature runtime machinery | `:architecture:relay:test` + app screen Relay device proof |
-| F2_EXECUTION_OWNERSHIP | `architecture/execution` | **SOURCE_FORMED / VICTOR REVIEW PENDING** | Own named asynchronous work, cancellation, failure visibility, supervision and explicit bounded restart outside Relay | `:architecture:execution:test` + Relay dependency-observation proof |
-| F3_RELAY_OBSERVATION_IDENTITY | Relay depth: observation/snapshot identity | HELD_UNTIL_F1_APPROVED | Add UNOBSERVED/EMPTY/PRESENT and state/instance/revision/transition identity without changing the parent mental model | prove only after F1 shape is accepted |
-| F4_RELAY_OPERATION_EFFECT | Relay depth: accepted work/effect admission | HELD_UNTIL_REAL_CONSUMER | Preserve operation != attempt != coroutine and explicit result admission when a real component needs effect work | component-driven proof |
-| F5_VIEWS_CONTAINERS | `views/container` family | DESIGN_LINEAGE_ONLY | Reuse container/anchor behavior for Tooltip/Snackbar without hiding component meaning inside generic utilities | source-place after Relay/execution review |
-| F5_DESIGN_LAB | debug/developer component gallery | REFERENCE_PROVEN | Provide a native place to exercise building blocks and inspect bounded local results | port only after F0-F4 provide its dependencies |
-| F6_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
-| F7_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+| F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without monorepo or IDE-local state | standalone test proof + later foundation extraction |
+| F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **SOURCE_REFORMED / VICTOR REVIEW PENDING** | Reconstruct Source-of-Truth Relay + composable Compound Relay from the readable parent pattern | `:architecture:relay:test` + app screen Relay device proof |
+| F2_VEX_APP_SCOPE | `architecture/execution` / `VexAppScope` | **SOURCE_REFORMED / VICTOR REVIEW PENDING** | Own app-lifetime named coroutines, parent supervision, cancellation, failure visibility and opt-in restart outside Relay | `:architecture:execution:test` + Relay dependency-observer proof |
+| F3_STARTUP_READINESS | startup/readiness sequencing | **DESIGN CAPTURED / NOT IMPLEMENTED** | Prevent DI-construction from being mistaken for asynchronous dependency readiness | first real async SDK/service bootstrap consumer |
+| F4_RELAY_OBSERVATION_IDENTITY | Relay depth: observation/snapshot identity | HELD_UNTIL_F1_APPROVED | Add UNOBSERVED/EMPTY/PRESENT and state/instance/revision/transition identity without changing the parent mental model | prove after F1 shape is accepted |
+| F5_RELAY_OPERATION_EFFECT | Relay depth: accepted work/effect admission | HELD_UNTIL_REAL_CONSUMER | Preserve operation != attempt != coroutine and explicit result admission when a real component needs effect work | component-driven proof |
+| F6_VIEWS_CONTAINERS | `views/container` family | DESIGN_LINEAGE_ONLY | Reuse container/anchor behavior for Tooltip/Snackbar without hiding component meaning inside generic utilities | source-place after Relay/AppScope review |
+| F7_DESIGN_LAB | debug/developer component gallery | REFERENCE_PROVEN | Exercise named foundations/components visually and inspect bounded receipts | port after foundation shapes stabilize |
+| F8_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit transport, identity, permission and failure contracts | not part of bootstrap |
+| F9_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
 
 ## F1 — Relay from first principles
 
@@ -79,8 +80,12 @@ Canonical source/readme:
 Current review shape:
 
 ```text
+VexDeepCopyable<Self>
+  -> explicit transitive copy contract for nested mutable ownership
+
 VexState<Self>
-  -> explicit deepCopy contract
+  -> independently Relay-owned state
+  -> extends VexDeepCopyable<Self>
 
 VexRelay<State>
   -> one Source-of-Truth state
@@ -143,9 +148,11 @@ owner may later use an explicit Koin scope. Factory-created Relays are not the d
 because each resolution would create an independent state universe.
 
 The Relay architecture remains Koin-free. Koin decides cardinality/lifetime; Relay owns state
-semantics. Compound dependency observation always receives an explicit owner CoroutineScope so
-collectors end with the owning application/session/feature scope instead of leaking a hidden global
-lifetime.
+semantics. Compound dependency observation receives a VexExecutionOwner. The current app-wide
+implementation is VexAppScope, which owns the named coroutine collectors and their lifetime.
+
+Deep-copy safety is transitive: Kotlin data-class copy() is shallow. A nested value that owns mutable
+children must recursively detach them (for example through VexDeepCopyable) or be truly immutable.
 
 The prior fragment-first `:sdk:state` PR remains closed/superseded.
 
@@ -165,7 +172,7 @@ views/
 
 Do not implement these until Victor approves the Relay/Compound Relay parent pattern.
 
-## F2 — Execution ownership
+## F2 — VexAppScope / execution ownership
 
 Canonical source/readme:
 
@@ -176,29 +183,36 @@ Question:
 > I started asynchronous work. What is it called, who owns it, how do I cancel it, how do I know
 > it failed, and when may it restart?
 
-First slice:
+Current first-principles shape:
 
 ```text
-VexExecutionScope
-  -> named VexExecutionHandle
-  -> observable execution registry
-  -> SupervisorJob sibling isolation
-  -> cancellation
-  -> failure state
-  -> opt-in bounded restart
+Koin single
+-> VexAppScope
+     parentJob = SupervisorJob()
+     application coroutineContext
+     LinkedHashMap<VexCoroutineRef, Job>
+     observable coroutine state registry
+
+launchCoroutine(stable ref, restartPolicy = Never)
+-> one managed child Job
+-> RUNNING / RESTARTING / COMPLETED / CANCELLED / FAILED
+
+forceStop(ref)
+-> cancellation
+-> CANCELLED
+-> no restart
 ```
 
-This replaces anonymous `dependencyJobs` inside Compound Relay.
+Stable coroutine refs are explicit authored identity rather than Kotlin class/lambda names, preserving
+meaning across obfuscation/refactor.
 
-Relay dependency collectors now become named executions such as:
+VexAppScopeObserver is the narrow future VexLogger/BulkDataLogging adapter seam. VexAppScope is not
+the logging/storage owner.
 
-```text
-relay.event-screen.observe.screen
-relay.event-screen.observe.items
-relay.event-screen.observe.interaction
-```
+Compound Relay dependency collectors now run as named VexAppScope executions instead of anonymous
+Job handles.
 
-Permanent boundary preserved from the accepted Android architecture:
+Permanent boundaries:
 
 ```text
 COROUTINE != OPERATION
@@ -207,8 +221,37 @@ HAS_A_COROUTINE_SCOPE != OWNS_THE_SEMANTIC_OPERATION
 RESTART_COROUTINE != RETRY_SEMANTIC_OPERATION
 ```
 
-Koin may retain the application `VexExecutionScope` as a `single`; execution semantics remain
-framework-neutral.
+## F3 — Startup/readiness sequencing (design captured)
+
+Victor recovered an important prior SDK failure mode:
+
+```text
+dependency exists in Koin
+!= asynchronous dependency initialized
+!= dependency READY
+```
+
+A constructor-injected object can still be null/unusable internally while its boot coroutine is
+running.
+
+Do not hide this inside VexAppScope or Koin.
+
+Future first real async SDK/service consumer should earn a small startup/readiness architecture that
+can explicitly sequence:
+
+```text
+construct
+-> start named initialization
+-> await declared readiness
+-> READY | FAILED | HELD
+-> start dependent execution
+```
+
+Current law:
+
+```text
+KOIN_RESOLVED != INITIALIZED != READY
+```
 
 ## F0 — Standalone Build Foundation
 

@@ -36,21 +36,49 @@ interface VexState<Self : VexState<Self>> {
 Example:
 
 ~~~kotlin
+data class Item(
+    val id: String,
+    val tags: MutableList<String>,
+) : VexDeepCopyable<Item> {
+
+    override fun deepCopy(): Item =
+        copy(
+            tags = tags.toMutableList(),
+        )
+}
+
 data class ItemVexState(
     val items: List<Item>,
 ) : VexState<ItemVexState> {
 
     override fun deepCopy(): ItemVexState =
         copy(
-            items = items.map { it.copy() },
+            items = items.map { it.deepCopy() },
         )
 }
 ~~~
 
 The self generic means ItemVexState.deepCopy() must return ItemVexState.
 
-Only the state container needs this contract. Nested properties may be primitives, immutable data
-classes, lists, enums, or other VexStates as the component requires.
+Important:
+
+~~~text
+data class copy()
+!= deep copy
+~~~
+
+A copied parent can still share a mutable child.
+
+VexDeepCopyable exists separately from VexState so a nested value can own recursive copy behavior
+without pretending it is independently observable state.
+
+The copy contract is transitive: every mutable ownership boundary reachable from a VexState must be
+recursively detached or proven immutable. If Item later contains another mutable child, Item.deepCopy
+must copy that child too.
+
+Prefer recursively immutable values whenever practical. Kotlin cannot generally prove deep
+immutability for arbitrary object graphs, so this remains an explicit source/test contract rather
+than a magical reflection/serialization copy.
 
 ---
 
@@ -514,7 +542,7 @@ A Compound Relay must not invent or own anonymous coroutine Jobs.
 Dependency collectors are named executions owned by architecture/execution:
 
 ~~~text
-VexExecutionScope("vexlife.application")
+VexAppScope
 
   relay.event-screen.observe.screen
   relay.event-screen.observe.items
@@ -525,9 +553,9 @@ The current helper:
 
 ~~~text
 observeDependencies(
-  executionScope,
+  executionOwner,
   vexRelayDependency(
-    executionName = ...,
+    coroutineRef = ...,
     relay = screenRelay,
   ) { partial screen input },
   ...

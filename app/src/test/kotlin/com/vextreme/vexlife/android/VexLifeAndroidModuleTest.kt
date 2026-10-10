@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android
 
-import com.vextreme.vex.android.architecture.execution.VexExecutionScope
+import com.vextreme.vex.android.architecture.execution.VexAppScope
 import org.junit.After
 import org.junit.Assert.assertSame
 import org.junit.Before
@@ -12,14 +12,14 @@ import org.koin.test.get
 
 class VexLifeAndroidModuleTest : KoinTest {
     @Before
-    fun startRelayComposition() {
+    fun startComposition() {
         startKoin {
             modules(vexLifeAndroidModule)
         }
     }
 
     @After
-    fun stopRelayComposition() {
+    fun stopComposition() {
         stopKoin()
     }
 
@@ -38,9 +38,9 @@ class VexLifeAndroidModuleTest : KoinTest {
     }
 
     @Test
-    fun applicationExecutionScopeIsOneCompositionOwner() {
-        val first = get<VexExecutionScope>()
-        val second = get<VexExecutionScope>()
+    fun vexAppScopeIsOneApplicationExecutionOwner() {
+        val first = get<VexAppScope>()
+        val second = get<VexAppScope>()
 
         assertSame(first, second)
     }
