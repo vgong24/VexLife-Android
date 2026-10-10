@@ -11,22 +11,46 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
+    // Koin returns the same app-wide Source-of-Truth Relay across Activity recreation.
+    private val screenRelay: FoundationScreenRelay by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            VexLifeAndroidFoundation()
+            val screenState by screenRelay.currentState.collectAsState()
+
+            VexLifeAndroidFoundation(
+                screenPresence = screenState.screenPresence,
+                relayRevision = screenState.revision,
+            )
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        screenRelay.screenEntered()
+    }
+
+    override fun onStop() {
+        screenRelay.screenExited()
+        super.onStop()
     }
 }
 
 @Composable
-private fun VexLifeAndroidFoundation() {
+private fun VexLifeAndroidFoundation(
+    screenPresence: FoundationScreenVexState.ScreenPresence,
+    relayRevision: Long,
+) {
     MaterialTheme {
         Surface(
             modifier = Modifier
@@ -46,6 +70,18 @@ private fun VexLifeAndroidFoundation() {
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(text = stringResource(R.string.foundation_body))
+                Text(
+                    text = stringResource(
+                        R.string.relay_screen_presence,
+                        screenPresence.name,
+                    ),
+                )
+                Text(
+                    text = stringResource(
+                        R.string.relay_revision,
+                        relayRevision,
+                    ),
+                )
             }
         }
     }

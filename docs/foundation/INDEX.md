@@ -60,14 +60,216 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
-| F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
-| F1_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
-| F2_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
-| F3_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
-| F4_LOCALIZATION_PRESENTATION | localization IDs + native presentation primitives | PORT_CANDIDATE | Keep visible language and component identity source-addressable | resource/localization + Compose tests |
-| F5_DESIGN_LAB | debug/developer component gallery | REFERENCE_PROVEN | Provide a native place to exercise building blocks and inspect bounded local results | port only after F0-F4 provide its dependencies |
-| F6_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
-| F7_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+| F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Reproducible standalone Android build/device base | architecture regression + remaining F0 unit proof |
+| F1_RELAY_FIRST_PRINCIPLES | `architecture/relay` | **REVIEWER SOURCE PASS / EXECUTION PROOF PENDING** | Source-of-Truth Relay + inspectable acyclic Compound topology + transactional recursive lifetime | `:architecture:relay:test` + exact-head build/device proof |
+| F2_VEX_APP_SCOPE | `architecture/execution` | **REVIEWER SOURCE PASS / EXECUTION PROOF PENDING** | Structured named coroutine ownership, bounded ref registry, supervision, cancellation and opt-in restart | `:architecture:execution:test` + exact-head build/device proof |
+| F3_VEX_LOGGER | `architecture/observability` | **REVIEWER SOURCE PASS / EXECUTION PROOF PENDING** | Bounded ordered architecture diagnostics without turning observability into correctness | `:architecture:observability:test` + cross-foundation exact-head proof |
+| F4_CODE_COVERAGE | test/coverage foundation | **NEXT AFTER F1-F3 CHECKPOINT** | Make untested architecture branches perceivable before broad Compose construction | select current compatible tooling + repeatable reports |
+| F5_STARTUP_READINESS | startup/readiness sequencing | **HELD_FOR_REAL_ASYNC_CONSUMER** | Keep DI construction distinct from initialization/readiness/accepting work | first real SDK/service bootstrap consumer |
+| F6_RELAY_OBSERVATION_IDENTITY | Relay depth | **HELD_FOR_EXTERNAL_TRUTH_CONSUMER** | Distinguish UNOBSERVED/EMPTY/PRESENT/HELD/UNAVAILABLE | Home/network/database/sensor-backed truth |
+| F7_DURABLE_OPERATION_REENTRY | operation/effect/recovery depth | **HELD_FOR_REAL_EFFECT_CONSUMER** | Preserve operation != attempt != coroutine across process/lifetime loss | real durable effect/re-entry consumer |
+| F8_VIEWS_CONTAINERS | `views/container`, `views/list` | **NEXT PRODUCT PHASE AFTER COVERAGE** | Recursive Compose containers, Tooltip/Snackbar anchoring and reusable screen cells | base container + Tooltip Design Lab proof |
+| F9_DESIGN_LAB | executable architecture/component gallery | REFERENCE_PROVEN | Visual proof/examples for reusable foundations and views | rebuild from accepted standalone foundations |
+| F10_HOME_TRANSPORT | real Home/network/session integration | HELD | Explicit transport/identity/permission/failure contracts | later |
+| F11_MODEL_COMPANION | model/AI companion integration | HELD | Separate model/runtime ownership and real integration contracts | later |
+
+## F1 — Relay from first principles
+
+Canonical source/readme:
+
+`architecture/relay/README.md`
+
+Current review shape:
+
+```text
+VexDeepCopyable<Self>
+  -> explicit transitive copy contract for nested mutable ownership
+
+VexState<Self>
+  -> independently Relay-owned state
+  -> extends VexDeepCopyable<Self>
+
+VexRelay<State>
+  -> one VexRelayRef Source-of-Truth owner
+  -> serialized send/update
+  -> explicit semantic equality compatible with StateFlow conflation
+  -> prepare-then-commit defensive publication
+  -> overridable processState only for bounded semantic admission/derivation
+  -> currentState: StateFlow for latest observation
+
+VexCompoundState<InputState, OutputState>
+  -> retained resolved input family + derived output family
+
+VexCompoundRelay<InputState, OutputState>
+  -> stable declared child-Relay topology
+  -> nullable partial input patches
+  -> merge against currentInputState
+  -> processStates(...) as bounded derivation only
+  -> one next compound totality
+  -> preflight cycle / Relay-ref / observer-ref identity
+  -> Compound-child leases enforce leaf-before-parent activation
+     and parent-before-child deactivation
+```
+
+Small child Relays own their own freshness/admission meaning. The Compound Relay composes their
+latest accepted states instead of duplicating those rules.
+
+Top-level nullable Compound InputState fields mean "no new update for this field." If null is real
+domain meaning, model it inside the nested state rather than overloading the patch marker.
+
+The processing path is serialized directly and does not depend on Compose collection. StateFlow is
+the latest-state read projection, not an event ledger. An every-transition channel remains held
+until a concrete consumer requires declared buffering/backpressure/replay semantics.
+
+The sample app keeps the smallest real Relay:
+
+```text
+Activity onStart/onStop
+-> FoundationScreenRelay
+-> FoundationScreenVexState
+-> Compose collectAsState()
+```
+
+The architecture test builds upward into:
+
+```text
+ScreenVexRelay ───────┐
+ItemVexRelay ─────────┼─> EventScreenVexCompoundRelay
+InteractionVexRelay ──┘
+```
+
+and requires concurrent child updates to survive without sibling-state overwrite.
+
+Android composition now places Koin above Relay rather than inside it:
+
+```text
+Koin single / declared scope
+-> Relay owner instances
+-> Compound Relay observes child Relay currentState
+-> bounded parent currentState
+-> Compose/ViewModel observes leaf projection
+```
+
+Canonical app-wide Source-of-Truth Relays are singleton-composed by default. A narrower semantic
+owner may later use an explicit Koin scope. Factory-created Relays are not the default truth owner
+because each resolution would create an independent state universe.
+
+The Relay architecture remains Koin-free. Koin decides cardinality/lifetime; Relay owns state
+semantics. Compound dependency observation receives a VexExecutionOwner. The current app-wide
+implementation is VexAppScope, which owns the named coroutine collectors and their lifetime.
+
+Deep-copy safety is transitive: Kotlin data-class copy() is shallow. A nested value that owns mutable
+children must recursively detach them (for example through VexDeepCopyable) or be truly immutable.
+
+The prior fragment-first `:sdk:state` PR remains closed/superseded.
+
+### Next component lineage after Relay review
+
+Recognized design scopes, not source-implemented modules yet:
+
+```text
+views/
+  container/
+    base/
+    tooltip/
+    snackbar/
+  list/
+    base/
+```
+
+Do not implement these until Victor approves the Relay/Compound Relay parent pattern.
+
+## F2 — VexAppScope / execution ownership
+
+Canonical:
+
+- architecture/execution/README.md
+- architecture/execution/examples/APP_SCOPE.md
+- architecture/execution/src/test/.../VexAppScopeTest.kt
+
+Current reviewed shape:
+
+~~~text
+named execution owns nested coroutine descendants
+stable VexCoroutineRef remains reserved through terminal bookkeeping
+cancel during restart delay -> CANCELLED
+ordinary Exception may opt into bounded restart
+JVM Error -> terminal FAILED / no restart
+stopApplication closes admission before cancelling tree
+post-stop launch fails closed
+registry exposure is defensive
+executions StateFlow owns state observation
+diagnostics cannot become execution ownership
+~~~
+
+## F3 — VexLogger / structured observability
+
+Canonical:
+
+- docs/foundation/F3-OBSERVABILITY.md
+- architecture/observability/README.md
+- architecture/observability/examples/LOGGER_AND_INTERCEPTOR.md
+- architecture/observability/src/test/.../VexLoggerTest.kt
+
+Current reviewed shape:
+
+~~~text
+VexLogger singleton
+-> injectable serialized VexLogExecutor
+-> production single-thread executor with bounded pending admission
+-> producer-time timestamps + diagnostic recording sequence
+-> explicit rejected-log count
+-> structured stable refs
+-> bounded recent record count + filters
+
+Relay + VexAppScope emit owner facts automatically
+Flow.vexLog(...) optionally records bounded observer receipt
+ordinary diagnostic failure != semantic/execution failure
+~~~
+
+## What remains after F1-F3
+
+Read:
+
+docs/foundation/POST-F1-F3-GAPS.md
+
+The existence of held gaps does not automatically prevent an F1-F3 checkpoint. The review/proof
+question is whether these three modules correctly enforce the contracts they claim.
+
+## F4 — Code coverage (next tooling phase)
+
+After F1-F3 reviewer clearance and Gradle proof, establish coverage before broad Compose work.
+
+Coverage is a test-perception tool, not semantic acceptance.
+
+Do not pin a coverage plugin/version until current Kotlin/AGP compatibility is freshly checked.
+
+## Held — startup/readiness
+
+~~~text
+KOIN_RESOLVED != INITIALIZED != READY != ACCEPTING_WORK
+~~~
+
+Do not hide readiness inside Koin, Relay, or VexAppScope.
+
+## Held — observation identity
+
+StateFlow initial/default value may not prove a real source has been observed.
+
+Preserve room for:
+
+~~~text
+UNOBSERVED / EMPTY / PRESENT / HELD / UNAVAILABLE
+~~~
+
+## Held — durable operation/re-entry
+
+~~~text
+COROUTINE != OPERATION != ATTEMPT != DURABLE_IDENTITY
+~~~
+
+Do not make Relay or VexAppScope persistence machinery.
+
 
 ## F0 — Standalone Build Foundation
 

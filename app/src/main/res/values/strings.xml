@@ -2,6 +2,8 @@
 <resources>
     <string name="app_name">VexLife Android</string>
     <string name="foundation_title">VexLife Android</string>
-    <string name="foundation_stage">Standalone foundation</string>
-    <string name="foundation_body">Source foundation formed; host and device proof in progress.</string>
+    <string name="foundation_stage">Relay + Compound Relay reconstruction</string>
+    <string name="foundation_body">Compose observes current Relay state; Relay processing remains active independently of the UI collector.</string>
+    <string name="relay_screen_presence">Screen Relay: %1$s</string>
+    <string name="relay_revision">Screen Relay revision: %1$d</string>
 </resources>
