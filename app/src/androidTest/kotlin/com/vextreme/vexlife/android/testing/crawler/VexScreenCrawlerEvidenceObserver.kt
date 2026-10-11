@@ -4,91 +4,61 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.platform.io.PlatformTestStorageRegistry
 import com.vextreme.vexlife.android.testing.journey.VexJourneyExecutionObserver
 import com.vextreme.vexlife.android.testing.journey.VexJourneyStepObservation
-import java.io.File
+import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 
 /**
- * Writes crawler screenshots and a JSONL manifest without retaining Activity/Compose/Bitmap objects.
+ * Writes crawler evidence through AndroidX PlatformTestStorage.
  *
- * The target app context is acquired only to resolve the output directory. Each screenshot Bitmap is
- * written and recycled immediately; retained state is strings/files/IDs only.
+ * Instrumented tests run inside Android's test-storage sandbox on modern Android. Writing to an
+ * app-visible /storage path and then assuming adb shell sees the same mount is not reliable.
+ *
+ * PlatformTestStorage is the instrumentation output boundary: screenshots/manifests are written as
+ * named test outputs and the Gradle/test infrastructure can collect them back to the host.
+ *
+ * No Activity/View/Compose/Bitmap is retained after a capture.
  */
 class VexScreenCrawlerEvidenceObserver(
     private val case: VexScreenCrawlerCase,
 ) : VexJourneyExecutionObserver {
     private val capturedScreens = linkedSetOf<String>()
     private var capturedScreenshotCount = 0
-    private val crawlerRootDirectory: File by lazy {
-        val targetContext =
-            InstrumentationRegistry.getInstrumentation().targetContext
-        val mediaDirectory =
-            requireNotNull(targetContext.externalMediaDirs.firstOrNull()) {
-                "crawler external media directory is unavailable"
-            }
 
-        File(
-            mediaDirectory,
-            "vex-screen-crawler",
-        ).also { directory ->
-            check(directory.mkdirs() || directory.isDirectory) {
-                "failed to create crawler media root: " +
-                    directory.absolutePath
-            }
-        }
-    }
+    private val storage =
+        PlatformTestStorageRegistry.getInstance()
 
-    private val rootDirectory: File by lazy {
-        File(
-            crawlerRootDirectory,
-            "${case.sourceRef.safePath()}/${case.caseRef.safePath()}",
-        ).also { directory ->
-            if (directory.exists()) {
-                check(directory.deleteRecursively()) {
-                    "failed to clear stale crawler case artifacts: " +
-                        directory.absolutePath
-                }
-            }
-            check(directory.mkdirs() || directory.isDirectory) {
-                "failed to create crawler case artifact directory: " +
-                    directory.absolutePath
-            }
-        }
-    }
+    private val caseRoot =
+        "vex-screen-crawler/" +
+            case.sourceRef.safePath() +
+            "/" +
+            case.caseRef.safePath()
 
-    private val manifest: File
-        get() = File(rootDirectory, "manifest.jsonl")
+    private val manifestPath =
+        "$caseRoot/manifest.jsonl"
 
     init {
-        val instrumentation =
-            InstrumentationRegistry.getInstrumentation()
-        val targetContext = instrumentation.targetContext
-
-        File(rootDirectory, "run-started.txt").writeText(
-            buildString {
+        writeText(
+            path = "$caseRoot/run-started.txt",
+            value = buildString {
                 appendLine("caseRef=${case.caseRef}")
                 appendLine("sourceRef=${case.sourceRef}")
-                appendLine("targetPackage=${targetContext.packageName}")
-                appendLine("artifactRoot=${crawlerRootDirectory.absolutePath}")
-                appendLine("caseDirectory=${rootDirectory.absolutePath}")
+                appendLine(
+                    "targetPackage=${InstrumentationRegistry.getInstrumentation().targetContext.packageName}",
+                )
                 appendLine("deviceModel=${Build.MODEL}")
                 appendLine("sdkInt=${Build.VERSION.SDK_INT}")
+                appendLine("storage=PlatformTestStorage")
             },
         )
 
-        println(
-            "Vex ScreenCrawler STARTED: ${case.caseRef}",
-        )
-        println(
-            "Vex ScreenCrawler artifact root: ${crawlerRootDirectory.absolutePath}",
-        )
         Log.i(
             SCREEN_CRAWLER_LOG_TAG,
             "START case=${case.caseRef} " +
-                "targetPackage=${targetContext.packageName} " +
-                "artifactRoot=${crawlerRootDirectory.absolutePath} " +
-                "caseDirectory=${rootDirectory.absolutePath}",
+                "storage=PlatformTestStorage " +
+                "outputRoot=$caseRoot",
         )
     }
 
@@ -132,39 +102,38 @@ class VexScreenCrawlerEvidenceObserver(
             "ScreenCrawler executed but captured ZERO screenshots for ${case.caseRef}. " +
                 "A crawler run must never pass without evidence."
         }
-        check(manifest.isFile && manifest.length() > 0L) {
-            "ScreenCrawler screenshots exist but manifest is missing/empty for ${case.caseRef}"
-        }
 
-        File(rootDirectory, "run-complete.txt").writeText(
-            buildString {
+        writeText(
+            path = "$caseRoot/run-complete.txt",
+            value = buildString {
                 appendLine("caseRef=${case.caseRef}")
                 appendLine("screenshots=$capturedScreenshotCount")
-                appendLine("manifest=${manifest.name}")
+                appendLine("manifest=manifest.jsonl")
                 appendLine("result=COMPLETE")
             },
         )
 
-        println(
-            "Vex ScreenCrawler captured $capturedScreenshotCount screenshot(s).",
-        )
         Log.i(
             SCREEN_CRAWLER_LOG_TAG,
             "COMPLETE case=${case.caseRef} " +
                 "screenshots=$capturedScreenshotCount " +
-                "manifest=${manifest.absolutePath}",
+                "outputRoot=$caseRoot",
         )
         println(
-            "Vex ScreenCrawler case artifacts: ${rootDirectory.absolutePath}",
+            "Vex ScreenCrawler captured $capturedScreenshotCount screenshot(s).",
         )
         println(
-            "Vex ScreenCrawler pull from repo root (macOS/Linux): " +
-                "bash tools/pull-vex-screen-crawler.sh",
+            "Vex ScreenCrawler outputs were handed to PlatformTestStorage under: $caseRoot",
         )
         println(
-            "Vex ScreenCrawler pull from repo root (Windows PowerShell): " +
-                "powershell -ExecutionPolicy Bypass -File " +
-                ".\\\\tools\\\\pull-vex-screen-crawler.ps1",
+            "Collect them from repo root with:",
+        )
+        println(
+            "  macOS/Linux: bash tools/pull-vex-screen-crawler.sh",
+        )
+        println(
+            "  Windows: powershell -ExecutionPolicy Bypass -File " +
+                ".\\tools\\pull-vex-screen-crawler.ps1",
         )
     }
 
@@ -176,14 +145,34 @@ class VexScreenCrawlerEvidenceObserver(
         val instrumentation =
             InstrumentationRegistry.getInstrumentation()
 
-        // Compose may already be idle while the device has a pending draw. Wait at the Android
-        // instrumentation boundary immediately before capturing the physical evidence frame.
         instrumentation.waitForIdleSync()
 
         val bitmap =
             requireNotNull(instrumentation.uiAutomation.takeScreenshot()) {
                 "UiAutomation.takeScreenshot() returned null"
             }
+
+        val bytes =
+            try {
+                ByteArrayOutputStream().use { output ->
+                    check(
+                        bitmap.compress(
+                            Bitmap.CompressFormat.PNG,
+                            100,
+                            output,
+                        ),
+                    ) {
+                        "failed to encode crawler screenshot for ${case.caseRef}"
+                    }
+                    output.toByteArray()
+                }
+            } finally {
+                bitmap.recycle()
+            }
+
+        check(bytes.isNotEmpty()) {
+            "crawler screenshot encoded to zero bytes for ${case.caseRef}"
+        }
 
         val stepLabel =
             if (observation.stepIndex == Int.MAX_VALUE) {
@@ -201,49 +190,56 @@ class VexScreenCrawlerEvidenceObserver(
                 observation.stepKind.safePath(),
             ).joinToString("__") + ".png"
 
-        val screenshot = File(rootDirectory, filename)
+        val screenshotPath =
+            "$caseRoot/$filename"
 
-        try {
-            screenshot.outputStream().buffered().use { output ->
-                check(
-                    bitmap.compress(
-                        Bitmap.CompressFormat.PNG,
-                        100,
-                        output,
-                    ),
-                ) {
-                    "failed to encode crawler screenshot: ${screenshot.absolutePath}"
-                }
-            }
-        } finally {
-            bitmap.recycle()
+        storage.openOutputFile(screenshotPath).buffered().use { output ->
+            output.write(bytes)
         }
 
-        manifest.appendText(
-            observation.toManifestLine(
-                screenshot = screenshot,
-                screenshotSha256 = screenshot.sha256(),
-            ) + "\n",
-        )
+        val screenshotSha256 =
+            bytes.sha256()
 
-        check(screenshot.isFile && screenshot.length() > 0L) {
-            "crawler screenshot was not written: ${screenshot.absolutePath}"
+        storage.openOutputFile(
+            manifestPath,
+            true,
+        ).bufferedWriter().use { writer ->
+            writer.appendLine(
+                observation.toManifestLine(
+                    screenshot = filename,
+                    screenshotSha256 = screenshotSha256,
+                    screenshotBytes = bytes.size,
+                ),
+            )
         }
+
         capturedScreenshotCount += 1
+
         Log.i(
             SCREEN_CRAWLER_LOG_TAG,
             "CAPTURE case=${case.caseRef} " +
                 "step=${observation.stepIndex} " +
                 "kind=${observation.stepKind} " +
                 "screen=${observation.screenId} " +
-                "file=${screenshot.absolutePath} " +
-                "bytes=${screenshot.length()}",
+                "output=$screenshotPath " +
+                "bytes=${bytes.size} " +
+                "uri=${storage.getOutputFileUri(screenshotPath)}",
         )
     }
 
+    private fun writeText(
+        path: String,
+        value: String,
+    ) {
+        storage.openOutputFile(path).bufferedWriter().use { writer ->
+            writer.write(value)
+        }
+    }
+
     private fun VexJourneyStepObservation.toManifestLine(
-        screenshot: File,
+        screenshot: String,
         screenshotSha256: String,
+        screenshotBytes: Int,
     ): String =
         buildString {
             append("{")
@@ -277,7 +273,9 @@ class VexScreenCrawlerEvidenceObserver(
             append(",\"sdkInt\":")
             append(Build.VERSION.SDK_INT)
             append(",")
-            appendJson("file", screenshot.name)
+            appendJson("file", screenshot)
+            append(",\"bytes\":")
+            append(screenshotBytes)
             append(",")
             appendJson("sha256", screenshotSha256)
             append("}")
@@ -319,21 +317,15 @@ private fun String.jsonEscape(): String =
         }
     }
 
+private fun ByteArray.sha256(): String {
+    val digest =
+        MessageDigest.getInstance("SHA-256")
+            .digest(this)
 
-private fun File.sha256(): String {
-    val digest = MessageDigest.getInstance("SHA-256")
-    inputStream().buffered().use { input ->
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        while (true) {
-            val read = input.read(buffer)
-            if (read < 0) break
-            digest.update(buffer, 0, read)
-        }
-    }
-    return digest.digest().joinToString("") { byte ->
+    return digest.joinToString("") { byte ->
         "%02x".format(byte)
     }
 }
 
-
-private const val SCREEN_CRAWLER_LOG_TAG = "VexScreenCrawler"
+private const val SCREEN_CRAWLER_LOG_TAG =
+    "VexScreenCrawler"
