@@ -33,6 +33,10 @@ class PairedVexStreamMusicRepository(
 ) : VexStreamMusicRepository {
 
     private val operationMutex = Mutex()
+    private val remoteTransport =
+        VexStreamRemoteTransport(
+            connectionStore,
+        )
     private var selectedService: VexStreamSelectedService? = null
 
     private val mutableState =
@@ -366,15 +370,14 @@ class PairedVexStreamMusicRepository(
 
         return try {
             val response =
-                authorizedConnection(
+                authorizedTextResponse(
                     connection = connection,
                     path = "v1/catalog",
                 )
             val status =
-                response.responseCode
+                response.status
 
             if (status == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                response.disconnect()
                 connectionStore.clear()
                 mutableState.value = mutableState.value
                     .withHubUnavailable(
@@ -393,7 +396,6 @@ class PairedVexStreamMusicRepository(
             }
 
             if (status != HttpURLConnection.HTTP_OK) {
-                response.disconnect()
                 mutableState.value =
                     mutableState.value.withHubUnavailable(
                         VexStreamHubState.Unreachable,
@@ -405,10 +407,7 @@ class PairedVexStreamMusicRepository(
             }
 
             val body =
-                response.inputStream
-                    .bufferedReader()
-                    .use { it.readText() }
-            response.disconnect()
+                response.body
 
             val catalog =
                 parseCatalog(
@@ -690,25 +689,25 @@ class PairedVexStreamMusicRepository(
             Dispatchers.IO,
         ) {
             try {
-                val response =
-                    authorizedConnection(
+                val media =
+                    authorizedMediaStream(
                         connection = connection,
                         path =
                             "v1/media/" +
                                 encodePathSegment(
                                     trackRef.value,
                                 ),
+                        expectedLength =
+                            target.track.mediaByteLength,
                     )
 
-                if (response.responseCode != HttpURLConnection.HTTP_OK) {
-                    val status =
-                        response.responseCode
-                    response.disconnect()
+                if (media.status != HttpURLConnection.HTTP_OK) {
+                    media.input?.close()
                     updateLocalCopy(
                         trackRef,
                         VexStreamLocalCopyState.Failed(
-                            reasonCode = "HTTP_$status",
-                            retryable = status >= 500,
+                            reasonCode = "HTTP_${media.status}",
+                            retryable = media.status >= 500,
                         ),
                     )
 
@@ -720,17 +719,20 @@ class PairedVexStreamMusicRepository(
                     )
                 }
 
+                val input =
+                    requireNotNull(
+                        media.input,
+                    )
                 val stored =
-                    response.inputStream.use { input ->
+                    input.use {
                         mediaStore.store(
                             expectedSha256 =
                                 target.track.mediaSha256,
                             expectedByteLength =
                                 target.track.mediaByteLength,
-                            input = input,
+                            input = it,
                         )
                     }
-                response.disconnect()
 
                 when (stored) {
                     is VexStreamMediaStoreResult.Stored -> {
@@ -806,6 +808,115 @@ class PairedVexStreamMusicRepository(
                 )
             }
         }
+
+    private data class AuthorizedTextResponse(
+        val status: Int,
+        val body: String,
+    )
+
+    private data class AuthorizedMediaStream(
+        val status: Int,
+        val input: java.io.InputStream?,
+    )
+
+    private fun authorizedTextResponse(
+        connection: VexStreamPairedConnection,
+        path: String,
+    ): AuthorizedTextResponse {
+        try {
+            val direct =
+                authorizedConnection(
+                    connection = connection,
+                    path = path,
+                )
+            val status =
+                direct.responseCode
+            val body =
+                VexStreamPinnedTls.readText(
+                    direct,
+                )
+            direct.disconnect()
+            return AuthorizedTextResponse(
+                status = status,
+                body = body,
+            )
+        } catch (directFailure: Exception) {
+            if (!connection.remoteReady) {
+                throw directFailure
+            }
+        }
+
+        val remote =
+            remoteTransport.execute(
+                connection = connection,
+                method = "GET",
+                path = path,
+            )
+        return AuthorizedTextResponse(
+            status = remote.status,
+            body =
+                String(
+                    remote.body,
+                    Charsets.UTF_8,
+                ),
+        )
+    }
+
+    private fun authorizedMediaStream(
+        connection: VexStreamPairedConnection,
+        path: String,
+        expectedLength: Long,
+    ): AuthorizedMediaStream {
+        try {
+            val direct =
+                authorizedConnection(
+                    connection = connection,
+                    path = path,
+                )
+            val status =
+                direct.responseCode
+            if (
+                status ==
+                HttpURLConnection.HTTP_OK
+            ) {
+                return AuthorizedMediaStream(
+                    status = status,
+                    input =
+                        object :
+                            java.io.FilterInputStream(
+                                direct.inputStream,
+                            ) {
+                            override fun close() {
+                                try {
+                                    super.close()
+                                } finally {
+                                    direct.disconnect()
+                                }
+                            }
+                        },
+                )
+            }
+            direct.disconnect()
+            return AuthorizedMediaStream(
+                status = status,
+                input = null,
+            )
+        } catch (directFailure: Exception) {
+            if (!connection.remoteReady) {
+                throw directFailure
+            }
+        }
+
+        return AuthorizedMediaStream(
+            status = HttpURLConnection.HTTP_OK,
+            input =
+                remoteTransport.openRangeStream(
+                    connection = connection,
+                    path = path,
+                    expectedLength = expectedLength,
+                ),
+        )
+    }
 
     private fun authorizedConnection(
         connection: VexStreamPairedConnection,
