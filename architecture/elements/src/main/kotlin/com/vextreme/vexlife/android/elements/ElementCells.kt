@@ -56,6 +56,7 @@ fun VexButton(
     handler: ElementActionHandler,
     modifier: Modifier = Modifier,
     style: ElementStyleKey = element.style,
+    enabled: Boolean = true,
 ) {
     val label = stringResource(requireNotNull(element.labelRes))
     val content: @Composable RowScope.() -> Unit = {
@@ -69,12 +70,14 @@ fun VexButton(
         VexElementStyles.SecondaryAction -> FilledTonalButton(
             onClick = { handler.activate(element) },
             modifier = modifier.vexElement(element),
+            enabled = enabled,
             content = content,
         )
 
         VexElementStyles.DangerAction -> Button(
             onClick = { handler.activate(element) },
             modifier = modifier.vexElement(element),
+            enabled = enabled,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -85,12 +88,14 @@ fun VexButton(
         VexElementStyles.Navigation -> OutlinedButton(
             onClick = { handler.activate(element) },
             modifier = modifier.vexElement(element),
+            enabled = enabled,
             content = content,
         )
 
         else -> Button(
             onClick = { handler.activate(element) },
             modifier = modifier.vexElement(element),
+            enabled = enabled,
             content = content,
         )
     }
