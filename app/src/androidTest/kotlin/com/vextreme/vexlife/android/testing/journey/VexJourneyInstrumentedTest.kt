@@ -23,7 +23,7 @@ class VexJourneyInstrumentedTest(
         @Parameterized.Parameters(name = "{0}")
         fun journeys(): List<Array<Any>> =
             VexJourneyCatalog.all.map { journey ->
-                arrayOf(journey)
+                arrayOf<Any>(journey)
             }
     }
 }
