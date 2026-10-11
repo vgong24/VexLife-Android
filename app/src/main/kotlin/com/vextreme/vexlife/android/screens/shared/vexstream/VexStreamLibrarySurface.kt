@@ -558,9 +558,6 @@ private fun VexStreamSearchSheet(
     onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var selectedTrackRef by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
 
     ModalBottomSheet(
         modifier = Modifier
@@ -643,8 +640,8 @@ private fun VexStreamSearchSheet(
                                     )
                                 }
                             },
-                        onVisitArtist = onVisitArtist,
-            )
+                            onVisitArtist = onVisitArtist,
+                        )
                     }
                 }
             }
@@ -804,22 +801,6 @@ private fun VexStreamSongsPane(
                 it.track.title.lowercase()
             }
         }
-    var selectedTrackRef by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    val sortedRefs =
-        remember(sorted) {
-            sorted.map {
-                it.track.trackRef.value
-            }
-        }
-    LaunchedEffect(sortedRefs) {
-        if (selectedTrackRef !in sortedRefs) {
-            selectedTrackRef =
-                sortedRefs.firstOrNull()
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -868,8 +849,8 @@ private fun VexStreamSongsPane(
                             )
                         }
                     },
-                onVisitArtist = onVisitArtist,
-            )
+                    onVisitArtist = onVisitArtist,
+                )
             }
         }
     }
@@ -895,22 +876,6 @@ private fun VexStreamDownloadsPane(
                     it.track.title.lowercase()
                 }
         }
-    var selectedTrackRef by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    val downloadedRefs =
-        remember(downloaded) {
-            downloaded.map {
-                it.track.trackRef.value
-            }
-        }
-    LaunchedEffect(downloadedRefs) {
-        if (selectedTrackRef !in downloadedRefs) {
-            selectedTrackRef =
-                downloadedRefs.firstOrNull()
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1289,24 +1254,6 @@ private fun VexStreamCollectionDetail(
     onBack: () -> Unit,
     onVisitArtist: (String) -> Unit,
 ) {
-    var selectedTrackRef by rememberSaveable(
-        title,
-    ) {
-        mutableStateOf<String?>(null)
-    }
-    val trackRefs =
-        remember(tracks) {
-            tracks.map {
-                it.track.trackRef.value
-            }
-        }
-    LaunchedEffect(trackRefs) {
-        if (selectedTrackRef !in trackRefs) {
-            selectedTrackRef =
-                trackRefs.firstOrNull()
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
