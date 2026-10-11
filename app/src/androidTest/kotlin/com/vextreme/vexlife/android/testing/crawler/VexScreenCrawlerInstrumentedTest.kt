@@ -91,16 +91,18 @@ import org.junit.runners.Parameterized
  *
  *      powershell -ExecutionPolicy Bypass -File .\\tools\\pull-vex-screen-crawler.ps1
  *
- *    The scripts:
- *    - derive the current applicationId from app/build.gradle.kts;
- *    - auto-select the only connected adb target;
- *    - verify crawler artifacts exist;
- *    - pull everything to ./vex-screen-crawler.
+ *    The scripts collect the ScreenCrawler artifacts that AndroidX TestStorage/Gradle returned
+ *    from the instrumentation run into:
  *
- *    If multiple adb targets are connected, the script stops and prints the exact one-time
- *    ANDROID_SERIAL command instead of guessing.
+ *      ./vex-screen-crawler
  *
- *    The test also prints the actual device artifact directory after each crawler case.
+ *    This is intentionally NOT a raw adb filesystem pull. Modern Android instrumentation runs in a
+ *    storage sandbox, so a path visible inside the test process may not exist in adb shell's mount
+ *    namespace. PlatformTestStorage is the transfer boundary.
+ *
+ *    For live debugging, filter Logcat with:
+ *
+ *      tag:VexScreenCrawler
  *
  *    Each screenshot is accompanied by JSONL evidence metadata including source/case/shard/journey,
  *    locale/font, Screen/step, device model/SDK, filename and screenshot SHA-256.
