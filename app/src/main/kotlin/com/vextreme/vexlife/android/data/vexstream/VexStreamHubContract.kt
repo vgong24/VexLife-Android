@@ -24,6 +24,7 @@ data class VexStreamHubCatalogProjection(
     val sourceVersion: String,
     val catalogRevision: String,
     val tracks: List<VexStreamHubTrackProjection>,
+    val playlists: List<VexStreamHubPlaylistProjection> = emptyList(),
 ) {
     init {
         require(hubRef.isNotBlank()) {
@@ -46,6 +47,19 @@ data class VexStreamHubCatalogProjection(
                 duplicateRefs.joinToString { it.value }
         }
     }
+}
+
+data class VexStreamHubPlaylistProjection(
+    val playlistRef: VexStreamPlaylistRef,
+    val name: String,
+    val trackRefs: List<VexStreamTrackRef>,
+) {
+    fun toPlaylist(): VexStreamPlaylist =
+        VexStreamPlaylist(
+            playlistRef = playlistRef,
+            name = name,
+            trackRefs = trackRefs,
+        )
 }
 
 data class VexStreamHubTrackProjection(
@@ -132,6 +146,21 @@ fun VexStreamMusicState.withHubCatalog(
             )
         }
 
+    val availableTrackRefs =
+        connectedTracks
+            .map { it.track.trackRef }
+            .toSet()
+
+    val playlists =
+        catalog.playlists.map { projection ->
+            projection.copy(
+                trackRefs =
+                    projection.trackRefs.filter {
+                        it in availableTrackRefs
+                    },
+            ).toPlaylist()
+        }
+
     return VexStreamMusicState(
         hubState = VexStreamHubState.Ready(
             hubRef = catalog.hubRef,
@@ -139,6 +168,7 @@ fun VexStreamMusicState.withHubCatalog(
         ),
         connectionState = connectionState,
         tracks = connectedTracks + localOnlyTracks,
+        playlists = playlists,
     )
 }
 
