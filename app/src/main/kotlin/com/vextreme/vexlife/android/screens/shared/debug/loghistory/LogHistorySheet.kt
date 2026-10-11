@@ -13,9 +13,8 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,12 +44,8 @@ fun LogHistorySheet(
     repository: LogHistoryRepository,
 ) {
     val history by repository.records.collectAsState(initial = emptyList())
-    val sheetState = rememberBottomSheetState(
-        initialValue = SheetValue.Hidden,
-        enabledValues = setOf(
-            SheetValue.Hidden,
-            SheetValue.Expanded,
-        ),
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
     )
 
     ModalBottomSheet(
