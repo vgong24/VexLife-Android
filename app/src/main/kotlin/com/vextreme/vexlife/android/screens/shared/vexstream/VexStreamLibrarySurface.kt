@@ -213,26 +213,51 @@ private fun VexStreamLibraryTabs(
             ),
         )
 
-    ScrollableTabRow(
-        selectedTabIndex =
-            tabs.indexOfFirst { (_, panelId, _) ->
-                panelId == selectedElementId
-            }.coerceAtLeast(0),
-        edgePadding = 8.dp,
-    ) {
-        tabs.forEach { (tab, panelId, labelRes) ->
-            Tab(
-                selected = selectedElementId == panelId,
+    Column {
+        ScrollableTabRow(
+            selectedTabIndex =
+                tabs.indexOfFirst { (_, panelId, _) ->
+                    panelId == selectedElementId
+                }.coerceAtLeast(0),
+            edgePadding = 8.dp,
+        ) {
+            tabs.forEach { (tab, panelId, labelRes) ->
+                Tab(
+                    selected = selectedElementId == panelId,
+                    onClick = {
+                        runtime.activate(tab)
+                    },
+                    modifier = Modifier.vexElement(tab),
+                    text = {
+                        Text(
+                            stringResource(labelRes),
+                        )
+                    },
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(
                 onClick = {
-                    runtime.activate(tab)
-                },
-                modifier = Modifier.vexElement(tab),
-                text = {
-                    Text(
-                        stringResource(labelRes),
+                    runtime.activate(
+                        VexStreamMusicScreen.ShowQueue,
                     )
                 },
-            )
+                modifier =
+                    Modifier.vexElement(
+                        VexStreamMusicScreen.ShowQueue,
+                    ),
+            ) {
+                Text(
+                    stringResource(
+                        R.string.vexstream_music_queue,
+                    ),
+                )
+            }
         }
     }
 }
