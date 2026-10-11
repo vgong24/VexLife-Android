@@ -125,31 +125,47 @@ data class VexScreenCrawlerConfig(
 
 class VexScreenCrawlerConfigBuilder {
     private var selection: VexCrawlerSelection = VexCrawlerSelection.AllShards
+    private var selectionWasExplicitlySet = false
     private val locales = mutableListOf<VexCrawlerLocale>()
     private val fonts = mutableListOf<VexCrawlerFontProfile>()
     private var capturePolicy = VexCrawlerCapturePolicy.SCREEN_ONCE
     private var sourceRef = "unknown"
 
     fun allShards() {
-        selection = VexCrawlerSelection.AllShards
+        setSelection(VexCrawlerSelection.AllShards)
     }
 
     fun allShardsExcept(vararg shards: VexJourneyShard) {
-        selection = VexCrawlerSelection.AllShardsExcept(
-            excludedShards = shards.toSet(),
+        setSelection(
+            VexCrawlerSelection.AllShardsExcept(
+                excludedShards = shards.toSet(),
+            ),
         )
     }
 
     fun shards(vararg shards: VexJourneyShard) {
-        selection = VexCrawlerSelection.Shards(
-            shards = shards.toSet(),
+        setSelection(
+            VexCrawlerSelection.Shards(
+                shards = shards.toSet(),
+            ),
         )
     }
 
     fun screens(vararg screens: ScreenElement) {
-        selection = VexCrawlerSelection.Screens(
-            screens = screens.toSet(),
+        setSelection(
+            VexCrawlerSelection.Screens(
+                screens = screens.toSet(),
+            ),
         )
+    }
+
+    private fun setSelection(value: VexCrawlerSelection) {
+        check(!selectionWasExplicitlySet) {
+            "ScreenCrawler config declares more than one selection; " +
+                "keep only one of screens/shards/allShardsExcept/allShards"
+        }
+        selection = value
+        selectionWasExplicitlySet = true
     }
 
     fun languages(vararg values: VexCrawlerLocale) {
