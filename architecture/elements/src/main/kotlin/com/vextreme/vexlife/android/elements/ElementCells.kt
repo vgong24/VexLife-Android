@@ -245,6 +245,42 @@ fun VexScrollableColumn(
     )
 }
 
+/**
+ * Renders one registered [ElementPlacement] tree into native Compose cells.
+ *
+ * This function is intentionally generic and recursive. It should look "dynamic" because the
+ * page-specific visual shape lives in the PageBlueprint file, not here.
+ *
+ * Example:
+ *
+ * HomePage.kt declares:
+ *
+ * scrollableColumn("body") {
+ *     card("preview") {
+ *         text("title", ...)
+ *         text("message", ...)
+ *     }
+ * }
+ *
+ * That arrives here as:
+ *
+ * ScrollableColumnElement
+ * └── CardElement
+ *     ├── TextElement(title)
+ *     └── TextElement(message)
+ *
+ * and this renderer chooses VexScrollableColumn -> VexContainer -> Text for those nodes.
+ *
+ * Where to debug:
+ * - wrong page structure/order -> open the owning PageBlueprint first;
+ * - wrong reusable cell appearance -> inspect the matching VexButton/VexContainer/etc above;
+ * - wrong click consequence -> breakpoint the supplied [handler] (normally VexRuntime.activate);
+ * - wrong swappable child (for example Gallery Elements/AppGraph) -> inspect [selectedChild] and
+ *   PresentationState.selectedByContainer rather than adding page-specific branches here.
+ *
+ * Do not add feature names such as Home/Settings/Gallery to this renderer. If a visual need cannot
+ * be described by the element vocabulary, improve the reusable cell/placement grammar instead.
+ */
 @Composable
 fun VexElementTree(
     placement: ElementPlacement,

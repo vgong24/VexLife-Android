@@ -27,6 +27,21 @@ import com.vextreme.vexlife.android.elements.navigation.BackLayer
 class PresentationState(
     private val registry: UIBlueprintRegistry,
 ) {
+    /*
+     * Session memory kept by semantic identity, not by retaining Composable trees:
+     *
+     * openElementIds
+     *   = what transient presentation is open right now (FAB options/dialogs).
+     *   It behaves like shallow presentation depth and is consumed by Back resolution.
+     *
+     * selectedByContainer
+     *   = the last selected child of a swappable container.
+     *   Example: Gallery.Content -> Gallery.AppGraphPanel. This is why returning to Gallery during
+     *   the same VexRuntime session can reopen the last selected Gallery tab.
+     *
+     * Both live only with this runtime instance. They are NOT database/DataStore persistence and
+     * should not silently become durable user preference/state.
+     */
     private var openElementIds by mutableStateOf<List<String>>(emptyList())
     private var selectedByContainer by mutableStateOf<Map<String, String>>(emptyMap())
 
