@@ -91,6 +91,27 @@ VexScreenCrawlerEvidenceObserver
 
 The crawler reuses the accepted interactions rather than constructing another app-walk language.
 
+### Scalability boundary
+
+Adding a normal Screen, action, or journey must **not** require a ScreenCrawler framework edit.
+
+~~~text
+new production Screen/action
+-> register through the ordinary product path
+-> add/adjust semantic journey when needed
+-> VexJourneyCatalog sees the registered journey
+-> ScreenCrawler planner can select it
+-> VexScreenCrawlerEvidenceObserver captures generic step evidence
+~~~
+
+`VexScreenCrawlerPlanner` changes only when selection/planning semantics change.
+`VexScreenCrawlerEvidenceObserver` changes only when screenshot/evidence transport or capture
+semantics change. Neither should grow per-feature `when` branches or lists.
+
+This is also why ScreenCrawler does not own a historical catalog of old app routes: the typed
+`Journeys.*` map and executable journey catalog own what paths exist now; Git/PR history explains
+how those paths evolved.
+
 ## One human control surface
 
 For ordinary local ScreenCrawler work, a developer should know exactly one file:
@@ -102,6 +123,16 @@ app/src/androidTest/kotlin/com/vextreme/vexlife/android/testing/crawler/
 
 Directly right-clicking that crawler class/method runs the configured crawler. A normal whole-suite
 Android run does not expand the optional crawler evidence matrix.
+
+The equivalent repository-root command is:
+
+~~~bash
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.vextreme.vexlife.android.testing.crawler.VexScreenCrawlerInstrumentedTest
+~~~
+
+The command selects the same configured class; it does not introduce another crawler configuration
+surface.
 
 That same runnable file contains:
 - exact typed journey/Screen/shard selection examples;
