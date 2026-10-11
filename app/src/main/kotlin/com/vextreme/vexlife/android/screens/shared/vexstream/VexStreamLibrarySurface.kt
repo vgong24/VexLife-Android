@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -100,6 +102,7 @@ internal fun VexStreamLibrarySurface(
                 VexStreamMiniPlayer(
                     playback = playback,
                     controller = controller,
+                    runtime = runtime,
                 )
             }
         },
@@ -157,6 +160,7 @@ internal fun VexStreamLibrarySurface(
 
                     VexStreamMusicScreen.DownloadsPanel.elementId ->
                         VexStreamDownloadsPane(
+                            runtime = runtime,
                             tracks = state.playableTracks(),
                             repository = repository,
                             controller = controller,
@@ -165,6 +169,7 @@ internal fun VexStreamLibrarySurface(
 
                     else ->
                         VexStreamSongsPane(
+                            runtime = runtime,
                             tracks = state.playableTracks(),
                             repository = repository,
                             controller = controller,
@@ -381,6 +386,7 @@ private fun VexStreamConnectionCard(
 
 @Composable
 private fun VexStreamSongsPane(
+    runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
     repository: VexStreamMusicRepository,
     controller: androidx.media3.session.MediaController?,
@@ -402,6 +408,7 @@ private fun VexStreamSongsPane(
             key = "songs-actions",
         ) {
             VexStreamCollectionActions(
+                runtime = runtime,
                 tracks = sorted,
                 controller = controller,
                 resolver = resolver,
@@ -455,6 +462,7 @@ private fun VexStreamSongsPane(
 
 @Composable
 private fun VexStreamDownloadsPane(
+    runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
     repository: VexStreamMusicRepository,
     controller: androidx.media3.session.MediaController?,
@@ -480,6 +488,7 @@ private fun VexStreamDownloadsPane(
             key = "downloads-actions",
         ) {
             VexStreamCollectionActions(
+                runtime = runtime,
                 tracks = downloaded,
                 controller = controller,
                 resolver = resolver,
@@ -759,8 +768,6 @@ private fun VexStreamCollectionBrowserPane(
                                 title = row.title,
                                 subtitle = row.subtitle,
                                 tracks = row.tracks,
-                                controller = controller,
-                                resolver = resolver,
                                 onOpen = {
                                     trail.push(
                                         VexStreamCollectionRoute.Detail(
@@ -786,6 +793,7 @@ private fun VexStreamCollectionBrowserPane(
                     )
                 } else {
                     VexStreamCollectionDetail(
+                        runtime = runtime,
                         title = selected.title,
                         tracks = selected.tracks,
                         controller = controller,
@@ -800,6 +808,7 @@ private fun VexStreamCollectionBrowserPane(
 
 @Composable
 private fun VexStreamCollectionDetail(
+    runtime: VexRuntime,
     title: String,
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
@@ -839,6 +848,7 @@ private fun VexStreamCollectionDetail(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 VexStreamCollectionActions(
+                    runtime = runtime,
                     tracks = tracks,
                     controller = controller,
                     resolver = resolver,
@@ -868,8 +878,6 @@ private fun VexStreamCollectionCard(
     title: String,
     subtitle: String,
     tracks: List<VexStreamTrackState>,
-    controller: androidx.media3.session.MediaController?,
-    resolver: VexStreamPlaybackSourceResolver,
     onOpen: () -> Unit,
 ) {
     Card(
@@ -900,61 +908,56 @@ private fun VexStreamCollectionCard(
                     ),
                 style = MaterialTheme.typography.bodySmall,
             )
-            VexStreamCollectionActions(
-                tracks = tracks,
-                controller = controller,
-                resolver = resolver,
-            )
         }
     }
 }
 
 @Composable
 private fun VexStreamCollectionActions(
+    runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     modifier: Modifier = Modifier,
 ) {
+    val canPlay =
+        controller != null &&
+            tracks.isNotEmpty()
+    val handler =
+        ElementActionHandler { element ->
+            runtime.activate(
+                element,
+            )
+            when (element) {
+                VexStreamMusicScreen.PlayAll ->
+                    controller?.playVexStreamCollection(
+                        tracks = tracks,
+                        resolver = resolver,
+                    )
+
+                VexStreamMusicScreen.ShuffleAll ->
+                    controller?.playVexStreamCollection(
+                        tracks = tracks,
+                        resolver = resolver,
+                        shuffled = true,
+                    )
+            }
+        }
+
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Button(
-            onClick = {
-                controller?.playVexStreamCollection(
-                    tracks = tracks,
-                    resolver = resolver,
-                )
-            },
-            enabled =
-                controller != null &&
-                    tracks.isNotEmpty(),
-        ) {
-            Text(
-                stringResource(
-                    R.string.vexstream_music_play_all,
-                ),
-            )
-        }
-        OutlinedButton(
-            onClick = {
-                controller?.playVexStreamCollection(
-                    tracks = tracks,
-                    resolver = resolver,
-                    shuffled = true,
-                )
-            },
-            enabled =
-                controller != null &&
-                    tracks.isNotEmpty(),
-        ) {
-            Text(
-                stringResource(
-                    R.string.vexstream_music_shuffle_all,
-                ),
-            )
-        }
+        VexButton(
+            element = VexStreamMusicScreen.PlayAll,
+            handler = handler,
+            enabled = canPlay,
+        )
+        VexButton(
+            element = VexStreamMusicScreen.ShuffleAll,
+            handler = handler,
+            enabled = canPlay,
+        )
     }
 }
 
@@ -1100,7 +1103,28 @@ private fun VexStreamTrackCard(
 private fun VexStreamMiniPlayer(
     playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
+    runtime: VexRuntime,
 ) {
+    val handler =
+        ElementActionHandler { element ->
+            runtime.activate(
+                element,
+            )
+            when (element) {
+                VexStreamMusicScreen.PreviousTrack ->
+                    controller?.seekToPreviousMediaItem()
+
+                VexStreamMusicScreen.TogglePlayback ->
+                    controller?.toggleVexStreamPlayback()
+
+                VexStreamMusicScreen.NextTrack ->
+                    controller?.seekToNextMediaItem()
+
+                VexStreamMusicScreen.ToggleShuffle ->
+                    controller?.toggleVexStreamShuffle()
+            }
+        }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1132,67 +1156,34 @@ private fun VexStreamMiniPlayer(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                TextButton(
-                    onClick = {
-                        controller?.seekToPreviousMediaItem()
-                    },
+                VexButton(
+                    element = VexStreamMusicScreen.PreviousTrack,
+                    handler = handler,
                     enabled =
                         controller?.hasPreviousMediaItem() == true,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexstream_music_previous,
-                        ),
-                    )
-                }
-                Button(
-                    onClick = {
-                        controller?.toggleVexStreamPlayback()
-                    },
+                )
+                VexButton(
+                    element = VexStreamMusicScreen.TogglePlayback,
+                    handler = handler,
                     enabled = controller != null,
-                ) {
-                    Text(
-                        stringResource(
-                            if (playback.isPlaying) {
-                                R.string.vexstream_music_pause
-                            } else {
-                                R.string.vexstream_music_play
-                            },
-                        ),
-                    )
-                }
-                TextButton(
-                    onClick = {
-                        controller?.seekToNextMediaItem()
-                    },
+                )
+                VexButton(
+                    element = VexStreamMusicScreen.NextTrack,
+                    handler = handler,
                     enabled =
                         controller?.hasNextMediaItem() == true,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexstream_music_next,
-                        ),
-                    )
-                }
-                TextButton(
-                    onClick = {
-                        controller?.toggleVexStreamShuffle()
-                    },
-                    enabled = controller != null,
-                ) {
-                    Text(
+                )
+                VexButton(
+                    element = VexStreamMusicScreen.ToggleShuffle,
+                    handler = handler,
+                    style =
                         if (playback.shuffleEnabled) {
-                            "✓ " +
-                                stringResource(
-                                    R.string.vexstream_music_shuffle,
-                                )
+                            VexElementStyles.PrimaryAction
                         } else {
-                            stringResource(
-                                R.string.vexstream_music_shuffle,
-                            )
+                            VexElementStyles.SecondaryAction
                         },
-                    )
-                }
+                    enabled = controller != null,
+                )
             }
         }
     }
@@ -1212,20 +1203,63 @@ private fun VexStreamQueueSheet(
                 it.track.trackRef.value
             }
         }
+    val sheetState =
+        rememberModalBottomSheetState(
+            skipPartiallyExpanded = false,
+        )
+    val handler =
+        ElementActionHandler { element ->
+            when (element) {
+                VexStreamMusicScreen.QueueToggleShuffle -> {
+                    runtime.activate(
+                        element,
+                    )
+                    controller?.toggleVexStreamShuffle()
+                }
+
+                VexStreamMusicScreen.ToggleRepeat -> {
+                    runtime.activate(
+                        element,
+                    )
+                    controller?.toggleVexStreamRepeatAll()
+                }
+
+                VexStreamMusicScreen.ClearQueue -> {
+                    runtime.activate(
+                        element,
+                    )
+                    controller?.clearMediaItems()
+                }
+
+                else ->
+                    runtime.activate(
+                        element,
+                    )
+            }
+        }
 
     ModalBottomSheet(
+        modifier = Modifier
+            .fillMaxHeight()
+            .vexElement(
+                VexStreamMusicScreen.QueueSheet,
+            ),
         onDismissRequest = {
             runtime.dismissPresentation(
                 VexStreamMusicScreen.QueueSheet,
             )
         },
+        sheetState = sheetState,
+        dragHandle = {
+            BottomSheetDefaults.DragHandle()
+        },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(
-                    horizontal = 16.dp,
-                ),
+                .fillMaxHeight()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
@@ -1239,46 +1273,35 @@ private fun VexStreamQueueSheet(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                TextButton(
-                    onClick = {
-                        controller?.toggleVexStreamShuffle()
-                    },
+                VexButton(
+                    element = VexStreamMusicScreen.QueueToggleShuffle,
+                    handler = handler,
+                    style =
+                        if (playback.shuffleEnabled) {
+                            VexElementStyles.PrimaryAction
+                        } else {
+                            VexElementStyles.SecondaryAction
+                        },
                     enabled = controller != null,
-                ) {
-                    Text(
-                        (if (playback.shuffleEnabled) "✓ " else "") +
-                            stringResource(
-                                R.string.vexstream_music_shuffle,
-                            ),
-                    )
-                }
-                TextButton(
-                    onClick = {
-                        controller?.toggleVexStreamRepeatAll()
-                    },
+                )
+                VexButton(
+                    element = VexStreamMusicScreen.ToggleRepeat,
+                    handler = handler,
+                    style =
+                        if (playback.repeatEnabled) {
+                            VexElementStyles.PrimaryAction
+                        } else {
+                            VexElementStyles.SecondaryAction
+                        },
                     enabled = controller != null,
-                ) {
-                    Text(
-                        (if (playback.repeatEnabled) "✓ " else "") +
-                            stringResource(
-                                R.string.vexstream_music_repeat,
-                            ),
-                    )
-                }
-                TextButton(
-                    onClick = {
-                        controller?.clearMediaItems()
-                    },
+                )
+                VexButton(
+                    element = VexStreamMusicScreen.ClearQueue,
+                    handler = handler,
                     enabled =
                         controller != null &&
                             playback.hasQueue,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexstream_music_clear_queue,
-                        ),
-                    )
-                }
+                )
             }
 
             HorizontalDivider()
@@ -1295,6 +1318,7 @@ private fun VexStreamQueueSheet(
                 )
             } else {
                 LazyColumn(
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     items(
@@ -1369,25 +1393,11 @@ private fun VexStreamQueueSheet(
                 }
             }
 
-            Button(
-                onClick = {
-                    runtime.activate(
-                        VexStreamMusicScreen.CloseQueue,
-                    )
-                },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .vexElement(
-                            VexStreamMusicScreen.CloseQueue,
-                        ),
-            ) {
-                Text(
-                    stringResource(
-                        R.string.close,
-                    ),
-                )
-            }
+            VexButton(
+                element = VexStreamMusicScreen.CloseQueue,
+                handler = handler,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
