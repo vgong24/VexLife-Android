@@ -23,9 +23,13 @@ internal class VexDeviceLocationSource(
         context.applicationContext
 
     private val locationManager =
-        appContext.getSystemService(
-            LocationManager::class.java,
-        )
+        requireNotNull(
+            appContext.getSystemService(
+                LocationManager::class.java,
+            ),
+        ) {
+            "Android LocationManager is unavailable"
+        }
 
     suspend fun currentPreciseLocation():
         VexDeviceLocationResult {
