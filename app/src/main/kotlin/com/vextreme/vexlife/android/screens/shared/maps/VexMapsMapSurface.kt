@@ -319,7 +319,15 @@ internal fun VexMapsMapSurface(
             locationState =
                 when (result) {
                     is VexDeviceLocationResult.Located ->
-                        VexMapsLocationState.Ready
+                        if (
+                            isVexMapsNavigationStartPreflightSatisfied(
+                                result,
+                            )
+                        ) {
+                            VexMapsLocationState.Ready
+                        } else {
+                            VexMapsLocationState.Inaccurate
+                        }
 
                     VexDeviceLocationResult.PermissionMissing ->
                         VexMapsLocationState.Denied
@@ -2277,8 +2285,14 @@ internal fun projectVexMapsMapDeviceLocation(
 
 internal fun isVexMapsNavigationStartPreflightSatisfied(
     result: VexDeviceLocationResult,
+    matchingPolicy:
+        VexRouteMatchingPolicy =
+        VexRouteMatchingPolicy(),
 ): Boolean =
-    result is VexDeviceLocationResult.Located
+    result is VexDeviceLocationResult.Located &&
+        matchingPolicy.acceptsAccuracy(
+            result.accuracyMeters,
+        )
 
 internal fun canStartVexMapsNavigation(
     precisePermissionGranted: Boolean,
@@ -2916,6 +2930,12 @@ private sealed interface VexMapsLocationState {
         VexMapsLocationState {
         override val stringResOrNull =
             R.string.vexmaps_location_unavailable
+    }
+
+    data object Inaccurate :
+        VexMapsLocationState {
+        override val stringResOrNull =
+            R.string.vexmaps_location_inaccurate
     }
 
     data object Error :
