@@ -30,21 +30,36 @@ internal object VexScreenCrawlerArguments {
             )
         }
 
+        val sourceRef =
+            arguments.getString("vexCrawlerSourceRef")
+                ?.takeIf { it.isNotBlank() }
+                ?: "manual"
+
+        val defaults =
+            VexScreenCrawlerRunConfig.build(
+                sourceRef = sourceRef,
+            )
+
         val config = VexScreenCrawlerConfig(
-            selection = parseSelection(arguments),
-            locales = parseLocales(
-                arguments.getString("vexCrawlerLocales"),
-            ),
-            fonts = parseFonts(
-                arguments.getString("vexCrawlerFonts"),
-            ),
-            capturePolicy = parseCapturePolicy(
-                arguments.getString("vexCrawlerCapture"),
-            ),
-            sourceRef =
-                arguments.getString("vexCrawlerSourceRef")
+            selection =
+                parseSelectionOrNull(arguments)
+                    ?: defaults.selection,
+            locales =
+                arguments.getString("vexCrawlerLocales")
                     ?.takeIf { it.isNotBlank() }
-                    ?: "unknown",
+                    ?.let(::parseLocales)
+                    ?: defaults.locales,
+            fonts =
+                arguments.getString("vexCrawlerFonts")
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let(::parseFonts)
+                    ?: defaults.fonts,
+            capturePolicy =
+                arguments.getString("vexCrawlerCapture")
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let(::parseCapturePolicy)
+                    ?: defaults.capturePolicy,
+            sourceRef = sourceRef,
         )
 
         val cases = VexScreenCrawlerPlanner.plan(config)
@@ -60,9 +75,9 @@ internal object VexScreenCrawlerArguments {
         }
     }
 
-    private fun parseSelection(
+    private fun parseSelectionOrNull(
         arguments: android.os.Bundle,
-    ): VexCrawlerSelection {
+    ): VexCrawlerSelection? {
         val shards = arguments.csv("vexCrawlerShards")
         val screens = arguments.csv("vexCrawlerScreens")
         val journeys = arguments.csv("vexCrawlerJourneys")
@@ -86,16 +101,16 @@ internal object VexScreenCrawlerArguments {
                 VexCrawlerSelection.Journeys(journeys.toSet())
 
             else ->
-                VexCrawlerSelection.AllShards
+                null
         }
     }
 
-    private fun parseLocales(raw: String?): List<VexCrawlerLocale> =
+    private fun parseLocales(raw: String): List<VexCrawlerLocale> =
         raw.csvOrDefault("en")
             .map(::VexCrawlerLocale)
 
     private fun parseFonts(
-        raw: String?,
+        raw: String,
     ): List<VexCrawlerFontProfile> =
         raw.csvOrDefault("normal").map { value ->
             when (value.lowercase()) {
@@ -120,10 +135,10 @@ internal object VexScreenCrawlerArguments {
         }
 
     private fun parseCapturePolicy(
-        raw: String?,
+        raw: String,
     ): VexCrawlerCapturePolicy =
-        when (raw?.lowercase()?.trim()) {
-            null, "", "screen-once" ->
+        when (raw.lowercase().trim()) {
+            "", "screen-once" ->
                 VexCrawlerCapturePolicy.SCREEN_ONCE
 
             "every-step" ->
