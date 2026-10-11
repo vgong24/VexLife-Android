@@ -3,10 +3,15 @@ package com.vextreme.vexlife.android.screens.shared.maps
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.LocationListener
 import android.location.LocationManager
 import android.os.CancellationSignal
+import android.os.Looper
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -97,6 +102,94 @@ internal class VexDeviceLocationSource(
             VexDeviceLocationResult.Unavailable
         }
     }
+
+    fun navigationUpdates(
+        minimumIntervalMillis: Long = 1_000L,
+    ): Flow<VexNavigationLocationSample> =
+        callbackFlow {
+            require(
+                minimumIntervalMillis > 0L,
+            )
+
+            if (
+                ContextCompat.checkSelfPermission(
+                    appContext,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                close(
+                    SecurityException(
+                        "precise location permission is not active",
+                    ),
+                )
+                return@callbackFlow
+            }
+
+            if (
+                !LocationManagerCompat.isLocationEnabled(
+                    locationManager,
+                )
+            ) {
+                close(
+                    IllegalStateException(
+                        "device location is disabled",
+                    ),
+                )
+                return@callbackFlow
+            }
+
+            val provider =
+                preferredProvider()
+                    ?: run {
+                        close(
+                            IllegalStateException(
+                                "no enabled location provider is available",
+                            ),
+                        )
+                        return@callbackFlow
+                    }
+
+            val listener =
+                LocationListener { fix ->
+                    val elapsedMillis =
+                        fix.elapsedRealtimeNanos /
+                            1_000_000L
+
+                    trySend(
+                        VexNavigationLocationSample(
+                            sampleRef =
+                                "android.location.$elapsedMillis",
+                            latitude =
+                                fix.latitude,
+                            longitude =
+                                fix.longitude,
+                            accuracyMeters =
+                                fix.accuracy
+                                    .takeIf { accuracy ->
+                                        accuracy.isFinite() &&
+                                            accuracy >= 0f
+                                    },
+                            elapsedRealtimeMillis =
+                                elapsedMillis,
+                        ),
+                    )
+                }
+
+            locationManager
+                .requestLocationUpdates(
+                    provider,
+                    minimumIntervalMillis,
+                    0f,
+                    listener,
+                    Looper.getMainLooper(),
+                )
+
+            awaitClose {
+                locationManager.removeUpdates(
+                    listener,
+                )
+            }
+        }
 
     private fun preferredProvider(): String? {
         val candidates =

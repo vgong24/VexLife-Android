@@ -145,6 +145,14 @@
     <string name="vexmaps_location_disabled">Device location is turned off. VexMaps still works for browsing.</string>
     <string name="vexmaps_location_unavailable">A current location fix is not available yet.</string>
     <string name="vexmaps_location_error">VexMaps could not read the current location.</string>
+    <string name="vexmaps_navigation_channel">VexMaps navigation</string>
+    <string name="vexmaps_navigation_notification_title">Navigating to %1$s</string>
+    <string name="vexmaps_navigation_notification_active">%1$d m remaining</string>
+    <string name="vexmaps_navigation_notification_turn">%1$s · %2$d m</string>
+    <string name="vexmaps_navigation_notification_off_route">Off route · waiting for a usable route fix</string>
+    <string name="vexmaps_navigation_notification_location">Navigation location is temporarily unavailable</string>
+    <string name="vexmaps_navigation_notification_arrived">Arrived</string>
+    <string name="vexmaps_navigation_stop">Stop navigation</string>
 
     <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
     <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>
