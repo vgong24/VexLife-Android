@@ -132,9 +132,10 @@ unit/integration/build/device proof
 ~~~
 
 VexRuntime resolves semantic Invoke actions through the current AppActionRegistrations snapshot.
-Feature effects are registered beside their owning Screen and duplicate ActionKey ownership fails
-closed. VexLifeApp combines registration groups and broad-lifetime dependencies; it should not become
-a giant feature-action switchboard.
+Feature effects are registered beside their owning AppScreenBlueprint. AppScreens combines those
+registration overrides from the same registered Screen list and fails closed on duplicate ownership or
+declared Invoke actions with no owner. VexLifeSession supplies construction dependencies; it should
+not become a feature-action switchboard or require edits whenever another Screen is added.
 
 The registration set can be inspected by ActionKey or ActionElement, but that only proves wiring:
 REGISTRATION_EXISTS != ACTION_IS_AVAILABLE_OR_AUTHORIZED. The latter belongs to future Relay/service/
