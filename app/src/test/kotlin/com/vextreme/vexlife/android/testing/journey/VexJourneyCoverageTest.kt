@@ -8,15 +8,6 @@ import org.junit.Test
 class VexJourneyCoverageTest {
     @Test
     fun reportSemanticCoverageDebtWithoutBlockingOrdinaryDevelopment() {
-        val duplicateTitles = VexJourneyCatalog.all
-            .groupBy { it.title }
-            .filterValues { it.size > 1 }
-            .keys
-        assertTrue(
-            "journey titles must be unique: $duplicateTitles",
-            duplicateTitles.isEmpty(),
-        )
-
         val duplicateShardIds = VexJourneyCatalog.shards
             .groupBy { it.shardId }
             .filterValues { it.size > 1 }
@@ -24,6 +15,28 @@ class VexJourneyCoverageTest {
         assertTrue(
             "journey shard IDs must be unique: $duplicateShardIds",
             duplicateShardIds.isEmpty(),
+        )
+
+        val duplicateJourneyIds = VexJourneyCatalog.shards
+            .flatMap { shard ->
+                shard.journeys
+                    .groupBy { it.id }
+                    .filterValues { it.size > 1 }
+                    .keys
+                    .map { journeyId -> "${shard.shardId}/$journeyId" }
+            }
+        assertTrue(
+            "journey IDs must be unique inside their shard: $duplicateJourneyIds",
+            duplicateJourneyIds.isEmpty(),
+        )
+
+        val duplicateCaseRefs = VexJourneyCatalog.cases
+            .groupBy { it.caseRef }
+            .filterValues { it.size > 1 }
+            .keys
+        assertTrue(
+            "journey case refs must be globally unique: $duplicateCaseRefs",
+            duplicateCaseRefs.isEmpty(),
         )
 
         // Malformed journey grammar is test-infrastructure failure, not coverage debt.
