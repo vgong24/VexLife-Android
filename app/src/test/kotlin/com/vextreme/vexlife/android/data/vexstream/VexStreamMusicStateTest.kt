@@ -235,6 +235,59 @@ class VexStreamMusicStateTest {
         assertEquals(downloaded, offline.tracks.single().localCopy)
     }
 
+    @Test
+    fun desktopPlaylistProjectionKeepsOrderAndDropsUnavailableTrackRefs() {
+        val next = VexStreamMusicState.Empty.withHubCatalog(
+            VexStreamHubCatalogProjection(
+                hubRef = "hub.fixture",
+                sourceVersion = "3.0.0",
+                catalogRevision = "catalog.playlists.1",
+                tracks = listOf(
+                    VexStreamHubTrackProjection(
+                        trackRef = VexStreamTrackRef("hub.track.a"),
+                        mediaSha256 = VexStreamMediaSha256(DIGEST_A),
+                        mediaByteLength = 4096,
+                        title = "A",
+                        artist = "Vex",
+                    ),
+                    VexStreamHubTrackProjection(
+                        trackRef = VexStreamTrackRef("hub.track.b"),
+                        mediaSha256 = VexStreamMediaSha256(DIGEST_B),
+                        mediaByteLength = 8192,
+                        title = "B",
+                        artist = "Vex",
+                    ),
+                ),
+                playlists = listOf(
+                    VexStreamHubPlaylistProjection(
+                        playlistRef = VexStreamPlaylistRef("playlist.road"),
+                        name = "Road Trip",
+                        trackRefs = listOf(
+                            VexStreamTrackRef("hub.track.b"),
+                            VexStreamTrackRef("missing.track"),
+                            VexStreamTrackRef("hub.track.a"),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(1, next.playlists.size)
+        assertEquals(
+            listOf("hub.track.b", "hub.track.a"),
+            next.playlists.single().trackRefs.map { it.value },
+        )
+
+        val offline =
+            next.withHubUnavailable(
+                VexStreamHubState.Unreachable,
+            )
+        assertEquals(
+            next.playlists,
+            offline.playlists,
+        )
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun mediaDigestMustBeExactSha256() {
         VexStreamMediaSha256("not-a-digest")
