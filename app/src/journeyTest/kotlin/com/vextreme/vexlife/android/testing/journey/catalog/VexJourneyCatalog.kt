@@ -8,7 +8,7 @@ package com.vextreme.vexlife.android.testing.journey
  */
 object VexJourneyCatalog {
     val shards: List<VexJourneyShard> =
-        Journeys.shards
+        registeredJourneyShards()
 
     /**
      * Canonical shard lookup derived from [shards].
