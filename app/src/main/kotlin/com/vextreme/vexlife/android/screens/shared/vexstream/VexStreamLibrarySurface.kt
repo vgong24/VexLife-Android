@@ -1465,10 +1465,60 @@ private fun VexStreamTrackCard(
             }
         }
 
+    val durationText =
+        state.track.durationSeconds
+            .takeIf { it > 0.0 }
+            ?.let {
+                formatVexStreamPlaybackTime(
+                    (it * 1_000.0).toLong(),
+                )
+            }
+    val secondaryText =
+        buildList {
+            state.track.artist
+                .takeIf {
+                    it.isNotBlank() &&
+                        !it.equals(
+                            state.track.title,
+                            ignoreCase = true,
+                        )
+                }
+                ?.let(::add)
+            durationText?.let(::add)
+        }.joinToString(" · ")
+    val compactStatus =
+        when {
+            state.localCopy is VexStreamLocalCopyState.Downloading ->
+                stringResource(
+                    R.string.vexstream_music_downloading,
+                )
+
+            state.localCopy is VexStreamLocalCopyState.Downloaded ->
+                stringResource(
+                    R.string.vexstream_music_downloaded,
+                )
+
+            state.availability == VexStreamTrackAvailability.LOCAL_ONLY ->
+                stringResource(
+                    R.string.vexstream_music_local_only,
+                )
+
+            state.availability == VexStreamTrackAvailability.UNAVAILABLE ->
+                stringResource(
+                    R.string.vexstream_music_unavailable,
+                )
+
+            else ->
+                null
+        }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
+            .padding(
+                horizontal = 8.dp,
+                vertical = 2.dp,
+            )
             .clickable(
                 onClick = onSelect,
             ),
@@ -1481,60 +1531,87 @@ private fun VexStreamTrackCard(
                             .secondaryContainer,
                 )
             } else {
-                CardDefaults.cardColors()
+                CardDefaults.cardColors(
+                    containerColor =
+                        MaterialTheme
+                            .colorScheme
+                            .surface,
+                )
             },
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier.padding(
+                horizontal = 10.dp,
+                vertical = 8.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(
-                text = state.track.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (
-                state.track.artist.isNotBlank() &&
-                !state.track.artist.equals(
-                    state.track.title,
-                    ignoreCase = true,
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(
-                    text = state.track.artist,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Surface(
+                    modifier = Modifier.size(54.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .surfaceContainerHigh,
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        VexIcon(
+                            icon = ElementIcon.Music,
+                            contentDescription = null,
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = state.track.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    if (secondaryText.isNotBlank()) {
+                        Text(
+                            text = secondaryText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    compactStatus?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
-            if (
-                state.track.album.isNotBlank() &&
-                !state.track.album.equals(
-                    state.track.title,
-                    ignoreCase = true,
-                ) &&
-                !state.track.album.equals(
-                    state.track.artist,
-                    ignoreCase = true,
-                )
-            ) {
-                Text(
-                    text = state.track.album,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text(
-                text = trackAvailabilityText(state),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
 
             if (selected) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
                 ) {
                     VexIconButton(
                         element = VexStreamMusicScreen.PlayTrack,
@@ -1577,23 +1654,6 @@ private fun VexStreamTrackCard(
                             }
                         }
                     }
-                }
-
-                if (
-                    showDownloadAction &&
-                    state.localCopy is VexStreamLocalCopyState.Downloading
-                ) {
-                    Text(
-                        text =
-                            stringResource(
-                                R.string.vexstream_music_downloading,
-                            ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurfaceVariant,
-                    )
                 }
             }
         }
