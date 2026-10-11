@@ -66,7 +66,6 @@ dependencies {
     implementation(libs.lifecycleViewModelCompose)
     implementation(libs.lifecycleRuntimeCompose)
     implementation(libs.maplibreAndroid)
-    implementation(libs.locationButtonCompose)
     implementation(libs.valhallaMobile)
     implementation(libs.valhallaModels)
     implementation(libs.valhallaModelsConfig)
