@@ -20,12 +20,20 @@ object VexJourneyCatalog {
         shards.flatMap { it.journeys }
 
     val cases: List<VexJourneyCase> =
-        all.flatMap { journey ->
-            journey.environments.map { environment ->
-                VexJourneyCase(
-                    journey = journey,
-                    environment = environment,
-                )
+        shards.flatMap { shard ->
+            shard.journeys.flatMap { journey ->
+                journey.environments.map { environment ->
+                    VexJourneyCase(
+                        shardId = shard.shardId,
+                        journey = journey,
+                        environment = environment,
+                    )
+                }
             }
+        }
+
+    fun requireCase(caseRef: String): VexJourneyCase =
+        requireNotNull(cases.firstOrNull { it.caseRef == caseRef }) {
+            "unknown journey case: $caseRef"
         }
 }
