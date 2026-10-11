@@ -43,7 +43,7 @@ object VexJourneyCatalog {
             // The expected-walk model mirrors that feature effect, then proves post-reset facts.
             tap(DebugMenuScreen.ResetLog)
             tap(DebugMenuScreen.ShowLog)
-            back()
+            dismiss(DebugMenuScreen.LogSheet)
             tap(AppShell.Elements.Back)
         },
 
