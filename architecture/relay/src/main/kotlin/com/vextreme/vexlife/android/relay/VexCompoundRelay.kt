@@ -1,16 +1,9 @@
 package com.vextreme.vexlife.android.relay
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 
-/**
- * Serial reconciler for several related truths that must produce one bounded current projection.
- *
- * EAP-00 deliberately owns processing only. Async dependency subscription/lifecycle is not hidden in
- * this base yet; the first real Events external-feed wiring will earn that seam from an actual
- * producer lifetime instead of importing the old experimental AppScope machinery wholesale.
- */
 abstract class VexCompoundRelay<
     InputState : VexInputState<InputState>,
     OutputState : VexOutputState<OutputState>,
@@ -34,17 +27,17 @@ abstract class VexCompoundRelay<
             ),
         )
 
-    override val currentState: StateFlow<VexCompoundState<InputState, OutputState>> =
-        DefensiveVexStateFlow(mutableCurrentState.asStateFlow())
+    override val states: Flow<VexCompoundState<InputState, OutputState>> =
+        mutableCurrentState.map { state ->
+            state.deepCopy()
+        }
 
-    /**
-     * The semantic heart of the relationship.
-     *
-     * A concrete Compound Relay should make its dependencies perceptible in [InputState], merge
-     * partial patches against [currentState], then derive exactly one next [OutputState].
-     *
-     * Long-running I/O, timers, SDK calls, and UI rendering do not belong in this function.
-     */
+    override val current: VexCompoundState<InputState, OutputState>
+        get() =
+            synchronized(lock) {
+                mutableCurrentState.value.deepCopy()
+            }
+
     protected abstract fun processStates(
         inputState: InputState,
         currentState: VexCompoundState<InputState, OutputState>,

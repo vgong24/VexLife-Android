@@ -1,16 +1,9 @@
 package com.vextreme.vexlife.android.relay
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 
-/**
- * One serialized Source-of-Truth Relay.
- *
- * The concrete subclass owns semantic freshness and reconciliation in [processState]. The base owns
- * the mechanical guarantees: one serialized processing boundary, defensive copying, and suppression
- * of semantically unchanged current state.
- */
 abstract class VexRelay<State : VexState<State>>(
     val relayRef: String,
     initialState: State,
@@ -25,17 +18,17 @@ abstract class VexRelay<State : VexState<State>>(
     private val mutableCurrentState =
         MutableStateFlow(initialState.deepCopy())
 
-    override val currentState: StateFlow<State> =
-        DefensiveVexStateFlow(mutableCurrentState.asStateFlow())
+    override val states: Flow<State> =
+        mutableCurrentState.map { state ->
+            state.deepCopy()
+        }
 
-    /**
-     * The small, intention-revealing processing section for this Relay.
-     *
-     * Examples:
-     * - reject a stale external provider revision;
-     * - normalize a bounded source snapshot;
-     * - preserve current state when the candidate carries no newer meaning.
-     */
+    override val current: State
+        get() =
+            synchronized(lock) {
+                mutableCurrentState.value.deepCopy()
+            }
+
     protected open fun processState(
         inputState: State,
         currentState: State,
