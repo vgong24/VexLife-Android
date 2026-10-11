@@ -125,6 +125,10 @@ Kotlin functions / properties / locals / parameters
   camelCase
   displayName, updateDisplayName, profileRef
 
+Kotlin compile-time constants
+  UPPER_SNAKE_CASE
+  DATABASE_NAME
+
 Android resources
   snake_case
   user_profile_name_label

@@ -130,7 +130,7 @@ abstract class VexLifeDatabase : RoomDatabase() {
  * not define repository policy; callers should normally enter through [AppRepositoryFactory].
  */
 object VexLifeDatabaseFactory {
-    private const val databaseName = "vexlife.db"
+    private const val DATABASE_NAME = "vexlife.db"
 
     @Volatile
     private var instance: VexLifeDatabase? = null
@@ -140,7 +140,7 @@ object VexLifeDatabaseFactory {
             instance ?: Room.databaseBuilder(
                 context.applicationContext,
                 VexLifeDatabase::class.java,
-                databaseName,
+                DATABASE_NAME,
             )
                 .addMigrations(VexLifeDatabase.migration1To2)
                 .build()
