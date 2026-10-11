@@ -84,6 +84,7 @@ class VexTestEngine(
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
+        compose.waitForIdle()
         observe(
             stepKind = "start",
             semanticRef = screen.screenId,
