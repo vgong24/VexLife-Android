@@ -32,8 +32,8 @@ class VexScreenCrawlerPlannerTest {
         val config = vexScreenCrawlerConfig {
             screens(UserProfileScreen)
             languages(
-                "en",
-                "zh",
+                language("en"),
+                language("zh"),
             )
             fontProfiles(
                 VexCrawlerFonts.Normal,
@@ -68,7 +68,7 @@ class VexScreenCrawlerPlannerTest {
                 DebugJourneys,
                 GalleryJourneys,
             )
-            languages("zh")
+            languages(language("zh"))
             fontProfiles(VexCrawlerFonts.Large)
         }
 
@@ -92,7 +92,7 @@ class VexScreenCrawlerPlannerTest {
     fun allShardsExceptAutomaticallyIncludesCanonicalShards() {
         val config = VexScreenCrawlerConfig(
             selection = VexCrawlerSelection.AllShardsExcept(
-                excludedShardIds = setOf(DebugJourneys.shardId),
+                excludedShards = setOf(DebugJourneys),
             ),
         )
 
@@ -111,13 +111,20 @@ class VexScreenCrawlerPlannerTest {
     }
 
     @Test
-    fun unknownShardFailsInsteadOfSilentlyProducingAnEmptyRun() {
+    fun unregisteredTypedShardFailsInsteadOfSilentlyProducingAnEmptyRun() {
+        val unknownShard =
+            object : com.vextreme.vexlife.android.testing.journey.VexJourneyShard {
+                override val shardId = "shared.not-real"
+                override val journeys =
+                    emptyList<com.vextreme.vexlife.android.testing.journey.VexJourney>()
+            }
+
         val failure = runCatching {
             VexScreenCrawlerPlanner.plan(
                 VexScreenCrawlerConfig(
                     selection =
                         VexCrawlerSelection.Shards(
-                            setOf("shared.not-real"),
+                            shards = setOf(unknownShard),
                         ),
                 ),
             )
@@ -126,7 +133,7 @@ class VexScreenCrawlerPlannerTest {
         requireNotNull(failure)
         assertTrue(
             failure.message.orEmpty()
-                .contains("unknown crawler shard IDs"),
+                .contains("unregistered shard"),
         )
     }
 }
