@@ -16,6 +16,15 @@ object VexJourneyCatalog {
         TalkToVexJourneys,
     )
 
+    /**
+     * Canonical shard lookup derived from [shards].
+     *
+     * ScreenCrawler and other consumers query this map; they do not maintain another shard list.
+     * New shards become available to selectors as soon as they are added to [shards].
+     */
+    val shardsById: Map<String, VexJourneyShard> =
+        shards.associateBy { it.shardId }
+
     val all: List<VexJourney> =
         shards.flatMap { it.journeys }
 
