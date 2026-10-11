@@ -7,14 +7,8 @@ package com.vextreme.vexlife.android.testing.journey
  * without restricting a journey from crossing Screens when one user intention naturally does so.
  */
 object VexJourneyCatalog {
-    val shards: List<VexJourneyShard> = listOf(
-        AppShellJourneys,
-        DebugJourneys,
-        GalleryJourneys,
-        UserProfileJourneys,
-        VexStreamJourneys,
-        TalkToVexJourneys,
-    )
+    val shards: List<VexJourneyShard> =
+        Journeys.shards
 
     /**
      * Canonical shard lookup derived from [shards].
