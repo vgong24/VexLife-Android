@@ -29,7 +29,7 @@ class VexMapsPlaceSearchQueryTest {
         assertEquals(
             "a* AND b* AND c*",
             vexMapsPlaceMatchQuery(
-                "a OR b "c"",
+                "a + b / c",
             ),
         )
     }

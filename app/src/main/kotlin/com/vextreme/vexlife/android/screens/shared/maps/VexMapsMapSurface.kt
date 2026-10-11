@@ -6,10 +6,13 @@ import android.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
@@ -970,7 +973,12 @@ private fun VexMapsRoutePlannerCard(
     ) {
         Column(
             modifier =
-                Modifier.padding(14.dp),
+                Modifier
+                    .heightIn(max = 560.dp)
+                    .verticalScroll(
+                        rememberScrollState(),
+                    )
+                    .padding(14.dp),
             verticalArrangement =
                 Arrangement.spacedBy(8.dp),
         ) {

@@ -210,11 +210,18 @@ internal class VexMapsPlaceSearchStore(
                     SELECT place_ref, name, subtitle, latitude, longitude
                     FROM vex_places_fts
                     WHERE vex_places_fts MATCH ?
-                    ORDER BY name COLLATE NOCASE
+                    ORDER BY
+                        CASE
+                            WHEN name LIKE ? COLLATE NOCASE THEN 0
+                            ELSE 1
+                        END,
+                        length(name),
+                        name COLLATE NOCASE
                     LIMIT ?
                     """.trimIndent(),
                     arrayOf(
                         matchQuery,
+                        query.trim() + "%",
                         limit.toString(),
                     ),
                 ).use { cursor ->
