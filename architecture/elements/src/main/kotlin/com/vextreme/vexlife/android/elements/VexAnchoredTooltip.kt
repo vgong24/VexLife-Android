@@ -470,6 +470,10 @@ private fun VexTooltipSurface(
 private fun VexTooltipCaret(
     direction: VexTooltipCaretDirection,
 ) {
+    if (direction == VexTooltipCaretDirection.NONE) {
+        return
+    }
+
     val fill =
         MaterialTheme.colorScheme.inverseSurface
     val outline =
@@ -498,7 +502,7 @@ private fun VexTooltipCaret(
                 )
 
             VexTooltipCaretDirection.NONE ->
-                Modifier.size(0.dp)
+                error("NONE caret direction returned after early exit")
         }
 
     Canvas(modifier) {
@@ -566,7 +570,7 @@ private fun VexTooltipCaret(
                     }
 
                     VexTooltipCaretDirection.NONE ->
-                        return@Canvas
+                        error("NONE caret direction returned after early exit")
                 }
 
                 close()

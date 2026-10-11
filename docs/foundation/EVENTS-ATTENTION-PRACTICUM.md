@@ -369,6 +369,22 @@ END
 FALLBACK
 ~~~
 
+Preferred placement order is strict: the resolver chooses the first preferred side that safely fits.
+If it cannot use the requested side, it tries the next preference and finally explicit FALLBACK.
+
+The rich tooltip renders a physical caret from the **resolved** placement:
+
+~~~text
+ABOVE -> caret points DOWN toward anchor
+BELOW -> caret points UP toward anchor
+START -> caret points toward anchor, respecting LTR/RTL
+END   -> caret points toward anchor, respecting LTR/RTL
+FALLBACK -> no directional caret claim
+~~~
+
+The target row also receives a subtle active outline while it owns the tooltip. Together these cues
+must make the relationship legible without reading explanatory text.
+
 START/END respect layout direction. A bottom/edge anchor may reorient without changing `eventRef`.
 If no preferred anchored side safely fits, the resolver emits explicit FALLBACK rather than claiming
 an unsafe preferred placement.
@@ -429,9 +445,33 @@ COMPOUND_INPUT_CHANGED
 CONSUMER_OUTPUT_CHANGED
 ~~~
 
-The second distinction now belongs to `VexCompoundRelay` itself rather than Events. A future
-Compound Relay UI consumer should collect `outputStates` and initialize from `currentOutput`;
-it should not hand-build `map { outputState }.distinctUntilChanged()`.
+The second distinction now belongs to `VexCompoundRelay` itself rather than Events.
+
+Canonical Compound observation surfaces:
+
+~~~text
+states / current
+  full retained input + output + revision
+  coordination/debug/currentness
+
+inputStates / currentInput
+  coherent retained dependency snapshot
+  distinct-by-input
+  use only when dependency/currentness context itself is part of the downstream concern
+
+outputStates / currentOutput
+  derived semantic result
+  distinct-by-output
+  normal presentation/downstream surface
+~~~
+
+Any ordinary Relay can serve as an input source to another Relay. "Input Relay" is a role, not a
+separate class. A Compound InputState is the coherent snapshot/envelope of those dependency truths.
+
+A future Compound Relay UI consumer should prefer `outputStates/currentOutput` when it only needs
+the post-calculation result. If it genuinely renders dependency/currentness context, it may use
+`inputStates/currentInput`. It should not unpack full `states` or re-run `processStates` logic in
+Compose by habit.
 
 A blocking lab scenario adds one stronger condition on top of the common presentation snapshot:
 the target is auto-scrolled into view, user scrolling is disabled, outside dismissal is ignored and
