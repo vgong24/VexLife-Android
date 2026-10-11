@@ -137,7 +137,10 @@ internal fun VexStreamLibrarySurface(
             }
         },
         floatingActionButton = {
-            if (libraryTracks.isNotEmpty()) {
+            if (
+                libraryTracks.isNotEmpty() &&
+                controller != null
+            ) {
                 VexStreamLibraryFabActions(
                     runtime = runtime,
                     tracks = libraryTracks,
