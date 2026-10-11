@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.vextreme.vexlife.android.testing.journey.VexJourneyExecutionObserver
 import com.vextreme.vexlife.android.testing.journey.VexJourneyStepObservation
 import java.io.File
+import java.security.MessageDigest
 
 /**
  * Writes crawler screenshots and a JSONL manifest without retaining Activity/Compose/Bitmap objects.
@@ -126,12 +127,14 @@ class VexScreenCrawlerEvidenceObserver(
         manifest.appendText(
             observation.toManifestLine(
                 screenshot = screenshot,
+                screenshotSha256 = screenshot.sha256(),
             ) + "\n",
         )
     }
 
     private fun VexJourneyStepObservation.toManifestLine(
         screenshot: File,
+        screenshotSha256: String,
     ): String =
         buildString {
             append("{")
@@ -166,6 +169,8 @@ class VexScreenCrawlerEvidenceObserver(
             append(Build.VERSION.SDK_INT)
             append(",")
             appendJson("file", screenshot.name)
+            append(",")
+            appendJson("sha256", screenshotSha256)
             append("}")
         }
 }
@@ -204,3 +209,19 @@ private fun String.jsonEscape(): String =
             }
         }
     }
+
+
+private fun File.sha256(): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    inputStream().buffered().use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { byte ->
+        "%02x".format(byte)
+    }
+}
