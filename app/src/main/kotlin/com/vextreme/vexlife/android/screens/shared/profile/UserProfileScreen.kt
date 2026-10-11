@@ -146,8 +146,8 @@ object UserProfileScreen : AppScreenBlueprint(
  * become runtime actions/log records. The app action owner performs persistence; Room's Flow then
  * updates the persisted field so the database round-trip is visible on-screen.
  *
- * This keeps the screen responsible for draft presentation state while persistence/operation ownership
- * remains outside the screen.
+ * This keeps the renderer responsible only for draft presentation state. The Screen object owns the
+ * Save operation registration; the repository remains the persisted-state owner.
  */
 @Composable
 fun UserProfileScreenContent(
