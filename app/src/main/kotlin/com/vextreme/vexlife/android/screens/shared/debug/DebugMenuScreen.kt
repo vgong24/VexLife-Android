@@ -69,6 +69,34 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.StopSyntheticEvents),
     )
 
+    val EmitSyntheticEvent = buttonRef(
+        id = "body.events-simulator.actions.emit-next",
+        labelRes = R.string.events_simulator_emit_next,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.EmitSyntheticEvent),
+    )
+
+    val EmitSyntheticEventBurst = buttonRef(
+        id = "body.events-simulator.actions.emit-burst",
+        labelRes = R.string.events_simulator_emit_burst,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.EmitSyntheticEventBurst),
+    )
+
+    val InsertHistoricalSyntheticEvent = buttonRef(
+        id = "body.events-simulator.actions.insert-historical",
+        labelRes = R.string.events_simulator_insert_historical,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.InsertHistoricalSyntheticEvent),
+    )
+
+    val RemoveOldestSyntheticEvent = buttonRef(
+        id = "body.events-simulator.actions.remove-oldest",
+        labelRes = R.string.events_simulator_remove_oldest,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.RemoveOldestSyntheticEvent),
+    )
+
     override val content = layout {
         scrollableColumn("body") {
             toggle(DarkMode)
@@ -96,9 +124,17 @@ object DebugMenuScreen : AppScreenBlueprint(
                     textRes = R.string.events_simulator_title,
                     role = TextRole.Title,
                 )
-                row("actions") {
+                row("timer-actions") {
                     button(StartSyntheticEvents)
                     button(StopSyntheticEvents)
+                }
+                row("emit-actions") {
+                    button(EmitSyntheticEvent)
+                    button(EmitSyntheticEventBurst)
+                }
+                row("mutation-actions") {
+                    button(InsertHistoricalSyntheticEvent)
+                    button(RemoveOldestSyntheticEvent)
                 }
                 text(
                     id = "helper",
@@ -150,6 +186,30 @@ object DebugMenuScreen : AppScreenBlueprint(
                 ownerRef = screenId,
             ) {
                 syntheticEvents.stop()
+            },
+            appAction(
+                action = AppActions.EmitSyntheticEvent,
+                ownerRef = screenId,
+            ) {
+                syntheticEvents.emitNext()
+            },
+            appAction(
+                action = AppActions.EmitSyntheticEventBurst,
+                ownerRef = screenId,
+            ) {
+                syntheticEvents.emitBurst()
+            },
+            appAction(
+                action = AppActions.InsertHistoricalSyntheticEvent,
+                ownerRef = screenId,
+            ) {
+                syntheticEvents.insertHistorical()
+            },
+            appAction(
+                action = AppActions.RemoveOldestSyntheticEvent,
+                ownerRef = screenId,
+            ) {
+                syntheticEvents.removeOldest()
             },
         )
     }

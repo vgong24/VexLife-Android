@@ -59,6 +59,68 @@ class SyntheticExternalEventSourceTest {
     }
 
     @Test
+    fun manualControlsExposeDeterministicListTortureConditions() {
+        val repository = RelayEventsRepository()
+        var now = 10_000L
+
+        val source =
+            SyntheticExternalEventSource(
+                sink = repository::accept,
+                clock = {
+                    now += 1_000L
+                    now
+                },
+            )
+
+        source.emitBurst(count = 4)
+
+        val beforeInsert =
+            repository.current.events
+        assertEquals(4, beforeInsert.size)
+
+        val retainedRefs =
+            beforeInsert
+                .map(VexExternalEvent::eventRef)
+                .toSet()
+
+        source.insertHistorical()
+
+        val afterInsert =
+            repository.current.events
+        assertEquals(5, afterInsert.size)
+        assertTrue(
+            afterInsert
+                .map(VexExternalEvent::eventRef)
+                .toSet()
+                .containsAll(retainedRefs),
+        )
+        assertEquals(
+            "event.synthetic.external.historical.0005",
+            afterInsert.last().eventRef,
+        )
+
+        source.removeOldest()
+
+        val afterRemoval =
+            repository.current.events
+        assertEquals(4, afterRemoval.size)
+        assertTrue(
+            afterRemoval.none { event ->
+                event.eventRef ==
+                    "event.synthetic.external.historical.0005"
+            },
+        )
+        assertEquals(
+            6L,
+            repository.current.sourceSnapshots
+                .getValue(
+                    SyntheticExternalEventSource.SOURCE_REF,
+                )
+                .sourceRevision,
+        )
+    }
+
+    @Test
     fun longRunningFixtureKeepsABoundedCurrentProjection() = runTest {
         val repository = RelayEventsRepository()
         val source =

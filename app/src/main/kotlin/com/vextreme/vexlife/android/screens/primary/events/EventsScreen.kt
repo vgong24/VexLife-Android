@@ -3,13 +3,11 @@ package com.vextreme.vexlife.android.screens.primary.events
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,7 +17,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -29,13 +26,17 @@ import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
+import com.vextreme.vexlife.android.data.events.VexExternalEventKind
+import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
 import com.vextreme.vexlife.android.elements.VexAnchoredTooltip
+import com.vextreme.vexlife.android.elements.VexStableLazyColumn
 import com.vextreme.vexlife.android.preview.VexPreviewHost
+import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 object EventsScreen : AppScreenBlueprint(
     screenKey = "events",
@@ -65,6 +66,13 @@ object EventsScreen : AppScreenBlueprint(
     }
 }
 
+/**
+ * Dynamic Events realization.
+ *
+ * The Screen owns event meaning and attention policy; [VexStableLazyColumn] owns only Android lazy
+ * list identity/visibility mechanics. This split is deliberate: a future list-based feature can
+ * reuse stable repeated-item behavior without inheriting Events repositories or attention rules.
+ */
 @Composable
 fun EventsScreenContent(
     runtime: VexRuntime,
@@ -82,17 +90,11 @@ fun EventsScreenContent(
         remember {
             EventsAttentionRelay()
         }
-    val listState =
-        rememberLazyListState()
 
     val currentScreenId =
         runtime.currentScreen.screenId
     val transientBlocked =
         runtime.presentation.hasOpenPresentation
-    val eventRefs =
-        feed.events
-            .map(VexExternalEvent::eventRef)
-            .toSet()
 
     LaunchedEffect(feed) {
         attentionRelay.feedChanged(feed)
@@ -108,22 +110,6 @@ fun EventsScreenContent(
             transientBlocked,
         )
     }
-    LaunchedEffect(listState, eventRefs) {
-        snapshotFlow {
-            listState.layoutInfo.visibleItemsInfo
-                .mapNotNull { item ->
-                    item.key as? String
-                }
-                .toSet()
-                .intersect(eventRefs)
-        }
-            .distinctUntilChanged()
-            .collect { visible ->
-                attentionRelay.visibleTargetsChanged(
-                    visible,
-                )
-            }
-    }
 
     val attention by attentionRelay.states.collectAsState(
         initial = attentionRelay.current,
@@ -137,85 +123,84 @@ fun EventsScreenContent(
             ?.candidate
             ?.eventRef
 
-    LazyColumn(
-        state = listState,
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .testTag(EventsScreen.content.element.elementId)
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (feed.events.isEmpty()) {
-            item(key = "events-empty") {
-                Text(
-                    text = stringResource(R.string.events_preview_body),
-                    style = MaterialTheme.typography.bodyLarge,
+    VexStableLazyColumn(
+        listRef = EventsScreen.content.element.elementId,
+        items = feed.events,
+        itemRef = VexExternalEvent::eventRef,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        onVisibleItemRefsChanged =
+            attentionRelay::visibleTargetsChanged,
+        emptyContent = {
+            Text(
+                text = stringResource(R.string.events_preview_body),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        },
+    ) { event ->
+        EventRow(
+            event = event,
+            isAttentionCandidate =
+                candidateRef == event.eventRef,
+            disposition =
+                preferences.dispositionByEventRef[
+                    event.eventRef
+                ],
+            onAcknowledge = {
+                runtime.recordDynamicInteraction(
+                    EventsPresentationRefs.attentionAction(
+                        event.eventRef,
+                        "acknowledge",
+                    ),
                 )
-            }
-        } else {
-            items(
-                items = feed.events,
-                key = VexExternalEvent::eventRef,
-            ) { event ->
-                EventRow(
-                    event = event,
-                    isAttentionCandidate =
-                        candidateRef == event.eventRef,
-                    disposition =
-                        preferences.dispositionByEventRef[
-                            event.eventRef
-                        ],
-                    onAcknowledge = {
-                        runtime.recordDynamicInteraction(
-                            EventsPresentationRefs.attentionAction(
-                                event.eventRef,
-                                "acknowledge",
-                            ),
-                        )
-                        attentionPreferences.acknowledge(
-                            event.eventRef,
-                        )
-                    },
-                    onDefer = {
-                        runtime.recordDynamicInteraction(
-                            EventsPresentationRefs.attentionAction(
-                                event.eventRef,
-                                "later",
-                            ),
-                        )
-                        attentionPreferences.defer(
-                            event.eventRef,
-                        )
-                    },
-                    onSuppress = {
-                        runtime.recordDynamicInteraction(
-                            EventsPresentationRefs.attentionAction(
-                                event.eventRef,
-                                "suppress",
-                            ),
-                        )
-                        attentionPreferences.suppress(
-                            event.eventRef,
-                        )
-                    },
-                    onDismiss = {
-                        runtime.recordDynamicInteraction(
-                            EventsPresentationRefs.tooltip(
-                                event.eventRef,
-                            ),
-                            action = "Dismissed",
-                        )
-                        attentionPreferences.defer(
-                            event.eventRef,
-                        )
-                    },
+                attentionPreferences.acknowledge(
+                    event.eventRef,
                 )
-            }
-        }
+            },
+            onDefer = {
+                runtime.recordDynamicInteraction(
+                    EventsPresentationRefs.attentionAction(
+                        event.eventRef,
+                        "later",
+                    ),
+                )
+                attentionPreferences.defer(
+                    event.eventRef,
+                )
+            },
+            onSuppress = {
+                runtime.recordDynamicInteraction(
+                    EventsPresentationRefs.attentionAction(
+                        event.eventRef,
+                        "suppress",
+                    ),
+                )
+                attentionPreferences.suppress(
+                    event.eventRef,
+                )
+            },
+            onDismiss = {
+                runtime.recordDynamicInteraction(
+                    EventsPresentationRefs.tooltip(
+                        event.eventRef,
+                    ),
+                    action = "Dismissed",
+                )
+                attentionPreferences.defer(
+                    event.eventRef,
+                )
+            },
+        )
     }
 }
 
+/**
+ * Events-specific row composition.
+ *
+ * Keeping this beside Events is intentional: kind/title/detail/disposition and its attention actions
+ * are product meaning, not generic list-cell behavior. The reusable list only asks this row for one
+ * stable [VexExternalEvent.eventRef].
+ */
 @Composable
 private fun EventRow(
     event: VexExternalEvent,
@@ -360,6 +345,9 @@ private fun EventRow(
     }
 }
 
+/**
+ * Empty/default screen preview.
+ */
 @VexScreenPreviews
 @Composable
 private fun EventsScreenPreview() {
@@ -374,6 +362,81 @@ private fun EventsScreenPreview() {
                 context.repositories.eventsAttention,
         )
     }
+}
+
+/**
+ * Feature-owned visual fixture for the interesting state: several provider events are already
+ * present and no attention preference has handled the oldest candidate yet.
+ *
+ * This preview is intentionally beside Events rather than in the shared preview host. It lets a
+ * human inspect row composition + anchored attention under every @VexScreenPreviews device/font/theme
+ * form without turning Preview infrastructure into another scenario registry.
+ */
+@VexScreenPreviews
+@Composable
+private fun EventsAttentionPreview() {
+    VexPreviewHost(
+        id = "events-attention",
+        startScreen = EventsScreen,
+        repositoriesFactory = ::eventsAttentionPreviewRepositories,
+    ) { context ->
+        EventsScreenContent(
+            runtime = context.runtime,
+            repository = context.repositories.events,
+            attentionPreferences =
+                context.repositories.eventsAttention,
+        )
+    }
+}
+
+private fun eventsAttentionPreviewRepositories(): AppRepositories {
+    val repositories =
+        VexPreviewRepositories.empty()
+    val events =
+        RelayEventsRepository()
+    val sourceRef =
+        "source.preview.external-information"
+
+    events.accept(
+        VexExternalEventSourceSnapshot(
+            sourceRef = sourceRef,
+            sourceRevision = 1L,
+            events =
+                listOf(
+                    VexExternalEvent(
+                        eventRef = "event.preview.message.001",
+                        sourceRef = sourceRef,
+                        kind = VexExternalEventKind.MESSAGE,
+                        title = "Preview message",
+                        detail =
+                            "This row demonstrates stable repeated identity and anchored attention.",
+                        occurredAtEpochMillis = 1_000L,
+                    ),
+                    VexExternalEvent(
+                        eventRef = "event.preview.call.002",
+                        sourceRef = sourceRef,
+                        kind = VexExternalEventKind.CALL,
+                        title = "Preview call",
+                        detail =
+                            "A second row makes ordering and list spacing visible in Preview.",
+                        occurredAtEpochMillis = 2_000L,
+                    ),
+                    VexExternalEvent(
+                        eventRef = "event.preview.map.003",
+                        sourceRef = sourceRef,
+                        kind = VexExternalEventKind.MAP,
+                        title = "Preview map update",
+                        detail =
+                            "Large-text Preview pressures row height and tooltip placement.",
+                        occurredAtEpochMillis = 3_000L,
+                    ),
+                ),
+        ),
+    )
+
+    return repositories.copy(
+        events = events,
+    )
 }
 
 // [VXG RealForever]
