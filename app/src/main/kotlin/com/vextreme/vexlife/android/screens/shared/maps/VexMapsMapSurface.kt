@@ -184,47 +184,59 @@ internal fun VexMapsMapSurface(
             )
         }
 
-    val readCurrentPreciseLocation: () -> Unit = {
+    fun readCurrentPreciseLocation(
+        onLocated: (() -> Unit)? = null,
+    ) {
         locationState =
             VexMapsLocationState.Finding
 
         scope.launch {
-            locationState =
-                when (
-                    val result =
-                        locationSource
-                            .currentPreciseLocation()
-                ) {
-                    is VexDeviceLocationResult.Located -> {
-                        currentLocation =
-                            result
-                        mapController
-                            .showDeviceLocation(
-                                result,
-                            )
+            when (
+                val result =
+                    locationSource
+                        .currentPreciseLocation()
+            ) {
+                is VexDeviceLocationResult.Located -> {
+                    check(
+                        isVexMapsNavigationStartPreflightSatisfied(
+                            result,
+                        ),
+                    )
+                    currentLocation =
+                        result
+                    mapController
+                        .showDeviceLocation(
+                            result,
+                        )
+                    locationState =
                         VexMapsLocationState.Ready
-                    }
-
-                    VexDeviceLocationResult.PermissionMissing -> {
-                        currentLocation = null
-                        VexMapsLocationState.Denied
-                    }
-
-                    VexDeviceLocationResult.ApproximateOnly -> {
-                        currentLocation = null
-                        VexMapsLocationState.Approximate
-                    }
-
-                    VexDeviceLocationResult.LocationDisabled -> {
-                        currentLocation = null
-                        VexMapsLocationState.Disabled
-                    }
-
-                    VexDeviceLocationResult.Unavailable -> {
-                        currentLocation = null
-                        VexMapsLocationState.Unavailable
-                    }
+                    onLocated?.invoke()
                 }
+
+                VexDeviceLocationResult.PermissionMissing -> {
+                    currentLocation = null
+                    locationState =
+                        VexMapsLocationState.Denied
+                }
+
+                VexDeviceLocationResult.ApproximateOnly -> {
+                    currentLocation = null
+                    locationState =
+                        VexMapsLocationState.Approximate
+                }
+
+                VexDeviceLocationResult.LocationDisabled -> {
+                    currentLocation = null
+                    locationState =
+                        VexMapsLocationState.Disabled
+                }
+
+                VexDeviceLocationResult.Unavailable -> {
+                    currentLocation = null
+                    locationState =
+                        VexMapsLocationState.Unavailable
+                }
+            }
         }
     }
 
@@ -898,8 +910,20 @@ internal fun VexMapsMapSurface(
                             "presentation.vexmaps.navigation.start",
                         action = "Clicked",
                     )
-                    VexMapsNavigationService
-                        .startPrepared(context)
+                    readCurrentPreciseLocation {
+                        if (
+                            VexMapsNavigationProcess
+                                .session
+                                .current
+                                .phase ==
+                            VexNavigationSessionPhase.READY
+                        ) {
+                            VexMapsNavigationService
+                                .startPrepared(
+                                    context,
+                                )
+                        }
+                    }
                 },
                 onStop = {
                     runtime.recordDynamicInteraction(
@@ -1896,6 +1920,11 @@ internal enum class VexMapsPlaceSearchError {
     IMPORT,
     SEARCH,
 }
+
+internal fun isVexMapsNavigationStartPreflightSatisfied(
+    result: VexDeviceLocationResult,
+): Boolean =
+    result is VexDeviceLocationResult.Located
 
 internal fun canStartVexMapsNavigation(
     precisePermissionGranted: Boolean,

@@ -39,6 +39,34 @@ class VexMapsNavigationStartReadinessTest {
     }
 
     @Test
+    fun onlyFreshLocatedResultSatisfiesStartPreflight() {
+        assertTrue(
+            isVexMapsNavigationStartPreflightSatisfied(
+                VexDeviceLocationResult.Located(
+                    latitude = 34.5794,
+                    longitude = -118.1165,
+                    accuracyMeters = 8f,
+                ),
+            ),
+        )
+        assertFalse(
+            isVexMapsNavigationStartPreflightSatisfied(
+                VexDeviceLocationResult.LocationDisabled,
+            ),
+        )
+        assertFalse(
+            isVexMapsNavigationStartPreflightSatisfied(
+                VexDeviceLocationResult.Unavailable,
+            ),
+        )
+        assertFalse(
+            isVexMapsNavigationStartPreflightSatisfied(
+                VexDeviceLocationResult.PermissionMissing,
+            ),
+        )
+    }
+
+    @Test
     fun revokedPermissionHoldsStartEvenWithRetainedFix() {
         assertFalse(
             canStartVexMapsNavigation(
