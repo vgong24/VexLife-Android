@@ -213,6 +213,15 @@ object GalleryScreen : AppScreenBlueprint(
                 // Intentionally no product effect: this sample exists to exercise the reusable cell.
             },
         )
+
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: com.vextreme.vexlife.android.data.AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        GalleryScreenContent(runtime)
+    }
 }
 
 @Composable
