@@ -141,6 +141,33 @@ the semantic app map, give it a registered identity first.
 
 Semantic journey meaning is separated from Android configuration pressure.
 
+**Normal functional instrumentation is baseline-only.** Every semantic journey must expose a baseline
+environment, and ordinary `:app:connectedDebugAndroidTest` selects exactly one baseline case per
+journey.
+
+Declared non-baseline environments are available without becoming an automatic cost on every
+functional run:
+
+~~~text
+no argument
+  -> baseline only
+
+vexJourneyMatrix=all
+  -> every environment declared by every journey
+
+vexJourneyEnvironment=<environment-id>
+  -> only that environment batch
+
+vexJourneyCase=<caseRef>
+  -> one exact case
+
+vexJourneyShard=<shard-id>
+  -> selected shard, baseline by default
+~~~
+
+This preserves one semantic catalog while keeping localization/accessibility matrices as explicit
+batch work rather than repeated functional proof.
+
 ~~~kotlin
 vexJourney(
     id = "form-submit",
@@ -366,8 +393,10 @@ The initial catalog covers:
 - VexStream Music placeholder;
 - Talk to Vex placeholder.
 
-The catalog is parameterized directly into instrumentation tests. Adding a journey to the catalog
-automatically adds one case per declared environment; there is no second test-method registry.
+The catalog remains the one semantic source. Adding a journey automatically adds its **baseline**
+case to ordinary Android instrumentation. Declared non-baseline environments are expanded only when
+an environment batch is requested (for example `vexJourneyMatrix=all`).
+
 Stable local journey IDs combine with shard/environment IDs to give every case a durable `caseRef`
 for reports and isolated reruns.
 
