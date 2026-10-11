@@ -18,6 +18,7 @@ class VexScreenCrawlerEvidenceObserver(
     private val case: VexScreenCrawlerCase,
 ) : VexJourneyExecutionObserver {
     private val capturedScreens = linkedSetOf<String>()
+    private var capturedScreenshotCount = 0
     private val crawlerRootDirectory: File by lazy {
         val targetContext =
             InstrumentationRegistry.getInstrumentation().targetContext
@@ -32,7 +33,18 @@ class VexScreenCrawlerEvidenceObserver(
         File(
             crawlerRootDirectory,
             "${case.sourceRef.safePath()}/${case.caseRef.safePath()}",
-        ).also(File::mkdirs)
+        ).also { directory ->
+            if (directory.exists()) {
+                check(directory.deleteRecursively()) {
+                    "failed to clear stale crawler case artifacts: " +
+                        directory.absolutePath
+                }
+            }
+            check(directory.mkdirs() || directory.isDirectory) {
+                "failed to create crawler case artifact directory: " +
+                    directory.absolutePath
+            }
+        }
     }
 
     private val manifest: File
@@ -74,6 +86,17 @@ class VexScreenCrawlerEvidenceObserver(
             )
         }
 
+        check(capturedScreenshotCount > 0) {
+            "ScreenCrawler executed but captured ZERO screenshots for ${case.caseRef}. " +
+                "A crawler run must never pass without evidence."
+        }
+        check(manifest.isFile && manifest.length() > 0L) {
+            "ScreenCrawler screenshots exist but manifest is missing/empty for ${case.caseRef}"
+        }
+
+        println(
+            "Vex ScreenCrawler captured $capturedScreenshotCount screenshot(s).",
+        )
         println(
             "Vex ScreenCrawler case artifacts: ${rootDirectory.absolutePath}",
         )
@@ -95,6 +118,11 @@ class VexScreenCrawlerEvidenceObserver(
     private fun capture(observation: VexJourneyStepObservation) {
         val instrumentation =
             InstrumentationRegistry.getInstrumentation()
+
+        // Compose may already be idle while the device has a pending draw. Wait at the Android
+        // instrumentation boundary immediately before capturing the physical evidence frame.
+        instrumentation.waitForIdleSync()
+
         val bitmap =
             requireNotNull(instrumentation.uiAutomation.takeScreenshot()) {
                 "UiAutomation.takeScreenshot() returned null"
@@ -140,6 +168,11 @@ class VexScreenCrawlerEvidenceObserver(
                 screenshotSha256 = screenshot.sha256(),
             ) + "\n",
         )
+
+        check(screenshot.isFile && screenshot.length() > 0L) {
+            "crawler screenshot was not written: ${screenshot.absolutePath}"
+        }
+        capturedScreenshotCount += 1
     }
 
     private fun VexJourneyStepObservation.toManifestLine(
