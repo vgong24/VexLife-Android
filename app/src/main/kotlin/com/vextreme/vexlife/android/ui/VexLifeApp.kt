@@ -30,6 +30,7 @@ import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPageContent
 import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPage
 import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPageContent
+import com.vextreme.vexlife.android.preview.VexPagePreviews
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppFrame
@@ -191,3 +192,17 @@ private fun VexLifeScaffold(
     }
 }
 
+
+
+/**
+ * Whole-app smoke preview.
+ *
+ * Page previews answer "does this page/state look right?" This one answers "does the shell + app
+ * frame + initial Home composition still fit together?" Future live repositories/services should be
+ * supplied through preview composition fixtures rather than making the whole app unpreviewable.
+ */
+@VexPagePreviews
+@Composable
+private fun VexLifeAppPreview() {
+    VexLifeApp()
+}
