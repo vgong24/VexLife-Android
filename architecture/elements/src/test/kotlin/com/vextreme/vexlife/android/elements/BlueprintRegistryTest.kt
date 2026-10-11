@@ -48,6 +48,24 @@ class BlueprintRegistryTest {
         assertEquals(listOf(Help), registry.navigationTargetsFrom(listOf(ShellButton)))
     }
 
+    @Test
+    fun placementStyleOverrideResolvesWithoutMutatingTheElementDefault() {
+        val registry = UIBlueprintRegistry(
+            AppBlueprint(
+                shell = column(ShellRoot) {
+                    button(ShellButton, style = VexElementStyles.Navigation)
+                },
+                screens = listOf(
+                    ScreenBlueprint(Home, column(HomeRoot) {}),
+                    ScreenBlueprint(Help, column(HelpRoot) {}),
+                ),
+            ),
+        )
+
+        assertEquals(VexElementStyles.PrimaryAction, ShellButton.style)
+        assertEquals(VexElementStyles.Navigation, registry.styleOf(ShellButton))
+    }
+
     @Test(expected = IllegalStateException::class)
     fun duplicateElementIdentityFailsClosed() {
         UIBlueprintRegistry(

@@ -50,15 +50,22 @@ val LocalElementActionHandler = staticCompositionLocalOf<ElementActionHandler> {
     error("ElementActionHandler has not been provided")
 }
 
+val LocalUIBlueprintRegistry = staticCompositionLocalOf<UIBlueprintRegistry?> { null }
+
+@Composable
+private fun blueprintStyle(element: UIElement): ElementStyleKey =
+    LocalUIBlueprintRegistry.current?.styleOf(element) ?: element.style
+
 fun Modifier.vexElement(element: UIElement): Modifier = testTag(element.elementId)
 
 @Composable
 fun VexButton(
     element: ButtonElement,
     modifier: Modifier = Modifier,
-    style: ElementStyleKey = element.style,
+    style: ElementStyleKey? = null,
 ) {
     val handler = LocalElementActionHandler.current
+    val resolvedStyle = style ?: blueprintStyle(element)
     val label = stringResource(requireNotNull(element.labelRes))
     val content: @Composable RowScope.() -> Unit = {
         element.icon?.let {
@@ -67,7 +74,7 @@ fun VexButton(
         Text(label)
     }
 
-    when (style) {
+    when (resolvedStyle) {
         VexElementStyles.SecondaryAction -> FilledTonalButton(
             onClick = { handler.activate(element) },
             modifier = modifier.vexElement(element),
@@ -122,15 +129,16 @@ fun VexFab(
     modifier: Modifier = Modifier,
 ) {
     val handler = LocalElementActionHandler.current
+    val resolvedStyle = blueprintStyle(element)
     val label = stringResource(requireNotNull(element.labelRes))
     FloatingActionButton(
         onClick = { handler.activate(element) },
         modifier = modifier.vexElement(element),
-        containerColor = when (element.style) {
+        containerColor = when (resolvedStyle) {
             VexElementStyles.FabOption -> MaterialTheme.colorScheme.secondaryContainer
             else -> MaterialTheme.colorScheme.primaryContainer
         },
-        contentColor = when (element.style) {
+        contentColor = when (resolvedStyle) {
             VexElementStyles.FabOption -> MaterialTheme.colorScheme.onSecondaryContainer
             else -> MaterialTheme.colorScheme.onPrimaryContainer
         },
@@ -179,12 +187,13 @@ fun VexContainer(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val resolvedStyle = blueprintStyle(element)
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .vexElement(element),
         shape = MaterialTheme.shapes.large,
-        color = when (element.style) {
+        color = when (resolvedStyle) {
             VexElementStyles.RaisedSurface -> MaterialTheme.colorScheme.surfaceContainerHigh
             else -> MaterialTheme.colorScheme.surfaceContainer
         },

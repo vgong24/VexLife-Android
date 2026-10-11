@@ -256,6 +256,9 @@ class UIBlueprintRegistry(
     fun placement(element: UIElement): ElementPlacement =
         requireNotNull(placementByElementId[element.elementId]) { "element not registered: ${element.elementId}" }
 
+    fun styleOf(element: UIElement): ElementStyleKey =
+        placement(element).styleOverride ?: element.style
+
     fun parentOf(element: UIElement): UIElement? = parentByElementId[element.elementId]
 
     fun childrenOf(element: UIElement): List<UIElement> =

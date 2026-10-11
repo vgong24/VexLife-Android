@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -31,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.blueprint.GalleryElements
 import com.vextreme.vexlife.android.blueprint.Screens
+import com.vextreme.vexlife.android.blueprint.ShellElements
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.LocalElementActionHandler
 import com.vextreme.vexlife.android.elements.ScreenElement
@@ -42,6 +45,7 @@ import com.vextreme.vexlife.android.elements.VexFab
 import com.vextreme.vexlife.android.elements.VexRow
 import com.vextreme.vexlife.android.elements.VexScrollableColumn
 import com.vextreme.vexlife.android.elements.VexToggleRow
+import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
@@ -59,12 +63,14 @@ fun GalleryScreen(
                 NavigationBarItem(
                     selected = selected.elementId == GalleryElements.ElementsPanel.elementId,
                     onClick = { handler.activate(GalleryElements.ElementsTab) },
+                    modifier = Modifier.vexElement(GalleryElements.ElementsTab),
                     icon = { Text("E") },
                     label = { Text(stringResource(R.string.gallery_elements)) },
                 )
                 NavigationBarItem(
                     selected = selected.elementId == GalleryElements.AppGraphPanel.elementId,
                     onClick = { handler.activate(GalleryElements.AppGraphTab) },
+                    modifier = Modifier.vexElement(GalleryElements.AppGraphTab),
                     icon = { Text("G") },
                     label = { Text(stringResource(R.string.gallery_app_graph)) },
                 )
@@ -125,6 +131,7 @@ private fun AppGraphPanel(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -205,9 +212,7 @@ private fun ScreenGraph(
     val shellActions = registry.shellElements.filterIsInstance<ActionElement>().map { it as UIElement }
     val navigatables = registry.navigationTargetsFrom(localActions + shellActions)
     val directChildren = registry.childrenOf(registry.screenRoot(screen).element)
-    val shellTop = registry.shellElements.filter {
-        registry.parentOf(it)?.elementId == "element.shell.root"
-    }
+    val shellTop = registry.childrenOf(ShellElements.Root)
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(

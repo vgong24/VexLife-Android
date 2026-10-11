@@ -53,6 +53,7 @@ import com.vextreme.vexlife.android.elements.ActionKey
 import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.LocalElementActionHandler
+import com.vextreme.vexlife.android.elements.LocalUIBlueprintRegistry
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.elements.VexFab
@@ -96,6 +97,7 @@ fun VexLifeApp() {
     VexLifeTheme(darkTheme = darkTheme) {
         CompositionLocalProvider(
             LocalElementActionHandler provides ElementActionHandler { runtime.activate(it) },
+            LocalUIBlueprintRegistry provides registry,
         ) {
             VexLifeScaffold(runtime, logger, darkTheme)
         }
