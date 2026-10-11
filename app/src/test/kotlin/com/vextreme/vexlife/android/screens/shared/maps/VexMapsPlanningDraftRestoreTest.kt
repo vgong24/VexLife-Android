@@ -30,6 +30,55 @@ class VexMapsPlanningDraftRestoreTest {
     }
 
     @Test
+    fun completeViewportRestoresTypedSnapshot() {
+        assertEquals(
+            VexMapsViewportSnapshot(
+                center =
+                    VexMapCoordinate(
+                        latitude = 34.5794,
+                        longitude = -118.1165,
+                    ),
+                zoom = 13.5,
+                bearing = 42.0,
+                tilt = 30.0,
+            ),
+            restoreVexMapsViewportSnapshot(
+                latitude = 34.5794,
+                longitude = -118.1165,
+                zoom = 13.5,
+                bearing = 42.0,
+                tilt = 30.0,
+            ),
+        )
+    }
+
+    @Test
+    fun partialViewportDoesNotInventPresentationState() {
+        assertNull(
+            restoreVexMapsViewportSnapshot(
+                latitude = 34.5794,
+                longitude = -118.1165,
+                zoom = null,
+                bearing = 42.0,
+                tilt = 30.0,
+            ),
+        )
+    }
+
+    @Test
+    fun invalidViewportDoesNotRestore() {
+        assertNull(
+            restoreVexMapsViewportSnapshot(
+                latitude = 34.5794,
+                longitude = -118.1165,
+                zoom = 13.5,
+                bearing = 42.0,
+                tilt = 70.0,
+            ),
+        )
+    }
+
+    @Test
     fun savedSelectionRoleRestoresOrFallsBackToDestination() {
         assertEquals(
             VexMapsMapSelectionTarget.ORIGIN,
