@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.screens.primary.events
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -10,15 +11,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
+import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.preview.VexPreviewHost
@@ -39,9 +45,6 @@ object EventsScreen : AppScreenBlueprint(
         }
     }
 
-    fun eventRowElementId(eventRef: String): String =
-        "element.events.dynamic.$eventRef"
-
     @Composable
     internal override fun renderContent(
         runtime: VexRuntime,
@@ -49,18 +52,50 @@ object EventsScreen : AppScreenBlueprint(
         darkTheme: Boolean,
     ) {
         EventsScreenContent(
+            runtime = runtime,
             repository = repositories.events,
+            attentionPreferences =
+                repositories.eventsAttention,
         )
     }
 }
 
 @Composable
 fun EventsScreenContent(
+    runtime: VexRuntime,
     repository: EventsRepository,
+    attentionPreferences: EventsAttentionPreferenceRepository,
 ) {
     val feed by repository.states.collectAsState(
         initial = repository.current,
     )
+    val preferences by attentionPreferences.states.collectAsState(
+        initial = attentionPreferences.current,
+    )
+
+    val attentionRelay =
+        remember {
+            EventsAttentionRelay()
+        }
+
+    val currentScreenId =
+        runtime.currentScreen.screenId
+
+    LaunchedEffect(feed) {
+        attentionRelay.feedChanged(feed)
+    }
+    LaunchedEffect(preferences) {
+        attentionRelay.preferencesChanged(preferences)
+    }
+    LaunchedEffect(currentScreenId) {
+        attentionRelay.screenChanged(currentScreenId)
+    }
+
+    val attention by attentionRelay.states.collectAsState(
+        initial = attentionRelay.current,
+    )
+    val candidateRef =
+        attention.outputState.candidate?.eventRef
 
     LazyColumn(
         modifier =
@@ -82,20 +117,50 @@ fun EventsScreenContent(
                 items = feed.events,
                 key = VexExternalEvent::eventRef,
             ) { event ->
-                EventRow(event)
+                EventRow(
+                    event = event,
+                    isAttentionCandidate =
+                        candidateRef == event.eventRef,
+                    disposition =
+                        preferences.dispositionByEventRef[
+                            event.eventRef
+                        ],
+                    onAcknowledge = {
+                        attentionPreferences.acknowledge(
+                            event.eventRef,
+                        )
+                    },
+                    onDefer = {
+                        attentionPreferences.defer(
+                            event.eventRef,
+                        )
+                    },
+                    onSuppress = {
+                        attentionPreferences.suppress(
+                            event.eventRef,
+                        )
+                    },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun EventRow(event: VexExternalEvent) {
+private fun EventRow(
+    event: VexExternalEvent,
+    isAttentionCandidate: Boolean,
+    disposition: EventsAttentionDisposition?,
+    onAcknowledge: () -> Unit,
+    onDefer: () -> Unit,
+    onSuppress: () -> Unit,
+) {
     Card(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .testTag(
-                    EventsScreen.eventRowElementId(
+                    EventsPresentationRefs.row(
                         event.eventRef,
                     ),
                 ),
@@ -127,6 +192,78 @@ private fun EventRow(event: VexExternalEvent) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            disposition?.let {
+                Text(
+                    text = it.name,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (isAttentionCandidate) {
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_candidate,
+                        ),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Row(
+                    horizontalArrangement =
+                        Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        onClick = onAcknowledge,
+                        modifier =
+                            Modifier.testTag(
+                                EventsPresentationRefs.attentionAction(
+                                    event.eventRef,
+                                    "acknowledge",
+                                ),
+                            ),
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.events_attention_acknowledge,
+                            ),
+                        )
+                    }
+                    TextButton(
+                        onClick = onDefer,
+                        modifier =
+                            Modifier.testTag(
+                                EventsPresentationRefs.attentionAction(
+                                    event.eventRef,
+                                    "later",
+                                ),
+                            ),
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.events_attention_later,
+                            ),
+                        )
+                    }
+                    TextButton(
+                        onClick = onSuppress,
+                        modifier =
+                            Modifier.testTag(
+                                EventsPresentationRefs.attentionAction(
+                                    event.eventRef,
+                                    "suppress",
+                                ),
+                            ),
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.events_attention_suppress,
+                            ),
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -139,7 +276,10 @@ private fun EventsScreenPreview() {
         startScreen = EventsScreen,
     ) { context ->
         EventsScreenContent(
+            runtime = context.runtime,
             repository = context.repositories.events,
+            attentionPreferences =
+                context.repositories.eventsAttention,
         )
     }
 }

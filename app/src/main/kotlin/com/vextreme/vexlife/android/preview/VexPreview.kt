@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
@@ -106,6 +107,7 @@ internal object VexPreviewRepositories {
             logHistory = InMemoryLogHistoryRepository(),
             userProfile = InMemoryUserProfileRepository(),
             events = RelayEventsRepository(),
+            eventsAttention = RelayEventsAttentionPreferenceRepository(),
         )
 
     fun withLogHistory(fixture: LogHistoryFixture): AppRepositories =

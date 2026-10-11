@@ -19,7 +19,11 @@
     <string name="home_vexstream_music">VexStream Music</string>
     <string name="home_talk_to_vex">Talk to Vex</string>
     <string name="events_preview_title">Events preview</string>
-    <string name="events_preview_body">Future home for chronological activity, receipts, and meaningful VexLife events. This is placeholder content for the first navigation practicum.</string>
+    <string name="events_preview_body">External information will appear here as stable chronological event rows.</string>
+    <string name="events_attention_candidate">Attention candidate</string>
+    <string name="events_attention_acknowledge">Acknowledge</string>
+    <string name="events_attention_later">Later</string>
+    <string name="events_attention_suppress">Suppress</string>
     <string name="settings_preview_title">Settings preview</string>
     <string name="settings_preview_body">Future home for preferences, device posture, and user-controlled configuration. This is placeholder content for the first navigation practicum.</string>
 

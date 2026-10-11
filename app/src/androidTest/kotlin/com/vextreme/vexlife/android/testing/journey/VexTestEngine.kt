@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.text.intl.LocaleList
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
@@ -44,6 +45,7 @@ class VexTestEngine(
         logHistory = logHistory,
         userProfile = InMemoryUserProfileRepository(),
         events = RelayEventsRepository(),
+        eventsAttention = RelayEventsAttentionPreferenceRepository(),
     )
     private val expected = VexExpectedWalk()
     private var stepIndex = 0

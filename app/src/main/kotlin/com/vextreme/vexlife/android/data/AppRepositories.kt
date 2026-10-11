@@ -1,7 +1,9 @@
 package com.vextreme.vexlife.android.data
 
 import android.content.Context
+import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.data.loghistory.RoomLogHistoryRepository
@@ -18,6 +20,7 @@ data class AppRepositories(
     val logHistory: LogHistoryRepository,
     val userProfile: UserProfileRepository,
     val events: EventsRepository,
+    val eventsAttention: EventsAttentionPreferenceRepository,
 )
 
 /**
@@ -38,6 +41,7 @@ object AppRepositoryFactory {
                 dao = database.userProfileDao(),
             ),
             events = RelayEventsRepository(),
+            eventsAttention = RelayEventsAttentionPreferenceRepository(),
         )
     }
 }
