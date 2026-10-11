@@ -144,7 +144,7 @@ class PairedVexStreamMusicRepository(
                         ),
                 )
 
-                val token =
+                val approval =
                     awaitPairingDecision(
                         selected = selected,
                         requestRef = requestRef,
@@ -156,7 +156,12 @@ class PairedVexStreamMusicRepository(
                         host = selected.host,
                         port = selected.port,
                         certificateSha256 = selected.certificateSha256,
-                        token = token,
+                        token = approval.token,
+                        remoteHomeRef = approval.remoteHomeRef,
+                        remoteGatewayPublicKey =
+                            approval.remoteGatewayPublicKey,
+                        remoteRelayBaseUrl =
+                            approval.remoteRelayBaseUrl,
                     )
                 connectionStore.save(connection)
                 selectedService = null
@@ -542,6 +547,10 @@ class PairedVexStreamMusicRepository(
                     "displayName",
                     connectionStore.deviceDisplayName(),
                 )
+                .put(
+                    "devicePublicKey",
+                    connectionStore.deviceSigningPublicKey(),
+                )
                 .toString()
         connection.outputStream
             .bufferedWriter()
@@ -568,10 +577,17 @@ class PairedVexStreamMusicRepository(
         )
     }
 
+    private data class PairingApproval(
+        val token: String,
+        val remoteHomeRef: String?,
+        val remoteGatewayPublicKey: String?,
+        val remoteRelayBaseUrl: String?,
+    )
+
     private suspend fun awaitPairingDecision(
         selected: VexStreamSelectedService,
         requestRef: String,
-    ): String =
+    ): PairingApproval =
         withTimeout(PAIRING_APPROVAL_TIMEOUT_MS) {
             while (true) {
                 val response =
@@ -590,8 +606,31 @@ class PairedVexStreamMusicRepository(
                     )
                 ) {
                     "APPROVED" ->
-                        return@withTimeout response.getString(
-                            "token",
+                        return@withTimeout PairingApproval(
+                            token =
+                                response.getString(
+                                    "token",
+                                ),
+                            remoteHomeRef =
+                                response.optString(
+                                    "remoteHomeRef",
+                                ).takeIf {
+                                    it.isNotBlank()
+                                },
+                            remoteGatewayPublicKey =
+                                response.optString(
+                                    "remoteGatewayPublicKey",
+                                ).takeIf {
+                                    it.isNotBlank()
+                                },
+                            remoteRelayBaseUrl =
+                                response.optString(
+                                    "remoteRelayBaseUrl",
+                                ).takeIf {
+                                    it.startsWith(
+                                        "https://",
+                                    )
+                                },
                         )
 
                     "DENIED" ->
