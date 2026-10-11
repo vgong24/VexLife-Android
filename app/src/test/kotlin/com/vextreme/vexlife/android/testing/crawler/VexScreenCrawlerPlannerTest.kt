@@ -83,6 +83,56 @@ class VexScreenCrawlerPlannerTest {
     }
 
     @Test
+    fun scenarioAndEvidenceIdentityStayStableAcrossLocaleAndFontConfigurations() {
+        val config = vexScreenCrawlerConfig {
+            journey(Journeys.userProfile.formSubmit)
+            languages(
+                language("en"),
+                language("zh"),
+            )
+            fontProfiles(
+                VexCrawlerFonts.Normal,
+                VexCrawlerFonts.Large,
+            )
+        }
+
+        val plan = VexScreenCrawlerPlanner.plan(config)
+
+        assertEquals(
+            setOf("shared.user-profile/form-submit"),
+            plan.map { case -> case.scenarioRef }.toSet(),
+        )
+        assertEquals(
+            setOf(
+                "en/normal-1x",
+                "en/large-1-45x",
+                "zh/normal-1x",
+                "zh/large-1-45x",
+            ),
+            plan.map { case -> case.configurationRef }.toSet(),
+        )
+
+        val evidenceRefs =
+            plan.map { case ->
+                case.evidenceIdentity(
+                    screenId = UserProfileScreen.screenId,
+                    stepIndex = 2,
+                    stepKind = "tap",
+                    semanticRef = UserProfileScreen.Save.elementId,
+                ).evidenceRef
+            }.toSet()
+
+        assertEquals(1, evidenceRefs.size)
+        assertEquals(
+            "shared.user-profile/form-submit::" +
+                "${UserProfileScreen.screenId}::" +
+                "step-002::tap::" +
+                UserProfileScreen.Save.elementId,
+            evidenceRefs.single(),
+        )
+    }
+
+    @Test
     fun shardSubsetDoesNotRequireASecondJourneyRegistry() {
         val config = vexScreenCrawlerConfig {
             shards(
