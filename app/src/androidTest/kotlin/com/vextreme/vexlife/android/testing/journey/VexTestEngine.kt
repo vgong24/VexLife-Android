@@ -1,5 +1,9 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.test.DeviceConfigurationOverride
+import androidx.compose.ui.test.FontScale
+import androidx.compose.ui.test.Locales
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.junit4.ComposeTestRule
@@ -11,6 +15,7 @@ import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.text.intl.LocaleList
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
@@ -40,13 +45,15 @@ class VexTestEngine(
     )
     private val expected = VexExpectedWalk()
 
-    fun run(journey: VexJourney) {
+    fun run(case: VexJourneyCase) {
         compose.setContent {
-            VexLifeApp(repositories = repositories)
+            case.environment.Host {
+                VexLifeApp(repositories = repositories)
+            }
         }
 
-        journey.walk(this)
-        verifyWalkHistory(journey.title)
+        case.journey.walk(this)
+        verifyWalkHistory(case.toString())
     }
 
     override fun start(screen: ScreenElement) {
@@ -149,3 +156,34 @@ private fun VexLogRecord.semanticProjection(): VexExpectedRecord =
         screenAfterId = screenAfterId,
         detailsJson = detailsJson,
     )
+
+
+@Composable
+private fun VexJourneyEnvironment.Host(
+    content: @Composable () -> Unit,
+) {
+    if (fontScale != null) {
+        DeviceConfigurationOverride(
+            DeviceConfigurationOverride.FontScale(fontScale),
+        ) {
+            LocaleHost(content)
+        }
+    } else {
+        LocaleHost(content)
+    }
+}
+
+@Composable
+private fun VexJourneyEnvironment.LocaleHost(
+    content: @Composable () -> Unit,
+) {
+    if (localeTag != null) {
+        DeviceConfigurationOverride(
+            DeviceConfigurationOverride.Locales(LocaleList(localeTag)),
+        ) {
+            content()
+        }
+    } else {
+        content()
+    }
+}
