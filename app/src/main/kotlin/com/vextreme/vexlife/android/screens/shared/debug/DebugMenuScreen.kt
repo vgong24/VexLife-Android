@@ -81,22 +81,29 @@ object DebugMenuScreen : AppScreenBlueprint(
 
     internal override fun appActionRegistrations(
         context: ScreenActionContext,
-    ): AppActionRegistrations =
-        AppActionRegistrations.of(
+    ): AppActionRegistrations {
+        // Capture only the dependencies these registrations need. ScreenActionContext is a
+        // construction-time bag, not something action closures should retain wholesale.
+        val toggleDarkMode = context.toggleDarkMode
+        val logger = context.logger
+        val logPersistence = context.logPersistence
+
+        return AppActionRegistrations.of(
             appAction(
                 action = AppActions.ToggleDarkMode,
                 ownerRef = screenId,
             ) {
-                context.toggleDarkMode()
+                toggleDarkMode()
             },
             appAction(
                 action = AppActions.ClearLogHistory,
                 ownerRef = screenId,
             ) {
-                context.logger.clearHistory()
-                context.logPersistence.clear()
+                logger.clearHistory()
+                logPersistence.clear()
             },
         )
+    }
 
     @Composable
     internal override fun renderContent(

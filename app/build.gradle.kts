@@ -17,6 +17,7 @@ android {
         versionCode = 1
         versionName = "0.0.1-foundation"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments["useTestStorageService"] = "true"
     }
 
     buildFeatures {
@@ -73,6 +74,7 @@ dependencies {
     androidTestImplementation(libs.androidxTestRunner)
     androidTestImplementation(libs.androidxTestExtJunit)
     androidTestImplementation(libs.espressoCore)
+    androidTestUtil(libs.androidxTestServices)
 }
 
 

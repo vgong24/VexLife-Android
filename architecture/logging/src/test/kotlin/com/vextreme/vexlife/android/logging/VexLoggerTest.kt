@@ -134,6 +134,32 @@ class VexLoggerTest {
     }
 
     @Test
+    fun logcatProjectionKeepsStableDiagnosticIdentity() {
+        val record = VexLogRecord(
+            sequence = 7,
+            timestamp = Instant.parse("2026-10-11T12:00:00Z"),
+            durationSincePreviousSeconds = 3,
+            kind = VexLogKind.Interaction,
+            subjectRef = "element.user-profile.body.profile.actions.save",
+            action = "Submitted",
+            screenBeforeId = "screen.user-profile",
+            screenAfterId = null,
+            section = 2,
+            detailsJson = "{\"name\":\"Victor\"}",
+        )
+
+        assertEquals(
+            "seq=7 kind=Interaction " +
+                "subject=element.user-profile.body.profile.actions.save " +
+                "action=Submitted " +
+                "before=screen.user-profile after=- " +
+                "section=2 delta=3s details={\"name\":\"Victor\"}",
+            VexLogcat.message(record),
+        )
+        assertEquals("VexLogger", VexLogcat.TAG)
+    }
+
+    @Test
     fun observerFailureCannotUndoAcceptedLocalDiagnosticRecord() {
         val logger = VexLogger(
             clock = { Instant.parse("2026-10-10T18:51:00Z") },

@@ -84,9 +84,45 @@ object UserProfileScreen : AppScreenBlueprint(
     internal override fun appActionRegistrations(
         context: ScreenActionContext,
     ): AppActionRegistrations =
-        userProfileActionRegistrations(
+        actionRegistrations(
             repository = context.repositories.userProfile,
             scope = context.scope,
+        )
+
+    /**
+     * Testable persistence effect owned by this Screen.
+     *
+     * Kept as a Screen member rather than a package-level helper so command-click/navigation always
+     * lands on the semantic owner first. Narrow dependency/clock injection exists only because this
+     * effect has independent repository behavior worth unit-testing.
+     */
+    internal fun actionRegistrations(
+        repository: UserProfileRepository,
+        scope: CoroutineScope,
+        now: () -> Instant = { Instant.now() },
+    ): AppActionRegistrations =
+        AppActionRegistrations.of(
+            appAction(
+                action = AppActions.SaveUserProfile,
+                ownerRef = screenId,
+            ) { request ->
+                val requestedName = request.submission
+                    ?.value(DisplayName)
+                    ?.trim()
+                    .orEmpty()
+
+                if (requestedName.isNotEmpty()) {
+                    scope.launch {
+                        repository.upsert(
+                            UserProfile(
+                                profileRef = UserProfileRefs.local,
+                                displayName = requestedName,
+                                updatedAt = now(),
+                            ),
+                        )
+                    }
+                }
+            },
         )
 
     @Composable
@@ -110,8 +146,8 @@ object UserProfileScreen : AppScreenBlueprint(
  * become runtime actions/log records. The app action owner performs persistence; Room's Flow then
  * updates the persisted field so the database round-trip is visible on-screen.
  *
- * This keeps the screen responsible for draft presentation state while persistence/operation ownership
- * remains outside the screen.
+ * This keeps the renderer responsible only for draft presentation state. The Screen object owns the
+ * Save operation registration; the repository remains the persisted-state owner.
  */
 @Composable
 fun UserProfileScreenContent(
@@ -169,42 +205,6 @@ fun UserProfileScreenContent(
         selectedChild = runtime.presentation::selected,
     )
 }
-
-/**
- * Persistence effect for UserProfileScreen's Save action.
- *
- * The Screen owns how its submitted fields become a profile mutation. The app root supplies the
- * longer-lived repository/scope, while AppActionRegistrations guarantees this ActionKey has only one owner.
- * Draft typing never reaches this registration; only the immutable Save submission does.
- */
-internal fun userProfileActionRegistrations(
-    repository: UserProfileRepository,
-    scope: CoroutineScope,
-    now: () -> Instant = { Instant.now() },
-): AppActionRegistrations =
-    AppActionRegistrations.of(
-        appAction(
-            action = AppActions.SaveUserProfile,
-            ownerRef = UserProfileScreen.screenId,
-        ) { request ->
-            val requestedName = request.submission
-                ?.value(UserProfileScreen.DisplayName)
-                ?.trim()
-                .orEmpty()
-
-            if (requestedName.isNotEmpty()) {
-                scope.launch {
-                    repository.upsert(
-                        UserProfile(
-                            profileRef = UserProfileRefs.local,
-                            displayName = requestedName,
-                            updatedAt = now(),
-                        ),
-                    )
-                }
-            }
-        },
-    )
 
 @VexScreenPreviews
 @Composable
