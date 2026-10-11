@@ -18,8 +18,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
-import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
@@ -81,6 +79,7 @@ private fun VexLifeApp(
     session: VexLifeSession,
 ) {
     val runtime = session.runtime
+    val repositories = session.repositories
     val darkTheme = session.darkTheme
 
     LaunchedEffect(runtime) {
@@ -90,8 +89,7 @@ private fun VexLifeApp(
     VexLifeTheme(darkTheme = darkTheme) {
         VexLifeScaffold(
             runtime = runtime,
-            logHistoryRepository = session.repositories.logHistory,
-            userProfileRepository = session.repositories.userProfile,
+            repositories = repositories,
             darkTheme = darkTheme,
         )
     }
@@ -100,8 +98,7 @@ private fun VexLifeApp(
 @Composable
 private fun VexLifeScaffold(
     runtime: VexRuntime,
-    logHistoryRepository: LogHistoryRepository,
-    userProfileRepository: UserProfileRepository,
+    repositories: AppRepositories,
     darkTheme: Boolean,
 ) {
     val primaryScreens = AppScreens.primary
@@ -196,7 +193,7 @@ private fun VexLifeScaffold(
                 when (screenId) {
                     DebugMenuScreen.screenId -> DebugMenuScreenContent(
                         runtime = runtime,
-                        logHistoryRepository = logHistoryRepository,
+                        logHistoryRepository = repositories.logHistory,
                         darkTheme = darkTheme,
                     )
 
@@ -204,7 +201,7 @@ private fun VexLifeScaffold(
 
                     UserProfileScreen.screenId -> UserProfileScreenContent(
                         runtime = runtime,
-                        repository = userProfileRepository,
+                        repository = repositories.userProfile,
                     )
 
                     VexStreamMusicScreen.screenId ->

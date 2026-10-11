@@ -290,7 +290,9 @@ Use narrow purpose bridges:
 
 ~~~text
 AppRepositories
-  composition-only bundle
+  composition-only repository bundle
+  may pass through app routing/composition code as one stable dependency
+  leaf Screen/content still receives only the repository/facade it actually needs
 
 AppActionRegistrations
   one immutable queryable registration set
@@ -306,8 +308,24 @@ screen
   receives the smallest repository/facade that answers its question
 ~~~
 
-Do not pass the entire AppRepositories bundle into VexLogger or ordinary screens merely for convenience.
-That turns composition into a service locator and makes unrelated data reachable from unrelated code.
+VexLifeScaffold may receive AppRepositories because it is the app routing/composition boundary.
+That avoids threading `logHistoryRepository`, `userProfileRepository`, and every future repository
+through intermediate signatures just so the final routing branch can select one.
+
+The selection still happens at the narrowest useful point:
+
+~~~text
+VexLifeScaffold(repositories)
+  -> DebugMenuScreenContent(repositories.logHistory)
+  -> UserProfileScreenContent(repositories.userProfile)
+~~~
+
+Do not pass the entire AppRepositories bundle into VexLogger or ordinary screens merely for
+convenience. That would turn composition convenience into a service locator and make unrelated data
+reachable from unrelated code.
+
+When several repositories form one real domain relationship, prefer a named facade/owner such as a
+future UserHub over making every caller know the underlying repository set.
 
 A bridge is successful when it hides plumbing while preserving dependency meaning.
 
