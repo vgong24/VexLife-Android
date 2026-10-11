@@ -63,7 +63,7 @@ if ($LASTEXITCODE -ne 0) {
 No ScreenCrawler artifacts found on $Serial at:
   $Remote
 
-Run VexScreenCrawlerInstrumentedTest with enabled=true first.
+Run VexScreenCrawlerInstrumentedTest directly first; an explicit crawler run must produce screenshot evidence.
 "@
 }
 
