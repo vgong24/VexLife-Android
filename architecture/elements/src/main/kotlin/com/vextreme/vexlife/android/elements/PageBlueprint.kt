@@ -2,6 +2,22 @@ package com.vextreme.vexlife.android.elements
 
 import androidx.annotation.StringRes
 
+/**
+ * One page's readable source-of-truth description.
+ *
+ * A normal page declares its identity and nested element placement here once; [VexElementTree]
+ * renders that same tree. This avoids maintaining a separate "blueprint version" and "Compose
+ * version" of the same page.
+ *
+ * Nested declarations also produce nested stable IDs. For example:
+ *
+ * scrollableColumn("body") { card("preview") { text("title", ...) } }
+ * -> element.<page>.body.preview.title
+ *
+ * Name an element with buttonRef/toggleRef/etc only when another relationship must address that
+ * exact object (navigation, open/close, external inspection). One-off structural/text elements can
+ * remain inline in [layout].
+ */
 abstract class PageBlueprint(
     pageId: String,
     @StringRes titleRes: Int,
@@ -88,6 +104,13 @@ abstract class PageBlueprint(
         element.elementId.removePrefix("$elementPrefix.")
 }
 
+/**
+ * DSL scope that records spatial/containment relationships while reading like the intended page.
+ *
+ * The current parent path is carried as [relativePath], so nesting in source and nesting in the
+ * registered element graph remain aligned. When debugging "where does this element live?", inspect
+ * the page file first, then use UIBlueprintRegistry.parentOf/childrenOf for the runtime projection.
+ */
 class PageLayoutScope internal constructor(
     private val page: PageBlueprint,
     private val relativePath: String,

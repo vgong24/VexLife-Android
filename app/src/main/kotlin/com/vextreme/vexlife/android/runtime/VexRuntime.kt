@@ -13,6 +13,16 @@ import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.logging.VexLogger
 
+/**
+ * Owns transient presentation that sits above the current page.
+ *
+ * Examples: an expanded FAB menu, dialog, or later a sheet. Opening one of these does NOT mean the
+ * user navigated to another page, so it deliberately does not change [VexRuntime.currentScreen].
+ *
+ * Debugging:
+ * - breakpoint [open], [close], or [closeTop] when a transient surface behaves incorrectly;
+ * - inspect this object when the correct page is active but something is unexpectedly covering it.
+ */
 class PresentationState(
     private val registry: UIBlueprintRegistry,
 ) {
@@ -60,6 +70,18 @@ class PresentationState(
     }
 }
 
+/**
+ * Owns the semantic page position of the app.
+ *
+ * Primary pages are peers: selecting Home -> Events changes [primarySelection] and does not build a
+ * back stack. Shared/detail pages are pushed into [pageStack], so Debug opened from Events can pop
+ * back to Events.
+ *
+ * Debugging a navigation problem:
+ * - [current] answers "which page is active right now?";
+ * - [primarySelection] answers "which Home/Events/Settings peer is underneath?";
+ * - [pageStack] answers "which pushed pages led from that primary page to the current page?".
+ */
 class AppNavigationState(
     initialPrimary: ScreenElement,
     primaryScreens: List<ScreenElement>,
@@ -114,6 +136,32 @@ class AppNavigationState(
         }
 }
 
+/**
+ * Front-door coordinator between declared UI intentions and the current running app.
+ *
+ * This is the most useful first breakpoint when an interaction or navigation result is surprising.
+ * It does not contain page UI; page structure lives under `pages/`. It translates an element's
+ * declared intent into runtime state, logs the accepted action in semantic order, and lets Compose
+ * re-render from the new state.
+ *
+ * Interaction sequence:
+ *
+ * element click/toggle/FAB
+ * -> [activate]
+ * -> snapshot [currentScreen] BEFORE changing navigation
+ * -> record the action + before/after page meaning
+ * -> [applyIntent]
+ * -> navigation/presentation state changes
+ * -> Compose observes that state and renders the new result
+ *
+ * Debugging map:
+ * - "What page is active?" -> [currentScreen]
+ * - "How did I get here?" -> [navigation]
+ * - "Is a dialog/FAB layer open above it?" -> [presentation]
+ * - "What did this button actually request?" -> breakpoint [activate] and inspect element.intent
+ * - "Why did a horizontal swipe change pages?" -> [onPagerSettled]
+ * - "Why did Back go here?" -> [goBack]
+ */
 class VexRuntime(
     val registry: UIBlueprintRegistry,
     val logger: VexLogger,
@@ -126,6 +174,12 @@ class VexRuntime(
     val presentation = PresentationState(registry)
     val navigation = AppNavigationState(initialScreen, primaryScreens)
 
+    /**
+     * The single runtime answer to "which semantic page is active right now?".
+     *
+     * This is intentionally easy to inspect in the debugger. Do not infer the active page from
+     * whichever Composable happens to be mounted or from Android lifecycle callbacks.
+     */
     val currentScreen: ScreenElement
         get() = navigation.current
 
@@ -142,6 +196,13 @@ class VexRuntime(
         }
     }
 
+    /**
+     * Entry point for action-bearing UI elements.
+     *
+     * Put a breakpoint here to observe every framework-routed button/FAB/toggle interaction before
+     * it mutates navigation or presentation. [before] is captured first so logging cannot accidentally
+     * attribute a click to the destination page after navigation has already changed.
+     */
     override fun activate(element: ActionElement) {
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
@@ -159,6 +220,12 @@ class VexRuntime(
         applyIntent(element.intent, uiElement)
     }
 
+    /**
+     * Commits a horizontal pager gesture only after the pager has settled on a primary page.
+     *
+     * Keeping this separate from raw scroll motion prevents half-finished swipes from becoming
+     * semantic navigation history.
+     */
     fun onPagerSettled(target: ScreenElement) {
         val before = currentScreen
         if (!isPrimary(before) || before.screenId == target.screenId) return
@@ -167,6 +234,15 @@ class VexRuntime(
         navigation.selectPrimary(target)
     }
 
+    /**
+     * Resolves Back from the shallowest visible layer inward:
+     *
+     * 1. dismiss a transient presentation (dialog/FAB layer);
+     * 2. otherwise pop a pushed page;
+     * 3. return false when the app is already at its primary root so Android may own root Back.
+     *
+     * Toolbar Back and Android system Back both end up here.
+     */
     fun goBack(logEvent: Boolean = true): Boolean {
         val before = currentScreen
 
@@ -197,6 +273,13 @@ class VexRuntime(
         else -> null
     }
 
+    /**
+     * The small interpreter for the sentence-like intent grammar declared by page elements.
+     *
+     * If an element's visible behavior is wrong but [activate] received the correct element, step
+     * through this method next. It is the point where NavigateTo/Open/Close/Toggle/SwapTo/Invoke
+     * become actual runtime changes.
+     */
     private fun applyIntent(
         intent: ElementIntent,
         source: UIElement,

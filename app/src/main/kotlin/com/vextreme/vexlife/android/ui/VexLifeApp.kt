@@ -34,6 +34,18 @@ import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppFrame
 
+/**
+ * Application composition root.
+ *
+ * Read this file for "what gets wired together?", not for individual page layout. The useful descent
+ * path while debugging is:
+ *
+ * VexLifeApp
+ * -> AppFrame (phone-safe shell)
+ * -> VexRuntime (current page + navigation/presentation transitions)
+ * -> AppPages (registered page objects)
+ * -> pages/<role>/<page>/... (the page's actual blueprint/source)
+ */
 @Composable
 fun VexLifeApp() {
     var darkTheme by rememberSaveable { mutableStateOf(true) }
@@ -48,6 +60,8 @@ fun VexLifeApp() {
         }
     }
 
+    // One runtime instance owns the current navigation/presentation state for this app composition.
+    // In a debugger, inspect this variable first; runtime.currentScreen is the active semantic page.
     val runtime = remember(registry, logger) {
         VexRuntime(
             registry = registry,
@@ -85,6 +99,7 @@ private fun VexLifeScaffold(
         pageCount = { primaryPages.size },
     )
 
+    // Runtime navigation -> pager: taps/navigation intents move the visible primary pager.
     LaunchedEffect(runtime.currentScreen.screenId) {
         val targetPage = primaryPages.indexOfFirst {
             it.screenId == runtime.currentScreen.screenId
@@ -98,6 +113,7 @@ private fun VexLifeScaffold(
         }
     }
 
+    // Pager -> runtime navigation: a completed swipe becomes semantic navigation only after settling.
     LaunchedEffect(pagerState.settledPage, pagerState.isScrollInProgress) {
         if (!pagerState.isScrollInProgress && runtime.isPrimary()) {
             runtime.onPagerSettled(primaryPages[pagerState.settledPage])

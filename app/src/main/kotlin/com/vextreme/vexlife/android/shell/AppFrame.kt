@@ -13,6 +13,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
+/**
+ * The app's coordinate-space boundary inside the Android window.
+ *
+ * Android owns status bars, cutouts, gesture/navigation areas, and other system insets. AppFrame
+ * first reduces the raw window to [WindowInsets.safeDrawing], then gives Scaffold ownership of the
+ * app bar, page viewport, bottom navigation, and FAB slot inside that safe rectangle.
+ *
+ * Debugging layout:
+ * - if the whole app collides with phone/system chrome, start here;
+ * - if only one page lays itself out incorrectly, follow [content] into that page's PageBlueprint;
+ * - [runtime.currentScreen] tells you which page should currently occupy the viewport.
+ */
 @Composable
 fun AppFrame(
     runtime: VexRuntime,
