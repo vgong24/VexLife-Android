@@ -90,32 +90,9 @@ internal object VexScreenCrawlerArguments {
         }
     }
 
-    private fun parseLocales(raw: String?): List<VexCrawlerLocale> {
-        val values = raw.csvOrDefault("en-US")
-
-        return values.map { value ->
-            when (value.lowercase()) {
-                "en", "en-us" ->
-                    VexCrawlerLocales.EnglishUs
-
-                "zh", "zh-cn", "zh-hans" ->
-                    VexCrawlerLocales.ChineseSimplified
-
-                else ->
-                    VexCrawlerLocale(
-                        id = value
-                            .lowercase()
-                            .replace('_', '-')
-                            .replace(
-                                Regex("[^a-z0-9-]+"),
-                                "-",
-                            )
-                            .trim('-'),
-                        localeTag = value,
-                    )
-            }
-        }
-    }
+    private fun parseLocales(raw: String?): List<VexCrawlerLocale> =
+        raw.csvOrDefault("en")
+            .map(::VexCrawlerLocale)
 
     private fun parseFonts(
         raw: String?,
