@@ -653,29 +653,59 @@ internal fun VexMapsMapSurface(
                     }
                 },
                 onPlaceSelected = { place ->
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.place-search.result",
-                        action = "Selected",
-                    )
-                    destination =
-                        place.coordinate
-                    destinationLabel =
-                        place.name
-                    mapSelectionTarget =
-                        VexMapsMapSelectionTarget.DESTINATION
-                    planningState =
-                        VexMapsPlanningState.Idle
-                    placeSearchState =
-                        VexMapsPlaceSearchState.Idle
-                    mapController
-                        .showDestination(
-                            place.coordinate,
-                        )
-                    mapController
-                        .focusOn(
-                            place.coordinate,
-                        )
+                    when (mapSelectionTarget) {
+                        VexMapsMapSelectionTarget.ORIGIN -> {
+                            runtime.recordDynamicInteraction(
+                                subjectRef =
+                                    "presentation.vexmaps.place-search.result",
+                                action =
+                                    "SelectedAsRouteStart",
+                            )
+                            selectedOrigin =
+                                place.coordinate
+                            mapSelectionTarget =
+                                nextVexMapsSelectionTarget(
+                                    VexMapsMapSelectionTarget.ORIGIN,
+                                )
+                            planningState =
+                                VexMapsPlanningState.Idle
+                            placeSearchState =
+                                VexMapsPlaceSearchState.Idle
+                            mapController
+                                .showOrigin(
+                                    place.coordinate,
+                                )
+                            mapController
+                                .focusOn(
+                                    place.coordinate,
+                                )
+                        }
+
+                        VexMapsMapSelectionTarget.DESTINATION -> {
+                            runtime.recordDynamicInteraction(
+                                subjectRef =
+                                    "presentation.vexmaps.place-search.result",
+                                action =
+                                    "SelectedAsDestination",
+                            )
+                            destination =
+                                place.coordinate
+                            destinationLabel =
+                                place.name
+                            planningState =
+                                VexMapsPlanningState.Idle
+                            placeSearchState =
+                                VexMapsPlaceSearchState.Idle
+                            mapController
+                                .showDestination(
+                                    place.coordinate,
+                                )
+                            mapController
+                                .focusOn(
+                                    place.coordinate,
+                                )
+                        }
+                    }
                 },
                 onChooseOriginOnMap = {
                     runtime.recordDynamicInteraction(
@@ -1021,6 +1051,23 @@ private fun VexMapsRoutePlannerCard(
             }
 
             if (placeSearchPack != null) {
+                Text(
+                    text =
+                        stringResource(
+                            if (selectingOrigin) {
+                                R.string
+                                    .vexmaps_place_search_selects_start
+                            } else {
+                                R.string
+                                    .vexmaps_place_search_selects_destination
+                            },
+                        ),
+                    style =
+                        MaterialTheme
+                            .typography
+                            .bodySmall,
+                )
+
                 OutlinedTextField(
                     value = placeSearchQuery,
                     onValueChange =
@@ -1645,10 +1692,21 @@ internal fun resolveVexMapsRouteOrigin(
 ): VexMapCoordinate? =
     selectedOrigin ?: deviceOrigin
 
-private enum class VexMapsMapSelectionTarget {
+internal enum class VexMapsMapSelectionTarget {
     ORIGIN,
     DESTINATION,
 }
+
+internal fun nextVexMapsSelectionTarget(
+    selectedRole: VexMapsMapSelectionTarget,
+): VexMapsMapSelectionTarget =
+    when (selectedRole) {
+        VexMapsMapSelectionTarget.ORIGIN ->
+            VexMapsMapSelectionTarget.DESTINATION
+
+        VexMapsMapSelectionTarget.DESTINATION ->
+            VexMapsMapSelectionTarget.DESTINATION
+    }
 
 private sealed interface VexMapsPlanningState {
     data object Idle :

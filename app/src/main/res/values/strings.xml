@@ -173,6 +173,8 @@
     <string name="vexmaps_place_search_importing">Importing place search region…</string>
     <string name="vexmaps_place_search_import_error">That file could not be used as a local place index.</string>
     <string name="vexmaps_place_search_query">Find a place</string>
+    <string name="vexmaps_place_search_selects_start">Search results will set the route start.</string>
+    <string name="vexmaps_place_search_selects_destination">Search results will set the destination.</string>
     <string name="vexmaps_place_search_action">Search offline</string>
     <string name="vexmaps_place_searching">Searching this phone…</string>
     <string name="vexmaps_place_search_no_results">No matching places in this local index.</string>
@@ -189,11 +191,11 @@
     <string name="vexmaps_region_pack_importing">Importing routing region…</string>
     <string name="vexmaps_region_pack_error">That file could not be used as an offline routing region.</string>
     <string name="vexmaps_route_start_needed">Choose a start on the map or use precise location.</string>
-    <string name="vexmaps_route_start_selecting">Long-press the map to choose a route start.</string>
+    <string name="vexmaps_route_start_selecting">Choose a route start by searching or long-pressing the map.</string>
     <string name="vexmaps_route_start_pinned">Start: pinned on map.</string>
     <string name="vexmaps_route_start_current">Start: current location.</string>
-    <string name="vexmaps_route_choose_start">Choose start on map</string>
-    <string name="vexmaps_route_change_start">Change start on map</string>
+    <string name="vexmaps_route_choose_start">Choose route start</string>
+    <string name="vexmaps_route_change_start">Change route start</string>
     <string name="vexmaps_route_use_current_start">Use current location as start</string>
     <string name="vexmaps_route_choose_destination">Long-press the map to choose a destination.</string>
     <string name="vexmaps_route_destination_selected">Pinned destination selected.</string>
