@@ -318,3 +318,41 @@ This is intentionally one-way for the current streaming milestone. A later phone
 writer can remain local until an explicit sync action/contract is admitted; two-way conflict rules
 are not invented here.
 
+## Vex element/runtime realization
+
+The Android renderer follows the same semantic/Compose split demonstrated by Debug -> Log History and
+User Profile:
+
+```text
+AppScreenBlueprint
+  -> registered container/action identity
+  -> VexContainer / VexButton realization
+  -> VexRuntime validation + semantic interaction log
+  -> VexLogger
+  -> LogHistoryPersistenceQueue
+```
+
+Compose remains the Android renderer. The important boundary is that durable product controls do not
+bypass the registered element/runtime path merely because the Screen has a custom renderer.
+
+VexStream therefore keeps:
+- connection controls, library lenses, collection actions, selected-track actions, mini-player
+  actions, Queue actions, and modal identity as registered Screen elements;
+- dynamic songs/albums/artists/playlists as repository data rather than synthesizing one static
+  blueprint node per media row;
+- track-row selection and collection drill-down as local presentation state;
+- MediaSessionService as playback lifetime/queue owner;
+- blocking transport/media/file work on `Dispatchers.IO`.
+
+`ElementIntent.LocalEffect` exists for a narrow custom-renderer case: the registered control must
+still enter VexRuntime for validation/logging, while the concrete effect depends on renderer-scoped
+context such as the current MediaController or selected dynamic row. Stable construction-time app
+effects continue to use Invoke/AppActionRegistrations.
+
+This keeps:
+
+```text
+CUSTOM_COMPOSE_RENDERER != BYPASS_SEMANTIC_RUNTIME
+DYNAMIC_CATALOG_DATA != STATIC_BLUEPRINT_TOPOLOGY
+LOCAL_EFFECT != GENERIC_SERVICE_LOCATOR
+```
