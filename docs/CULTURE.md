@@ -179,6 +179,27 @@ Kotlin inheritance cannot require a separate top-level Android Studio `@Preview`
 source-alignment gate intentionally owns that part of the authoring contract and emits the concrete
 missing-preview/source-shape error.
 
+`AppScreenBlueprint` is also the app-level render bridge. VexLifeApp owns pager/transition
+composition only; it must not maintain another `screenId -> ScreenContent` feature switchboard.
+
+~~~text
+AppScreens
+  one registered Screen list
+
+AppScreenBlueprint.renderContent(...)
+  default generic VexElementTree realization
+  OR
+  Screen-local override that narrows repositories/theme/runtime into its ScreenContent
+
+VexLifeApp
+  asks the registered Screen to render
+  does not import feature Screens
+~~~
+
+Adding a Screen should therefore require one AppScreens registration, not a second edit in
+VexLifeApp. Broad composition dependencies may reach the Screen bridge, but the Screen should
+immediately narrow them before calling ordinary feature content.
+
 Do not alternate between Page and Screen for the same app-destination concept. Framework APIs may
 still use their own terms (for example HorizontalPager's page index); do not rename framework
 vocabulary merely to mimic the domain.
