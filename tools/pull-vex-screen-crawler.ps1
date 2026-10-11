@@ -34,6 +34,10 @@ and confirm COMPLETE ... screenshots=<n>.
 "@
 }
 
+# Delivery output represents THIS collection only. Never merge fresh evidence into a stale local tree.
+if (Test-Path $Destination) {
+    Remove-Item -Recurse -Force $Destination
+}
 New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 
 foreach ($Source in $Sources) {
@@ -44,6 +48,6 @@ foreach ($Source in $Sources) {
 
 Write-Host ""
 Write-Host "Done: $Destination"
-Write-Host "Manifests:"
-Get-ChildItem -Path $Destination -Recurse -Filter "manifest.jsonl" |
+Write-Host "Screenshot batches:"
+Get-ChildItem -Path $Destination -Directory -Recurse -Filter "screenshots" |
     ForEach-Object { Write-Host "  $($_.FullName)" }
