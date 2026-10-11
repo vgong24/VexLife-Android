@@ -24,11 +24,11 @@ import javax.crypto.spec.SecretKeySpec
 import org.json.JSONObject
 
 /**
- * Content-blind off-LAN transport for the already-paired VexStream mobile surface.
+ * Off-LAN transport for the already-paired VexStream mobile surface.
  *
- * The public relay sees routing metadata and signed device identity, but the inner request/response
- * (including the VexStream bearer and media bytes) is encrypted end-to-end to the desktop gateway
- * key learned during the locally approved pairing.
+ * A direct public route to the paired Home PC is preferred when available. The request remains
+ * signed by the Android device identity and end-to-end encrypted to the desktop gateway key. A
+ * content-blind VexRelay route remains fallback when direct reachability is unavailable.
  */
 internal class VexStreamRemoteTransport(
     private val connectionStore: VexStreamConnectionStore,
@@ -183,12 +183,42 @@ internal class VexStreamRemoteTransport(
             ),
         )
 
+        for (
+            directBaseUrl in
+                connection.remoteDirectBaseUrls
+        ) {
+            val direct =
+                runCatching {
+                    directJson(
+                        connection = connection,
+                        baseUrl = directBaseUrl,
+                        body = envelope,
+                    )
+                }.getOrNull()
+                    ?: continue
+
+            if (
+                direct.first ==
+                HttpURLConnection.HTTP_OK
+            ) {
+                return decodeRemoteResponse(
+                    key = key,
+                    homeRef = homeRef,
+                    requestRef = requestRef,
+                    body = direct.second,
+                )
+            }
+        }
+
+        val relayBaseUrl =
+            connection.remoteRelayBaseUrl
+                ?: throw IOException(
+                    "VexStream direct routes were unreachable and no relay fallback is configured",
+                )
+
         val queued =
             relayJson(
-                baseUrl =
-                    requireNotNull(
-                        connection.remoteRelayBaseUrl,
-                    ),
+                baseUrl = relayBaseUrl,
                 path = "v1/remote/request",
                 body = envelope,
             )
@@ -246,83 +276,18 @@ internal class VexStreamRemoteTransport(
 
             val polled =
                 relayJson(
-                    baseUrl =
-                        requireNotNull(
-                            connection.remoteRelayBaseUrl,
-                        ),
+                    baseUrl = relayBaseUrl,
                     path = "v1/remote/response",
                     body = poll,
                 )
             when (polled.first) {
-                HttpURLConnection.HTTP_OK -> {
-                    val outer =
-                        JSONObject(
-                            polled.second,
-                        )
-                    check(
-                        outer.getString(
-                            "requestRef",
-                        ) == requestRef,
-                    ) {
-                        "remote response request identity changed"
-                    }
-                    val plaintext =
-                        open(
-                            key = key,
-                            nonce =
-                                outer.getString(
-                                    "nonce",
-                                ),
-                            ciphertext =
-                                outer.getString(
-                                    "ciphertext",
-                                ),
-                            aad =
-                                VexStreamRemoteProtocol.responseAad(
-                                    homeRef,
-                                    requestRef,
-                                ),
-                        )
-                    val response =
-                        JSONObject(
-                            String(
-                                plaintext,
-                                StandardCharsets.UTF_8,
-                            ),
-                        )
-                    val responseHeaders =
-                        mutableMapOf<String, String>()
-                    response
-                        .optJSONObject(
-                            "headers",
-                        )
-                        ?.let { json ->
-                            json.keys()
-                                .forEach { name ->
-                                    responseHeaders[name] =
-                                        json.getString(
-                                            name,
-                                        )
-                                }
-                        }
-
-                    return Response(
-                        status =
-                            response.getInt(
-                                "status",
-                            ),
-                        headers =
-                            responseHeaders,
-                        body =
-                            response.optString(
-                                "body",
-                            ).takeIf {
-                                it.isNotBlank()
-                            }?.let(
-                                ::decodeBase64,
-                            ) ?: ByteArray(0),
+                HttpURLConnection.HTTP_OK ->
+                    return decodeRemoteResponse(
+                        key = key,
+                        homeRef = homeRef,
+                        requestRef = requestRef,
+                        body = polled.second,
                     )
-                }
 
                 HttpURLConnection.HTTP_ACCEPTED -> {
                     Thread.sleep(
@@ -368,6 +333,121 @@ internal class VexStreamRemoteTransport(
             start = start,
             expectedLength = expectedLength,
         )
+
+    private fun directJson(
+        connection: VexStreamPairedConnection,
+        baseUrl: String,
+        body: JSONObject,
+    ): Pair<Int, String> {
+        val request =
+            VexStreamPinnedTls.open(
+                baseUrl = baseUrl,
+                certificateSha256 =
+                    connection.certificateSha256,
+                path = "v1/direct/request",
+                method = "POST",
+            )
+        request.connectTimeout =
+            DIRECT_CONNECT_TIMEOUT_MS
+        request.readTimeout =
+            DIRECT_READ_TIMEOUT_MS
+        request.doOutput = true
+        request.setRequestProperty(
+            "Content-Type",
+            "application/json",
+        )
+        request.outputStream
+            .bufferedWriter()
+            .use {
+                it.write(
+                    body.toString(),
+                )
+            }
+
+        val status =
+            request.responseCode
+        val text =
+            VexStreamPinnedTls.readText(
+                request,
+            )
+        request.disconnect()
+        return status to text
+    }
+
+    private fun decodeRemoteResponse(
+        key: ByteArray,
+        homeRef: String,
+        requestRef: String,
+        body: String,
+    ): Response {
+        val outer =
+            JSONObject(
+                body,
+            )
+        check(
+            outer.getString(
+                "requestRef",
+            ) == requestRef,
+        ) {
+            "remote response request identity changed"
+        }
+        val plaintext =
+            open(
+                key = key,
+                nonce =
+                    outer.getString(
+                        "nonce",
+                    ),
+                ciphertext =
+                    outer.getString(
+                        "ciphertext",
+                    ),
+                aad =
+                    VexStreamRemoteProtocol.responseAad(
+                        homeRef,
+                        requestRef,
+                    ),
+            )
+        val response =
+            JSONObject(
+                String(
+                    plaintext,
+                    StandardCharsets.UTF_8,
+                ),
+            )
+        val responseHeaders =
+            mutableMapOf<String, String>()
+        response
+            .optJSONObject(
+                "headers",
+            )
+            ?.let { json ->
+                json.keys()
+                    .forEach { name ->
+                        responseHeaders[name] =
+                            json.getString(
+                                name,
+                            )
+                    }
+            }
+
+        return Response(
+            status =
+                response.getInt(
+                    "status",
+                ),
+            headers =
+                responseHeaders,
+            body =
+                response.optString(
+                    "body",
+                ).takeIf {
+                    it.isNotBlank()
+                }?.let(
+                    ::decodeBase64,
+                ) ?: ByteArray(0),
+        )
+    }
 
     private fun relayJson(
         baseUrl: String,
@@ -685,6 +765,10 @@ internal class VexStreamRemoteTransport(
             256 * 1024
         const val GCM_NONCE_BYTES = 12
         const val GCM_TAG_BITS = 128
+        const val DIRECT_CONNECT_TIMEOUT_MS =
+            3_000
+        const val DIRECT_READ_TIMEOUT_MS =
+            35_000
         const val RELAY_CONNECT_TIMEOUT_MS =
             5_000
         const val RELAY_READ_TIMEOUT_MS =
