@@ -313,30 +313,41 @@ source review
 
 Do not erase the valid UI effects while changing nervous-system layers.
 
+## Current accepted movement
+
+The data/UI/Screen candidate from PR #9 is merged into main. The follow-up composition refinement also
+merged: app routing carries the existing AppRepositories aggregate instead of threading one repository
+parameter per intermediate function, while leaf Screens still receive narrow dependencies.
+
+Do not reconstruct those as open source candidates.
+
+Data proof is not magically complete: Room migration/integration execution and a clean aggregate
+Gradle/device rerun remain separate owed predicates.
+
 ## First unconsumed edge
 
-Finish/prove the data-repository candidate first:
+Establish the Journey / Instrumentation foundation before introducing Relay/AppScope:
 
 ~~~text
-Room/KSP/Lifecycle Sync + compile
--> LogHistory screen-scope protocol + UserProfile update fixture/in-memory/unit tests
--> Room v1 -> v2 -> v3 migration + repository integration proof
--> :app:verifySourceAlignment
--> Android Studio Screen previews render
--> physical-device User Profile: edit name -> Save -> persisted name visibly updates
--> relaunch -> persisted name remains
--> physical-device Log History persistence
--> rotate while Debug/Log History sheet is open -> same Screen + sheet + session remains
--> verify Screen-scoped readable history + Submitted JSON detail
--> Reset clears persistence
--> Gallery preserves both AlertDialog + ModalBottomSheet samples
--> dark/light toggle keeps status + native navigation bars legible/themed
--> launcher shows the Vex mark
--> clean source state
+shared VexJourneyCatalog
+-> fast JVM semantic-map coverage against AppScreens.registry
+-> independent expected-walk interpreter
+-> Compose instrumentation using stable production element IDs
+-> actual VexLogger -> persistence-queue -> InMemoryLogHistoryRepository history
+-> semantic expected/actual comparison
+-> connected-device/emulator proof
 ~~~
 
-Then inventory PR #3 against the resulting current `main` and propose the smallest vertical
-service/state slice that lets the existing body demonstrate:
+The coverage gate must make omissions visible for registered Screens, ActionElements, editable
+TextFieldElements, and Dialog/ModalBottomSheet surfaces.
+
+The initial Android walks should cover primary navigation, Debug/Log History (including gesture
+dismissal and Reset), Gallery/modal/local-panel behavior, User Profile Submit, VexStream, and Talk to
+Vex.
+
+After this candidate proves cleanly, use its executable journeys to strengthen the still-owed
+data/repository/device regression surface, then return to PR #3 as a design quarry for the smallest
+real Relay/service slice:
 
 ~~~text
 multiple source/service states

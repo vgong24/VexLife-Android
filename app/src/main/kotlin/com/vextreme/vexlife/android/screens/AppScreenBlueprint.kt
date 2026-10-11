@@ -1,11 +1,16 @@
 package com.vextreme.vexlife.android.screens
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.elements.ScreenBlueprint
+import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
+import com.vextreme.vexlife.android.runtime.VexRuntime
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -44,4 +49,27 @@ abstract class AppScreenBlueprint(
         context: ScreenActionContext,
     ): AppActionRegistrations =
         AppActionRegistrations.Empty
+
+    /**
+     * Android realization bridge for this registered Screen.
+     *
+     * The app router supplies broad composition dependencies once. This Screen immediately narrows
+     * them to whatever its actual renderer needs. Ordinary blueprint-only Screens inherit the
+     * generic VexElementTree path; a Screen overrides this only when it owns custom realization,
+     * local state projection, or a repository/theme dependency.
+     */
+    @Composable
+    internal open fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        VexElementTree(
+            placement = content,
+            registry = runtime.registry,
+            handler = runtime,
+            modifier = Modifier.fillMaxSize(),
+            selectedChild = runtime.presentation::selected,
+        )
+    }
 }

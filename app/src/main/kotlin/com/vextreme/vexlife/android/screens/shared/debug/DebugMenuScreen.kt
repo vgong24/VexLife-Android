@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -96,6 +97,19 @@ object DebugMenuScreen : AppScreenBlueprint(
                 context.logPersistence.clear()
             },
         )
+
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        DebugMenuScreenContent(
+            runtime = runtime,
+            logHistoryRepository = repositories.logHistory,
+            darkTheme = darkTheme,
+        )
+    }
 }
 
 @Composable

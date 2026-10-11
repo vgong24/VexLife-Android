@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
@@ -14,6 +16,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.0.1-foundation"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -24,6 +27,15 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        named("test") {
+            kotlin.directories += "src/journeyTest/kotlin"
+        }
+        named("androidTest") {
+            kotlin.directories += "src/journeyTest/kotlin"
+        }
     }
 }
 
@@ -42,6 +54,7 @@ dependencies {
     implementation(libs.composeMaterialIconsExtended)
     implementation(libs.composeUiToolingPreview)
     debugImplementation(libs.composeUiTooling)
+    debugImplementation(libs.composeUiTestManifest)
 
     implementation(libs.roomRuntime)
     implementation(libs.roomKtx)
@@ -54,11 +67,38 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutinesTest)
     testImplementation(libs.roomTesting)
+
+    androidTestImplementation(platform(libs.composeBom))
+    androidTestImplementation(libs.composeUiTestJunit4)
+    androidTestImplementation(libs.androidxTestRunner)
+    androidTestImplementation(libs.androidxTestExtJunit)
+    androidTestImplementation(libs.espressoCore)
 }
 
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+tasks.withType<Test>().configureEach {
+    val journeyCoverageReport =
+        layout.buildDirectory.file(
+            "reports/vex/journey-coverage-${name}.txt",
+        )
+
+    systemProperty(
+        "vex.journey.coverageReport",
+        journeyCoverageReport.get().asFile.absolutePath,
+    )
+    systemProperty(
+        "vex.journey.strictCoverage",
+        providers.gradleProperty("vexStrictJourneyCoverage")
+            .orElse("false")
+            .get(),
+    )
+
+    // Journey debt is intentionally visible during a green ordinary test run.
+    testLogging.showStandardStreams = true
 }
 
 

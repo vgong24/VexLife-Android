@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.elements.VexButton
+import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 
@@ -36,6 +37,7 @@ internal fun GalleryModalSamples(
 ) {
     if (runtime.presentation.isOpen(GalleryScreen.DialogModalSample)) {
         AlertDialog(
+            modifier = Modifier.vexElement(GalleryScreen.DialogModalSample),
             onDismissRequest = {
                 runtime.dismissPresentation(GalleryScreen.DialogModalSample)
             },
@@ -56,7 +58,9 @@ internal fun GalleryModalSamples(
 
     if (runtime.presentation.isOpen(GalleryScreen.BottomSheetModalSample)) {
         ModalBottomSheet(
-            modifier = Modifier.fillMaxHeight(),
+            modifier = Modifier
+                .fillMaxHeight()
+                .vexElement(GalleryScreen.BottomSheetModalSample),
             onDismissRequest = {
                 runtime.dismissPresentation(GalleryScreen.BottomSheetModalSample)
             },

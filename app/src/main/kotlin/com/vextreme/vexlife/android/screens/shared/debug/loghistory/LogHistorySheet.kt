@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
+import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
@@ -48,7 +49,9 @@ fun LogHistorySheet(
     )
 
     ModalBottomSheet(
-        modifier = Modifier.fillMaxHeight(),
+        modifier = Modifier
+            .fillMaxHeight()
+            .vexElement(DebugMenuScreen.LogSheet),
         onDismissRequest = {
             runtime.dismissPresentation(DebugMenuScreen.LogSheet)
         },

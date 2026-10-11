@@ -42,6 +42,9 @@ object AppScreens {
 
     val all: List<AppScreenBlueprint> = primary + shared
 
+    private val byScreenId: Map<String, AppScreenBlueprint> =
+        all.associateBy { it.screenId }
+
     val registry = UIBlueprintRegistry(
         AppBlueprint(
             shell = AppShell.blueprint,
@@ -71,4 +74,14 @@ object AppScreens {
 
         return combined.requireCoverage(screenActionElements)
     }
+
+    /**
+     * Resolves the app-level Screen object that owns rendering/actions for one registered screenId.
+     *
+     * This map is derived from [all]; it is not another hand-maintained Screen registry.
+     */
+    internal fun require(screenId: String): AppScreenBlueprint =
+        requireNotNull(byScreenId[screenId]) {
+            "screen is registered in runtime blueprint but missing from AppScreens: $screenId"
+        }
 }

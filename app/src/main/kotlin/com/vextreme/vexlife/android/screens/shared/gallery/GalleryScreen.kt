@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.elements.ColumnElement
@@ -62,6 +63,31 @@ object GalleryScreen : AppScreenBlueprint(
 
     val BottomSheetModalSample = modalBottomSheetRef(
         id = "page.content.elements.modal-samples.bottom-sheet",
+    )
+
+    /*
+     * These sample actions are named because semantic journeys now address production actions by
+     * their real element objects. Their IDs intentionally match the former inline DSL-generated IDs.
+     */
+    val SampleButton = buttonRef(
+        id = "page.content.elements.samples.button-row.button",
+        labelRes = R.string.gallery_sample_button,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.GallerySample),
+    )
+
+    val SampleToggle = toggleRef(
+        id = "page.content.elements.samples.toggle",
+        labelRes = R.string.gallery_sample_toggle,
+        intent = invoke(AppActions.GallerySample),
+    )
+
+    val SampleFab = fabRef(
+        id = "page.content.elements.samples.fab",
+        labelRes = R.string.gallery_sample_fab,
+        icon = ElementIcon.Add,
+        style = VexElementStyles.FabOption,
+        intent = invoke(AppActions.GallerySample),
     )
 
     val ShowDialogModalSample = buttonRef(
@@ -130,25 +156,10 @@ object GalleryScreen : AppScreenBlueprint(
                             role = TextRole.Supporting,
                         )
                         row("button-row") {
-                            button(
-                                id = "button",
-                                labelRes = R.string.gallery_sample_button,
-                                style = VexElementStyles.SecondaryAction,
-                                intent = invoke(AppActions.GallerySample),
-                            )
+                            button(SampleButton)
                         }
-                        toggle(
-                            id = "toggle",
-                            labelRes = R.string.gallery_sample_toggle,
-                            intent = invoke(AppActions.GallerySample),
-                        )
-                        fab(
-                            id = "fab",
-                            labelRes = R.string.gallery_sample_fab,
-                            icon = ElementIcon.Add,
-                            style = VexElementStyles.FabOption,
-                            intent = invoke(AppActions.GallerySample),
-                        )
+                        toggle(SampleToggle)
+                        fab(SampleFab)
                     }
 
                     card("modal-samples") {
@@ -203,6 +214,15 @@ object GalleryScreen : AppScreenBlueprint(
                 // Intentionally no product effect: this sample exists to exercise the reusable cell.
             },
         )
+
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        GalleryScreenContent(runtime)
+    }
 }
 
 @Composable

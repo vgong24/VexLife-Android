@@ -62,7 +62,8 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
-| DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | SOURCE CANDIDATE / PROOF PENDING | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | Sync/compile + unit tests + Room integration + lived persistence/reset proof |
+| DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
+| JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | SOURCE CANDIDATE / PROOF PENDING | Make real Android journeys executable once while failing fast when registered interactive semantics have no journey | JVM journey coverage/oracle tests + connected Android instrumentation + clean rerun |
 | F2_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
 | F3_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
 | F4_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
@@ -99,6 +100,19 @@ domain fixture shape should seed previews, unit tests, and in-memory repository 
 creating a second mock data model.
 
 No generic `BaseRepository<T>` is admitted by this candidate.
+
+## Journey / Instrumentation candidate
+
+Canonical detail: [`JOURNEY-INSTRUMENTATION.md`](JOURNEY-INSTRUMENTATION.md)
+
+### Intention
+
+A developer should be able to describe a walk through the app once, have that walk generate its own
+expected semantic history, execute the same declaration through real Compose instrumentation, and
+receive a fast JVM failure when a registered Screen/action/editable field/modal is absent from every
+known journey.
+
+This is semantic app-map coverage. It remains separate from ordinary line/branch code coverage.
 
 ## F0 — Standalone Build Foundation
 

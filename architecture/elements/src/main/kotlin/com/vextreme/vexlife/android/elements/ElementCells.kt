@@ -149,9 +149,7 @@ fun VexToggleRow(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .vexElement(element),
+        modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -167,6 +165,7 @@ fun VexToggleRow(
             Switch(
                 checked = checked,
                 onCheckedChange = { handler.activate(element) },
+                modifier = Modifier.vexElement(element),
             )
         }
     }

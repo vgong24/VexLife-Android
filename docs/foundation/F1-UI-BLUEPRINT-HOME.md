@@ -99,6 +99,31 @@ visible beside the source that owns it.
 Feature-specific preview states stay in that same Screen file. `VexPreview.kt` provides only the
 generic host/environment plus the preview-only `VexPreviewSetup` DSL.
 
+The app Screen object also owns the bridge from registered identity to Android realization:
+
+~~~text
+AppScreenBlueprint.renderContent(runtime, repositories, darkTheme)
+
+default:
+  render this Screen's registered content through VexElementTree
+
+override when earned:
+  Debug
+    -> choose repositories.logHistory + darkTheme
+    -> DebugMenuScreenContent(...)
+
+  Profile
+    -> choose repositories.userProfile
+    -> UserProfileScreenContent(...)
+
+  Gallery
+    -> choose Gallery's custom Scaffold/tab realization
+~~~
+
+VexLifeApp therefore owns pager/shared-screen transitions but not a feature `when(screenId)` map.
+AppScreens derives a screenId lookup from the same registered list; adding a Screen does not require
+another composition-root mapping.
+
 For example, Gallery's AppGraph preview locally declares:
 
 ~~~kotlin
@@ -125,9 +150,10 @@ The Gradle source-alignment gate intentionally checks convention drift, not runt
   fails on source convention drift
 ~~~
 
-It watches narrow contracts such as `*Screen.kt`/ScreenBlueprint/colocated Preview naming and
-explicit Room physical schema names. Navigation behavior, migrations, transactions, persistence, and
-device behavior remain unit/integration/lived proof responsibilities.
+It watches narrow contracts such as `*Screen.kt`/AppScreenBlueprint/colocated Preview naming,
+explicit Room physical schema names, and the rule that VexLifeApp must not import feature Screens to
+recreate a central render switchboard. Navigation behavior, migrations, transactions, persistence,
+and device behavior remain unit/integration/lived proof responsibilities.
 
 ## Navigate vs swap
 

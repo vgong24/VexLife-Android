@@ -66,6 +66,14 @@ row("actions") {
 Reusable identity and placed identity are therefore the same object, not two objects reconciled by a
 matching string.
 
+Semantic journey coverage is now one legitimate addressing relationship. If a user-actionable
+element must be exercised by the app journey map, give it a named ref rather than making the test
+reconstruct its generated string ID. This is why Gallery's sample Button/Toggle/FAB are named even
+though their product effects are intentionally small.
+
+The rule remains need-based: static one-off text/layout nodes do not become named fields merely
+because tests exist.
+
 ## Repository shape
 
 ~~~text

@@ -9,6 +9,9 @@ ksp = "2.3.12"
 coroutines = "1.11.0"
 core = "1.19.1"
 lifecycle = "2.11.0"
+androidxTest = "1.7.0"
+androidxTestExtJunit = "1.3.0"
+espresso = "3.7.0"
 
 [libraries]
 composeBom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -18,6 +21,8 @@ composeRuntime = { module = "androidx.compose.runtime:runtime" }
 composeUi = { module = "androidx.compose.ui:ui" }
 composeUiToolingPreview = { module = "androidx.compose.ui:ui-tooling-preview" }
 composeUiTooling = { module = "androidx.compose.ui:ui-tooling" }
+composeUiTestJunit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+composeUiTestManifest = { module = "androidx.compose.ui:ui-test-manifest" }
 composeMaterialIconsExtended = { module = "androidx.compose.material:material-icons-extended" }
 activityCompose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -30,6 +35,9 @@ coreKtx = { module = "androidx.core:core-ktx", version.ref = "core" }
 lifecycleViewModelKtx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 lifecycleViewModelCompose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 coroutinesTest = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+androidxTestRunner = { module = "androidx.test:runner", version.ref = "androidxTest" }
+androidxTestExtJunit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }
+espressoCore = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

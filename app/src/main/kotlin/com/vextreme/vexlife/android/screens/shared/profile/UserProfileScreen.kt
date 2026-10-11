@@ -10,6 +10,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -87,6 +88,18 @@ object UserProfileScreen : AppScreenBlueprint(
             repository = context.repositories.userProfile,
             scope = context.scope,
         )
+
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        UserProfileScreenContent(
+            runtime = runtime,
+            repository = repositories.userProfile,
+        )
+    }
 }
 
 /**
