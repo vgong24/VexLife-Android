@@ -303,6 +303,13 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val SeekPlayback = buttonRef(
+        id = "body.player.seek",
+        labelRes = R.string.vexstream_music_seek,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
     val ShuffleQueue = buttonRef(
         id = "body.player.shuffle",
         labelRes = R.string.vexstream_music_shuffle,
@@ -420,6 +427,8 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 element = PlayerSection,
                 style = VexElementStyles.RaisedSurface,
             ) {
+                button(SeekPlayback)
+
                 row("controls") {
                     button(PreviousTrack)
                     button(TogglePlayback)
