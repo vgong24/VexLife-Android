@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.maps
 
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.ceil
 import kotlin.math.sin
 import kotlin.math.sqrt
 import org.json.JSONObject
@@ -27,8 +28,15 @@ data class VexOfflineRouteResult(
     val geometry: List<VexRouteGeometryPoint>,
     val travelMode: VexMapsTravelMode =
         VexMapsTravelMode.DRIVE,
+    val estimatedDurationSeconds: Int? = null,
 ) {
     init {
+        require(
+            estimatedDurationSeconds == null ||
+                estimatedDurationSeconds > 0,
+        ) {
+            "estimatedDurationSeconds must be positive when present"
+        }
         require(geometry.size >= 2) {
             "route geometry must contain at least two points"
         }
@@ -37,6 +45,7 @@ data class VexOfflineRouteResult(
 
 internal data class VexValhallaRouteProjection(
     val legs: List<VexValhallaLegProjection>,
+    val estimatedDurationSeconds: Int? = null,
 )
 
 internal data class VexValhallaLegProjection(
@@ -65,6 +74,21 @@ internal object VexValhallaRouteTranslator {
                 .getJSONObject("trip")
         val legsJson =
             trip.getJSONArray("legs")
+        val estimatedDurationSeconds =
+            trip
+                .optJSONObject("summary")
+                ?.optDouble(
+                    "time",
+                    Double.NaN,
+                )
+                ?.takeIf { seconds ->
+                    seconds.isFinite() &&
+                        seconds > 0.0
+                }
+                ?.let { seconds ->
+                    ceil(seconds)
+                        .toInt()
+                }
 
         val legs =
             buildList {
@@ -139,6 +163,8 @@ internal object VexValhallaRouteTranslator {
 
         return VexValhallaRouteProjection(
             legs = legs,
+            estimatedDurationSeconds =
+                estimatedDurationSeconds,
         )
     }
 
@@ -274,6 +300,8 @@ internal object VexValhallaRouteTranslator {
                 combinedGeometry.toList(),
             travelMode =
                 travelMode,
+            estimatedDurationSeconds =
+                estimatedDurationSeconds,
         )
     }
 }

@@ -93,6 +93,64 @@ class VexValhallaRouteTranslatorTest {
     }
 
     @Test
+    fun providerTripTimeBecomesRoutePreviewDuration() {
+        val encoded =
+            encodePolyline6ForTest(
+                listOf(
+                    VexRouteGeometryPoint(
+                        34.0,
+                        -118.0,
+                    ),
+                    VexRouteGeometryPoint(
+                        34.001,
+                        -118.0,
+                    ),
+                ),
+            )
+
+        val raw =
+            """
+            {
+              "trip": {
+                "summary": {
+                  "time": 605.234
+                },
+                "legs": [
+                  {
+                    "shape": "$encoded",
+                    "maneuvers": [
+                      {
+                        "instruction": "Start north",
+                        "begin_shape_index": 0
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+            """.trimIndent()
+
+        val projection =
+            VexValhallaRouteTranslator
+                .fromJson(raw)
+
+        val result =
+            with(VexValhallaRouteTranslator) {
+                projection
+                    .toOfflineRouteResult(
+                        routeRef = "route.time",
+                        routeRevision = 1L,
+                        destinationLabel = "Test",
+                    )
+            }
+
+        assertEquals(
+            606,
+            result.estimatedDurationSeconds,
+        )
+    }
+
+    @Test
     fun duplicateTransitionDistanceDoesNotBreakStrictRouteOrdering() {
         val pointA =
             VexRouteGeometryPoint(

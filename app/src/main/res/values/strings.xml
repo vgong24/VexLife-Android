@@ -157,6 +157,8 @@
     <string name="vexmaps_navigation_stop">Stop navigation</string>
     <string name="vexmaps_navigation_ready">Route to %1$s · %2$d m</string>
     <string name="vexmaps_navigation_route_mode">Mode: %1$s</string>
+    <string name="vexmaps_navigation_eta_minutes">About %1$d min</string>
+    <string name="vexmaps_navigation_eta_hours">About %1$d hr %2$d min</string>
     <string name="vexmaps_navigation_edit_route">Edit route</string>
     <string name="vexmaps_navigation_location_needed">Use precise location before starting navigation.</string>
     <string name="vexmaps_navigation_start">Start</string>

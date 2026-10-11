@@ -1569,6 +1569,38 @@ private fun VexMapsNavigationCard(
 
                     state
                         .routeResult
+                        ?.estimatedDurationSeconds
+                        ?.let { durationSeconds ->
+                            val estimate =
+                                projectVexMapsDurationEstimate(
+                                    durationSeconds,
+                                )
+
+                            Text(
+                                text =
+                                    if (estimate.hours > 0) {
+                                        stringResource(
+                                            R.string
+                                                .vexmaps_navigation_eta_hours,
+                                            estimate.hours,
+                                            estimate.minutes,
+                                        )
+                                    } else {
+                                        stringResource(
+                                            R.string
+                                                .vexmaps_navigation_eta_minutes,
+                                            estimate.minutes,
+                                        )
+                                    },
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .bodyMedium,
+                            )
+                        }
+
+                    state
+                        .routeResult
                         ?.travelMode
                         ?.let { mode ->
                             Text(
@@ -1794,6 +1826,34 @@ internal sealed interface VexMapsPlaceSearchState {
 internal enum class VexMapsPlaceSearchError {
     IMPORT,
     SEARCH,
+}
+
+internal data class VexMapsDurationEstimate(
+    val hours: Int,
+    val minutes: Int,
+)
+
+internal fun projectVexMapsDurationEstimate(
+    durationSeconds: Int,
+): VexMapsDurationEstimate {
+    require(durationSeconds > 0)
+
+    val totalMinutes =
+        (
+            durationSeconds +
+                SECONDS_PER_MINUTE -
+                1
+        ) /
+            SECONDS_PER_MINUTE
+
+    return VexMapsDurationEstimate(
+        hours =
+            totalMinutes /
+                MINUTES_PER_HOUR,
+        minutes =
+            totalMinutes %
+                MINUTES_PER_HOUR,
+    )
 }
 
 internal fun resolveVexMapsRouteOrigin(
@@ -2434,6 +2494,12 @@ private class VexMapsMapViewLifecycle(
         started = false
     }
 }
+
+private const val SECONDS_PER_MINUTE =
+    60
+
+private const val MINUTES_PER_HOUR =
+    60
 
 private const val ROUTE_SOURCE_ID =
     "vexmaps-route"
