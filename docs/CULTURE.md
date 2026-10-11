@@ -161,13 +161,23 @@ Use **Screen** for app destinations and their source files:
 
 ```text
 ScreenElement
-ScreenBlueprint
+ScreenBlueprint            portable structural contract
+AppScreenBlueprint         VexLife app Screen contract
 ScreenRegistration
 HomeScreen.kt
 AppScreens
 screens/primary/...
 screens/shared/...
 ```
+
+App-authored Screens extend `AppScreenBlueprint`. Adding the Screen once to `AppScreens` makes its
+optional `appActionRegistrations(...)` override discoverable automatically. A Screen that declares
+an Invoke action but supplies no owner fails action-coverage construction; Screens with only
+runtime-owned navigation/presentation actions inherit the empty registration set.
+
+Kotlin inheritance cannot require a separate top-level Android Studio `@Preview` composable, so the
+source-alignment gate intentionally owns that part of the authoring contract and emits the concrete
+missing-preview/source-shape error.
 
 Do not alternate between Page and Screen for the same app-destination concept. Framework APIs may
 still use their own terms (for example HorizontalPager's page index); do not rename framework
@@ -219,6 +229,10 @@ rejects direct mutation of inactive Screen-owned presentation state.
 
 This prevents hidden cross-feature effects such as Home mutating Gallery's selected panel before
 Gallery is opened.
+
+Platform-native dismissal is also semantic. A draggable/scrim-dismissed modal records one
+`Dismissed` interaction against the modal element itself; it does not fabricate a Close-button click.
+Android Back remains its own Back diagnostic.
 
 ## Static alignment is not behavioral proof
 
@@ -275,8 +289,13 @@ map.
 REGISTRATION_EXISTS != ACTION_IS_AVAILABLE_OR_AUTHORIZED. Registration proves wiring/ownership only;
 future Relay/capability/connection state must own whether an action is currently usable.
 
-The app composition may assemble registrations and supply broader-lifetime dependencies; it should
-not re-describe the feature's business effect.
+AppScreens assembles registrations from the same registered Screen list and validates that every
+declared Screen Invoke action has an owner. VexLifeSession supplies the construction dependencies but
+does not keep a second feature-by-feature registration list. Adding a new Screen should not require a
+corresponding VexLifeSession edit.
+
+The app composition may supply broader-lifetime dependencies; it should not re-describe the
+feature's business effect.
 
 ## Configuration recreation is not a semantic restart
 
