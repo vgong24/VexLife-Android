@@ -17,6 +17,9 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import org.json.JSONArray
 
+private const val MAX_REMOTE_DIRECT_ROUTES = 8
+private const val MAX_REMOTE_DIRECT_ROUTE_LENGTH = 512
+
 data class VexStreamPairedConnection(
     val displayName: String,
     val host: String,
@@ -444,9 +447,6 @@ class VexStreamConnectionStore(
         private const val KEY_REMOTE_GATEWAY_PUBLIC_KEY = "remoteGatewayPublicKey"
         private const val KEY_REMOTE_DIRECT_BASE_URLS = "remoteDirectBaseUrls"
         private const val KEY_REMOTE_RELAY_BASE_URL = "remoteRelayBaseUrl"
-
-        private const val MAX_REMOTE_DIRECT_ROUTES = 8
-        private const val MAX_REMOTE_DIRECT_ROUTE_LENGTH = 512
 
         private const val ANDROID_KEY_STORE = "AndroidKeyStore"
         private const val KEY_ALIAS = "vexstream.mobile.connection.token.v1"
