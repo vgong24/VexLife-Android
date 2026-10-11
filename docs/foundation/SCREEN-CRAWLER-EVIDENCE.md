@@ -93,56 +93,41 @@ The crawler reuses the accepted interactions rather than constructing another ap
 
 ## One human control surface
 
-Local/manual ScreenCrawler work is configured in one file:
+For ordinary local ScreenCrawler work, a developer should know exactly one file:
 
 ~~~text
-app/src/journeyTest/kotlin/.../testing/crawler/VexScreenCrawlerRunConfig.kt
+app/src/androidTest/kotlin/com/vextreme/vexlife/android/testing/crawler/
+  VexScreenCrawlerInstrumentedTest.kt
 ~~~
 
-A new developer should not need to learn Gradle/instrumentation argument names to run a crawler.
+That same runnable class contains:
+1. where/how to right-click-run the crawler in Android Studio;
+2. the `enabled` flag;
+3. typed Screen/shard selection examples;
+4. locale/font/capture configuration;
+5. physical-device/emulator behavior;
+6. macOS/Linux + Windows PowerShell `adb pull` commands;
+7. evidence-path/manifest explanation.
 
-The preset is intentionally a comment/uncomment surface:
+There is no separate human run-config class.
 
-~~~kotlin
-object VexScreenCrawlerRunConfig {
-    const val enabled = false
+The intended workflow is:
 
-    val config = vexScreenCrawlerConfig {
-        // No selector means ALL current/future canonical shards.
-
-        // screens(UserProfileScreen)
-        // shards(DebugJourneys)
-        // shards(DebugJourneys, GalleryJourneys)
-        // allShardsExcept(DebugJourneys)
-
-        languages(
-            language("en"),
-            // language("zh"),
-            // language("bg"),
-            // language("lt"),
-            // language("zh-Hans"),
-        )
-
-        fontProfiles(
-            VexCrawlerFonts.Normal,
-            // VexCrawlerFonts.Large,
-            // VexCrawlerFonts.ExtraLarge,
-        )
-
-        capture(VexCrawlerCapturePolicy.SCREEN_ONCE)
-    }
-}
+~~~text
+open VexScreenCrawlerInstrumentedTest.kt
+-> enabled = true
+-> optionally uncomment ONE typed selection line
+-> enable/disable locale/font rows
+-> right-click Run
+-> copy screenshots with the documented adb pull command
 ~~~
-
-To run:
-1. set `enabled = true`;
-2. optionally uncomment one typed selection line;
-3. enable/disable language/font rows;
-4. run `VexScreenCrawlerInstrumentedTest`.
 
 While `enabled = false`, the dedicated crawler test emits one explicit green no-op status and returns
 without creating crawler cases or screenshot work. Disabled optional evidence therefore cannot make
 ordinary Android test runs red or block development.
+
+The lower-level planner/config/evidence classes are framework internals. A developer only needs them
+when changing how ScreenCrawler itself works, not when choosing what to crawl.
 
 ## Kotlin identity / source-of-truth rules
 
