@@ -6,10 +6,14 @@ class SyntheticExternalEventSource(
     private val sink: (VexExternalEventSourceSnapshot) -> Unit,
     private val intervalMillis: Long = DEFAULT_INTERVAL_MILLIS,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val maxEvents: Int = DEFAULT_MAX_EVENTS,
 ) {
     init {
         require(intervalMillis > 0L) {
             "synthetic external event interval must be positive"
+        }
+        require(maxEvents > 0) {
+            "synthetic external event maxEvents must be positive"
         }
     }
 
@@ -38,6 +42,10 @@ class SyntheticExternalEventSource(
                     occurredAtEpochMillis = clock(),
                 )
 
+            while (emitted.size > maxEvents) {
+                emitted.removeAt(0)
+            }
+
             sink(
                 VexExternalEventSourceSnapshot(
                     sourceRef = SOURCE_REF,
@@ -57,6 +65,7 @@ class SyntheticExternalEventSource(
     companion object {
         const val SOURCE_REF = "source.synthetic.external-information"
         const val DEFAULT_INTERVAL_MILLIS = 5_000L
+        const val DEFAULT_MAX_EVENTS = 24
 
         private val templates =
             listOf(

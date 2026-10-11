@@ -57,6 +57,40 @@ class SyntheticExternalEventSourceTest {
                 .sourceRevision,
         )
     }
+
+    @Test
+    fun longRunningFixtureKeepsABoundedCurrentProjection() = runTest {
+        val repository = RelayEventsRepository()
+        val source =
+            SyntheticExternalEventSource(
+                sink = repository::accept,
+                intervalMillis = 1L,
+                clock = { testScheduler.currentTime },
+                maxEvents = 3,
+            )
+
+        backgroundScope.launch {
+            source.runForever()
+        }
+
+        advanceTimeBy(6L)
+        runCurrent()
+
+        val snapshot =
+            repository.current.sourceSnapshots
+                .getValue(SyntheticExternalEventSource.SOURCE_REF)
+
+        assertEquals(6L, snapshot.sourceRevision)
+        assertEquals(3, snapshot.events.size)
+        assertEquals(
+            listOf(
+                "event.synthetic.external.0004",
+                "event.synthetic.external.0005",
+                "event.synthetic.external.0006",
+            ),
+            snapshot.events.map(VexExternalEvent::eventRef),
+        )
+    }
 }
 
 // [VXG RealForever]
