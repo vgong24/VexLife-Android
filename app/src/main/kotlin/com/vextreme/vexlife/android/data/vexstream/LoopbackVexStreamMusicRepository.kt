@@ -305,11 +305,63 @@ class LoopbackVexStreamMusicRepository(
             }
         }
 
+        val playlistsJson =
+            root.optJSONArray(
+                "playlists",
+            )
+        val playlists =
+            buildList {
+                if (playlistsJson != null) {
+                    repeat(
+                        playlistsJson.length(),
+                    ) { index ->
+                        val playlist =
+                            playlistsJson.getJSONObject(
+                                index,
+                            )
+                        val refsJson =
+                            playlist.getJSONArray(
+                                "trackRefs",
+                            )
+                        val refs =
+                            buildList {
+                                repeat(
+                                    refsJson.length(),
+                                ) { refIndex ->
+                                    add(
+                                        VexStreamTrackRef(
+                                            refsJson.getString(
+                                                refIndex,
+                                            ),
+                                        ),
+                                    )
+                                }
+                            }
+                        add(
+                            VexStreamHubPlaylistProjection(
+                                playlistRef =
+                                    VexStreamPlaylistRef(
+                                        playlist.getString(
+                                            "playlistRef",
+                                        ),
+                                    ),
+                                name =
+                                    playlist.getString(
+                                        "name",
+                                    ),
+                                trackRefs = refs,
+                            ),
+                        )
+                    }
+                }
+            }
+
         return VexStreamHubCatalogProjection(
             hubRef = root.getString("hubRef"),
             sourceVersion = root.getString("sourceVersion"),
             catalogRevision = root.getString("catalogRevision"),
             tracks = tracks,
+            playlists = playlists,
         )
     }
 
