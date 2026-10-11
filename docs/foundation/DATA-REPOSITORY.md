@@ -63,6 +63,56 @@ OBSERVED_REPOSITORY_STATE != OPERATION_ATTEMPT
 There is intentionally no BaseRepository<T>. Each repository should answer a real domain question,
 because remote/local merge, retry, freshness, permissions, and mutation semantics differ by domain.
 
+## Transaction boundary
+
+Room already wraps one @Insert/@Update/@Delete/@Upsert write as a transaction. Use @Transaction when
+multiple database statements together form one invariant.
+
+Current concrete example:
+
+~~~text
+insert LogHistory row
++
+prune retained LogHistory window
+=
+one atomic database effect
+~~~
+
+LogHistoryDao.insertAndPrune() owns that transaction. Repository code must not split it back into
+"insert(); prune()" calls, because app/process interruption between them would reopen a partial-state
+window.
+
+Transactions protect database consistency only. They do not make network/device side effects atomic;
+future cross-system operations will need their own operation/reconciliation contracts.
+
+## Schema names, serialization names, and obfuscation
+
+These are separate compatibility surfaces:
+
+~~~text
+Room:
+  @Entity(tableName = ...)
+  @ColumnInfo(name = ...)
+  migrations
+
+network/protocol:
+  DTO field names
+  @SerialName / @SerializedName only if that serializer is chosen
+
+R8/obfuscation:
+  Kotlin/JVM symbol renaming at build time
+~~~
+
+Database entities now declare explicit SQL table/column names. Renaming a Kotlin property is therefore
+not silently treated as a database column rename.
+
+Do not add @SerializedName to Room entities to "protect the database"; it is a JSON/Gson contract,
+not a Room schema contract. When backend DTOs arrive, keep DTOs separate from Room entities and map
+between DTO/domain/entity shapes.
+
+The current app build does not yet enable release minification/obfuscation. Add an explicit R8/minify
+proof when that release concern is admitted rather than assuming this database work proved it.
+
 ## Log History persistence
 
 Room is the Android-local substrate for this first repository.
@@ -159,6 +209,55 @@ repository or database schema.
 
 Future domains should copy the principle, not necessarily this exact builder API.
 
+## User Profile proof domain
+
+The second repository intentionally stays small:
+
+~~~text
+UserProfile(
+  profileRef,
+  displayName,
+  updatedAt
+)
+
+UserProfileRepository:
+  observe(profileRef)
+  upsert(profile)
+  updateDisplayName(...)
+~~~
+
+A single upsert/update is already transactional at the Room write boundary. This domain proves
+insert/update behavior and reusable fixtures without inventing VexHome pairing storage prematurely.
+
+Schema version 2 adds user_profile with an explicit v1 -> v2 migration so schema evolution is part of
+the foundation rather than a future surprise.
+
+## Simplicity bridges without repository sprawl
+
+Repositories are intentionally isolated, but callers should not need to manually thread every low-level
+endpoint through feature code.
+
+Use narrow purpose bridges:
+
+~~~text
+AppRepositories
+  composition-only bundle
+
+VexLogger
+  receives one record endpoint (logPersistence::record)
+
+future UserHub
+  may intentionally combine UserProfileRepository + LinkedSystemRepository
+
+page
+  receives the smallest repository/facade that answers its question
+~~~
+
+Do not pass the entire AppRepositories bundle into VexLogger or ordinary pages merely for convenience.
+That turns composition into a service locator and makes unrelated data reachable from unrelated code.
+
+A bridge is successful when it hides plumbing while preserving dependency meaning.
+
 ## Backend evolution
 
 A future backend does not automatically mean "replace Room."
@@ -180,9 +279,9 @@ Do not put generic sync/freshness/conflict machinery into this foundation before
 
 ~~~text
 unit:
-  fixtures
-  InMemory repository
-  mapper laws
+  LogHistory + UserProfile fixtures
+  InMemory repositories
+  entity/domain mapper laws
   persistence queue ordering / failure isolation
 
 integration:

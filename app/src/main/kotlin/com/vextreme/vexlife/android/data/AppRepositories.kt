@@ -3,6 +3,8 @@ package com.vextreme.vexlife.android.data
 import android.content.Context
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.data.loghistory.RoomLogHistoryRepository
+import com.vextreme.vexlife.android.data.userprofile.RoomUserProfileRepository
+import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 
 /**
  * Small composition surface for data repositories used by the app.
@@ -12,6 +14,7 @@ import com.vextreme.vexlife.android.data.loghistory.RoomLogHistoryRepository
  */
 data class AppRepositories(
     val logHistory: LogHistoryRepository,
+    val userProfile: UserProfileRepository,
 )
 
 object AppRepositoryFactory {
@@ -21,6 +24,9 @@ object AppRepositoryFactory {
         return AppRepositories(
             logHistory = RoomLogHistoryRepository(
                 dao = database.logHistoryDao(),
+            ),
+            userProfile = RoomUserProfileRepository(
+                dao = database.userProfileDao(),
             ),
         )
     }

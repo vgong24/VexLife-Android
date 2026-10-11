@@ -5,12 +5,6 @@ import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-/**
- * Room-backed implementation of [LogHistoryRepository].
- *
- * The repository owns mapping between storage rows and VexLogRecord. Pages never see DAO/entity
- * types, which leaves room for future local+remote/sync behavior behind this contract.
- */
 class RoomLogHistoryRepository(
     private val dao: LogHistoryDao,
     private val recentLimit: Int = 256,
@@ -30,8 +24,11 @@ class RoomLogHistoryRepository(
         }
 
     override suspend fun append(record: VexLogRecord) {
-        dao.insert(record.toEntity(sessionRef))
-        dao.pruneTo(retentionLimit)
+        // One DAO transaction: the persisted append and retention invariant cannot partially diverge.
+        dao.insertAndPrune(
+            entity = record.toEntity(sessionRef),
+            limit = retentionLimit,
+        )
     }
 
     override suspend fun clear() {

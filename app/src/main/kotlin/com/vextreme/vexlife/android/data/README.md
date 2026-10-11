@@ -20,6 +20,14 @@ data/
     LogHistoryEntity.kt
     LogHistoryPersistenceQueue.kt
     LogHistoryFixture.kt
+  userprofile/
+    UserProfile.kt
+    UserProfileRepository.kt
+    RoomUserProfileRepository.kt
+    InMemoryUserProfileRepository.kt
+    UserProfileDao.kt
+    UserProfileEntity.kt
+    UserProfileFixture.kt
 ~~~
 
 The important command-click direction is:
@@ -37,6 +45,10 @@ Do not make pages consume DAOs or entities directly.
 states through the same repository contract instead of teaching production code about mocks.
 
 There is deliberately no generic BaseRepository<T>.
+
+Log History demonstrates a multi-statement @Transaction boundary (insert + retention prune).
+User Profile demonstrates single-row upsert/update and schema migration without pretending profile
+data owns future VexHome/VexStream connection state.
 
 See `docs/foundation/DATA-REPOSITORY.md`.
 

@@ -4,41 +4,60 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Room access for persisted Log History.
+ *
+ * insertAndPrune() is one transaction because "persist this record" and "restore the retention
+ * invariant" are one database effect. If the transaction is interrupted, SQLite/Room does not leave
+ * the database halfway between those two statements.
+ */
 @Dao
-interface LogHistoryDao {
-    /**
-     * Keep only the most recent bounded window for UI/debug inspection while returning it oldest ->
-     * newest so readable chronology remains natural.
-     */
+abstract class LogHistoryDao {
     @Query(
         """
         SELECT * FROM (
             SELECT * FROM log_history
-            ORDER BY databaseId DESC
+            ORDER BY database_id DESC
             LIMIT :limit
         )
-        ORDER BY databaseId ASC
+        ORDER BY database_id ASC
         """
     )
-    fun observeRecent(limit: Int): Flow<List<LogHistoryEntity>>
+    abstract fun observeRecent(limit: Int): Flow<List<LogHistoryEntity>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insert(entity: LogHistoryEntity)
+    protected abstract suspend fun insertInternal(entity: LogHistoryEntity)
 
     @Query(
         """
         DELETE FROM log_history
-        WHERE databaseId NOT IN (
-            SELECT databaseId FROM log_history
-            ORDER BY databaseId DESC
+        WHERE database_id NOT IN (
+            SELECT database_id FROM log_history
+            ORDER BY database_id DESC
             LIMIT :limit
         )
         """
     )
-    suspend fun pruneTo(limit: Int)
+    protected abstract suspend fun pruneToInternal(limit: Int)
+
+    /**
+     * Multi-statement write boundary.
+     *
+     * Do not replace this with repository-side "insert(); prune()" sequencing: that would reopen the
+     * partial-update window this transaction is intended to close.
+     */
+    @Transaction
+    open suspend fun insertAndPrune(
+        entity: LogHistoryEntity,
+        limit: Int,
+    ) {
+        insertInternal(entity)
+        pruneToInternal(limit)
+    }
 
     @Query("DELETE FROM log_history")
-    suspend fun clear()
+    abstract suspend fun clear()
 }

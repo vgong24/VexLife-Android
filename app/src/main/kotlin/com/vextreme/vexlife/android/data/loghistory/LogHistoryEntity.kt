@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.data.loghistory
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -10,28 +11,49 @@ import java.time.Instant
 /**
  * SQLite/Room representation only.
  *
- * The database primary key is intentionally different from VexLogRecord.sequence: logger sequence is
- * session-local and may restart after process restart/clear. [sessionRef] preserves that distinction.
+ * SQL names are explicit so Kotlin refactors/obfuscation are not accidentally treated as database
+ * migrations. Network serialization names are a different contract and do not belong on this entity.
  */
 @Entity(
     tableName = "log_history",
     indices = [
-        Index(value = ["sessionRef", "sequence"]),
-        Index(value = ["timestampEpochMillis"]),
+        Index(value = ["session_ref", "sequence"]),
+        Index(value = ["timestamp_epoch_millis"]),
     ],
 )
 data class LogHistoryEntity(
     @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "database_id")
     val databaseId: Long = 0,
+
+    @ColumnInfo(name = "session_ref")
     val sessionRef: String,
+
+    @ColumnInfo(name = "sequence")
     val sequence: Long,
+
+    @ColumnInfo(name = "timestamp_epoch_millis")
     val timestampEpochMillis: Long,
+
+    @ColumnInfo(name = "duration_since_previous_seconds")
     val durationSincePreviousSeconds: Long?,
+
+    @ColumnInfo(name = "kind")
     val kind: String,
+
+    @ColumnInfo(name = "subject_ref")
     val subjectRef: String,
+
+    @ColumnInfo(name = "action")
     val action: String,
+
+    @ColumnInfo(name = "screen_before_id")
     val screenBeforeId: String?,
+
+    @ColumnInfo(name = "screen_after_id")
     val screenAfterId: String?,
+
+    @ColumnInfo(name = "section")
     val section: Long,
 )
 
