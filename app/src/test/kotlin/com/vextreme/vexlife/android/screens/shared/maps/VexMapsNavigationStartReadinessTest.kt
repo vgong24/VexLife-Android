@@ -67,6 +67,72 @@ class VexMapsNavigationStartReadinessTest {
     }
 
     @Test
+    fun inaccurateLocatedResultDoesNotSatisfyStartPreflight() {
+        assertFalse(
+            isVexMapsNavigationStartPreflightSatisfied(
+                VexDeviceLocationResult.Located(
+                    latitude = 34.5794,
+                    longitude = -118.1165,
+                    accuracyMeters = 81f,
+                ),
+            ),
+        )
+        assertTrue(
+            isVexMapsNavigationStartPreflightSatisfied(
+                VexDeviceLocationResult.Located(
+                    latitude = 34.5794,
+                    longitude = -118.1165,
+                    accuracyMeters = 80f,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun startPreflightUsesTheSuppliedMatchingPolicy() {
+        val policy =
+            VexRouteMatchingPolicy(
+                maximumAccuracyMeters = 30f,
+            )
+
+        assertFalse(
+            isVexMapsNavigationStartPreflightSatisfied(
+                result =
+                    VexDeviceLocationResult.Located(
+                        latitude = 34.5794,
+                        longitude = -118.1165,
+                        accuracyMeters = 31f,
+                    ),
+                matchingPolicy = policy,
+            ),
+        )
+        assertTrue(
+            isVexMapsNavigationStartPreflightSatisfied(
+                result =
+                    VexDeviceLocationResult.Located(
+                        latitude = 34.5794,
+                        longitude = -118.1165,
+                        accuracyMeters = 30f,
+                    ),
+                matchingPolicy = policy,
+            ),
+        )
+    }
+
+    @Test
+    fun unknownAccuracyKeepsExistingMatcherAdmission() {
+        assertTrue(
+            isVexMapsNavigationStartPreflightSatisfied(
+                VexDeviceLocationResult.Located(
+                    latitude = 34.5794,
+                    longitude = -118.1165,
+                    accuracyMeters = null,
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun revokedPermissionHoldsStartEvenWithRetainedFix() {
         assertFalse(
             canStartVexMapsNavigation(
