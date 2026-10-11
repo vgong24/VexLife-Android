@@ -23,6 +23,8 @@ import androidx.compose.material.icons.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PlaylistPlay
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
@@ -37,12 +40,14 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -116,15 +121,58 @@ fun VexIconButton(
     handler: ElementActionHandler,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    selected: Boolean = false,
+    iconOverride: ElementIcon? = null,
 ) {
     val label = stringResource(requireNotNull(element.labelRes))
-    IconButton(
-        onClick = { handler.activate(element) },
+    val content: @Composable () -> Unit = {
+        VexIcon(
+            icon =
+                iconOverride
+                    ?: requireNotNull(element.icon) {
+                        "${element.elementId} requires an icon"
+                    },
+            contentDescription = label,
+        )
+    }
+
+    if (selected) {
+        FilledTonalIconButton(
+            onClick = { handler.activate(element) },
+            modifier = modifier.vexElement(element),
+            enabled = enabled,
+            content = content,
+        )
+    } else {
+        IconButton(
+            onClick = { handler.activate(element) },
+            modifier = modifier.vexElement(element),
+            enabled = enabled,
+            content = content,
+        )
+    }
+}
+
+@Composable
+fun VexActionFab(
+    element: ButtonElement,
+    handler: ElementActionHandler,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val label = stringResource(requireNotNull(element.labelRes))
+    SmallFloatingActionButton(
+        onClick = {
+            if (enabled) {
+                handler.activate(element)
+            }
+        },
         modifier = modifier.vexElement(element),
-        enabled = enabled,
     ) {
         VexIcon(
-            icon = requireNotNull(element.icon) { "${element.elementId} requires an icon" },
+            icon = requireNotNull(element.icon) {
+                "${element.elementId} requires an icon"
+            },
             contentDescription = label,
         )
     }
@@ -557,7 +605,10 @@ private fun ElementIcon.imageVector(): ImageVector = when (this) {
     ElementIcon.RemoveDownload -> Icons.Rounded.Delete
     ElementIcon.Previous -> Icons.Rounded.SkipPrevious
     ElementIcon.PlayPause -> Icons.Rounded.PlayArrow
+    ElementIcon.Pause -> Icons.Rounded.Pause
     ElementIcon.Next -> Icons.Rounded.SkipNext
     ElementIcon.Shuffle -> Icons.Rounded.Shuffle
     ElementIcon.Repeat -> Icons.Rounded.Repeat
+    ElementIcon.Search -> Icons.Rounded.Search
+    ElementIcon.Music -> Icons.Rounded.MusicNote
 }
