@@ -30,11 +30,11 @@ android {
     }
 
     sourceSets {
-        getByName("test") {
-            kotlin.srcDir("src/journeyTest/kotlin")
+        named("test") {
+            kotlin.directories += "src/journeyTest/kotlin"
         }
-        getByName("androidTest") {
-            kotlin.srcDir("src/journeyTest/kotlin")
+        named("androidTest") {
+            kotlin.directories += "src/journeyTest/kotlin"
         }
     }
 }
@@ -80,9 +80,11 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
-tasks.named<Test>("testDebugUnitTest").configure {
+tasks.withType<Test>().configureEach {
     val journeyCoverageReport =
-        layout.buildDirectory.file("reports/vex/journey-coverage.txt")
+        layout.buildDirectory.file(
+            "reports/vex/journey-coverage-${name}.txt",
+        )
 
     systemProperty(
         "vex.journey.coverageReport",
