@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.testing.journey
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,10 +16,6 @@ class VexJourneyInstrumentedTest(
 
     @Test
     fun walkMatchesActualSemanticHistory() {
-        assumeTrue(
-            "filtered journey case: ${case.caseRef}",
-            case.matchesInstrumentationFilter(),
-        )
         VexTestEngine(compose).run(case)
     }
 
@@ -28,36 +23,46 @@ class VexJourneyInstrumentedTest(
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun journeys(): List<Array<Any>> =
-            VexJourneyCatalog.cases.map { case ->
+            selectedJourneyCases().map { case ->
                 arrayOf<Any>(case)
             }
     }
 }
 
 
-private fun VexJourneyCase.matchesInstrumentationFilter(): Boolean {
+private fun selectedJourneyCases(): List<VexJourneyCase> {
     val arguments = InstrumentationRegistry.getArguments()
 
-    val exactCase = arguments
-        .getString("vexJourneyCase")
-        ?.takeIf { it.isNotBlank() }
-    if (exactCase != null && caseRef != exactCase) {
-        return false
-    }
+    val matrixMode =
+        when (
+            arguments.getString("vexJourneyMatrix")
+                ?.trim()
+                ?.lowercase()
+        ) {
+            null, "", "baseline" ->
+                VexJourneyMatrixMode.BASELINE_ONLY
 
-    val shard = arguments
-        .getString("vexJourneyShard")
-        ?.takeIf { it.isNotBlank() }
-    if (shard != null && shardId != shard) {
-        return false
-    }
+            "all" ->
+                VexJourneyMatrixMode.ALL_DECLARED
 
-    val environment = arguments
-        .getString("vexJourneyEnvironment")
-        ?.takeIf { it.isNotBlank() }
-    if (environment != null && this.environment.id != environment) {
-        return false
-    }
+            else ->
+                error(
+                    "unknown vexJourneyMatrix; use baseline|all",
+                )
+        }
 
-    return true
+    return VexJourneyCaseSelector.select(
+        VexJourneyRunSelection(
+            matrixMode = matrixMode,
+            exactCaseRef =
+                arguments.getString("vexJourneyCase")
+                    ?.takeIf { it.isNotBlank() },
+            shardId =
+                arguments.getString("vexJourneyShard")
+                    ?.takeIf { it.isNotBlank() },
+            environmentId =
+                arguments.getString("vexJourneyEnvironment")
+                    ?.takeIf { it.isNotBlank() },
+        ),
+    )
 }
