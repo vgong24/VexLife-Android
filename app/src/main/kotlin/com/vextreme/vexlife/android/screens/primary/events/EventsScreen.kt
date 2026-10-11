@@ -131,7 +131,7 @@ fun EventsScreenContent(
     }
 
     val attention by attentionRelay.outputStates.collectAsState(
-        initial = attentionRelay.current.outputState,
+        initial = attentionRelay.currentOutput,
     )
     val activeCandidateRef =
         attention.candidate?.eventRef

@@ -3,6 +3,13 @@ package com.vextreme.vexlife.android.relay
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
@@ -379,6 +386,72 @@ class VexRelayEventsPracticumTest {
         assertEquals(
             "event.synthetic.concurrent",
             events.current.outputState.attentionCandidateEventRef,
+        )
+    }
+
+    @Test
+    fun compoundOutputStatesSuppressInputOnlyRevisions() = runBlocking {
+        val feed =
+            ExternalFeedRelay()
+        val events =
+            EventsAttentionRelay()
+
+        val observed =
+            mutableListOf<EventsOutputState>()
+
+        val collection =
+            async(
+                start = CoroutineStart.UNDISPATCHED,
+            ) {
+                events.outputStates
+                    .take(2)
+                    .toList(observed)
+            }
+
+        /*
+         * Both mutations advance retained Compound input/currentness but derive the exact same empty
+         * output. A downstream consumer should not see either revision.
+         */
+        events.screenChanged(
+            ScreenState(
+                currentScreenId = "home",
+            ),
+        )
+        events.preferenceChanged(
+            AttentionPreferenceState(),
+        )
+
+        feed.feedArrived(
+            sourceRevision = 1L,
+            items =
+                listOf(
+                    EventItem(
+                        eventRef = "event.output-change",
+                        summary = "Actual derived output change",
+                    ),
+                ),
+        )
+        events.feedChanged(
+            feed.current,
+        )
+
+        yield()
+
+        withTimeout(1_000L) {
+            collection.await()
+        }
+
+        assertEquals(
+            2,
+            observed.size,
+        )
+        assertEquals(
+            EventsOutputState(),
+            observed.first(),
+        )
+        assertEquals(
+            listOf("event.output-change"),
+            observed.last().eventRefs,
         )
     }
 

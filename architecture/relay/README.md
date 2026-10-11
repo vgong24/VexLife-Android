@@ -44,6 +44,52 @@ The concrete Relay should be boring to inspect:
 2. read processState / processStates to see the reconciliation law;
 3. read its output state to see what consumers are allowed to depend on.
 
+### Compound observation surfaces
+
+A Compound Relay has two intentionally different observation surfaces:
+
+~~~text
+states
+  full retained totality:
+  inputState + outputState + revision
+
+  use when:
+  coordination/currentness/internal dependency state actually matters
+
+outputStates
+  derived OutputState only
+  distinct-by-output is built into VexCompoundRelay
+
+  use when:
+  UI/downstream behavior depends only on the semantic result
+~~~
+
+Permanent distinction:
+
+~~~text
+COMPOUND_INTERNAL_STATE_CHANGED
+!=
+CONSUMER_OUTPUT_CHANGED
+~~~
+
+A caller must **not** be required to remember this pattern:
+
+~~~kotlin
+relay.states
+    .map { it.outputState }
+    .distinctUntilChanged()
+~~~
+
+That would encode a Relay invariant as consumer folklore and eventually create avoidable
+recomposition/flicker bugs. `VexCompoundRelay.outputStates` owns that projection once.
+
+`currentOutput` provides the corresponding defensively copied current snapshot for initial UI
+state.
+
+The full `states` stream remains available deliberately; it is not deprecated or hidden. Some
+coordination owners genuinely need retained-input/currentness changes even when derived output is
+equal.
+
 ## EAP-00 owns
 
 - explicit transitive defensive-copy contract;
@@ -53,7 +99,9 @@ The concrete Relay should be boring to inspect:
 - nullable top-level input patches as "no new dependency value supplied";
 - sibling patch serialization so concurrent inputs cannot erase one another;
 - semantic no-op suppression;
-- Compound revision only when retained/derived meaning changes.
+- Compound revision only when retained/derived meaning changes;
+- canonical distinct-by-output projection through `outputStates`;
+- defensively copied `currentOutput` for downstream initialization.
 
 ## EAP-00 deliberately does not own
 

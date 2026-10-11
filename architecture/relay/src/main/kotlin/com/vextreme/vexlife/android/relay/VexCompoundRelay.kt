@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.relay
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 abstract class VexCompoundRelay<
@@ -27,10 +28,47 @@ abstract class VexCompoundRelay<
             ),
         )
 
+    /**
+     * Full retained coordination truth.
+     *
+     * This stream may change when only Compound inputs/currentness change. Consumers that care only
+     * about the derived semantic result should use [outputStates] rather than collecting this stream
+     * and remembering to add map/distinctUntilChanged themselves.
+     */
     override val states: Flow<VexCompoundState<InputState, OutputState>> =
         mutableCurrentState.map { state ->
             state.deepCopy()
         }
+
+    /**
+     * Canonical downstream projection of this Compound Relay.
+     *
+     * Distinct-by-output is an architectural guarantee, not a consumer habit:
+     *
+     * retained input/revision change + equal output
+     * -> [states] may emit
+     * -> [outputStates] does not emit
+     *
+     * Equality is evaluated against Relay-owned output state before a defensive copy is emitted, so
+     * a consumer cannot mutate the value retained by distinctUntilChanged.
+     */
+    val outputStates: Flow<OutputState> =
+        mutableCurrentState
+            .map { state ->
+                state.outputState
+            }
+            .distinctUntilChanged()
+            .map { output ->
+                output.deepCopy()
+            }
+
+    val currentOutput: OutputState
+        get() =
+            synchronized(lock) {
+                mutableCurrentState.value
+                    .outputState
+                    .deepCopy()
+            }
 
     override val current: VexCompoundState<InputState, OutputState>
         get() =

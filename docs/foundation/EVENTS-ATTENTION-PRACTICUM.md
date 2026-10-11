@@ -403,10 +403,10 @@ Current anti-flicker ownership is therefore:
 VexCompoundRelay.states
   retained input may change every provider emission
 
-EventsAttentionRelay.outputStates
-  map to derived EventsAttentionOutputState
-  distinctUntilChanged()
-  presentation observes this projection, not every compound revision
+VexCompoundRelay.outputStates
+  architecture-owned derived output projection
+  distinct-by-output built into Relay
+  Events presentation consumes this inherited surface
 
 EventsScreen presentation snapshot
   while the same candidate is active:
@@ -423,7 +423,15 @@ This means:
 CANONICAL_PROVIDER_UPDATE
 !=
 MOVE_THE_ANCHORED_ROW_UNDER_THE_HUMAN
+
+COMPOUND_INPUT_CHANGED
+!=
+CONSUMER_OUTPUT_CHANGED
 ~~~
+
+The second distinction now belongs to `VexCompoundRelay` itself rather than Events. A future
+Compound Relay UI consumer should collect `outputStates` and initialize from `currentOutput`;
+it should not hand-build `map { outputState }.distinctUntilChanged()`.
 
 A blocking lab scenario adds one stronger condition on top of the common presentation snapshot:
 the target is auto-scrolled into view, user scrolling is disabled, outside dismissal is ignored and
