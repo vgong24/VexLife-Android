@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -125,20 +126,64 @@ internal fun VexMapsMapSurface(
                 VexDeviceLocationResult.Located?
             >(null)
         }
-    var selectedOrigin by
-        remember {
-            mutableStateOf<VexMapCoordinate?>(
+    var selectedOriginLatitude by
+        rememberSaveable {
+            mutableStateOf<Double?>(
                 null,
             )
         }
-    var destination by
-        remember {
-            mutableStateOf<VexMapCoordinate?>(
+    var selectedOriginLongitude by
+        rememberSaveable {
+            mutableStateOf<Double?>(
                 null,
             )
         }
+    val selectedOrigin =
+        restoreVexMapCoordinate(
+            latitude =
+                selectedOriginLatitude,
+            longitude =
+                selectedOriginLongitude,
+        )
+    fun setSelectedOrigin(
+        coordinate: VexMapCoordinate?,
+    ) {
+        selectedOriginLatitude =
+            coordinate?.latitude
+        selectedOriginLongitude =
+            coordinate?.longitude
+    }
+
+    var destinationLatitude by
+        rememberSaveable {
+            mutableStateOf<Double?>(
+                null,
+            )
+        }
+    var destinationLongitude by
+        rememberSaveable {
+            mutableStateOf<Double?>(
+                null,
+            )
+        }
+    val destination =
+        restoreVexMapCoordinate(
+            latitude =
+                destinationLatitude,
+            longitude =
+                destinationLongitude,
+        )
+    fun setDestination(
+        coordinate: VexMapCoordinate?,
+    ) {
+        destinationLatitude =
+            coordinate?.latitude
+        destinationLongitude =
+            coordinate?.longitude
+    }
+
     var destinationLabel by
-        remember {
+        rememberSaveable {
             mutableStateOf<String?>(
                 null,
             )
@@ -150,7 +195,7 @@ internal fun VexMapsMapSurface(
             )
         }
     var placeSearchQuery by
-        remember {
+        rememberSaveable {
             mutableStateOf("")
         }
     var placeSearchState by
@@ -159,12 +204,24 @@ internal fun VexMapsMapSurface(
                 VexMapsPlaceSearchState.Idle,
             )
         }
-    var mapSelectionTarget by
-        remember {
+    var mapSelectionTargetName by
+        rememberSaveable {
             mutableStateOf(
-                VexMapsMapSelectionTarget.DESTINATION,
+                VexMapsMapSelectionTarget
+                    .DESTINATION
+                    .name,
             )
         }
+    val mapSelectionTarget =
+        restoreVexMapsMapSelectionTarget(
+            mapSelectionTargetName,
+        )
+    fun setMapSelectionTarget(
+        target: VexMapsMapSelectionTarget,
+    ) {
+        mapSelectionTargetName =
+            target.name
+    }
     var regionPack by
         remember {
             mutableStateOf(
@@ -177,12 +234,24 @@ internal fun VexMapsMapSurface(
                 VexMapsPlanningState.Idle,
             )
         }
-    var travelMode by
-        remember {
+    var travelModeName by
+        rememberSaveable {
             mutableStateOf(
-                VexMapsTravelMode.DRIVE,
+                VexMapsTravelMode
+                    .DRIVE
+                    .name,
             )
         }
+    val travelMode =
+        restoreVexMapsTravelMode(
+            travelModeName,
+        )
+    fun setTravelMode(
+        mode: VexMapsTravelMode,
+    ) {
+        travelModeName =
+            mode.name
+    }
 
     fun readCurrentPreciseLocation(
         onLocated: (() -> Unit)? = null,
@@ -419,10 +488,12 @@ internal fun VexMapsMapSurface(
                                         "presentation.vexmaps.origin.pin",
                                     action = "LongPressed",
                                 )
-                                selectedOrigin =
-                                    selected
-                                mapSelectionTarget =
-                                    VexMapsMapSelectionTarget.DESTINATION
+                                setSelectedOrigin(
+                                    selected,
+                                )
+                                setMapSelectionTarget(
+                                    VexMapsMapSelectionTarget.DESTINATION,
+                                )
                                 planningState =
                                     VexMapsPlanningState.Idle
                                 mapController
@@ -437,8 +508,9 @@ internal fun VexMapsMapSurface(
                                         "presentation.vexmaps.destination.pin",
                                     action = "LongPressed",
                                 )
-                                destination =
-                                    selected
+                                setDestination(
+                                    selected,
+                                )
                                 destinationLabel =
                                     context.getString(
                                         R.string
@@ -651,7 +723,9 @@ internal fun VexMapsMapSurface(
                 planningState =
                     planningState,
                 onTravelModeSelected = { selected ->
-                    travelMode = selected
+                    setTravelMode(
+                        selected,
+                    )
                     planningState =
                         VexMapsPlanningState.Idle
                 },
@@ -722,12 +796,14 @@ internal fun VexMapsMapSurface(
                                 action =
                                     "SelectedAsRouteStart",
                             )
-                            selectedOrigin =
-                                place.coordinate
-                            mapSelectionTarget =
+                            setSelectedOrigin(
+                                place.coordinate,
+                            )
+                            setMapSelectionTarget(
                                 nextVexMapsSelectionTarget(
                                     VexMapsMapSelectionTarget.ORIGIN,
-                                )
+                                ),
+                            )
                             planningState =
                                 VexMapsPlanningState.Idle
                             placeSearchState =
@@ -749,8 +825,9 @@ internal fun VexMapsMapSurface(
                                 action =
                                     "SelectedAsDestination",
                             )
-                            destination =
-                                place.coordinate
+                            setDestination(
+                                place.coordinate,
+                            )
                             destinationLabel =
                                 place.name
                             planningState =
@@ -774,8 +851,9 @@ internal fun VexMapsMapSurface(
                             "presentation.vexmaps.origin.choose",
                         action = "Clicked",
                     )
-                    mapSelectionTarget =
-                        VexMapsMapSelectionTarget.ORIGIN
+                    setMapSelectionTarget(
+                        VexMapsMapSelectionTarget.ORIGIN,
+                    )
                     planningState =
                         VexMapsPlanningState.Idle
                 },
@@ -785,9 +863,12 @@ internal fun VexMapsMapSurface(
                             "presentation.vexmaps.origin.use-device",
                         action = "Clicked",
                     )
-                    selectedOrigin = null
-                    mapSelectionTarget =
-                        VexMapsMapSelectionTarget.DESTINATION
+                    setSelectedOrigin(
+                        null,
+                    )
+                    setMapSelectionTarget(
+                        VexMapsMapSelectionTarget.DESTINATION,
+                    )
                     planningState =
                         VexMapsPlanningState.Idle
                     mapController.clearOrigin()
@@ -1922,6 +2003,45 @@ internal enum class VexMapsPlaceSearchError {
     IMPORT,
     SEARCH,
 }
+
+internal fun restoreVexMapCoordinate(
+    latitude: Double?,
+    longitude: Double?,
+): VexMapCoordinate? {
+    if (
+        latitude == null ||
+        longitude == null
+    ) {
+        return null
+    }
+
+    return runCatching {
+        VexMapCoordinate(
+            latitude = latitude,
+            longitude = longitude,
+        )
+    }.getOrNull()
+}
+
+internal fun restoreVexMapsMapSelectionTarget(
+    savedName: String,
+): VexMapsMapSelectionTarget =
+    VexMapsMapSelectionTarget
+        .entries
+        .firstOrNull { target ->
+            target.name == savedName
+        }
+        ?: VexMapsMapSelectionTarget.DESTINATION
+
+internal fun restoreVexMapsTravelMode(
+    savedName: String,
+): VexMapsTravelMode =
+    VexMapsTravelMode
+        .entries
+        .firstOrNull { mode ->
+            mode.name == savedName
+        }
+        ?: VexMapsTravelMode.DRIVE
 
 internal fun isVexMapsNavigationStartPreflightSatisfied(
     result: VexDeviceLocationResult,
