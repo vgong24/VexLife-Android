@@ -9,13 +9,19 @@ object VexStreamJourneys : VexJourneyShard {
 
     val connectRefreshForget = vexJourney(
         id = "connect-refresh-forget",
-        title = "VexStream connect, refresh, and forget",
+        title = "VexStream connect, library lenses, queue, and forget",
     ) {
         start(HomeScreen)
         tap(HomeScreen.VexStreamMusic)
         tap(VexStreamMusicScreen.FindNearby)
         tap(VexStreamMusicScreen.ConfirmPairingCode)
         tap(VexStreamMusicScreen.RefreshCatalog)
+        tap(VexStreamMusicScreen.AlbumsTab)
+        tap(VexStreamMusicScreen.ArtistsTab)
+        tap(VexStreamMusicScreen.DownloadsTab)
+        tap(VexStreamMusicScreen.SongsTab)
+        tap(VexStreamMusicScreen.ShowQueue)
+        tap(VexStreamMusicScreen.CloseQueue)
         tap(VexStreamMusicScreen.ForgetPaired)
         tap(AppShell.Elements.Back)
     }
