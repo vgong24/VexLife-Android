@@ -18,7 +18,7 @@ class UserProfileActionTest {
         val repository = InMemoryUserProfileRepository()
         val now = Instant.parse("2026-10-11T05:00:00Z")
         val registrations = AppActionRegistrations.combine(
-            userProfileActionRegistrations(
+            UserProfileScreen.actionRegistrations(
                 repository = repository,
                 scope = this,
                 now = { now },
