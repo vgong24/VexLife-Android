@@ -77,6 +77,7 @@
     <string name="vexstream_music_unavailable">Unavailable</string>
     <string name="vexstream_music_songs">Songs</string>
     <string name="vexstream_music_search">Search your VexStream library</string>
+    <string name="vexstream_music_search_action">Search library</string>
     <string name="vexstream_music_no_search_results">No matching music.</string>
     <string name="vexstream_music_albums">Albums</string>
     <string name="vexstream_music_artists">Artists</string>
