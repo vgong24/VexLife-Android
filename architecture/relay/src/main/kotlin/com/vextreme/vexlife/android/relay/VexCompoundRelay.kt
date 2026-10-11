@@ -41,6 +41,34 @@ abstract class VexCompoundRelay<
         }
 
     /**
+     * Canonical retained dependency projection.
+     *
+     * This is the coherent InputState after the concrete Compound Relay has merged partial patches.
+     * It is distinct-by-input and defensively copied. Use it when a downstream coordinator or
+     * diagnostic/presentation surface genuinely needs the dependency/currentness context itself.
+     *
+     * Do not use this merely to redo [processStates] outside the Relay; ordinary consumers should
+     * prefer [outputStates].
+     */
+    val inputStates: Flow<InputState> =
+        mutableCurrentState
+            .map { state ->
+                state.inputState
+            }
+            .distinctUntilChanged()
+            .map { input ->
+                input.deepCopy()
+            }
+
+    val currentInput: InputState
+        get() =
+            synchronized(lock) {
+                mutableCurrentState.value
+                    .inputState
+                    .deepCopy()
+            }
+
+    /**
      * Canonical downstream projection of this Compound Relay.
      *
      * Distinct-by-output is an architectural guarantee, not a consumer habit:

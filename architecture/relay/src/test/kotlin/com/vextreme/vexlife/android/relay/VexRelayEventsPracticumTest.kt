@@ -390,6 +390,59 @@ class VexRelayEventsPracticumTest {
     }
 
     @Test
+    fun compoundInputStatesExposeCoherentDependencyProjection() = runBlocking {
+        val events =
+            EventsAttentionRelay()
+
+        val observed =
+            mutableListOf<EventsInputState>()
+
+        val collection =
+            async(
+                start = CoroutineStart.UNDISPATCHED,
+            ) {
+                events.inputStates
+                    .take(3)
+                    .toList(observed)
+            }
+
+        events.screenChanged(
+            ScreenState(
+                currentScreenId = "home",
+            ),
+        )
+        events.preferenceChanged(
+            AttentionPreferenceState(
+                acknowledgedEventRefs =
+                    setOf("event.input-proof"),
+            ),
+        )
+
+        withTimeout(1_000L) {
+            collection.await()
+        }
+
+        assertEquals(
+            EventsInputState(),
+            observed[0],
+        )
+        assertEquals(
+            "home",
+            observed[1].screen?.currentScreenId,
+        )
+        assertEquals(
+            setOf("event.input-proof"),
+            observed[2]
+                .preference
+                ?.acknowledgedEventRefs,
+        )
+        assertEquals(
+            observed.last(),
+            events.currentInput,
+        )
+    }
+
+    @Test
     fun compoundOutputStatesSuppressInputOnlyRevisions() = runBlocking {
         val feed =
             ExternalFeedRelay()

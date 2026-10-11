@@ -10,7 +10,7 @@ import org.junit.Test
 
 class VexAnchoredTooltipTest {
     @Test
-    fun choosesTheSafeSideWithTheMostUsableRoom() {
+    fun choosesTheFirstPreferredSideThatSafelyFits() {
         val resolved =
             resolveVexAnchoredTooltip(
                 anchorBounds =
@@ -31,6 +31,66 @@ class VexAnchoredTooltipTest {
             resolved.placement,
         )
         assertFalse(resolved.clipped)
+    }
+
+    @Test
+    fun preferenceOrderWinsWhenSeveralSidesFit() {
+        val resolved =
+            resolveVexAnchoredTooltip(
+                anchorBounds =
+                    IntRect(
+                        left = 150,
+                        top = 300,
+                        right = 250,
+                        bottom = 350,
+                    ),
+                windowSize = IntSize(500, 800),
+                popupSize = IntSize(180, 120),
+                layoutDirection = LayoutDirection.Ltr,
+                marginPx = 4,
+                preferred =
+                    listOf(
+                        VexTooltipPlacement.ABOVE,
+                        VexTooltipPlacement.BELOW,
+                    ),
+            )
+
+        assertEquals(
+            VexTooltipPlacement.ABOVE,
+            resolved.placement,
+        )
+    }
+
+    @Test
+    fun caretPointsBackTowardTheAnchorForResolvedPlacement() {
+        assertEquals(
+            VexTooltipCaretDirection.DOWN,
+            vexTooltipCaretDirection(
+                VexTooltipPlacement.ABOVE,
+                LayoutDirection.Ltr,
+            ),
+        )
+        assertEquals(
+            VexTooltipCaretDirection.UP,
+            vexTooltipCaretDirection(
+                VexTooltipPlacement.BELOW,
+                LayoutDirection.Ltr,
+            ),
+        )
+        assertEquals(
+            VexTooltipCaretDirection.RIGHT,
+            vexTooltipCaretDirection(
+                VexTooltipPlacement.START,
+                LayoutDirection.Ltr,
+            ),
+        )
+        assertEquals(
+            VexTooltipCaretDirection.LEFT,
+            vexTooltipCaretDirection(
+                VexTooltipPlacement.START,
+                LayoutDirection.Rtl,
+            ),
+        )
     }
 
     @Test

@@ -46,7 +46,7 @@ The concrete Relay should be boring to inspect:
 
 ### Compound observation surfaces
 
-A Compound Relay has two intentionally different observation surfaces:
+A Compound Relay has three intentionally different observation surfaces:
 
 ~~~text
 states
@@ -54,7 +54,15 @@ states
   inputState + outputState + revision
 
   use when:
-  coordination/currentness/internal dependency state actually matters
+  coordination/currentness/full internal relationship state actually matters
+
+inputStates
+  coherent retained InputState
+  distinct-by-input is built into VexCompoundRelay
+
+  use when:
+  a downstream coordinator/diagnostic/presentation surface genuinely needs dependency/currentness
+  context itself
 
 outputStates
   derived OutputState only
@@ -62,6 +70,14 @@ outputStates
 
   use when:
   UI/downstream behavior depends only on the semantic result
+~~~
+
+And matching current snapshots:
+
+~~~text
+current
+currentInput
+currentOutput
 ~~~
 
 Permanent distinction:
@@ -89,6 +105,29 @@ state.
 The full `states` stream remains available deliberately; it is not deprecated or hidden. Some
 coordination owners genuinely need retained-input/currentness changes even when derived output is
 equal.
+
+### "Input Relay" is a role, not a second Relay class
+
+Any `VexObservableRelay<State>` can be an input source to another Relay:
+
+~~~text
+ScreenContextRelay.states
+ExternalFeedRelay.states
+AttentionPreferenceRelay.states
+        \      |      /
+         \     |     /
+          -> Compound InputState
+             -> processStates(...)
+             -> OutputState
+~~~
+
+The Compound `InputState` is the coherent retained snapshot/envelope of those dependencies. It is
+not itself required to be a special Relay subtype.
+
+If presentation genuinely needs current dependency context, consume `inputStates/currentInput`.
+If presentation only needs the post-calculation semantic result, consume
+`outputStates/currentOutput`. Do not re-run Compound business logic in Compose merely because the
+inputs are available.
 
 ## EAP-00 owns
 

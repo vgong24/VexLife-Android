@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.screens.primary.events
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -301,6 +302,19 @@ private fun EventRow(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .then(
+                    if (isAttentionCandidate) {
+                        Modifier.border(
+                            width = 2.dp,
+                            color =
+                                MaterialTheme.colorScheme.primary,
+                            shape =
+                                MaterialTheme.shapes.medium,
+                        )
+                    } else {
+                        Modifier
+                    },
+                )
                 .testTag(
                     EventsPresentationRefs.row(
                         event.eventRef,
