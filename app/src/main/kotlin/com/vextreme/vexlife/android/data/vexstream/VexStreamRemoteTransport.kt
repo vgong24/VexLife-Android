@@ -13,14 +13,16 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.X509EncodedKeySpec
-import java.time.Instant
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.KeyAgreement
 import javax.crypto.Mac
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import kotlinx.coroutines.delay
 import org.json.JSONObject
 
 /**
@@ -132,7 +134,7 @@ internal class VexStreamRemoteTransport(
                 ephemeral.public.encoded,
             )
         val issuedAt =
-            Instant.now().toString()
+            rfc3339Now()
         val envelope =
             JSONObject()
                 .put(
@@ -209,7 +211,7 @@ internal class VexStreamRemoteTransport(
             deadline
         ) {
             val pollIssuedAt =
-                Instant.now().toString()
+                rfc3339Now()
             val poll =
                 JSONObject()
                     .put(
@@ -437,6 +439,7 @@ internal class VexStreamRemoteTransport(
                 ByteArray(0),
             )
         private var exhausted = false
+        private var finalChunk = false
 
         override fun read(): Int {
             val one =
@@ -469,6 +472,11 @@ internal class VexStreamRemoteTransport(
             while (
                 current.available() == 0
             ) {
+                if (finalChunk) {
+                    exhausted = true
+                    return -1
+                }
+
                 val remaining =
                     endExclusive
                         ?.minus(
@@ -518,20 +526,12 @@ internal class VexStreamRemoteTransport(
                         response.body,
                     )
                 if (
-                    response.body.size <
+                    response.body.size.toLong() <
                     chunkSize
                 ) {
-                    // The final short range still remains readable from current; the next refill
-                    // terminates rather than fabricating bytes.
-                    if (
-                        endExclusive ==
-                        null
-                    ) {
-                        exhausted =
-                            position >
-                                startPosition &&
-                                current.available() == 0
-                    }
+                    // Preserve this final short range for the caller; after it is consumed, the
+                    // next refill terminates rather than inventing another request past EOF.
+                    finalChunk = true
                 }
             }
 
@@ -542,9 +542,20 @@ internal class VexStreamRemoteTransport(
             )
         }
 
-        private val startPosition =
-            start
     }
+
+    private fun rfc3339Now(): String =
+        SimpleDateFormat(
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            Locale.US,
+        ).apply {
+            timeZone =
+                TimeZone.getTimeZone(
+                    "UTC",
+                )
+        }.format(
+            Date(),
+        )
 
     private fun remoteHkdf(
         shared: ByteArray,
