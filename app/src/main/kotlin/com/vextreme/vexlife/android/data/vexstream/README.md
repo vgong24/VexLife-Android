@@ -255,3 +255,58 @@ LOCAL_VEXSTREAM_PAIRING
 
 Away-from-home streaming still belongs behind the rightful Home/Safety route.
 
+## Current VexLife foundation alignment
+
+The feature is currentized onto VexLife-Android main
+`1b5f1c8cb06a479f2768ce1f8f8557b61694f15d`, including the merged ScreenCrawler/Journey evidence
+foundation.
+
+The current Android shape follows the repository's existing feature pattern rather than introducing a
+second navigation/runtime system:
+
+```text
+one AppScreenBlueprint
+  -> stable connection actions
+  -> swappable library lenses
+       Songs
+       Albums
+       Artists
+       Playlists
+       Downloads
+  -> one registered Queue sheet
+
+custom feature renderer
+  -> dynamic tracks/albums/artists
+  -> feature-local album/artist drill-down state
+  -> MediaController commands
+
+MediaSessionService
+  -> playback lifetime
+  -> current queue
+  -> shuffle/repeat
+  -> previous/next
+```
+
+Dynamic music objects do not become one registered blueprint element per song. The blueprint names
+durable semantic surfaces; repository data remains data.
+
+The semantic journey uses the current typed `Journeys.vexStream...` authoring surface and exercises
+connection, every registered library lens, Queue open/close, and forget.
+
+### Playlist ownership
+
+Desktop playlists are currently projected read-only into the sanitized mobile catalog:
+
+```text
+desktop playlist writer
+  -> playlistRef + name + ordered current track refs
+  -> Android browse/play/shuffle
+
+Android
+  -> no silent desktop playlist mutations
+```
+
+This is intentionally one-way for the current streaming milestone. A later phone-local playlist
+writer can remain local until an explicit sync action/contract is admitted; two-way conflict rules
+are not invented here.
+
