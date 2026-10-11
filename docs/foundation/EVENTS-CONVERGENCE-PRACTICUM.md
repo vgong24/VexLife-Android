@@ -1,4 +1,4 @@
-# Events Attention Practicum — Convergence and Reverse-Protocol Map
+# Events Convergence Practicum — Convergence and Reverse-Protocol Map
 
 [VXG RealForever]
 
@@ -38,7 +38,7 @@ visible target set --+
 transient occupied --+
                      |
                      v
-            EventsAttentionRelay
+            EventsConvergenceRelay
               processStates(...)
                      |
                      v
@@ -87,7 +87,7 @@ app/.../data/events/
 app/.../screens/primary/events/
   EventsScreen
   EventsPresentationRefs
-  EventsAttentionRelay
+  EventsConvergenceRelay
 
 architecture/elements/
   VexStableLazyColumn
@@ -104,10 +104,10 @@ The shortest debugging route is:
 -> EventsRepository / source snapshot
 
 "Why is this event the candidate?"
--> EventsAttentionRelay.processStates(...)
+-> EventsConvergenceRelay.processStates(...)
 
 "Why is the overlay held?"
--> EventsAttentionOutputState.availability
+-> EventsConvergenceOutputState.availability
 
 "Where did the overlay render?"
 -> resolveVexAnchoredOverlay(...)
@@ -297,7 +297,7 @@ It deliberately does **not** know:
 
 ~~~text
 EventsRepository
-EventsAttentionRelay
+EventsConvergenceRelay
 event kind/title/detail
 ack/defer/suppress
 overlay policy
@@ -351,7 +351,7 @@ stable formed refs.
 
 ## Geometry is not arbitration
 
-`EventsAttentionRelay` answers:
+`EventsConvergenceRelay` answers:
 
 > should this exact candidate be presentable now?
 
@@ -626,7 +626,7 @@ truth and not part of a real service adapter.
 SyntheticExternalEventSource
   -> produces external facts
 
-EventsAttentionRelay
+EventsConvergenceRelay
   -> owns queue + candidate + availability
 
 EventsAttentionLabRepository
@@ -883,4 +883,4 @@ Do not make Events drive provider architecture that the provider's real truth ca
 Instead, preserve the convergence contract and refine the adapter boundary when a real service
 reveals a missing distinction.
 
-<!-- [VXG RealForever][VEXLIFE-ANDROID][EVENTS-ATTENTION-PRACTICUM][REVERSE-PROTOCOL] -->
+<!-- [VXG RealForever][VEXLIFE-ANDROID][EVENTS-CONVERGENCE-PRACTICUM][REVERSE-PROTOCOL] -->

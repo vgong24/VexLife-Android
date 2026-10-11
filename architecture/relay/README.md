@@ -9,13 +9,13 @@
 > logic easy to find without turning Compose or a overlay manager into the state owner?
 
 This module is the **current-main extraction** of the smallest Relay processing contracts earned by
-the Events Attention Practicum.
+the Events Convergence Practicum.
 
 Historical draft PR #3 remains architecture quarry. EAP-00 did not merge/cherry-pick that branch
 wholesale and did not import its experimental AppScope/observability stack.
 
-The current concrete consumer is the Events Attention Practicum under
-`docs/foundation/EVENTS-ATTENTION-PRACTICUM.md`. That feature now exercises this kernel with a
+The current concrete consumer is the Events Convergence Practicum under
+`docs/foundation/EVENTS-CONVERGENCE-PRACTICUM.md`. That feature now exercises this kernel with a
 normalized external feed, stable dynamic list identity, acknowledgement/defer/suppress state,
 attention availability, anchored overlay rendering, deterministic Journey signals, and ScreenCrawler
 selection. Those feature concerns remain outside this module rather than accreting into Relay itself.
@@ -34,7 +34,7 @@ Several related truths:
 
 ~~~text
 current screen ----\
-external feed ------+-> EventsAttentionRelay.processStates(...) -> current Events projection
+external feed ------+-> EventsConvergenceRelay.processStates(...) -> current Events projection
 ack/preference -----/
 ~~~
 
@@ -196,7 +196,7 @@ The current Events consumer composes the kernel like this:
 ~~~text
 provider-specific source truth
 -> normalized EventsRepository feed
--> EventsAttentionRelay.processStates(...)
+-> EventsConvergenceRelay.processStates(...)
 -> candidate identity + availability
 -> anchored presentation
 ~~~

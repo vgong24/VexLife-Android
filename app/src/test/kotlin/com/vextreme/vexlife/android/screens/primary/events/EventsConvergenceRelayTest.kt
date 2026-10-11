@@ -20,7 +20,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class EventsAttentionRelayTest {
+class EventsConvergenceRelayTest {
     private fun feed(): EventsFeedState {
         val source = "source.test"
         val first =
@@ -58,7 +58,7 @@ class EventsAttentionRelayTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun outputProjectionSuppressesInputOnlyCompoundRevisions() = runTest {
-        val relay = EventsAttentionRelay()
+        val relay = EventsConvergenceRelay()
 
         relay.feedChanged(feed())
         relay.preferencesChanged(
@@ -71,7 +71,7 @@ class EventsAttentionRelayTest {
         relay.screenChanged("screen.home")
 
         val observed =
-            mutableListOf<EventsAttentionOutputState>()
+            mutableListOf<EventsConvergenceOutputState>()
 
         backgroundScope.launch {
             relay.outputStates.collect { output ->
@@ -82,7 +82,7 @@ class EventsAttentionRelayTest {
 
         assertEquals(1, observed.size)
         assertEquals(
-            EventsAttentionAvailability.HELD_OTHER_SCREEN,
+            EventsConvergenceAvailability.HELD_OTHER_SCREEN,
             observed.single().availability,
         )
 
@@ -96,11 +96,11 @@ class EventsAttentionRelayTest {
 
     @Test
     fun candidateIdentitySurvivesScreenReachabilityAndTransientChanges() {
-        val relay = EventsAttentionRelay()
+        val relay = EventsConvergenceRelay()
 
         assertNull(relay.current.outputState.candidate)
         assertEquals(
-            EventsAttentionAvailability.UNOBSERVED,
+            EventsConvergenceAvailability.UNOBSERVED,
             relay.current.outputState.availability,
         )
 
@@ -119,7 +119,7 @@ class EventsAttentionRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
         assertEquals(
-            EventsAttentionAvailability.HELD_OTHER_SCREEN,
+            EventsConvergenceAvailability.HELD_OTHER_SCREEN,
             relay.current.outputState.availability,
         )
 
@@ -130,7 +130,7 @@ class EventsAttentionRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
         assertEquals(
-            EventsAttentionAvailability.READY,
+            EventsConvergenceAvailability.READY,
             relay.current.outputState.availability,
         )
         assertEquals(
@@ -151,7 +151,7 @@ class EventsAttentionRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
         assertEquals(
-            EventsAttentionAvailability.HELD_TARGET_UNREACHABLE,
+            EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE,
             relay.current.outputState.availability,
         )
 
@@ -165,13 +165,13 @@ class EventsAttentionRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
         assertEquals(
-            EventsAttentionAvailability.HELD_TRANSIENT_OCCUPIED,
+            EventsConvergenceAvailability.HELD_TRANSIENT_OCCUPIED,
             relay.current.outputState.availability,
         )
 
         relay.transientBlockedChanged(false)
         assertEquals(
-            EventsAttentionAvailability.READY,
+            EventsConvergenceAvailability.READY,
             relay.current.outputState.availability,
         )
 
@@ -189,7 +189,7 @@ class EventsAttentionRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
         assertEquals(
-            EventsAttentionAvailability.READY,
+            EventsConvergenceAvailability.READY,
             relay.current.outputState.availability,
         )
         assertEquals(
@@ -258,7 +258,7 @@ class EventsAttentionRelayTest {
                     ),
             )
 
-        val relay = EventsAttentionRelay()
+        val relay = EventsConvergenceRelay()
         relay.feedChanged(feed)
         relay.visibleTargetsChanged(
             setOf(
@@ -354,7 +354,7 @@ class EventsAttentionRelayTest {
 
     @Test
     fun labScenarioTargetsExactStableEventRefInsteadOfVisualPositionGuessing() {
-        val relay = EventsAttentionRelay()
+        val relay = EventsConvergenceRelay()
         val state = feed()
 
         relay.feedChanged(state)
@@ -395,7 +395,7 @@ class EventsAttentionRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
         assertEquals(
-            EventsAttentionAvailability.READY,
+            EventsConvergenceAvailability.READY,
             relay.current.outputState.availability,
         )
     }
@@ -447,7 +447,7 @@ class EventsAttentionRelayTest {
                     ),
             )
 
-        val relay = EventsAttentionRelay()
+        val relay = EventsConvergenceRelay()
 
         relay.feedChanged(feed(1L, listOf(first, second)))
         relay.preferencesChanged(
@@ -508,7 +508,7 @@ class EventsAttentionRelayTest {
 
     @Test
     fun handledFeedExposesNoneInsteadOfUnobserved() {
-        val relay = EventsAttentionRelay()
+        val relay = EventsConvergenceRelay()
 
         relay.feedChanged(feed())
         relay.preferencesChanged(
@@ -529,7 +529,7 @@ class EventsAttentionRelayTest {
 
         assertNull(relay.current.outputState.candidate)
         assertEquals(
-            EventsAttentionAvailability.NONE,
+            EventsConvergenceAvailability.NONE,
             relay.current.outputState.availability,
         )
         assertEquals(0, relay.current.outputState.unhandledCount)

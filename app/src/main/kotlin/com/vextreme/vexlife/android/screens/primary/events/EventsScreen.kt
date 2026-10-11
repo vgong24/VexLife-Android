@@ -105,7 +105,7 @@ fun EventsScreenContent(
 
     val attentionRelay =
         remember {
-            EventsAttentionRelay()
+            EventsConvergenceRelay()
         }
 
     val currentScreenId =
@@ -140,7 +140,7 @@ fun EventsScreenContent(
         attention
             .takeIf { output ->
                 output.availability ==
-                    EventsAttentionAvailability.READY
+                    EventsConvergenceAvailability.READY
             }
             ?.candidate
             ?.eventRef
@@ -290,7 +290,7 @@ private fun EventRow(
     event: VexExternalEvent,
     isAttentionCandidate: Boolean,
     disposition: EventsAttentionDisposition?,
-    attention: EventsAttentionOutputState,
+    attention: EventsConvergenceOutputState,
     scenario: EventsAttentionLabScenario?,
     onAcknowledge: () -> Unit,
     onDefer: () -> Unit,

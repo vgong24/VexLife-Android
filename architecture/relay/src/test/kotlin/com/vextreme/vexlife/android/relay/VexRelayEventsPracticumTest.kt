@@ -105,7 +105,7 @@ class VexRelayEventsPracticumTest {
             copy(eventRefs = eventRefs.toList())
     }
 
-    private class EventsAttentionRelay :
+    private class EventsConvergenceRelay :
         VexCompoundRelay<EventsInputState, EventsOutputState>(
             relayRef = "relay.events.attention",
             initialInputState = EventsInputState(),
@@ -238,7 +238,7 @@ class VexRelayEventsPracticumTest {
     @Test
     fun eventCanExistWhilePresentationIsIneligibleThenBecomeEligibleOnCurrentScreen() {
         val feed = ExternalFeedRelay()
-        val events = EventsAttentionRelay()
+        val events = EventsConvergenceRelay()
 
         events.screenChanged(ScreenState(currentScreenId = "home"))
 
@@ -271,7 +271,7 @@ class VexRelayEventsPracticumTest {
     @Test
     fun acknowledgementRecomputesTheNextCurrentCandidateWithoutDeletingEventTruth() {
         val feed = ExternalFeedRelay()
-        val events = EventsAttentionRelay()
+        val events = EventsConvergenceRelay()
 
         feed.feedArrived(
             sourceRevision = 1L,
@@ -312,7 +312,7 @@ class VexRelayEventsPracticumTest {
     @Test
     fun concurrentDependencyPatchesCannotEraseSiblingTruth() {
         val feed = ExternalFeedRelay()
-        val events = EventsAttentionRelay()
+        val events = EventsConvergenceRelay()
 
         feed.feedArrived(
             sourceRevision = 7L,
@@ -392,7 +392,7 @@ class VexRelayEventsPracticumTest {
     @Test
     fun compoundInputStatesExposeCoherentDependencyProjection() = runBlocking {
         val events =
-            EventsAttentionRelay()
+            EventsConvergenceRelay()
 
         val observed =
             mutableListOf<EventsInputState>()
@@ -447,7 +447,7 @@ class VexRelayEventsPracticumTest {
         val feed =
             ExternalFeedRelay()
         val events =
-            EventsAttentionRelay()
+            EventsConvergenceRelay()
 
         val observed =
             mutableListOf<EventsOutputState>()
@@ -510,7 +510,7 @@ class VexRelayEventsPracticumTest {
 
     @Test
     fun semanticNoOpDoesNotAdvanceCompoundRevision() {
-        val events = EventsAttentionRelay()
+        val events = EventsConvergenceRelay()
 
         events.screenChanged(ScreenState(currentScreenId = "events"))
         val afterFirst = events.current.revision

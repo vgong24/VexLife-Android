@@ -8,15 +8,15 @@ import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
 
-data class EventsAttentionInputState(
+data class EventsConvergenceInputState(
     val currentScreenId: String? = null,
     val feed: EventsFeedState? = null,
     val preferences: EventsAttentionPreferenceState? = null,
     val lab: EventsAttentionLabState? = null,
     val visibleEventRefs: Set<String>? = null,
     val transientBlocked: Boolean? = null,
-) : VexInputState<EventsAttentionInputState> {
-    override fun deepCopy(): EventsAttentionInputState =
+) : VexInputState<EventsConvergenceInputState> {
+    override fun deepCopy(): EventsConvergenceInputState =
         copy(
             feed = feed?.deepCopy(),
             preferences = preferences?.deepCopy(),
@@ -25,12 +25,12 @@ data class EventsAttentionInputState(
         )
 }
 
-data class EventsAttentionCandidate(
+data class EventsConvergenceCandidate(
     val eventRef: String,
     val targetElementRef: String,
 )
 
-enum class EventsAttentionAvailability {
+enum class EventsConvergenceAvailability {
     /**
      * One or more dependencies have not yet been observed by this presentation relationship.
      */
@@ -52,10 +52,10 @@ enum class EventsAttentionAvailability {
     READY,
 }
 
-data class EventsAttentionOutputState(
-    val candidate: EventsAttentionCandidate? = null,
-    val availability: EventsAttentionAvailability =
-        EventsAttentionAvailability.UNOBSERVED,
+data class EventsConvergenceOutputState(
+    val candidate: EventsConvergenceCandidate? = null,
+    val availability: EventsConvergenceAvailability =
+        EventsConvergenceAvailability.UNOBSERVED,
 
     /**
      * Human/debug-facing queue metadata derived from the same Relay decision.
@@ -71,38 +71,38 @@ data class EventsAttentionOutputState(
     val suppressedCount: Int = 0,
     val currentQueueCount: Int = 0,
     val nextSequenceCount: Int = 0,
-) : VexOutputState<EventsAttentionOutputState> {
-    override fun deepCopy(): EventsAttentionOutputState =
+) : VexOutputState<EventsConvergenceOutputState> {
+    override fun deepCopy(): EventsConvergenceOutputState =
         copy(candidate = candidate?.copy())
 }
 
 /**
- * One current attention relationship over canonical Events truth.
+ * One current convergence relationship over canonical Events truth.
  *
  * Candidate identity is resolved from event truth + acknowledgement state first. Current Screen,
  * target reachability and transient occupancy then classify presentation availability without
  * silently switching to a different event merely because the candidate scrolled off-screen.
  */
-class EventsAttentionRelay :
-    VexCompoundRelay<EventsAttentionInputState, EventsAttentionOutputState>(
-        relayRef = "relay.events.attention",
-        initialInputState = EventsAttentionInputState(),
-        initialOutputState = EventsAttentionOutputState(),
+class EventsConvergenceRelay :
+    VexCompoundRelay<EventsConvergenceInputState, EventsConvergenceOutputState>(
+        relayRef = "relay.events.convergence",
+        initialInputState = EventsConvergenceInputState(),
+        initialOutputState = EventsConvergenceOutputState(),
     ) {
     fun screenChanged(screenId: String) {
         require(screenId.isNotBlank())
-        send(EventsAttentionInputState(currentScreenId = screenId))
+        send(EventsConvergenceInputState(currentScreenId = screenId))
     }
 
     fun feedChanged(feed: EventsFeedState) {
-        send(EventsAttentionInputState(feed = feed.deepCopy()))
+        send(EventsConvergenceInputState(feed = feed.deepCopy()))
     }
 
     fun preferencesChanged(
         preferences: EventsAttentionPreferenceState,
     ) {
         send(
-            EventsAttentionInputState(
+            EventsConvergenceInputState(
                 preferences = preferences.deepCopy(),
             ),
         )
@@ -110,7 +110,7 @@ class EventsAttentionRelay :
 
     fun labChanged(lab: EventsAttentionLabState) {
         send(
-            EventsAttentionInputState(
+            EventsConvergenceInputState(
                 lab = lab.deepCopy(),
             ),
         )
@@ -118,7 +118,7 @@ class EventsAttentionRelay :
 
     fun visibleTargetsChanged(eventRefs: Set<String>) {
         send(
-            EventsAttentionInputState(
+            EventsConvergenceInputState(
                 visibleEventRefs = eventRefs.toSet(),
             ),
         )
@@ -126,21 +126,21 @@ class EventsAttentionRelay :
 
     fun transientBlockedChanged(blocked: Boolean) {
         send(
-            EventsAttentionInputState(
+            EventsConvergenceInputState(
                 transientBlocked = blocked,
             ),
         )
     }
 
     override fun processStates(
-        inputState: EventsAttentionInputState,
+        inputState: EventsConvergenceInputState,
         currentState: VexCompoundState<
-            EventsAttentionInputState,
-            EventsAttentionOutputState
+            EventsConvergenceInputState,
+            EventsConvergenceOutputState
         >,
     ): VexCompoundState<
-        EventsAttentionInputState,
-        EventsAttentionOutputState
+        EventsConvergenceInputState,
+        EventsConvergenceOutputState
     > {
         val previous =
             currentState.inputState
@@ -165,7 +165,7 @@ class EventsAttentionRelay :
                 ?: previous.transientBlocked
 
         val coherentInput =
-            EventsAttentionInputState(
+            EventsConvergenceInputState(
                 currentScreenId = screenId,
                 feed = feed?.deepCopy(),
                 preferences = preferences?.deepCopy(),
@@ -268,7 +268,7 @@ class EventsAttentionRelay :
 
         val candidate =
             candidateEvent?.let { event ->
-                EventsAttentionCandidate(
+                EventsConvergenceCandidate(
                     eventRef = event.eventRef,
                     targetElementRef =
                         EventsPresentationRefs.row(
@@ -284,22 +284,22 @@ class EventsAttentionRelay :
                     screenId == null ||
                     visibleEventRefs == null ||
                     transientBlocked == null ->
-                    EventsAttentionAvailability.UNOBSERVED
+                    EventsConvergenceAvailability.UNOBSERVED
 
                 candidate == null ->
-                    EventsAttentionAvailability.NONE
+                    EventsConvergenceAvailability.NONE
 
                 screenId != EventsScreen.screenId ->
-                    EventsAttentionAvailability.HELD_OTHER_SCREEN
+                    EventsConvergenceAvailability.HELD_OTHER_SCREEN
 
                 transientBlocked ->
-                    EventsAttentionAvailability.HELD_TRANSIENT_OCCUPIED
+                    EventsConvergenceAvailability.HELD_TRANSIENT_OCCUPIED
 
                 candidate.eventRef !in visibleEventRefs ->
-                    EventsAttentionAvailability.HELD_TARGET_UNREACHABLE
+                    EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
 
                 else ->
-                    EventsAttentionAvailability.READY
+                    EventsConvergenceAvailability.READY
             }
 
         val currentQueueCount =
@@ -326,7 +326,7 @@ class EventsAttentionRelay :
         return currentState.copy(
             inputState = coherentInput,
             outputState =
-                EventsAttentionOutputState(
+                EventsConvergenceOutputState(
                     candidate = candidate,
                     availability = availability,
                     unhandledCount = unhandledCount,
