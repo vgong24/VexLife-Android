@@ -137,6 +137,12 @@ class VexLogger(
             lastTimestamp = null
             currentSection = 0L
         }
+
+        try {
+            VexLogcat.historyCleared()
+        } catch (_: Throwable) {
+            // Logcat is a non-authoritative developer projection.
+        }
     }
 
     fun renderHistory(): String = formatHistory(
@@ -175,9 +181,15 @@ class VexLogger(
         }
 
         try {
+            VexLogcat.record(record)
+        } catch (_: Throwable) {
+            // Logcat is a non-authoritative developer projection.
+        }
+
+        try {
             onRecord(record)
         } catch (_: Throwable) {
-            // Diagnostics are deliberately non-authoritative.
+            // Downstream diagnostics are deliberately non-authoritative.
         }
     }
 
