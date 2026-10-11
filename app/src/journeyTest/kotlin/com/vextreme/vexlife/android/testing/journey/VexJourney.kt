@@ -6,6 +6,7 @@ import com.vextreme.vexlife.android.elements.TextFieldElement
 import com.vextreme.vexlife.android.elements.UIElement
 
 data class VexJourney(
+    val id: String,
     val title: String,
     val environments: List<VexJourneyEnvironment> = listOf(
         VexJourneyEnvironments.Baseline,
@@ -13,6 +14,9 @@ data class VexJourney(
     val walk: VexJourneyScope.() -> Unit,
 ) {
     init {
+        require(id.matches(Regex("[a-z0-9][a-z0-9-]*"))) {
+            "journey id must be lowercase kebab-case: $id"
+        }
         require(environments.isNotEmpty()) { "journey must declare at least one environment" }
         require(environments.map { it.id }.distinct().size == environments.size) {
             "journey environments must have unique IDs: $title"
@@ -23,6 +27,7 @@ data class VexJourney(
 }
 
 fun vexJourney(
+    id: String,
     title: String,
     environments: List<VexJourneyEnvironment> = listOf(
         VexJourneyEnvironments.Baseline,
@@ -30,6 +35,7 @@ fun vexJourney(
     walk: VexJourneyScope.() -> Unit,
 ): VexJourney =
     VexJourney(
+        id = id,
         title = title,
         environments = environments,
         walk = walk,
