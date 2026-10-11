@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.PlayPause
 import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Repeat
@@ -557,7 +556,7 @@ private fun ElementIcon.imageVector(): ImageVector = when (this) {
     ElementIcon.Download -> Icons.Rounded.Download
     ElementIcon.RemoveDownload -> Icons.Rounded.Delete
     ElementIcon.Previous -> Icons.Rounded.SkipPrevious
-    ElementIcon.PlayPause -> Icons.Rounded.PlayPause
+    ElementIcon.PlayPause -> Icons.Rounded.PlayArrow
     ElementIcon.Next -> Icons.Rounded.SkipNext
     ElementIcon.Shuffle -> Icons.Rounded.Shuffle
     ElementIcon.Repeat -> Icons.Rounded.Repeat
