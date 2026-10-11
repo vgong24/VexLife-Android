@@ -555,6 +555,7 @@ private fun VexStreamSearchSheet(
     resolver: VexStreamPlaybackSourceResolver,
     query: String,
     onQueryChange: (String) -> Unit,
+    onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var selectedTrackRef by rememberSaveable {
@@ -800,6 +801,7 @@ private fun VexStreamSongsPane(
     repository: VexStreamMusicRepository,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val sorted =
@@ -892,6 +894,7 @@ private fun VexStreamDownloadsPane(
     repository: VexStreamMusicRepository,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val downloaded =
@@ -996,6 +999,7 @@ private fun VexStreamAlbumsPane(
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
 ) {
     val unknownAlbum =
         stringResource(
@@ -1045,6 +1049,7 @@ private fun VexStreamAlbumsPane(
         navigationLabel = "vexstream-album-depth",
         controller = controller,
         resolver = resolver,
+        onVisitArtist = onVisitArtist,
     )
 }
 
@@ -1054,6 +1059,9 @@ private fun VexStreamArtistsPane(
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    requestedArtist: String?,
+    onRequestedArtistConsumed: () -> Unit,
+    onVisitArtist: (String) -> Unit,
 ) {
     val unknownArtist =
         stringResource(
@@ -1097,6 +1105,13 @@ private fun VexStreamArtistsPane(
         navigationLabel = "vexstream-artist-depth",
         controller = controller,
         resolver = resolver,
+        onVisitArtist = onVisitArtist,
+        requestedDetailKey =
+            requestedArtist?.let {
+                "artist:$it"
+            },
+        onRequestedDetailConsumed =
+            onRequestedArtistConsumed,
     )
 }
 
@@ -1106,6 +1121,7 @@ private fun VexStreamPlaylistsPane(
     state: VexStreamMusicState,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
 ) {
     val tracksByRef =
         remember(state.tracks) {
@@ -1147,6 +1163,7 @@ private fun VexStreamPlaylistsPane(
         navigationLabel = "vexstream-playlist-depth",
         controller = controller,
         resolver = resolver,
+        onVisitArtist = onVisitArtist,
     )
 }
 
@@ -1158,6 +1175,9 @@ private fun VexStreamCollectionBrowserPane(
     navigationLabel: String,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
+    requestedDetailKey: String? = null,
+    onRequestedDetailConsumed: () -> Unit = {},
 ) {
     val trail =
         remember {
@@ -1165,6 +1185,27 @@ private fun VexStreamCollectionBrowserPane(
                 root = VexStreamCollectionRoute.Index,
             )
         }
+
+    val rowKeys =
+        remember(rows) {
+            rows.map(VexStreamCollectionRow::key)
+        }
+    LaunchedEffect(
+        requestedDetailKey,
+        rowKeys,
+    ) {
+        val key =
+            requestedDetailKey
+                ?: return@LaunchedEffect
+        if (key in rowKeys) {
+            trail.push(
+                VexStreamCollectionRoute.Detail(
+                    key = key,
+                ),
+            )
+            onRequestedDetailConsumed()
+        }
+    }
 
     DisposableEffect(
         runtime,
@@ -1248,6 +1289,7 @@ private fun VexStreamCollectionBrowserPane(
                         controller = controller,
                         resolver = resolver,
                         onBack = trail::goBack,
+                        onVisitArtist = onVisitArtist,
                     )
                 }
             }
@@ -1263,6 +1305,7 @@ private fun VexStreamCollectionDetail(
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onBack: () -> Unit,
+    onVisitArtist: (String) -> Unit,
 ) {
     var selectedTrackRef by rememberSaveable(
         title,
