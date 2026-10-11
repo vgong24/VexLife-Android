@@ -263,9 +263,10 @@ Do not grow a giant action `when` in VexLifeApp, and do not create broadcast lis
 Screens. `AppActionRegistrations` rejects duplicate ActionKey ownership so two features cannot silently
 respond to one Save/Reset action.
 
-Registrations are not accumulating subscriptions. App composition combines fresh immutable
-registration groups; recomposition replaces the current snapshot rather than adding another listener.
-A duplicate owner fails when groups combine, and an invoked action with no owner fails at dispatch.
+Registrations are not accumulating subscriptions. VexLifeSession assembles one immutable
+registration snapshot for the current in-process app session; Activity/Compose recreation reuses that
+session rather than adding listeners. A duplicate owner fails when groups combine, and an invoked
+action with no owner fails at dispatch.
 
 The registration set is intentionally queryable by either ActionKey or ActionElement. Element lookup
 follows the element's declared Invoke/Sequence intent instead of maintaining a second relationship
