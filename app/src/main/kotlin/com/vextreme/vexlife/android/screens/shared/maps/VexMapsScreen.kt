@@ -2,9 +2,11 @@ package com.vextreme.vexlife.android.screens.shared.maps
 
 import androidx.compose.runtime.Composable
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.preview.VexBlueprintScreenPreview
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
+import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 
 /**
@@ -33,6 +35,17 @@ object VexMapsScreen : AppScreenBlueprint(
                 )
             }
         }
+    }
+
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        VexMapsMapSurface(
+            darkTheme = darkTheme,
+        )
     }
 }
 

@@ -64,6 +64,7 @@ dependencies {
     implementation(libs.coreKtx)
     implementation(libs.lifecycleViewModelKtx)
     implementation(libs.lifecycleViewModelCompose)
+    implementation(libs.maplibreAndroid)
 
     implementation(libs.media3Common)
     implementation(libs.media3Exoplayer)
