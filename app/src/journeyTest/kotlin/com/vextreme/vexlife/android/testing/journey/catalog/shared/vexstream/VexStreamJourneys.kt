@@ -1,11 +1,28 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
+import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.shell.AppShell
 
 object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
+
+    private val pairedHubUnavailable =
+        journeySignal(
+            signalRef = "signal.vexstream.paired-hub-unavailable",
+        ) { repositories ->
+            val vexStream =
+                repositories.vexStream as?
+                    InMemoryVexStreamMusicRepository
+                    ?: error(
+                        "VexStream journey requires InMemoryVexStreamMusicRepository",
+                    )
+            vexStream.publishHubUnavailable(
+                VexStreamHubState.Unreachable,
+            )
+        }
 
     val connectRefreshForget = vexJourney(
         id = "connect-refresh-forget",
@@ -56,7 +73,7 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.SearchLibrary)
         type(
             VexStreamMusicScreen.SearchQuery,
-            "Vex",
+            "Journey",
         )
         tap(VexStreamMusicScreen.CloseSearch)
         tap(VexStreamMusicScreen.AlbumsTab)
@@ -64,12 +81,16 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.PlaylistsTab)
         tap(VexStreamMusicScreen.DownloadsTab)
         tap(VexStreamMusicScreen.SongsTab)
-        tap(VexStreamMusicScreen.ShowQueue)
-        tap(VexStreamMusicScreen.CloseQueue)
+
         tap(VexStreamMusicScreen.ManageConnection)
         tap(VexStreamMusicScreen.RefreshCatalog)
+        tap(VexStreamMusicScreen.CloseConnectionMenu)
+
+        signal(pairedHubUnavailable)
+        tap(VexStreamMusicScreen.ManageConnection)
         tap(VexStreamMusicScreen.Reconnect)
         tap(VexStreamMusicScreen.CloseConnectionMenu)
+
         tap(VexStreamMusicScreen.ManageConnection)
         tap(VexStreamMusicScreen.RequestForgetPaired)
         tap(VexStreamMusicScreen.CancelForgetPaired)
