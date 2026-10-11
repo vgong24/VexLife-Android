@@ -97,15 +97,18 @@ class VexValhallaOfflineRouteProvider(
                     request.toValhallaJson(),
                 )
 
-            VexValhallaRouteTranslator
-                .fromJson(rawResponse)
-                .toOfflineRouteResult(
-                    routeRef = request.routeRef,
-                    routeRevision =
-                        request.routeRevision,
-                    destinationLabel =
-                        request.destinationLabel,
-                )
+            with(
+                VexValhallaRouteTranslator,
+            ) {
+                fromJson(rawResponse)
+                    .toOfflineRouteResult(
+                        routeRef = request.routeRef,
+                        routeRevision =
+                            request.routeRevision,
+                        destinationLabel =
+                            request.destinationLabel,
+                    )
+            }
         }
 
     override fun close() {
