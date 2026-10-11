@@ -7,38 +7,41 @@ import com.vextreme.vexlife.android.shell.AppShell
 object DebugJourneys : VexJourneyShard {
     override val shardId = "shared.debug"
 
+    val logHistoryDismiss = vexJourney(
+        id = "log-history-dismiss",
+        title = "Debug Log History gesture dismissal",
+        environments = listOf(
+            VexJourneyEnvironments.Baseline,
+            VexJourneyEnvironments.LargeText,
+        ),
+    ) {
+        start(HomeScreen)
+        tap(AppShell.Elements.Add)
+        tap(AppShell.Elements.DebugMenu)
+        tap(DebugMenuScreen.DarkMode)
+        tap(DebugMenuScreen.ShowLog)
+        dismiss(DebugMenuScreen.LogSheet)
+        tap(AppShell.Elements.Back)
+    }
+
+    val resetFreshHistory = vexJourney(
+        id = "reset-fresh-history",
+        title = "Debug Reset starts a fresh history",
+    ) {
+        start(HomeScreen)
+        tap(AppShell.Elements.Add)
+        tap(AppShell.Elements.DebugMenu)
+
+        // Reset deliberately clears the same semantic history used as the journey oracle.
+        // The expected-walk model mirrors that feature effect, then proves post-reset facts.
+        tap(DebugMenuScreen.ResetLog)
+        tap(DebugMenuScreen.ShowLog)
+        dismiss(DebugMenuScreen.LogSheet)
+        tap(AppShell.Elements.Back)
+    }
+
     override val journeys = listOf(
-        vexJourney(
-            id = "log-history-dismiss",
-            title = "Debug Log History gesture dismissal",
-            environments = listOf(
-                VexJourneyEnvironments.Baseline,
-                VexJourneyEnvironments.LargeText,
-            ),
-        ) {
-            start(HomeScreen)
-            tap(AppShell.Elements.Add)
-            tap(AppShell.Elements.DebugMenu)
-            tap(DebugMenuScreen.DarkMode)
-            tap(DebugMenuScreen.ShowLog)
-            dismiss(DebugMenuScreen.LogSheet)
-            tap(AppShell.Elements.Back)
-        },
-
-        vexJourney(
-            id = "reset-fresh-history",
-            title = "Debug Reset starts a fresh history",
-        ) {
-            start(HomeScreen)
-            tap(AppShell.Elements.Add)
-            tap(AppShell.Elements.DebugMenu)
-
-            // Reset deliberately clears the same semantic history used as the journey oracle.
-            // The expected-walk model mirrors that feature effect, then proves post-reset facts.
-            tap(DebugMenuScreen.ResetLog)
-            tap(DebugMenuScreen.ShowLog)
-            dismiss(DebugMenuScreen.LogSheet)
-            tap(AppShell.Elements.Back)
-        },
+        logHistoryDismiss,
+        resetFreshHistory,
     )
 }
