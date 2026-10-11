@@ -17,6 +17,11 @@ import androidx.annotation.StringRes
  * Name an element with buttonRef/toggleRef/etc only when another relationship must address that
  * exact object (navigation, open/close, external inspection). One-off structural/text elements can
  * remain inline in [layout].
+ *
+ * Preview convention:
+ * keep the page's @Preview composable at the bottom of the SAME page file. That lets a worker open
+ * HomePage.kt, edit its blueprint, and immediately see the visual entry point without hunting a
+ * parallel preview tree. Shared setup/mock fixtures live in app/.../preview/VexPreview.kt.
  */
 abstract class PageBlueprint(
     pageId: String,

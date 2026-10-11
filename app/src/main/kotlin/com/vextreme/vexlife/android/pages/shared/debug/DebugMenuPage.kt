@@ -16,6 +16,10 @@ import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.pages.shared.debug.loghistory.LogHistoryDialog
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.preview.VexPagePreviews
+import com.vextreme.vexlife.android.preview.VexPreviewHost
+import com.vextreme.vexlife.android.preview.VexPreviewMocks
+import com.vextreme.vexlife.android.preview.VexPreviewScenario
 
 object DebugMenuPage : PageBlueprint(
     pageId = "debug-menu",
@@ -100,6 +104,50 @@ fun DebugMenuPageContent(
         LogHistoryDialog(
             runtime = runtime,
             logger = logger,
+        )
+    }
+}
+
+
+// PREVIEWS — kept with DebugMenuPage because these are the states a worker needs while editing it.
+@VexPagePreviews
+@Composable
+private fun DebugMenuPagePreview() {
+    VexPreviewHost(
+        scenario = VexPreviewScenario(
+            id = "debug-menu-default",
+            startPage = DebugMenuPage,
+        ),
+    ) { context ->
+        DebugMenuPageContent(
+            runtime = context.runtime,
+            logger = context.logger,
+            darkTheme = context.darkTheme,
+        )
+    }
+}
+
+/**
+ * Edge-case preview: modal open + repeated history actions.
+ * This catches scroll/readability/dialog-size problems without a live session.
+ */
+@VexPagePreviews
+@Composable
+private fun DebugMenuLogHistoryPreview() {
+    VexPreviewHost(
+        scenario = VexPreviewScenario(
+            id = "debug-menu-history-open",
+            startPage = DebugMenuPage,
+            loggerFactory = VexPreviewMocks::loggerWithTypicalHistory,
+            prepare = {
+                runtime.presentation.open(DebugMenuPage.LogDialog)
+            },
+        ),
+    ) { context ->
+        DebugMenuPageContent(
+            runtime = context.runtime,
+            logger = context.logger,
+            darkTheme = context.darkTheme,
         )
     }
 }

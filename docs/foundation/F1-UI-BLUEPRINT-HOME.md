@@ -81,6 +81,32 @@ blueprint layout
 second handwritten Compose reconstruction
 ~~~
 
+## Preview convention
+
+Screen/page previews stay in the same source file as the PageBlueprint they preview.
+
+~~~text
+HomePage.kt
+  HomePage
+  HomePagePreview()
+
+DebugMenuPage.kt
+  DebugMenuPage
+  DebugMenuPageContent(...)
+  DebugMenuPagePreview()
+  DebugMenuLogHistoryPreview()
+~~~
+
+Reusable preview mechanics live under `app/.../preview/VexPreview.kt`: common device/theme forms,
+deterministic mock facts, and the real AppFrame/VexRuntime preview host. Production page structure
+does not depend on preview-specific state models.
+
+The default preview forms deliberately include a compact/large-font variant in addition to normal
+dark/light phone shapes so wrapping/clipping problems are visible before a live run.
+
+When real Relay/service state arrives, previews should consume small explicit fixtures from those
+owners rather than cloning their state machines into preview code.
+
 ## AppGraph
 
 The graph is a projection of registered relationships, not a second registry.

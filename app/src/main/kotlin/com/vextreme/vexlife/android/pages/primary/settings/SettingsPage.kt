@@ -2,7 +2,10 @@ package com.vextreme.vexlife.android.pages.primary.settings
 
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.elements.PageBlueprint
+import androidx.compose.runtime.Composable
 import com.vextreme.vexlife.android.elements.TextRole
+import com.vextreme.vexlife.android.preview.VexBlueprintPagePreview
+import com.vextreme.vexlife.android.preview.VexPagePreviews
 
 object SettingsPage : PageBlueprint(
     pageId = "settings",
@@ -24,4 +27,12 @@ object SettingsPage : PageBlueprint(
             }
         }
     }
+}
+
+
+// PREVIEW — stays beside SettingsPage so Android Studio shows the page while it is edited.
+@VexPagePreviews
+@Composable
+private fun SettingsPagePreview() {
+    VexBlueprintPagePreview(SettingsPage)
 }

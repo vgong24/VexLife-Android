@@ -31,6 +31,9 @@ import com.vextreme.vexlife.android.pages.shared.gallery.elements.ElementsGaller
 import com.vextreme.vexlife.android.pages.shared.gallery.graph.AppGraphView
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.preview.VexPagePreviews
+import com.vextreme.vexlife.android.preview.VexPreviewHost
+import com.vextreme.vexlife.android.preview.VexPreviewScenario
 
 object GalleryPage : PageBlueprint(
     pageId = "gallery",
@@ -161,5 +164,36 @@ fun GalleryPageContent(
                 ElementsGallery(runtime)
             }
         }
+    }
+}
+
+
+// PREVIEWS — kept with GalleryPage so its two important presentation states are visible in-place.
+@VexPagePreviews
+@Composable
+private fun GalleryElementsPreview() {
+    VexPreviewHost(
+        scenario = VexPreviewScenario(
+            id = "gallery-elements",
+            startPage = GalleryPage,
+        ),
+    ) { context ->
+        GalleryPageContent(context.runtime)
+    }
+}
+
+@VexPagePreviews
+@Composable
+private fun GalleryAppGraphPreview() {
+    VexPreviewHost(
+        scenario = VexPreviewScenario(
+            id = "gallery-app-graph",
+            startPage = GalleryPage,
+            prepare = {
+                runtime.presentation.swapTo(GalleryPage.AppGraphPanel)
+            },
+        ),
+    ) { context ->
+        GalleryPageContent(context.runtime)
     }
 }

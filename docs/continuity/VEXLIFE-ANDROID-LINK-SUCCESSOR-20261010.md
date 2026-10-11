@@ -55,7 +55,8 @@ Lived-device feedback corrected:
 - one `BackResolution` consumed by native Android Back, toolbar visibility/execution, logging, and local/pushed/root behavior;
 - forward/backward local navigation animations as spatial opposites;
 - AppGraph self/cycle relationships visible without endless traversable loops;
-- readable source-adjacent debugging comments.
+- readable source-adjacent debugging comments;
+- Android Studio previews colocated with their PageBlueprint files, backed by reusable internal preview scenarios/mocks.
 
 ## Fresh successor reading order
 
@@ -70,11 +71,12 @@ Read narrowly, in this order:
 7. `app/src/main/kotlin/com/vextreme/vexlife/android/runtime/VexRuntime.kt`
 8. `architecture/elements/src/main/kotlin/com/vextreme/vexlife/android/elements/ElementCells.kt`
 9. `architecture/elements/src/main/kotlin/com/vextreme/vexlife/android/elements/navigation/NavigationTrail.kt`
-10. `architecture/logging/README.md`
+10. `app/src/main/kotlin/com/vextreme/vexlife/android/preview/VexPreview.kt`
+11. `architecture/logging/README.md`
 
 Then re-ground the old architecture quarry:
 
-11. open draft PR #3, `[VexLife Android][F1-F3][REVIEW] Relay + VexAppScope + VexLogger foundations`
+12. open draft PR #3, `[VexLife Android][F1-F3][REVIEW] Relay + VexAppScope + VexLogger foundations`
 
 PR #3 predates the accepted UI/body work and is based on the old standalone base. Treat it as design
 evidence, examples, and tests to review—not as a branch to merge or cherry-pick wholesale.
@@ -108,6 +110,16 @@ rememberSaveable darkTheme
 ~~~
 
 Do not silently turn one of these into persistence simply because future service work needs memory.
+
+## Preview workflow
+
+Each page keeps its @Preview composables in the same page file so a worker sees the visual entry
+point while editing the blueprint. Shared preview tooling is internal under `app/.../preview/`.
+
+Preview scenarios may seed deterministic facts (selected Gallery panel, open Debug log dialog,
+bounded mock history) but must not become a shadow implementation of Relay/service truth. When the
+next trajectory introduces real service state, expose small preview/test fixtures from the rightful
+owner and feed those fixtures through the normal projection path.
 
 ## Next trajectory: give the stable body a nervous system
 

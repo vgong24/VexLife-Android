@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInspectionMode
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
 /**
@@ -34,8 +35,12 @@ fun AppFrame(
     // Do not re-derive "can go back" independently here.
     val nextBack = runtime.nextBack
 
-    BackHandler(enabled = nextBack != null) {
-        nextBack?.let { runtime.goBack(it) }
+    // Preview renders the real AppFrame visuals, but there is no meaningful native Back dispatch to
+    // register with Android Studio's inspection surface.
+    if (!LocalInspectionMode.current) {
+        BackHandler(enabled = nextBack != null) {
+            nextBack?.let { runtime.goBack(it) }
+        }
     }
 
     Box(
