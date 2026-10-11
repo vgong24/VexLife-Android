@@ -67,6 +67,9 @@ dependencies {
     implementation(libs.lifecycleRuntimeCompose)
     implementation(libs.maplibreAndroid)
     implementation(libs.locationButtonCompose)
+    implementation(libs.valhallaMobile)
+    implementation(libs.valhallaModels)
+    implementation(libs.valhallaModelsConfig)
 
     implementation(libs.media3Common)
     implementation(libs.media3Exoplayer)
