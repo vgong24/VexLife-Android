@@ -97,7 +97,6 @@ internal fun VexStreamLibrarySurface(
                 VexStreamMiniPlayer(
                     playback = playback,
                     controller = controller,
-                    runtime = runtime,
                 )
             }
         },
@@ -1196,7 +1195,6 @@ private fun VexStreamTrackCard(
 private fun VexStreamMiniPlayer(
     playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
-    runtime: VexRuntime,
 ) {
     Card(
         modifier = Modifier
