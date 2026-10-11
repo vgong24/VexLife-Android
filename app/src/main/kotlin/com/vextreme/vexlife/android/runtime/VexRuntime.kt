@@ -325,6 +325,26 @@ class VexRuntime(
     }
 
     /**
+     * Records and applies a platform dismissal without pretending the user clicked a Close button.
+     *
+     * Material sheets/dialogs may dismiss through drag, scrim, or another platform gesture. The
+     * semantic presentation element remains the subject, while the action is "Dismissed". If a
+     * platform callback arrives after Back already closed the element, the closed state is a no-op so
+     * the diagnostic is not duplicated.
+     */
+    fun dismissPresentation(element: UIElement) {
+        requireActiveSource(element)
+        if (!presentation.isOpen(element)) return
+
+        logger.recordInteraction(
+            element = element,
+            screenBefore = currentScreen,
+            action = "Dismissed",
+        )
+        presentation.close(element)
+    }
+
+    /**
      * Entry point for action-bearing UI elements.
      *
      * Put a breakpoint here to observe every framework-routed button/FAB/toggle interaction before
