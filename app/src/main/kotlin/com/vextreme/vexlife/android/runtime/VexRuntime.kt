@@ -75,8 +75,9 @@ class PresentationState(
  * Owns the semantic page position of the app.
  *
  * Primary pages are peers: selecting Home -> Events changes [primarySelection] and does not build a
- * back stack. Shared/detail pages are pushed into [pageStack], so Debug opened from Events can pop
- * back to Events.
+ * back stack. Home is also the primary-root fallback: Back from Events/Settings returns to Home
+ * before Android is allowed to close the app. Shared/detail pages are pushed into [pageStack], so
+ * Debug opened from Events still pops to Events first.
  *
  * Debugging a navigation problem:
  * - [current] answers "which page is active right now?";
@@ -88,6 +89,7 @@ class AppNavigationState(
     primaryScreens: List<ScreenElement>,
 ) {
     private val primaryIds = primaryScreens.map { it.screenId }.toSet()
+    private val primaryRoot = initialPrimary
 
     var primarySelection by mutableStateOf(initialPrimary)
         private set
@@ -100,6 +102,14 @@ class AppNavigationState(
 
     val canPopPage: Boolean
         get() = pageStack.isNotEmpty()
+
+    val canReturnToPrimaryRoot: Boolean
+        get() =
+            pageStack.isEmpty() &&
+                primarySelection.screenId != primaryRoot.screenId
+
+    val canGoBack: Boolean
+        get() = canPopPage || canReturnToPrimaryRoot
 
     fun isPrimary(screen: ScreenElement = current): Boolean =
         screen.screenId in primaryIds && pageStack.isEmpty()
@@ -129,11 +139,29 @@ class AppNavigationState(
         return current
     }
 
-    fun peekBackTarget(): ScreenElement? =
+    fun goBack(): ScreenElement? {
         if (pageStack.isNotEmpty()) {
-            pageStack.dropLast(1).lastOrNull() ?: primarySelection
-        } else {
-            null
+            return popPage()
+        }
+
+        if (canReturnToPrimaryRoot) {
+            selectPrimary(primaryRoot)
+            return current
+        }
+
+        return null
+    }
+
+    fun peekBackTarget(): ScreenElement? =
+        when {
+            pageStack.isNotEmpty() ->
+                pageStack.dropLast(1).lastOrNull() ?: primarySelection
+
+            canReturnToPrimaryRoot ->
+                primaryRoot
+
+            else ->
+                null
         }
 }
 
@@ -189,7 +217,7 @@ class VexRuntime(
         get() =
             presentation.hasOpenPresentation ||
                 activeBackLayer?.canGoBack == true ||
-                navigation.canPopPage
+                navigation.canGoBack
 
     val showToolbarBack: Boolean
         get() = activeBackLayer?.canGoBack == true || navigation.canPopPage
@@ -264,7 +292,8 @@ class VexRuntime(
      * 1. dismiss a transient presentation (dialog/FAB layer);
      * 2. otherwise pop the active page-local navigation layer;
      * 3. otherwise pop a pushed app page;
-     * 4. return false when the app is already at its primary root so Android may own root Back.
+     * 4. otherwise return Events/Settings to the primary root (Home);
+     * 5. return false only when already at Home with no shallower layer, so Android may own root Back.
      *
      * Toolbar Back and Android system Back both end up here.
      */
@@ -294,7 +323,7 @@ class VexRuntime(
                 screenAfter = target,
             )
         }
-        navigation.popPage()
+        navigation.goBack()
         return true
     }
 
