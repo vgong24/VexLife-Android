@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.testing.crawler
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
+import android.util.Log
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.testing.journey.Journeys
 import com.vextreme.vexlife.android.testing.journey.VexTestEngine
@@ -132,6 +133,10 @@ class VexScreenCrawlerInstrumentedTest(
     fun runConfiguredScreenCrawler() {
         when (val selected = plannedRun) {
             is PlannedRun.NotSelected -> {
+                Log.i(
+                    SCREEN_CRAWLER_LOG_TAG,
+                    "NOT_SELECTED reason=${selected.reason}",
+                )
                 println(
                     "Vex ScreenCrawler not selected for this run: ${selected.reason}",
                 )
@@ -140,6 +145,10 @@ class VexScreenCrawlerInstrumentedTest(
 
             is PlannedRun.Case -> {
                 val case = selected.value
+                Log.i(
+                    SCREEN_CRAWLER_LOG_TAG,
+                    "RUN case=${case.caseRef}",
+                )
                 val evidence =
                     VexScreenCrawlerEvidenceObserver(case)
 
@@ -327,3 +336,6 @@ class VexScreenCrawlerInstrumentedTest(
         }
     }
 }
+
+
+private const val SCREEN_CRAWLER_LOG_TAG = "VexScreenCrawler"
