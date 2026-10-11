@@ -277,6 +277,33 @@ future Relay/capability/connection state must own whether an action is currently
 The app composition may assemble registrations and supply broader-lifetime dependencies; it should
 not re-describe the feature's business effect.
 
+## Configuration recreation is not a semantic restart
+
+Android may recreate the Activity/Compose tree for configuration changes such as rotation without
+the VexLife app session semantically restarting.
+
+Current ownership:
+
+~~~text
+VexLifeViewModel
+  -> VexLifeSession
+       -> VexRuntime navigation/presentation
+       -> VexLogger current session
+       -> diagnostic persistence queue / viewModelScope
+       -> current dark/light selection
+       -> app-action registrations
+~~~
+
+A configuration recreation should therefore preserve the current Screen and open semantic
+presentation state.
+
+Do not promote every Compose-local detail into the ViewModel. Local scroll positions, text drafts,
+and feature-local navigation should use the smallest rightful lifetime (remember, rememberSaveable,
+or a feature owner) based on a real requirement.
+
+CONFIGURATION_RECREATION != PROCESS_DEATH. The current ViewModel boundary does not claim process
+death restoration; that requires explicit serializable/restorable state and separate proof.
+
 ## Platform-native responsibility
 
 Portable meaning should remain portable. Android should own what Android can uniquely implement and
