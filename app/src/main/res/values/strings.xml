@@ -165,6 +165,11 @@
     <string name="vexmaps_navigation_waiting_location_body">The route is preserved while VexMaps waits for a current accurate fix.</string>
     <string name="vexmaps_navigation_arrived">Arrived at %1$s</string>
     <string name="vexmaps_navigation_done">Done</string>
+    <string name="vexmaps_offline_map_loading">Checking offline map regions…</string>
+    <string name="vexmaps_offline_map_none">Offline map: no complete region installed.</string>
+    <string name="vexmaps_offline_map_ready">Offline map: %1$d complete region(s) installed.</string>
+    <string name="vexmaps_offline_map_error">Offline map regions could not be read.</string>
+    <string name="vexmaps_offline_map_import">Import offline map region</string>
     <string name="vexmaps_region_pack_needed">Offline routing needs a local region pack.</string>
     <string name="vexmaps_region_pack_ready">Offline routing region ready.</string>
     <string name="vexmaps_region_pack_import">Import routing region</string>

@@ -93,6 +93,12 @@ internal fun VexMapsMapSurface(
                 context,
             )
         }
+    val offlineMapStore =
+        remember(context) {
+            VexMapsOfflineMapStore(
+                context,
+            )
+        }
 
     var locationState by
         remember {
@@ -123,6 +129,53 @@ internal fun VexMapsMapSurface(
             mutableStateOf<VexMapsPlanningState>(
                 VexMapsPlanningState.Idle,
             )
+        }
+    var offlineMapState by
+        remember {
+            mutableStateOf<VexMapsOfflineMapState>(
+                VexMapsOfflineMapState.Loading,
+            )
+        }
+
+    LaunchedEffect(
+        offlineMapStore,
+    ) {
+        offlineMapState =
+            runCatching {
+                offlineMapStore.load()
+            }.getOrElse {
+                VexMapsOfflineMapState.Error
+            }
+    }
+
+    val offlineMapImportLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .OpenDocument(),
+        ) { uri ->
+            if (uri == null) {
+                return@rememberLauncherForActivityResult
+            }
+
+            runtime.recordDynamicInteraction(
+                subjectRef =
+                    "presentation.vexmaps.offline-map.import",
+                action = "Selected",
+            )
+
+            offlineMapState =
+                VexMapsOfflineMapState.Loading
+
+            scope.launch {
+                offlineMapState =
+                    runCatching {
+                        offlineMapStore.import(
+                            uri,
+                        )
+                    }.getOrElse {
+                        VexMapsOfflineMapState.Error
+                    }
+            }
         }
 
     val importLauncher =
@@ -186,17 +239,26 @@ internal fun VexMapsMapSurface(
             )
     }
 
-    val onlineStyleUri =
+    val fallbackOnlineStyleUri =
         if (darkTheme) {
             OPEN_FREE_MAP_DARK_STYLE
         } else {
             OPEN_FREE_MAP_LIBERTY_STYLE
         }
 
+    val mapStyleUri =
+        (
+            offlineMapState as?
+                VexMapsOfflineMapState.Ready
+        )
+            ?.preferred
+            ?.styleUri
+            ?: fallbackOnlineStyleUri
+
     val mapView =
         remember(
             context,
-            onlineStyleUri,
+            mapStyleUri,
             mapController,
         ) {
             MapLibre.getInstance(
@@ -218,7 +280,7 @@ internal fun VexMapsMapSurface(
                             .build()
 
                     map.setStyle(
-                        onlineStyleUri,
+                        mapStyleUri,
                     ) { style ->
                         mapController.attach(
                             map = map,
@@ -303,12 +365,24 @@ internal fun VexMapsMapSurface(
         ) {
             VexMapsRoutePlannerCard(
                 regionPack = regionPack,
+                offlineMapState =
+                    offlineMapState,
                 hasLocation =
                     currentLocation != null,
                 destination =
                     destination,
                 planningState =
                     planningState,
+                onImportOfflineMap = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.offline-map.import",
+                        action = "Clicked",
+                    )
+                    offlineMapImportLauncher.launch(
+                        arrayOf("*/*"),
+                    )
+                },
                 onImportRegion = {
                     runtime.recordDynamicInteraction(
                         subjectRef =
@@ -577,9 +651,12 @@ internal fun VexMapsMapSurface(
 @Composable
 private fun VexMapsRoutePlannerCard(
     regionPack: VexMapsRegionPack?,
+    offlineMapState:
+        VexMapsOfflineMapState,
     hasLocation: Boolean,
     destination: VexMapCoordinate?,
     planningState: VexMapsPlanningState,
+    onImportOfflineMap: () -> Unit,
     onImportRegion: () -> Unit,
     onRouteHere: () -> Unit,
     modifier: Modifier = Modifier,
@@ -650,6 +727,55 @@ private fun VexMapsRoutePlannerCard(
 
                 VexMapsPlanningState.Idle ->
                     Unit
+            }
+
+            Text(
+                text =
+                    when (offlineMapState) {
+                        VexMapsOfflineMapState.Loading ->
+                            stringResource(
+                                R.string
+                                    .vexmaps_offline_map_loading,
+                            )
+
+                        VexMapsOfflineMapState.None ->
+                            stringResource(
+                                R.string
+                                    .vexmaps_offline_map_none,
+                            )
+
+                        is VexMapsOfflineMapState.Ready ->
+                            stringResource(
+                                R.string
+                                    .vexmaps_offline_map_ready,
+                                offlineMapState
+                                    .completeRegionCount,
+                            )
+
+                        VexMapsOfflineMapState.Error ->
+                            stringResource(
+                                R.string
+                                    .vexmaps_offline_map_error,
+                            )
+                    },
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodySmall,
+            )
+
+            OutlinedButton(
+                onClick = onImportOfflineMap,
+                enabled =
+                    offlineMapState !is
+                    VexMapsOfflineMapState.Loading,
+            ) {
+                Text(
+                    stringResource(
+                        R.string
+                            .vexmaps_offline_map_import,
+                    ),
+                )
             }
 
             OutlinedButton(
