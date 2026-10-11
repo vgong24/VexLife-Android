@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.vextreme.vexlife.android.R
+import AppRepositories
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.elements.ColumnElement
@@ -217,7 +218,7 @@ object GalleryScreen : AppScreenBlueprint(
     @Composable
     internal override fun renderContent(
         runtime: VexRuntime,
-        repositories: com.vextreme.vexlife.android.data.AppRepositories,
+        repositories: AppRepositories,
         darkTheme: Boolean,
     ) {
         GalleryScreenContent(runtime)
