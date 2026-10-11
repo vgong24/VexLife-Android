@@ -97,9 +97,11 @@
     <string name="vexstream_music_waiting_approval">Waiting for approval on your computer…</string>
     <string name="vexstream_music_pairing_failed">Couldn’t connect. Make VexStream discoverable on your computer and try again.</string>
     <string name="vexstream_music_empty">No songs are available yet.</string>
+    <string name="vexstream_music_track_menu">Song options</string>
     <string name="vexstream_music_play">Play</string>
     <string name="vexstream_music_download">Download</string>
     <string name="vexstream_music_remove_download">Remove download</string>
+    <string name="vexstream_music_visit_artist">Visit artist</string>
     <string name="vexstream_music_downloaded">Downloaded · available offline</string>
     <string name="vexstream_music_downloading">Downloading…</string>
     <string name="vexstream_music_hub_only">Available from desktop</string>
