@@ -203,6 +203,89 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
+    fun vexStreamForgetRequiresManagementAndConfirmationBeforeTheEffect() {
+        val actions =
+            AppActionRegistrations.of(
+                appAction(
+                    action = AppActions.ForgetPairedVexStream,
+                    ownerRef = VexStreamMusicScreen.screenId,
+                ) {
+                    // This test owns only the runtime/presentation sequence.
+                },
+            )
+        val runtime =
+            runtime(
+                appActions = actions,
+            )
+
+        runtime.activate(
+            HomeScreen.VexStreamMusic,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.ManageConnection,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.RequestForgetPaired,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.CancelForgetPaired,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.RequestForgetPaired,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.ForgetPaired,
+        )
+
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+    }
+
+    @Test
     fun platformDismissalLogsThePresentationWithoutInventingACloseClick() {
         val logger = VexLogger()
         val runtime = runtime(logger = logger)
