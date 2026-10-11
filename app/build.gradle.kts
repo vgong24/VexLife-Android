@@ -14,6 +14,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.0.1-foundation"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -24,6 +25,15 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        getByName("test") {
+            java.srcDir("src/journeyTest/kotlin")
+        }
+        getByName("androidTest") {
+            java.srcDir("src/journeyTest/kotlin")
+        }
     }
 }
 
@@ -42,6 +52,7 @@ dependencies {
     implementation(libs.composeMaterialIconsExtended)
     implementation(libs.composeUiToolingPreview)
     debugImplementation(libs.composeUiTooling)
+    debugImplementation(libs.composeUiTestManifest)
 
     implementation(libs.roomRuntime)
     implementation(libs.roomKtx)
@@ -54,6 +65,12 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutinesTest)
     testImplementation(libs.roomTesting)
+
+    androidTestImplementation(platform(libs.composeBom))
+    androidTestImplementation(libs.composeUiTestJunit4)
+    androidTestImplementation(libs.androidxTestRunner)
+    androidTestImplementation(libs.androidxTestExtJunit)
+    androidTestImplementation(libs.espressoCore)
 }
 
 
