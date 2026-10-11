@@ -13,6 +13,41 @@ This foundation is intentionally about **semantic app-map coverage + Android rea
 It is not a replacement for line/branch code coverage, visual regression, accessibility proof,
 Room migration proof, or physical-device product acceptance.
 
+## Package / shard shape
+
+The current test-only foundation is organized as:
+
+~~~text
+testing/journey/
+  VexJourney.kt
+  VexExpectedWalk.kt
+  VexJourneyCoverage.kt
+
+  environment/
+    VexJourneyEnvironment.kt
+
+  catalog/
+    VexJourneyCatalog.kt
+    VexJourneyShard.kt
+
+    shell/
+      AppShellJourneys.kt
+
+    shared/
+      debug/DebugJourneys.kt
+      gallery/GalleryJourneys.kt
+      profile/UserProfileJourneys.kt
+      vexstream/VexStreamJourneys.kt
+      vex/TalkToVexJourneys.kt
+~~~
+
+The shard answers "where should a developer look when this walk fails or coverage is missing?" It
+does not prohibit cross-Screen journeys. A Profile journey may naturally begin at Home/FAB and still
+belong to the Profile shard because the user intention being proved is Profile.
+
+This is still a **journey/walker** foundation, not an autonomous ScreenCrawler. Reserve a future
+`testing/crawler/` package for an actual traversal planner that chooses routes automatically.
+
 ## One journey, two consumers
 
 Journey declarations live under:
@@ -53,7 +88,7 @@ The walk itself forms the expectation.
 It records which production semantics each journey names and compares them with
 `AppScreens.registry`.
 
-Current required coverage:
+Current observed coverage surface:
 
 ~~~text
 every registered Screen
@@ -62,10 +97,24 @@ every editable TextFieldElement
 every registered DialogElement / ModalBottomSheetElement
 ~~~
 
-A new production action with no journey therefore fails the ordinary JVM test path with its stable
-semantic ID.
+The report also includes per-shard journey counts and Android environment-case counts so debt can be
+localized without treating a percentage as the source of truth.
 
-Example failure shape:
+A new production action with no journey therefore appears as explicit **journey tech debt** with
+its stable semantic ID.
+
+Ordinary JVM/build development does NOT fail merely because semantic coverage is incomplete. The
+coverage test:
+- fails for malformed journey grammar, duplicate journey titles, or duplicate shard IDs;
+- emits a visible warning when production semantics are missing/stale;
+- writes `build/reports/vex/journey-coverage.txt`;
+- fails on coverage debt only when strictness is explicitly requested with
+  `-PvexStrictJourneyCoverage=true`.
+
+This keeps debt visible without mapping it through a silencer or making APK construction depend on
+journey completeness.
+
+Example warning shape:
 
 ~~~text
 ActionElement journey coverage mismatch.
@@ -83,6 +132,52 @@ they exist. Rendering/style/accessibility need their own proof surfaces.
 Local clickable implementation details that are not registered semantic elements are likewise not
 silently counted as registered ActionElement coverage. If such an interaction becomes important to
 the semantic app map, give it a registered identity first.
+
+## Environment / conditional variants
+
+Semantic journey meaning is separated from Android configuration pressure.
+
+~~~kotlin
+vexJourney(
+    title = "User Profile form submission",
+    environments = listOf(
+        VexJourneyEnvironments.Baseline,
+        VexJourneyEnvironments.LargeText,
+        VexJourneyEnvironments.AlternateLocaleFallback,
+    ),
+) {
+    ...
+}
+~~~
+
+One journey may therefore become several Android cases without duplicating its expected history.
+
+Current profiles:
+
+~~~text
+baseline
+  device/test-host defaults
+
+large-text-1.45x
+  Compose DeviceConfigurationOverride.FontScale(1.45f)
+
+alternate-locale-fallback
+  Compose DeviceConfigurationOverride.Locales("es-ES")
+~~~
+
+The alternate locale case is **not a localization-complete claim**. There are not yet translated
+product resources. It currently proves:
+- stable semantic selectors are independent of English visible text;
+- Android locale/resource configuration can be injected into the same journey harness;
+- future localization can add supported-language profiles without rewriting the walk grammar.
+
+When localization is admitted, add real supported locale profiles and language-specific presentation
+proof at that foundation. RTL, window-size, orientation, font-weight, and other Android configuration
+profiles can use the same environment seam when a real consumer earns them.
+
+App dark/light mode is currently VexLife session/product state, not merely system dark-mode
+configuration, so journeys should continue using the real Debug DarkMode action to prove that
+behavior rather than pretending a device override changed product state.
 
 ## Android instrumentation mode
 
