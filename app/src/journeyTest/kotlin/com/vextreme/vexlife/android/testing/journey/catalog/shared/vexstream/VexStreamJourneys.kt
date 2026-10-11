@@ -7,15 +7,17 @@ import com.vextreme.vexlife.android.shell.AppShell
 object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
 
-    override val journeys = listOf(
-        vexJourney(
-            id = "placeholder",
+    val placeholder = vexJourney(
+        id = "placeholder",
             title = "VexStream Music placeholder",
         ) {
             start(HomeScreen)
             tap(HomeScreen.VexStreamMusic)
             tap(VexStreamMusicScreen.PlaceholderAction)
             tap(AppShell.Elements.Back)
-        },
+        }
+
+    override val journeys = listOf(
+        placeholder,
     )
 }
