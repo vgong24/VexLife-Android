@@ -47,8 +47,28 @@ class InMemoryVexStreamMusicRepository(
         return VexStreamRepositoryResult.Accepted()
     }
 
-    override suspend fun reconnectPairedVexStream(): VexStreamRepositoryResult =
-        refreshCatalog()
+    override suspend fun reconnectPairedVexStream(): VexStreamRepositoryResult {
+        val current = mutableState.value
+        if (current.connectionState !is VexStreamConnectionState.Paired) {
+            return VexStreamRepositoryResult.Rejected(
+                reason = VexStreamRepositoryRejection.PAIRING_NOT_READY,
+            )
+        }
+
+        mutableState.value = current.copy(
+            hubState =
+                VexStreamHubState.Ready(
+                    hubRef = "hub.in-memory",
+                    catalogRevision = "catalog.in-memory.reconnected",
+                ),
+            tracks = current.tracks.map { state ->
+                state.copy(
+                    hubAvailable = true,
+                )
+            },
+        )
+        return VexStreamRepositoryResult.Accepted()
+    }
 
     override suspend fun confirmPairingCode(): VexStreamRepositoryResult {
         val current = mutableState.value
