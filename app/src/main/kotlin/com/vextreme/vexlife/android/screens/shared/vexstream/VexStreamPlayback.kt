@@ -441,43 +441,53 @@ internal fun vexStreamQueueShuffleTargetOrder(
 
 internal fun MediaController.shuffleVexStreamQueue(): Boolean {
     val count = mediaItemCount
-    if (count <= 1) {
+    if (
+        count <= 1 ||
+        !isCommandAvailable(
+            Player.COMMAND_CHANGE_MEDIA_ITEMS,
+        )
+    ) {
+        return false
+    }
+
+    val currentIndex =
+        currentMediaItemIndex
+            .coerceIn(
+                -1,
+                count - 1,
+            )
+    val futureStart =
+        (currentIndex + 1)
+            .coerceIn(
+                0,
+                count,
+            )
+    val futureCount =
+        count - futureStart
+    if (futureCount <= 1) {
         return false
     }
 
     val targetOrder =
         vexStreamQueueShuffleTargetOrder(
             itemCount = count,
-            currentIndex = currentMediaItemIndex,
+            currentIndex = currentIndex,
         )
-    val workingOrder =
-        (0 until count).toMutableList()
-
-    if (targetOrder == workingOrder) {
-        return false
-    }
+    val shuffledFuture =
+        targetOrder
+            .drop(futureStart)
+            .map(::getMediaItemAt)
 
     shuffleModeEnabled = false
 
-    targetOrder.forEachIndexed { targetIndex, originalIndex ->
-        val sourceIndex =
-            workingOrder.indexOf(originalIndex)
-        if (sourceIndex == targetIndex) {
-            return@forEachIndexed
-        }
-
-        moveMediaItem(
-            sourceIndex,
-            targetIndex,
-        )
-        val moved =
-            workingOrder.removeAt(sourceIndex)
-        workingOrder.add(
-            targetIndex,
-            moved,
-        )
-    }
-
+    // One playlist mutation keeps large queues responsive. The previous implementation emitted one
+    // moveMediaItem command per shuffled position, which caused hundreds of MediaSession timeline
+    // updates and recompositions for large libraries.
+    replaceMediaItems(
+        futureStart,
+        count,
+        shuffledFuture,
+    )
     return true
 }
 
