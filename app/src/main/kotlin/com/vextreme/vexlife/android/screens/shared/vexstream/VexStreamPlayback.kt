@@ -1,17 +1,21 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
@@ -22,6 +26,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
+import kotlinx.coroutines.delay
 
 /**
  * Resolves product-level track availability into one Media3 item.
@@ -99,6 +104,9 @@ internal data class VexStreamPlaybackUiState(
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val queueMediaIds: List<String> = emptyList(),
     val currentIndex: Int = -1,
+    val currentPositionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val bufferedPositionMs: Long = 0L,
 ) {
     val hasQueue: Boolean
         get() = queueMediaIds.isNotEmpty()
@@ -106,54 +114,88 @@ internal data class VexStreamPlaybackUiState(
     val repeatEnabled: Boolean
         get() = repeatMode != Player.REPEAT_MODE_OFF
 
+    val progressFraction: Float
+        get() =
+            if (durationMs > 0L) {
+                (currentPositionMs.toFloat() / durationMs.toFloat())
+                    .coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+
+    val bufferedFraction: Float
+        get() =
+            if (durationMs > 0L) {
+                (bufferedPositionMs.toFloat() / durationMs.toFloat())
+                    .coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+
     companion object {
         val Empty = VexStreamPlaybackUiState()
     }
 }
 
 /**
- * Connects Compose to the Android-owned MediaSessionService without moving player lifetime into UI.
+ * Activity/ViewModel-lifetime client for the service-owned VexStream player.
+ *
+ * The MediaSessionService remains the player/queue owner. Retaining only the UI-side controller here
+ * prevents ordinary VexLife Screen navigation from disconnecting the last in-app controller when
+ * VexStream leaves composition. The controller is released with the Activity's ViewModel store.
  */
-@Composable
-internal fun rememberVexStreamMediaController(): MediaController? {
-    val context = LocalContext.current
-    var controller by remember {
-        mutableStateOf<MediaController?>(null)
-    }
+internal class VexStreamPlaybackViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
+    private var cleared = false
 
-    DisposableEffect(context) {
-        val sessionToken =
+    private val controllerFuture =
+        MediaController.Builder(
+            application,
             SessionToken(
-                context,
+                application,
                 ComponentName(
-                    context,
+                    application,
                     VexStreamPlaybackService::class.java,
                 ),
-            )
-        val controllerFuture =
-            MediaController.Builder(
-                context,
-                sessionToken,
-            ).buildAsync()
+            ),
+        ).buildAsync()
 
+    var controller by mutableStateOf<MediaController?>(null)
+        private set
+
+    init {
         controllerFuture.addListener(
             {
                 runCatching {
                     controllerFuture.get()
                 }.onSuccess { connected ->
-                    controller = connected
+                    if (!cleared) {
+                        controller = connected
+                    }
                 }
             },
-            ContextCompat.getMainExecutor(context),
+            ContextCompat.getMainExecutor(application),
         )
-
-        onDispose {
-            controller = null
-            MediaController.releaseFuture(controllerFuture)
-        }
     }
 
-    return controller
+    override fun onCleared() {
+        cleared = true
+        controller = null
+        MediaController.releaseFuture(controllerFuture)
+        super.onCleared()
+    }
+}
+
+/**
+ * Projects the retained VexStream media client into Compose.
+ *
+ * This function does not own player lifetime and does not reconnect on every Screen composition.
+ */
+@Composable
+internal fun rememberVexStreamMediaController(): MediaController? {
+    val owner: VexStreamPlaybackViewModel = viewModel()
+    return owner.controller
 }
 
 @Composable
@@ -189,6 +231,23 @@ internal fun rememberVexStreamPlaybackUiState(
 
         onDispose {
             controller.removeListener(listener)
+        }
+    }
+
+    LaunchedEffect(controller) {
+        if (controller == null) {
+            return@LaunchedEffect
+        }
+
+        while (true) {
+            projected.value = controller.toVexStreamUiState()
+            delay(
+                if (controller.isPlaying) {
+                    250L
+                } else {
+                    1_000L
+                },
+            )
         }
     }
 
@@ -318,6 +377,31 @@ private fun Player.toVexStreamUiState(): VexStreamPlaybackUiState {
     val current =
         currentMediaItem
 
+    val durationMs =
+        duration.takeIf {
+            it != C.TIME_UNSET && it > 0L
+        } ?: 0L
+    val positionMs =
+        currentPosition
+            .coerceAtLeast(0L)
+            .let {
+                if (durationMs > 0L) {
+                    it.coerceAtMost(durationMs)
+                } else {
+                    it
+                }
+            }
+    val bufferedMs =
+        bufferedPosition
+            .coerceAtLeast(0L)
+            .let {
+                if (durationMs > 0L) {
+                    it.coerceAtMost(durationMs)
+                } else {
+                    it
+                }
+            }
+
     return VexStreamPlaybackUiState(
         currentMediaId = current?.mediaId,
         currentTitle =
@@ -346,7 +430,32 @@ private fun Player.toVexStreamUiState(): VexStreamPlaybackUiState {
             } else {
                 -1
             },
+        currentPositionMs = positionMs,
+        durationMs = durationMs,
+        bufferedPositionMs = bufferedMs,
     )
+}
+
+internal fun formatVexStreamPlaybackTime(
+    positionMs: Long,
+): String {
+    val totalSeconds =
+        positionMs
+            .coerceAtLeast(0L) / 1_000L
+    val hours = totalSeconds / 3_600L
+    val minutes =
+        (totalSeconds % 3_600L) / 60L
+    val seconds = totalSeconds % 60L
+
+    return if (hours > 0L) {
+        "$hours:" +
+            minutes.toString().padStart(2, '0') +
+            ":" +
+            seconds.toString().padStart(2, '0')
+    } else {
+        "$minutes:" +
+            seconds.toString().padStart(2, '0')
+    }
 }
 
 // [VXG RealForever]
