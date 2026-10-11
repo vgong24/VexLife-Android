@@ -34,6 +34,7 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.NextTrack)
         tap(VexStreamMusicScreen.PreviousTrack)
         tap(VexStreamMusicScreen.TogglePlayback)
+        tap(VexStreamMusicScreen.ShuffleQueue)
 
         tap(VexStreamMusicScreen.TrackMenu)
         tap(VexStreamMusicScreen.DownloadTrack)
