@@ -8,11 +8,16 @@ junit = "4.13.2"
 [libraries]
 composeBom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 composeMaterial3 = { module = "androidx.compose.material3:material3" }
+composeFoundation = { module = "androidx.compose.foundation:foundation" }
+composeRuntime = { module = "androidx.compose.runtime:runtime" }
+composeUi = { module = "androidx.compose.ui:ui" }
 composeUiToolingPreview = { module = "androidx.compose.ui:ui-tooling-preview" }
 composeUiTooling = { module = "androidx.compose.ui:ui-tooling" }
+composeMaterialIconsExtended = { module = "androidx.compose.material:material-icons-extended" }
 activityCompose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
