@@ -24,16 +24,23 @@ object VexJourneyCatalog {
             back()
         },
 
-        vexJourney("Debug Log History, dismissal, Reset and toolbar Back") {
+        vexJourney("Debug Log History gesture dismissal") {
             start(HomeScreen)
             tap(AppShell.Elements.Add)
             tap(AppShell.Elements.DebugMenu)
             tap(DebugMenuScreen.DarkMode)
             tap(DebugMenuScreen.ShowLog)
             dismiss(DebugMenuScreen.LogSheet)
+            tap(AppShell.Elements.Back)
+        },
+
+        vexJourney("Debug Reset starts a fresh history") {
+            start(HomeScreen)
+            tap(AppShell.Elements.Add)
+            tap(AppShell.Elements.DebugMenu)
 
             // Reset deliberately clears the same semantic history used as the journey oracle.
-            // The expected-walk model mirrors that feature effect, then verifies only post-reset facts.
+            // The expected-walk model mirrors that feature effect, then proves post-reset facts.
             tap(DebugMenuScreen.ResetLog)
             tap(DebugMenuScreen.ShowLog)
             back()
