@@ -149,9 +149,12 @@ enum class ElementIcon {
     RemoveDownload,
     Previous,
     PlayPause,
+    Pause,
     Next,
     Shuffle,
     Repeat,
+    Search,
+    Music,
 }
 
 /**
