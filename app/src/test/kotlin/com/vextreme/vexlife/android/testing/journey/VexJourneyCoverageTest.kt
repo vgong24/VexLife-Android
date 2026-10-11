@@ -14,6 +14,8 @@ class VexJourneyCoverageTest {
     fun everyRegisteredSemanticSurfaceIsNamedByAJourney() {
         val recorder = VexJourneyCoverageRecorder()
         VexJourneyCatalog.all.forEach { journey ->
+            // Validate the declared state/grammar sequence as part of the fast gate too.
+            journey.walk(VexExpectedWalk())
             journey.walk(recorder)
         }
         val covered = recorder.snapshot()
