@@ -69,6 +69,10 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.queue.sheet",
     )
 
+    val SearchSheet = modalBottomSheetRef(
+        id = "body.library.search-sheet",
+    )
+
     val ConnectionMenuSheet = modalBottomSheetRef(
         id = "body.connection.menu",
     )
@@ -96,6 +100,22 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         labelRes = R.string.vexstream_music_refresh,
         style = VexElementStyles.SecondaryAction,
         intent = invoke(AppActions.RefreshVexStreamCatalog),
+    )
+
+    val SearchLibrary = buttonRef(
+        id = "body.library.search.open",
+        labelRes = R.string.vexstream_music_search_action,
+        style = VexElementStyles.ToolbarIcon,
+        icon = ElementIcon.Search,
+        intent = open(SearchSheet),
+    )
+
+    val CloseSearch = buttonRef(
+        id = "body.library.search.close",
+        labelRes = R.string.close,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Close,
+        intent = close(SearchSheet),
     )
 
     val ManageConnection = buttonRef(
@@ -332,6 +352,11 @@ object VexStreamMusicScreen : AppScreenBlueprint(
 
     override val content = layout {
         column("body") {
+            row("toolbar-actions") {
+                button(SearchLibrary)
+                button(ManageConnection)
+            }
+
             column(
                 element = ConnectionSection,
                 style = VexElementStyles.RaisedSurface,
@@ -343,10 +368,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 )
                 button(FindNearby)
                 button(ConfirmPairingCode)
-                button(ManageConnection)
             }
-
-            textField(SearchQuery)
 
             row("library-tabs") {
                 button(SongsTab)
@@ -399,6 +421,11 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 button(CloseQueue)
             }
 
+            modalBottomSheet(SearchSheet) {
+                textField(SearchQuery)
+                button(CloseSearch)
+            }
+
             modalBottomSheet(ConnectionMenuSheet) {
                 button(RefreshCatalog)
                 button(Reconnect)
@@ -412,6 +439,13 @@ object VexStreamMusicScreen : AppScreenBlueprint(
             }
         }
     }
+
+    internal override val toolbarActions
+        get() =
+            listOf(
+                SearchLibrary,
+                ManageConnection,
+            )
 
     internal override fun appActionRegistrations(
         context: ScreenActionContext,
