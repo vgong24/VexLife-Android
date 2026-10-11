@@ -107,7 +107,7 @@ Ordinary JVM/build development does NOT fail merely because semantic coverage is
 coverage test:
 - fails for malformed journey grammar, duplicate journey titles, or duplicate shard IDs;
 - emits a visible warning when production semantics are missing/stale;
-- writes `build/reports/vex/journey-coverage.txt`;
+- writes a per-host-test report under `build/reports/vex/journey-coverage-<task>.txt`;
 - fails on coverage debt only when strictness is explicitly requested with
   `-PvexStrictJourneyCoverage=true`.
 
