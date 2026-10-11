@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android
 
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
@@ -21,6 +22,7 @@ class FeatureActionRegistrationsTest {
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
                 userProfile = InMemoryUserProfileRepository(),
+                events = RelayEventsRepository(),
             ),
             scope = backgroundScope,
         ).appActions
