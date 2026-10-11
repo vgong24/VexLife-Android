@@ -62,6 +62,27 @@
     <string name="vexstream_music_hub_only">Available from desktop</string>
     <string name="vexstream_music_local_only">Offline copy · desktop unavailable</string>
     <string name="vexstream_music_unavailable">Unavailable</string>
+    <string name="vexstream_music_songs">Songs</string>
+    <string name="vexstream_music_albums">Albums</string>
+    <string name="vexstream_music_artists">Artists</string>
+    <string name="vexstream_music_downloads">Downloads</string>
+    <string name="vexstream_music_queue">Queue</string>
+    <string name="vexstream_music_shuffle_all">Shuffle all</string>
+    <string name="vexstream_music_play_all">Play all</string>
+    <string name="vexstream_music_play_next">Play next</string>
+    <string name="vexstream_music_add_queue">Add to queue</string>
+    <string name="vexstream_music_now_playing">Now playing</string>
+    <string name="vexstream_music_pause">Pause</string>
+    <string name="vexstream_music_previous">Previous</string>
+    <string name="vexstream_music_next">Next</string>
+    <string name="vexstream_music_shuffle">Shuffle</string>
+    <string name="vexstream_music_repeat">Repeat</string>
+    <string name="vexstream_music_clear_queue">Clear queue</string>
+    <string name="vexstream_music_queue_empty">Nothing is queued yet.</string>
+    <string name="vexstream_music_no_downloads">No downloaded songs yet.</string>
+    <string name="vexstream_music_unknown_album">Unknown album</string>
+    <string name="vexstream_music_unknown_artist">Unknown artist</string>
+    <string name="vexstream_music_track_count">%1$d songs</string>
 
     <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
     <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>
