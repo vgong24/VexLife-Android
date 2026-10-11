@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.screens.primary.events
 
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabState
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceState
 import com.vextreme.vexlife.android.data.events.EventsFeedState
 import com.vextreme.vexlife.android.relay.VexCompoundRelay
@@ -11,6 +12,7 @@ data class EventsAttentionInputState(
     val currentScreenId: String? = null,
     val feed: EventsFeedState? = null,
     val preferences: EventsAttentionPreferenceState? = null,
+    val lab: EventsAttentionLabState? = null,
     val visibleEventRefs: Set<String>? = null,
     val transientBlocked: Boolean? = null,
 ) : VexInputState<EventsAttentionInputState> {
@@ -18,6 +20,7 @@ data class EventsAttentionInputState(
         copy(
             feed = feed?.deepCopy(),
             preferences = preferences?.deepCopy(),
+            lab = lab?.deepCopy(),
             visibleEventRefs = visibleEventRefs?.toSet(),
         )
 }
@@ -64,7 +67,10 @@ data class EventsAttentionOutputState(
     val queuedAfterCurrentCount: Int = 0,
     val acknowledgedCount: Int = 0,
     val deferredCount: Int = 0,
+    val suspendedCount: Int = 0,
     val suppressedCount: Int = 0,
+    val currentQueueCount: Int = 0,
+    val nextSequenceCount: Int = 0,
 ) : VexOutputState<EventsAttentionOutputState> {
     override fun deepCopy(): EventsAttentionOutputState =
         copy(candidate = candidate?.copy())
@@ -98,6 +104,14 @@ class EventsAttentionRelay :
         send(
             EventsAttentionInputState(
                 preferences = preferences.deepCopy(),
+            ),
+        )
+    }
+
+    fun labChanged(lab: EventsAttentionLabState) {
+        send(
+            EventsAttentionInputState(
+                lab = lab.deepCopy(),
             ),
         )
     }
@@ -140,6 +154,9 @@ class EventsAttentionRelay :
         val preferences =
             inputState.preferences
                 ?: previous.preferences
+        val lab =
+            inputState.lab
+                ?: previous.lab
         val visibleEventRefs =
             inputState.visibleEventRefs
                 ?: previous.visibleEventRefs
@@ -152,6 +169,7 @@ class EventsAttentionRelay :
                 currentScreenId = screenId,
                 feed = feed?.deepCopy(),
                 preferences = preferences?.deepCopy(),
+                lab = lab?.deepCopy(),
                 visibleEventRefs = visibleEventRefs?.toSet(),
                 transientBlocked = transientBlocked,
             )
@@ -161,27 +179,89 @@ class EventsAttentionRelay :
                 ?.dispositionByEventRef
                 .orEmpty()
 
-        val unhandled =
-            if (feed != null && preferences != null) {
-                feed.events.filter { event ->
+        /*
+         * Queue law:
+         *
+         * NORMAL      -> current queue
+         * SUSPENDED   -> back of current queue
+         * DEFERRED    -> next sequence, only after current queue drains
+         * ACK/SUPPRESS-> terminal for proactive attention this lab/session
+         *
+         * feed.events is newest-first; reversing each pool makes the attention queue oldest-first.
+         */
+        val normalQueue =
+            feed
+                ?.events
+                .orEmpty()
+                .filter { event ->
                     event.eventRef !in dispositions
                 }
-            } else {
-                emptyList()
+                .asReversed()
+
+        val suspendedQueue =
+            feed
+                ?.events
+                .orEmpty()
+                .filter { event ->
+                    dispositions[event.eventRef] ==
+                        com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.SUSPENDED
+                }
+                .sortedBy { event ->
+                    preferences
+                        ?.suspendedOrderByEventRef
+                        ?.get(event.eventRef)
+                        ?: Long.MAX_VALUE
+                }
+
+        val deferredQueue =
+            feed
+                ?.events
+                .orEmpty()
+                .filter { event ->
+                    dispositions[event.eventRef] ==
+                        com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.DEFERRED
+                }
+                .sortedBy { event ->
+                    preferences
+                        ?.deferredOrderByEventRef
+                        ?.get(event.eventRef)
+                        ?: Long.MAX_VALUE
+                }
+
+        val activePool =
+            when {
+                normalQueue.isNotEmpty() ->
+                    normalQueue
+
+                suspendedQueue.isNotEmpty() ->
+                    suspendedQueue
+
+                else ->
+                    deferredQueue
             }
 
         val candidateEvent =
             if (feed != null && preferences != null) {
+                val labTargetRef =
+                    lab
+                        ?.currentScenario
+                        ?.targetEventRef
+
                 val retainedCandidateRef =
                     currentState.outputState
                         .candidate
                         ?.eventRef
 
-                unhandled.firstOrNull { event ->
+                /*
+                 * A live lab scenario may intentionally target a specific stable eventRef to prove
+                 * list-position/geometry conditions. Outside the lab, retain the current candidate
+                 * while it remains in the active queue, then advance normally.
+                 */
+                activePool.firstOrNull { event ->
+                    event.eventRef == labTargetRef
+                } ?: activePool.firstOrNull { event ->
                     event.eventRef == retainedCandidateRef
-                } ?: unhandled
-                    .asReversed()
-                    .firstOrNull()
+                } ?: activePool.firstOrNull()
             } else {
                 null
             }
@@ -222,8 +302,26 @@ class EventsAttentionRelay :
                     EventsAttentionAvailability.READY
             }
 
+        val currentQueueCount =
+            normalQueue.size +
+                suspendedQueue.size
+        val nextSequenceCount =
+            deferredQueue.size
         val unhandledCount =
-            unhandled.size
+            currentQueueCount +
+                nextSequenceCount
+
+        val activeQueueCount =
+            when {
+                normalQueue.isNotEmpty() ->
+                    currentQueueCount
+
+                suspendedQueue.isNotEmpty() ->
+                    suspendedQueue.size
+
+                else ->
+                    deferredQueue.size
+            }
 
         return currentState.copy(
             inputState = coherentInput,
@@ -236,7 +334,7 @@ class EventsAttentionRelay :
                         if (candidate == null) {
                             0
                         } else {
-                            (unhandledCount - 1)
+                            (activeQueueCount - 1)
                                 .coerceAtLeast(0)
                         },
                     acknowledgedCount =
@@ -245,15 +343,18 @@ class EventsAttentionRelay :
                                 com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.ACKNOWLEDGED
                         },
                     deferredCount =
-                        dispositions.values.count { disposition ->
-                            disposition ==
-                                com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.DEFERRED
-                        },
+                        deferredQueue.size,
+                    suspendedCount =
+                        suspendedQueue.size,
                     suppressedCount =
                         dispositions.values.count { disposition ->
                             disposition ==
                                 com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.SUPPRESSED
                         },
+                    currentQueueCount =
+                        currentQueueCount,
+                    nextSequenceCount =
+                        nextSequenceCount,
                 ),
         )
     }

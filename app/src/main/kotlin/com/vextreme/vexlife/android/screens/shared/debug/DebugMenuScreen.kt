@@ -105,6 +105,27 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.ResetSyntheticEventLab),
     )
 
+    val UseRotationAttentionLab = buttonRef(
+        id = "body.events-simulator.actions.use-rotation",
+        labelRes = R.string.events_simulator_use_rotation,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.UseRotationAttentionLab),
+    )
+
+    val UseRandomAttentionLab = buttonRef(
+        id = "body.events-simulator.actions.use-random",
+        labelRes = R.string.events_simulator_use_random,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.UseRandomAttentionLab),
+    )
+
+    val NextAttentionLabScenario = buttonRef(
+        id = "body.events-simulator.actions.next-scenario",
+        labelRes = R.string.events_simulator_next_scenario,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.NextAttentionLabScenario),
+    )
+
     override val content = layout {
         scrollableColumn("body") {
             toggle(DarkMode)
@@ -147,6 +168,13 @@ object DebugMenuScreen : AppScreenBlueprint(
                 row("reset-actions") {
                     button(ResetSyntheticEventLab)
                 }
+                row("scenario-mode-actions") {
+                    button(UseRotationAttentionLab)
+                    button(UseRandomAttentionLab)
+                }
+                row("scenario-actions") {
+                    button(NextAttentionLabScenario)
+                }
                 text(
                     id = "helper",
                     textRes = R.string.events_simulator_helper,
@@ -186,6 +214,10 @@ object DebugMenuScreen : AppScreenBlueprint(
             )
         val eventsAttention =
             context.repositories.eventsAttention
+        val eventsAttentionLab =
+            context.repositories.eventsAttentionLab
+        val events =
+            context.repositories.events
 
         return AppActionRegistrations.of(
             appAction(
@@ -244,6 +276,42 @@ object DebugMenuScreen : AppScreenBlueprint(
                 syntheticEvents.stop()
                 syntheticEvents.resetCurrent()
                 eventsAttention.resetAll()
+                eventsAttentionLab.reset()
+            },
+            appAction(
+                action = AppActions.UseRotationAttentionLab,
+                ownerRef = screenId,
+            ) {
+                eventsAttentionLab.useRotation()
+            },
+            appAction(
+                action = AppActions.UseRandomAttentionLab,
+                ownerRef = screenId,
+            ) {
+                eventsAttentionLab.useSeededRandom(
+                    System.currentTimeMillis(),
+                )
+            },
+            appAction(
+                action = AppActions.NextAttentionLabScenario,
+                ownerRef = screenId,
+            ) {
+                if (events.current.events.size < 12) {
+                    syntheticEvents.emitBurst(
+                        12 - events.current.events.size,
+                    )
+                }
+
+                eventsAttention.resetAll()
+
+                val scenario =
+                    eventsAttentionLab.planNext(
+                        events.current.events,
+                    )
+
+                if (scenario.freezeProjection) {
+                    syntheticEvents.start()
+                }
             },
         )
     }

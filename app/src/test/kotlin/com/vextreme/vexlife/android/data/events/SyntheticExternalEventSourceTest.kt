@@ -26,6 +26,7 @@ class SyntheticExternalEventSourceTest {
                 },
             )
 
+        source.setTimedEmissionEnabled(true)
         backgroundScope.launch {
             source.runForever()
         }
@@ -152,6 +153,7 @@ class SyntheticExternalEventSourceTest {
                 maxEvents = 3,
             )
 
+        source.setTimedEmissionEnabled(true)
         backgroundScope.launch {
             source.runForever()
         }

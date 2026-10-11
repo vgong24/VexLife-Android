@@ -78,6 +78,46 @@ class SyntheticExternalEventControllerTest {
             repository.current.events.size,
         )
     }
+    @Test
+    fun resetDisablesTimedEmissionBeforePublishingEmptyProjection() = runTest {
+        val repository = RelayEventsRepository()
+
+        val controller =
+            SyntheticExternalEventController(
+                repository = repository,
+                scope = backgroundScope,
+                sourceFactory = { sink ->
+                    SyntheticExternalEventSource(
+                        sink = sink,
+                        intervalMillis = 5_000L,
+                        clock = { testScheduler.currentTime },
+                    )
+                },
+            )
+
+        controller.start()
+        advanceTimeBy(4_999L)
+
+        val reset =
+            controller.resetCurrent()
+
+        assertEquals(1L, reset.sourceRevision)
+        assertEquals(0, reset.events.size)
+
+        advanceTimeBy(10_000L)
+        runCurrent()
+
+        assertEquals(
+            1L,
+            repository.current.sourceSnapshots
+                .getValue(
+                    SyntheticExternalEventSource.SOURCE_REF,
+                )
+                .sourceRevision,
+        )
+        assertEquals(0, repository.current.events.size)
+    }
+
 }
 
 // [VXG RealForever]

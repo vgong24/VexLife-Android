@@ -1,6 +1,12 @@
 package com.vextreme.vexlife.android.screens.primary.events
 
 import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabMode
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabPlacement
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabExpectedAction
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenario
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenarioKind
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabState
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceState
 import com.vextreme.vexlife.android.data.events.EventsFeedState
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
@@ -162,6 +168,192 @@ class EventsAttentionRelayTest {
         assertEquals(
             0,
             relay.current.outputState.suppressedCount,
+        )
+    }
+
+    @Test
+    fun suspendStaysInCurrentQueueWhileLaterMovesToNextSequence() {
+        val source = "source.queue"
+        val first =
+            VexExternalEvent(
+                "event.first",
+                source,
+                VexExternalEventKind.MESSAGE,
+                "First",
+                "First",
+                10L,
+            )
+        val second =
+            VexExternalEvent(
+                "event.second",
+                source,
+                VexExternalEventKind.CALL,
+                "Second",
+                "Second",
+                20L,
+            )
+        val third =
+            VexExternalEvent(
+                "event.third",
+                source,
+                VexExternalEventKind.MAP,
+                "Third",
+                "Third",
+                30L,
+            )
+
+        val feed =
+            EventsFeedState(
+                sourceSnapshots =
+                    mapOf(
+                        source to
+                            VexExternalEventSourceSnapshot(
+                                source,
+                                1L,
+                                listOf(first, second, third),
+                            ),
+                    ),
+            )
+
+        val relay = EventsAttentionRelay()
+        relay.feedChanged(feed)
+        relay.visibleTargetsChanged(
+            setOf(
+                first.eventRef,
+                second.eventRef,
+                third.eventRef,
+            ),
+        )
+        relay.transientBlockedChanged(false)
+        relay.screenChanged(EventsScreen.screenId)
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(),
+        )
+
+        assertEquals(
+            first.eventRef,
+            relay.current.outputState.candidate?.eventRef,
+        )
+
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(
+                mapOf(
+                    first.eventRef to
+                        EventsAttentionDisposition.SUSPENDED,
+                ),
+            ),
+        )
+
+        assertEquals(
+            second.eventRef,
+            relay.current.outputState.candidate?.eventRef,
+        )
+        assertEquals(3, relay.current.outputState.currentQueueCount)
+        assertEquals(0, relay.current.outputState.nextSequenceCount)
+        assertEquals(1, relay.current.outputState.suspendedCount)
+
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(
+                mapOf(
+                    first.eventRef to
+                        EventsAttentionDisposition.SUSPENDED,
+                    second.eventRef to
+                        EventsAttentionDisposition.DEFERRED,
+                ),
+            ),
+        )
+
+        assertEquals(
+            third.eventRef,
+            relay.current.outputState.candidate?.eventRef,
+        )
+        assertEquals(2, relay.current.outputState.currentQueueCount)
+        assertEquals(1, relay.current.outputState.nextSequenceCount)
+
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(
+                mapOf(
+                    first.eventRef to
+                        EventsAttentionDisposition.SUSPENDED,
+                    second.eventRef to
+                        EventsAttentionDisposition.DEFERRED,
+                    third.eventRef to
+                        EventsAttentionDisposition.ACKNOWLEDGED,
+                ),
+            ),
+        )
+
+        assertEquals(
+            first.eventRef,
+            relay.current.outputState.candidate?.eventRef,
+        )
+
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(
+                mapOf(
+                    first.eventRef to
+                        EventsAttentionDisposition.ACKNOWLEDGED,
+                    second.eventRef to
+                        EventsAttentionDisposition.DEFERRED,
+                    third.eventRef to
+                        EventsAttentionDisposition.ACKNOWLEDGED,
+                ),
+            ),
+        )
+
+        assertEquals(
+            second.eventRef,
+            relay.current.outputState.candidate?.eventRef,
+        )
+        assertEquals(0, relay.current.outputState.currentQueueCount)
+        assertEquals(1, relay.current.outputState.nextSequenceCount)
+    }
+
+    @Test
+    fun labScenarioTargetsExactStableEventRefInsteadOfVisualPositionGuessing() {
+        val relay = EventsAttentionRelay()
+        val state = feed()
+
+        relay.feedChanged(state)
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(),
+        )
+        relay.visibleTargetsChanged(
+            setOf("event.first", "event.second"),
+        )
+        relay.transientBlockedChanged(false)
+        relay.screenChanged(EventsScreen.screenId)
+
+        relay.labChanged(
+            EventsAttentionLabState(
+                currentScenario =
+                    EventsAttentionLabScenario(
+                        scenarioRef = "scenario.test.middle",
+                        ordinal = 2L,
+                        mode = EventsAttentionLabMode.ROTATION,
+                        seed = 1L,
+                        kind =
+                            EventsAttentionLabScenarioKind.ANCHORED_MIDDLE,
+                        targetEventRef = "event.second",
+                        targetPositionFromTop = 0,
+                        listCountAtPlan = 2,
+                        preferredPlacement =
+                            EventsAttentionLabPlacement.ABOVE,
+                        expectedAction =
+                            EventsAttentionLabExpectedAction.LATER,
+                        freezeProjection = false,
+                        blockingAcknowledgeOnly = false,
+                    ),
+            ),
+        )
+
+        assertEquals(
+            "event.second",
+            relay.current.outputState.candidate?.eventRef,
+        )
+        assertEquals(
+            EventsAttentionAvailability.READY,
+            relay.current.outputState.availability,
         )
     }
 

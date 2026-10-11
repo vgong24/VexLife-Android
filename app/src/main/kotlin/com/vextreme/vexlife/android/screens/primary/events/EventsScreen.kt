@@ -17,7 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -25,6 +27,9 @@ import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabPlacement
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenario
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
@@ -33,6 +38,7 @@ import com.vextreme.vexlife.android.data.events.VexExternalEventKind
 import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
 import com.vextreme.vexlife.android.elements.VexAnchoredTooltip
 import com.vextreme.vexlife.android.elements.VexStableLazyColumn
+import com.vextreme.vexlife.android.elements.VexTooltipPlacement
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -63,6 +69,8 @@ object EventsScreen : AppScreenBlueprint(
             repository = repositories.events,
             attentionPreferences =
                 repositories.eventsAttention,
+            attentionLab =
+                repositories.eventsAttentionLab,
         )
     }
 }
@@ -79,6 +87,7 @@ fun EventsScreenContent(
     runtime: VexRuntime,
     repository: EventsRepository,
     attentionPreferences: EventsAttentionPreferenceRepository,
+    attentionLab: EventsAttentionLabRepository,
 ) {
     val feed by repository.states.collectAsState(
         initial = repository.current,
@@ -86,6 +95,33 @@ fun EventsScreenContent(
     val preferences by attentionPreferences.states.collectAsState(
         initial = attentionPreferences.current,
     )
+    val labState by attentionLab.states.collectAsState(
+        initial = attentionLab.current,
+    )
+    val scenario =
+        labState.currentScenario
+
+    /*
+     * BLOCKING_FREEZE_TOP freezes only the displayed projection. The repository/feed continues to
+     * admit provider updates so acknowledgement can release the freeze and reveal accumulated truth.
+     * This is lab behavior, not an EventsRepository fork.
+     */
+    var frozenEvents by
+        remember {
+            mutableStateOf<List<VexExternalEvent>?>(null)
+        }
+
+    LaunchedEffect(scenario?.scenarioRef) {
+        frozenEvents =
+            if (scenario?.freezeProjection == true) {
+                feed.events
+            } else {
+                null
+            }
+    }
+
+    val displayedEvents =
+        frozenEvents ?: feed.events
 
     val attentionRelay =
         remember {
@@ -102,6 +138,9 @@ fun EventsScreenContent(
     }
     LaunchedEffect(preferences) {
         attentionRelay.preferencesChanged(preferences)
+    }
+    LaunchedEffect(labState) {
+        attentionRelay.labChanged(labState)
     }
     LaunchedEffect(currentScreenId) {
         attentionRelay.screenChanged(currentScreenId)
@@ -126,9 +165,11 @@ fun EventsScreenContent(
 
     VexStableLazyColumn(
         listRef = EventsScreen.content.element.elementId,
-        items = feed.events,
+        items = displayedEvents,
         itemRef = VexExternalEvent::eventRef,
         contentType = { "events-event-row" },
+        requestedVisibleItemRef =
+            scenario?.targetEventRef,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         onVisibleItemRefsChanged =
@@ -149,6 +190,7 @@ fun EventsScreenContent(
                     event.eventRef
                 ],
             attention = attention.outputState,
+            scenario = scenario,
             onAcknowledge = {
                 runtime.recordDynamicInteraction(
                     EventsPresentationRefs.attentionAction(
@@ -159,6 +201,9 @@ fun EventsScreenContent(
                 attentionPreferences.acknowledge(
                     event.eventRef,
                 )
+                if (scenario?.targetEventRef == event.eventRef) {
+                    attentionLab.completeCurrent()
+                }
             },
             onDefer = {
                 runtime.recordDynamicInteraction(
@@ -170,6 +215,23 @@ fun EventsScreenContent(
                 attentionPreferences.defer(
                     event.eventRef,
                 )
+                if (scenario?.targetEventRef == event.eventRef) {
+                    attentionLab.completeCurrent()
+                }
+            },
+            onSuspend = {
+                runtime.recordDynamicInteraction(
+                    EventsPresentationRefs.attentionAction(
+                        event.eventRef,
+                        "suspend",
+                    ),
+                )
+                attentionPreferences.suspend(
+                    event.eventRef,
+                )
+                if (scenario?.targetEventRef == event.eventRef) {
+                    attentionLab.completeCurrent()
+                }
             },
             onSuppress = {
                 runtime.recordDynamicInteraction(
@@ -181,6 +243,9 @@ fun EventsScreenContent(
                 attentionPreferences.suppress(
                     event.eventRef,
                 )
+                if (scenario?.targetEventRef == event.eventRef) {
+                    attentionLab.completeCurrent()
+                }
             },
             onDismiss = {
                 runtime.recordDynamicInteraction(
@@ -192,6 +257,9 @@ fun EventsScreenContent(
                 attentionPreferences.defer(
                     event.eventRef,
                 )
+                if (scenario?.targetEventRef == event.eventRef) {
+                    attentionLab.completeCurrent()
+                }
             },
         )
     }
@@ -210,8 +278,10 @@ private fun EventRow(
     isAttentionCandidate: Boolean,
     disposition: EventsAttentionDisposition?,
     attention: EventsAttentionOutputState,
+    scenario: EventsAttentionLabScenario?,
     onAcknowledge: () -> Unit,
     onDefer: () -> Unit,
+    onSuspend: () -> Unit,
     onSuppress: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -268,12 +338,30 @@ private fun EventRow(
         }
 
         if (isAttentionCandidate) {
+            val preferredPlacements =
+                scenario
+                    ?.preferredTooltipPlacements()
+                    ?: listOf(
+                        VexTooltipPlacement.BELOW,
+                        VexTooltipPlacement.ABOVE,
+                        VexTooltipPlacement.END,
+                        VexTooltipPlacement.START,
+                    )
+            val blocking =
+                scenario?.blockingAcknowledgeOnly == true
+
             VexAnchoredTooltip(
                 presentationRef =
                     EventsPresentationRefs.tooltip(
                         event.eventRef,
                     ),
-                onDismissRequest = onDismiss,
+                onDismissRequest = {
+                    if (!blocking) {
+                        onDismiss()
+                    }
+                },
+                preferredPlacements =
+                    preferredPlacements,
             ) {
                 Text(
                     text =
@@ -300,9 +388,8 @@ private fun EventRow(
                 )
 
                 /*
-                 * This is intentionally Relay-owned metadata rendered verbatim enough for lived
-                 * testing. Compose does not recalculate the queue; if these numbers look wrong,
-                 * the defect is in the attention relationship rather than a second UI model.
+                 * Relay-owned queue metadata. If these numbers are wrong, the failure belongs to the
+                 * queue/attention relationship, not to a second Compose-side model.
                  */
                 Text(
                     text =
@@ -312,6 +399,15 @@ private fun EventRow(
                             attention.queuedAfterCurrentCount,
                         ),
                     style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_sequence_summary,
+                            attention.currentQueueCount,
+                            attention.nextSequenceCount,
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
                 )
                 Text(
                     text =
@@ -335,10 +431,79 @@ private fun EventRow(
                             R.string.events_attention_handled_summary,
                             attention.acknowledgedCount,
                             attention.deferredCount,
+                            attention.suspendedCount,
                             attention.suppressedCount,
                         ),
                     style = MaterialTheme.typography.labelSmall,
                 )
+
+                scenario?.let { labScenario ->
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.events_attention_lab_scenario,
+                                labScenario.kind.name,
+                            ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.inversePrimary,
+                    )
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.events_attention_lab_mode,
+                                labScenario.mode.name,
+                                labScenario.seed,
+                                labScenario.ordinal,
+                            ),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+
+                    val position =
+                        labScenario.targetPositionFromTop
+
+                    if (position != null) {
+                        Text(
+                            text =
+                                stringResource(
+                                    R.string.events_attention_lab_target,
+                                    position + 1,
+                                    labScenario.listCountAtPlan,
+                                    labScenario.targetEventRef.orEmpty(),
+                                ),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.events_attention_lab_placement,
+                                labScenario.preferredPlacement.name,
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.events_attention_lab_expected_action,
+                                labScenario.expectedAction.name,
+                            ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.inversePrimary,
+                    )
+
+                    if (labScenario.freezeProjection) {
+                        Text(
+                            text =
+                                stringResource(
+                                    R.string.events_attention_lab_blocking,
+                                ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.inversePrimary,
+                        )
+                    }
+                }
+
                 Text(
                     text =
                         stringResource(
@@ -362,20 +527,31 @@ private fun EventRow(
                         ),
                     style = MaterialTheme.typography.bodySmall,
                 )
-                Text(
-                    text =
-                        stringResource(
-                            R.string.events_attention_later_expectation,
-                        ),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    text =
-                        stringResource(
-                            R.string.events_attention_suppress_expectation,
-                        ),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+
+                if (!blocking) {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.events_attention_later_expectation,
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.events_attention_suspend_expectation,
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.events_attention_suppress_expectation,
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
                 Text(
                     text =
                         stringResource(
@@ -410,53 +586,97 @@ private fun EventRow(
                             ),
                         )
                     }
-                    TextButton(
-                        onClick = onDefer,
-                        colors =
-                            TextButtonDefaults.textButtonColors(
-                                contentColor =
-                                    MaterialTheme.colorScheme.inversePrimary,
-                            ),
-                        modifier =
-                            Modifier.testTag(
-                                EventsPresentationRefs.attentionAction(
-                                    event.eventRef,
-                                    "later",
+
+                    if (!blocking) {
+                        TextButton(
+                            onClick = onDefer,
+                            colors =
+                                TextButtonDefaults.textButtonColors(
+                                    contentColor =
+                                        MaterialTheme.colorScheme.inversePrimary,
                                 ),
-                            ),
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string.events_attention_later,
-                            ),
-                        )
-                    }
-                    TextButton(
-                        onClick = onSuppress,
-                        colors =
-                            TextButtonDefaults.textButtonColors(
-                                contentColor =
-                                    MaterialTheme.colorScheme.inversePrimary,
-                            ),
-                        modifier =
-                            Modifier.testTag(
-                                EventsPresentationRefs.attentionAction(
-                                    event.eventRef,
-                                    "suppress",
+                            modifier =
+                                Modifier.testTag(
+                                    EventsPresentationRefs.attentionAction(
+                                        event.eventRef,
+                                        "later",
+                                    ),
                                 ),
-                            ),
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string.events_attention_suppress,
-                            ),
-                        )
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.events_attention_later,
+                                ),
+                            )
+                        }
+                        TextButton(
+                            onClick = onSuspend,
+                            colors =
+                                TextButtonDefaults.textButtonColors(
+                                    contentColor =
+                                        MaterialTheme.colorScheme.inversePrimary,
+                                ),
+                            modifier =
+                                Modifier.testTag(
+                                    EventsPresentationRefs.attentionAction(
+                                        event.eventRef,
+                                        "suspend",
+                                    ),
+                                ),
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.events_attention_suspend,
+                                ),
+                            )
+                        }
+                        TextButton(
+                            onClick = onSuppress,
+                            colors =
+                                TextButtonDefaults.textButtonColors(
+                                    contentColor =
+                                        MaterialTheme.colorScheme.inversePrimary,
+                                ),
+                            modifier =
+                                Modifier.testTag(
+                                    EventsPresentationRefs.attentionAction(
+                                        event.eventRef,
+                                        "suppress",
+                                    ),
+                                ),
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.events_attention_suppress,
+                                ),
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+private fun EventsAttentionLabScenario.preferredTooltipPlacements():
+    List<VexTooltipPlacement> =
+    when (preferredPlacement) {
+        EventsAttentionLabPlacement.ABOVE ->
+            listOf(
+                VexTooltipPlacement.ABOVE,
+                VexTooltipPlacement.BELOW,
+                VexTooltipPlacement.END,
+                VexTooltipPlacement.START,
+            )
+
+        EventsAttentionLabPlacement.BELOW ->
+            listOf(
+                VexTooltipPlacement.BELOW,
+                VexTooltipPlacement.ABOVE,
+                VexTooltipPlacement.END,
+                VexTooltipPlacement.START,
+            )
+    }
 
 /**
  * Empty/default screen preview.
@@ -473,6 +693,8 @@ private fun EventsScreenPreview() {
             repository = context.repositories.events,
             attentionPreferences =
                 context.repositories.eventsAttention,
+            attentionLab =
+                context.repositories.eventsAttentionLab,
         )
     }
 }
@@ -498,6 +720,8 @@ private fun EventsAttentionPreview() {
             repository = context.repositories.events,
             attentionPreferences =
                 context.repositories.eventsAttention,
+            attentionLab =
+                context.repositories.eventsAttentionLab,
         )
     }
 }

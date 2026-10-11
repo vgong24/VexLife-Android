@@ -13,7 +13,8 @@ class EventsAttentionPreferenceRepositoryTest {
 
         preferences.acknowledge("event.a")
         preferences.defer("event.b")
-        preferences.suppress("event.c")
+        preferences.suspend("event.c")
+        preferences.suppress("event.d")
 
         assertEquals(
             EventsAttentionDisposition.ACKNOWLEDGED,
@@ -28,9 +29,27 @@ class EventsAttentionPreferenceRepositoryTest {
                 .getValue("event.b"),
         )
         assertEquals(
+            EventsAttentionDisposition.SUSPENDED,
+            preferences.current
+                .dispositionByEventRef
+                .getValue("event.c"),
+        )
+        assertEquals(
             EventsAttentionDisposition.SUPPRESSED,
             preferences.current
                 .dispositionByEventRef
+                .getValue("event.d"),
+        )
+        assertEquals(
+            1L,
+            preferences.current
+                .deferredOrderByEventRef
+                .getValue("event.b"),
+        )
+        assertEquals(
+            2L,
+            preferences.current
+                .suspendedOrderByEventRef
                 .getValue("event.c"),
         )
 
@@ -39,6 +58,11 @@ class EventsAttentionPreferenceRepositoryTest {
         assertFalse(
             preferences.current
                 .dispositionByEventRef
+                .containsKey("event.b"),
+        )
+        assertFalse(
+            preferences.current
+                .deferredOrderByEventRef
                 .containsKey("event.b"),
         )
 

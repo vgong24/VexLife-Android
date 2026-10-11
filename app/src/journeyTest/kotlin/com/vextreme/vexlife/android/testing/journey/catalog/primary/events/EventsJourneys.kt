@@ -18,6 +18,8 @@ object EventsJourneys : VexJourneyShard {
         "event.journey.external.call.002"
     private const val MapRef =
         "event.journey.external.map.003"
+    private const val MediaRef =
+        "event.journey.external.media.004"
 
     private val fixtureEvents =
         listOf(
@@ -45,10 +47,19 @@ object EventsJourneys : VexJourneyShard {
                 detail = "External map-like information arrived outside Events.",
                 occurredAtEpochMillis = 3_000L,
             ),
+            VexExternalEvent(
+                eventRef = MediaRef,
+                sourceRef = SourceRef,
+                kind = VexExternalEventKind.MEDIA,
+                title = "Journey media update",
+                detail = "External media-like information arrived outside Events.",
+                occurredAtEpochMillis = 4_000L,
+            ),
         )
 
     private fun externalSnapshotSignal(
         revision: Int,
+        eventCount: Int = revision,
     ): VexJourneySignal =
         journeySignal(
             signalRef =
@@ -59,7 +70,7 @@ object EventsJourneys : VexJourneyShard {
                 VexExternalEventSourceSnapshot(
                     sourceRef = SourceRef,
                     sourceRevision = revision.toLong(),
-                    events = fixtureEvents.take(revision),
+                    events = fixtureEvents.take(eventCount),
                 ),
             )
         }
@@ -89,8 +100,15 @@ object EventsJourneys : VexJourneyShard {
             )
 
             tap(AppShell.Elements.Home)
-            signal(externalSnapshotSignal(2))
+            signal(
+                externalSnapshotSignal(
+                    revision = 2,
+                    eventCount = 4,
+                ),
+            )
             tap(AppShell.Elements.Events)
+
+            // LATER moves Call out of the current queue and into the next sequence.
             tapDynamic(
                 dynamicElement(
                     EventsPresentationRefs.attentionAction(
@@ -100,14 +118,42 @@ object EventsJourneys : VexJourneyShard {
                 ),
             )
 
-            tap(AppShell.Elements.Home)
-            signal(externalSnapshotSignal(3))
-            tap(AppShell.Elements.Events)
+            // SUSPEND keeps Map active but puts it behind unsuspended current-queue work.
             tapDynamic(
                 dynamicElement(
                     EventsPresentationRefs.attentionAction(
                         MapRef,
+                        "suspend",
+                    ),
+                ),
+            )
+
+            // MEDIA is now the remaining normal current-queue item.
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        MediaRef,
                         "suppress",
+                    ),
+                ),
+            )
+
+            // Suspended Map returns before the deferred next-sequence Call.
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        MapRef,
+                        "acknowledge",
+                    ),
+                ),
+            )
+
+            // Current queue drained: deferred Call becomes the next-sequence candidate.
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        CallRef,
+                        "acknowledge",
                     ),
                 ),
             )

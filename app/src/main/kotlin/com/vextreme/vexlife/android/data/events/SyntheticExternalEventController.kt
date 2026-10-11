@@ -39,6 +39,8 @@ class SyntheticExternalEventController(
         synchronized(lock) {
             if (job != null) return
 
+            source.setTimedEmissionEnabled(true)
+
             val launched =
                 scope.launch {
                     source.runForever()
@@ -58,6 +60,7 @@ class SyntheticExternalEventController(
 
     fun stop() {
         synchronized(lock) {
+            source.setTimedEmissionEnabled(false)
             job?.cancel()
         }
     }
@@ -77,7 +80,11 @@ class SyntheticExternalEventController(
         source.removeOldest()
 
     fun resetCurrent(): VexExternalEventSourceSnapshot =
-        source.resetCurrent()
+        synchronized(lock) {
+            source.setTimedEmissionEnabled(false)
+            job?.cancel()
+            source.resetCurrent()
+        }
 }
 
 // [VXG RealForever]

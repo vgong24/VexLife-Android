@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * - one stable semantic ref per item becomes the Compose lazy-list key;
  * - callers may supply [contentType] so Compose only reuses item compositions across compatible
  *   row shapes;
+ * - an optional [requestedVisibleItemRef] lets a scenario or feature bring one stable item into the
+ *   viewport without exposing visual list position as product identity;
  * - the list itself has one stable semantic ref/test tag;
  * - current visible item refs are projected as a Set for relationships such as anchored attention;
  * - item meaning, actions, row layout, repositories, ordering policy, and presentation eligibility
@@ -46,6 +48,7 @@ fun <Item> VexStableLazyColumn(
     items: List<Item>,
     itemRef: (Item) -> String,
     contentType: (Item) -> Any? = { null },
+    requestedVisibleItemRef: String? = null,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     verticalArrangement: Arrangement.Vertical =
@@ -75,6 +78,25 @@ fun <Item> VexStableLazyColumn(
      * rows every few seconds; restarting this collector for every ref-set change can expose a brief
      * pre/post-layout visibility gap and blink an otherwise-stable anchored candidate.
      */
+    LaunchedEffect(
+        listState,
+        requestedVisibleItemRef,
+        refs,
+    ) {
+        val requested =
+            requestedVisibleItemRef
+                ?: return@LaunchedEffect
+
+        val index =
+            items.indexOfFirst { item ->
+                itemRef(item) == requested
+            }
+
+        if (index >= 0) {
+            listState.animateScrollToItem(index)
+        }
+    }
+
     LaunchedEffect(listState) {
         snapshotFlow {
             listState.layoutInfo.visibleItemsInfo

@@ -34,6 +34,7 @@ class SyntheticExternalEventSource(
     }
 
     private val lock = Any()
+    private var timedEmissionEnabled = false
     private var sourceRevision = 0L
     private var eventOrdinal = 0L
     private var templateCursor = 0
@@ -42,38 +43,58 @@ class SyntheticExternalEventSource(
     suspend fun runForever() {
         while (true) {
             delay(intervalMillis)
-            emitNext()
+
+            val snapshot =
+                synchronized(lock) {
+                    if (!timedEmissionEnabled) {
+                        return
+                    }
+
+                    nextSnapshotLocked()
+                }
+
+            publish(snapshot)
+        }
+    }
+
+    fun setTimedEmissionEnabled(enabled: Boolean) {
+        synchronized(lock) {
+            timedEmissionEnabled = enabled
         }
     }
 
     fun emitNext(): VexExternalEventSourceSnapshot =
         publish(
             synchronized(lock) {
-                sourceRevision += 1L
-                eventOrdinal += 1L
-
-                val template =
-                    templates[
-                        templateCursor % templates.size
-                    ]
-                templateCursor += 1
-
-                emitted +=
-                    VexExternalEvent(
-                        eventRef =
-                            "event.synthetic.external." +
-                                eventOrdinal.toString().padStart(4, '0'),
-                        sourceRef = SOURCE_REF,
-                        kind = template.kind,
-                        title = template.title,
-                        detail = template.detail,
-                        occurredAtEpochMillis = clock(),
-                    )
-
-                trimToBoundLocked()
-                snapshotLocked()
+                nextSnapshotLocked()
             },
         )
+
+    private fun nextSnapshotLocked(): VexExternalEventSourceSnapshot {
+        sourceRevision += 1L
+        eventOrdinal += 1L
+
+        val template =
+            templates[
+                templateCursor % templates.size
+            ]
+        templateCursor += 1
+
+        emitted +=
+            VexExternalEvent(
+                eventRef =
+                    "event.synthetic.external." +
+                        eventOrdinal.toString().padStart(4, '0'),
+                sourceRef = SOURCE_REF,
+                kind = template.kind,
+                title = template.title,
+                detail = template.detail,
+                occurredAtEpochMillis = clock(),
+            )
+
+        trimToBoundLocked()
+        return snapshotLocked()
+    }
 
     fun emitBurst(
         count: Int = DEFAULT_BURST_COUNT,

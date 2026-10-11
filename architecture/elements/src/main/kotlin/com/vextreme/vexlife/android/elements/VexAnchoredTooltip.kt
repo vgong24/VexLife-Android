@@ -1,9 +1,12 @@
 package com.vextreme.vexlife.android.elements
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
@@ -227,6 +230,7 @@ fun resolveVexAnchoredTooltip(
 
 private class VexAnchoredTooltipPositionProvider(
     private val marginPx: Int,
+    private val preferred: List<VexTooltipPlacement>,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -240,6 +244,7 @@ private class VexAnchoredTooltipPositionProvider(
             popupSize = popupContentSize,
             layoutDirection = layoutDirection,
             marginPx = marginPx,
+            preferred = preferred,
         ).offset
 }
 
@@ -247,6 +252,13 @@ private class VexAnchoredTooltipPositionProvider(
 fun VexAnchoredTooltip(
     presentationRef: String,
     onDismissRequest: () -> Unit,
+    preferredPlacements: List<VexTooltipPlacement> =
+        listOf(
+            VexTooltipPlacement.BELOW,
+            VexTooltipPlacement.ABOVE,
+            VexTooltipPlacement.END,
+            VexTooltipPlacement.START,
+        ),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     require(presentationRef.isNotBlank()) {
@@ -259,10 +271,18 @@ fun VexAnchoredTooltip(
         with(density) {
             12.dp.roundToPx()
         }
+    require(preferredPlacements.isNotEmpty()) {
+        "tooltip preferredPlacements must not be empty"
+    }
+
     val provider =
-        remember(marginPx) {
+        remember(
+            marginPx,
+            preferredPlacements,
+        ) {
             VexAnchoredTooltipPositionProvider(
                 marginPx = marginPx,
+                preferred = preferredPlacements,
             )
         }
 
@@ -283,6 +303,7 @@ fun VexAnchoredTooltip(
             modifier =
                 Modifier
                     .widthIn(max = 336.dp)
+                    .heightIn(max = 520.dp)
                     .testTag(presentationRef),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.inverseSurface,
@@ -296,7 +317,10 @@ fun VexAnchoredTooltip(
             shadowElevation = 12.dp,
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier =
+                    Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
                 verticalArrangement =
                     Arrangement.spacedBy(8.dp),
                 content = content,
