@@ -256,6 +256,44 @@ class VexNavigationSessionTest {
     }
 
     @Test
+    fun offRouteReroutePreservesTravelMode() {
+        val session =
+            VexNavigationSession()
+        val walkingRoute =
+            routeResult.copy(
+                travelMode =
+                    VexMapsTravelMode.WALK,
+            )
+
+        session.prepare(
+            walkingRoute,
+        )
+        session.start()
+
+        session.acceptLocation(
+            sample =
+                VexNavigationLocationSample(
+                    sampleRef =
+                        "walking.off.route",
+                    latitude = 34.02,
+                    longitude = -117.98,
+                    accuracyMeters = 5f,
+                    elapsedRealtimeMillis =
+                        1_000L,
+                ),
+            nowElapsedRealtimeMillis =
+                1_050L,
+        )
+
+        assertEquals(
+            VexMapsTravelMode.WALK,
+            session.current
+                .pendingReroute
+                ?.travelMode,
+        )
+    }
+
+    @Test
     fun activeRouteReplacementResetsOldRouteProgress() {
         val session =
             VexNavigationSession()

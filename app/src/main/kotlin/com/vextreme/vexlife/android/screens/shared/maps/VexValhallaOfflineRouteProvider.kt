@@ -16,12 +16,22 @@ import org.json.JSONObject
  * Coordinates are inputs to the routing adapter. The returned route is immediately translated into
  * the provider-independent [VexNavigationRoute] owned by VM-02.
  */
+enum class VexMapsTravelMode(
+    val valhallaCosting: String,
+) {
+    DRIVE("auto"),
+    WALK("pedestrian"),
+    BICYCLE("bicycle"),
+}
+
 data class VexOfflineRouteRequest(
     val routeRef: String,
     val routeRevision: Long,
     val origin: VexMapCoordinate,
     val destination: VexMapCoordinate,
     val destinationLabel: String,
+    val travelMode: VexMapsTravelMode =
+        VexMapsTravelMode.DRIVE,
 ) {
     init {
         require(routeRef.isNotBlank()) {
@@ -107,6 +117,8 @@ class VexValhallaOfflineRouteProvider(
                             request.routeRevision,
                         destinationLabel =
                             request.destinationLabel,
+                        travelMode =
+                            request.travelMode,
                     )
             }
         }
@@ -125,7 +137,10 @@ private fun VexOfflineRouteRequest.toValhallaJson():
 
     return JSONObject()
         .put("locations", locations)
-        .put("costing", "auto")
+        .put(
+            "costing",
+            travelMode.valhallaCosting,
+        )
         .put("units", "kilometers")
         .put("directions_type", "instructions")
         .put("format", "json")

@@ -35,6 +35,7 @@ data class VexNavigationRerouteRequest(
     val origin: VexMapCoordinate,
     val destination: VexMapCoordinate,
     val destinationLabel: String,
+    val travelMode: VexMapsTravelMode,
 )
 
 data class VexNavigationSessionState(
@@ -287,6 +288,9 @@ class VexNavigationSession(
                                     currentRoute
                                         .route
                                         .destinationLabel,
+                                travelMode =
+                                    currentRoute
+                                        .travelMode,
                             )
                         } else {
                             state.pendingReroute
@@ -508,6 +512,8 @@ internal object VexMapsNavigationProcess {
                                 request.destination,
                             destinationLabel =
                                 request.destinationLabel,
+                            travelMode =
+                                request.travelMode,
                         ),
                 )
 

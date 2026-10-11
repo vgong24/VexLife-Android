@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -170,6 +171,12 @@ internal fun VexMapsMapSurface(
         remember {
             mutableStateOf<VexMapsPlanningState>(
                 VexMapsPlanningState.Idle,
+            )
+        }
+    var travelMode by
+        remember {
+            mutableStateOf(
+                VexMapsTravelMode.DRIVE,
             )
         }
 
@@ -592,8 +599,15 @@ internal fun VexMapsMapSurface(
                     placeSearchQuery,
                 placeSearchState =
                     placeSearchState,
+                travelMode =
+                    travelMode,
                 planningState =
                     planningState,
+                onTravelModeSelected = { selected ->
+                    travelMode = selected
+                    planningState =
+                        VexMapsPlanningState.Idle
+                },
                 onPlaceSearchQueryChange = { query ->
                     placeSearchQuery = query
                     if (
@@ -794,6 +808,8 @@ internal fun VexMapsMapSurface(
                                                         R.string
                                                             .vexmaps_route_destination_label,
                                                     ),
+                                            travelMode =
+                                                travelMode,
                                         ),
                                 )
                         }.onSuccess { route ->
@@ -986,7 +1002,9 @@ private fun VexMapsRoutePlannerCard(
     placeSearchPack: VexMapsPlaceSearchPack?,
     placeSearchQuery: String,
     placeSearchState: VexMapsPlaceSearchState,
+    travelMode: VexMapsTravelMode,
     planningState: VexMapsPlanningState,
+    onTravelModeSelected: (VexMapsTravelMode) -> Unit,
     onPlaceSearchQueryChange: (String) -> Unit,
     onImportPlaceSearch: () -> Unit,
     onSearchPlaces: () -> Unit,
@@ -1316,6 +1334,57 @@ private fun VexMapsRoutePlannerCard(
             }
 
             if (regionPack != null) {
+                Text(
+                    text =
+                        stringResource(
+                            R.string
+                                .vexmaps_route_mode,
+                        ),
+                    style =
+                        MaterialTheme
+                            .typography
+                            .bodyMedium,
+                )
+
+                Row(
+                    horizontalArrangement =
+                        Arrangement.spacedBy(6.dp),
+                ) {
+                    VexMapsTravelMode
+                        .entries
+                        .forEach { mode ->
+                            if (mode == travelMode) {
+                                Button(
+                                    onClick = {
+                                        onTravelModeSelected(
+                                            mode,
+                                        )
+                                    },
+                                ) {
+                                    Text(
+                                        stringResource(
+                                            mode.labelRes,
+                                        ),
+                                    )
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = {
+                                        onTravelModeSelected(
+                                            mode,
+                                        )
+                                    },
+                                ) {
+                                    Text(
+                                        stringResource(
+                                            mode.labelRes,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                }
+
                 Text(
                     text =
                         stringResource(
@@ -1691,6 +1760,19 @@ internal fun resolveVexMapsRouteOrigin(
     deviceOrigin: VexMapCoordinate?,
 ): VexMapCoordinate? =
     selectedOrigin ?: deviceOrigin
+
+private val VexMapsTravelMode.labelRes: Int
+    get() =
+        when (this) {
+            VexMapsTravelMode.DRIVE ->
+                R.string.vexmaps_route_mode_drive
+
+            VexMapsTravelMode.WALK ->
+                R.string.vexmaps_route_mode_walk
+
+            VexMapsTravelMode.BICYCLE ->
+                R.string.vexmaps_route_mode_bicycle
+        }
 
 internal enum class VexMapsMapSelectionTarget {
     ORIGIN,

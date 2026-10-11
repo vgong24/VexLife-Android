@@ -25,6 +25,8 @@ data class VexRouteGeometryPoint(
 data class VexOfflineRouteResult(
     val route: VexNavigationRoute,
     val geometry: List<VexRouteGeometryPoint>,
+    val travelMode: VexMapsTravelMode =
+        VexMapsTravelMode.DRIVE,
 ) {
     init {
         require(geometry.size >= 2) {
@@ -145,6 +147,8 @@ internal object VexValhallaRouteTranslator {
             routeRef: String,
             routeRevision: Long,
             destinationLabel: String,
+            travelMode: VexMapsTravelMode =
+                VexMapsTravelMode.DRIVE,
         ): VexOfflineRouteResult {
         val combinedGeometry =
             mutableListOf<VexRouteGeometryPoint>()
@@ -268,6 +272,8 @@ internal object VexValhallaRouteTranslator {
                 ),
             geometry =
                 combinedGeometry.toList(),
+            travelMode =
+                travelMode,
         )
     }
 }
