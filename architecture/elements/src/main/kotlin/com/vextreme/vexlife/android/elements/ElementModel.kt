@@ -99,6 +99,17 @@ sealed interface ElementIntent {
         val container: SwappableContainerElement,
         val child: UIElement,
     ) : ElementIntent
+    /**
+     * Semantic interaction whose effect is intentionally owned by the current custom renderer.
+     *
+     * VexRuntime still validates/logs the registered element, but does not dispatch an app action.
+     * Use this when the concrete effect needs renderer-scoped context (for example the current
+     * MediaController or currently selected dynamic row) and the narrow feature/repository/service
+     * owner is already explicit there. Stable app actions with construction-time owners still use
+     * Invoke/AppActionRegistrations; LocalEffect is not a generic escape hatch.
+     */
+    data object LocalEffect : ElementIntent
+
     data class Invoke(val action: ActionKey) : ElementIntent
     data class Sequence(val intents: List<ElementIntent>) : ElementIntent {
         init {
@@ -131,6 +142,19 @@ enum class ElementIcon {
     Save,
     Help,
     Person,
+    Play,
+    PlayNext,
+    Queue,
+    Download,
+    RemoveDownload,
+    Previous,
+    PlayPause,
+    Pause,
+    Next,
+    Shuffle,
+    Repeat,
+    Search,
+    Music,
 }
 
 /**
@@ -338,6 +362,7 @@ fun swapTo(
         child = child,
     )
 
+fun localEffect(): ElementIntent = ElementIntent.LocalEffect
 fun invoke(action: ActionKey): ElementIntent = ElementIntent.Invoke(action)
 
 infix fun ElementIntent.then(next: ElementIntent): ElementIntent {

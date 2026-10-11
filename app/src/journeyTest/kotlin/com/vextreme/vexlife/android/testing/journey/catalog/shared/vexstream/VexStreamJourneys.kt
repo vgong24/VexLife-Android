@@ -7,17 +7,42 @@ import com.vextreme.vexlife.android.shell.AppShell
 object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
 
-    val placeholder = vexJourney(
-        id = "placeholder",
-        title = "VexStream Music placeholder",
+    val connectRefreshForget = vexJourney(
+        id = "connect-refresh-forget",
+        title = "VexStream connect, library-first controls, and confirmed forget",
     ) {
         start(HomeScreen)
+        tap(HomeScreen.ConnectVexStreamMusic)
+        tap(VexStreamMusicScreen.FindNearby)
+        tap(VexStreamMusicScreen.ConfirmPairingCode)
+        tap(AppShell.Elements.Back)
         tap(HomeScreen.VexStreamMusic)
-        tap(VexStreamMusicScreen.PlaceholderAction)
+        tap(VexStreamMusicScreen.RefreshCatalog)
+        tap(VexStreamMusicScreen.SearchLibrary)
+        type(
+            VexStreamMusicScreen.SearchQuery,
+            "Vex",
+        )
+        tap(VexStreamMusicScreen.CloseSearch)
+        tap(VexStreamMusicScreen.AlbumsTab)
+        tap(VexStreamMusicScreen.ArtistsTab)
+        tap(VexStreamMusicScreen.PlaylistsTab)
+        tap(VexStreamMusicScreen.DownloadsTab)
+        tap(VexStreamMusicScreen.SongsTab)
+        tap(VexStreamMusicScreen.ShowQueue)
+        tap(VexStreamMusicScreen.CloseQueue)
+        tap(VexStreamMusicScreen.ManageConnection)
+        tap(VexStreamMusicScreen.RefreshCatalog)
+        tap(VexStreamMusicScreen.CloseConnectionMenu)
+        tap(VexStreamMusicScreen.ManageConnection)
+        tap(VexStreamMusicScreen.RequestForgetPaired)
+        tap(VexStreamMusicScreen.CancelForgetPaired)
+        tap(VexStreamMusicScreen.RequestForgetPaired)
+        tap(VexStreamMusicScreen.ForgetPaired)
         tap(AppShell.Elements.Back)
     }
 
     override val journeys = listOf(
-        placeholder,
+        connectRefreshForget,
     )
 }

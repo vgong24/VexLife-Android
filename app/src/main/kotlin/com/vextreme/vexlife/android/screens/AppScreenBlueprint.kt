@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
+import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
@@ -49,6 +50,15 @@ abstract class AppScreenBlueprint(
         context: ScreenActionContext,
     ): AppActionRegistrations =
         AppActionRegistrations.Empty
+
+    /**
+     * Optional registered actions realized by the shared app toolbar while this Screen is current.
+     *
+     * The Screen still owns each element/intent. AppFrame only renders the supplied registered
+     * controls so feature chrome does not become a second feature-specific toolbar implementation.
+     */
+    internal open val toolbarActions: List<ButtonElement>
+        get() = emptyList()
 
     /**
      * Android realization bridge for this registered Screen.

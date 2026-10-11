@@ -48,7 +48,7 @@ object Journeys {
     }
 
     object vexStream : JourneyDomain() {
-        val placeholder = JourneyPath()
+        val connectRefreshForget = JourneyPath()
     }
 
     object talkToVex : JourneyDomain() {
@@ -116,8 +116,8 @@ private val journeyDomainBindings: List<JourneyDomainBinding> =
             domain = Journeys.vexStream,
             shard = VexStreamJourneys,
             paths = mapOf(
-                Journeys.vexStream.placeholder to
-                    VexStreamJourneys.placeholder,
+                Journeys.vexStream.connectRefreshForget to
+                    VexStreamJourneys.connectRefreshForget,
             ),
         ),
         JourneyDomainBinding(

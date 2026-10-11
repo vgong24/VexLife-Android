@@ -69,28 +69,51 @@ class AppBlueprintTest {
     fun ordinaryScreenLayoutProducesNestedInspectableIdentity() {
         val root = registry.screenRoot(HomeScreen).element
         val children = registry.childrenOf(root)
-        val preview = children.single {
-            it.elementId == "element.home.body.preview"
+        val vexStream = children.single {
+            it.elementId == HomeScreen.VexStreamSection.elementId
         }
         val systems = children.single {
-            it.elementId == "element.home.body.systems"
+            it.elementId == HomeScreen.SystemsSection.elementId
         }
 
         assertEquals("element.home.body", root.elementId)
         assertEquals(
             setOf(
-                "element.home.body.preview.title",
-                "element.home.body.preview.message",
+                HomeScreen.ConnectVexStreamMusic.elementId,
+                HomeScreen.VexStreamMusic.elementId,
             ),
-            registry.childrenOf(preview).map { it.elementId }.toSet(),
+            registry.childrenOf(vexStream).map { it.elementId }.toSet(),
         )
         assertEquals(
             setOf(
-                "element.home.body.systems.title",
-                HomeScreen.VexStreamMusic.elementId,
                 HomeScreen.TalkToVex.elementId,
             ),
             registry.childrenOf(systems).map { it.elementId }.toSet(),
+        )
+    }
+
+    @Test
+    fun vexStreamToolbarActionsRemainOwnedByTheRegisteredScreen() {
+        assertEquals(
+            listOf(
+                VexStreamMusicScreen.SearchLibrary.elementId,
+                VexStreamMusicScreen.ManageConnection.elementId,
+            ),
+            VexStreamMusicScreen.toolbarActions.map {
+                it.elementId
+            },
+        )
+        assertSame(
+            VexStreamMusicScreen,
+            registry.ownerScreenOf(
+                VexStreamMusicScreen.SearchLibrary,
+            ),
+        )
+        assertSame(
+            VexStreamMusicScreen,
+            registry.ownerScreenOf(
+                VexStreamMusicScreen.ManageConnection,
+            ),
         )
     }
 

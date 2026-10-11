@@ -21,6 +21,7 @@ import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRe
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
+import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.TextFieldElement
@@ -45,6 +46,7 @@ class VexTestEngine(
     private val repositories = AppRepositories(
         logHistory = logHistory,
         userProfile = InMemoryUserProfileRepository(),
+        vexStream = InMemoryVexStreamMusicRepository(),
         events = RelayEventsRepository(),
         eventsAttention = RelayEventsAttentionPreferenceRepository(),
         eventsAttentionLab = RelayEventsAttentionLabRepository(),

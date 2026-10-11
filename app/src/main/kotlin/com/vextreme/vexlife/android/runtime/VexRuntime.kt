@@ -550,6 +550,8 @@ class VexRuntime(
                     child = intent.child,
                 )
             }
+            ElementIntent.LocalEffect -> Unit
+
             is ElementIntent.Invoke -> appActions.dispatch(
                 AppActionRequest(
                     action = intent.action,

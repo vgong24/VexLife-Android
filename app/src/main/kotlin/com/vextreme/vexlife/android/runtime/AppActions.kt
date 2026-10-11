@@ -24,6 +24,9 @@ object AppActions {
     val NextAttentionLabScenario = ActionKey("action.events.attention-lab.next-scenario")
     val GallerySample = ActionKey("action.gallery.sample")
     val SaveUserProfile = ActionKey("action.user-profile.save")
-    val VexStreamMusicPlaceholder = ActionKey("action.vexstream-music.placeholder")
+    val FindNearbyVexStream = ActionKey("action.vexstream-music.connection.find")
+    val ConfirmVexStreamPairingCode = ActionKey("action.vexstream-music.connection.confirm-code")
+    val ForgetPairedVexStream = ActionKey("action.vexstream-music.connection.forget")
+    val RefreshVexStreamCatalog = ActionKey("action.vexstream-music.catalog.refresh")
     val TalkToVexPlaceholder = ActionKey("action.talk-to-vex.placeholder")
 }

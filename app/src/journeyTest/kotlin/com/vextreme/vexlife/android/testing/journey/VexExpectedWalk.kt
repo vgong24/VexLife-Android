@@ -204,6 +204,7 @@ class VexExpectedWalk : VexJourneyScope {
                 }
             }
             is ElementIntent.SwapTo -> Unit
+            ElementIntent.LocalEffect -> Unit
             is ElementIntent.Invoke -> Unit
             is ElementIntent.Sequence -> intent.intents.forEach(::applyIntent)
         }
@@ -238,10 +239,10 @@ class VexExpectedWalk : VexJourneyScope {
     private fun applyBack() {
         when {
             openPresentation.isNotEmpty() ->
-                openPresentation.removeLast()
+                openPresentation.removeAt(openPresentation.lastIndex)
 
             screenStack.isNotEmpty() ->
-                screenStack.removeLast()
+                screenStack.removeAt(screenStack.lastIndex)
 
             primarySelection.screenId != HomeScreen.screenId -> {
                 primarySelection = HomeScreen

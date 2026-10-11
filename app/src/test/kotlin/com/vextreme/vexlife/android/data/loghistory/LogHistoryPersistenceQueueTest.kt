@@ -4,7 +4,7 @@ import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -27,7 +27,7 @@ class LogHistoryPersistenceQueueTest {
 
         val queue = LogHistoryPersistenceQueue(
             repository = repository,
-            scope = this,
+            scope = backgroundScope,
             dispatcher = dispatcher,
             capacity = 8,
         )
@@ -36,7 +36,7 @@ class LogHistoryPersistenceQueueTest {
         queue.clear()
         queue.record(afterReset)
 
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf(afterReset), repository.records.value)
     }

@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.AppActions
@@ -172,6 +173,114 @@ class VexRuntimeNavigationTest {
         assertTrue(
             text.contains(
                 UserProfileScreen.DisplayName.elementId,
+            ),
+        )
+    }
+
+    @Test
+    fun rendererLocalEffectIsValidatedAndLoggedWithoutAppActionDispatch() {
+        val logger = VexLogger()
+        val runtime = runtime(
+            logger = logger,
+        )
+
+        runtime.activate(
+            HomeScreen.VexStreamMusic,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.TogglePlayback,
+        )
+
+        assertEquals(
+            VexStreamMusicScreen.screenId,
+            runtime.currentScreen.screenId,
+        )
+        assertTrue(
+            logger.renderHistory().contains(
+                "PlayPause Clicked",
+            ),
+        )
+    }
+
+    @Test
+    fun vexStreamForgetRequiresManagementAndConfirmationBeforeTheEffect() {
+        val actions =
+            AppActionRegistrations.of(
+                appAction(
+                    action = AppActions.ForgetPairedVexStream,
+                    ownerRef = VexStreamMusicScreen.screenId,
+                ) {
+                    // This test owns only the runtime/presentation sequence.
+                },
+            )
+        val runtime =
+            runtime(
+                appActions = actions,
+            )
+
+        runtime.activate(
+            HomeScreen.VexStreamMusic,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.ManageConnection,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.RequestForgetPaired,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.CancelForgetPaired,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.RequestForgetPaired,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.ForgetPaired,
+        )
+
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
             ),
         )
     }

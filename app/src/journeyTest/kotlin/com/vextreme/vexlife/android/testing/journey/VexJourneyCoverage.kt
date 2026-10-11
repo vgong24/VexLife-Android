@@ -90,6 +90,9 @@ class VexJourneyCoverageRecorder : VexJourneyScope {
             is ElementIntent.SwapTo ->
                 Unit
 
+            ElementIntent.LocalEffect ->
+                Unit
+
             is ElementIntent.Invoke ->
                 Unit
 

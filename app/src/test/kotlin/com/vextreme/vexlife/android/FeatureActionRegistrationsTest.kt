@@ -6,6 +6,7 @@ import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRe
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
+import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -24,6 +25,7 @@ class FeatureActionRegistrationsTest {
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
                 userProfile = InMemoryUserProfileRepository(),
+                vexStream = InMemoryVexStreamMusicRepository(),
                 events = RelayEventsRepository(),
                 eventsAttention = RelayEventsAttentionPreferenceRepository(),
                 eventsAttentionLab = RelayEventsAttentionLabRepository(),
@@ -36,9 +38,13 @@ class FeatureActionRegistrationsTest {
 
         assertEquals(
             VexStreamMusicScreen.screenId,
-            registrations[VexStreamMusicScreen.PlaceholderAction]
+            registrations[VexStreamMusicScreen.RefreshCatalog]
                 .single()
                 .ownerRef,
+        )
+        assertTrue(
+            registrations[VexStreamMusicScreen.TogglePlayback]
+                .isEmpty(),
         )
         assertEquals(
             TalkToVexScreen.screenId,
