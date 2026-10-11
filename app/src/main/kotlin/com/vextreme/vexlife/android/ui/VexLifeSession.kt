@@ -13,12 +13,8 @@ import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreens
+import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
-import com.vextreme.vexlife.android.screens.shared.debug.debugMenuActionRegistrations
-import com.vextreme.vexlife.android.screens.shared.gallery.galleryActionRegistrations
-import com.vextreme.vexlife.android.screens.shared.profile.userProfileActionRegistrations
-import com.vextreme.vexlife.android.screens.shared.vex.talkToVexActionRegistrations
-import com.vextreme.vexlife.android.screens.shared.vexstream.vexStreamMusicActionRegistrations
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -52,19 +48,14 @@ internal class VexLifeSession(
     )
 
     val appActions: AppActionRegistrations =
-        AppActionRegistrations.combine(
-            debugMenuActionRegistrations(
-                toggleDarkMode = ::toggleDarkMode,
+        AppScreens.appActionRegistrations(
+            ScreenActionContext(
+                repositories = repositories,
+                scope = scope,
                 logger = logger,
                 logPersistence = logPersistence,
+                toggleDarkMode = ::toggleDarkMode,
             ),
-            galleryActionRegistrations(),
-            userProfileActionRegistrations(
-                repository = repositories.userProfile,
-                scope = scope,
-            ),
-            vexStreamMusicActionRegistrations(),
-            talkToVexActionRegistrations(),
         )
 
     val runtime = VexRuntime(
