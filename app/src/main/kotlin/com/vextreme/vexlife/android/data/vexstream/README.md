@@ -471,58 +471,99 @@ LIBRARY_DENSITY != SEMANTIC_IDENTITY_LOSS
 
 ### Off-home route successor
 
-The same-Wi-Fi pairing remains the bootstrap and preferred direct route. The remote successor does not
-replace MediaSession, the VexStream repository, or verified offline storage.
+The same-Wi-Fi pairing remains the bootstrap and preferred local route. The Home PC is also the real
+remote VexStream host: when that already-paired PC is directly reachable from the Internet, Android
+should connect to it rather than sending music through a hosted relay.
 
 ```text
 VexStreamNetworkDataSource / repository request
   -> remembered paired connection
 
-  try pinned LAN HTTPS first
+  1. try pinned LAN HTTPS first
 
-  if LAN transport is unreachable
-  AND remote pairing material is present
-    -> signed + end-to-end encrypted relay request
-    -> desktop outbound VexStream gateway
-    -> existing desktop mobile HTTPS surface
+  2. if LAN is unreachable
+     AND paired remote identity exists
+     -> try direct public routes advertised by the same paired PC
+     -> pin the exact paired desktop TLS certificate
+     -> send the existing signed + AES-GCM remote envelope
+     -> dedicated desktop /v1/direct/request ingress
 
-  if no network route
-    -> verified local media remains independently usable
+  3. if direct routes are unreachable
+     AND a VexRelay URL is present
+     -> content-blind relay fallback
+     -> desktop outbound VexStream gateway
+
+  4. if no network route
+     -> verified local media remains independently usable
 ```
 
 The long-lived Android device signing private key is generated in Android Keystore. Local pairing
-sends only its P-256 public key. Existing v1 pairings opportunistically call the bearer-authorized
-remote-upgrade endpoint while the desktop is directly reachable, so remote enrollment does not
-require a mandatory Forget/re-pair cycle.
+sends only its P-256 public key. The desktop also provides its stable remote-gateway public key. Both
+direct and relay transports reuse that one cryptographic relationship rather than creating separate
+authorization systems.
 
-Remote request confidentiality is separate from relay TLS. Android creates an ephemeral P-256 ECDH
-key for each request, derives an AES-GCM request key with the desktop's paired remote-gateway public
-key, and encrypts the existing VexStream bearer plus the bounded catalog/media request. The relay can
-verify the paired device signature but cannot decrypt that inner payload.
+For every off-LAN request Android:
 
-Media fallback is Range-based and bounded rather than materializing an entire song in one relay
-response.
+```text
+forms a fresh requestRef
+forms an ephemeral P-256 ECDH key
+derives an AES-GCM request key with the paired desktop gateway public key
+encrypts:
+  VexStream bearer
+  method/path
+  bounded headers
+signs the outer routing envelope with the Android Keystore device key
+```
 
-The connection store accepts the previous local-pairing schema for compatibility; newly saved
-connections use v2 and may additionally retain:
+A direct public route therefore does **not** send the bearer in plaintext merely because the TLS
+endpoint is on the Home PC. The direct TLS connection also pins the exact desktop certificate learned
+during local approval; public IP/port is reachability, not identity.
+
+The public desktop ingress is intentionally narrower than the LAN pairing surface. It admits only the
+encrypted remote request envelope and the desktop later permits only:
+
+```text
+GET /v1/catalog
+GET/HEAD /v1/media/<trackRef>
+```
+
+It does not expose pairing, desktop UI/admin APIs, filesystem paths, uploads, arbitrary URLs, shell
+execution, or general Vex computer control.
+
+Existing pairings opportunistically call the bearer-authorized remote-upgrade endpoint while the
+desktop is directly reachable. That refreshes changing direct routes without forcing a Forget/re-pair
+cycle. A route refresh failure never invalidates the proven same-LAN relationship.
+
+The connection store accepts v1 and v2 pairing records for compatibility; newly saved connections use
+v3 and may additionally retain:
 
 ```text
 remoteHomeRef
 remoteGatewayPublicKey
+remoteDirectBaseUrls[]
 remoteRelayBaseUrl
 ```
 
-Those fields are reachability inputs, not a claim that Android minted canonical Home/Safety
-membership or authority.
+`remoteDirectBaseUrls[]` are bounded HTTPS reachability candidates learned from the paired desktop,
+not independently trusted hosts. Android still requires the paired certificate pin and the signed /
+encrypted remote protocol on every direct route.
 
-The remote route becomes executable only when a real HTTPS relay URL has been deployed and supplied
-by the desktop during local pairing/upgrade. Source formation alone does not claim off-home lived
-reachability.
+Media off-LAN remains Range-based and bounded rather than materializing an entire song in one remote
+response.
 
 ```text
 LAN_FIRST
-REMOTE_SECOND
+DIRECT_HOME_PC_SECOND
+VEXRELAY_FALLBACK_THIRD
 VERIFIED_LOCAL_COPY_ALWAYS_INDEPENDENT
+
+PUBLIC_ROUTE != DEVICE_IDENTITY
 PAIRED_DEVICE_SIGNATURE != GENERAL_HOME_AUTHORITY
 REMOTE_VEXSTREAM_READ != GENERAL_PC_REMOTE_CONTROL
+VEXRELAY != REQUIRED_MEDIA_HOST
 ```
+
+This remains an app-scoped VexStream remote-access candidate. It does not claim to replace accepted
+future Home/Safety membership, capability leases, revocation generations, or shared VexHome gateway
+semantics.
+
