@@ -12,6 +12,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
+import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
 /**
@@ -29,6 +30,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 @Composable
 fun AppFrame(
     runtime: VexRuntime,
+    toolbarActions: List<ButtonElement> = emptyList(),
     content: @Composable () -> Unit,
 ) {
     // One resolved Back plan drives both Android native Back and the toolbar affordance below.
@@ -56,6 +58,7 @@ fun AppFrame(
                     currentScreen = runtime.currentScreen,
                     runtime = runtime,
                     showBack = nextBack?.showToolbarBack == true,
+                    actions = toolbarActions,
                 )
             },
             bottomBar = {
