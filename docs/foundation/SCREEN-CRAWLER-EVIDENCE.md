@@ -100,36 +100,20 @@ app/src/androidTest/kotlin/com/vextreme/vexlife/android/testing/crawler/
   VexScreenCrawlerInstrumentedTest.kt
 ~~~
 
-That same runnable class contains:
-1. where/how to right-click-run the crawler in Android Studio;
-2. the `enabled` flag;
-3. typed Screen/shard selection examples;
-4. locale/font/capture configuration;
-5. physical-device/emulator behavior;
-6. macOS/Linux + Windows PowerShell `adb pull` commands;
-7. evidence-path/manifest explanation.
+Directly right-clicking that crawler class/method runs the configured crawler. A normal whole-suite
+Android run does not expand the optional crawler evidence matrix.
 
-There is no separate human run-config class.
-
-The intended workflow is:
-
-~~~text
-open VexScreenCrawlerInstrumentedTest.kt
--> enabled = true
--> optionally uncomment ONE typed selection line
--> enable/disable locale/font rows
--> right-click Run
--> copy screenshots with the documented adb pull command
-~~~
-
-While `enabled = false`, the dedicated crawler test emits one explicit green no-op status and returns
-without creating crawler cases or screenshot work. Disabled optional evidence therefore cannot make
-ordinary Android test runs red or block development.
+That same runnable file contains:
+- exact typed journey/Screen/shard selection examples;
+- locale/font/capture configuration;
+- physical-device/emulator behavior;
+- macOS/Linux + Windows collection commands;
+- Logcat debugging guidance.
 
 The lower-level planner/config/evidence classes are framework internals. A developer only needs them
-when changing how ScreenCrawler itself works, not when choosing what to crawl.
+when changing how ScreenCrawler itself works.
 
-Screenshot retrieval is also repo-owned:
+Screenshot retrieval is repo-owned:
 
 ~~~text
 macOS/Linux:
@@ -139,9 +123,14 @@ Windows PowerShell:
   powershell -ExecutionPolicy Bypass -File .\tools\pull-vex-screen-crawler.ps1
 ~~~
 
-The scripts derive the applicationId, use the sole connected adb target when unambiguous, verify the
-artifact root, and pull evidence to `./vex-screen-crawler`. Multiple-device ambiguity is surfaced
-instead of guessed.
+Instrumentation evidence is transferred through AndroidX PlatformTestStorage into the Gradle test
+output tree. The helper collects returned evidence from `app/build` into `./vex-screen-crawler`.
+
+For live execution/capture debugging:
+
+~~~text
+tag:VexScreenCrawler
+~~~
 
 ## Kotlin identity / source-of-truth rules
 
@@ -285,34 +274,105 @@ those conditions once admitted.
 
 ## Evidence artifacts
 
-The Android evidence observer captures full-device PNGs with UiAutomation and appends one JSONL
-manifest entry for each screenshot.
-
-Current metadata includes:
+The evidence layout is an invariant designed for bulk handoff / ZIP delivery:
 
 ~~~text
-sourceRef
+vex-screen-crawler/
+  <sourceRef>/
+    <locale>/
+      <fontProfile>/
+        screenshots/
+          <all PNGs for this configuration>
+        cases/
+          <scenarioRef>/
+            manifest.jsonl
+            run-started.txt
+            run-complete.txt
+~~~
+
+The useful delivery unit is therefore one configuration folder:
+
+~~~text
+<locale>/<fontProfile>/
+~~~
+
+A translator/reviewer can receive that folder (or ZIP it) without manually regrouping journey
+directories after delivery.
+
+### Stable evidence identity
+
+Each executable case has three distinct references:
+
+~~~text
+scenarioRef
+  semantic scenario only
+  example: shared.user-profile/form-submit
+  STABLE across locale/font configurations
+
+configurationRef
+  locale/font only
+  example: zh/large-1-45x
+
 caseRef
-shardId
-journeyId
+  concrete executable scenario + configuration
+~~~
+
+Each screenshot also gets an `evidenceRef` formed from stable semantic coordinates:
+
+~~~text
+scenarioRef
++ screenId
++ step index
++ step kind
++ semanticRef
+~~~
+
+`evidenceRef` deliberately excludes locale/font. Therefore the same screenshot condition can be
+matched directly across configurations.
+
+Filename pattern:
+
+~~~text
+<stable-evidence-prefix>__<locale>__<font>.png
+~~~
+
+Example family:
+
+~~~text
+shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__en__normal-1x.png
+shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__zh__normal-1x.png
+shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__en__large-1-45x.png
+shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__zh__large-1-45x.png
+~~~
+
+The common prefix tells reviewers these images represent the same semantic condition before opening
+them.
+
+Manifest metadata includes:
+
+~~~text
+scenarioRef
+evidenceRef
+configurationRef
+caseRef
+sourceRef
+shardId / journeyId
 localeId / localeTag
 fontId / fontScale
 capturePolicy
 screenId
 stepIndex / stepKind / semanticRef
 deviceModel / sdkInt
-screenshot filename
+configuration-relative screenshot path
+screenshot bytes
 screenshot SHA-256
 ~~~
 
-This improves traceability; it is not by itself regulatory compliance.
+Artifacts are written through AndroidX PlatformTestStorage so Android instrumentation storage
+isolation does not break host retrieval. The Gradle/test infrastructure returns the outputs; the repo
+helper then assembles the configuration-first delivery tree in `./vex-screen-crawler`.
 
-Artifacts are written through AndroidX PlatformTestStorage under a `vex-screen-crawler/` relative
-output tree. Modern instrumented tests run inside a storage sandbox, so an app-visible /storage path
-must not be assumed to be adb-shell-visible after the test process exits.
-
-The AndroidX test/Gradle infrastructure owns transfer back to the host. The repo helper then collects
-returned crawler output from `app/build` into `./vex-screen-crawler`.
+This improves traceability and handoff quality; it is not by itself regulatory compliance.
 
 ## Lifecycle / leak boundary
 
