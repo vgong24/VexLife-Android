@@ -146,6 +146,7 @@
     <string name="vexmaps_location_approximate">Approximate location is available, but precise location is required to start turn-by-turn navigation.</string>
     <string name="vexmaps_location_disabled">Device location is turned off. VexMaps still works for browsing.</string>
     <string name="vexmaps_location_unavailable">A current location fix is not available yet.</string>
+    <string name="vexmaps_location_inaccurate">Current location is visible, but the fix is not accurate enough to start navigation yet.</string>
     <string name="vexmaps_location_error">VexMaps could not read the current location.</string>
     <string name="vexmaps_navigation_channel">VexMaps navigation</string>
     <string name="vexmaps_navigation_notification_title">Navigating to %1$s</string>
