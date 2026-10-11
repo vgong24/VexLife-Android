@@ -335,6 +335,8 @@ class VexRuntime(
         activate(
             element = element,
             submission = null,
+            logAction = "Clicked",
+            detailsJson = null,
         )
     }
 
@@ -342,8 +344,8 @@ class VexRuntime(
      * Submit-style activation for forms.
      *
      * The interaction is logged exactly once at the semantic action boundary (for example Save).
-     * [submission] is forwarded to the invoked app action but its field values are not written to
-     * VexLogger.
+     * [submission] is forwarded to the invoked app action and that immutable submitted snapshot is
+     * serialized as diagnostic JSON. Draft edits before Submit never become log records.
      */
     fun submit(
         element: ActionElement,
@@ -352,12 +354,16 @@ class VexRuntime(
         activate(
             element = element,
             submission = submission,
+            logAction = "Submitted",
+            detailsJson = submission.toDiagnosticJson(),
         )
     }
 
     private fun activate(
         element: ActionElement,
         submission: FormSubmission?,
+        logAction: String,
+        detailsJson: String?,
     ) {
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
@@ -372,6 +378,8 @@ class VexRuntime(
             element = uiElement,
             screenBefore = before,
             screenAfter = target,
+            action = logAction,
+            detailsJson = detailsJson,
         )
 
         applyIntent(
@@ -515,3 +523,44 @@ class VexRuntime(
         }
     }
 }
+
+/**
+ * Deterministic JSON representation of the immutable submitted snapshot.
+ *
+ * Stable element IDs remain the keys so persisted diagnostics can be reverse-parsed without relying
+ * on localized labels. Only explicit submit boundaries call this; draft edits never reach it.
+ */
+private fun FormSubmission.toDiagnosticJson(): String =
+    valuesByElementId
+        .toSortedMap()
+        .entries
+        .joinToString(
+            prefix = "{\n",
+            postfix = "\n}",
+            separator = ",\n",
+        ) { (key, value) ->
+            "  \"${key.jsonEscape()}\": \"${value.jsonEscape()}\""
+        }
+
+private fun String.jsonEscape(): String =
+    buildString(length) {
+        this@jsonEscape.forEach { ch ->
+            when (ch) {
+                '\\' -> append("\\\\")
+                '"' -> append("\\\"")
+                '\b' -> append("\\b")
+                '\u000C' -> append("\\f")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                else -> {
+                    if (ch.code < 0x20) {
+                        append("\\u")
+                        append(ch.code.toString(16).padStart(4, '0'))
+                    } else {
+                        append(ch)
+                    }
+                }
+            }
+        }
+    }

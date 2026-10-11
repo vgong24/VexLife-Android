@@ -19,6 +19,7 @@ class LogHistoryEntityTest {
             screenBeforeId = "screen.debug-menu",
             screenAfterId = null,
             section = 2,
+            detailsJson = """{"field":"value"}""",
         )
 
         val entity = record.toEntity(sessionRef = "session-a")

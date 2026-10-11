@@ -55,6 +55,9 @@ data class LogHistoryEntity(
 
     @ColumnInfo(name = "section")
     val section: Long,
+
+    @ColumnInfo(name = "details_json")
+    val detailsJson: String?,
 )
 
 internal fun VexLogRecord.toEntity(
@@ -71,6 +74,7 @@ internal fun VexLogRecord.toEntity(
         screenBeforeId = screenBeforeId,
         screenAfterId = screenAfterId,
         section = section,
+        detailsJson = detailsJson,
     )
 
 internal fun LogHistoryEntity.toRecord(): VexLogRecord =
@@ -84,4 +88,5 @@ internal fun LogHistoryEntity.toRecord(): VexLogRecord =
         screenBeforeId = screenBeforeId,
         screenAfterId = screenAfterId,
         section = section,
+        detailsJson = detailsJson,
     )

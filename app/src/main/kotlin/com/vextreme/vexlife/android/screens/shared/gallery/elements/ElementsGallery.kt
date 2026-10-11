@@ -18,4 +18,6 @@ fun ElementsGallery(
         modifier = Modifier.fillMaxSize(),
         selectedChild = runtime.presentation::selected,
     )
+
+    GalleryModalSamples(runtime)
 }

@@ -320,6 +320,7 @@ fun VexElementTree(
 
     when (element) {
         is DialogElement -> Unit
+        is ModalBottomSheetElement -> Unit
 
         is SwappableContainerElement -> {
             val selected = selectedChild(element)

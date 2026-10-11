@@ -19,7 +19,7 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
-import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistoryDialog
+import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistorySheet
 import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -31,7 +31,7 @@ object DebugMenuScreen : ScreenBlueprint(
     screenKey = "debug-menu",
     titleRes = R.string.debug_menu_title,
 ) {
-    val LogDialog = dialogRef("log-history.dialog")
+    val LogSheet = modalBottomSheetRef("log-history.sheet")
 
     val DarkMode = toggleRef(
         id = "body.dark-mode",
@@ -44,7 +44,7 @@ object DebugMenuScreen : ScreenBlueprint(
         labelRes = R.string.log_history_show,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.History,
-        intent = open(LogDialog),
+        intent = open(LogSheet),
     )
 
     val ResetLog = buttonRef(
@@ -56,11 +56,11 @@ object DebugMenuScreen : ScreenBlueprint(
     )
 
     val CloseLog = buttonRef(
-        id = "body.log-history.dialog.close",
+        id = "body.log-history.sheet.close",
         labelRes = R.string.close,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Close,
-        intent = close(LogDialog),
+        intent = close(LogSheet),
     )
 
     override val content = layout {
@@ -84,7 +84,7 @@ object DebugMenuScreen : ScreenBlueprint(
                 )
             }
 
-            dialog(LogDialog) {
+            modalBottomSheet(LogSheet) {
                 button(CloseLog)
             }
         }
@@ -106,8 +106,8 @@ fun DebugMenuScreenContent(
         selectedChild = runtime.presentation::selected,
     )
 
-    if (runtime.presentation.isOpen(DebugMenuScreen.LogDialog)) {
-        LogHistoryDialog(
+    if (runtime.presentation.isOpen(DebugMenuScreen.LogSheet)) {
+        LogHistorySheet(
             runtime = runtime,
             repository = logHistoryRepository,
         )
@@ -142,7 +142,7 @@ internal fun debugMenuActionRegistrations(
     )
 
 /**
- * Normal Debug screen plus an edge preview with persisted history and the dialog open.
+ * Normal Debug screen plus an edge preview with persisted history and the sheet open.
  */
 @VexScreenPreviews
 @Composable
@@ -171,7 +171,7 @@ private fun DebugMenuHistoryPreview() {
             )
         },
         previewSetup = {
-            open(DebugMenuScreen.LogDialog)
+            open(DebugMenuScreen.LogSheet)
         },
     ) { context ->
         DebugMenuScreenContent(
@@ -186,7 +186,7 @@ private fun DebugMenuHistoryPreview() {
 /**
  * Preview data belongs beside DebugMenuScreen because it describes a meaningful state of THIS screen.
  * The shared preview layer only knows how to host repositories/runtime; it does not know Debug's
- * dialog or history scenario.
+ * sheet/history scenario.
  */
 private fun debugHistoryPreviewFixture(): LogHistoryFixture =
     LogHistoryFixture.build {

@@ -13,8 +13,9 @@ import kotlinx.coroutines.launch
  * Non-blocking bridge from synchronous VexLogger calls into a suspend repository.
  *
  * This class deliberately does NOT create/own its own application scope. The caller supplies the
- * lifecycle owner. Today VexLifeApp supplies its composition scope; VexAppScope can take over that
- * ownership later without changing the repository or logger contract.
+ * lifecycle owner. Production now supplies VexLifeViewModel.viewModelScope so diagnostic work
+ * survives Activity configuration recreation. A future VexAppScope may take over longer-lived
+ * semantic operation ownership without changing the repository or logger contract.
  *
  * Diagnostic persistence is non-authoritative:
  * - append never blocks the product action that produced the log;

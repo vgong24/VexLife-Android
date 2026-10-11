@@ -89,6 +89,7 @@ class LogHistoryFixtureBuilder internal constructor(
         from: ScreenElement,
         to: ScreenElement? = null,
         action: String = "Clicked",
+        detailsJson: String? = null,
     ) {
         appendRecord(
             kind = VexLogKind.Interaction,
@@ -96,6 +97,22 @@ class LogHistoryFixtureBuilder internal constructor(
             action = action,
             screenBeforeId = from.screenId,
             screenAfterId = to?.screenId,
+            detailsJson = detailsJson,
+        )
+    }
+
+    fun submit(
+        element: UIElement,
+        from: ScreenElement,
+        to: ScreenElement? = null,
+        detailsJson: String,
+    ) {
+        click(
+            element = element,
+            from = from,
+            to = to,
+            action = "Submitted",
+            detailsJson = detailsJson,
         )
     }
 
@@ -127,6 +144,7 @@ class LogHistoryFixtureBuilder internal constructor(
         action: String,
         screenBeforeId: String?,
         screenAfterId: String?,
+        detailsJson: String? = null,
     ) {
         val previous = records.lastOrNull()
         val duration = previous?.timestamp?.let {
@@ -143,6 +161,7 @@ class LogHistoryFixtureBuilder internal constructor(
             screenBeforeId = screenBeforeId,
             screenAfterId = screenAfterId,
             section = section,
+            detailsJson = detailsJson,
         )
     }
 }

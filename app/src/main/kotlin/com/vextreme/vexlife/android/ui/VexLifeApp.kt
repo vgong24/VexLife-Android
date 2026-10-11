@@ -13,40 +13,25 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.data.AppRepositoryFactory
-import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.elements.VexElementTree
-import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.screens.AppScreens
-import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreenContent
-import com.vextreme.vexlife.android.screens.shared.debug.debugMenuActionRegistrations
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreenContent
-import com.vextreme.vexlife.android.screens.shared.gallery.galleryActionRegistrations
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreenContent
-import com.vextreme.vexlife.android.screens.shared.profile.userProfileActionRegistrations
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreenContent
-import com.vextreme.vexlife.android.screens.shared.vex.talkToVexActionRegistrations
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreenContent
-import com.vextreme.vexlife.android.screens.shared.vexstream.vexStreamMusicActionRegistrations
-import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -66,73 +51,37 @@ import com.vextreme.vexlife.android.shell.AppFrame
  */
 @Composable
 fun VexLifeApp() {
-    val appContext = LocalContext.current.applicationContext
-    val repositories = remember(appContext) {
-        AppRepositoryFactory.production(appContext)
-    }
-
-    VexLifeApp(repositories = repositories)
+    val sessionViewModel: VexLifeViewModel = viewModel()
+    VexLifeApp(session = sessionViewModel.session)
 }
 
 /**
- * Injectable composition root used by previews/tests and, later, alternate repository environments.
+ * Injectable composition root used by previews/tests and alternate repository environments.
  *
- * Production calls the zero-argument wrapper above. Tooling can supply InMemory repositories without
- * teaching production repositories how to mock themselves or requiring Android Studio Preview to
- * open the real Room database.
+ * Production enters through [VexLifeViewModel], whose session survives configuration recreation.
+ * Tooling may supply in-memory repositories and receives a composition-scoped session instead.
  */
 @Composable
 internal fun VexLifeApp(
     repositories: AppRepositories,
 ) {
-    var darkTheme by rememberSaveable { mutableStateOf(true) }
-
-    val appScope = rememberCoroutineScope()
-    val logPersistence = remember(repositories.logHistory, appScope) {
-        LogHistoryPersistenceQueue(
-            repository = repositories.logHistory,
-            scope = appScope,
+    val scope = rememberCoroutineScope()
+    val session = remember(repositories, scope) {
+        VexLifeSession(
+            repositories = repositories,
+            scope = scope,
         )
     }
-    val logger = remember(logPersistence) {
-        VexLogger(onRecord = logPersistence::record)
-    }
-    val registry = remember { AppScreens.registry }
 
-    /*
-     * Feature effects stay beside the Screens that declare them. This root only composes immutable
-     * registration groups. AppActionRegistrations owns indexing/duplicate validation once and is
-     * inspectable by ActionKey or ActionElement.
-     */
-    val actionRegistrations = AppActionRegistrations.combine(
-        debugMenuActionRegistrations(
-            toggleDarkMode = { darkTheme = !darkTheme },
-            logger = logger,
-            logPersistence = logPersistence,
-        ),
-        galleryActionRegistrations(),
-        userProfileActionRegistrations(
-            repository = repositories.userProfile,
-            scope = appScope,
-        ),
-        vexStreamMusicActionRegistrations(),
-        talkToVexActionRegistrations(),
-    )
-    val currentActionRegistrations by rememberUpdatedState(actionRegistrations)
+    VexLifeApp(session = session)
+}
 
-    // One runtime instance owns the current navigation/presentation state for this app composition.
-    // In a debugger, inspect this variable first; runtime.currentScreen is the active semantic screen.
-    val runtime = remember(registry, logger) {
-        VexRuntime(
-            registry = registry,
-            logger = logger,
-            initialScreen = HomeScreen,
-            primaryScreens = AppScreens.primary,
-            currentAppActions = {
-                currentActionRegistrations
-            },
-        )
-    }
+@Composable
+private fun VexLifeApp(
+    session: VexLifeSession,
+) {
+    val runtime = session.runtime
+    val darkTheme = session.darkTheme
 
     LaunchedEffect(runtime) {
         runtime.appOpened()
@@ -141,8 +90,8 @@ internal fun VexLifeApp(
     VexLifeTheme(darkTheme = darkTheme) {
         VexLifeScaffold(
             runtime = runtime,
-            logHistoryRepository = repositories.logHistory,
-            userProfileRepository = repositories.userProfile,
+            logHistoryRepository = session.repositories.logHistory,
+            userProfileRepository = session.repositories.userProfile,
             darkTheme = darkTheme,
         )
     }
@@ -158,7 +107,7 @@ private fun VexLifeScaffold(
     val primaryScreens = AppScreens.primary
     val pagerState = rememberPagerState(
         initialPage = primaryScreens.indexOfFirst {
-            it.screenId == runtime.currentScreen.screenId
+            it.screenId == runtime.navigation.primarySelection.screenId
         }.coerceAtLeast(0),
         pageCount = { primaryScreens.size },
     )

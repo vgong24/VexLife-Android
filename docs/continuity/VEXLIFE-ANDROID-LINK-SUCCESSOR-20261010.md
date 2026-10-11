@@ -161,11 +161,16 @@ PresentationState.selectedByContainer
 NavigationTrail
   local layered navigation while the local view is mounted
 
-VexLogger
-  bounded in-memory readable interaction history
+VexLifeSession / VexLifeViewModel
+  configuration-lifetime owner for runtime/navigation/presentation/logger/dark theme
+  survives Activity recreation/rotation
+  does NOT claim process-death restoration
 
-rememberSaveable darkTheme
-  small saveable Compose value, not yet a real durable preference
+VexLogger
+  bounded in-memory current-session diagnostic history
+
+Room LogHistoryRepository
+  durable recent history across process restart
 ~~~
 
 Do not silently turn one of these into persistence simply because future service work needs memory.
@@ -175,7 +180,7 @@ Do not silently turn one of these into persistence simply because future service
 Victor explicitly wants the database/repository architecture next, before returning to the broader
 Relay/AppScope nervous-system work.
 
-Current source candidate: draft PR #9, `[Data][DRAFT] Repository boundary + Room-backed Log History`.
+Current source candidate: draft PR #9, `[Data/UI][DRAFT] Repository foundation + User Profile / Screen integration`.
 Ground its live head rather than trusting a chat-copied hash.
 
 The first consumer is Debug -> Log History, with User Profile added as the second repository proof:
@@ -186,7 +191,7 @@ VexLogger record
 -> LogHistoryRepository
 -> RoomLogHistoryRepository
 -> Room database
--> Log History dialog observes repository
+-> Log History draggable bottom sheet observes repository
 -> Reset clears current + persisted history
 ~~~
 
@@ -197,14 +202,15 @@ The current candidate for this work should preserve:
 - @Transaction only where multiple statements form one invariant;
 - UserProfile kept separate from future linked-system/QR/VexHome connection ownership;
 - User Profile UI reachable from the shared FAB, proving repository -> Room -> Flow -> UI update;
-- form draft edits remain local/unlogged; Save alone creates the semantic FormSubmission boundary;
+- form draft edits remain local/unlogged; Save alone creates one Submitted FormSubmission snapshot
+  and may persist its structured JSON diagnostic detail;
 - Room entity/DAO types behind the repository;
 - bounded local retention;
 - storage failure unable to change product-action semantics;
 - chain-buildable domain fixtures that seed InMemory repositories for previews/unit tests;
 - the same fixture shape remaining usable if a future repository combines local + backend sources;
-- app-owned coroutine scope only as the temporary persistence owner, with VexAppScope expected to
-  take over lifecycle ownership once admitted.
+- VexLifeViewModel.viewModelScope as the current Android configuration-lifetime owner, with
+  VexAppScope still eligible to take over longer semantic operation ownership once admitted.
 
 Finish/prove this data slice before broad Relay/AppScope porting.
 
@@ -311,15 +317,18 @@ Do not erase the valid UI effects while changing nervous-system layers.
 Finish/prove the data-repository candidate first:
 
 ~~~text
-Room/KSP Sync + compile
--> LogHistory transaction + UserProfile update fixture/in-memory/unit tests
--> Room v1 -> v2 migration + repository integration proof
+Room/KSP/Lifecycle Sync + compile
+-> LogHistory screen-scope protocol + UserProfile update fixture/in-memory/unit tests
+-> Room v1 -> v2 -> v3 migration + repository integration proof
 -> :app:verifySourceAlignment
 -> Android Studio Screen previews render
 -> physical-device User Profile: edit name -> Save -> persisted name visibly updates
 -> relaunch -> persisted name remains
 -> physical-device Log History persistence
+-> rotate while Debug/Log History sheet is open -> same Screen + sheet + session remains
+-> verify Screen-scoped readable history + Submitted JSON detail
 -> Reset clears persistence
+-> Gallery preserves both AlertDialog + ModalBottomSheet samples
 -> dark/light toggle keeps status + native navigation bars legible/themed
 -> launcher shows the Vex mark
 -> clean source state

@@ -62,7 +62,7 @@ Transient presentation is shallower than a pushed screen:
 ~~~text
 Events
   -> Debug
-       -> LogHistoryDialog
+       -> LogHistorySheet
 ~~~
 
 Back resolves from one runtime plan, from the shallowest visible layer outward:
@@ -178,8 +178,12 @@ VexLogger.history
   bounded recent records (currently 256)
 ~~~
 
-These are in-memory runtime/Compose state unless a source explicitly says otherwise. Do not treat
-them as durable DataStore/database preference or process-restoration contracts.
+VexRuntime / navigation / presentation / logger session / dark-theme selection are now owned by a
+VexLifeSession retained in VexLifeViewModel, so Activity configuration recreation (for example
+rotation) keeps the same semantic Screen and open modal state.
+
+That is NOT a process-death restoration claim. Screen-local Compose-only state must still explicitly
+choose rememberSaveable or another rightful longer-lived owner when it needs that behavior.
 
 ## Form interactions
 
@@ -187,8 +191,9 @@ Editable fields keep draft values as presentation state. Keystrokes are not sema
 and are not logged individually.
 
 A submit control such as User Profile Save creates one immutable `FormSubmission` keyed by stable
-TextFieldElement identities. VexRuntime logs the Save interaction once, forwards the submission to
-the app-action owner, and does not include raw submitted field values in the readable diagnostic log.
+TextFieldElement identities. VexRuntime logs one `Submitted` interaction, forwards the submission to
+the app-action owner, and serializes that submitted snapshot once as JSON diagnostic detail. Draft
+keystrokes remain absent.
 
 ## Home navigation vs feature effects
 
@@ -228,6 +233,23 @@ the element's declared Invoke/Sequence intent, so no second element-to-action ma
 REGISTRATION_EXISTS != ACTION_IS_AVAILABLE_OR_AUTHORIZED. Registration proves wiring only; future
 Relay/capability/service state must decide whether an action is currently usable.
 
+## Modal presentation samples
+
+Debug Log History now uses a draggable Material `ModalBottomSheet` while keeping its semantic
+open/closed state in VexRuntime.presentation.
+
+Gallery Elements preserves both modal realization patterns as inspectable samples:
+
+~~~text
+DialogElement
+  -> AlertDialog sample
+
+ModalBottomSheetElement
+  -> draggable ModalBottomSheet sample
+~~~
+
+Both use the same local Open/Close ownership rules; the difference is Android presentation style.
+
 ## Android system surface
 
 VexLifeTheme draws the app background across the full edge-to-edge window while AppFrame applies
@@ -240,8 +262,22 @@ introducing a separate app identity.
 
 ## Logging
 
-Navigation intent is observed against the current runtime screen before navigation state changes.
-System Back is also recorded when it changes presentation/screen state.
+Navigation intent is observed against the current runtime Screen before navigation state changes.
+System Back is also recorded when it changes presentation/Screen state.
+
+Readable Log History groups events into Screen scopes instead of repeating the Screen per event:
+
+~~~text
+---ScreenName---
+[timestamp]
+Element Clicked
+...
+[Duration: x seconds]
+---NextScreen---
+~~~
+
+Screen duration is derived from semantic entry -> transition time. Submitted form snapshots may add a
+JSON block beneath the Submitted event.
 
 Platform lifecycle callback order remains separate from semantic navigation order.
 

@@ -16,6 +16,12 @@ enum class VexLogKind {
     Gesture,
 }
 
+/**
+ * Canonical readable diagnostic fact.
+ *
+ * [detailsJson] is optional structured detail captured only at an explicit semantic boundary such
+ * as form Submit. Draft field edits are never emitted as records.
+ */
 data class VexLogRecord(
     val sequence: Long,
     val timestamp: Instant,
@@ -26,7 +32,25 @@ data class VexLogRecord(
     val screenBeforeId: String?,
     val screenAfterId: String?,
     val section: Long,
+    val detailsJson: String? = null,
 )
+
+/**
+ * Derived readable scope: one semantic Screen visit and the events that happened inside it.
+ *
+ * Screen duration is computed from entry -> transition time, not by summing per-event gaps.
+ */
+data class VexLogScreenScope(
+    val screenId: String,
+    val enteredAt: Instant,
+    val exitedAt: Instant?,
+    val records: List<VexLogRecord>,
+) {
+    val durationSeconds: Long?
+        get() = exitedAt?.let { exit ->
+            Duration.between(enteredAt, exit).seconds.coerceAtLeast(0L)
+        }
+}
 
 class VexLogger(
     private val clock: () -> Instant = { Instant.now() },
@@ -62,6 +86,7 @@ class VexLogger(
         screenBefore: ScreenElement,
         screenAfter: ScreenElement? = null,
         action: String = "Clicked",
+        detailsJson: String? = null,
     ) {
         append(
             kind = VexLogKind.Interaction,
@@ -69,6 +94,7 @@ class VexLogger(
             action = action,
             screenBeforeId = screenBefore.screenId,
             screenAfterId = screenAfter?.screenId,
+            detailsJson = detailsJson,
         )
     }
 
@@ -124,6 +150,7 @@ class VexLogger(
         action: String,
         screenBeforeId: String?,
         screenAfterId: String?,
+        detailsJson: String? = null,
     ) {
         val record = synchronized(lock) {
             val now = clock()
@@ -140,19 +167,13 @@ class VexLogger(
                 screenBeforeId = screenBeforeId,
                 screenAfterId = screenAfterId,
                 section = currentSection,
+                detailsJson = detailsJson,
             ).also {
                 _history.value = (_history.value + it).takeLast(maxRecords)
                 lastTimestamp = now
             }
         }
 
-        /*
-         * Persistence/export is a projection of the accepted diagnostic record, not the owner of it.
-         * Invoke observers after the local record is committed and outside the lock. A broken sink
-         * must never make the user action that produced this diagnostic appear to fail.
-         *
-         * Callers should keep this callback non-blocking (the app uses a bounded persistence queue).
-         */
         try {
             onRecord(record)
         } catch (_: Throwable) {
@@ -161,6 +182,91 @@ class VexLogger(
     }
 
     companion object {
+        /**
+         * Groups canonical records into semantic Screen visits.
+         *
+         * A transition record belongs to its source Screen. The destination scope begins at that
+         * same timestamp. A later AppOpened starts a new session scope rather than pretending the
+         * app spent the offline interval on the previous Screen.
+         */
+        fun screenScopes(records: List<VexLogRecord>): List<VexLogScreenScope> {
+            if (records.isEmpty()) return emptyList()
+
+            val result = mutableListOf<VexLogScreenScope>()
+            var currentScreenId: String? = null
+            var enteredAt: Instant? = null
+            var currentRecords = mutableListOf<VexLogRecord>()
+
+            fun finish(exitedAt: Instant?) {
+                val screenId = currentScreenId ?: return
+                val entry = enteredAt ?: return
+                result += VexLogScreenScope(
+                    screenId = screenId,
+                    enteredAt = entry,
+                    exitedAt = exitedAt,
+                    records = currentRecords.toList(),
+                )
+                currentScreenId = null
+                enteredAt = null
+                currentRecords = mutableListOf()
+            }
+
+            fun begin(screenId: String, timestamp: Instant) {
+                currentScreenId = screenId
+                enteredAt = timestamp
+                currentRecords = mutableListOf()
+            }
+
+            records.forEach { record ->
+                val eventScreenId = when {
+                    record.kind == VexLogKind.AppOpened ->
+                        record.screenAfterId ?: record.screenBeforeId
+
+                    record.screenBeforeId != null ->
+                        record.screenBeforeId
+
+                    else ->
+                        record.screenAfterId
+                } ?: "screen.unknown"
+
+                if (record.kind == VexLogKind.AppOpened) {
+                    if (currentScreenId != null) {
+                        // A new app session does not establish when the prior process actually ended.
+                        finish(exitedAt = null)
+                    }
+                    begin(eventScreenId, record.timestamp)
+                    currentRecords += record
+                    return@forEach
+                }
+
+                if (currentScreenId == null) {
+                    begin(eventScreenId, record.timestamp)
+                } else if (currentScreenId != eventScreenId) {
+                    // Handles truncated histories whose first observed record begins mid-session.
+                    finish(exitedAt = record.timestamp)
+                    begin(eventScreenId, record.timestamp)
+                }
+
+                currentRecords += record
+
+                val destination = record.screenAfterId
+                if (
+                    record.screenBeforeId != null &&
+                    destination != null &&
+                    record.screenBeforeId != destination
+                ) {
+                    finish(exitedAt = record.timestamp)
+                    begin(destination, record.timestamp)
+                }
+            }
+
+            if (currentScreenId != null) {
+                finish(exitedAt = null)
+            }
+
+            return result
+        }
+
         fun formatHistory(
             records: List<VexLogRecord>,
             zoneId: ZoneId,
@@ -172,62 +278,41 @@ class VexLogger(
                 .withZone(zoneId)
 
             return buildString {
-                var previousSection: Long? = null
+                screenScopes(records).forEachIndexed { scopeIndex, scope ->
+                    if (scopeIndex > 0) appendLine()
+                    appendLine("---${screenName(scope.screenId)}---")
 
-                records.forEachIndexed { index, record ->
-                    val screenTransition =
-                        record.screenBeforeId != null &&
-                            record.screenAfterId != null &&
-                            record.screenBeforeId != record.screenAfterId
+                    scope.records.forEachIndexed { recordIndex, record ->
+                        if (recordIndex > 0) appendLine()
+                        appendLine("[${formatter.format(record.timestamp)}]")
 
-                    if (
-                        index > 0 &&
-                        (record.section != previousSection || screenTransition)
-                    ) {
-                        appendLine("---")
-                    }
+                        when (record.kind) {
+                            VexLogKind.AppOpened ->
+                                appendLine("App Opened")
 
-                    val duration = record.durationSincePreviousSeconds
-                        ?.let { " | $it sec" }
-                        .orEmpty()
+                            else -> {
+                                val subject = eventName(record.subjectRef)
+                                if (subject.equals(record.action, ignoreCase = true)) {
+                                    appendLine(record.action)
+                                } else {
+                                    appendLine("$subject ${record.action}")
+                                }
 
-                    append("[")
-                    append(formatter.format(record.timestamp))
-                    append(duration)
-                    append("]")
-
-                    when (record.kind) {
-                        VexLogKind.AppOpened -> {
-                            append("[App Opened]")
-                            append("[")
-                            append(screenName(record.screenAfterId))
-                            append(" ScreenAppeared]")
-                        }
-
-                        else -> {
-                            append("[")
-                            append(subjectName(record.subjectRef))
-                            append(" | ")
-                            append(record.action)
-                            append("]")
-
-                            append("[")
-                            if (screenTransition) {
-                                append(screenName(record.screenBeforeId))
-                                append(" ScreenDisappeared -> ")
-                                append(screenName(record.screenAfterId))
-                                append(" ScreenAppeared")
-                            } else {
-                                append(screenName(record.screenBeforeId ?: record.screenAfterId))
+                                record.detailsJson
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?.let { details ->
+                                        appendLine(details)
+                                    }
                             }
-                            append("]")
                         }
                     }
 
-                    if (index < records.lastIndex) appendLine()
-                    previousSection = record.section
+                    scope.durationSeconds?.let { seconds ->
+                        if (scope.records.isNotEmpty()) appendLine()
+                        appendLine("[Duration: $seconds seconds]")
+                    }
                 }
-            }
+            }.trimEnd()
         }
 
         fun screenName(screenId: String?): String {
@@ -235,6 +320,17 @@ class VexLogger(
             val body = screenId.removePrefix("screen.")
             return body.split('.')
                 .joinToString("") { pascal(it) } + "Screen"
+        }
+
+        /**
+         * Compact event label used inside a Screen scope. The full stable ref remains in the record.
+         */
+        fun eventName(ref: String): String {
+            if (ref == "system.back") return "Back"
+            val body = ref
+                .removePrefix("element.")
+                .removePrefix("presentation.")
+            return pascal(body.substringAfterLast('.'))
         }
 
         fun subjectName(ref: String): String {

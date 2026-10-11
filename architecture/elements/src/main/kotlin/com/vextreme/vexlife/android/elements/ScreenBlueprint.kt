@@ -96,6 +96,9 @@ abstract class ScreenBlueprint(
     protected fun dialogRef(id: String): DialogElement =
         DialogElement(elementId(id))
 
+    protected fun modalBottomSheetRef(id: String): ModalBottomSheetElement =
+        ModalBottomSheetElement(elementId(id))
+
     protected fun swappableRef(
         id: String,
         defaultChild: UIElement,
@@ -293,6 +296,20 @@ class ScreenLayoutScope internal constructor(
 
     fun dialog(
         element: DialogElement,
+        block: ScreenLayoutScope.() -> Unit,
+    ) {
+        val scope = ScreenLayoutScope(
+            screen = screen,
+            relativePath = relativeFromElement(element),
+        ).apply(block)
+        placements += ElementPlacement(
+            element = element,
+            children = scope.result(),
+        )
+    }
+
+    fun modalBottomSheet(
+        element: ModalBottomSheetElement,
         block: ScreenLayoutScope.() -> Unit,
     ) {
         val scope = ScreenLayoutScope(

@@ -50,6 +50,8 @@ class AppBlueprintTest {
         assertNull(registry.ownerScreenOf(AppShell.Elements.UserProfile))
         assertSame(DebugMenuScreen, registry.ownerScreenOf(DebugMenuScreen.ResetLog))
         assertSame(GalleryScreen, registry.ownerScreenOf(GalleryScreen.ElementsTab))
+        assertSame(GalleryScreen, registry.ownerScreenOf(GalleryScreen.DialogModalSample))
+        assertSame(GalleryScreen, registry.ownerScreenOf(GalleryScreen.BottomSheetModalSample))
         assertSame(UserProfileScreen, registry.ownerScreenOf(UserProfileScreen.DisplayName))
     }
 

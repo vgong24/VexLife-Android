@@ -14,8 +14,8 @@ import com.vextreme.vexlife.android.data.userprofile.UserProfileEntity
 /**
  * Android-local persistence substrate.
  *
- * Keep entity registration/migrations here. Do not let pages depend on this database directly;
- * pages consume repository contracts. Future backend/network sources can therefore coexist with or
+ * Keep entity registration/migrations here. Do not let Screens depend on this database directly;
+ * Screens consume repository contracts. Future backend/network sources can therefore coexist with or
  * replace local storage policy without changing UI code.
  */
 @Database(
@@ -23,7 +23,7 @@ import com.vextreme.vexlife.android.data.userprofile.UserProfileEntity
         LogHistoryEntity::class,
         UserProfileEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class VexLifeDatabase : RoomDatabase() {
@@ -38,8 +38,8 @@ abstract class VexLifeDatabase : RoomDatabase() {
          * 1. moves Log History to explicit snake_case SQL names without losing existing rows;
          * 2. adds the independent user_profile domain.
          *
-         * New installs create v2 directly. Existing v1 candidate installs upgrade through this
-         * migration, so naming cleanup is treated as real schema evolution rather than cosmetics.
+         * Existing v1 candidate installs upgrade through this migration before later migrations run,
+         * so naming cleanup is treated as real schema evolution rather than cosmetics.
          */
         val migration1To2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -120,6 +120,18 @@ abstract class VexLifeDatabase : RoomDatabase() {
                 )
             }
         }
+
+        /**
+         * v3 persists optional structured diagnostic detail captured at explicit submit boundaries.
+         * Existing rows remain valid with null details.
+         */
+        val migration2To3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE log_history ADD COLUMN details_json TEXT",
+                )
+            }
+        }
     }
 }
 
@@ -142,7 +154,10 @@ object VexLifeDatabaseFactory {
                 VexLifeDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(VexLifeDatabase.migration1To2)
+                .addMigrations(
+                    VexLifeDatabase.migration1To2,
+                    VexLifeDatabase.migration2To3,
+                )
                 .build()
                 .also { instance = it }
         }

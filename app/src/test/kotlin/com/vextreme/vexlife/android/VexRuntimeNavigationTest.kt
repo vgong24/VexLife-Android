@@ -136,7 +136,7 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
-    fun formSubmissionLogsOnlyTheSaveBoundaryAndForwardsTheSnapshot() {
+    fun formSubmissionLogsOneSubmittedSnapshotAndForwardsIt() {
         val logger = VexLogger()
         var request: com.vextreme.vexlife.android.runtime.AppActionRequest? = null
         val actions = AppActionRegistrations.of(
@@ -167,8 +167,13 @@ class VexRuntimeNavigationTest {
         assertEquals(UserProfileScreen.Save.elementId, request?.source?.elementId)
 
         val text = logger.renderHistory()
-        assertTrue(text.contains("UserProfile.Body.Profile.Actions.Save"))
-        assertFalse(text.contains(typedName))
+        assertTrue(text.contains("Save Submitted"))
+        assertTrue(text.contains(typedName))
+        assertTrue(
+            text.contains(
+                UserProfileScreen.DisplayName.elementId,
+            ),
+        )
     }
 
     @Test
@@ -178,13 +183,13 @@ class VexRuntimeNavigationTest {
         runtime.activate(AppShell.Elements.DebugMenu)
         runtime.activate(DebugMenuScreen.ShowLog)
 
-        assertTrue(runtime.presentation.isOpen(DebugMenuScreen.LogDialog))
+        assertTrue(runtime.presentation.isOpen(DebugMenuScreen.LogSheet))
         assertEquals(DebugMenuScreen.screenId, runtime.currentScreen.screenId)
         assertEquals(BackResolution.DismissPresentation, runtime.nextBack)
 
         runtime.goBack(requireNotNull(runtime.nextBack))
 
-        assertFalse(runtime.presentation.isOpen(DebugMenuScreen.LogDialog))
+        assertFalse(runtime.presentation.isOpen(DebugMenuScreen.LogSheet))
         assertEquals(DebugMenuScreen.screenId, runtime.currentScreen.screenId)
 
         runtime.goBack()

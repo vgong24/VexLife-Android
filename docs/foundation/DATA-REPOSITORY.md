@@ -47,7 +47,8 @@ RoomLogHistoryRepository
 LogHistoryDao / LogHistoryEntity
 ~~~
 
-The Debug Log History dialog observes LogHistoryRepository rather than VexLogger's local Compose history.
+The Debug Log History bottom sheet observes LogHistoryRepository rather than VexLogger's local
+Compose history.
 
 ## Laws
 
@@ -121,7 +122,8 @@ Storage keeps:
 - an auto-generated database row ID for global storage order;
 - a generated sessionRef;
 - VexLogRecord.sequence as session-local sequence;
-- timestamp / duration / action / screen context / section.
+- timestamp / duration / action / screen context / section;
+- optional details_json captured only at explicit semantic boundaries such as form Submit.
 
 The database ID is NOT the logger sequence. Logger sequence may restart after Reset or process
 recreation while the persisted database has its own row identity.
@@ -155,9 +157,10 @@ user action
 
 Repository failures are swallowed/counted by the queue and cannot make the product action fail.
 
-The queue deliberately does NOT create an application scope. VexLifeApp currently supplies its
-composition scope. When VexAppScope is admitted, lifecycle ownership should move there without
-changing the repository/logger contract.
+The queue deliberately does NOT create an application scope. Production now supplies
+VexLifeViewModel.viewModelScope through VexLifeSession, so database/log work survives Activity
+configuration recreation. A future VexAppScope may take over longer-lived semantic operation
+ownership without changing the repository/logger contract.
 
 ## Reset
 
@@ -231,9 +234,9 @@ repository
   persists the submitted snapshot
 ~~~
 
-The submitted field values are intentionally not included in VexLogger output by default. The useful
-diagnostic fact is that Save occurred on UserProfileScreen, not the user's raw profile text or the order
-in which they typed it.
+Draft field changes are intentionally absent from VexLogger. At Save/Submit, however, the immutable
+FormSubmission snapshot is serialized once as JSON detail using stable element refs as keys. This
+preserves what was actually submitted without recording typing order.
 
 A form screen may know how to assemble its draft values into FormSubmission. It must not perform the
 repository mutation secretly after calling runtime.activate.
@@ -271,10 +274,12 @@ The current test UI is reachable from the shared FAB menu and shows:
 
 That visible round trip is the first lived proof target for User Profile.
 
-Schema version 2 has an explicit v1 -> v2 migration. It both preserves existing Log History rows
-while moving their physical SQL columns from the original Kotlin-derived camelCase names to explicit
-snake_case names, and adds user_profile. Schema naming changes are therefore treated as migrations,
-not formatting.
+Schema version 3 now has:
+- v1 -> v2: preserve Log History while moving physical SQL columns to explicit snake_case names and
+  add user_profile;
+- v2 -> v3: add nullable details_json for structured submit diagnostics.
+
+Existing rows remain valid with null details. Schema changes are migrations, not formatting.
 
 ## Simplicity bridges without repository sprawl
 
@@ -336,7 +341,8 @@ integration:
   Room DAO + RoomLogHistoryRepository using an in-memory Android database
 
 lived:
-  app action -> logger -> queue -> Room -> Log History dialog
+  app action -> logger -> queue -> Room -> Log History bottom sheet
+  rotate Activity while sheet is open -> same Screen/sheet/session remains
   Reset -> database cleared -> new action appears as fresh history
 ~~~
 

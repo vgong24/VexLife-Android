@@ -60,6 +60,14 @@
     <string name="gallery_sample_button">Button</string>
     <string name="gallery_sample_toggle">Toggle row</string>
     <string name="gallery_sample_fab">FAB</string>
+    <string name="gallery_modal_samples_title">Modal presentation samples</string>
+    <string name="gallery_modal_samples_body">Two local presentation styles using the same open/close ownership rules.</string>
+    <string name="gallery_show_dialog_sample">Show dialog</string>
+    <string name="gallery_show_sheet_sample">Show bottom sheet</string>
+    <string name="gallery_dialog_sample_title">Dialog modal sample</string>
+    <string name="gallery_dialog_sample_body">AlertDialog remains available as a centered blocking modal pattern.</string>
+    <string name="gallery_sheet_sample_title">Bottom sheet modal sample</string>
+    <string name="gallery_sheet_sample_body">ModalBottomSheet is suited to draggable, vertically spacious content and can be dismissed by dragging down.</string>
     <string name="gallery_sample_text">Container and row compose smaller cells without changing their identities.</string>
     <string name="gallery_graph_intro">Registered topology. Open a row to move one layer deeper without flattening the whole app into one map.</string>
 

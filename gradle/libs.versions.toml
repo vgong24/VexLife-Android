@@ -8,6 +8,7 @@ room = "2.8.5"
 ksp = "2.3.12"
 coroutines = "1.11.0"
 core = "1.19.1"
+lifecycle = "2.11.0"
 
 [libraries]
 composeBom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -26,6 +27,8 @@ roomCompiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 roomTesting = { module = "androidx.room:room-testing", version.ref = "room" }
 coroutinesAndroid = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 coreKtx = { module = "androidx.core:core-ktx", version.ref = "core" }
+lifecycleViewModelKtx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+lifecycleViewModelCompose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 coroutinesTest = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]

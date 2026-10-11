@@ -198,8 +198,9 @@ open class TextFieldElement(
  * A screen creates this only when the user chooses a semantic action such as Save. Values are keyed by
  * stable element IDs so the receiving action can address fields without depending on Compose state.
  *
- * Do not log [valuesByElementId] by default; form contents may be personal/sensitive and are not
- * needed to understand that Save occurred.
+ * Draft values are never logged while the form is being edited. At an explicit submit boundary,
+ * VexRuntime may serialize this immutable snapshot as structured diagnostic detail so the submitted
+ * event can be inspected/reverse-parsed without recording keystroke order.
  */
 data class FormSubmission(
     val valuesByElementId: Map<String, String>,
@@ -285,6 +286,18 @@ open class DialogElement(
     elementId: String,
     style: ElementStyleKey = VexElementStyles.RaisedSurface,
 ) : ContainerElement(elementId, "Dialog", style)
+
+/**
+ * Registered Material-style modal bottom sheet identity.
+ *
+ * Like DialogElement, this records semantic ownership/contents while the Screen-specific renderer
+ * decides when to realize the modal. Drag/dismiss behavior is platform presentation, not blueprint
+ * structure.
+ */
+open class ModalBottomSheetElement(
+    elementId: String,
+    style: ElementStyleKey = VexElementStyles.RaisedSurface,
+) : ContainerElement(elementId, "ModalBottomSheet", style)
 
 /**
  * Container with one selected child at a time, such as Gallery Elements/AppGraph.

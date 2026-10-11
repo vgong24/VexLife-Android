@@ -26,7 +26,9 @@ import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.ScrollableColumnElement
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.close
 import com.vextreme.vexlife.android.elements.invoke
+import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.elements.swapTo
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.screens.shared.gallery.elements.ElementsGallery
@@ -51,6 +53,44 @@ object GalleryScreen : ScreenBlueprint(
     val Content = swappableRef(
         id = "page.content",
         defaultChild = ElementsPanel,
+    )
+
+    val DialogModalSample = dialogRef(
+        id = "page.content.elements.modal-samples.dialog",
+    )
+
+    val BottomSheetModalSample = modalBottomSheetRef(
+        id = "page.content.elements.modal-samples.bottom-sheet",
+    )
+
+    val ShowDialogModalSample = buttonRef(
+        id = "page.content.elements.modal-samples.actions.show-dialog",
+        labelRes = R.string.gallery_show_dialog_sample,
+        style = VexElementStyles.SecondaryAction,
+        intent = open(DialogModalSample),
+    )
+
+    val ShowBottomSheetModalSample = buttonRef(
+        id = "page.content.elements.modal-samples.actions.show-bottom-sheet",
+        labelRes = R.string.gallery_show_sheet_sample,
+        style = VexElementStyles.SecondaryAction,
+        intent = open(BottomSheetModalSample),
+    )
+
+    val CloseDialogModalSample = buttonRef(
+        id = "page.content.elements.modal-samples.dialog.close",
+        labelRes = R.string.close,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Close,
+        intent = close(DialogModalSample),
+    )
+
+    val CloseBottomSheetModalSample = buttonRef(
+        id = "page.content.elements.modal-samples.bottom-sheet.close",
+        labelRes = R.string.close,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Close,
+        intent = close(BottomSheetModalSample),
     )
 
     val ElementsTab = buttonRef(
@@ -108,6 +148,29 @@ object GalleryScreen : ScreenBlueprint(
                             style = VexElementStyles.FabOption,
                             intent = invoke(AppActions.GallerySample),
                         )
+                    }
+
+                    card("modal-samples") {
+                        text(
+                            id = "title",
+                            textRes = R.string.gallery_modal_samples_title,
+                            role = TextRole.Title,
+                        )
+                        text(
+                            id = "description",
+                            textRes = R.string.gallery_modal_samples_body,
+                            role = TextRole.Supporting,
+                        )
+                        row("actions") {
+                            button(ShowDialogModalSample)
+                            button(ShowBottomSheetModalSample)
+                        }
+                        dialog(DialogModalSample) {
+                            button(CloseDialogModalSample)
+                        }
+                        modalBottomSheet(BottomSheetModalSample) {
+                            button(CloseBottomSheetModalSample)
+                        }
                     }
                 }
 
