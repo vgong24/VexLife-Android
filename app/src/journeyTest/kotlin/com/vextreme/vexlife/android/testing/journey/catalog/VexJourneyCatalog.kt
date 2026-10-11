@@ -32,6 +32,33 @@ object VexJourneyCatalog {
             }
         }
 
+    /**
+     * Ordinary functional journey suite: one baseline Android case per semantic journey.
+     *
+     * Localization/accessibility permutations are batch concerns and remain available through
+     * [cases] / explicit selection without multiplying every normal connected test run.
+     */
+    val baselineCases: List<VexJourneyCase> =
+        shards.flatMap { shard ->
+            shard.journeys.map { journey ->
+                val baseline = requireNotNull(
+                    journey.environments.firstOrNull { environment ->
+                        environment.id ==
+                            VexJourneyEnvironments.Baseline.id
+                    },
+                ) {
+                    "journey must declare baseline environment: " +
+                        "${shard.shardId}/${journey.id}"
+                }
+
+                VexJourneyCase(
+                    shardId = shard.shardId,
+                    journey = journey,
+                    environment = baseline,
+                )
+            }
+        }
+
     fun requireCase(caseRef: String): VexJourneyCase =
         requireNotNull(cases.firstOrNull { it.caseRef == caseRef }) {
             "unknown journey case: $caseRef"
