@@ -99,6 +99,15 @@ sealed interface ElementIntent {
         val container: SwappableContainerElement,
         val child: UIElement,
     ) : ElementIntent
+    /**
+     * Semantic interaction whose effect is intentionally owned by the current custom renderer.
+     *
+     * VexRuntime still validates/logs the registered element, but does not dispatch an app action.
+     * Use this only for already-local platform effects (for example MediaController commands), not
+     * as a shortcut around a repository/domain action owner.
+     */
+    data object LocalEffect : ElementIntent
+
     data class Invoke(val action: ActionKey) : ElementIntent
     data class Sequence(val intents: List<ElementIntent>) : ElementIntent {
         init {
@@ -338,6 +347,7 @@ fun swapTo(
         child = child,
     )
 
+fun localEffect(): ElementIntent = ElementIntent.LocalEffect
 fun invoke(action: ActionKey): ElementIntent = ElementIntent.Invoke(action)
 
 infix fun ElementIntent.then(next: ElementIntent): ElementIntent {
