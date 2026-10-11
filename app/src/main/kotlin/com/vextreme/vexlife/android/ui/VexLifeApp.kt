@@ -18,8 +18,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
-import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
@@ -80,30 +78,26 @@ internal fun VexLifeApp(
 private fun VexLifeApp(
     session: VexLifeSession,
 ) {
-    val runtime = session.runtime
-    val darkTheme = session.darkTheme
+    val context = VexLifeCompositionContext(
+        runtime = session.runtime,
+        repositories = session.repositories,
+        darkTheme = session.darkTheme,
+    )
 
-    LaunchedEffect(runtime) {
-        runtime.appOpened()
+    LaunchedEffect(context.runtime) {
+        context.runtime.appOpened()
     }
 
-    VexLifeTheme(darkTheme = darkTheme) {
-        VexLifeScaffold(
-            runtime = runtime,
-            logHistoryRepository = session.repositories.logHistory,
-            userProfileRepository = session.repositories.userProfile,
-            darkTheme = darkTheme,
-        )
+    VexLifeTheme(darkTheme = context.darkTheme) {
+        VexLifeScaffold(context)
     }
 }
 
 @Composable
 private fun VexLifeScaffold(
-    runtime: VexRuntime,
-    logHistoryRepository: LogHistoryRepository,
-    userProfileRepository: UserProfileRepository,
-    darkTheme: Boolean,
+    context: VexLifeCompositionContext,
 ) {
+    val runtime = context.runtime
     val primaryScreens = AppScreens.primary
     val pagerState = rememberPagerState(
         initialPage = primaryScreens.indexOfFirst {
@@ -196,15 +190,15 @@ private fun VexLifeScaffold(
                 when (screenId) {
                     DebugMenuScreen.screenId -> DebugMenuScreenContent(
                         runtime = runtime,
-                        logHistoryRepository = logHistoryRepository,
-                        darkTheme = darkTheme,
+                        logHistoryRepository = context.repositories.logHistory,
+                        darkTheme = context.darkTheme,
                     )
 
                     GalleryScreen.screenId -> GalleryScreenContent(runtime)
 
                     UserProfileScreen.screenId -> UserProfileScreenContent(
                         runtime = runtime,
-                        repository = userProfileRepository,
+                        repository = context.repositories.userProfile,
                     )
 
                     VexStreamMusicScreen.screenId ->
