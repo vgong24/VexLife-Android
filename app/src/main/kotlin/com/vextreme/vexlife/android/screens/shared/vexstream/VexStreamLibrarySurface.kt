@@ -627,17 +627,10 @@ private fun VexStreamSongsPane(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item(
-            key = "songs-actions",
+            key = "songs-tabs",
         ) {
-            VexStreamCollectionActions(
+            VexStreamLibraryTabs(
                 runtime = runtime,
-                tracks = sorted,
-                controller = controller,
-                resolver = resolver,
-                modifier = Modifier.padding(
-                    horizontal = 12.dp,
-                    vertical = 10.dp,
-                ),
             )
         }
 
@@ -730,17 +723,10 @@ private fun VexStreamDownloadsPane(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item(
-            key = "downloads-actions",
+            key = "downloads-tabs",
         ) {
-            VexStreamCollectionActions(
+            VexStreamLibraryTabs(
                 runtime = runtime,
-                tracks = downloaded,
-                controller = controller,
-                resolver = resolver,
-                modifier = Modifier.padding(
-                    horizontal = 12.dp,
-                    vertical = 10.dp,
-                ),
             )
         }
 
@@ -916,8 +902,6 @@ private fun VexStreamArtistsPane(
 private fun VexStreamPlaylistsPane(
     runtime: VexRuntime,
     state: VexStreamMusicState,
-    visibleTracks: List<VexStreamTrackState>,
-    searchQuery: String,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
 ) {
@@ -927,62 +911,25 @@ private fun VexStreamPlaylistsPane(
                 it.track.trackRef
             }
         }
-    val visibleRefs =
-        remember(visibleTracks) {
-            visibleTracks
-                .map { it.track.trackRef }
-                .toSet()
-        }
-    val normalizedQuery =
-        searchQuery.trim()
     val syncedLabel =
         stringResource(
             R.string.vexstream_music_playlist_synced,
         )
     val rows =
         state.playlists
-            .mapNotNull { playlist ->
-                val allTracks =
-                    playlist.trackRefs
-                        .mapNotNull(
-                            tracksByRef::get,
-                        )
-                val playlistNameMatches =
-                    normalizedQuery.isNotBlank() &&
-                        playlist.name.contains(
-                            normalizedQuery,
-                            ignoreCase = true,
-                        )
-                val projectedTracks =
-                    when {
-                        normalizedQuery.isBlank() ->
-                            allTracks
-
-                        playlistNameMatches ->
-                            allTracks
-
-                        else ->
-                            allTracks.filter {
-                                it.track.trackRef in visibleRefs
-                            }
-                    }
-
-                if (
-                    normalizedQuery.isNotBlank() &&
-                    !playlistNameMatches &&
-                    projectedTracks.isEmpty()
-                ) {
-                    null
-                } else {
-                    VexStreamCollectionRow(
-                        key =
-                            "playlist:" +
-                                playlist.playlistRef.value,
-                        title = playlist.name,
-                        subtitle = syncedLabel,
-                        tracks = projectedTracks,
-                    )
-                }
+            .map { playlist ->
+                VexStreamCollectionRow(
+                    key =
+                        "playlist:" +
+                            playlist.playlistRef.value,
+                    title = playlist.name,
+                    subtitle = syncedLabel,
+                    tracks =
+                        playlist.trackRefs
+                            .mapNotNull(
+                                tracksByRef::get,
+                            ),
+                )
             }
             .sortedBy {
                 it.title.lowercase()
@@ -1041,6 +988,14 @@ private fun VexStreamCollectionBrowserPane(
                             8.dp,
                         ),
                 ) {
+                    item(
+                        key = "collection-tabs",
+                    ) {
+                        VexStreamLibraryTabs(
+                            runtime = runtime,
+                        )
+                    }
+
                     if (rows.isEmpty()) {
                         item(
                             key = "collection-empty",
