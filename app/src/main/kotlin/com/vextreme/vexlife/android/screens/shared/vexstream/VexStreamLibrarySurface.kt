@@ -15,8 +15,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -50,6 +52,7 @@ import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexContainer
 import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.VexIconButton
 import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
@@ -1163,6 +1166,17 @@ private fun VexStreamTrackCard(
             .clickable(
                 onClick = onSelect,
             ),
+        colors =
+            if (selected) {
+                CardDefaults.cardColors(
+                    containerColor =
+                        MaterialTheme
+                            .colorScheme
+                            .secondaryContainer,
+                )
+            } else {
+                CardDefaults.cardColors()
+            },
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -1214,64 +1228,66 @@ private fun VexStreamTrackCard(
 
             if (selected) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    VexButton(
+                    VexIconButton(
                         element = VexStreamMusicScreen.PlayTrack,
                         handler = handler,
                         enabled = controller != null,
                     )
-                    VexButton(
+                    VexIconButton(
                         element = VexStreamMusicScreen.PlayTrackNext,
                         handler = handler,
                         enabled = controller != null,
                     )
-                    VexButton(
+                    VexIconButton(
                         element = VexStreamMusicScreen.AddTrackToQueue,
                         handler = handler,
                         enabled = controller != null,
                     )
-                }
 
-                if (showDownloadAction) {
-                    when (state.localCopy) {
-                        is VexStreamLocalCopyState.Downloaded -> {
-                            VexButton(
-                                element =
-                                    VexStreamMusicScreen
-                                        .RemoveTrackDownload,
-                                handler = handler,
-                            )
-                        }
-
-                        is VexStreamLocalCopyState.Downloading -> {
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.vexstream_music_downloading,
-                                    ),
-                                style =
-                                    MaterialTheme
-                                        .typography
-                                        .bodySmall,
-                                color =
-                                    MaterialTheme
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                            )
-                        }
-
-                        else -> {
-                            if (state.hubAvailable) {
-                                VexButton(
+                    if (showDownloadAction) {
+                        when (state.localCopy) {
+                            is VexStreamLocalCopyState.Downloaded ->
+                                VexIconButton(
                                     element =
                                         VexStreamMusicScreen
-                                            .DownloadTrack,
+                                            .RemoveTrackDownload,
                                     handler = handler,
                                 )
+
+                            is VexStreamLocalCopyState.Downloading ->
+                                Unit
+
+                            else -> {
+                                if (state.hubAvailable) {
+                                    VexIconButton(
+                                        element =
+                                            VexStreamMusicScreen
+                                                .DownloadTrack,
+                                        handler = handler,
+                                    )
+                                }
                             }
                         }
                     }
+                }
+
+                if (
+                    showDownloadAction &&
+                    state.localCopy is VexStreamLocalCopyState.Downloading
+                ) {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string.vexstream_music_downloading,
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -1305,6 +1321,14 @@ private fun VexStreamMiniPlayer(
                 else -> Unit
             }
         }
+    val queuePosition =
+        playback.currentIndex
+            .takeIf { it >= 0 }
+            ?.let { index ->
+                (index + 1).toString() +
+                    "/" +
+                    playback.queueMediaIds.size
+            }
 
     VexContainer(
         element = VexStreamMusicScreen.PlayerSection,
@@ -1313,59 +1337,109 @@ private fun VexStreamMiniPlayer(
             .padding(8.dp),
         style = VexElementStyles.RaisedSurface,
     ) {
-            Text(
-                text =
-                    playback.currentTitle.ifBlank {
-                        stringResource(
-                            R.string.vexstream_music_now_playing,
-                        )
-                    },
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (playback.currentArtist.isNotBlank()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+            ) {
                 Text(
-                    text = playback.currentArtist,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text =
+                        playback.currentTitle.ifBlank {
+                            stringResource(
+                                R.string.vexstream_music_now_playing,
+                            )
+                        },
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (playback.currentArtist.isNotBlank()) {
+                    Text(
+                        text = playback.currentArtist,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                VexButton(
-                    element = VexStreamMusicScreen.PreviousTrack,
-                    handler = handler,
-                    enabled =
-                        controller?.hasPreviousMediaItem() == true,
-                )
-                VexButton(
-                    element = VexStreamMusicScreen.TogglePlayback,
-                    handler = handler,
-                    enabled = controller != null,
-                )
-                VexButton(
-                    element = VexStreamMusicScreen.NextTrack,
-                    handler = handler,
-                    enabled =
-                        controller?.hasNextMediaItem() == true,
+
+            queuePosition?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            VexButton(
-                element = VexStreamMusicScreen.ToggleShuffle,
-                handler = handler,
-                style =
-                    if (playback.shuffleEnabled) {
-                        VexElementStyles.PrimaryAction
+        }
+
+        LinearProgressIndicator(
+            progress = {
+                playback.progressFraction
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text =
+                    formatVexStreamPlaybackTime(
+                        playback.currentPositionMs,
+                    ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text =
+                    if (playback.durationMs > 0L) {
+                        formatVexStreamPlaybackTime(
+                            playback.durationMs,
+                        )
                     } else {
-                        VexElementStyles.SecondaryAction
+                        "--:--"
                     },
-                enabled = controller != null,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            VexIconButton(
+                element = VexStreamMusicScreen.PreviousTrack,
+                handler = handler,
+                enabled =
+                    controller?.hasPreviousMediaItem() == true,
+            )
+            VexIconButton(
+                element = VexStreamMusicScreen.TogglePlayback,
+                handler = handler,
+                enabled = controller != null,
+            )
+            VexIconButton(
+                element = VexStreamMusicScreen.NextTrack,
+                handler = handler,
+                enabled =
+                    controller?.hasNextMediaItem() == true,
+            )
+            VexIconButton(
+                element = VexStreamMusicScreen.ToggleShuffle,
+                handler = handler,
+                enabled = controller != null,
+            )
+            VexIconButton(
+                element = VexStreamMusicScreen.ShowQueue,
+                handler = runtime,
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
