@@ -56,6 +56,8 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         defaultChild = SongsPanel,
     )
 
+    val PlayerSection = columnRef("body.player")
+
     val QueueSheet = modalBottomSheetRef(
         id = "body.queue.sheet",
     )
@@ -306,11 +308,16 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 button(ShowQueue)
             }
 
-            row("player-controls") {
-                button(PreviousTrack)
-                button(TogglePlayback)
-                button(NextTrack)
-                button(ToggleShuffle)
+            column(
+                element = PlayerSection,
+                style = VexElementStyles.RaisedSurface,
+            ) {
+                row("controls") {
+                    button(PreviousTrack)
+                    button(TogglePlayback)
+                    button(NextTrack)
+                    button(ToggleShuffle)
+                }
             }
 
             modalBottomSheet(QueueSheet) {
