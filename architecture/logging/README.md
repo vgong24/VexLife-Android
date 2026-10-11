@@ -42,6 +42,38 @@ duplicate duration beside every event.
 The canonical record still retains stable subject refs and before/after Screen IDs, so the readable
 projection can be regenerated/reinterpreted without making the formatted text the source of truth.
 
+
+## Logcat developer projection
+
+Every accepted canonical `VexLogRecord` is also projected to Android Logcat under one stable tag:
+
+~~~text
+VexLogger
+~~~
+
+Android Studio filter:
+
+~~~text
+tag:VexLogger
+~~~
+
+ADB filter:
+
+~~~bash
+adb logcat -s VexLogger:I '*:S'
+~~~
+
+Example:
+
+~~~text
+seq=7 kind=Interaction subject=element.user-profile.body.profile.actions.save action=Submitted before=screen.user-profile after=- section=2 delta=3s details={"name":"Victor"}
+~~~
+
+Logcat is not canonical history and is not durable evidence. It is a live developer/debugging surface.
+The in-memory `VexLogRecord` sequence remains canonical for the logger session; persistent LogHistory
+remains a downstream repository projection. Logcat and repository persistence are failure-isolated so
+one diagnostic surface cannot suppress the other.
+
 ## Form submissions
 
 Draft typing is not logged.
