@@ -1,8 +1,7 @@
 package com.vextreme.vexlife.android.testing.crawler
 
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
-import com.vextreme.vexlife.android.testing.journey.DebugJourneys
-import com.vextreme.vexlife.android.testing.journey.GalleryJourneys
+import com.vextreme.vexlife.android.testing.journey.Journeys
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -24,6 +23,25 @@ class VexScreenCrawlerPlannerTest {
                 case.locale == VexCrawlerLocale("en") &&
                     case.font == VexCrawlerFonts.Normal
             },
+        )
+    }
+
+    @Test
+    fun oneNamedJourneySelectsExactlyOnePath() {
+        val config = vexScreenCrawlerConfig {
+            journey(Journeys.userProfile.formSubmit)
+        }
+
+        val plan = VexScreenCrawlerPlanner.plan(config)
+
+        assertEquals(1, plan.size)
+        assertEquals(
+            Journeys.userProfile.formSubmit,
+            plan.single().journey,
+        )
+        assertEquals(
+            Journeys.userProfile.shardId,
+            plan.single().shardId,
         )
     }
 
@@ -65,8 +83,8 @@ class VexScreenCrawlerPlannerTest {
     fun shardSubsetDoesNotRequireASecondJourneyRegistry() {
         val config = vexScreenCrawlerConfig {
             shards(
-                DebugJourneys,
-                GalleryJourneys,
+                Journeys.debug,
+                Journeys.gallery,
             )
             languages(language("zh"))
             fontProfiles(VexCrawlerFonts.Large)
@@ -75,14 +93,14 @@ class VexScreenCrawlerPlannerTest {
         val plan = VexScreenCrawlerPlanner.plan(config)
 
         assertEquals(
-            DebugJourneys.journeys.size +
-                GalleryJourneys.journeys.size,
+            Journeys.debug.journeys.size +
+                Journeys.gallery.journeys.size,
             plan.size,
         )
         assertEquals(
             setOf(
-                DebugJourneys.shardId,
-                GalleryJourneys.shardId,
+                Journeys.debug.shardId,
+                Journeys.gallery.shardId,
             ),
             plan.map { it.shardId }.toSet(),
         )
@@ -92,7 +110,7 @@ class VexScreenCrawlerPlannerTest {
     fun allShardsExceptAutomaticallyIncludesCanonicalShards() {
         val config = VexScreenCrawlerConfig(
             selection = VexCrawlerSelection.AllShardsExcept(
-                excludedShards = setOf(DebugJourneys),
+                excludedShards = setOf(Journeys.debug),
             ),
         )
 
@@ -100,12 +118,12 @@ class VexScreenCrawlerPlannerTest {
 
         assertTrue(
             plan.none { case ->
-                case.shardId == DebugJourneys.shardId
+                case.shardId == Journeys.debug.shardId
             },
         )
         assertTrue(
             plan.any { case ->
-                case.shardId == GalleryJourneys.shardId
+                case.shardId == Journeys.gallery.shardId
             },
         )
     }
