@@ -4,13 +4,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.R
-import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.preview.VexPreviewHost
+import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -22,7 +23,7 @@ import com.vextreme.vexlife.android.runtime.appAction
  * This screen does not invent model/session/voice lifecycle yet. It exists as a stable UI
  * destination and demonstrates that its Invoke effect stays scoped beside the feature source.
  */
-object TalkToVexScreen : ScreenBlueprint(
+object TalkToVexScreen : AppScreenBlueprint(
     screenKey = "talk-to-vex",
     titleRes = R.string.talk_to_vex_title,
 ) {
@@ -50,6 +51,18 @@ object TalkToVexScreen : ScreenBlueprint(
             }
         }
     }
+
+    internal override fun appActionRegistrations(
+        context: ScreenActionContext,
+    ): AppActionRegistrations =
+        AppActionRegistrations.of(
+            appAction(
+                action = AppActions.TalkToVexPlaceholder,
+                ownerRef = screenId,
+            ) {
+                // No product effect yet.
+            },
+        )
 }
 
 @Composable
@@ -64,16 +77,6 @@ fun TalkToVexScreenContent(
         selectedChild = runtime.presentation::selected,
     )
 }
-
-internal fun talkToVexActionRegistrations(): AppActionRegistrations =
-    AppActionRegistrations.of(
-        appAction(
-            action = AppActions.TalkToVexPlaceholder,
-            ownerRef = TalkToVexScreen.screenId,
-        ) {
-            // No product effect yet.
-        },
-    )
 
 @VexScreenPreviews
 @Composable
