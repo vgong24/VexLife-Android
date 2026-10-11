@@ -289,13 +289,10 @@ endpoint through feature code.
 Use narrow purpose bridges:
 
 ~~~text
-VexLifeCompositionContext
-  composition/router-only projection
-  runtime + AppRepositories + presentation-level app projection
-  future Relay/service families may join only when a real consumer earns them
-
 AppRepositories
   composition-only repository bundle
+  may pass through app routing/composition code as one stable dependency
+  leaf Screen/content still receives only the repository/facade it actually needs
 
 AppActionRegistrations
   one immutable queryable registration set
@@ -311,13 +308,21 @@ screen
   receives the smallest repository/facade that answers its question
 ~~~
 
-VexLifeScaffold may receive VexLifeCompositionContext because it is the app routing/composition
-boundary. It unpacks that context and still hands each Screen only the repository/facade it actually
-needs.
+VexLifeScaffold may receive AppRepositories because it is the app routing/composition boundary.
+That avoids threading `logHistoryRepository`, `userProfileRepository`, and every future repository
+through intermediate signatures just so the final routing branch can select one.
 
-Do not pass the entire VexLifeCompositionContext or AppRepositories bundle into VexLogger or ordinary
-screens merely for convenience. That turns composition into a service locator and makes unrelated
-state/data reachable from unrelated code.
+The selection still happens at the narrowest useful point:
+
+~~~text
+VexLifeScaffold(repositories)
+  -> DebugMenuScreenContent(repositories.logHistory)
+  -> UserProfileScreenContent(repositories.userProfile)
+~~~
+
+Do not pass the entire AppRepositories bundle into VexLogger or ordinary screens merely for
+convenience. That would turn composition convenience into a service locator and make unrelated data
+reachable from unrelated code.
 
 When several repositories form one real domain relationship, prefer a named facade/owner such as a
 future UserHub over making every caller know the underlying repository set.
