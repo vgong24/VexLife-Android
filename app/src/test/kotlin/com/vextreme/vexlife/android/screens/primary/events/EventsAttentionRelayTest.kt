@@ -15,21 +15,21 @@ class EventsAttentionRelayTest {
         val source = "source.test"
         val first =
             VexExternalEvent(
-                eventRef = "event.first",
-                sourceRef = source,
-                kind = VexExternalEventKind.MESSAGE,
-                title = "First",
-                detail = "First",
-                occurredAtEpochMillis = 10L,
+                "event.first",
+                source,
+                VexExternalEventKind.MESSAGE,
+                "First",
+                "First",
+                10L,
             )
         val second =
             VexExternalEvent(
-                eventRef = "event.second",
-                sourceRef = source,
-                kind = VexExternalEventKind.CALL,
-                title = "Second",
-                detail = "Second",
-                occurredAtEpochMillis = 20L,
+                "event.second",
+                source,
+                VexExternalEventKind.CALL,
+                "Second",
+                "Second",
+                20L,
             )
 
         return EventsFeedState(
@@ -37,23 +37,26 @@ class EventsAttentionRelayTest {
                 mapOf(
                     source to
                         VexExternalEventSourceSnapshot(
-                            sourceRef = source,
-                            sourceRevision = 1L,
-                            events = listOf(first, second),
+                            source,
+                            1L,
+                            listOf(first, second),
                         ),
                 ),
         )
     }
 
     @Test
-    fun currentScreenAndPreferencesRecomputeOneStableCandidate() {
-        val relay =
-            EventsAttentionRelay()
+    fun currentContextReachabilityAndPreferencesProduceOneCandidate() {
+        val relay = EventsAttentionRelay()
 
         relay.feedChanged(feed())
         relay.preferencesChanged(
             EventsAttentionPreferenceState(),
         )
+        relay.visibleTargetsChanged(
+            setOf("event.first", "event.second"),
+        )
+        relay.transientBlockedChanged(false)
         relay.screenChanged("screen.home")
 
         assertNull(relay.current.outputState.candidate)
@@ -64,19 +67,22 @@ class EventsAttentionRelayTest {
             "event.first",
             relay.current.outputState.candidate?.eventRef,
         )
+
+        relay.transientBlockedChanged(true)
+        assertNull(relay.current.outputState.candidate)
+
+        relay.transientBlockedChanged(false)
         assertEquals(
-            EventsPresentationRefs.row("event.first"),
-            relay.current.outputState.candidate
-                ?.targetElementRef,
+            "event.first",
+            relay.current.outputState.candidate?.eventRef,
         )
 
         relay.preferencesChanged(
             EventsAttentionPreferenceState(
-                dispositionByEventRef =
-                    mapOf(
-                        "event.first" to
-                            EventsAttentionDisposition.ACKNOWLEDGED,
-                    ),
+                mapOf(
+                    "event.first" to
+                        EventsAttentionDisposition.ACKNOWLEDGED,
+                ),
             ),
         )
 
@@ -85,10 +91,14 @@ class EventsAttentionRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
 
-        relay.screenChanged("screen.settings")
+        relay.visibleTargetsChanged(
+            setOf("event.first"),
+        )
         assertNull(relay.current.outputState.candidate)
 
-        relay.screenChanged(EventsScreen.screenId)
+        relay.visibleTargetsChanged(
+            setOf("event.second"),
+        )
         assertEquals(
             "event.second",
             relay.current.outputState.candidate?.eventRef,

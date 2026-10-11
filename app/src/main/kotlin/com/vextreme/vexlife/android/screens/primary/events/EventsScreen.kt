@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.primary.events
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -27,10 +30,12 @@ import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
+import com.vextreme.vexlife.android.elements.VexAnchoredTooltip
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 object EventsScreen : AppScreenBlueprint(
     screenKey = "events",
@@ -77,9 +82,17 @@ fun EventsScreenContent(
         remember {
             EventsAttentionRelay()
         }
+    val listState =
+        rememberLazyListState()
 
     val currentScreenId =
         runtime.currentScreen.screenId
+    val transientBlocked =
+        runtime.presentation.hasOpenPresentation
+    val eventRefs =
+        feed.events
+            .map(VexExternalEvent::eventRef)
+            .toSet()
 
     LaunchedEffect(feed) {
         attentionRelay.feedChanged(feed)
@@ -90,6 +103,27 @@ fun EventsScreenContent(
     LaunchedEffect(currentScreenId) {
         attentionRelay.screenChanged(currentScreenId)
     }
+    LaunchedEffect(transientBlocked) {
+        attentionRelay.transientBlockedChanged(
+            transientBlocked,
+        )
+    }
+    LaunchedEffect(listState, eventRefs) {
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo
+                .mapNotNull { item ->
+                    item.key as? String
+                }
+                .toSet()
+                .intersect(eventRefs)
+        }
+            .distinctUntilChanged()
+            .collect { visible ->
+                attentionRelay.visibleTargetsChanged(
+                    visible,
+                )
+            }
+    }
 
     val attention by attentionRelay.states.collectAsState(
         initial = attentionRelay.current,
@@ -98,6 +132,7 @@ fun EventsScreenContent(
         attention.outputState.candidate?.eventRef
 
     LazyColumn(
+        state = listState,
         modifier =
             Modifier
                 .fillMaxSize()
@@ -155,7 +190,7 @@ private fun EventRow(
     onDefer: () -> Unit,
     onSuppress: () -> Unit,
 ) {
-    Card(
+    Box(
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -165,43 +200,56 @@ private fun EventRow(
                     ),
                 ),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+        Card(
+            modifier =
+                Modifier.fillMaxWidth(),
         ) {
-            Text(
-                text = event.kind.name,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = event.title,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = event.detail,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = event.sourceRef,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = event.eventRef,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            disposition?.let {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Text(
-                    text = it.name,
+                    text = event.kind.name,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = event.detail,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = event.sourceRef,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
+                Text(
+                    text = event.eventRef,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-            if (isAttentionCandidate) {
+                disposition?.let {
+                    Text(
+                        text = it.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        if (isAttentionCandidate) {
+            VexAnchoredTooltip(
+                presentationRef =
+                    EventsPresentationRefs.tooltip(
+                        event.eventRef,
+                    ),
+                onDismissRequest = onDefer,
+            ) {
                 Text(
                     text =
                         stringResource(
@@ -209,6 +257,14 @@ private fun EventRow(
                         ),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = event.title,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = event.detail,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 Row(
                     horizontalArrangement =

@@ -11,11 +11,14 @@ data class EventsAttentionInputState(
     val currentScreenId: String? = null,
     val feed: EventsFeedState? = null,
     val preferences: EventsAttentionPreferenceState? = null,
+    val visibleEventRefs: Set<String>? = null,
+    val transientBlocked: Boolean? = null,
 ) : VexInputState<EventsAttentionInputState> {
     override fun deepCopy(): EventsAttentionInputState =
         copy(
             feed = feed?.deepCopy(),
             preferences = preferences?.deepCopy(),
+            visibleEventRefs = visibleEventRefs?.toSet(),
         )
 }
 
@@ -31,12 +34,6 @@ data class EventsAttentionOutputState(
         copy(candidate = candidate?.copy())
 }
 
-/**
- * Current Events presentation eligibility.
- *
- * Inputs are deliberately visible in the type above. The processing section below is the one place
- * to answer "why is this external event currently eligible for proactive Events attention?"
- */
 class EventsAttentionRelay :
     VexCompoundRelay<EventsAttentionInputState, EventsAttentionOutputState>(
         relayRef = "relay.events.attention",
@@ -45,19 +42,11 @@ class EventsAttentionRelay :
     ) {
     fun screenChanged(screenId: String) {
         require(screenId.isNotBlank())
-        send(
-            EventsAttentionInputState(
-                currentScreenId = screenId,
-            ),
-        )
+        send(EventsAttentionInputState(currentScreenId = screenId))
     }
 
     fun feedChanged(feed: EventsFeedState) {
-        send(
-            EventsAttentionInputState(
-                feed = feed.deepCopy(),
-            ),
-        )
+        send(EventsAttentionInputState(feed = feed.deepCopy()))
     }
 
     fun preferencesChanged(
@@ -66,6 +55,22 @@ class EventsAttentionRelay :
         send(
             EventsAttentionInputState(
                 preferences = preferences.deepCopy(),
+            ),
+        )
+    }
+
+    fun visibleTargetsChanged(eventRefs: Set<String>) {
+        send(
+            EventsAttentionInputState(
+                visibleEventRefs = eventRefs.toSet(),
+            ),
+        )
+    }
+
+    fun transientBlockedChanged(blocked: Boolean) {
+        send(
+            EventsAttentionInputState(
+                transientBlocked = blocked,
             ),
         )
     }
@@ -92,25 +97,38 @@ class EventsAttentionRelay :
         val preferences =
             inputState.preferences
                 ?: previous.preferences
+        val visibleEventRefs =
+            inputState.visibleEventRefs
+                ?: previous.visibleEventRefs
+        val transientBlocked =
+            inputState.transientBlocked
+                ?: previous.transientBlocked
 
         val coherentInput =
             EventsAttentionInputState(
                 currentScreenId = screenId,
                 feed = feed?.deepCopy(),
                 preferences = preferences?.deepCopy(),
+                visibleEventRefs = visibleEventRefs?.toSet(),
+                transientBlocked = transientBlocked,
             )
 
         val candidateEvent =
-            if (screenId == EventsScreen.screenId) {
+            if (
+                screenId == EventsScreen.screenId &&
+                transientBlocked == false &&
+                visibleEventRefs != null
+            ) {
                 feed
                     ?.events
                     .orEmpty()
                     .asReversed()
                     .firstOrNull { event ->
-                        preferences
-                            ?.dispositionByEventRef
-                            ?.containsKey(event.eventRef)
-                            != true
+                        event.eventRef in visibleEventRefs &&
+                            preferences
+                                ?.dispositionByEventRef
+                                ?.containsKey(event.eventRef)
+                                != true
                     }
             } else {
                 null
