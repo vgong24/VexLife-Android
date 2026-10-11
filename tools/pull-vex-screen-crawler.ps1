@@ -26,7 +26,7 @@ if (-not $PackageMatch.Success) {
 }
 
 $PackageId = $PackageMatch.Groups[1].Value
-$Remote = "/sdcard/Android/data/$PackageId/files/vex-screen-crawler"
+$Remote = "/storage/emulated/0/Android/media/$PackageId/vex-screen-crawler"
 $Serial = $env:ANDROID_SERIAL
 
 if (-not $Serial) {
