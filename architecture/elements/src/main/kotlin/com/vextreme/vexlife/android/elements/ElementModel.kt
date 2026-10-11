@@ -142,6 +142,16 @@ enum class ElementIcon {
     Save,
     Help,
     Person,
+    Play,
+    PlayNext,
+    Queue,
+    Download,
+    RemoveDownload,
+    Previous,
+    PlayPause,
+    Next,
+    Shuffle,
+    Repeat,
 }
 
 /**
