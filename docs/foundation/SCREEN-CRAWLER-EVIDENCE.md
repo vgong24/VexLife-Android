@@ -91,27 +91,143 @@ VexScreenCrawlerEvidenceObserver
 
 The crawler reuses the accepted interactions rather than constructing another app-walk language.
 
-## Typed source API
+## One human control surface
 
-### Full app in Simplified Chinese, large text
+Local/manual ScreenCrawler work is configured in one file:
+
+~~~text
+app/src/journeyTest/kotlin/.../testing/crawler/VexScreenCrawlerRunConfig.kt
+~~~
+
+A new developer should not need to learn Gradle/instrumentation argument names to run a crawler.
+
+The preset is intentionally a comment/uncomment surface:
 
 ~~~kotlin
-val config = vexScreenCrawlerConfig {
-    allShards()
-    languages(VexCrawlerLocales.ChineseSimplified)
-    fontProfiles(VexCrawlerFonts.Large)
-    capture(VexCrawlerCapturePolicy.SCREEN_ONCE)
+object VexScreenCrawlerRunConfig {
+    const val enabled = false
+
+    val config = vexScreenCrawlerConfig {
+        // No selector means ALL current/future canonical shards.
+
+        // screens(UserProfileScreen)
+        // shards(DebugJourneys)
+        // shards(DebugJourneys, GalleryJourneys)
+        // allShardsExcept(DebugJourneys)
+
+        languages(
+            language("en"),
+            // language("zh"),
+            // language("bg"),
+            // language("lt"),
+            // language("zh-Hans"),
+        )
+
+        fontProfiles(
+            VexCrawlerFonts.Normal,
+            // VexCrawlerFonts.Large,
+            // VexCrawlerFonts.ExtraLarge,
+        )
+
+        capture(VexCrawlerCapturePolicy.SCREEN_ONCE)
+    }
 }
 ~~~
 
-### One Screen across English + Chinese and normal + large fonts
+To run:
+1. set `enabled = true`;
+2. optionally uncomment one typed selection line;
+3. enable/disable language/font rows;
+4. run `VexScreenCrawlerInstrumentedTest`.
+
+The dedicated crawler test remains skipped while `enabled = false`, so ordinary Android test runs do
+not accidentally expand screenshot batches.
+
+## Kotlin identity / source-of-truth rules
+
+### Shards
+
+`VexJourneyCatalog.shards` is the one canonical shard list.
+
+`VexJourneyCatalog.shardsById` is derived from that list for orientation/reporting only.
+
+ScreenCrawler selection stores actual `VexJourneyShard` objects:
+
+~~~kotlin
+shards(DebugJourneys, GalleryJourneys)
+~~~
+
+not copied IDs:
+
+~~~text
+"shared.debug", "shared.gallery"
+~~~
+
+Default selection includes all canonical shards automatically. A new shard therefore becomes
+crawlable as soon as it is added to `VexJourneyCatalog`; no crawler registry edit is required.
+
+`allShardsExcept(DebugJourneys)` is the convenient form when the desired policy is "everything,
+including future shards, except these temporary exclusions."
+
+### Screens
+
+Screen selection stores the actual registered `ScreenElement` / `AppScreenBlueprint` object:
+
+~~~kotlin
+screens(UserProfileScreen)
+~~~
+
+The planner validates it against `AppScreens`. There is no duplicated screen-ID configuration map.
+
+### Languages / locales
+
+Locale identity is different from Screen/shard identity: BCP-47 already defines the external code.
+
+Use a validated typed value:
+
+~~~kotlin
+language("en")
+language("zh")
+language("bg")
+language("lt")
+language("zh-Hans")
+language("pt-BR")
+~~~
+
+Do not create English-named Kotlin properties such as `ChineseSimplified` or `Bulgarian` merely
+to represent standard language codes.
+
+`VexCrawlerLocale` is still only a test/evidence condition:
+
+~~~text
+CRAWLER_LOCALE
+!=
+PRODUCT_SUPPORTED_LANGUAGE
+~~~
+
+When a localization foundation establishes the real supported-language authority, ScreenCrawler
+should consume those canonical codes rather than become another language registry.
+
+## Selection examples
+
+### Full current/future app in Chinese, large text
+
+~~~kotlin
+val config = vexScreenCrawlerConfig {
+    // no selector = all canonical shards
+    languages(language("zh"))
+    fontProfiles(VexCrawlerFonts.Large)
+}
+~~~
+
+### User Profile only across English + Chinese and normal + large fonts
 
 ~~~kotlin
 val config = vexScreenCrawlerConfig {
     screens(UserProfileScreen)
     languages(
-        VexCrawlerLocales.EnglishUs,
-        VexCrawlerLocales.ChineseSimplified,
+        language("en"),
+        language("zh"),
     )
     fontProfiles(
         VexCrawlerFonts.Normal,
@@ -121,10 +237,11 @@ val config = vexScreenCrawlerConfig {
 }
 ~~~
 
-This becomes the Cartesian product of the selected journeys with the requested locale/font profiles.
-The semantic walk remains single-source.
+A Screen selection resolves every existing journey whose declared semantic map touches that Screen.
+In Screen-selection mode the evidence observer captures only selected Screen IDs, so route setup
+Screens do not automatically become translation screenshots.
 
-### Selected shards
+### Debug + Gallery only
 
 ~~~kotlin
 val config = vexScreenCrawlerConfig {
@@ -132,83 +249,22 @@ val config = vexScreenCrawlerConfig {
         DebugJourneys,
         GalleryJourneys,
     )
-    languages(VexCrawlerLocales.ChineseSimplified)
+    languages(language("zh"))
     fontProfiles(VexCrawlerFonts.Large)
 }
 ~~~
 
-A Screen selection resolves every existing journey whose declared semantic map touches that Screen.
-In Screen-selection mode the evidence observer captures only the selected Screen IDs, so route setup
-Screens do not automatically become translation screenshots for the requested target.
+## Functional tests versus crawler evidence
 
-## Opt-in instrumentation
-
-Ordinary `:app:connectedDebugAndroidTest` does not expand the crawler matrix.
-
-The dedicated `VexScreenCrawlerInstrumentedTest` produces a skipped placeholder unless:
+The accepted ordinary journey suite remains baseline-only by default:
 
 ~~~text
-vexCrawlerEnabled=true
+connectedDebugAndroidTest
+-> one baseline case per semantic journey
 ~~~
 
-Crawler arguments:
-
-~~~text
-vexCrawlerShards
-  comma-separated shard IDs
-
-vexCrawlerScreens
-  comma-separated stable screen IDs
-
-vexCrawlerJourneys
-  comma-separated <shardId>/<journeyId> refs
-
-choose at most ONE selector above
-omit all three -> all shards
-
-vexCrawlerLocales
-  comma-separated locale tags/aliases
-  examples: en-US, zh-CN
-
-vexCrawlerFonts
-  comma-separated named profiles/scales
-  examples: normal, large, 2.0
-
-vexCrawlerCapture
-  screen-once | every-step | final-only
-
-vexCrawlerSourceRef
-  source/build/commit evidence coordinate supplied by the caller
-~~~
-
-Example:
-
-~~~bash
-./gradlew :app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.vexCrawlerEnabled=true \
-  -Pandroid.testInstrumentationRunnerArguments.vexCrawlerScreens=screen.user-profile \
-  -Pandroid.testInstrumentationRunnerArguments.vexCrawlerLocales=en-US,zh-CN \
-  -Pandroid.testInstrumentationRunnerArguments.vexCrawlerFonts=normal,large \
-  -Pandroid.testInstrumentationRunnerArguments.vexCrawlerCapture=every-step \
-  -Pandroid.testInstrumentationRunnerArguments.vexCrawlerSourceRef=<source-ref>
-~~~
-
-## Locale authority
-
-`VexCrawlerLocale` is only a test/evidence locale profile.
-
-~~~text
-CRAWLER_LOCALE_PROFILE
-!=
-PRODUCT_SUPPORTED_LANGUAGE
-~~~
-
-Chinese is present now only as a preparation/evidence profile. Until translated `zh` resources are
-admitted, Android resource fallback is expected and the crawler must not claim Chinese localization
-is complete.
-
-When the localization foundation establishes a real SupportedLanguages owner, ScreenCrawler should
-consume that owner rather than become a second product-language registry.
+ScreenCrawler is a separately editable/opt-in evidence plan. It can multiply selected journeys across
+language/font conditions without imposing that matrix on normal functional development.
 
 ## Font profiles
 
