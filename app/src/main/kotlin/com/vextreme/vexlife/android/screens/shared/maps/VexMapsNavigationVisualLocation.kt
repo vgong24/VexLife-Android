@@ -29,4 +29,29 @@ internal fun VexNavigationLocationSample
             elapsedRealtimeMillis,
     )
 
+internal fun advanceVexMapsNavigationVisualLocation(
+    current: VexMapsNavigationVisualLocation?,
+    sample: VexNavigationLocationSample,
+    phase: VexNavigationSessionPhase,
+): VexMapsNavigationVisualLocation? {
+    if (
+        phase != VexNavigationSessionPhase.ACTIVE &&
+        phase != VexNavigationSessionPhase.OFF_ROUTE &&
+        phase != VexNavigationSessionPhase.LOCATION_HELD
+    ) {
+        return current
+    }
+
+    if (
+        current != null &&
+        sample.elapsedRealtimeMillis <=
+        current.elapsedRealtimeMillis
+    ) {
+        return current
+    }
+
+    return sample
+        .toVexMapsNavigationVisualLocation()
+}
+
 // [VXG RealForever]
