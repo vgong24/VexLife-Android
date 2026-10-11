@@ -177,6 +177,20 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
+    fun platformDismissalLogsThePresentationWithoutInventingACloseClick() {
+        val logger = VexLogger()
+        val runtime = runtime(logger = logger)
+
+        runtime.activate(AppShell.Elements.DebugMenu)
+        runtime.activate(DebugMenuScreen.ShowLog)
+        runtime.dismissPresentation(DebugMenuScreen.LogSheet)
+
+        assertFalse(runtime.presentation.isOpen(DebugMenuScreen.LogSheet))
+        assertTrue(logger.renderHistory().contains("Sheet Dismissed"))
+        assertFalse(logger.renderHistory().contains("Close Clicked"))
+    }
+
+    @Test
     fun backDismissesPresentationBeforePoppingItsScreen() {
         val runtime = runtime()
 
