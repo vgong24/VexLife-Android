@@ -242,7 +242,7 @@ The Gradle source-alignment gate answers only:
 
 It may check cheap structural facts such as:
 
-- `*Screen.kt` + `ScreenBlueprint` + colocated Preview;
+- `*Screen.kt` + `AppScreenBlueprint` + colocated Preview;
 - Screen registration in `AppScreens`;
 - absence of retired `*Page.kt` / `PageBlueprint` destination vocabulary;
 - explicit Room table/column names.
@@ -259,6 +259,41 @@ Use:
 :app:verifySourceAlignment
   failing verification
 ```
+
+## Semantic journey coverage is not code coverage
+
+Registered UI identity now supports a second proof question:
+
+> does every production interaction surface appear in at least one declared human journey?
+
+The shared `VexJourneyCatalog` is consumed two ways:
+
+~~~text
+JVM coverage
+  AppScreens.registry
+  vs
+  journey-named Screens / ActionElements / editable fields / modal surfaces
+
+Android instrumentation
+  same journey declaration
+  -> real Compose input
+  -> VexRuntime/VexLogger
+  -> persisted diagnostic records
+  -> semantic history comparison
+~~~
+
+Do not restate the journey as a second hand-authored expected log. The test-side walk interpreter
+forms the expected canonical history from each step.
+
+Keep expected and actual implementations independent:
+
+~~~text
+EXPECTED_WALK != VexLogger
+EXPECTED_WALK != VexRuntime
+~~~
+
+Journey coverage answers semantic map omission. Ordinary code line/branch coverage answers a
+different question and may be added separately.
 
 ## Action ownership stays scoped
 
