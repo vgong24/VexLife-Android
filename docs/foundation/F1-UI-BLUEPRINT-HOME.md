@@ -80,8 +80,10 @@ not independently recompute separate `canGoBack` condition trees.
 
 ## Screen authoring
 
-A normal screen declares its layout once through `ScreenBlueprint`. The renderer walks that same
-tree. Named elements are reserved for things another relationship must address.
+A normal VexLife app screen extends `AppScreenBlueprint`, which layers optional feature-action
+registration over the portable `ScreenBlueprint`. The Screen declares its layout once and the
+renderer walks that same tree. Named elements are reserved for things another relationship must
+address.
 
 This removes the former duplication:
 
@@ -223,9 +225,11 @@ Screen element
 -> effect
 ~~~
 
-VexLifeApp assembles registrations and broad-lifetime dependencies only. It should not accumulate a
-global feature `when` statement, and Screens should not subscribe as broadcast listeners.
-AppActionRegistrations rejects duplicate ActionKey ownership; unit tests protect that delivery behavior.
+AppScreens assembles each registered AppScreenBlueprint's local registration override and validates
+Invoke coverage; VexLifeSession supplies construction dependencies without maintaining another
+feature list. It should not accumulate a global feature `when` statement, and Screens should not
+subscribe as broadcast listeners. AppActionRegistrations rejects duplicate ActionKey ownership and
+missing declared Invoke ownership; unit tests protect that delivery behavior.
 
 The immutable registration set is queryable by ActionKey or ActionElement. Element lookup follows
 the element's declared Invoke/Sequence intent, so no second element-to-action map is maintained.
@@ -235,8 +239,13 @@ Relay/capability/service state must decide whether an action is currently usable
 
 ## Modal presentation samples
 
-Debug Log History now uses a draggable Material `ModalBottomSheet` while keeping its semantic
-open/closed state in VexRuntime.presentation.
+Debug Log History now uses Material's partial/expanded `ModalBottomSheet` states while keeping
+its semantic open/closed state in VexRuntime.presentation. It opens partially so the underlying
+Screen remains perceptible, can be dragged fully open for reading, and can be dragged/scrim-dismissed.
+The Log History sheet has no redundant Close button; platform dismissal records `Sheet Dismissed`.
+
+Its inner Log History scroller disables its own overscroll effect so leftover downward drag/fling can
+resolve through nested scrolling to the sheet instead of visually rubber-banding at the content edge.
 
 Gallery Elements preserves both modal realization patterns as inspectable samples:
 
