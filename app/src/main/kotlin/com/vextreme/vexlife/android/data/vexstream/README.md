@@ -438,3 +438,32 @@ VIEWMODEL_MEDIA_CONTROLLER = RETAINED_UI_CLIENT
 ICON_REALIZATION != BYPASS_SEMANTIC_RUNTIME
 LIVED_NAVIGATION_PROOF = STILL_REQUIRED
 ```
+
+
+### Library-first Android UX scaffold
+
+Lived Android review showed that connection/setup chrome and foundation-era labels occupied more
+space than the music itself. The current realization therefore treats VexStream as a music
+destination inside VexLife.
+
+The shared AppToolbar now renders Back, the Vex mark, the current Screen title, and optional
+Screen-owned registered toolbar actions. VexStream contributes Search and Manage Connection without
+moving their ownership into the shell.
+
+When paired, the VexStream body is library-first. Category controls are list content that can scroll
+away, global Play All and Shuffle All use registered floating-action realization, compact track rows
+reserve a leading artwork slot, and the mini-player projects actual play/pause and shuffle state.
+When unpaired, connection setup remains prominent because connection is the current task.
+
+Search is contextual presentation rather than a permanently mounted large field. SearchQuery remains
+the same registered editable semantic identity and is realized only while the Search sheet is open.
+
+The track list adds an artwork slot without inventing artwork data. The current VexStream catalog
+contract carries music metadata and media identity but no admitted cover-art reference or bytes, so
+Android uses a music placeholder until that producer/consumer contract is deliberately extended.
+
+YOUTUBE_MUSIC_LAYOUT_CUE != YOUTUBE_MUSIC_PRODUCT_COPY
+ARTWORK_SLOT != FABRICATED_ARTWORK_SOURCE
+SCREEN_TOOLBAR_ACTION != SHELL_FEATURE_OWNERSHIP
+VISIBLE_SELECTED_STATE != NEW_PLAYBACK_TRUTH
+LIBRARY_DENSITY != SEMANTIC_IDENTITY_LOSS
