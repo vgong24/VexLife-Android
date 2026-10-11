@@ -303,7 +303,22 @@ class VexStreamMusicStateTest {
             localOnly.remoteReady,
         )
 
-        val remote =
+        val direct =
+            localOnly.copy(
+                remoteHomeRef =
+                    "vexstream.home.$DIGEST_A",
+                remoteGatewayPublicKey =
+                    "gateway-public-key",
+                remoteDirectBaseUrls =
+                    listOf(
+                        "https://203.0.113.8:18767",
+                    ),
+            )
+        assertTrue(
+            direct.remoteReady,
+        )
+
+        val relay =
             localOnly.copy(
                 remoteHomeRef =
                     "vexstream.home.$DIGEST_A",
@@ -313,7 +328,7 @@ class VexStreamMusicStateTest {
                     "https://relay.example.test",
             )
         assertTrue(
-            remote.remoteReady,
+            relay.remoteReady,
         )
     }
 
