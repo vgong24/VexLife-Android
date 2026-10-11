@@ -1,9 +1,6 @@
 name: Verify VexStream Android Mobile Player
 
 on:
-  push:
-    branches:
-      - VXG-101126-vexstream-mobile-stream-offline
   workflow_dispatch:
 
 permissions:
