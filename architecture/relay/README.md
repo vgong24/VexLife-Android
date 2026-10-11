@@ -6,7 +6,7 @@
 
 > External information can arrive while the human is somewhere else in the app. How do we keep the
 > source truth reliable, combine only the current dependencies that matter, and make the processing
-> logic easy to find without turning Compose or a tooltip manager into the state owner?
+> logic easy to find without turning Compose or a overlay manager into the state owner?
 
 This module is the **current-main extraction** of the smallest Relay processing contracts earned by
 the Events Attention Practicum.
@@ -17,7 +17,7 @@ wholesale and did not import its experimental AppScope/observability stack.
 The current concrete consumer is the Events Attention Practicum under
 `docs/foundation/EVENTS-ATTENTION-PRACTICUM.md`. That feature now exercises this kernel with a
 normalized external feed, stable dynamic list identity, acknowledgement/defer/suppress state,
-attention availability, anchored tooltip rendering, deterministic Journey signals, and ScreenCrawler
+attention availability, anchored overlay rendering, deterministic Journey signals, and ScreenCrawler
 selection. Those feature concerns remain outside this module rather than accreting into Relay itself.
 
 ## Developer shape
@@ -148,7 +148,7 @@ inputs are available.
 - scheduled synthetic source lifecycle;
 - coroutine/job supervision or startup/readiness;
 - persistent event history;
-- tooltip/snackbar/dialog rendering;
+- overlay/snackbar/dialog rendering;
 - transient priority/arbitration policy beyond the pure Events practicum fixture;
 - anchored geometry;
 - Journey/ScreenCrawler integration;
@@ -201,7 +201,7 @@ provider-specific source truth
 -> anchored presentation
 ~~~
 
-The module still does **not** own provider lifecycle, repository history, Compose, tooltip geometry,
+The module still does **not** own provider lifecycle, repository history, Compose, overlay geometry,
 or Journey execution.
 
 A reusable async dependency-binding/activation layer remains unearned. The current Events feature

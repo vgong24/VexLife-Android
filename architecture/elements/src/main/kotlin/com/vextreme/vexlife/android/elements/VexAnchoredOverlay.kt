@@ -36,7 +36,7 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import kotlin.math.max
 
-enum class VexTooltipPlacement {
+enum class VexOverlayPlacement {
     ABOVE,
     BELOW,
     START,
@@ -44,33 +44,33 @@ enum class VexTooltipPlacement {
     FALLBACK,
 }
 
-data class VexResolvedTooltipPlacement(
-    val placement: VexTooltipPlacement,
+data class VexResolvedOverlayPlacement(
+    val placement: VexOverlayPlacement,
     val offset: IntOffset,
     val rect: IntRect,
     val clipped: Boolean,
 )
 
-fun resolveVexAnchoredTooltip(
+fun resolveVexAnchoredOverlay(
     anchorBounds: IntRect,
     windowSize: IntSize,
     popupSize: IntSize,
     layoutDirection: LayoutDirection,
     marginPx: Int,
-    preferred: List<VexTooltipPlacement> =
+    preferred: List<VexOverlayPlacement> =
         listOf(
-            VexTooltipPlacement.BELOW,
-            VexTooltipPlacement.ABOVE,
-            VexTooltipPlacement.END,
-            VexTooltipPlacement.START,
+            VexOverlayPlacement.BELOW,
+            VexOverlayPlacement.ABOVE,
+            VexOverlayPlacement.END,
+            VexOverlayPlacement.START,
         ),
-): VexResolvedTooltipPlacement {
+): VexResolvedOverlayPlacement {
     require(marginPx >= 0) {
-        "tooltip margin must be non-negative"
+        "overlay margin must be non-negative"
     }
     require(
         preferred.none {
-            it == VexTooltipPlacement.FALLBACK
+            it == VexOverlayPlacement.FALLBACK
         },
     ) {
         "FALLBACK is resolver-owned, not caller preference"
@@ -84,43 +84,43 @@ fun resolveVexAnchoredTooltip(
             bottom = max(marginPx, windowSize.height - marginPx),
         )
 
-    fun room(placement: VexTooltipPlacement): Int =
+    fun room(placement: VexOverlayPlacement): Int =
         when (placement) {
-            VexTooltipPlacement.ABOVE ->
+            VexOverlayPlacement.ABOVE ->
                 anchorBounds.top - safe.top
 
-            VexTooltipPlacement.BELOW ->
+            VexOverlayPlacement.BELOW ->
                 safe.bottom - anchorBounds.bottom
 
-            VexTooltipPlacement.START ->
+            VexOverlayPlacement.START ->
                 if (layoutDirection == LayoutDirection.Ltr) {
                     anchorBounds.left - safe.left
                 } else {
                     safe.right - anchorBounds.right
                 }
 
-            VexTooltipPlacement.END ->
+            VexOverlayPlacement.END ->
                 if (layoutDirection == LayoutDirection.Ltr) {
                     safe.right - anchorBounds.right
                 } else {
                     anchorBounds.left - safe.left
                 }
 
-            VexTooltipPlacement.FALLBACK ->
+            VexOverlayPlacement.FALLBACK ->
                 0
         }
 
-    fun required(placement: VexTooltipPlacement): Int =
+    fun required(placement: VexOverlayPlacement): Int =
         when (placement) {
-            VexTooltipPlacement.ABOVE,
-            VexTooltipPlacement.BELOW,
+            VexOverlayPlacement.ABOVE,
+            VexOverlayPlacement.BELOW,
             -> popupSize.height + marginPx
 
-            VexTooltipPlacement.START,
-            VexTooltipPlacement.END,
+            VexOverlayPlacement.START,
+            VexOverlayPlacement.END,
             -> popupSize.width + marginPx
 
-            VexTooltipPlacement.FALLBACK ->
+            VexOverlayPlacement.FALLBACK ->
                 Int.MAX_VALUE
         }
 
@@ -130,7 +130,7 @@ fun resolveVexAnchoredTooltip(
         }
 
     val placement =
-        chosen ?: VexTooltipPlacement.FALLBACK
+        chosen ?: VexOverlayPlacement.FALLBACK
 
     val centeredX =
         anchorBounds.left +
@@ -152,7 +152,7 @@ fun resolveVexAnchoredTooltip(
 
     val offset =
         when (placement) {
-            VexTooltipPlacement.ABOVE ->
+            VexOverlayPlacement.ABOVE ->
                 IntOffset(
                     x = clampX(centeredX),
                     y =
@@ -161,13 +161,13 @@ fun resolveVexAnchoredTooltip(
                             marginPx,
                 )
 
-            VexTooltipPlacement.BELOW ->
+            VexOverlayPlacement.BELOW ->
                 IntOffset(
                     x = clampX(centeredX),
                     y = anchorBounds.bottom + marginPx,
                 )
 
-            VexTooltipPlacement.START ->
+            VexOverlayPlacement.START ->
                 if (layoutDirection == LayoutDirection.Ltr) {
                     IntOffset(
                         x =
@@ -183,7 +183,7 @@ fun resolveVexAnchoredTooltip(
                     )
                 }
 
-            VexTooltipPlacement.END ->
+            VexOverlayPlacement.END ->
                 if (layoutDirection == LayoutDirection.Ltr) {
                     IntOffset(
                         x = anchorBounds.right + marginPx,
@@ -199,7 +199,7 @@ fun resolveVexAnchoredTooltip(
                     )
                 }
 
-            VexTooltipPlacement.FALLBACK ->
+            VexOverlayPlacement.FALLBACK ->
                 IntOffset(
                     x = clampX(centeredX),
                     y =
@@ -223,7 +223,7 @@ fun resolveVexAnchoredTooltip(
             rect.right > safe.right ||
             rect.bottom > safe.bottom
 
-    return VexResolvedTooltipPlacement(
+    return VexResolvedOverlayPlacement(
         placement = placement,
         offset = offset,
         rect = rect,
@@ -231,10 +231,10 @@ fun resolveVexAnchoredTooltip(
     )
 }
 
-private class VexAnchoredTooltipPositionProvider(
+private class VexAnchoredOverlayPositionProvider(
     private val marginPx: Int,
-    private val preferred: List<VexTooltipPlacement>,
-    private val onResolvedPlacement: (VexTooltipPlacement) -> Unit,
+    private val preferred: List<VexOverlayPlacement>,
+    private val onResolvedPlacement: (VexOverlayPlacement) -> Unit,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -243,7 +243,7 @@ private class VexAnchoredTooltipPositionProvider(
         popupContentSize: IntSize,
     ): IntOffset {
         val resolved =
-            resolveVexAnchoredTooltip(
+            resolveVexAnchoredOverlay(
                 anchorBounds = anchorBounds,
                 windowSize = windowSize,
                 popupSize = popupContentSize,
@@ -257,7 +257,7 @@ private class VexAnchoredTooltipPositionProvider(
     }
 }
 
-internal enum class VexTooltipCaretDirection {
+internal enum class VexOverlayCaretDirection {
     UP,
     DOWN,
     LEFT,
@@ -265,53 +265,64 @@ internal enum class VexTooltipCaretDirection {
     NONE,
 }
 
-internal fun vexTooltipCaretDirection(
-    placement: VexTooltipPlacement,
+internal fun vexOverlayCaretDirection(
+    placement: VexOverlayPlacement,
     layoutDirection: LayoutDirection,
-): VexTooltipCaretDirection =
+): VexOverlayCaretDirection =
     when (placement) {
-        VexTooltipPlacement.ABOVE ->
-            VexTooltipCaretDirection.DOWN
+        VexOverlayPlacement.ABOVE ->
+            VexOverlayCaretDirection.DOWN
 
-        VexTooltipPlacement.BELOW ->
-            VexTooltipCaretDirection.UP
+        VexOverlayPlacement.BELOW ->
+            VexOverlayCaretDirection.UP
 
-        VexTooltipPlacement.START ->
+        VexOverlayPlacement.START ->
             if (layoutDirection == LayoutDirection.Ltr) {
-                VexTooltipCaretDirection.RIGHT
+                VexOverlayCaretDirection.RIGHT
             } else {
-                VexTooltipCaretDirection.LEFT
+                VexOverlayCaretDirection.LEFT
             }
 
-        VexTooltipPlacement.END ->
+        VexOverlayPlacement.END ->
             if (layoutDirection == LayoutDirection.Ltr) {
-                VexTooltipCaretDirection.LEFT
+                VexOverlayCaretDirection.LEFT
             } else {
-                VexTooltipCaretDirection.RIGHT
+                VexOverlayCaretDirection.RIGHT
             }
 
-        VexTooltipPlacement.FALLBACK ->
-            VexTooltipCaretDirection.NONE
+        VexOverlayPlacement.FALLBACK ->
+            VexOverlayCaretDirection.NONE
     }
 
+/**
+ * Target-relative transient overlay.
+ *
+ * The primitive owns only relational presentation mechanics:
+ * - resolve a safe placement around the Compose anchor;
+ * - render a directional caret from the resolved placement;
+ * - preserve safe fallback when a preferred side cannot fit;
+ * - provide the transient container/dismissal boundary.
+ *
+ * Why the overlay exists, whether it is blocking, and what its actions mean belong to the caller.
+ */
 @Composable
-fun VexAnchoredTooltip(
+fun VexAnchoredOverlay(
     presentationRef: String,
     onDismissRequest: () -> Unit,
-    preferredPlacements: List<VexTooltipPlacement> =
+    preferredPlacements: List<VexOverlayPlacement> =
         listOf(
-            VexTooltipPlacement.BELOW,
-            VexTooltipPlacement.ABOVE,
-            VexTooltipPlacement.END,
-            VexTooltipPlacement.START,
+            VexOverlayPlacement.BELOW,
+            VexOverlayPlacement.ABOVE,
+            VexOverlayPlacement.END,
+            VexOverlayPlacement.START,
         ),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     require(presentationRef.isNotBlank()) {
-        "tooltip presentationRef must not be blank"
+        "overlay presentationRef must not be blank"
     }
     require(preferredPlacements.isNotEmpty()) {
-        "tooltip preferredPlacements must not be empty"
+        "overlay preferredPlacements must not be empty"
     }
 
     val density =
@@ -323,7 +334,7 @@ fun VexAnchoredTooltip(
 
     var resolvedPlacement by
         remember {
-            mutableStateOf<VexTooltipPlacement?>(null)
+            mutableStateOf<VexOverlayPlacement?>(null)
         }
 
     val provider =
@@ -331,7 +342,7 @@ fun VexAnchoredTooltip(
             anchorGapPx,
             preferredPlacements,
         ) {
-            VexAnchoredTooltipPositionProvider(
+            VexAnchoredOverlayPositionProvider(
                 marginPx = anchorGapPx,
                 preferred = preferredPlacements,
                 onResolvedPlacement = { placement ->
@@ -354,7 +365,7 @@ fun VexAnchoredTooltip(
                 focusable = true,
             ),
     ) {
-        VexTooltipBubble(
+        VexAnchoredOverlayBubble(
             presentationRef = presentationRef,
             placement = visualPlacement,
             content = content,
@@ -363,66 +374,66 @@ fun VexAnchoredTooltip(
 }
 
 @Composable
-private fun VexTooltipBubble(
+private fun VexAnchoredOverlayBubble(
     presentationRef: String,
-    placement: VexTooltipPlacement,
+    placement: VexOverlayPlacement,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val layoutDirection =
         LocalLayoutDirection.current
     val caretDirection =
-        vexTooltipCaretDirection(
+        vexOverlayCaretDirection(
             placement = placement,
             layoutDirection = layoutDirection,
         )
 
     when (caretDirection) {
-        VexTooltipCaretDirection.UP ->
+        VexOverlayCaretDirection.UP ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                VexTooltipCaret(caretDirection)
-                VexTooltipSurface(
+                VexAnchoredOverlayCaret(caretDirection)
+                VexAnchoredOverlaySurface(
                     presentationRef = presentationRef,
                     content = content,
                 )
             }
 
-        VexTooltipCaretDirection.DOWN ->
+        VexOverlayCaretDirection.DOWN ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                VexTooltipSurface(
+                VexAnchoredOverlaySurface(
                     presentationRef = presentationRef,
                     content = content,
                 )
-                VexTooltipCaret(caretDirection)
+                VexAnchoredOverlayCaret(caretDirection)
             }
 
-        VexTooltipCaretDirection.LEFT ->
+        VexOverlayCaretDirection.LEFT ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                VexTooltipCaret(caretDirection)
-                VexTooltipSurface(
+                VexAnchoredOverlayCaret(caretDirection)
+                VexAnchoredOverlaySurface(
                     presentationRef = presentationRef,
                     content = content,
                 )
             }
 
-        VexTooltipCaretDirection.RIGHT ->
+        VexOverlayCaretDirection.RIGHT ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                VexTooltipSurface(
+                VexAnchoredOverlaySurface(
                     presentationRef = presentationRef,
                     content = content,
                 )
-                VexTooltipCaret(caretDirection)
+                VexAnchoredOverlayCaret(caretDirection)
             }
 
-        VexTooltipCaretDirection.NONE ->
-            VexTooltipSurface(
+        VexOverlayCaretDirection.NONE ->
+            VexAnchoredOverlaySurface(
                 presentationRef = presentationRef,
                 content = content,
             )
@@ -430,7 +441,7 @@ private fun VexTooltipBubble(
 }
 
 @Composable
-private fun VexTooltipSurface(
+private fun VexAnchoredOverlaySurface(
     presentationRef: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -467,10 +478,10 @@ private fun VexTooltipSurface(
 }
 
 @Composable
-private fun VexTooltipCaret(
-    direction: VexTooltipCaretDirection,
+private fun VexAnchoredOverlayCaret(
+    direction: VexOverlayCaretDirection,
 ) {
-    if (direction == VexTooltipCaretDirection.NONE) {
+    if (direction == VexOverlayCaretDirection.NONE) {
         return
     }
 
@@ -485,23 +496,23 @@ private fun VexTooltipCaret(
 
     val modifier =
         when (direction) {
-            VexTooltipCaretDirection.UP,
-            VexTooltipCaretDirection.DOWN,
+            VexOverlayCaretDirection.UP,
+            VexOverlayCaretDirection.DOWN,
             ->
                 Modifier.size(
                     width = 18.dp,
                     height = 10.dp,
                 )
 
-            VexTooltipCaretDirection.LEFT,
-            VexTooltipCaretDirection.RIGHT,
+            VexOverlayCaretDirection.LEFT,
+            VexOverlayCaretDirection.RIGHT,
             ->
                 Modifier.size(
                     width = 10.dp,
                     height = 18.dp,
                 )
 
-            VexTooltipCaretDirection.NONE ->
+            VexOverlayCaretDirection.NONE ->
                 error("NONE caret direction returned after early exit")
         }
 
@@ -509,7 +520,7 @@ private fun VexTooltipCaret(
         val path =
             Path().apply {
                 when (direction) {
-                    VexTooltipCaretDirection.UP -> {
+                    VexOverlayCaretDirection.UP -> {
                         moveTo(
                             x = size.width / 2f,
                             y = 0f,
@@ -524,7 +535,7 @@ private fun VexTooltipCaret(
                         )
                     }
 
-                    VexTooltipCaretDirection.DOWN -> {
+                    VexOverlayCaretDirection.DOWN -> {
                         moveTo(
                             x = 0f,
                             y = 0f,
@@ -539,7 +550,7 @@ private fun VexTooltipCaret(
                         )
                     }
 
-                    VexTooltipCaretDirection.LEFT -> {
+                    VexOverlayCaretDirection.LEFT -> {
                         moveTo(
                             x = 0f,
                             y = size.height / 2f,
@@ -554,7 +565,7 @@ private fun VexTooltipCaret(
                         )
                     }
 
-                    VexTooltipCaretDirection.RIGHT -> {
+                    VexOverlayCaretDirection.RIGHT -> {
                         moveTo(
                             x = 0f,
                             y = 0f,
@@ -569,7 +580,7 @@ private fun VexTooltipCaret(
                         )
                     }
 
-                    VexTooltipCaretDirection.NONE ->
+                    VexOverlayCaretDirection.NONE ->
                         error("NONE caret direction returned after early exit")
                 }
 

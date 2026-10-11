@@ -38,9 +38,9 @@ import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
 import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
-import com.vextreme.vexlife.android.elements.VexAnchoredTooltip
+import com.vextreme.vexlife.android.elements.VexAnchoredOverlay
 import com.vextreme.vexlife.android.elements.VexStableLazyColumn
-import com.vextreme.vexlife.android.elements.VexTooltipPlacement
+import com.vextreme.vexlife.android.elements.VexOverlayPlacement
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -262,7 +262,7 @@ fun EventsScreenContent(
             },
             onDismiss = {
                 runtime.recordDynamicInteraction(
-                    EventsPresentationRefs.tooltip(
+                    EventsPresentationRefs.overlay(
                         event.eventRef,
                     ),
                     action = "Dismissed",
@@ -366,21 +366,21 @@ private fun EventRow(
         if (isAttentionCandidate) {
             val preferredPlacements =
                 scenario
-                    ?.preferredTooltipPlacements()
+                    ?.preferredOverlayPlacements()
                     ?: listOf(
-                        VexTooltipPlacement.BELOW,
-                        VexTooltipPlacement.ABOVE,
-                        VexTooltipPlacement.END,
-                        VexTooltipPlacement.START,
+                        VexOverlayPlacement.BELOW,
+                        VexOverlayPlacement.ABOVE,
+                        VexOverlayPlacement.END,
+                        VexOverlayPlacement.START,
                     )
             val blocking =
                 scenario?.blockingAcknowledgeOnly == true
             val expectedAction =
                 scenario?.expectedAction
 
-            VexAnchoredTooltip(
+            VexAnchoredOverlay(
                 presentationRef =
-                    EventsPresentationRefs.tooltip(
+                    EventsPresentationRefs.overlay(
                         event.eventRef,
                     ),
                 onDismissRequest = {
@@ -636,23 +636,23 @@ private fun EventsAttentionLabScenario.expectedResultRes(): Int =
             R.string.events_attention_expected_suppress_short
     }
 
-private fun EventsAttentionLabScenario.preferredTooltipPlacements():
-    List<VexTooltipPlacement> =
+private fun EventsAttentionLabScenario.preferredOverlayPlacements():
+    List<VexOverlayPlacement> =
     when (preferredPlacement) {
         EventsAttentionLabPlacement.ABOVE ->
             listOf(
-                VexTooltipPlacement.ABOVE,
-                VexTooltipPlacement.BELOW,
-                VexTooltipPlacement.END,
-                VexTooltipPlacement.START,
+                VexOverlayPlacement.ABOVE,
+                VexOverlayPlacement.BELOW,
+                VexOverlayPlacement.END,
+                VexOverlayPlacement.START,
             )
 
         EventsAttentionLabPlacement.BELOW ->
             listOf(
-                VexTooltipPlacement.BELOW,
-                VexTooltipPlacement.ABOVE,
-                VexTooltipPlacement.END,
-                VexTooltipPlacement.START,
+                VexOverlayPlacement.BELOW,
+                VexOverlayPlacement.ABOVE,
+                VexOverlayPlacement.END,
+                VexOverlayPlacement.START,
             )
     }
 
@@ -742,7 +742,7 @@ private fun eventsAttentionPreviewRepositories(): AppRepositories {
                         kind = VexExternalEventKind.MAP,
                         title = "Preview map update",
                         detail =
-                            "Large-text Preview pressures row height and tooltip placement.",
+                            "Large-text Preview pressures row height and overlay placement.",
                         occurredAtEpochMillis = 3_000L,
                     ),
                 ),

@@ -8,11 +8,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class VexAnchoredTooltipTest {
+class VexAnchoredOverlayTest {
     @Test
     fun choosesTheFirstPreferredSideThatSafelyFits() {
         val resolved =
-            resolveVexAnchoredTooltip(
+            resolveVexAnchoredOverlay(
                 anchorBounds =
                     IntRect(
                         left = 100,
@@ -27,7 +27,7 @@ class VexAnchoredTooltipTest {
             )
 
         assertEquals(
-            VexTooltipPlacement.BELOW,
+            VexOverlayPlacement.BELOW,
             resolved.placement,
         )
         assertFalse(resolved.clipped)
@@ -36,7 +36,7 @@ class VexAnchoredTooltipTest {
     @Test
     fun preferenceOrderWinsWhenSeveralSidesFit() {
         val resolved =
-            resolveVexAnchoredTooltip(
+            resolveVexAnchoredOverlay(
                 anchorBounds =
                     IntRect(
                         left = 150,
@@ -50,13 +50,13 @@ class VexAnchoredTooltipTest {
                 marginPx = 4,
                 preferred =
                     listOf(
-                        VexTooltipPlacement.ABOVE,
-                        VexTooltipPlacement.BELOW,
+                        VexOverlayPlacement.ABOVE,
+                        VexOverlayPlacement.BELOW,
                     ),
             )
 
         assertEquals(
-            VexTooltipPlacement.ABOVE,
+            VexOverlayPlacement.ABOVE,
             resolved.placement,
         )
     }
@@ -64,30 +64,30 @@ class VexAnchoredTooltipTest {
     @Test
     fun caretPointsBackTowardTheAnchorForResolvedPlacement() {
         assertEquals(
-            VexTooltipCaretDirection.DOWN,
-            vexTooltipCaretDirection(
-                VexTooltipPlacement.ABOVE,
+            VexOverlayCaretDirection.DOWN,
+            vexOverlayCaretDirection(
+                VexOverlayPlacement.ABOVE,
                 LayoutDirection.Ltr,
             ),
         )
         assertEquals(
-            VexTooltipCaretDirection.UP,
-            vexTooltipCaretDirection(
-                VexTooltipPlacement.BELOW,
+            VexOverlayCaretDirection.UP,
+            vexOverlayCaretDirection(
+                VexOverlayPlacement.BELOW,
                 LayoutDirection.Ltr,
             ),
         )
         assertEquals(
-            VexTooltipCaretDirection.RIGHT,
-            vexTooltipCaretDirection(
-                VexTooltipPlacement.START,
+            VexOverlayCaretDirection.RIGHT,
+            vexOverlayCaretDirection(
+                VexOverlayPlacement.START,
                 LayoutDirection.Ltr,
             ),
         )
         assertEquals(
-            VexTooltipCaretDirection.LEFT,
-            vexTooltipCaretDirection(
-                VexTooltipPlacement.START,
+            VexOverlayCaretDirection.LEFT,
+            vexOverlayCaretDirection(
+                VexOverlayPlacement.START,
                 LayoutDirection.Rtl,
             ),
         )
@@ -96,7 +96,7 @@ class VexAnchoredTooltipTest {
     @Test
     fun bottomAnchorReorientsAboveWithoutChangingTargetIdentity() {
         val resolved =
-            resolveVexAnchoredTooltip(
+            resolveVexAnchoredOverlay(
                 anchorBounds =
                     IntRect(
                         left = 100,
@@ -111,7 +111,7 @@ class VexAnchoredTooltipTest {
             )
 
         assertEquals(
-            VexTooltipPlacement.ABOVE,
+            VexOverlayPlacement.ABOVE,
             resolved.placement,
         )
         assertFalse(resolved.clipped)
@@ -120,7 +120,7 @@ class VexAnchoredTooltipTest {
     @Test
     fun logicalStartRespectsRtl() {
         val resolved =
-            resolveVexAnchoredTooltip(
+            resolveVexAnchoredOverlay(
                 anchorBounds =
                     IntRect(
                         left = 40,
@@ -134,12 +134,12 @@ class VexAnchoredTooltipTest {
                 marginPx = 12,
                 preferred =
                     listOf(
-                        VexTooltipPlacement.START,
+                        VexOverlayPlacement.START,
                     ),
             )
 
         assertEquals(
-            VexTooltipPlacement.START,
+            VexOverlayPlacement.START,
             resolved.placement,
         )
         assertTrue(
@@ -151,7 +151,7 @@ class VexAnchoredTooltipTest {
     @Test
     fun impossibleFitIsExplicitFallbackRatherThanUnsafePreferredClaim() {
         val resolved =
-            resolveVexAnchoredTooltip(
+            resolveVexAnchoredOverlay(
                 anchorBounds =
                     IntRect(
                         left = 20,
@@ -166,7 +166,7 @@ class VexAnchoredTooltipTest {
             )
 
         assertEquals(
-            VexTooltipPlacement.FALLBACK,
+            VexOverlayPlacement.FALLBACK,
             resolved.placement,
         )
         assertTrue(resolved.clipped)

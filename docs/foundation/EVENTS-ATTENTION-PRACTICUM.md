@@ -51,7 +51,7 @@ transient occupied --+
          READY
                      |
                      v
-           VexAnchoredTooltip
+           VexAnchoredOverlay
        pure placement / renderer
                      |
                      v
@@ -91,7 +91,7 @@ app/.../screens/primary/events/
 
 architecture/elements/
   VexStableLazyColumn
-  VexAnchoredTooltip
+  VexAnchoredOverlay
 
 testing/journey/catalog/primary/events/
   EventsJourneys
@@ -106,11 +106,11 @@ The shortest debugging route is:
 "Why is this event the candidate?"
 -> EventsAttentionRelay.processStates(...)
 
-"Why is the tooltip held?"
+"Why is the overlay held?"
 -> EventsAttentionOutputState.availability
 
-"Where did the tooltip render?"
--> resolveVexAnchoredTooltip(...)
+"Where did the overlay render?"
+-> resolveVexAnchoredOverlay(...)
 
 "What exact row/action did the proof address?"
 -> EventsPresentationRefs + Journeys.events.externalAttention
@@ -300,7 +300,7 @@ EventsRepository
 EventsAttentionRelay
 event kind/title/detail
 ack/defer/suppress
-tooltip policy
+overlay policy
 provider ordering semantics
 ~~~
 
@@ -336,7 +336,7 @@ eventRef + acknowledge/later/suppress
 -> dynamic action elementRef
 
 eventRef
--> tooltip presentationRef
+-> overlay presentationRef
 ~~~
 
 The static AppScreens registry does not enumerate every possible future message/call/map row.
@@ -355,9 +355,9 @@ stable formed refs.
 
 > should this exact candidate be presentable now?
 
-`resolveVexAnchoredTooltip` answers:
+`resolveVexAnchoredOverlay` answers:
 
-> given the current anchor/window/tooltip geometry, where can it fit?
+> given the current anchor/window/overlay geometry, where can it fit?
 
 Current placement family:
 
@@ -372,7 +372,7 @@ FALLBACK
 Preferred placement order is strict: the resolver chooses the first preferred side that safely fits.
 If it cannot use the requested side, it tries the next preference and finally explicit FALLBACK.
 
-The rich tooltip renders a physical caret from the **resolved** placement:
+The rich overlay renders a physical caret from the **resolved** placement:
 
 ~~~text
 ABOVE -> caret points DOWN toward anchor
@@ -382,7 +382,7 @@ END   -> caret points toward anchor, respecting LTR/RTL
 FALLBACK -> no directional caret claim
 ~~~
 
-The target row also receives a subtle active outline while it owns the tooltip. Together these cues
+The target row also receives a subtle active outline while it owns the overlay. Together these cues
 must make the relationship legible without reading explanatory text.
 
 START/END respect layout direction. A bottom/edge anchor may reorient without changing `eventRef`.
@@ -397,7 +397,7 @@ AUTOMATIC_REPOSITION != HUMAN_PREFERENCE
 
 ## Lived attention contract
 
-The attention popup is an **interactive anchored rich tooltip / popover**, not another Events row.
+The attention popup is an **interactive anchored rich anchored overlay**, not another Events row.
 
 A lived-device review exposed two requirements that are now part of the practicum:
 
@@ -406,7 +406,7 @@ TRANSIENT_SURFACE_MUST_LOOK_TRANSIENT
 PROVIDER_UPDATE != VISIBILITY_OBSERVER_RESTART
 ~~~
 
-The tooltip therefore uses an inverse/outlined surface rather than the ordinary event-card surface.
+The overlay therefore uses an inverse/outlined surface rather than the ordinary event-card surface.
 
 The second lived review showed that keeping the visibility observer alive was necessary but not
 sufficient: a five-second provider emission still legitimately changes the Compound Relay input and
@@ -477,8 +477,8 @@ A blocking lab scenario adds one stronger condition on top of the common present
 the target is auto-scrolled into view, user scrolling is disabled, outside dismissal is ignored and
 Acknowledge releases the lock.
 
-The rich tooltip is intentionally compact. The durable/Debug surfaces retain deep metadata; the
-popover shows only the information needed for the current human decision:
+The rich overlay is intentionally compact. The durable/Debug surfaces retain deep metadata; the
+overlay shows only the information needed for the current human decision:
 
 ~~~text
 event title
@@ -558,7 +558,7 @@ Useful live play:
 Debug Menu
 -> Emit 12-event burst
 -> Events
--> note the current tooltip candidate
+-> note the current overlay candidate
 -> scroll that row off-screen
    => same candidate becomes HELD_TARGET_UNREACHABLE
 -> scroll it back
@@ -688,7 +688,7 @@ VISUAL_INDEX != SEMANTIC_IDENTITY
 ~~~
 
 VexStableLazyColumn(requestedVisibleItemRef=...) brings a planned stable item into the viewport.
-VexAnchoredTooltip(preferredPlacements=...) tries the scenario's preferred side first and may use
+VexAnchoredOverlay(preferredPlacements=...) tries the scenario's preferred side first and may use
 a documented safe fallback when the requested side does not fit.
 
 ### Queue action law
@@ -857,7 +857,7 @@ repository Gradle :architecture:relay:test PASS
 app JVM/assemble PASS on exact current candidate
 connected Android Journey PASS
 ScreenCrawler screenshot return PASS for Events lattice
-physical-device lived tooltip/reorder/scroll review
+physical-device lived overlay/reorder/scroll review
 ~~~
 
 This environment cannot resolve github.com from its execution container, so it cannot clean-clone

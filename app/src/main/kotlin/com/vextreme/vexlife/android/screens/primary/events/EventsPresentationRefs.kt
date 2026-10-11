@@ -13,8 +13,8 @@ object EventsPresentationRefs {
     ): String =
         row(eventRef) + ".attention." + action
 
-    fun tooltip(eventRef: String): String =
-        "presentation.events.tooltip.$eventRef"
+    fun overlay(eventRef: String): String =
+        "presentation.events.overlay.$eventRef"
 }
 
 // [VXG RealForever]
