@@ -893,15 +893,18 @@ private fun VexStreamCollectionDetail(
                 modifier = Modifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                TextButton(
-                    onClick = onBack,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.back,
-                        ),
-                    )
-                }
+                VexButton(
+                    element =
+                        VexStreamMusicScreen
+                            .CollectionBack,
+                    handler =
+                        ElementActionHandler { element ->
+                            runtime.activate(
+                                element,
+                            )
+                            onBack()
+                        },
+                )
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
@@ -1419,12 +1422,6 @@ private fun VexStreamQueueSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    controller?.seekToDefaultPosition(
-                                        index,
-                                    )
-                                    controller?.play()
-                                }
                                 .padding(
                                     vertical = 9.dp,
                                 ),
