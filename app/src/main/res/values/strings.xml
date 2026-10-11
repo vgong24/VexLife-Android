@@ -177,7 +177,13 @@
     <string name="vexmaps_region_pack_replace">Replace region</string>
     <string name="vexmaps_region_pack_importing">Importing routing region…</string>
     <string name="vexmaps_region_pack_error">That file could not be used as an offline routing region.</string>
-    <string name="vexmaps_route_need_location">Use precise location, then choose a destination.</string>
+    <string name="vexmaps_route_start_needed">Choose a start on the map or use precise location.</string>
+    <string name="vexmaps_route_start_selecting">Long-press the map to choose a route start.</string>
+    <string name="vexmaps_route_start_pinned">Start: pinned on map.</string>
+    <string name="vexmaps_route_start_current">Start: current location.</string>
+    <string name="vexmaps_route_choose_start">Choose start on map</string>
+    <string name="vexmaps_route_change_start">Change start on map</string>
+    <string name="vexmaps_route_use_current_start">Use current location as start</string>
     <string name="vexmaps_route_choose_destination">Long-press the map to choose a destination.</string>
     <string name="vexmaps_route_destination_selected">Pinned destination selected.</string>
     <string name="vexmaps_route_here">Route here</string>

@@ -110,10 +110,22 @@ internal fun VexMapsMapSurface(
                 VexDeviceLocationResult.Located?
             >(null)
         }
+    var selectedOrigin by
+        remember {
+            mutableStateOf<VexMapCoordinate?>(
+                null,
+            )
+        }
     var destination by
         remember {
             mutableStateOf<VexMapCoordinate?>(
                 null,
+            )
+        }
+    var mapSelectionTarget by
+        remember {
+            mutableStateOf(
+                VexMapsMapSelectionTarget.DESTINATION,
             )
         }
     var regionPack by
@@ -302,25 +314,47 @@ internal fun VexMapsMapSurface(
 
     SideEffect {
         mapController
-            .setOnDestinationLongPress(
+            .setOnMapLongPress(
                 if (
                     navigationState.phase ==
                     VexNavigationSessionPhase.IDLE
                 ) {
                     { selected ->
-                        runtime.recordDynamicInteraction(
-                            subjectRef =
-                                "presentation.vexmaps.destination.pin",
-                            action = "LongPressed",
-                        )
-                        destination =
-                            selected
-                        planningState =
-                            VexMapsPlanningState.Idle
-                        mapController
-                            .showDestination(
-                                selected,
-                            )
+                        when (mapSelectionTarget) {
+                            VexMapsMapSelectionTarget.ORIGIN -> {
+                                runtime.recordDynamicInteraction(
+                                    subjectRef =
+                                        "presentation.vexmaps.origin.pin",
+                                    action = "LongPressed",
+                                )
+                                selectedOrigin =
+                                    selected
+                                mapSelectionTarget =
+                                    VexMapsMapSelectionTarget.DESTINATION
+                                planningState =
+                                    VexMapsPlanningState.Idle
+                                mapController
+                                    .showOrigin(
+                                        selected,
+                                    )
+                            }
+
+                            VexMapsMapSelectionTarget.DESTINATION -> {
+                                runtime.recordDynamicInteraction(
+                                    subjectRef =
+                                        "presentation.vexmaps.destination.pin",
+                                    action = "LongPressed",
+                                )
+                                destination =
+                                    selected
+                                planningState =
+                                    VexMapsPlanningState.Idle
+                                mapController
+                                    .showDestination(
+                                        selected,
+                                    )
+                            }
+                        }
                     }
                 } else {
                     null
@@ -440,6 +474,19 @@ internal fun VexMapsMapSurface(
             ) ==
             PackageManager.PERMISSION_GRANTED
 
+    val deviceRouteOrigin =
+        currentLocation?.let { location ->
+            VexMapCoordinate(
+                latitude = location.latitude,
+                longitude = location.longitude,
+            )
+        }
+    val routeOrigin =
+        resolveVexMapsRouteOrigin(
+            selectedOrigin = selectedOrigin,
+            deviceOrigin = deviceRouteOrigin,
+        )
+
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -456,12 +503,43 @@ internal fun VexMapsMapSurface(
                 regionPack = regionPack,
                 offlineMapState =
                     offlineMapState,
-                hasLocation =
-                    currentLocation != null,
+                routeOrigin =
+                    routeOrigin,
+                usingPinnedOrigin =
+                    selectedOrigin != null,
+                selectingOrigin =
+                    mapSelectionTarget ==
+                        VexMapsMapSelectionTarget.ORIGIN,
+                canUseDeviceOrigin =
+                    deviceRouteOrigin != null,
                 destination =
                     destination,
                 planningState =
                     planningState,
+                onChooseOriginOnMap = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.origin.choose",
+                        action = "Clicked",
+                    )
+                    mapSelectionTarget =
+                        VexMapsMapSelectionTarget.ORIGIN
+                    planningState =
+                        VexMapsPlanningState.Idle
+                },
+                onUseDeviceOrigin = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.origin.use-device",
+                        action = "Clicked",
+                    )
+                    selectedOrigin = null
+                    mapSelectionTarget =
+                        VexMapsMapSelectionTarget.DESTINATION
+                    planningState =
+                        VexMapsPlanningState.Idle
+                    mapController.clearOrigin()
+                },
                 onImportOfflineMap = {
                     runtime.recordDynamicInteraction(
                         subjectRef =
@@ -487,7 +565,7 @@ internal fun VexMapsMapSurface(
                         regionPack
                             ?: return@VexMapsRoutePlannerCard
                     val origin =
-                        currentLocation
+                        routeOrigin
                             ?: return@VexMapsRoutePlannerCard
                     val target =
                         destination
@@ -516,12 +594,7 @@ internal fun VexMapsMapSurface(
                                                 VexMapsRouteIdentity
                                                     .nextRevision(),
                                             origin =
-                                                VexMapCoordinate(
-                                                    latitude =
-                                                        origin.latitude,
-                                                    longitude =
-                                                        origin.longitude,
-                                                ),
+                                                origin,
                                             destination =
                                                 target,
                                             destinationLabel =
@@ -713,9 +786,14 @@ private fun VexMapsRoutePlannerCard(
     regionPack: VexMapsRegionPack?,
     offlineMapState:
         VexMapsOfflineMapState,
-    hasLocation: Boolean,
+    routeOrigin: VexMapCoordinate?,
+    usingPinnedOrigin: Boolean,
+    selectingOrigin: Boolean,
+    canUseDeviceOrigin: Boolean,
     destination: VexMapCoordinate?,
     planningState: VexMapsPlanningState,
+    onChooseOriginOnMap: () -> Unit,
+    onUseDeviceOrigin: () -> Unit,
     onImportOfflineMap: () -> Unit,
     onImportRegion: () -> Unit,
     onRouteHere: () -> Unit,
@@ -862,36 +940,103 @@ private fun VexMapsRoutePlannerCard(
             if (regionPack != null) {
                 Text(
                     text =
-                        when {
-                            !hasLocation ->
-                                stringResource(
+                        stringResource(
+                            when {
+                                selectingOrigin ->
                                     R.string
-                                        .vexmaps_route_need_location,
-                                )
+                                        .vexmaps_route_start_selecting
 
-                            destination == null ->
-                                stringResource(
+                                usingPinnedOrigin ->
                                     R.string
-                                        .vexmaps_route_choose_destination,
-                                )
+                                        .vexmaps_route_start_pinned
 
-                            else ->
-                                stringResource(
+                                routeOrigin != null ->
                                     R.string
-                                        .vexmaps_route_destination_selected,
-                                )
-                        },
+                                        .vexmaps_route_start_current
+
+                                else ->
+                                    R.string
+                                        .vexmaps_route_start_needed
+                            },
+                        ),
                     style =
                         MaterialTheme
                             .typography
                             .bodyMedium,
                 )
+
+                OutlinedButton(
+                    onClick = onChooseOriginOnMap,
+                    enabled =
+                        planningState !is
+                        VexMapsPlanningState.Routing &&
+                            planningState !is
+                            VexMapsPlanningState.Importing,
+                ) {
+                    Text(
+                        stringResource(
+                            if (usingPinnedOrigin) {
+                                R.string
+                                    .vexmaps_route_change_start
+                            } else {
+                                R.string
+                                    .vexmaps_route_choose_start
+                            },
+                        ),
+                    )
+                }
+
+                if (
+                    usingPinnedOrigin &&
+                    canUseDeviceOrigin
+                ) {
+                    OutlinedButton(
+                        onClick = onUseDeviceOrigin,
+                        enabled =
+                            planningState !is
+                            VexMapsPlanningState.Routing &&
+                                planningState !is
+                                VexMapsPlanningState.Importing,
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_route_use_current_start,
+                            ),
+                        )
+                    }
+                }
+
+                if (
+                    routeOrigin != null &&
+                    !selectingOrigin
+                ) {
+                    Text(
+                        text =
+                            if (destination == null) {
+                                stringResource(
+                                    R.string
+                                        .vexmaps_route_choose_destination,
+                                )
+                            } else {
+                                stringResource(
+                                    R.string
+                                        .vexmaps_route_destination_selected,
+                                )
+                            },
+                        style =
+                            MaterialTheme
+                                .typography
+                                .bodyMedium,
+                    )
+                }
             }
 
             if (
                 regionPack != null &&
-                hasLocation &&
-                destination != null
+                routeOrigin != null &&
+                destination != null &&
+                !selectingOrigin
             ) {
                 Button(
                     onClick = onRouteHere,
@@ -1139,6 +1284,17 @@ private fun NavigationStopButton(
     }
 }
 
+internal fun resolveVexMapsRouteOrigin(
+    selectedOrigin: VexMapCoordinate?,
+    deviceOrigin: VexMapCoordinate?,
+): VexMapCoordinate? =
+    selectedOrigin ?: deviceOrigin
+
+private enum class VexMapsMapSelectionTarget {
+    ORIGIN,
+    DESTINATION,
+}
+
 private sealed interface VexMapsPlanningState {
     data object Idle :
         VexMapsPlanningState
@@ -1166,18 +1322,20 @@ private class VexMapsMapController {
         VexDeviceLocationResult.Located? = null
     private var pendingRoute:
         VexOfflineRouteResult? = null
+    private var pendingOrigin:
+        VexMapCoordinate? = null
     private var pendingDestination:
         VexMapCoordinate? = null
     private var lastFittedRouteKey:
         String? = null
-    private var onDestinationLongPress:
+    private var onMapLongPress:
         ((VexMapCoordinate) -> Unit)? = null
 
     private val longClickListener =
         MapLibreMap.OnMapLongClickListener {
             point ->
             val callback =
-                onDestinationLongPress
+                onMapLongPress
                     ?: return@OnMapLongClickListener false
 
             callback(
@@ -1191,11 +1349,11 @@ private class VexMapsMapController {
             true
         }
 
-    fun setOnDestinationLongPress(
+    fun setOnMapLongPress(
         callback:
             ((VexMapCoordinate) -> Unit)?,
     ) {
-        onDestinationLongPress =
+        onMapLongPress =
             callback
     }
 
@@ -1215,6 +1373,9 @@ private class VexMapsMapController {
                 fitCamera = true,
             )
         }
+        pendingOrigin?.let(
+            ::renderOrigin,
+        )
         pendingDestination?.let(
             ::renderDestination,
         )
@@ -1230,6 +1391,37 @@ private class VexMapsMapController {
         map = null
         style = null
         lastFittedRouteKey = null
+    }
+
+    fun showOrigin(
+        origin: VexMapCoordinate,
+    ) {
+        pendingOrigin = origin
+        renderOrigin(origin)
+    }
+
+    fun clearOrigin() {
+        pendingOrigin = null
+
+        val style = style ?: return
+        if (
+            style.getLayer(
+                ORIGIN_LAYER_ID,
+            ) != null
+        ) {
+            style.removeLayer(
+                ORIGIN_LAYER_ID,
+            )
+        }
+        if (
+            style.getSource(
+                ORIGIN_SOURCE_ID,
+            ) != null
+        ) {
+            style.removeSource(
+                ORIGIN_SOURCE_ID,
+            )
+        }
     }
 
     fun showDestination(
@@ -1280,6 +1472,51 @@ private class VexMapsMapController {
     ) {
         pendingLocation = location
         renderDeviceLocation(location)
+    }
+
+    private fun renderOrigin(
+        origin: VexMapCoordinate,
+    ) {
+        val style = style ?: return
+        val point =
+            Point.fromLngLat(
+                origin.longitude,
+                origin.latitude,
+            )
+        val existing =
+            style.getSource(
+                ORIGIN_SOURCE_ID,
+            ) as? GeoJsonSource
+
+        if (existing == null) {
+            style.addSource(
+                GeoJsonSource(
+                    ORIGIN_SOURCE_ID,
+                    point,
+                ),
+            )
+            style.addLayer(
+                CircleLayer(
+                    ORIGIN_LAYER_ID,
+                    ORIGIN_SOURCE_ID,
+                ).withProperties(
+                    circleRadius(9f),
+                    circleColor(
+                        Color.parseColor(
+                            "#146C2E",
+                        ),
+                    ),
+                    circleStrokeWidth(3f),
+                    circleStrokeColor(
+                        Color.WHITE,
+                    ),
+                ),
+            )
+        } else {
+            existing.setGeoJson(
+                point,
+            )
+        }
     }
 
     private fun renderDestination(
@@ -1652,6 +1889,12 @@ private const val ROUTE_SOURCE_ID =
 
 private const val ROUTE_LAYER_ID =
     "vexmaps-route-layer"
+
+private const val ORIGIN_SOURCE_ID =
+    "vexmaps-origin"
+
+private const val ORIGIN_LAYER_ID =
+    "vexmaps-origin-layer"
 
 private const val DESTINATION_SOURCE_ID =
     "vexmaps-destination"
