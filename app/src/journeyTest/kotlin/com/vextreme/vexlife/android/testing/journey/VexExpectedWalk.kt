@@ -190,6 +190,7 @@ class VexExpectedWalk : VexJourneyScope {
                 }
             }
             is ElementIntent.SwapTo -> Unit
+            ElementIntent.LocalEffect -> Unit
             is ElementIntent.Invoke -> Unit
             is ElementIntent.Sequence -> intent.intents.forEach(::applyIntent)
         }
