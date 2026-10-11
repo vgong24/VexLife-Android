@@ -186,26 +186,41 @@ private fun VexStreamLibraryTabs(
 ) {
     val tabs =
         listOf(
-            VexStreamMusicScreen.SongsTab to
+            Triple(
+                VexStreamMusicScreen.SongsTab,
                 VexStreamMusicScreen.SongsPanel.elementId,
-            VexStreamMusicScreen.AlbumsTab to
+                R.string.vexstream_music_songs,
+            ),
+            Triple(
+                VexStreamMusicScreen.AlbumsTab,
                 VexStreamMusicScreen.AlbumsPanel.elementId,
-            VexStreamMusicScreen.ArtistsTab to
+                R.string.vexstream_music_albums,
+            ),
+            Triple(
+                VexStreamMusicScreen.ArtistsTab,
                 VexStreamMusicScreen.ArtistsPanel.elementId,
-            VexStreamMusicScreen.PlaylistsTab to
+                R.string.vexstream_music_artists,
+            ),
+            Triple(
+                VexStreamMusicScreen.PlaylistsTab,
                 VexStreamMusicScreen.PlaylistsPanel.elementId,
-            VexStreamMusicScreen.DownloadsTab to
+                R.string.vexstream_music_playlists,
+            ),
+            Triple(
+                VexStreamMusicScreen.DownloadsTab,
                 VexStreamMusicScreen.DownloadsPanel.elementId,
+                R.string.vexstream_music_downloads,
+            ),
         )
 
     ScrollableTabRow(
         selectedTabIndex =
-            tabs.indexOfFirst { (_, panelId) ->
+            tabs.indexOfFirst { (_, panelId, _) ->
                 panelId == selectedElementId
             }.coerceAtLeast(0),
         edgePadding = 8.dp,
     ) {
-        tabs.forEach { (tab, panelId) ->
+        tabs.forEach { (tab, panelId, labelRes) ->
             Tab(
                 selected = selectedElementId == panelId,
                 onClick = {
@@ -214,7 +229,7 @@ private fun VexStreamLibraryTabs(
                 modifier = Modifier.vexElement(tab),
                 text = {
                     Text(
-                        stringResource(tab.labelRes),
+                        stringResource(labelRes),
                     )
                 },
             )
