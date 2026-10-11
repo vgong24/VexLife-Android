@@ -67,8 +67,8 @@ enum class VexCrawlerCapturePolicy {
     /** Capture the first stable appearance of each selected/visited Screen in one case. */
     SCREEN_ONCE,
 
-    /** Capture after every semantic journey step. Useful for modal/state translation review. */
-    EVERY_SEMANTIC_STEP,
+    /** Capture after every journey step, including local text entry. Useful for translation review. */
+    EVERY_STEP,
 
     /** Capture only the final stable state of the selected journey case. */
     FINAL_ONLY,
