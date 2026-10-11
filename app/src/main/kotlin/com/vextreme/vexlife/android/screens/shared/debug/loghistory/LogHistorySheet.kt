@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
-import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
@@ -33,8 +32,9 @@ import java.time.ZoneId
  * Draggable Log History presentation.
  *
  * The semantic open/closed state still belongs to VexRuntime.presentation. Material's sheet state
- * only realizes that state on Android. Dragging the sheet down dismisses it without inventing a
- * synthetic "Clicked" log event; the explicit Close button remains available for accessibility.
+ * only realizes that state on Android. It opens partially, can be dragged to full height, and can
+ * be dragged/scrim-dismissed. Platform dismissal is recorded as "Dismissed" against the sheet's
+ * semantic identity rather than inventing a Close-button click.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,12 +44,13 @@ fun LogHistorySheet(
 ) {
     val history by repository.records.collectAsState(initial = emptyList())
     val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
+        skipPartiallyExpanded = false,
     )
 
     ModalBottomSheet(
+        modifier = Modifier.fillMaxHeight(),
         onDismissRequest = {
-            runtime.presentation.close(DebugMenuScreen.LogSheet)
+            runtime.dismissPresentation(DebugMenuScreen.LogSheet)
         },
         sheetState = sheetState,
         dragHandle = {
@@ -59,7 +60,7 @@ fun LogHistorySheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.9f)
+                .fillMaxHeight()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 20.dp),
         ) {
@@ -73,7 +74,10 @@ fun LogHistorySheet(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(
+                        state = rememberScrollState(),
+                        overscrollEffect = null,
+                    ),
             ) {
                 SelectionContainer {
                     Text(
@@ -86,11 +90,6 @@ fun LogHistorySheet(
                 }
             }
 
-            VexButton(
-                element = DebugMenuScreen.CloseLog,
-                handler = runtime,
-                modifier = Modifier.padding(top = 16.dp),
-            )
         }
     }
 }
