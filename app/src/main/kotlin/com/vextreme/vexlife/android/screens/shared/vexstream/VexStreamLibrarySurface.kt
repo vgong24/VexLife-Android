@@ -1989,7 +1989,6 @@ private fun VexStreamQueueSheet(
                                 entry.stableKey
                         val reorderEnabled =
                             controller != null &&
-                                !playback.shuffleEnabled &&
                                 controller.isCommandAvailable(
                                     androidx.media3.common.Player
                                         .COMMAND_CHANGE_MEDIA_ITEMS,
@@ -2130,6 +2129,14 @@ private fun VexStreamQueueSheet(
                                                 )
                                                     ?: return@detectVerticalDragGestures
 
+                                            if (
+                                                controller
+                                                    ?.shuffleModeEnabled ==
+                                                true
+                                            ) {
+                                                controller.shuffleModeEnabled =
+                                                    false
+                                            }
                                             controller?.moveMediaItem(
                                                 draggedIndex,
                                                 target,
