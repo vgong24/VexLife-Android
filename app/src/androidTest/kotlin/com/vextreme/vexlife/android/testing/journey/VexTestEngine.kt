@@ -5,7 +5,7 @@ import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.FontScale
 import androidx.compose.ui.test.Locales
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -34,7 +34,7 @@ import org.junit.Assert.fail
  * by VexLogger -> LogHistoryPersistenceQueue.
  */
 class VexTestEngine(
-    private val compose: ComposeTestRule,
+    private val compose: ComposeContentTestRule,
 ) : VexJourneyScope {
     private val logHistory = InMemoryLogHistoryRepository()
     private val repositories = AppRepositories(
