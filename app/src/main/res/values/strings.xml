@@ -153,6 +153,17 @@
     <string name="vexmaps_navigation_notification_location">Navigation location is temporarily unavailable</string>
     <string name="vexmaps_navigation_notification_arrived">Arrived</string>
     <string name="vexmaps_navigation_stop">Stop navigation</string>
+    <string name="vexmaps_navigation_ready">Route to %1$s · %2$d m</string>
+    <string name="vexmaps_navigation_location_needed">Use precise location before starting navigation.</string>
+    <string name="vexmaps_navigation_start">Start</string>
+    <string name="vexmaps_navigation_continue">Continue on the route</string>
+    <string name="vexmaps_navigation_remaining">%1$d m remaining</string>
+    <string name="vexmaps_navigation_off_route">Off route</string>
+    <string name="vexmaps_navigation_off_route_body">Holding guidance until your position is back on the route.</string>
+    <string name="vexmaps_navigation_waiting_location">Waiting for a usable location</string>
+    <string name="vexmaps_navigation_waiting_location_body">The route is preserved while VexMaps waits for a current accurate fix.</string>
+    <string name="vexmaps_navigation_arrived">Arrived at %1$s</string>
+    <string name="vexmaps_navigation_done">Done</string>
 
     <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
     <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>

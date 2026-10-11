@@ -2,14 +2,22 @@ package com.vextreme.vexlife.android.screens.shared.maps
 
 import android.graphics.Color
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,36 +35,49 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.runtime.VexRuntime
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.CameraPosition
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
 import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
 /**
- * Android-native realization of the VexMaps basemap + explicit current-location capability.
+ * Android-native realization of the VexMaps map and current active-navigation presentation.
  *
- * MapLibre owns rendering. OpenFreeMap is the current zero-key online OSM tile/style source.
- * Android owns the one-session precise-location grant. Neither becomes the owner of route,
- * navigation, or guidance meaning.
+ * MapLibre owns pixels. Android owns explicit location access. [VexNavigationSession] owns route
+ * progress. This Composable only projects those truths into one calm human surface.
  */
 @Composable
 internal fun VexMapsMapSurface(
+    runtime: VexRuntime,
     darkTheme: Boolean,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
+    val navigationState by
+        VexMapsNavigationProcess
+            .session
+            .states
+            .collectAsState()
+
     val mapController =
         remember {
             VexMapsMapController()
@@ -118,6 +139,29 @@ internal fun VexMapsMapSurface(
             }
         }
 
+    LaunchedEffect(
+        navigationState
+            .routeResult
+            ?.route
+            ?.routeRef,
+        navigationState
+            .routeResult
+            ?.route
+            ?.routeRevision,
+        mapController,
+    ) {
+        val routeResult =
+            navigationState.routeResult
+
+        if (routeResult == null) {
+            mapController.clearRoute()
+        } else {
+            mapController.showRoute(
+                routeResult,
+            )
+        }
+    }
+
     DisposableEffect(
         lifecycle,
         mapView,
@@ -152,6 +196,46 @@ internal fun VexMapsMapSurface(
         AndroidView(
             factory = { mapView },
             modifier = Modifier.fillMaxSize(),
+        )
+
+        VexMapsNavigationCard(
+            state = navigationState,
+            locationReady =
+                locationState ==
+                    VexMapsLocationState.Ready,
+            onStart = {
+                runtime.recordDynamicInteraction(
+                    subjectRef =
+                        "presentation.vexmaps.navigation.start",
+                    action = "Clicked",
+                )
+                VexMapsNavigationService
+                    .startPrepared(context)
+            },
+            onStop = {
+                runtime.recordDynamicInteraction(
+                    subjectRef =
+                        "presentation.vexmaps.navigation.stop",
+                    action = "Clicked",
+                )
+                VexMapsNavigationService
+                    .stop(context)
+            },
+            onDone = {
+                runtime.recordDynamicInteraction(
+                    subjectRef =
+                        "presentation.vexmaps.navigation.done",
+                    action = "Clicked",
+                )
+                VexMapsNavigationProcess
+                    .session
+                    .stop()
+            },
+            modifier =
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+                    .widthIn(max = 340.dp),
         )
 
         Column(
@@ -264,11 +348,245 @@ internal fun VexMapsMapSurface(
     }
 }
 
+@Composable
+private fun VexMapsNavigationCard(
+    state: VexNavigationSessionState,
+    locationReady: Boolean,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (
+        state.phase ==
+        VexNavigationSessionPhase.IDLE
+    ) {
+        return
+    }
+
+    val destination =
+        state
+            .routeResult
+            ?.route
+            ?.destinationLabel
+            .orEmpty()
+
+    Card(
+        modifier = modifier,
+    ) {
+        Column(
+            modifier =
+                Modifier.padding(14.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(8.dp),
+        ) {
+            when (state.phase) {
+                VexNavigationSessionPhase.READY -> {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_ready,
+                                destination,
+                                state
+                                    .routeResult
+                                    ?.route
+                                    ?.totalDistanceMeters
+                                    ?: 0,
+                            ),
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleMedium,
+                    )
+
+                    if (locationReady) {
+                        Button(
+                            onClick = onStart,
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string
+                                        .vexmaps_navigation_start,
+                                ),
+                            )
+                        }
+                    } else {
+                        Text(
+                            text =
+                                stringResource(
+                                    R.string
+                                        .vexmaps_navigation_location_needed,
+                                ),
+                            style =
+                                MaterialTheme
+                                    .typography
+                                    .bodySmall,
+                        )
+                    }
+                }
+
+                VexNavigationSessionPhase.ACTIVE -> {
+                    val progress =
+                        state.convergence?.progress
+                    val next =
+                        progress?.nextManeuver
+
+                    Text(
+                        text =
+                            next
+                                ?.maneuver
+                                ?.instructionProjection
+                                ?: stringResource(
+                                    R.string
+                                        .vexmaps_navigation_continue,
+                                ),
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleLarge,
+                    )
+
+                    next?.let {
+                        Text(
+                            text =
+                                stringResource(
+                                    R.string
+                                        .vexmaps_navigation_notification_active,
+                                    it.distanceToManeuverMeters,
+                                ),
+                            style =
+                                MaterialTheme
+                                    .typography
+                                    .headlineSmall,
+                        )
+                    }
+
+                    Text(
+                        text =
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_remaining,
+                                progress
+                                    ?.distanceRemainingMeters
+                                    ?: 0,
+                            ),
+                        style =
+                            MaterialTheme
+                                .typography
+                                .bodyMedium,
+                    )
+
+                    NavigationStopButton(
+                        onStop = onStop,
+                    )
+                }
+
+                VexNavigationSessionPhase.OFF_ROUTE -> {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_off_route,
+                            ),
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleLarge,
+                    )
+                    Text(
+                        text =
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_off_route_body,
+                            ),
+                    )
+                    NavigationStopButton(
+                        onStop = onStop,
+                    )
+                }
+
+                VexNavigationSessionPhase.LOCATION_HELD -> {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_waiting_location,
+                            ),
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleLarge,
+                    )
+                    Text(
+                        text =
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_waiting_location_body,
+                            ),
+                    )
+                    NavigationStopButton(
+                        onStop = onStop,
+                    )
+                }
+
+                VexNavigationSessionPhase.ARRIVED -> {
+                    Text(
+                        text =
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_arrived,
+                                destination,
+                            ),
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleLarge,
+                    )
+                    Button(
+                        onClick = onDone,
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_done,
+                            ),
+                        )
+                    }
+                }
+
+                VexNavigationSessionPhase.IDLE ->
+                    Unit
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavigationStopButton(
+    onStop: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onStop,
+    ) {
+        Text(
+            stringResource(
+                R.string
+                    .vexmaps_navigation_stop,
+            ),
+        )
+    }
+}
+
 private class VexMapsMapController {
     private var map: MapLibreMap? = null
     private var style: Style? = null
     private var pendingLocation:
         VexDeviceLocationResult.Located? = null
+    private var pendingRoute:
+        VexOfflineRouteResult? = null
+    private var lastFittedRouteKey:
+        String? = null
 
     fun attach(
         map: MapLibreMap,
@@ -276,6 +594,14 @@ private class VexMapsMapController {
     ) {
         this.map = map
         this.style = style
+
+        pendingRoute?.let { route ->
+            renderRoute(
+                route = route,
+                fitCamera = true,
+            )
+        }
+
         pendingLocation?.let(
             ::renderDeviceLocation,
         )
@@ -284,6 +610,30 @@ private class VexMapsMapController {
     fun detach() {
         map = null
         style = null
+        lastFittedRouteKey = null
+    }
+
+    fun showRoute(
+        route: VexOfflineRouteResult,
+    ) {
+        pendingRoute = route
+        renderRoute(
+            route = route,
+            fitCamera = true,
+        )
+    }
+
+    fun clearRoute() {
+        pendingRoute = null
+        lastFittedRouteKey = null
+
+        val style = style ?: return
+        style.removeLayer(
+            ROUTE_LAYER_ID,
+        )
+        style.removeSource(
+            ROUTE_SOURCE_ID,
+        )
     }
 
     fun showDeviceLocation(
@@ -291,6 +641,90 @@ private class VexMapsMapController {
     ) {
         pendingLocation = location
         renderDeviceLocation(location)
+    }
+
+    private fun renderRoute(
+        route: VexOfflineRouteResult,
+        fitCamera: Boolean,
+    ) {
+        val map = map ?: return
+        val style = style ?: return
+
+        val points =
+            route.geometry.map { coordinate ->
+                Point.fromLngLat(
+                    coordinate.longitude,
+                    coordinate.latitude,
+                )
+            }
+
+        val line =
+            LineString.fromLngLats(
+                points,
+            )
+
+        val existingSource =
+            style.getSource(
+                ROUTE_SOURCE_ID,
+            ) as? GeoJsonSource
+
+        if (existingSource == null) {
+            style.addSource(
+                GeoJsonSource(
+                    ROUTE_SOURCE_ID,
+                    line,
+                ),
+            )
+            style.addLayer(
+                LineLayer(
+                    ROUTE_LAYER_ID,
+                    ROUTE_SOURCE_ID,
+                ).withProperties(
+                    lineColor(
+                        Color.parseColor(
+                            "#6750A4",
+                        ),
+                    ),
+                    lineWidth(7f),
+                    lineOpacity(0.92f),
+                ),
+            )
+        } else {
+            existingSource.setGeoJson(
+                line,
+            )
+        }
+
+        val routeKey =
+            route.route.routeRef +
+                ":" +
+                route.route.routeRevision
+
+        if (
+            fitCamera &&
+            lastFittedRouteKey != routeKey
+        ) {
+            val bounds =
+                LatLngBounds.Builder()
+                    .includes(
+                        route.geometry.map { coordinate ->
+                            LatLng(
+                                coordinate.latitude,
+                                coordinate.longitude,
+                            )
+                        },
+                    )
+                    .build()
+
+            map.animateCamera(
+                CameraUpdateFactory
+                    .newLatLngBounds(
+                        bounds,
+                        96,
+                    ),
+            )
+            lastFittedRouteKey = routeKey
+        }
     }
 
     private fun renderDeviceLocation(
@@ -341,16 +775,20 @@ private class VexMapsMapController {
             )
         }
 
-        map.animateCamera(
-            CameraUpdateFactory
-                .newLatLngZoom(
-                    LatLng(
-                        location.latitude,
-                        location.longitude,
+        if (
+            pendingRoute == null
+        ) {
+            map.animateCamera(
+                CameraUpdateFactory
+                    .newLatLngZoom(
+                        LatLng(
+                            location.latitude,
+                            location.longitude,
+                        ),
+                        15.5,
                     ),
-                    15.5,
-                ),
-        )
+            )
+        }
     }
 }
 
@@ -400,9 +838,6 @@ private sealed interface VexMapsLocationState {
     }
 }
 
-/**
- * Keeps MapView's imperative Android lifecycle behind the screen-local realization boundary.
- */
 private class VexMapsMapViewLifecycle(
     private val mapView: MapView,
 ) {
@@ -521,6 +956,12 @@ private class VexMapsMapViewLifecycle(
         started = false
     }
 }
+
+private const val ROUTE_SOURCE_ID =
+    "vexmaps-route"
+
+private const val ROUTE_LAYER_ID =
+    "vexmaps-route-layer"
 
 private const val DEVICE_LOCATION_SOURCE_ID =
     "vexmaps-device-location"

@@ -44,6 +44,7 @@ object VexMapsScreen : AppScreenBlueprint(
         darkTheme: Boolean,
     ) {
         VexMapsMapSurface(
+            runtime = runtime,
             darkTheme = darkTheme,
         )
     }
