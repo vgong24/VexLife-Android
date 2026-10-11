@@ -1,7 +1,9 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
+import kotlin.random.Random
 
 class VexStreamPlaybackUiStateTest {
 
@@ -81,6 +83,52 @@ class VexStreamPlaybackUiStateTest {
                 itemHeightPx = 100,
                 lastIndex = 4,
             ),
+        )
+    }
+
+    @Test
+    fun oneShotShuffleKeepsHistoryAndCurrentFixedWhileChangingFutureOrder() {
+        val natural =
+            (0 until 7).toList()
+        val shuffled =
+            vexStreamQueueShuffleTargetOrder(
+                itemCount = natural.size,
+                currentIndex = 2,
+                random = Random(7),
+            )
+
+        assertEquals(
+            natural.take(3),
+            shuffled.take(3),
+        )
+        assertEquals(
+            natural.toSet(),
+            shuffled.toSet(),
+        )
+        assertNotEquals(
+            natural.drop(3),
+            shuffled.drop(3),
+        )
+    }
+
+    @Test
+    fun oneShotShuffleCanReorderTheWholeQueueBeforePlaybackStarts() {
+        val natural =
+            (0 until 5).toList()
+        val shuffled =
+            vexStreamQueueShuffleTargetOrder(
+                itemCount = natural.size,
+                currentIndex = -1,
+                random = Random(11),
+            )
+
+        assertEquals(
+            natural.toSet(),
+            shuffled.toSet(),
+        )
+        assertNotEquals(
+            natural,
+            shuffled,
         )
     }
 
