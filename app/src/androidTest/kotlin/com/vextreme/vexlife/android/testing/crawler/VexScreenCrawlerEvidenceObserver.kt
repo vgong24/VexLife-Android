@@ -1,7 +1,6 @@
 package com.vextreme.vexlife.android.testing.crawler
 
 import android.graphics.Bitmap
-import android.os.Build
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
@@ -11,16 +10,14 @@ import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 
 /**
- * Writes crawler evidence through AndroidX PlatformTestStorage.
+ * Writes crawler screenshots through AndroidX PlatformTestStorage.
  *
- * Evidence layout is configuration-first for handoff/ZIP delivery:
+ * Delivery layout is configuration-first and intentionally screenshot-only:
  *
- *   vex-screen-crawler/<source>/<locale>/<font>/
- *     screenshots/  <- all PNGs for this language/font batch
- *     cases/        <- per-scenario manifests/start/complete markers
+ *   vex-screen-crawler/<source>/<locale>/<font>/screenshots/
  *
- * Screenshot semantic identity is stable across locale/font configurations; locale/font only appear
- * as the final filename suffix and folder grouping.
+ * Filename identity remains stable across locale/font runs; the varying configuration is appended at
+ * the end so equivalent semantic frames can be matched before opening the image.
  */
 class VexScreenCrawlerEvidenceObserver(
     private val case: VexScreenCrawlerCase,
@@ -42,37 +39,13 @@ class VexScreenCrawlerEvidenceObserver(
     private val screenshotsRoot =
         "$configurationRoot/screenshots"
 
-    private val scenarioRoot =
-        "$configurationRoot/cases/" +
-            case.scenarioRef.safePath()
-
-    private val manifestPath =
-        "$scenarioRoot/manifest.jsonl"
-
     init {
-        writeText(
-            path = "$scenarioRoot/run-started.txt",
-            value = buildString {
-                appendLine("scenarioRef=${case.scenarioRef}")
-                appendLine("caseRef=${case.caseRef}")
-                appendLine("configurationRef=${case.configurationRef}")
-                appendLine("sourceRef=${case.sourceRef}")
-                appendLine(
-                    "targetPackage=${InstrumentationRegistry.getInstrumentation().targetContext.packageName}",
-                )
-                appendLine("deviceModel=${Build.MODEL}")
-                appendLine("sdkInt=${Build.VERSION.SDK_INT}")
-                appendLine("storage=PlatformTestStorage")
-                appendLine("configurationRoot=$configurationRoot")
-            },
-        )
-
         Log.i(
             SCREEN_CRAWLER_LOG_TAG,
             "START scenario=${case.scenarioRef} " +
                 "configuration=${case.configurationRef} " +
                 "case=${case.caseRef} " +
-                "outputRoot=$configurationRoot",
+                "outputRoot=$screenshotsRoot",
         )
     }
 
@@ -117,24 +90,14 @@ class VexScreenCrawlerEvidenceObserver(
                 "A crawler run must never pass without evidence."
         }
 
-        writeText(
-            path = "$scenarioRoot/run-complete.txt",
-            value = buildString {
-                appendLine("scenarioRef=${case.scenarioRef}")
-                appendLine("caseRef=${case.caseRef}")
-                appendLine("configurationRef=${case.configurationRef}")
-                appendLine("screenshots=$capturedScreenshotCount")
-                appendLine("manifest=manifest.jsonl")
-                appendLine("result=COMPLETE")
-            },
-        )
-
         Log.i(
             SCREEN_CRAWLER_LOG_TAG,
             "COMPLETE scenario=${case.scenarioRef} " +
                 "configuration=${case.configurationRef} " +
-                "screenshots=$capturedScreenshotCount",
+                "screenshots=$capturedScreenshotCount " +
+                "outputRoot=$screenshotsRoot",
         )
+
         println(
             "Vex ScreenCrawler captured $capturedScreenshotCount screenshot(s).",
         )
@@ -198,11 +161,8 @@ class VexScreenCrawlerEvidenceObserver(
                 semanticRef = observation.semanticRef,
             )
 
-        val stablePrefix =
-            identity.evidenceRef.safePath()
-
         val filename =
-            stablePrefix +
+            identity.evidenceRef.safePath() +
                 "__" + case.locale.id.safePath() +
                 "__" + case.font.id.safePath() +
                 ".png"
@@ -217,20 +177,6 @@ class VexScreenCrawlerEvidenceObserver(
         val screenshotSha256 =
             bytes.sha256()
 
-        storage.openOutputFile(
-            manifestPath,
-            true,
-        ).bufferedWriter().use { writer ->
-            writer.appendLine(
-                observation.toManifestLine(
-                    identity = identity,
-                    screenshot = filename,
-                    screenshotSha256 = screenshotSha256,
-                    screenshotBytes = bytes.size,
-                ),
-            )
-        }
-
         capturedScreenshotCount += 1
 
         Log.i(
@@ -240,85 +186,9 @@ class VexScreenCrawlerEvidenceObserver(
                 "configuration=${case.configurationRef} " +
                 "output=$screenshotPath " +
                 "bytes=${bytes.size} " +
+                "sha256=$screenshotSha256 " +
                 "uri=${storage.getOutputFileUri(screenshotPath)}",
         )
-    }
-
-    private fun writeText(
-        path: String,
-        value: String,
-    ) {
-        storage.openOutputFile(path).bufferedWriter().use { writer ->
-            writer.write(value)
-        }
-    }
-
-    private fun VexJourneyStepObservation.toManifestLine(
-        identity: VexCrawlerEvidenceIdentity,
-        screenshot: String,
-        screenshotSha256: String,
-        screenshotBytes: Int,
-    ): String =
-        buildString {
-            append("{")
-            appendJson("scenarioRef", identity.scenarioRef)
-            append(",")
-            appendJson("evidenceRef", identity.evidenceRef)
-            append(",")
-            appendJson("configurationRef", case.configurationRef)
-            append(",")
-            appendJson("caseRef", case.caseRef)
-            append(",")
-            appendJson("sourceRef", case.sourceRef)
-            append(",")
-            appendJson("shardId", case.shardId)
-            append(",")
-            appendJson("journeyId", case.journey.id)
-            append(",")
-            appendJson("localeId", case.locale.id)
-            append(",")
-            appendJson("localeTag", case.locale.localeTag)
-            append(",")
-            appendJson("fontId", case.font.id)
-            append(",\"fontScale\":")
-            append(case.font.scale)
-            append(",")
-            appendJson("capturePolicy", case.capturePolicy.name)
-            append(",")
-            appendJson("screenId", screenId)
-            append(",\"stepIndex\":")
-            append(stepIndex)
-            append(",")
-            appendJson("stepKind", stepKind)
-            append(",")
-            appendJson("semanticRef", semanticRef)
-            append(",")
-            appendJson("deviceModel", Build.MODEL)
-            append(",\"sdkInt\":")
-            append(Build.VERSION.SDK_INT)
-            append(",")
-            appendJson("file", "screenshots/$screenshot")
-            append(",\"bytes\":")
-            append(screenshotBytes)
-            append(",")
-            appendJson("sha256", screenshotSha256)
-            append("}")
-        }
-}
-
-private fun StringBuilder.appendJson(
-    key: String,
-    value: String?,
-) {
-    append("\"")
-    append(key.jsonEscape())
-    append("\":")
-    if (value == null) {
-        append("null")
-    } else {
-        append("\"")
-        append(value.jsonEscape())
-        append("\"")
     }
 }
 
@@ -326,20 +196,6 @@ private fun String.safePath(): String =
     replace(Regex("[^A-Za-z0-9._-]+"), "_")
         .trim('_')
         .ifBlank { "unknown" }
-
-private fun String.jsonEscape(): String =
-    buildString(length) {
-        this@jsonEscape.forEach { ch ->
-            when (ch) {
-                '\\' -> append("\\\\")
-                '"' -> append("\\\"")
-                '\n' -> append("\\n")
-                '\r' -> append("\\r")
-                '\t' -> append("\\t")
-                else -> append(ch)
-            }
-        }
-    }
 
 private fun ByteArray.sha256(): String {
     val digest =
