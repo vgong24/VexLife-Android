@@ -46,8 +46,14 @@ class EventsAttentionRelayTest {
     }
 
     @Test
-    fun currentContextReachabilityAndPreferencesProduceOneCandidate() {
+    fun candidateIdentitySurvivesScreenReachabilityAndTransientChanges() {
         val relay = EventsAttentionRelay()
+
+        assertNull(relay.current.outputState.candidate)
+        assertEquals(
+            EventsAttentionAvailability.UNOBSERVED,
+            relay.current.outputState.availability,
+        )
 
         relay.feedChanged(feed())
         relay.preferencesChanged(
@@ -59,7 +65,14 @@ class EventsAttentionRelayTest {
         relay.transientBlockedChanged(false)
         relay.screenChanged("screen.home")
 
-        assertNull(relay.current.outputState.candidate)
+        assertEquals(
+            "event.first",
+            relay.current.outputState.candidate?.eventRef,
+        )
+        assertEquals(
+            EventsAttentionAvailability.HELD_OTHER_SCREEN,
+            relay.current.outputState.availability,
+        )
 
         relay.screenChanged(EventsScreen.screenId)
 
@@ -67,14 +80,42 @@ class EventsAttentionRelayTest {
             "event.first",
             relay.current.outputState.candidate?.eventRef,
         )
+        assertEquals(
+            EventsAttentionAvailability.READY,
+            relay.current.outputState.availability,
+        )
 
-        relay.transientBlockedChanged(true)
-        assertNull(relay.current.outputState.candidate)
+        relay.visibleTargetsChanged(
+            setOf("event.second"),
+        )
 
-        relay.transientBlockedChanged(false)
         assertEquals(
             "event.first",
             relay.current.outputState.candidate?.eventRef,
+        )
+        assertEquals(
+            EventsAttentionAvailability.HELD_TARGET_UNREACHABLE,
+            relay.current.outputState.availability,
+        )
+
+        relay.visibleTargetsChanged(
+            setOf("event.first", "event.second"),
+        )
+        relay.transientBlockedChanged(true)
+
+        assertEquals(
+            "event.first",
+            relay.current.outputState.candidate?.eventRef,
+        )
+        assertEquals(
+            EventsAttentionAvailability.HELD_TRANSIENT_OCCUPIED,
+            relay.current.outputState.availability,
+        )
+
+        relay.transientBlockedChanged(false)
+        assertEquals(
+            EventsAttentionAvailability.READY,
+            relay.current.outputState.availability,
         )
 
         relay.preferencesChanged(
@@ -90,18 +131,37 @@ class EventsAttentionRelayTest {
             "event.second",
             relay.current.outputState.candidate?.eventRef,
         )
-
-        relay.visibleTargetsChanged(
-            setOf("event.first"),
-        )
-        assertNull(relay.current.outputState.candidate)
-
-        relay.visibleTargetsChanged(
-            setOf("event.second"),
-        )
         assertEquals(
-            "event.second",
-            relay.current.outputState.candidate?.eventRef,
+            EventsAttentionAvailability.READY,
+            relay.current.outputState.availability,
+        )
+    }
+
+    @Test
+    fun handledFeedExposesNoneInsteadOfUnobserved() {
+        val relay = EventsAttentionRelay()
+
+        relay.feedChanged(feed())
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(
+                mapOf(
+                    "event.first" to
+                        EventsAttentionDisposition.ACKNOWLEDGED,
+                    "event.second" to
+                        EventsAttentionDisposition.SUPPRESSED,
+                ),
+            ),
+        )
+        relay.visibleTargetsChanged(
+            setOf("event.first", "event.second"),
+        )
+        relay.transientBlockedChanged(false)
+        relay.screenChanged(EventsScreen.screenId)
+
+        assertNull(relay.current.outputState.candidate)
+        assertEquals(
+            EventsAttentionAvailability.NONE,
+            relay.current.outputState.availability,
         )
     }
 }

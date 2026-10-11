@@ -27,13 +27,44 @@ data class EventsAttentionCandidate(
     val targetElementRef: String,
 )
 
+enum class EventsAttentionAvailability {
+    /**
+     * One or more dependencies have not yet been observed by this presentation relationship.
+     */
+    UNOBSERVED,
+
+    /** Current feed contains no unhandled event candidate. */
+    NONE,
+
+    /** Candidate exists, but Events is not the current semantic Screen. */
+    HELD_OTHER_SCREEN,
+
+    /** Candidate exists and Events is current, but its exact row is not presently reachable. */
+    HELD_TARGET_UNREACHABLE,
+
+    /** Candidate exists, but another transient surface currently owns presentation attention. */
+    HELD_TRANSIENT_OCCUPIED,
+
+    /** Candidate exists and the exact target is currently eligible for anchored presentation. */
+    READY,
+}
+
 data class EventsAttentionOutputState(
     val candidate: EventsAttentionCandidate? = null,
+    val availability: EventsAttentionAvailability =
+        EventsAttentionAvailability.UNOBSERVED,
 ) : VexOutputState<EventsAttentionOutputState> {
     override fun deepCopy(): EventsAttentionOutputState =
         copy(candidate = candidate?.copy())
 }
 
+/**
+ * One current attention relationship over canonical Events truth.
+ *
+ * Candidate identity is resolved from event truth + acknowledgement state first. Current Screen,
+ * target reachability and transient occupancy then classify presentation availability without
+ * silently switching to a different event merely because the candidate scrolled off-screen.
+ */
 class EventsAttentionRelay :
     VexCompoundRelay<EventsAttentionInputState, EventsAttentionOutputState>(
         relayRef = "relay.events.attention",
@@ -114,43 +145,60 @@ class EventsAttentionRelay :
             )
 
         val candidateEvent =
-            if (
-                screenId == EventsScreen.screenId &&
-                transientBlocked == false &&
-                visibleEventRefs != null
-            ) {
-                feed
-                    ?.events
-                    .orEmpty()
+            if (feed != null && preferences != null) {
+                feed.events
                     .asReversed()
                     .firstOrNull { event ->
-                        event.eventRef in visibleEventRefs &&
-                            preferences
-                                ?.dispositionByEventRef
-                                ?.containsKey(event.eventRef)
-                                != true
+                        event.eventRef !in
+                            preferences.dispositionByEventRef
                     }
             } else {
                 null
             }
 
-        val output =
-            EventsAttentionOutputState(
-                candidate =
-                    candidateEvent?.let { event ->
-                        EventsAttentionCandidate(
-                            eventRef = event.eventRef,
-                            targetElementRef =
-                                EventsPresentationRefs.row(
-                                    event.eventRef,
-                                ),
-                        )
-                    },
-            )
+        val candidate =
+            candidateEvent?.let { event ->
+                EventsAttentionCandidate(
+                    eventRef = event.eventRef,
+                    targetElementRef =
+                        EventsPresentationRefs.row(
+                            event.eventRef,
+                        ),
+                )
+            }
+
+        val availability =
+            when {
+                feed == null ||
+                    preferences == null ||
+                    screenId == null ||
+                    visibleEventRefs == null ||
+                    transientBlocked == null ->
+                    EventsAttentionAvailability.UNOBSERVED
+
+                candidate == null ->
+                    EventsAttentionAvailability.NONE
+
+                screenId != EventsScreen.screenId ->
+                    EventsAttentionAvailability.HELD_OTHER_SCREEN
+
+                transientBlocked ->
+                    EventsAttentionAvailability.HELD_TRANSIENT_OCCUPIED
+
+                candidate.eventRef !in visibleEventRefs ->
+                    EventsAttentionAvailability.HELD_TARGET_UNREACHABLE
+
+                else ->
+                    EventsAttentionAvailability.READY
+            }
 
         return currentState.copy(
             inputState = coherentInput,
-            outputState = output,
+            outputState =
+                EventsAttentionOutputState(
+                    candidate = candidate,
+                    availability = availability,
+                ),
         )
     }
 }

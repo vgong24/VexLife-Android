@@ -129,7 +129,13 @@ fun EventsScreenContent(
         initial = attentionRelay.current,
     )
     val candidateRef =
-        attention.outputState.candidate?.eventRef
+        attention.outputState
+            .takeIf { output ->
+                output.availability ==
+                    EventsAttentionAvailability.READY
+            }
+            ?.candidate
+            ?.eventRef
 
     LazyColumn(
         state = listState,
