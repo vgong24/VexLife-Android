@@ -4,14 +4,14 @@ import androidx.compose.runtime.Composable
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.preview.VexBlueprintScreenPreview
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
-import com.vextreme.vexlife.android.elements.ScreenBlueprint
+import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.navigateTo
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 
-object HomeScreen : ScreenBlueprint(
+object HomeScreen : AppScreenBlueprint(
     screenKey = "home",
     titleRes = R.string.home_title,
 ) {
