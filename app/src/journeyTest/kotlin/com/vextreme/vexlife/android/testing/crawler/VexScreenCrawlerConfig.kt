@@ -1,11 +1,15 @@
 package com.vextreme.vexlife.android.testing.crawler
 
 import com.vextreme.vexlife.android.elements.ScreenElement
+import com.vextreme.vexlife.android.testing.journey.JourneyDomain
+import com.vextreme.vexlife.android.testing.journey.JourneyPath
 import com.vextreme.vexlife.android.testing.journey.VexJourney
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCoverageRecorder
 import com.vextreme.vexlife.android.testing.journey.VexJourneyEnvironment
 import com.vextreme.vexlife.android.testing.journey.VexJourneyShard
+import com.vextreme.vexlife.android.testing.journey.journeyFor
+import com.vextreme.vexlife.android.testing.journey.shardFor
 
 /**
  * Test/evidence locale condition addressed directly by a BCP-47 language/locale code.
@@ -90,12 +94,12 @@ sealed interface VexCrawlerSelection {
      * Future shards are included automatically because planning reads VexJourneyCatalog.shards.
      */
     data class AllShardsExcept(
-        val excludedShards: Set<VexJourneyShard> = emptySet(),
+        val excludedShards: Set<JourneyDomain> = emptySet(),
     ) : VexCrawlerSelection
 
     /** Explicit "only these shards" partition using canonical shard objects. */
     data class Shards(
-        val shards: Set<VexJourneyShard>,
+        val shards: Set<JourneyDomain>,
     ) : VexCrawlerSelection
 
     /** Select every journey whose declared semantic walk touches any selected Screen. */
@@ -105,7 +109,7 @@ sealed interface VexCrawlerSelection {
 
     /** Select exactly these canonical journey objects. */
     data class Journeys(
-        val journeys: Set<VexJourney>,
+        val journeys: Set<JourneyPath>,
     ) : VexCrawlerSelection
 }
 
@@ -140,7 +144,7 @@ class VexScreenCrawlerConfigBuilder {
         setSelection(VexCrawlerSelection.AllShards)
     }
 
-    fun allShardsExcept(vararg shards: VexJourneyShard) {
+    fun allShardsExcept(vararg shards: JourneyDomain) {
         setSelection(
             VexCrawlerSelection.AllShardsExcept(
                 excludedShards = shards.toSet(),
@@ -148,7 +152,7 @@ class VexScreenCrawlerConfigBuilder {
         )
     }
 
-    fun shards(vararg shards: VexJourneyShard) {
+    fun shards(vararg shards: JourneyDomain) {
         setSelection(
             VexCrawlerSelection.Shards(
                 shards = shards.toSet(),
@@ -165,7 +169,7 @@ class VexScreenCrawlerConfigBuilder {
     }
 
     /** Run exactly one named journey/path. */
-    fun journey(journey: VexJourney) {
+    fun journey(journey: JourneyPath) {
         setSelection(
             VexCrawlerSelection.Journeys(
                 journeys = setOf(journey),
@@ -174,7 +178,7 @@ class VexScreenCrawlerConfigBuilder {
     }
 
     /** Run an explicit typed set of named journeys/paths. */
-    fun journeys(vararg journeys: VexJourney) {
+    fun journeys(vararg journeys: JourneyPath) {
         setSelection(
             VexCrawlerSelection.Journeys(
                 journeys = journeys.toSet(),
@@ -291,28 +295,20 @@ object VexScreenCrawlerPlanner {
                 all
 
             is VexCrawlerSelection.AllShardsExcept -> {
-                val known = VexJourneyCatalog.shards.toSet()
-                val unknown = selection.excludedShards - known
-                require(unknown.isEmpty()) {
-                    "crawler exclusion contains unregistered shard(s): " +
-                        unknown.joinToString { shard -> shard.shardId }
-                }
+                val excluded =
+                    selection.excludedShards.map(::shardFor).toSet()
 
                 all.filterNot { (shard, _) ->
-                    shard in selection.excludedShards
+                    shard in excluded
                 }
             }
 
             is VexCrawlerSelection.Shards -> {
-                val known = VexJourneyCatalog.shards.toSet()
-                val unknown = selection.shards - known
-                require(unknown.isEmpty()) {
-                    "crawler selection contains unregistered shard(s): " +
-                        unknown.joinToString { shard -> shard.shardId }
-                }
+                val selected =
+                    selection.shards.map(::shardFor).toSet()
 
                 all.filter { (shard, _) ->
-                    shard in selection.shards
+                    shard in selected
                 }
             }
 
@@ -341,16 +337,11 @@ object VexScreenCrawlerPlanner {
             }
 
             is VexCrawlerSelection.Journeys -> {
-                val registered =
-                    all.map { (_, journey) -> journey }.toSet()
-                val unknown = selection.journeys - registered
-                require(unknown.isEmpty()) {
-                    "crawler selection contains unregistered journey(s): " +
-                        unknown.joinToString { journey -> journey.id }
-                }
+                val selected =
+                    selection.journeys.map(::journeyFor).toSet()
 
                 all.filter { (_, journey) ->
-                    journey in selection.journeys
+                    journey in selected
                 }
             }
         }
