@@ -52,6 +52,36 @@ class VexLoggerTest {
     }
 
     @Test
+    fun observerFailureCannotUndoAcceptedLocalDiagnosticRecord() {
+        val logger = VexLogger(
+            clock = { Instant.parse("2026-10-10T18:51:00Z") },
+            onRecord = { error("persistence sink failed") },
+        )
+
+        logger.appOpened(Home)
+
+        assertEquals(1, logger.history.value.size)
+        assertEquals(VexLogKind.AppOpened, logger.history.value.single().kind)
+    }
+
+    @Test
+    fun observerRunsAfterRecordIsVisibleLocally() {
+        lateinit var logger: VexLogger
+        var locallyVisibleWhenObserved = false
+
+        logger = VexLogger(
+            clock = { Instant.parse("2026-10-10T18:51:00Z") },
+            onRecord = { record ->
+                locallyVisibleWhenObserved = logger.history.value.lastOrNull() == record
+            },
+        )
+
+        logger.appOpened(Home)
+
+        assertTrue(locallyVisibleWhenObserved)
+    }
+
+    @Test
     fun sectionResetAddsReadableBoundaryWithoutErasingEvidence() {
         var now = Instant.parse("2026-10-10T18:51:00Z")
         val logger = VexLogger(clock = { now }, zoneId = { ZoneId.of("UTC") })

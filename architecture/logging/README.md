@@ -4,8 +4,9 @@
 
 This module records a small, readable UI action history for the Android construction practicum.
 
-It does not own navigation, screen state, application state, analytics persistence, or network
-delivery.
+It does not own navigation, screen state, application state, database policy, or network delivery.
+The app may project accepted VexLogRecord values into a repository/persistence adapter; that adapter
+remains downstream and cannot change whether the diagnostic record or product action was accepted.
 
 ~~~text
 runtime owner decides what happened
@@ -24,7 +25,7 @@ lifecycle callback order. A navigation interaction can therefore be recorded as:
 
 before framework lifecycle callbacks happen in whatever native order Android chooses.
 
-Duration is the elapsed time between accepted log records. Network or API export is intentionally
-not part of this first slice.
+Duration is the elapsed time between accepted log records. Durable/local history is now being
+explored by the app-level Data/Repository foundation; VexLogger itself remains independent of Room.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][LOGGING] -->

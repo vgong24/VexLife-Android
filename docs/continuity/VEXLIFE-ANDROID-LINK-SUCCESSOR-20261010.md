@@ -109,7 +109,37 @@ rememberSaveable darkTheme
 
 Do not silently turn one of these into persistence simply because future service work needs memory.
 
-## Next trajectory: give the stable body a nervous system
+## First next trajectory: establish the data/repository boundary
+
+Victor explicitly wants the database/repository architecture next, before returning to the broader
+Relay/AppScope nervous-system work.
+
+The first consumer is Debug -> Log History:
+
+~~~text
+VexLogger record
+-> non-authoritative persistence queue
+-> LogHistoryRepository
+-> RoomLogHistoryRepository
+-> Room database
+-> Log History dialog observes repository
+-> Reset clears current + persisted history
+~~~
+
+The current candidate for this work should preserve:
+
+- domain-specific repository contracts rather than a generic BaseRepository<T>;
+- Room entity/DAO types behind the repository;
+- bounded local retention;
+- storage failure unable to change product-action semantics;
+- chain-buildable domain fixtures that seed InMemory repositories for previews/unit tests;
+- the same fixture shape remaining usable if a future repository combines local + backend sources;
+- app-owned coroutine scope only as the temporary persistence owner, with VexAppScope expected to
+  take over lifecycle ownership once admitted.
+
+Finish/prove this data slice before broad Relay/AppScope porting.
+
+## Then: give the stable body a nervous system
 
 Do NOT spend the next lane polishing more UI cells by default.
 
@@ -209,8 +239,19 @@ Do not erase the valid UI effects while changing nervous-system layers.
 
 ## First unconsumed edge
 
-Inventory PR #3 against current `main`, then propose the smallest vertical service/state slice that
-lets the existing body demonstrate:
+Finish/prove the data-repository candidate first:
+
+~~~text
+Room/KSP Sync + compile
+-> fixture/in-memory/unit tests
+-> Room repository integration proof
+-> physical-device Log History persistence
+-> Reset clears persistence
+-> clean source state
+~~~
+
+Then inventory PR #3 against the resulting current `main` and propose the smallest vertical
+service/state slice that lets the existing body demonstrate:
 
 ~~~text
 multiple source/service states

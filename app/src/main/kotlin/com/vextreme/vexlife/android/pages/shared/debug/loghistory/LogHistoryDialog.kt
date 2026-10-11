@@ -7,12 +7,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
@@ -22,9 +24,9 @@ import java.time.ZoneId
 @Composable
 fun LogHistoryDialog(
     runtime: VexRuntime,
-    logger: VexLogger,
+    repository: LogHistoryRepository,
 ) {
-    val history by logger.history
+    val history by repository.records.collectAsState(initial = emptyList())
 
     AlertDialog(
         onDismissRequest = { runtime.activate(DebugMenuPage.CloseLog) },

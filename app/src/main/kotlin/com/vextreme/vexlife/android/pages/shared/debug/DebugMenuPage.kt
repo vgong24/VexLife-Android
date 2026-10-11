@@ -12,7 +12,7 @@ import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.close
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.open
-import com.vextreme.vexlife.android.logging.VexLogger
+import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.pages.shared.debug.loghistory.LogHistoryDialog
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -42,7 +42,7 @@ object DebugMenuPage : PageBlueprint(
         labelRes = R.string.log_history_reset,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Reset,
-        intent = invoke(AppActions.ResetLogSection),
+        intent = invoke(AppActions.ClearLogHistory),
     )
 
     val CloseLog = buttonRef(
@@ -84,7 +84,7 @@ object DebugMenuPage : PageBlueprint(
 @Composable
 fun DebugMenuPageContent(
     runtime: VexRuntime,
-    logger: VexLogger,
+    logHistoryRepository: LogHistoryRepository,
     darkTheme: Boolean,
 ) {
     VexElementTree(
@@ -99,7 +99,7 @@ fun DebugMenuPageContent(
     if (runtime.presentation.isOpen(DebugMenuPage.LogDialog)) {
         LogHistoryDialog(
             runtime = runtime,
-            logger = logger,
+            repository = logHistoryRepository,
         )
     }
 }

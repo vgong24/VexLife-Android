@@ -4,6 +4,9 @@ kotlin = "2.4.20"
 composeBom = "2026.09.00"
 activity = "1.13.0"
 junit = "4.13.2"
+room = "2.8.5"
+ksp = "2.3.12"
+coroutines = "1.11.0"
 
 [libraries]
 composeBom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -16,8 +19,15 @@ composeUiTooling = { module = "androidx.compose.ui:ui-tooling" }
 composeMaterialIconsExtended = { module = "androidx.compose.material:material-icons-extended" }
 activityCompose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 junit = { module = "junit:junit", version.ref = "junit" }
+roomRuntime = { module = "androidx.room:room-runtime", version.ref = "room" }
+roomKtx = { module = "androidx.room:room-ktx", version.ref = "room" }
+roomCompiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+roomTesting = { module = "androidx.room:room-testing", version.ref = "room" }
+coroutinesAndroid = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutinesTest = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

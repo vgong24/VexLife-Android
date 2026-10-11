@@ -4,6 +4,6 @@ import com.vextreme.vexlife.android.elements.ActionKey
 
 object AppActions {
     val ToggleDarkMode = ActionKey("action.theme.dark-mode.toggle")
-    val ResetLogSection = ActionKey("action.log-history.reset-section")
+    val ClearLogHistory = ActionKey("action.log-history.clear")
     val GallerySample = ActionKey("action.gallery.sample")
 }

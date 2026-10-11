@@ -31,7 +31,7 @@
     <string name="log_history">Log History</string>
     <string name="log_history_show">Show</string>
     <string name="log_history_reset">Reset</string>
-    <string name="log_history_helper">Reset starts a new readable log section without erasing the current session evidence.</string>
+    <string name="log_history_helper">Reset clears the persisted Log History. New actions begin a fresh history immediately after.</string>
     <string name="close">Close</string>
 
     <string name="gallery_elements">Elements</string>

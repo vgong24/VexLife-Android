@@ -32,6 +32,7 @@ class VexLogger(
     private val clock: () -> Instant = { Instant.now() },
     private val zoneId: () -> ZoneId = { ZoneId.systemDefault() },
     private val maxRecords: Int = 256,
+    private val onRecord: (VexLogRecord) -> Unit = {},
 ) {
     private val lock = Any()
     private val _history = mutableStateOf<List<VexLogRecord>>(emptyList())
@@ -124,12 +125,12 @@ class VexLogger(
         screenBeforeId: String?,
         screenAfterId: String?,
     ) {
-        synchronized(lock) {
+        val record = synchronized(lock) {
             val now = clock()
             val duration = lastTimestamp
                 ?.let { Duration.between(it, now).seconds.coerceAtLeast(0L) }
 
-            val record = VexLogRecord(
+            VexLogRecord(
                 sequence = nextSequence++,
                 timestamp = now,
                 durationSincePreviousSeconds = duration,
@@ -139,10 +140,23 @@ class VexLogger(
                 screenBeforeId = screenBeforeId,
                 screenAfterId = screenAfterId,
                 section = currentSection,
-            )
+            ).also {
+                _history.value = (_history.value + it).takeLast(maxRecords)
+                lastTimestamp = now
+            }
+        }
 
-            _history.value = (_history.value + record).takeLast(maxRecords)
-            lastTimestamp = now
+        /*
+         * Persistence/export is a projection of the accepted diagnostic record, not the owner of it.
+         * Invoke observers after the local record is committed and outside the lock. A broken sink
+         * must never make the user action that produced this diagnostic appear to fail.
+         *
+         * Callers should keep this callback non-blocking (the app uses a bounded persistence queue).
+         */
+        try {
+            onRecord(record)
+        } catch (_: Throwable) {
+            // Diagnostics are deliberately non-authoritative.
         }
     }
 

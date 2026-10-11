@@ -16,10 +16,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.vextreme.vexlife.android.data.AppRepositoryFactory
+import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
+import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.elements.ActionKey
 import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.elements.VexElementTree
@@ -49,13 +54,33 @@ import com.vextreme.vexlife.android.shell.AppFrame
 @Composable
 fun VexLifeApp() {
     var darkTheme by rememberSaveable { mutableStateOf(true) }
-    val logger = remember { VexLogger() }
+
+    val appContext = LocalContext.current.applicationContext
+    val persistenceScope = rememberCoroutineScope()
+    val repositories = remember(appContext) {
+        AppRepositoryFactory.production(appContext)
+    }
+    val logPersistence = remember(repositories.logHistory, persistenceScope) {
+        LogHistoryPersistenceQueue(
+            repository = repositories.logHistory,
+            scope = persistenceScope,
+        )
+    }
+    val logger = remember(logPersistence) {
+        VexLogger(onRecord = logPersistence::record)
+    }
     val registry = remember { AppPages.registry }
 
     val currentActionHandler by rememberUpdatedState<(ActionKey, UIElement) -> Unit> { action, _ ->
         when (action.actionId) {
             AppActions.ToggleDarkMode.actionId -> darkTheme = !darkTheme
-            AppActions.ResetLogSection.actionId -> logger.startNewSection()
+
+            AppActions.ClearLogHistory.actionId -> {
+                // Reset is one user intention projected to both current-memory and persisted history.
+                logger.clearHistory()
+                logPersistence.clear()
+            }
+
             else -> Unit
         }
     }
@@ -79,7 +104,7 @@ fun VexLifeApp() {
     VexLifeTheme(darkTheme = darkTheme) {
         VexLifeScaffold(
             runtime = runtime,
-            logger = logger,
+            logHistoryRepository = repositories.logHistory,
             darkTheme = darkTheme,
         )
     }
@@ -88,7 +113,7 @@ fun VexLifeApp() {
 @Composable
 private fun VexLifeScaffold(
     runtime: VexRuntime,
-    logger: VexLogger,
+    logHistoryRepository: LogHistoryRepository,
     darkTheme: Boolean,
 ) {
     val primaryPages = AppPages.primary
@@ -180,7 +205,7 @@ private fun VexLifeScaffold(
                 when (screenId) {
                     DebugMenuPage.screenId -> DebugMenuPageContent(
                         runtime = runtime,
-                        logger = logger,
+                        logHistoryRepository = logHistoryRepository,
                         darkTheme = darkTheme,
                     )
 

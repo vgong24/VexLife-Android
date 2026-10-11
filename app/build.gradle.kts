@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -42,5 +43,17 @@ dependencies {
     implementation(libs.composeUiToolingPreview)
     debugImplementation(libs.composeUiTooling)
 
+    implementation(libs.roomRuntime)
+    implementation(libs.roomKtx)
+    implementation(libs.coroutinesAndroid)
+    ksp(libs.roomCompiler)
+
     testImplementation(libs.junit)
+    testImplementation(libs.coroutinesTest)
+    testImplementation(libs.roomTesting)
+}
+
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
