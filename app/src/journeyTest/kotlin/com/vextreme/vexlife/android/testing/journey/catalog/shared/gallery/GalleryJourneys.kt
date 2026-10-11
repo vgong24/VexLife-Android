@@ -9,6 +9,7 @@ object GalleryJourneys : VexJourneyShard {
 
     override val journeys = listOf(
         vexJourney(
+            id = "elements-modals-swap",
             title = "Gallery elements, modals and local panel swap",
             environments = listOf(
                 VexJourneyEnvironments.Baseline,
