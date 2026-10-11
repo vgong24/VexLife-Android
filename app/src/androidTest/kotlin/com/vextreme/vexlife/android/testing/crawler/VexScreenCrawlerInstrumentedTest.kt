@@ -1,15 +1,117 @@
 package com.vextreme.vexlife.android.testing.crawler
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.testing.journey.DebugJourneys
+import com.vextreme.vexlife.android.testing.journey.GalleryJourneys
 import com.vextreme.vexlife.android.testing.journey.VexTestEngine
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
+/**
+ * SCREENCRAWLER — NORMAL HUMAN ENTRY POINT
+ *
+ * You should only need this file for ordinary local ScreenCrawler work.
+ *
+ * 1. WHERE DO I RUN IT?
+ *
+ *    In Android Studio, open this class and right-click either:
+ *
+ *      VexScreenCrawlerInstrumentedTest
+ *
+ *    or:
+ *
+ *      runConfiguredScreenCrawler()
+ *
+ *    Then choose Run.
+ *
+ * 2. HOW DO I CHANGE WHAT IT CRAWLS?
+ *
+ *    Edit the CONFIG section in the companion object below.
+ *
+ *    First enable it:
+ *
+ *      enabled = true
+ *
+ *    No selection line means ALL current/future canonical journey shards.
+ *
+ *    One Screen only:
+ *
+ *      screens(UserProfileScreen)
+ *
+ *    A shard subset:
+ *
+ *      shards(DebugJourneys, GalleryJourneys)
+ *
+ *    English only:
+ *
+ *      language("en")
+ *
+ *    Chinese only:
+ *
+ *      // language("en")
+ *      language("zh")
+ *
+ *    English + Chinese:
+ *
+ *      language("en")
+ *      language("zh")
+ *
+ *    Large text:
+ *
+ *      VexCrawlerFonts.Large
+ *
+ *    The selector uses real Kotlin Screen/shard objects. Locale values use validated BCP-47-style
+ *    codes because the language code itself is the external identity.
+ *
+ * 3. WHERE DOES IT RUN?
+ *
+ *    It runs on the Android target selected in Android Studio's device selector:
+ *    - connected physical Android device; OR
+ *    - running emulator.
+ *
+ *    Every generated crawler case gets a fresh Compose/VexTestEngine/repository environment.
+ *
+ * 4. WHERE ARE SCREENSHOTS AND HOW DO I PULL THEM?
+ *
+ *    Device/app path:
+ *
+ *      /sdcard/Android/data/com.vextreme.vexlife.android/files/vex-screen-crawler
+ *
+ *    macOS / Linux:
+ *
+ *      adb pull "/sdcard/Android/data/com.vextreme.vexlife.android/files/vex-screen-crawler" "./vex-screen-crawler"
+ *
+ *    Windows PowerShell:
+ *
+ *      adb pull "/sdcard/Android/data/com.vextreme.vexlife.android/files/vex-screen-crawler" ".\\vex-screen-crawler"
+ *
+ *    If more than one device/emulator is attached:
+ *
+ *      adb devices
+ *
+ *    then:
+ *
+ *      adb -s <device-serial> pull "<device-path>" "<local-destination>"
+ *
+ *    The test also prints the actual device artifact directory after each crawler case.
+ *
+ *    Each screenshot is accompanied by JSONL evidence metadata including source/case/shard/journey,
+ *    locale/font, Screen/step, device model/SDK, filename and screenshot SHA-256.
+ *
+ * IMPORTANT:
+ *
+ * - enabled=false is a GREEN NO-OP. It must never block ordinary Android development.
+ * - ordinary VexJourney functional tests are separate and remain baseline-only by default.
+ * - ScreenCrawler locale/font matrices are explicit evidence work, not automatic functional-test
+ *   multiplication.
+ * - crawler locale conditions do not claim that translations already exist or are accepted.
+ */
 @RunWith(Parameterized::class)
 class VexScreenCrawlerInstrumentedTest(
-    private val parameter: VexScreenCrawlerParameter,
+    private val parameter: Parameter,
 ) {
     @get:Rule
     val compose = createComposeRule()
@@ -17,14 +119,14 @@ class VexScreenCrawlerInstrumentedTest(
     @Test
     fun runConfiguredScreenCrawler() {
         when (val selected = parameter) {
-            is VexScreenCrawlerParameter.Disabled -> {
+            is Parameter.Disabled -> {
                 println(
                     "Vex ScreenCrawler disabled: ${selected.reason}",
                 )
                 return
             }
 
-            is VexScreenCrawlerParameter.Case -> {
+            is Parameter.Case -> {
                 val case = selected.value
                 val evidence =
                     VexScreenCrawlerEvidenceObserver(case)
@@ -42,13 +144,124 @@ class VexScreenCrawlerInstrumentedTest(
     }
 
     companion object {
+        // ---------------------------------------------------------------------
+        // CONFIG — NORMAL HUMAN EDIT SURFACE
+        // ---------------------------------------------------------------------
+
+        /**
+         * false -> this test is an explicit green no-op.
+         * true  -> plan and execute the crawler cases configured below.
+         */
+        const val enabled: Boolean = false
+
+        /**
+         * Evidence coordinate stored in the screenshot manifest.
+         *
+         * "manual" is fine for exploratory local runs.
+         * Use an exact commit/build/release reference for formal evidence.
+         */
+        const val sourceRef: String = "manual"
+
+        val config: VexScreenCrawlerConfig =
+            vexScreenCrawlerConfig {
+                /*
+                 * SELECTION — uncomment AT MOST ONE line.
+                 *
+                 * Leave all commented:
+                 *   -> ALL current/future canonical journey shards.
+                 *
+                 * A newly registered shard automatically becomes available because ScreenCrawler
+                 * reads VexJourneyCatalog; this file is not another shard registry.
+                 */
+
+                // screens(UserProfileScreen)
+                // shards(DebugJourneys)
+                // shards(DebugJourneys, GalleryJourneys)
+                // allShardsExcept(DebugJourneys)
+
+                /*
+                 * LANGUAGE / LOCALE — enable/disable rows.
+                 *
+                 * Examples:
+                 *   en      English
+                 *   zh      Chinese
+                 *   bg      Bulgarian
+                 *   lt      Lithuanian
+                 *   zh-Hans Chinese, Simplified script
+                 *   zh-Hant Chinese, Traditional script
+                 */
+                languages(
+                    language("en"),
+                    // language("zh"),
+                    // language("bg"),
+                    // language("lt"),
+                    // language("zh-Hans"),
+                    // language("zh-Hant"),
+                )
+
+                /*
+                 * FONT / ACCESSIBILITY CONDITIONS — enable/disable rows.
+                 */
+                fontProfiles(
+                    VexCrawlerFonts.Normal,
+                    // VexCrawlerFonts.Large,
+                    // VexCrawlerFonts.ExtraLarge,
+                    // VexCrawlerFonts.Small,
+                )
+
+                /*
+                 * SCREENSHOT DENSITY — keep exactly ONE active.
+                 */
+                capture(
+                    VexCrawlerCapturePolicy.SCREEN_ONCE,
+                    // VexCrawlerCapturePolicy.EVERY_STEP,
+                    // VexCrawlerCapturePolicy.FINAL_ONLY,
+                )
+
+                sourceRef(sourceRef)
+            }
+
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun cases(): List<Array<Any>> =
-            VexScreenCrawlerRunConfig
-                .parameters()
-                .map { parameter ->
-                    arrayOf<Any>(parameter)
-                }
+            parameters().map { parameter ->
+                arrayOf<Any>(parameter)
+            }
+
+        private fun parameters(): List<Parameter> {
+            if (!enabled) {
+                return listOf(
+                    Parameter.Disabled(
+                        reason =
+                            "set VexScreenCrawlerInstrumentedTest.enabled = true",
+                    ),
+                )
+            }
+
+            val cases = VexScreenCrawlerPlanner.plan(config)
+            require(cases.isNotEmpty()) {
+                "ScreenCrawler config selected zero journey cases"
+            }
+
+            return cases.map { case ->
+                Parameter.Case(case)
+            }
+        }
+    }
+
+    sealed interface Parameter {
+        data class Disabled(
+            val reason: String,
+        ) : Parameter {
+            override fun toString(): String =
+                "screen-crawler-disabled"
+        }
+
+        data class Case(
+            val value: VexScreenCrawlerCase,
+        ) : Parameter {
+            override fun toString(): String =
+                value.caseRef
+        }
     }
 }
