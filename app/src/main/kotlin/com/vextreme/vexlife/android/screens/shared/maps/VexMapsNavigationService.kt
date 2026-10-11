@@ -119,7 +119,6 @@ class VexMapsNavigationService :
             VexNavigationSessionPhase.ARRIVED
         ) {
             VexMapsNavigationProcess
-                .session
                 .stop()
         }
 
@@ -166,6 +165,25 @@ class VexMapsNavigationService :
                             nowElapsedRealtimeMillis =
                                 SystemClock.elapsedRealtime(),
                         )
+
+                        session
+                            .current
+                            .pendingReroute
+                            ?.let { request ->
+                                runCatching {
+                                    VexMapsNavigationProcess
+                                        .reroutePending(
+                                            context =
+                                                this@VexMapsNavigationService,
+                                            requestRef =
+                                                request.requestRef,
+                                        )
+                                }.onFailure {
+                                    session.rerouteFailed(
+                                        request.requestRef,
+                                    )
+                                }
+                            }
                     }
             }
 
@@ -198,7 +216,6 @@ class VexMapsNavigationService :
     private fun stopNavigation() {
         stopping = true
         VexMapsNavigationProcess
-            .session
             .stop()
         finishForegroundService()
     }

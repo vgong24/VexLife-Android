@@ -444,8 +444,10 @@ internal fun VexMapsMapSurface(
                                 )
                         }.onSuccess { route ->
                             VexMapsNavigationProcess
-                                .session
-                                .prepare(route)
+                                .prepare(
+                                    routeResult = route,
+                                    routingPack = pack,
+                                )
                             planningState =
                                 VexMapsPlanningState.Idle
                         }.onFailure {
@@ -492,7 +494,6 @@ internal fun VexMapsMapSurface(
                         action = "Clicked",
                     )
                     VexMapsNavigationProcess
-                        .session
                         .stop()
                 },
                 modifier =

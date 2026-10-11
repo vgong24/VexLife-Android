@@ -168,6 +168,151 @@ class VexNavigationSessionTest {
     }
 
     @Test
+    fun offRouteCreatesOneRerouteRequestAndCooldownPreventsSpam() {
+        val session =
+            VexNavigationSession(
+                rerouteCooldownMillis =
+                    10_000L,
+            )
+        session.prepare(routeResult)
+        session.start()
+
+        session.acceptLocation(
+            sample =
+                VexNavigationLocationSample(
+                    sampleRef = "off.1",
+                    latitude = 34.02,
+                    longitude = -117.98,
+                    accuracyMeters = 5f,
+                    elapsedRealtimeMillis =
+                        1_000L,
+                ),
+            nowElapsedRealtimeMillis =
+                1_050L,
+        )
+
+        val first =
+            requireNotNull(
+                session.current
+                    .pendingReroute,
+            )
+
+        assertEquals(
+            routeResult
+                .route
+                .routeRevision,
+            first.previousRouteRevision,
+        )
+        assertEquals(
+            VexMapCoordinate(
+                latitude = 34.02,
+                longitude = -117.98,
+            ),
+            first.origin,
+        )
+
+        session.rerouteFailed(
+            first.requestRef,
+        )
+
+        session.acceptLocation(
+            sample =
+                VexNavigationLocationSample(
+                    sampleRef = "off.2",
+                    latitude = 34.021,
+                    longitude = -117.981,
+                    accuracyMeters = 5f,
+                    elapsedRealtimeMillis =
+                        5_000L,
+                ),
+            nowElapsedRealtimeMillis =
+                5_050L,
+        )
+
+        assertEquals(
+            null,
+            session.current
+                .pendingReroute,
+        )
+
+        session.acceptLocation(
+            sample =
+                VexNavigationLocationSample(
+                    sampleRef = "off.3",
+                    latitude = 34.022,
+                    longitude = -117.982,
+                    accuracyMeters = 5f,
+                    elapsedRealtimeMillis =
+                        12_000L,
+                ),
+            nowElapsedRealtimeMillis =
+                12_050L,
+        )
+
+        assertNotNull(
+            session.current
+                .pendingReroute,
+        )
+    }
+
+    @Test
+    fun activeRouteReplacementResetsOldRouteProgress() {
+        val session =
+            VexNavigationSession()
+        session.prepare(routeResult)
+        session.start()
+
+        session.acceptLocation(
+            sample =
+                VexNavigationLocationSample(
+                    sampleRef = "off.route",
+                    latitude = 34.02,
+                    longitude = -117.98,
+                    accuracyMeters = 5f,
+                    elapsedRealtimeMillis =
+                        1_000L,
+                ),
+            nowElapsedRealtimeMillis =
+                1_050L,
+        )
+
+        val rerouted =
+            routeResult.copy(
+                route =
+                    routeResult.route.copy(
+                        routeRevision = 2L,
+                    ),
+            )
+
+        session.replaceActiveRoute(
+            rerouted,
+        )
+
+        assertEquals(
+            VexNavigationSessionPhase.ACTIVE,
+            session.current.phase,
+        )
+        assertEquals(
+            2L,
+            session.current
+                .routeResult
+                ?.route
+                ?.routeRevision,
+        )
+        assertEquals(
+            null,
+            session.current
+                .pendingReroute,
+        )
+        assertEquals(
+            VexNavigationConvergenceAvailability.ROUTE_PREVIEW,
+            session.current
+                .convergence
+                ?.availability,
+        )
+    }
+
+    @Test
     fun stopReleasesRouteAndReturnsToIdle() {
         val session =
             VexNavigationSession()

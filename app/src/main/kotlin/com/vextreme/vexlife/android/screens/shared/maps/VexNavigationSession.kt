@@ -28,6 +28,15 @@ enum class VexNavigationLocationDisposition {
  *
  * Process-death restoration is intentionally not claimed by this generation.
  */
+data class VexNavigationRerouteRequest(
+    val requestRef: String,
+    val routeRef: String,
+    val previousRouteRevision: Long,
+    val origin: VexMapCoordinate,
+    val destination: VexMapCoordinate,
+    val destinationLabel: String,
+)
+
 data class VexNavigationSessionState(
     val phase: VexNavigationSessionPhase =
         VexNavigationSessionPhase.IDLE,
@@ -39,6 +48,8 @@ data class VexNavigationSessionState(
     val locationDisposition:
         VexNavigationLocationDisposition =
         VexNavigationLocationDisposition.NONE,
+    val pendingReroute:
+        VexNavigationRerouteRequest? = null,
 )
 
 /**
@@ -58,7 +69,12 @@ class VexNavigationSession(
     private val matchingPolicy:
         VexRouteMatchingPolicy =
         VexRouteMatchingPolicy(),
+    private val rerouteCooldownMillis:
+        Long = 10_000L,
 ) {
+    init {
+        require(rerouteCooldownMillis > 0L)
+    }
     private val lock = Any()
 
     private val mutableState =
@@ -78,6 +94,8 @@ class VexNavigationSession(
         VexRouteGeometryMatcher? = null
     private var convergence:
         VexNavigationConvergenceRelay? = null
+    private var lastRerouteRequestElapsedRealtimeMillis:
+        Long? = null
 
     fun prepare(
         routeResult: VexOfflineRouteResult,
@@ -194,17 +212,96 @@ class VexNavigationSession(
                                 output,
                             locationDisposition =
                                 VexNavigationLocationDisposition.MATCHED,
+                            pendingReroute = null,
                         )
                 }
 
-                is VexRouteMatchResult.OffRoute ->
+                is VexRouteMatchResult.OffRoute -> {
+                    val lastRequest =
+                        lastRerouteRequestElapsedRealtimeMillis
+                    val canRequest =
+                        state.pendingReroute == null &&
+                            (
+                                lastRequest == null ||
+                                sample.elapsedRealtimeMillis -
+                                    lastRequest >=
+                                    rerouteCooldownMillis
+                            )
+
+                    val reroute =
+                        if (canRequest) {
+                            val currentRoute =
+                                requireNotNull(
+                                    state.routeResult,
+                                )
+                            val destination =
+                                currentRoute
+                                    .geometry
+                                    .last()
+
+                            lastRerouteRequestElapsedRealtimeMillis =
+                                sample.elapsedRealtimeMillis
+
+                            VexNavigationRerouteRequest(
+                                requestRef =
+                                    buildString {
+                                        append(
+                                            currentRoute
+                                                .route
+                                                .routeRef,
+                                        )
+                                        append(':')
+                                        append(
+                                            currentRoute
+                                                .route
+                                                .routeRevision,
+                                        )
+                                        append(':')
+                                        append(
+                                            sample.sampleRef,
+                                        )
+                                    },
+                                routeRef =
+                                    currentRoute
+                                        .route
+                                        .routeRef,
+                                previousRouteRevision =
+                                    currentRoute
+                                        .route
+                                        .routeRevision,
+                                origin =
+                                    VexMapCoordinate(
+                                        latitude =
+                                            sample.latitude,
+                                        longitude =
+                                            sample.longitude,
+                                    ),
+                                destination =
+                                    VexMapCoordinate(
+                                        latitude =
+                                            destination.latitude,
+                                        longitude =
+                                            destination.longitude,
+                                    ),
+                                destinationLabel =
+                                    currentRoute
+                                        .route
+                                        .destinationLabel,
+                            )
+                        } else {
+                            state.pendingReroute
+                        }
+
                     mutableState.value =
                         state.copy(
                             phase =
                                 VexNavigationSessionPhase.OFF_ROUTE,
                             locationDisposition =
                                 VexNavigationLocationDisposition.OFF_ROUTE,
+                            pendingReroute =
+                                reroute,
                         )
+                }
 
                 is VexRouteMatchResult.Inaccurate ->
                     mutableState.value =
@@ -230,6 +327,84 @@ class VexNavigationSession(
                             locationDisposition =
                                 VexNavigationLocationDisposition.OUT_OF_ORDER,
                         )
+            }
+        }
+    }
+
+    fun replaceActiveRoute(
+        routeResult: VexOfflineRouteResult,
+    ) {
+        synchronized(lock) {
+            val state =
+                mutableState.value
+
+            require(
+                state.phase ==
+                    VexNavigationSessionPhase.ACTIVE ||
+                    state.phase ==
+                    VexNavigationSessionPhase.OFF_ROUTE ||
+                    state.phase ==
+                    VexNavigationSessionPhase.LOCATION_HELD,
+            ) {
+                "active navigation is required for reroute replacement"
+            }
+
+            val relay =
+                VexNavigationConvergenceRelay(
+                    guidancePolicy,
+                )
+            relay.routeChanged(
+                routeResult.route,
+            )
+
+            matcher =
+                VexRouteGeometryMatcher(
+                    route =
+                        routeResult.route,
+                    geometry =
+                        routeResult.geometry,
+                    policy =
+                        matchingPolicy,
+                )
+            convergence = relay
+            lastRerouteRequestElapsedRealtimeMillis = null
+
+            mutableState.value =
+                state.copy(
+                    phase =
+                        VexNavigationSessionPhase.ACTIVE,
+                    routeResult =
+                        routeResult.copy(
+                            geometry =
+                                routeResult
+                                    .geometry
+                                    .toList(),
+                        ),
+                    convergence =
+                        relay.currentOutput,
+                    locationDisposition =
+                        VexNavigationLocationDisposition.NONE,
+                    pendingReroute = null,
+                )
+        }
+    }
+
+    fun rerouteFailed(
+        requestRef: String,
+    ) {
+        synchronized(lock) {
+            val state =
+                mutableState.value
+
+            if (
+                state.pendingReroute
+                    ?.requestRef ==
+                requestRef
+            ) {
+                mutableState.value =
+                    state.copy(
+                        pendingReroute = null,
+                    )
             }
         }
     }
@@ -262,6 +437,7 @@ class VexNavigationSession(
         synchronized(lock) {
             matcher = null
             convergence = null
+            lastRerouteRequestElapsedRealtimeMillis = null
             mutableState.value =
                 VexNavigationSessionState()
         }
@@ -276,6 +452,88 @@ class VexNavigationSession(
 internal object VexMapsNavigationProcess {
     val session =
         VexNavigationSession()
+
+    private val lock = Any()
+    private var activeRoutingPack:
+        VexMapsRegionPack? = null
+
+    fun prepare(
+        routeResult: VexOfflineRouteResult,
+        routingPack: VexMapsRegionPack,
+    ) {
+        synchronized(lock) {
+            activeRoutingPack =
+                routingPack
+            session.prepare(
+                routeResult,
+            )
+        }
+    }
+
+    suspend fun reroutePending(
+        context: android.content.Context,
+        requestRef: String,
+    ): Boolean {
+        val request =
+            session
+                .current
+                .pendingReroute
+                ?.takeIf {
+                    it.requestRef ==
+                        requestRef
+                }
+                ?: return false
+
+        val pack =
+            synchronized(lock) {
+                activeRoutingPack
+            } ?: return false
+
+        val rerouted =
+            VexMapsOfflineRoutingProcess
+                .planner
+                .route(
+                    context = context,
+                    pack = pack,
+                    request =
+                        VexOfflineRouteRequest(
+                            routeRef =
+                                request.routeRef,
+                            routeRevision =
+                                VexMapsRouteIdentity
+                                    .nextRevision(),
+                            origin =
+                                request.origin,
+                            destination =
+                                request.destination,
+                            destinationLabel =
+                                request.destinationLabel,
+                        ),
+                )
+
+        val stillCurrent =
+            session
+                .current
+                .pendingReroute
+                ?.requestRef ==
+            requestRef
+
+        if (!stillCurrent) {
+            return false
+        }
+
+        session.replaceActiveRoute(
+            rerouted,
+        )
+        return true
+    }
+
+    fun stop() {
+        synchronized(lock) {
+            activeRoutingPack = null
+            session.stop()
+        }
+    }
 }
 
 // [VXG RealForever]
