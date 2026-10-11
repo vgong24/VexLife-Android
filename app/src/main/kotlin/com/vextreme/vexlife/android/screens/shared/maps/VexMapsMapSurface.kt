@@ -44,6 +44,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
@@ -809,6 +810,11 @@ internal fun VexMapsMapSurface(
                 planningState =
                     planningState,
                 onTravelModeSelected = { selected ->
+                    runtime.activate(
+                        VexMapsScreen.travelModeElement(
+                            selected,
+                        ),
+                    )
                     setTravelMode(
                         selected,
                     )
@@ -826,10 +832,8 @@ internal fun VexMapsMapSurface(
                     }
                 },
                 onImportPlaceSearch = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.place-search.import",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.ImportPlaceSearch,
                     )
                     placeSearchImportLauncher.launch(
                         arrayOf("*/*"),
@@ -846,10 +850,8 @@ internal fun VexMapsMapSurface(
                         return@VexMapsRoutePlannerCard
                     }
 
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.place-search.query",
-                        action = "Submitted",
+                    runtime.activate(
+                        VexMapsScreen.SearchPlaces,
                     )
                     placeSearchState =
                         VexMapsPlaceSearchState.Searching
@@ -932,10 +934,8 @@ internal fun VexMapsMapSurface(
                     }
                 },
                 onChooseOriginOnMap = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.origin.choose",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.ChooseOriginOnMap,
                     )
                     setMapSelectionTarget(
                         VexMapsMapSelectionTarget.ORIGIN,
@@ -944,10 +944,8 @@ internal fun VexMapsMapSurface(
                         VexMapsPlanningState.Idle
                 },
                 onUseDeviceOrigin = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.origin.use-device",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.UseDeviceOrigin,
                     )
                     setSelectedOrigin(
                         null,
@@ -960,20 +958,16 @@ internal fun VexMapsMapSurface(
                     mapController.clearOrigin()
                 },
                 onImportOfflineMap = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.offline-map.import",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.ImportOfflineMap,
                     )
                     offlineMapImportLauncher.launch(
                         arrayOf("*/*"),
                     )
                 },
                 onImportRegion = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.region.import",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.ImportRoutingRegion,
                     )
                     importLauncher.launch(
                         arrayOf("*/*"),
@@ -990,10 +984,8 @@ internal fun VexMapsMapSurface(
                         destination
                             ?: return@VexMapsRoutePlannerCard
 
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.route.calculate",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.PlanRoute,
                     )
                     planningState =
                         VexMapsPlanningState.Routing
@@ -1057,6 +1049,9 @@ internal fun VexMapsMapSurface(
                     navigationVisualLocation !=
                         null,
                 onRecenter = {
+                    runtime.activate(
+                        VexMapsScreen.RecenterNavigation,
+                    )
                     navigationVisualLocation
                         ?.let { visual ->
                             mapController.focusOn(
@@ -1065,19 +1060,15 @@ internal fun VexMapsMapSurface(
                         }
                 },
                 onEditRoute = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.route.edit",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.EditRoute,
                     )
                     VexMapsNavigationProcess
                         .stop()
                 },
                 onStart = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.navigation.start",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.StartNavigation,
                     )
                     readCurrentPreciseLocation {
                         if (
@@ -1095,19 +1086,15 @@ internal fun VexMapsMapSurface(
                     }
                 },
                 onStop = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.navigation.stop",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.StopNavigation,
                     )
                     VexMapsNavigationService
                         .stop(context)
                 },
                 onDone = {
-                    runtime.recordDynamicInteraction(
-                        subjectRef =
-                            "presentation.vexmaps.navigation.done",
-                        action = "Clicked",
+                    runtime.activate(
+                        VexMapsScreen.DoneNavigation,
                     )
                     VexMapsNavigationProcess
                         .stop()
@@ -1138,11 +1125,13 @@ internal fun VexMapsMapSurface(
                     Alignment.End,
             ) {
                 OutlinedButton(
+                    modifier =
+                        Modifier.vexElement(
+                            VexMapsScreen.UsePreciseLocation,
+                        ),
                     onClick = {
-                        runtime.recordDynamicInteraction(
-                            subjectRef =
-                                "presentation.vexmaps.location.use-precise",
-                            action = "Clicked",
+                        runtime.activate(
+                            VexMapsScreen.UsePreciseLocation,
                         )
 
                         if (
@@ -1294,6 +1283,10 @@ private fun VexMapsRoutePlannerCard(
             )
 
             OutlinedButton(
+                modifier =
+                    Modifier.vexElement(
+                        VexMapsScreen.ImportPlaceSearch,
+                    ),
                 onClick = onImportPlaceSearch,
                 enabled =
                     placeSearchState !is
@@ -1334,6 +1327,10 @@ private fun VexMapsRoutePlannerCard(
 
                 OutlinedTextField(
                     value = placeSearchQuery,
+                    modifier =
+                        Modifier.vexElement(
+                            VexMapsScreen.PlaceSearchQuery,
+                        ),
                     onValueChange =
                         onPlaceSearchQueryChange,
                     singleLine = true,
@@ -1348,6 +1345,10 @@ private fun VexMapsRoutePlannerCard(
                 )
 
                 OutlinedButton(
+                    modifier =
+                        Modifier.vexElement(
+                            VexMapsScreen.SearchPlaces,
+                        ),
                     onClick = onSearchPlaces,
                     enabled =
                         placeSearchQuery
@@ -1545,6 +1546,10 @@ private fun VexMapsRoutePlannerCard(
             )
 
             OutlinedButton(
+                modifier =
+                    Modifier.vexElement(
+                        VexMapsScreen.ImportOfflineMap,
+                    ),
                 onClick = onImportOfflineMap,
                 enabled =
                     offlineMapState !is
@@ -1559,6 +1564,10 @@ private fun VexMapsRoutePlannerCard(
             }
 
             OutlinedButton(
+                modifier =
+                    Modifier.vexElement(
+                        VexMapsScreen.ImportRoutingRegion,
+                    ),
                 onClick = onImportRegion,
                 enabled =
                     planningState !is
@@ -1601,6 +1610,13 @@ private fun VexMapsRoutePlannerCard(
                         .forEach { mode ->
                             if (mode == travelMode) {
                                 Button(
+                                    modifier =
+                                        Modifier.vexElement(
+                                            VexMapsScreen
+                                                .travelModeElement(
+                                                    mode,
+                                                ),
+                                        ),
                                     onClick = {
                                         onTravelModeSelected(
                                             mode,
@@ -1615,6 +1631,13 @@ private fun VexMapsRoutePlannerCard(
                                 }
                             } else {
                                 OutlinedButton(
+                                    modifier =
+                                        Modifier.vexElement(
+                                            VexMapsScreen
+                                                .travelModeElement(
+                                                    mode,
+                                                ),
+                                        ),
                                     onClick = {
                                         onTravelModeSelected(
                                             mode,
@@ -1659,6 +1682,10 @@ private fun VexMapsRoutePlannerCard(
                 )
 
                 OutlinedButton(
+                    modifier =
+                        Modifier.vexElement(
+                            VexMapsScreen.ChooseOriginOnMap,
+                        ),
                     onClick = onChooseOriginOnMap,
                     enabled =
                         planningState !is
@@ -1684,6 +1711,10 @@ private fun VexMapsRoutePlannerCard(
                     canUseDeviceOrigin
                 ) {
                     OutlinedButton(
+                        modifier =
+                            Modifier.vexElement(
+                                VexMapsScreen.UseDeviceOrigin,
+                            ),
                         onClick = onUseDeviceOrigin,
                         enabled =
                             planningState !is
@@ -1732,6 +1763,10 @@ private fun VexMapsRoutePlannerCard(
                 !selectingOrigin
             ) {
                 Button(
+                    modifier =
+                        Modifier.vexElement(
+                            VexMapsScreen.PlanRoute,
+                        ),
                     onClick = onRouteHere,
                     enabled =
                         planningState !is
@@ -1859,6 +1894,10 @@ private fun VexMapsNavigationCard(
                         }
 
                     OutlinedButton(
+                        modifier =
+                            Modifier.vexElement(
+                                VexMapsScreen.EditRoute,
+                            ),
                         onClick = onEditRoute,
                     ) {
                         Text(
@@ -1871,6 +1910,10 @@ private fun VexMapsNavigationCard(
 
                     if (locationReady) {
                         Button(
+                            modifier =
+                                Modifier.vexElement(
+                                    VexMapsScreen.StartNavigation,
+                                ),
                             onClick = onStart,
                         ) {
                             Text(
@@ -2009,6 +2052,10 @@ private fun VexMapsNavigationCard(
                                 .titleLarge,
                     )
                     Button(
+                        modifier =
+                            Modifier.vexElement(
+                                VexMapsScreen.DoneNavigation,
+                            ),
                         onClick = onDone,
                     ) {
                         Text(
@@ -2036,6 +2083,10 @@ private fun VexMapsNavigationCard(
                 )
             ) {
                 OutlinedButton(
+                    modifier =
+                        Modifier.vexElement(
+                            VexMapsScreen.RecenterNavigation,
+                        ),
                     onClick = onRecenter,
                 ) {
                     Text(
@@ -2055,6 +2106,10 @@ private fun NavigationStopButton(
     onStop: () -> Unit,
 ) {
     OutlinedButton(
+        modifier =
+            Modifier.vexElement(
+                VexMapsScreen.StopNavigation,
+            ),
         onClick = onStop,
     ) {
         Text(
