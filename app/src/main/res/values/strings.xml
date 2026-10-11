@@ -97,9 +97,11 @@
     <string name="vexstream_music_waiting_approval">Waiting for approval on your computer…</string>
     <string name="vexstream_music_pairing_failed">Couldn’t connect. Make VexStream discoverable on your computer and try again.</string>
     <string name="vexstream_music_empty">No songs are available yet.</string>
+    <string name="vexstream_music_track_menu">Song options</string>
     <string name="vexstream_music_play">Play</string>
     <string name="vexstream_music_download">Download</string>
     <string name="vexstream_music_remove_download">Remove download</string>
+    <string name="vexstream_music_visit_artist">Visit artist</string>
     <string name="vexstream_music_downloaded">Downloaded · available offline</string>
     <string name="vexstream_music_downloading">Downloading…</string>
     <string name="vexstream_music_hub_only">Available from desktop</string>
@@ -125,9 +127,14 @@
     <string name="vexstream_music_play_pause">Play / Pause</string>
     <string name="vexstream_music_previous">Previous</string>
     <string name="vexstream_music_next">Next</string>
+    <string name="vexstream_music_seek">Seek playback</string>
     <string name="vexstream_music_shuffle">Shuffle</string>
     <string name="vexstream_music_repeat">Repeat</string>
     <string name="vexstream_music_clear_queue">Clear queue</string>
+    <string name="vexstream_music_queue_play">Play queued song</string>
+    <string name="vexstream_music_queue_reorder">Reorder queue</string>
+    <string name="vexstream_music_queue_reorder_hint">Tap a song to play it. Drag its handle to reorder.</string>
+    <string name="vexstream_music_queue_current">Current</string>
     <string name="vexstream_music_queue_empty">Nothing is queued yet.</string>
     <string name="vexstream_music_no_downloads">No downloaded songs yet.</string>
     <string name="vexstream_music_unknown_album">Unknown album</string>

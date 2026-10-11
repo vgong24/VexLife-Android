@@ -13,6 +13,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /**
@@ -33,6 +34,10 @@ class PairedVexStreamMusicRepository(
 ) : VexStreamMusicRepository {
 
     private val operationMutex = Mutex()
+    private val remoteTransport =
+        VexStreamRemoteTransport(
+            connectionStore,
+        )
     private var selectedService: VexStreamSelectedService? = null
 
     private val mutableState =
@@ -118,6 +123,73 @@ class PairedVexStreamMusicRepository(
             }
         }
 
+    override suspend fun reconnectPairedVexStream(): VexStreamRepositoryResult =
+        operationMutex.withLock {
+            val remembered =
+                connectionStore.load()
+                    ?: return VexStreamRepositoryResult.Rejected(
+                        reason = VexStreamRepositoryRejection.HUB_NOT_READY,
+                    )
+
+            val rememberedRouteResult =
+                refreshCatalogLocked(
+                    connection = remembered,
+                )
+            if (
+                rememberedRouteResult is
+                    VexStreamRepositoryResult.Accepted
+            ) {
+                return rememberedRouteResult
+            }
+
+            // An authorization failure clears pairing inside refreshCatalogBlocking. Do not
+            // rediscover and silently rebind a credential that the desktop has revoked.
+            val stillPaired =
+                connectionStore.load()
+                    ?: return rememberedRouteResult
+
+            // Reconnect means "reach this paired PC", not "LAN discovery". Nearby discovery is a
+            // bounded recovery only after the remembered local/direct/relay routes all fail. It
+            // can refresh a DHCP-changed LAN address, but only for the exact pinned certificate.
+            val selected =
+                withTimeoutOrNull(
+                    RECONNECT_DISCOVERY_TIMEOUT_MS,
+                ) {
+                    runCatching {
+                        nearbyDiscovery.selectService()
+                    }.getOrNull()
+                }
+                    ?: return rememberedRouteResult
+
+            if (
+                selected.certificateSha256 !=
+                stillPaired.certificateSha256
+            ) {
+                return rememberedRouteResult
+            }
+
+            val rerouted =
+                stillPaired.copy(
+                    displayName = selected.displayName,
+                    host = selected.host,
+                    port = selected.port,
+                )
+            connectionStore.save(
+                rerouted,
+            )
+            selectedService = null
+            mutableState.value = mutableState.value.copy(
+                connectionState =
+                    VexStreamConnectionState.Paired(
+                        displayName = rerouted.displayName,
+                    ),
+            )
+
+            refreshCatalogLocked(
+                connection = rerouted,
+            )
+        }
+
     override suspend fun confirmPairingCode(): VexStreamRepositoryResult =
         operationMutex.withLock {
             val selected =
@@ -144,7 +216,7 @@ class PairedVexStreamMusicRepository(
                         ),
                 )
 
-                val token =
+                val approval =
                     awaitPairingDecision(
                         selected = selected,
                         requestRef = requestRef,
@@ -156,7 +228,14 @@ class PairedVexStreamMusicRepository(
                         host = selected.host,
                         port = selected.port,
                         certificateSha256 = selected.certificateSha256,
-                        token = token,
+                        token = approval.token,
+                        remoteHomeRef = approval.remoteHomeRef,
+                        remoteGatewayPublicKey =
+                            approval.remoteGatewayPublicKey,
+                        remoteDirectBaseUrls =
+                            approval.remoteDirectBaseUrls,
+                        remoteRelayBaseUrl =
+                            approval.remoteRelayBaseUrl,
                     )
                 connectionStore.save(connection)
                 selectedService = null
@@ -345,8 +424,91 @@ class PairedVexStreamMusicRepository(
             Dispatchers.IO,
         ) {
             refreshCatalogBlocking(
-                connection = connection,
+                connection =
+                    upgradeRemotePairingIfAvailable(
+                        connection,
+                    ),
             )
+        }
+
+    private fun upgradeRemotePairingIfAvailable(
+        connection: VexStreamPairedConnection,
+    ): VexStreamPairedConnection =
+        runCatching {
+            val request =
+                authorizedConnection(
+                    connection = connection,
+                    path = "v1/pairing/remote-upgrade",
+                    method = "POST",
+                )
+            request.doOutput = true
+            request.setRequestProperty(
+                "Content-Type",
+                "application/json",
+            )
+            request.outputStream
+                .bufferedWriter()
+                .use {
+                    it.write(
+                        JSONObject()
+                            .put(
+                                "devicePublicKey",
+                                connectionStore
+                                    .deviceSigningPublicKey(),
+                            )
+                            .toString(),
+                    )
+                }
+
+            if (
+                request.responseCode !=
+                HttpURLConnection.HTTP_OK
+            ) {
+                request.disconnect()
+                return@runCatching connection
+            }
+
+            val response =
+                JSONObject(
+                    VexStreamPinnedTls.readText(
+                        request,
+                    ),
+                )
+            request.disconnect()
+
+            val upgraded =
+                connection.copy(
+                    remoteHomeRef =
+                        response.optString(
+                            "remoteHomeRef",
+                        ).takeIf {
+                            it.isNotBlank()
+                        },
+                    remoteGatewayPublicKey =
+                        response.optString(
+                            "remoteGatewayPublicKey",
+                        ).takeIf {
+                            it.isNotBlank()
+                        },
+                    remoteDirectBaseUrls =
+                        response.remoteDirectBaseUrls(),
+                    remoteRelayBaseUrl =
+                        response.optString(
+                            "remoteRelayBaseUrl",
+                        ).takeIf {
+                            it.startsWith(
+                                "https://",
+                            )
+                        },
+                )
+            connectionStore.save(
+                upgraded,
+            )
+            upgraded
+        }.getOrElse {
+            // Remote route refresh is opportunistic while the already-paired desktop is directly
+            // reachable. Failure must not make the proven same-LAN product path unusable.
+            connection
         }
 
     private fun refreshCatalogBlocking(
@@ -361,15 +523,14 @@ class PairedVexStreamMusicRepository(
 
         return try {
             val response =
-                authorizedConnection(
+                authorizedTextResponse(
                     connection = connection,
                     path = "v1/catalog",
                 )
             val status =
-                response.responseCode
+                response.status
 
             if (status == HttpURLConnection.HTTP_UNAUTHORIZED) {
-                response.disconnect()
                 connectionStore.clear()
                 mutableState.value = mutableState.value
                     .withHubUnavailable(
@@ -388,7 +549,6 @@ class PairedVexStreamMusicRepository(
             }
 
             if (status != HttpURLConnection.HTTP_OK) {
-                response.disconnect()
                 mutableState.value =
                     mutableState.value.withHubUnavailable(
                         VexStreamHubState.Unreachable,
@@ -400,10 +560,7 @@ class PairedVexStreamMusicRepository(
             }
 
             val body =
-                response.inputStream
-                    .bufferedReader()
-                    .use { it.readText() }
-            response.disconnect()
+                response.body
 
             val catalog =
                 parseCatalog(
@@ -542,6 +699,10 @@ class PairedVexStreamMusicRepository(
                     "displayName",
                     connectionStore.deviceDisplayName(),
                 )
+                .put(
+                    "devicePublicKey",
+                    connectionStore.deviceSigningPublicKey(),
+                )
                 .toString()
         connection.outputStream
             .bufferedWriter()
@@ -568,10 +729,48 @@ class PairedVexStreamMusicRepository(
         )
     }
 
+    private fun JSONObject.remoteDirectBaseUrls(): List<String> {
+        val routes =
+            optJSONArray(
+                "remoteDirectBaseUrls",
+            ) ?: return emptyList()
+
+        return buildList {
+            for (
+                index in
+                    0 until
+                        minOf(
+                            routes.length(),
+                            MAX_REMOTE_DIRECT_ROUTES,
+                        )
+            ) {
+                routes.optString(
+                    index,
+                ).takeIf {
+                    it.startsWith(
+                        "https://",
+                    ) &&
+                        it.length <=
+                        MAX_REMOTE_DIRECT_ROUTE_LENGTH
+                }?.let(
+                    ::add,
+                )
+            }
+        }.distinct()
+    }
+
+    private data class PairingApproval(
+        val token: String,
+        val remoteHomeRef: String?,
+        val remoteGatewayPublicKey: String?,
+        val remoteDirectBaseUrls: List<String>,
+        val remoteRelayBaseUrl: String?,
+    )
+
     private suspend fun awaitPairingDecision(
         selected: VexStreamSelectedService,
         requestRef: String,
-    ): String =
+    ): PairingApproval =
         withTimeout(PAIRING_APPROVAL_TIMEOUT_MS) {
             while (true) {
                 val response =
@@ -590,8 +789,33 @@ class PairedVexStreamMusicRepository(
                     )
                 ) {
                     "APPROVED" ->
-                        return@withTimeout response.getString(
-                            "token",
+                        return@withTimeout PairingApproval(
+                            token =
+                                response.getString(
+                                    "token",
+                                ),
+                            remoteHomeRef =
+                                response.optString(
+                                    "remoteHomeRef",
+                                ).takeIf {
+                                    it.isNotBlank()
+                                },
+                            remoteGatewayPublicKey =
+                                response.optString(
+                                    "remoteGatewayPublicKey",
+                                ).takeIf {
+                                    it.isNotBlank()
+                                },
+                            remoteDirectBaseUrls =
+                                response.remoteDirectBaseUrls(),
+                            remoteRelayBaseUrl =
+                                response.optString(
+                                    "remoteRelayBaseUrl",
+                                ).takeIf {
+                                    it.startsWith(
+                                        "https://",
+                                    )
+                                },
                         )
 
                     "DENIED" ->
@@ -651,25 +875,25 @@ class PairedVexStreamMusicRepository(
             Dispatchers.IO,
         ) {
             try {
-                val response =
-                    authorizedConnection(
+                val media =
+                    authorizedMediaStream(
                         connection = connection,
                         path =
                             "v1/media/" +
                                 encodePathSegment(
                                     trackRef.value,
                                 ),
+                        expectedLength =
+                            target.track.mediaByteLength,
                     )
 
-                if (response.responseCode != HttpURLConnection.HTTP_OK) {
-                    val status =
-                        response.responseCode
-                    response.disconnect()
+                if (media.status != HttpURLConnection.HTTP_OK) {
+                    media.input?.close()
                     updateLocalCopy(
                         trackRef,
                         VexStreamLocalCopyState.Failed(
-                            reasonCode = "HTTP_$status",
-                            retryable = status >= 500,
+                            reasonCode = "HTTP_${media.status}",
+                            retryable = media.status >= 500,
                         ),
                     )
 
@@ -681,17 +905,20 @@ class PairedVexStreamMusicRepository(
                     )
                 }
 
+                val input =
+                    requireNotNull(
+                        media.input,
+                    )
                 val stored =
-                    response.inputStream.use { input ->
+                    input.use {
                         mediaStore.store(
                             expectedSha256 =
                                 target.track.mediaSha256,
                             expectedByteLength =
                                 target.track.mediaByteLength,
-                            input = input,
+                            input = it,
                         )
                     }
-                response.disconnect()
 
                 when (stored) {
                     is VexStreamMediaStoreResult.Stored -> {
@@ -767,6 +994,115 @@ class PairedVexStreamMusicRepository(
                 )
             }
         }
+
+    private data class AuthorizedTextResponse(
+        val status: Int,
+        val body: String,
+    )
+
+    private data class AuthorizedMediaStream(
+        val status: Int,
+        val input: java.io.InputStream?,
+    )
+
+    private fun authorizedTextResponse(
+        connection: VexStreamPairedConnection,
+        path: String,
+    ): AuthorizedTextResponse {
+        try {
+            val direct =
+                authorizedConnection(
+                    connection = connection,
+                    path = path,
+                )
+            val status =
+                direct.responseCode
+            val body =
+                VexStreamPinnedTls.readText(
+                    direct,
+                )
+            direct.disconnect()
+            return AuthorizedTextResponse(
+                status = status,
+                body = body,
+            )
+        } catch (directFailure: Exception) {
+            if (!connection.remoteReady) {
+                throw directFailure
+            }
+        }
+
+        val remote =
+            remoteTransport.execute(
+                connection = connection,
+                method = "GET",
+                path = path,
+            )
+        return AuthorizedTextResponse(
+            status = remote.status,
+            body =
+                String(
+                    remote.body,
+                    Charsets.UTF_8,
+                ),
+        )
+    }
+
+    private fun authorizedMediaStream(
+        connection: VexStreamPairedConnection,
+        path: String,
+        expectedLength: Long,
+    ): AuthorizedMediaStream {
+        try {
+            val direct =
+                authorizedConnection(
+                    connection = connection,
+                    path = path,
+                )
+            val status =
+                direct.responseCode
+            if (
+                status ==
+                HttpURLConnection.HTTP_OK
+            ) {
+                return AuthorizedMediaStream(
+                    status = status,
+                    input =
+                        object :
+                            java.io.FilterInputStream(
+                                direct.inputStream,
+                            ) {
+                            override fun close() {
+                                try {
+                                    super.close()
+                                } finally {
+                                    direct.disconnect()
+                                }
+                            }
+                        },
+                )
+            }
+            direct.disconnect()
+            return AuthorizedMediaStream(
+                status = status,
+                input = null,
+            )
+        } catch (directFailure: Exception) {
+            if (!connection.remoteReady) {
+                throw directFailure
+            }
+        }
+
+        return AuthorizedMediaStream(
+            status = HttpURLConnection.HTTP_OK,
+            input =
+                remoteTransport.openRangeStream(
+                    connection = connection,
+                    path = path,
+                    expectedLength = expectedLength,
+                ),
+        )
+    }
 
     private fun authorizedConnection(
         connection: VexStreamPairedConnection,
@@ -1020,8 +1356,11 @@ class PairedVexStreamMusicRepository(
     }
 
     companion object {
+        private const val MAX_REMOTE_DIRECT_ROUTES = 8
+        private const val MAX_REMOTE_DIRECT_ROUTE_LENGTH = 512
         private const val PAIRING_POLL_MS = 750L
         private const val PAIRING_APPROVAL_TIMEOUT_MS = 5 * 60 * 1000L
+        private const val RECONNECT_DISCOVERY_TIMEOUT_MS = 8_000L
 
         fun production(
             context: Context,

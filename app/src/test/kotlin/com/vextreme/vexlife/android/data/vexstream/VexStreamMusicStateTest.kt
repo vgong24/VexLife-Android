@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.data.vexstream
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -285,6 +286,49 @@ class VexStreamMusicStateTest {
         assertEquals(
             next.playlists,
             offline.playlists,
+        )
+    }
+
+    @Test
+    fun pairedConnectionRequiresCompleteRemoteRouteBeforeFallbackIsEnabled() {
+        val localOnly =
+            VexStreamPairedConnection(
+                displayName = "VexStream",
+                host = "192.0.2.10",
+                port = 18766,
+                certificateSha256 = DIGEST_A,
+                token = "token",
+            )
+        assertFalse(
+            localOnly.remoteReady,
+        )
+
+        val direct =
+            localOnly.copy(
+                remoteHomeRef =
+                    "vexstream.home.$DIGEST_A",
+                remoteGatewayPublicKey =
+                    "gateway-public-key",
+                remoteDirectBaseUrls =
+                    listOf(
+                        "https://203.0.113.8:18767",
+                    ),
+            )
+        assertTrue(
+            direct.remoteReady,
+        )
+
+        val relay =
+            localOnly.copy(
+                remoteHomeRef =
+                    "vexstream.home.$DIGEST_A",
+                remoteGatewayPublicKey =
+                    "gateway-public-key",
+                remoteRelayBaseUrl =
+                    "https://relay.example.test",
+            )
+        assertTrue(
+            relay.remoteReady,
         )
     }
 

@@ -40,6 +40,9 @@ class LoopbackVexStreamMusicRepository(
             reason = VexStreamRepositoryRejection.DISCOVERY_UNAVAILABLE,
         )
 
+    override suspend fun reconnectPairedVexStream(): VexStreamRepositoryResult =
+        refreshCatalog()
+
     override suspend fun confirmPairingCode(): VexStreamRepositoryResult =
         VexStreamRepositoryResult.Rejected(
             reason = VexStreamRepositoryRejection.PAIRING_NOT_READY,
