@@ -336,11 +336,12 @@ Compose remains the Android renderer. The important boundary is that durable pro
 bypass the registered element/runtime path merely because the Screen has a custom renderer.
 
 VexStream therefore keeps:
-- connection controls, library lenses, collection actions, selected-track actions, mini-player
+- connection controls, library lenses, collection actions, song-row/menu actions, mini-player
   actions, Queue actions, and modal identity as registered Screen elements;
 - dynamic songs/albums/artists/playlists as repository data rather than synthesizing one static
   blueprint node per media row;
-- track-row selection and collection drill-down as local presentation state;
+- song-row tap as direct Play, with secondary actions in one explicit labeled menu; collection
+  drill-down remains local presentation/navigation state;
 - MediaSessionService as playback lifetime/queue owner;
 - blocking transport/media/file work on `Dispatchers.IO`.
 
@@ -425,10 +426,10 @@ The correction is still owed lived-device verification; static source shape is n
 proving the reported navigation behavior on the phone.
 
 The mobile player also now takes layout cues from the desktop VexStream experience without copying
-desktop UI architecture: selected tracks have a perceivable selected surface, high-frequency
-track/player actions use registered semantic icon controls, and the mini-player projects
+desktop UI architecture: tapping a song plays it immediately, one trailing menu exposes labeled
+Play / Play next / Add to queue / download / Visit artist choices, and the mini-player projects
 title/artist, queue position, elapsed/duration timeline, and compact transport/shuffle/queue controls.
-The semantic element identities remain unchanged, so custom Compose realization still enters
+The semantic element identities remain explicit, so custom Compose realization still enters
 VexRuntime before each local playback effect.
 
 ```text
@@ -465,7 +466,8 @@ Android uses a music placeholder until that producer/consumer contract is delibe
 YOUTUBE_MUSIC_LAYOUT_CUE != YOUTUBE_MUSIC_PRODUCT_COPY
 ARTWORK_SLOT != FABRICATED_ARTWORK_SOURCE
 SCREEN_TOOLBAR_ACTION != SHELL_FEATURE_OWNERSHIP
-VISIBLE_SELECTED_STATE != NEW_PLAYBACK_TRUTH
+SONG_ROW_TAP = PLAY_INTENT
+SECONDARY_SONG_ACTIONS -> LABELED_MENU
 LIBRARY_DENSITY != SEMANTIC_IDENTITY_LOSS
 
 
