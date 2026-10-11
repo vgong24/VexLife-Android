@@ -1,8 +1,11 @@
 package com.vextreme.vexlife.android.testing.crawler
 
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.testing.journey.JourneyDomain
 import com.vextreme.vexlife.android.testing.journey.Journeys
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
+import com.vextreme.vexlife.android.testing.journey.journeyFor
+import com.vextreme.vexlife.android.testing.journey.shardFor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,11 +39,11 @@ class VexScreenCrawlerPlannerTest {
 
         assertEquals(1, plan.size)
         assertEquals(
-            Journeys.userProfile.formSubmit,
+            journeyFor(Journeys.userProfile.formSubmit),
             plan.single().journey,
         )
         assertEquals(
-            Journeys.userProfile.shardId,
+            shardFor(Journeys.userProfile).shardId,
             plan.single().shardId,
         )
     }
@@ -93,14 +96,14 @@ class VexScreenCrawlerPlannerTest {
         val plan = VexScreenCrawlerPlanner.plan(config)
 
         assertEquals(
-            Journeys.debug.journeys.size +
-                Journeys.gallery.journeys.size,
+            shardFor(Journeys.debug).journeys.size +
+                shardFor(Journeys.gallery).journeys.size,
             plan.size,
         )
         assertEquals(
             setOf(
-                Journeys.debug.shardId,
-                Journeys.gallery.shardId,
+                shardFor(Journeys.debug).shardId,
+                shardFor(Journeys.gallery).shardId,
             ),
             plan.map { it.shardId }.toSet(),
         )
@@ -118,31 +121,27 @@ class VexScreenCrawlerPlannerTest {
 
         assertTrue(
             plan.none { case ->
-                case.shardId == Journeys.debug.shardId
+                case.shardId == shardFor(Journeys.debug).shardId
             },
         )
         assertTrue(
             plan.any { case ->
-                case.shardId == Journeys.gallery.shardId
+                case.shardId == shardFor(Journeys.gallery).shardId
             },
         )
     }
 
     @Test
     fun unregisteredTypedShardFailsInsteadOfSilentlyProducingAnEmptyRun() {
-        val unknownShard =
-            object : com.vextreme.vexlife.android.testing.journey.VexJourneyShard {
-                override val shardId = "shared.not-real"
-                override val journeys =
-                    emptyList<com.vextreme.vexlife.android.testing.journey.VexJourney>()
-            }
+        val unknownDomain =
+            object : JourneyDomain() {}
 
         val failure = runCatching {
             VexScreenCrawlerPlanner.plan(
                 VexScreenCrawlerConfig(
                     selection =
                         VexCrawlerSelection.Shards(
-                            shards = setOf(unknownShard),
+                            shards = setOf(unknownDomain),
                         ),
                 ),
             )
@@ -151,7 +150,7 @@ class VexScreenCrawlerPlannerTest {
         requireNotNull(failure)
         assertTrue(
             failure.message.orEmpty()
-                .contains("unregistered shard"),
+                .contains("journey domain is not registered"),
         )
     }
 }
