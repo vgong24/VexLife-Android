@@ -289,8 +289,13 @@ endpoint through feature code.
 Use narrow purpose bridges:
 
 ~~~text
+VexLifeCompositionContext
+  composition/router-only projection
+  runtime + AppRepositories + presentation-level app projection
+  future Relay/service families may join only when a real consumer earns them
+
 AppRepositories
-  composition-only bundle
+  composition-only repository bundle
 
 AppActionRegistrations
   one immutable queryable registration set
@@ -306,8 +311,16 @@ screen
   receives the smallest repository/facade that answers its question
 ~~~
 
-Do not pass the entire AppRepositories bundle into VexLogger or ordinary screens merely for convenience.
-That turns composition into a service locator and makes unrelated data reachable from unrelated code.
+VexLifeScaffold may receive VexLifeCompositionContext because it is the app routing/composition
+boundary. It unpacks that context and still hands each Screen only the repository/facade it actually
+needs.
+
+Do not pass the entire VexLifeCompositionContext or AppRepositories bundle into VexLogger or ordinary
+screens merely for convenience. That turns composition into a service locator and makes unrelated
+state/data reachable from unrelated code.
+
+When several repositories form one real domain relationship, prefer a named facade/owner such as a
+future UserHub over making every caller know the underlying repository set.
 
 A bridge is successful when it hides plumbing while preserving dependency meaning.
 
