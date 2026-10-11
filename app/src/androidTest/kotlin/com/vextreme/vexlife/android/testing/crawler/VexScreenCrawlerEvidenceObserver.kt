@@ -50,6 +50,31 @@ class VexScreenCrawlerEvidenceObserver(
     private val manifest: File
         get() = File(rootDirectory, "manifest.jsonl")
 
+    init {
+        val instrumentation =
+            InstrumentationRegistry.getInstrumentation()
+        val targetContext = instrumentation.targetContext
+
+        File(rootDirectory, "run-started.txt").writeText(
+            buildString {
+                appendLine("caseRef=${case.caseRef}")
+                appendLine("sourceRef=${case.sourceRef}")
+                appendLine("targetPackage=${targetContext.packageName}")
+                appendLine("artifactRoot=${crawlerRootDirectory.absolutePath}")
+                appendLine("caseDirectory=${rootDirectory.absolutePath}")
+                appendLine("deviceModel=${Build.MODEL}")
+                appendLine("sdkInt=${Build.VERSION.SDK_INT}")
+            },
+        )
+
+        println(
+            "Vex ScreenCrawler STARTED: ${case.caseRef}",
+        )
+        println(
+            "Vex ScreenCrawler artifact root: ${crawlerRootDirectory.absolutePath}",
+        )
+    }
+
     override fun afterStep(observation: VexJourneyStepObservation) {
         if (!shouldCaptureScreen(observation.screenId)) return
 
@@ -93,6 +118,15 @@ class VexScreenCrawlerEvidenceObserver(
         check(manifest.isFile && manifest.length() > 0L) {
             "ScreenCrawler screenshots exist but manifest is missing/empty for ${case.caseRef}"
         }
+
+        File(rootDirectory, "run-complete.txt").writeText(
+            buildString {
+                appendLine("caseRef=${case.caseRef}")
+                appendLine("screenshots=$capturedScreenshotCount")
+                appendLine("manifest=${manifest.name}")
+                appendLine("result=COMPLETE")
+            },
+        )
 
         println(
             "Vex ScreenCrawler captured $capturedScreenshotCount screenshot(s).",
