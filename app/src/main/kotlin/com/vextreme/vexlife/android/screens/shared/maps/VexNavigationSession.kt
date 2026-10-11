@@ -20,6 +20,7 @@ enum class VexNavigationLocationDisposition {
     STALE,
     OUT_OF_ORDER,
     INACCURATE,
+    UNAVAILABLE,
 }
 
 /**
@@ -229,6 +230,30 @@ class VexNavigationSession(
                             locationDisposition =
                                 VexNavigationLocationDisposition.OUT_OF_ORDER,
                         )
+            }
+        }
+    }
+
+    fun locationUnavailable() {
+        synchronized(lock) {
+            val state =
+                mutableState.value
+
+            if (
+                state.phase ==
+                    VexNavigationSessionPhase.ACTIVE ||
+                state.phase ==
+                    VexNavigationSessionPhase.OFF_ROUTE ||
+                state.phase ==
+                    VexNavigationSessionPhase.LOCATION_HELD
+            ) {
+                mutableState.value =
+                    state.copy(
+                        phase =
+                            VexNavigationSessionPhase.LOCATION_HELD,
+                        locationDisposition =
+                            VexNavigationLocationDisposition.UNAVAILABLE,
+                    )
             }
         }
     }

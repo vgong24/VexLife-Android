@@ -128,24 +128,9 @@ class VexMapsNavigationService :
                             error !is
                             CancellationException
                         ) {
-                            // Keep the route/session visible, but stop claiming a usable fix.
-                            val current =
-                                session.current
-                            if (
-                                current.phase ==
-                                    VexNavigationSessionPhase.ACTIVE ||
-                                current.phase ==
-                                    VexNavigationSessionPhase.OFF_ROUTE
-                            ) {
-                                // No synthetic location is emitted; the notification explains
-                                // that the current fix is unavailable.
-                                updateNotification(
-                                    current.copy(
-                                        phase =
-                                            VexNavigationSessionPhase.LOCATION_HELD,
-                                    ),
-                                )
-                            }
+                            // Preserve the route, but make the shared session truth say that
+                            // navigation currently lacks a usable location stream.
+                            session.locationUnavailable()
                         }
                     }
                     .collect { sample ->
