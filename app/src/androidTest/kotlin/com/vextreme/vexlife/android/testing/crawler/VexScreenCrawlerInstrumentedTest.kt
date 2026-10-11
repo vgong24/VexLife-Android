@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.testing.crawler
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.platform.app.InstrumentationRegistry
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.testing.journey.Journeys
 import com.vextreme.vexlife.android.testing.journey.VexTestEngine
@@ -29,10 +30,6 @@ import org.junit.runners.Parameterized
  * 2. HOW DO I CHANGE WHAT IT CRAWLS?
  *
  *    Edit the CONFIG section in the companion object below.
- *
- *    First enable it:
- *
- *      enabled = true
  *
  *    No selection line means ALL current/future canonical journey shards.
  *
@@ -109,7 +106,8 @@ import org.junit.runners.Parameterized
  *
  * IMPORTANT:
  *
- * - enabled=false is a GREEN NO-OP. It must never block ordinary Android development.
+ * - right-clicking THIS crawler class/method means "run the configured crawler".
+ * - ordinary full-suite Android runs do not expand crawler screenshot work.
  * - ordinary VexJourney functional tests are separate and remain baseline-only by default.
  * - ScreenCrawler locale/font matrices are explicit evidence work, not automatic functional-test
  *   multiplication.
@@ -120,8 +118,10 @@ class VexScreenCrawlerInstrumentedTest(
     /**
      * AUTOMATIC JUNIT INPUT — DO NOT EDIT/CONSTRUCT THIS.
      *
-     * JUnit's Parameterized runner calls [plannedRuns] below. Each returned PlannedRun becomes one
-     * fresh test-class instance and is injected here. Change the CONFIG below; JUnit supplies this.
+     * JUnit's Parameterized runner calls [plannedRuns] below. If this crawler test was explicitly
+     * selected in Android Studio, the CONFIG is planned into real crawler cases. During an ordinary
+     * full-suite run, one green NotSelected placeholder is injected instead so screenshot work does
+     * not multiply normal functional testing.
      */
     private val plannedRun: PlannedRun,
 ) {
@@ -131,9 +131,9 @@ class VexScreenCrawlerInstrumentedTest(
     @Test
     fun runConfiguredScreenCrawler() {
         when (val selected = plannedRun) {
-            is PlannedRun.Disabled -> {
+            is PlannedRun.NotSelected -> {
                 println(
-                    "Vex ScreenCrawler disabled: ${selected.reason}",
+                    "Vex ScreenCrawler not selected for this run: ${selected.reason}",
                 )
                 return
             }
@@ -159,12 +159,6 @@ class VexScreenCrawlerInstrumentedTest(
         // ---------------------------------------------------------------------
         // CONFIG — NORMAL HUMAN EDIT SURFACE
         // ---------------------------------------------------------------------
-
-        /**
-         * false -> this test is an explicit green no-op.
-         * true  -> plan and execute the crawler cases configured below.
-         */
-        const val enabled: Boolean = false
 
         /**
          * Evidence coordinate stored in the screenshot manifest.
@@ -258,11 +252,13 @@ class VexScreenCrawlerInstrumentedTest(
             }
 
         private fun buildPlannedRuns(): List<PlannedRun> {
-            if (!enabled) {
+            if (!isCrawlerExplicitlySelected()) {
                 return listOf(
-                    PlannedRun.Disabled(
+                    PlannedRun.NotSelected(
                         reason =
-                            "set VexScreenCrawlerInstrumentedTest.enabled = true",
+                            "ordinary suite run; right-click " +
+                                "VexScreenCrawlerInstrumentedTest or " +
+                                "runConfiguredScreenCrawler() to execute crawler evidence",
                     ),
                 )
             }
@@ -274,10 +270,49 @@ class VexScreenCrawlerInstrumentedTest(
 
             return cases.map(PlannedRun::Case)
         }
+
+        /**
+         * AndroidJUnitRunner receives the standard "class" filter when Android Studio runs a
+         * specific class/method. Package selection is also treated as explicit crawler intent.
+         *
+         * A plain connectedDebugAndroidTest/full-module run has neither crawler-specific filter, so
+         * the optional evidence matrix stays out of the normal production loop.
+         */
+        private fun isCrawlerExplicitlySelected(): Boolean {
+            val arguments = InstrumentationRegistry.getArguments()
+            val className =
+                VexScreenCrawlerInstrumentedTest::class.java.name
+            val packageName =
+                VexScreenCrawlerInstrumentedTest::class.java.packageName
+
+            val classFilter = arguments
+                .getString("class")
+                .orEmpty()
+                .split(',')
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+
+            if (
+                classFilter.any { candidate ->
+                    candidate.substringBefore('#') == className
+                }
+            ) {
+                return true
+            }
+
+            val packageFilter = arguments
+                .getString("package")
+                .orEmpty()
+                .split(',')
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+
+            return packageName in packageFilter
+        }
     }
 
     sealed interface PlannedRun {
-        data class Disabled(
+        data class NotSelected(
             val reason: String,
 ) : PlannedRun {
             override fun toString(): String =
