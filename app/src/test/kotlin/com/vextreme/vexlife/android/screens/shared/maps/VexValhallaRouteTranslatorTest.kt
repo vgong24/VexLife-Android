@@ -1,116 +1,276 @@
 package com.vextreme.vexlife.android.screens.shared.maps
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexValhallaRouteTranslatorTest {
     @Test
-    fun segmentTransitionsBecomeStableVexManeuvers() {
+    fun maneuverUsesPolylineShapeIndexInsteadOfProviderRoadLength() {
+        val geometry =
+            listOf(
+                VexRouteGeometryPoint(
+                    34.0,
+                    -118.0,
+                ),
+                VexRouteGeometryPoint(
+                    34.0,
+                    -117.999,
+                ),
+                VexRouteGeometryPoint(
+                    34.001,
+                    -117.999,
+                ),
+                VexRouteGeometryPoint(
+                    34.001,
+                    -117.998,
+                ),
+            )
+
         val providerRoute =
             VexValhallaRouteProjection(
-                totalDistanceMeters = 1_000,
-                segments =
+                legs =
                     listOf(
-                        VexValhallaManeuverSegment(
-                            instruction =
-                                "Drive east",
-                            lengthMeters = 300,
-                        ),
-                        VexValhallaManeuverSegment(
-                            instruction =
-                                "Turn right onto Main Street",
-                            lengthMeters = 500,
-                        ),
-                        VexValhallaManeuverSegment(
-                            instruction =
-                                "Arrive at Home",
-                            lengthMeters = 200,
+                        VexValhallaLegProjection(
+                            geometry = geometry,
+                            maneuvers =
+                                listOf(
+                                    VexValhallaManeuverProjection(
+                                        instruction =
+                                            "Start east",
+                                        beginShapeIndex = 0,
+                                    ),
+                                    VexValhallaManeuverProjection(
+                                        instruction =
+                                            "Turn left",
+                                        beginShapeIndex = 1,
+                                    ),
+                                    VexValhallaManeuverProjection(
+                                        instruction =
+                                            "Turn right",
+                                        beginShapeIndex = 2,
+                                    ),
+                                ),
                         ),
                     ),
             )
 
-        val route =
+        val result =
             with(VexValhallaRouteTranslator) {
-                providerRoute.toNavigationRoute(
-                    routeRef = "route.home",
-                    routeRevision = 7L,
-                    destinationLabel = "Home",
-                )
+                providerRoute
+                    .toOfflineRouteResult(
+                        routeRef = "route.test",
+                        routeRevision = 4L,
+                        destinationLabel = "Test",
+                    )
             }
 
+        val geometryAxis =
+            cumulativeGeometryMeters(
+                geometry,
+            )
+
         assertEquals(
-            "route.home",
-            route.routeRef,
+            geometryAxis.last(),
+            result.route.totalDistanceMeters,
         )
         assertEquals(
-            7L,
-            route.routeRevision,
+            geometryAxis[1],
+            result.route
+                .maneuvers[0]
+                .distanceFromRouteStartMeters,
         )
         assertEquals(
-            1_000,
-            route.totalDistanceMeters,
+            geometryAxis[2],
+            result.route
+                .maneuvers[1]
+                .distanceFromRouteStartMeters,
         )
         assertEquals(
-            listOf(
-                VexNavigationManeuver(
-                    maneuverRef =
-                        "valhalla.maneuver.1",
-                    instructionProjection =
-                        "Turn right onto Main Street",
-                    distanceFromRouteStartMeters =
-                        300,
-                ),
-                VexNavigationManeuver(
-                    maneuverRef =
-                        "valhalla.maneuver.2",
-                    instructionProjection =
-                        "Arrive at Home",
-                    distanceFromRouteStartMeters =
-                        800,
-                ),
-            ),
-            route.maneuvers,
+            geometry,
+            result.geometry,
         )
     }
 
     @Test
-    fun duplicateZeroLengthTransitionsDoNotBreakRouteOrdering() {
+    fun duplicateTransitionDistanceDoesNotBreakStrictRouteOrdering() {
+        val pointA =
+            VexRouteGeometryPoint(
+                34.0,
+                -118.0,
+            )
+        val pointB =
+            VexRouteGeometryPoint(
+                34.0,
+                -117.999,
+            )
+        val pointC =
+            VexRouteGeometryPoint(
+                34.001,
+                -117.999,
+            )
+
         val providerRoute =
             VexValhallaRouteProjection(
-                totalDistanceMeters = 500,
-                segments =
+                legs =
                     listOf(
-                        VexValhallaManeuverSegment(
-                            "Start",
-                            250,
-                        ),
-                        VexValhallaManeuverSegment(
-                            "Continue",
-                            0,
-                        ),
-                        VexValhallaManeuverSegment(
-                            "Turn left",
-                            250,
+                        VexValhallaLegProjection(
+                            geometry =
+                                listOf(
+                                    pointA,
+                                    pointB,
+                                    pointC,
+                                ),
+                            maneuvers =
+                                listOf(
+                                    VexValhallaManeuverProjection(
+                                        "Start",
+                                        0,
+                                    ),
+                                    VexValhallaManeuverProjection(
+                                        "Turn first",
+                                        1,
+                                    ),
+                                    VexValhallaManeuverProjection(
+                                        "Duplicate transition",
+                                        1,
+                                    ),
+                                ),
                         ),
                     ),
             )
 
         val route =
             with(VexValhallaRouteTranslator) {
-                providerRoute.toNavigationRoute(
-                    routeRef = "route.test",
-                    routeRevision = 1L,
-                    destinationLabel = "Test",
-                )
+                providerRoute
+                    .toOfflineRouteResult(
+                        routeRef = "route.test",
+                        routeRevision = 1L,
+                        destinationLabel = "Test",
+                    )
+                    .route
             }
 
         assertEquals(
-            listOf(250),
-            route.maneuvers.map {
-                it.distanceFromRouteStartMeters
+            1,
+            route.maneuvers.size,
+        )
+    }
+
+    @Test
+    fun polyline6DecoderPreservesSmallCoordinateDeltas() {
+        val expected =
+            listOf(
+                VexRouteGeometryPoint(
+                    34.000001,
+                    -118.000001,
+                ),
+                VexRouteGeometryPoint(
+                    34.000101,
+                    -117.999901,
+                ),
+            )
+
+        val encoded =
+            encodePolyline6ForTest(
+                expected,
+            )
+
+        assertEquals(
+            expected,
+            decodePolyline6(
+                encoded,
+            ),
+        )
+    }
+
+    @Test
+    fun geometryDistanceIsMonotonic() {
+        val distances =
+            cumulativeGeometryMeters(
+                listOf(
+                    VexRouteGeometryPoint(
+                        34.0,
+                        -118.0,
+                    ),
+                    VexRouteGeometryPoint(
+                        34.001,
+                        -118.0,
+                    ),
+                    VexRouteGeometryPoint(
+                        34.001,
+                        -117.999,
+                    ),
+                ),
+            )
+
+        assertEquals(0, distances.first())
+        assertTrue(
+            distances.zipWithNext().all {
+                (a, b) -> b > a
             },
         )
     }
+}
+
+private fun encodePolyline6ForTest(
+    points: List<VexRouteGeometryPoint>,
+): String {
+    var previousLatitude = 0
+    var previousLongitude = 0
+
+    return buildString {
+        points.forEach { point ->
+            val latitude =
+                (point.latitude *
+                    1_000_000.0)
+                    .toInt()
+            val longitude =
+                (point.longitude *
+                    1_000_000.0)
+                    .toInt()
+
+            appendEncodedValue(
+                latitude -
+                    previousLatitude,
+            )
+            appendEncodedValue(
+                longitude -
+                    previousLongitude,
+            )
+
+            previousLatitude =
+                latitude
+            previousLongitude =
+                longitude
+        }
+    }
+}
+
+private fun StringBuilder.appendEncodedValue(
+    value: Int,
+) {
+    var encoded =
+        if (value < 0) {
+            (value shl 1).inv()
+        } else {
+            value shl 1
+        }
+
+    while (encoded >= 0x20) {
+        append(
+            ((0x20 or
+                (encoded and 0x1f)) +
+                63).toChar(),
+        )
+        encoded =
+            encoded shr 5
+    }
+
+    append(
+        (encoded + 63)
+            .toChar(),
+    )
 }
 
 // [VXG RealForever]

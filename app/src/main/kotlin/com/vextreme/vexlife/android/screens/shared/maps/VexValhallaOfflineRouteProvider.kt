@@ -90,7 +90,7 @@ class VexValhallaOfflineRouteProvider(
 
     suspend fun route(
         request: VexOfflineRouteRequest,
-    ): VexNavigationRoute =
+    ): VexOfflineRouteResult =
         withContext(Dispatchers.IO) {
             val rawResponse =
                 engine.routeRaw(
@@ -99,7 +99,7 @@ class VexValhallaOfflineRouteProvider(
 
             VexValhallaRouteTranslator
                 .fromJson(rawResponse)
-                .toNavigationRoute(
+                .toOfflineRouteResult(
                     routeRef = request.routeRef,
                     routeRevision =
                         request.routeRevision,
