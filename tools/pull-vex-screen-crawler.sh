@@ -13,6 +13,8 @@ fi
 
 FOUND=0
 
+# Delivery output represents THIS collection only. Never merge fresh evidence into a stale local tree.
+rm -rf "$DESTINATION"
 mkdir -p "$DESTINATION"
 
 while IFS= read -r source; do
@@ -34,5 +36,5 @@ fi
 
 echo
 echo "Done: $DESTINATION"
-echo "Manifests:"
-find "$DESTINATION" -name manifest.jsonl -print
+echo "Screenshot batches:"
+find "$DESTINATION" -type d -name screenshots -print
