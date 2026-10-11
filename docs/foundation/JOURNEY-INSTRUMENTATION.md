@@ -21,6 +21,7 @@ The current test-only foundation is organized as:
 testing/journey/
   VexJourney.kt
   VexExpectedWalk.kt
+  VexJourneyHistoryVerifier.kt
   VexJourneyCoverage.kt
 
   environment/
@@ -61,7 +62,10 @@ That source directory is compiled into both JVM unit tests and Android instrumen
 A journey reads like the product walk:
 
 ~~~kotlin
-vexJourney("User Profile form submission") {
+vexJourney(
+    id = "form-submit",
+    title = "User Profile form submission",
+) {
     start(HomeScreen)
 
     tap(AppShell.Elements.Add)
@@ -105,7 +109,7 @@ its stable semantic ID.
 
 Ordinary JVM/build development does NOT fail merely because semantic coverage is incomplete. The
 coverage test:
-- fails for malformed journey grammar, duplicate journey titles, or duplicate shard IDs;
+- fails for malformed journey grammar, duplicate shard IDs, duplicate local journey IDs, or duplicate case refs;
 - emits a visible warning when production semantics are missing/stale;
 - writes a per-host-test report under `build/reports/vex/journey-coverage-<task>.txt`;
 - fails on coverage debt only when strictness is explicitly requested with
@@ -139,6 +143,7 @@ Semantic journey meaning is separated from Android configuration pressure.
 
 ~~~kotlin
 vexJourney(
+    id = "form-submit",
     title = "User Profile form submission",
     environments = listOf(
         VexJourneyEnvironments.Baseline,
@@ -218,6 +223,58 @@ Compose input
 -> InMemoryLogHistoryRepository
 ~~~
 
+## Failure isolation and negative controls
+
+One source-level `@Test` method does NOT mean one giant Android run.
+
+JUnit's parameterized runner creates one test instance per `VexJourneyCase`:
+
+~~~text
+shard/journey@environment
+
+shared.gallery/elements-modals-swap@baseline
+shared.gallery/elements-modals-swap@large-text-1.45x
+shared.user-profile/form-submit@baseline
+...
+~~~
+
+Each case gets a fresh:
+- Compose rule;
+- VexTestEngine;
+- expected walk;
+- in-memory repository graph.
+
+A failing Gallery/large-text case therefore does not share state with Profile/baseline.
+
+Cases may be re-run in isolation with instrumentation arguments:
+
+~~~bash
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.vexJourneyCase=shared.gallery/elements-modals-swap@large-text-1.45x
+~~~
+
+Or by broader filters:
+
+~~~text
+vexJourneyShard
+vexJourneyEnvironment
+~~~
+
+Unselected parameter cases are reported as skipped rather than silently removed.
+
+The verifier itself has JVM negative controls. `VexJourneyHistoryVerifierTest` intentionally feeds:
+- a missing semantic record;
+- a reordered semantic record;
+- an unexpected extra record;
+- records whose timestamps/durations/logger sequence differ but whose semantic meaning is equal.
+
+The first three must be detected at the first divergent list position. The timing-only difference
+must compare equal.
+
+Do not keep deliberately broken production journeys merely to prove the harness can fail. Keep
+negative controls focused on the reusable verifier/oracle, then let real journeys fail only when the
+app or declared walk actually disagrees.
+
 ## Expected history comes from the walk
 
 `VexExpectedWalk` is a small independent test-side interpreter.
@@ -251,7 +308,9 @@ timestamp
 durationSincePreviousSeconds
 ~~~
 
-List order already expresses journey order. Timestamp/duration formatting remains protected by
+List order is the journey ordering contract. `VexJourneyHistoryVerifier` compares the semantic
+records by index and reports the first divergent position with a small sequence neighborhood.
+Timestamp/duration/logger-sequence formatting remains outside this equality and is protected by
 focused VexLogger tests.
 
 ## Why expected and actual stay separate
@@ -308,7 +367,9 @@ The initial catalog covers:
 - Talk to Vex placeholder.
 
 The catalog is parameterized directly into instrumentation tests. Adding a journey to the catalog
-automatically adds an Android instrumentation case; there is no second test-method registry.
+automatically adds one case per declared environment; there is no second test-method registry.
+Stable local journey IDs combine with shard/environment IDs to give every case a durable `caseRef`
+for reports and isolated reruns.
 
 ## Proof layers
 
@@ -321,6 +382,10 @@ JVM:
 
   VexExpectedWalkTest
     independent expected-side grammar/oracle
+
+  VexJourneyHistoryVerifierTest
+    negative controls for missing/reordered/extra records
+    proves timing metadata is excluded from semantic equality
 
 Android instrumentation:
   :app:connectedDebugAndroidTest
