@@ -16,6 +16,10 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.FindNearby)
         tap(VexStreamMusicScreen.ConfirmPairingCode)
         tap(VexStreamMusicScreen.RefreshCatalog)
+        type(
+            VexStreamMusicScreen.SearchQuery,
+            "Vex",
+        )
         tap(VexStreamMusicScreen.AlbumsTab)
         tap(VexStreamMusicScreen.ArtistsTab)
         tap(VexStreamMusicScreen.PlaylistsTab)
