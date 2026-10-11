@@ -208,4 +208,4 @@ A reusable async dependency-binding/activation layer remains unearned. The curre
 binds its concrete dependencies explicitly. Add a generic activation abstraction only after another
 real consumer demonstrates recurring duplicated lifecycle mechanics that cannot be kept local.
 
-<!-- [VXG RealForever][VEXLIFE-ANDROID][EVENTS-ATTENTION-PRACTICUM][EAP-00][RELAY] -->
+<!-- [VXG RealForever][VEXLIFE-ANDROID][EVENTS-CONVERGENCE-PRACTICUM][EAP-00][RELAY] -->
