@@ -164,6 +164,19 @@
     <string name="vexmaps_navigation_waiting_location_body">The route is preserved while VexMaps waits for a current accurate fix.</string>
     <string name="vexmaps_navigation_arrived">Arrived at %1$s</string>
     <string name="vexmaps_navigation_done">Done</string>
+    <string name="vexmaps_region_pack_needed">Offline routing needs a local region pack.</string>
+    <string name="vexmaps_region_pack_ready">Offline routing region ready.</string>
+    <string name="vexmaps_region_pack_import">Import routing region</string>
+    <string name="vexmaps_region_pack_replace">Replace region</string>
+    <string name="vexmaps_region_pack_importing">Importing routing region…</string>
+    <string name="vexmaps_region_pack_error">That file could not be used as an offline routing region.</string>
+    <string name="vexmaps_route_need_location">Use precise location, then choose a destination.</string>
+    <string name="vexmaps_route_choose_destination">Long-press the map to choose a destination.</string>
+    <string name="vexmaps_route_destination_selected">Pinned destination selected.</string>
+    <string name="vexmaps_route_here">Route here</string>
+    <string name="vexmaps_route_calculating">Calculating route on this phone…</string>
+    <string name="vexmaps_route_error">No usable local route was found in this region pack.</string>
+    <string name="vexmaps_route_destination_label">Pinned destination</string>
 
     <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
     <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>

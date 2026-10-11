@@ -1,11 +1,14 @@
 package com.vextreme.vexlife.android.screens.shared.maps
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Color
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -17,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.core.locationbutton.compose.LocationButton
 import androidx.core.locationbutton.compose.LocationButtonTextType
 import androidx.lifecycle.Lifecycle
@@ -58,12 +63,6 @@ import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
-/**
- * Android-native realization of the VexMaps map and current active-navigation presentation.
- *
- * MapLibre owns pixels. Android owns explicit location access. [VexNavigationSession] owns route
- * progress. This Composable only projects those truths into one calm human surface.
- */
 @Composable
 internal fun VexMapsMapSurface(
     runtime: VexRuntime,
@@ -88,6 +87,12 @@ internal fun VexMapsMapSurface(
                 context,
             )
         }
+    val regionStore =
+        remember(context) {
+            VexMapsRegionPackStore(
+                context,
+            )
+        }
 
     var locationState by
         remember {
@@ -95,6 +100,91 @@ internal fun VexMapsMapSurface(
                 VexMapsLocationState.Idle,
             )
         }
+    var currentLocation by
+        remember {
+            mutableStateOf<
+                VexDeviceLocationResult.Located?
+            >(null)
+        }
+    var destination by
+        remember {
+            mutableStateOf<VexMapCoordinate?>(
+                null,
+            )
+        }
+    var regionPack by
+        remember {
+            mutableStateOf(
+                regionStore.currentPack(),
+            )
+        }
+    var planningState by
+        remember {
+            mutableStateOf<VexMapsPlanningState>(
+                VexMapsPlanningState.Idle,
+            )
+        }
+
+    val importLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .OpenDocument(),
+        ) { uri ->
+            if (uri == null) {
+                return@rememberLauncherForActivityResult
+            }
+
+            runtime.recordDynamicInteraction(
+                subjectRef =
+                    "presentation.vexmaps.region.import",
+                action = "Selected",
+            )
+            planningState =
+                VexMapsPlanningState.Importing
+
+            scope.launch {
+                runCatching {
+                    regionStore.import(uri)
+                }.onSuccess { imported ->
+                    regionPack = imported
+                    planningState =
+                        VexMapsPlanningState.Idle
+                }.onFailure {
+                    planningState =
+                        VexMapsPlanningState.Error(
+                            VexMapsPlanningError.REGION_IMPORT,
+                        )
+                }
+            }
+        }
+
+    SideEffect {
+        mapController
+            .setOnDestinationLongPress(
+                if (
+                    navigationState.phase ==
+                    VexNavigationSessionPhase.IDLE
+                ) {
+                    { selected ->
+                        runtime.recordDynamicInteraction(
+                            subjectRef =
+                                "presentation.vexmaps.destination.pin",
+                            action = "LongPressed",
+                        )
+                        destination =
+                            selected
+                        planningState =
+                            VexMapsPlanningState.Idle
+                        mapController
+                            .showDestination(
+                                selected,
+                            )
+                    }
+                } else {
+                    null
+                },
+            )
+    }
 
     val onlineStyleUri =
         if (darkTheme) {
@@ -190,6 +280,15 @@ internal fun VexMapsMapSurface(
         }
     }
 
+    val preciseLocationActive =
+        locationState ==
+            VexMapsLocationState.Ready ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            ) ==
+            PackageManager.PERMISSION_GRANTED
+
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -198,131 +297,244 @@ internal fun VexMapsMapSurface(
             modifier = Modifier.fillMaxSize(),
         )
 
-        VexMapsNavigationCard(
-            state = navigationState,
-            locationReady =
-                locationState ==
-                    VexMapsLocationState.Ready,
-            onStart = {
-                runtime.recordDynamicInteraction(
-                    subjectRef =
-                        "presentation.vexmaps.navigation.start",
-                    action = "Clicked",
-                )
-                VexMapsNavigationService
-                    .startPrepared(context)
-            },
-            onStop = {
-                runtime.recordDynamicInteraction(
-                    subjectRef =
-                        "presentation.vexmaps.navigation.stop",
-                    action = "Clicked",
-                )
-                VexMapsNavigationService
-                    .stop(context)
-            },
-            onDone = {
-                runtime.recordDynamicInteraction(
-                    subjectRef =
-                        "presentation.vexmaps.navigation.done",
-                    action = "Clicked",
-                )
-                VexMapsNavigationProcess
-                    .session
-                    .stop()
-            },
-            modifier =
-                Modifier
-                    .align(Alignment.TopStart)
-                    .padding(12.dp)
-                    .widthIn(max = 340.dp),
-        )
-
-        Column(
-            modifier =
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(12.dp),
-            horizontalAlignment = Alignment.End,
+        if (
+            navigationState.phase ==
+            VexNavigationSessionPhase.IDLE
         ) {
-            LocationButton(
-                textType =
-                    LocationButtonTextType
-                        .UsePreciseLocation,
-                onPermissionResult = { granted ->
-                    if (!granted) {
-                        locationState =
-                            VexMapsLocationState.Denied
-                        return@LocationButton
-                    }
+            VexMapsRoutePlannerCard(
+                regionPack = regionPack,
+                hasLocation =
+                    currentLocation != null,
+                destination =
+                    destination,
+                planningState =
+                    planningState,
+                onImportRegion = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.region.import",
+                        action = "Clicked",
+                    )
+                    importLauncher.launch(
+                        arrayOf("*/*"),
+                    )
+                },
+                onRouteHere = {
+                    val pack =
+                        regionPack
+                            ?: return@VexMapsRoutePlannerCard
+                    val origin =
+                        currentLocation
+                            ?: return@VexMapsRoutePlannerCard
+                    val target =
+                        destination
+                            ?: return@VexMapsRoutePlannerCard
 
-                    locationState =
-                        VexMapsLocationState.Finding
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.route.calculate",
+                        action = "Clicked",
+                    )
+                    planningState =
+                        VexMapsPlanningState.Routing
 
                     scope.launch {
-                        locationState =
-                            when (
-                                val result =
-                                    locationSource
-                                        .currentPreciseLocation()
-                            ) {
-                                is VexDeviceLocationResult.Located -> {
-                                    mapController
-                                        .showDeviceLocation(
-                                            result,
-                                        )
-                                    VexMapsLocationState.Ready
-                                }
-
-                                VexDeviceLocationResult.PermissionMissing ->
-                                    VexMapsLocationState.Denied
-
-                                VexDeviceLocationResult.LocationDisabled ->
-                                    VexMapsLocationState.Disabled
-
-                                VexDeviceLocationResult.Unavailable ->
-                                    VexMapsLocationState.Unavailable
-                            }
-                    }
-                },
-                onError = {
-                    locationState =
-                        VexMapsLocationState.Error
-                },
-            )
-
-            locationState.stringResOrNull
-                ?.let { stringRes ->
-                    Text(
-                        text =
-                            stringResource(
-                                stringRes,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .labelMedium,
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurface,
-                        modifier =
-                            Modifier
-                                .padding(top = 8.dp)
-                                .background(
-                                    MaterialTheme
-                                        .colorScheme
-                                        .surface
-                                        .copy(
-                                            alpha = 0.88f,
+                        runCatching {
+                            VexMapsOfflineRoutingProcess
+                                .planner
+                                .route(
+                                    context = context,
+                                    pack = pack,
+                                    request =
+                                        VexOfflineRouteRequest(
+                                            routeRef =
+                                                "route.vexmaps.current",
+                                            routeRevision =
+                                                VexMapsRouteIdentity
+                                                    .nextRevision(),
+                                            origin =
+                                                VexMapCoordinate(
+                                                    latitude =
+                                                        origin.latitude,
+                                                    longitude =
+                                                        origin.longitude,
+                                                ),
+                                            destination =
+                                                target,
+                                            destinationLabel =
+                                                context.getString(
+                                                    R.string
+                                                        .vexmaps_route_destination_label,
+                                                ),
                                         ),
                                 )
-                                .padding(
-                                    horizontal = 8.dp,
-                                    vertical = 5.dp,
-                                ),
+                        }.onSuccess { route ->
+                            VexMapsNavigationProcess
+                                .session
+                                .prepare(route)
+                            planningState =
+                                VexMapsPlanningState.Idle
+                        }.onFailure {
+                            planningState =
+                                VexMapsPlanningState.Error(
+                                    VexMapsPlanningError.ROUTE,
+                                )
+                        }
+                    }
+                },
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                        .widthIn(max = 320.dp),
+            )
+        } else {
+            VexMapsNavigationCard(
+                state = navigationState,
+                locationReady =
+                    preciseLocationActive,
+                onStart = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.navigation.start",
+                        action = "Clicked",
                     )
-                }
+                    VexMapsNavigationService
+                        .startPrepared(context)
+                },
+                onStop = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.navigation.stop",
+                        action = "Clicked",
+                    )
+                    VexMapsNavigationService
+                        .stop(context)
+                },
+                onDone = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.navigation.done",
+                        action = "Clicked",
+                    )
+                    VexMapsNavigationProcess
+                        .session
+                        .stop()
+                },
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(12.dp)
+                        .widthIn(max = 340.dp),
+            )
+        }
+
+        if (
+            navigationState.phase ==
+                VexNavigationSessionPhase.IDLE ||
+            navigationState.phase ==
+                VexNavigationSessionPhase.READY
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            end = 12.dp,
+                            bottom = 52.dp,
+                        ),
+                horizontalAlignment =
+                    Alignment.End,
+            ) {
+                LocationButton(
+                    textType =
+                        LocationButtonTextType
+                            .UsePreciseLocation,
+                    onPermissionResult = { granted ->
+                        if (!granted) {
+                            locationState =
+                                VexMapsLocationState.Denied
+                            currentLocation = null
+                            return@LocationButton
+                        }
+
+                        locationState =
+                            VexMapsLocationState.Finding
+
+                        scope.launch {
+                            locationState =
+                                when (
+                                    val result =
+                                        locationSource
+                                            .currentPreciseLocation()
+                                ) {
+                                    is VexDeviceLocationResult.Located -> {
+                                        currentLocation =
+                                            result
+                                        mapController
+                                            .showDeviceLocation(
+                                                result,
+                                            )
+                                        VexMapsLocationState.Ready
+                                    }
+
+                                    VexDeviceLocationResult.PermissionMissing -> {
+                                        currentLocation = null
+                                        VexMapsLocationState.Denied
+                                    }
+
+                                    VexDeviceLocationResult.LocationDisabled -> {
+                                        currentLocation = null
+                                        VexMapsLocationState.Disabled
+                                    }
+
+                                    VexDeviceLocationResult.Unavailable -> {
+                                        currentLocation = null
+                                        VexMapsLocationState.Unavailable
+                                    }
+                                }
+                        }
+                    },
+                    onError = {
+                        currentLocation = null
+                        locationState =
+                            VexMapsLocationState.Error
+                    },
+                )
+
+                locationState.stringResOrNull
+                    ?.let { stringRes ->
+                        Text(
+                            text =
+                                stringResource(
+                                    stringRes,
+                                ),
+                            style =
+                                MaterialTheme
+                                    .typography
+                                    .labelMedium,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurface,
+                            modifier =
+                                Modifier
+                                    .padding(top = 8.dp)
+                                    .background(
+                                        MaterialTheme
+                                            .colorScheme
+                                            .surface
+                                            .copy(
+                                                alpha = 0.88f,
+                                            ),
+                                    )
+                                    .padding(
+                                        horizontal = 8.dp,
+                                        vertical = 5.dp,
+                                    ),
+                        )
+                    }
+            }
         }
 
         Text(
@@ -345,6 +557,159 @@ internal fun VexMapsMapSurface(
                         vertical = 3.dp,
                     ),
         )
+    }
+}
+
+@Composable
+private fun VexMapsRoutePlannerCard(
+    regionPack: VexMapsRegionPack?,
+    hasLocation: Boolean,
+    destination: VexMapCoordinate?,
+    planningState: VexMapsPlanningState,
+    onImportRegion: () -> Unit,
+    onRouteHere: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+    ) {
+        Column(
+            modifier =
+                Modifier.padding(14.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text =
+                    when {
+                        regionPack == null ->
+                            stringResource(
+                                R.string
+                                    .vexmaps_region_pack_needed,
+                            )
+
+                        else ->
+                            stringResource(
+                                R.string
+                                    .vexmaps_region_pack_ready,
+                            )
+                    },
+                style =
+                    MaterialTheme
+                        .typography
+                        .titleMedium,
+            )
+
+            when (planningState) {
+                VexMapsPlanningState.Importing ->
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_region_pack_importing,
+                        ),
+                    )
+
+                VexMapsPlanningState.Routing ->
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_route_calculating,
+                        ),
+                    )
+
+                is VexMapsPlanningState.Error ->
+                    Text(
+                        stringResource(
+                            when (
+                                planningState.error
+                            ) {
+                                VexMapsPlanningError.REGION_IMPORT ->
+                                    R.string
+                                        .vexmaps_region_pack_error
+
+                                VexMapsPlanningError.ROUTE ->
+                                    R.string
+                                        .vexmaps_route_error
+                            },
+                        ),
+                    )
+
+                VexMapsPlanningState.Idle ->
+                    Unit
+            }
+
+            OutlinedButton(
+                onClick = onImportRegion,
+                enabled =
+                    planningState !is
+                    VexMapsPlanningState.Importing &&
+                        planningState !is
+                        VexMapsPlanningState.Routing,
+            ) {
+                Text(
+                    stringResource(
+                        if (regionPack == null) {
+                            R.string
+                                .vexmaps_region_pack_import
+                        } else {
+                            R.string
+                                .vexmaps_region_pack_replace
+                        },
+                    ),
+                )
+            }
+
+            if (regionPack != null) {
+                Text(
+                    text =
+                        when {
+                            !hasLocation ->
+                                stringResource(
+                                    R.string
+                                        .vexmaps_route_need_location,
+                                )
+
+                            destination == null ->
+                                stringResource(
+                                    R.string
+                                        .vexmaps_route_choose_destination,
+                                )
+
+                            else ->
+                                stringResource(
+                                    R.string
+                                        .vexmaps_route_destination_selected,
+                                )
+                        },
+                    style =
+                        MaterialTheme
+                            .typography
+                            .bodyMedium,
+                )
+            }
+
+            if (
+                regionPack != null &&
+                hasLocation &&
+                destination != null
+            ) {
+                Button(
+                    onClick = onRouteHere,
+                    enabled =
+                        planningState !is
+                        VexMapsPlanningState.Routing &&
+                            planningState !is
+                            VexMapsPlanningState.Importing,
+                ) {
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_route_here,
+                        ),
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -450,11 +815,7 @@ private fun VexMapsNavigationCard(
                     next?.let {
                         Text(
                             text =
-                                stringResource(
-                                    R.string
-                                        .vexmaps_navigation_notification_active,
-                                    it.distanceToManeuverMeters,
-                                ),
+                                "${it.distanceToManeuverMeters} m",
                             style =
                                 MaterialTheme
                                     .typography
@@ -578,6 +939,26 @@ private fun NavigationStopButton(
     }
 }
 
+private sealed interface VexMapsPlanningState {
+    data object Idle :
+        VexMapsPlanningState
+
+    data object Importing :
+        VexMapsPlanningState
+
+    data object Routing :
+        VexMapsPlanningState
+
+    data class Error(
+        val error: VexMapsPlanningError,
+    ) : VexMapsPlanningState
+}
+
+private enum class VexMapsPlanningError {
+    REGION_IMPORT,
+    ROUTE,
+}
+
 private class VexMapsMapController {
     private var map: MapLibreMap? = null
     private var style: Style? = null
@@ -585,8 +966,38 @@ private class VexMapsMapController {
         VexDeviceLocationResult.Located? = null
     private var pendingRoute:
         VexOfflineRouteResult? = null
+    private var pendingDestination:
+        VexMapCoordinate? = null
     private var lastFittedRouteKey:
         String? = null
+    private var onDestinationLongPress:
+        ((VexMapCoordinate) -> Unit)? = null
+
+    private val longClickListener =
+        MapLibreMap.OnMapLongClickListener {
+            point ->
+            val callback =
+                onDestinationLongPress
+                    ?: return@OnMapLongClickListener false
+
+            callback(
+                VexMapCoordinate(
+                    latitude =
+                        point.latitude,
+                    longitude =
+                        point.longitude,
+                ),
+            )
+            true
+        }
+
+    fun setOnDestinationLongPress(
+        callback:
+            ((VexMapCoordinate) -> Unit)?,
+    ) {
+        onDestinationLongPress =
+            callback
+    }
 
     fun attach(
         map: MapLibreMap,
@@ -594,6 +1005,9 @@ private class VexMapsMapController {
     ) {
         this.map = map
         this.style = style
+        map.addOnMapLongClickListener(
+            longClickListener,
+        )
 
         pendingRoute?.let { route ->
             renderRoute(
@@ -601,16 +1015,28 @@ private class VexMapsMapController {
                 fitCamera = true,
             )
         }
-
+        pendingDestination?.let(
+            ::renderDestination,
+        )
         pendingLocation?.let(
             ::renderDeviceLocation,
         )
     }
 
     fun detach() {
+        map?.removeOnMapLongClickListener(
+            longClickListener,
+        )
         map = null
         style = null
         lastFittedRouteKey = null
+    }
+
+    fun showDestination(
+        destination: VexMapCoordinate,
+    ) {
+        pendingDestination = destination
+        renderDestination(destination)
     }
 
     fun showRoute(
@@ -628,12 +1054,25 @@ private class VexMapsMapController {
         lastFittedRouteKey = null
 
         val style = style ?: return
-        style.removeLayer(
-            ROUTE_LAYER_ID,
-        )
-        style.removeSource(
-            ROUTE_SOURCE_ID,
-        )
+
+        if (
+            style.getLayer(
+                ROUTE_LAYER_ID,
+            ) != null
+        ) {
+            style.removeLayer(
+                ROUTE_LAYER_ID,
+            )
+        }
+        if (
+            style.getSource(
+                ROUTE_SOURCE_ID,
+            ) != null
+        ) {
+            style.removeSource(
+                ROUTE_SOURCE_ID,
+            )
+        }
     }
 
     fun showDeviceLocation(
@@ -641,6 +1080,51 @@ private class VexMapsMapController {
     ) {
         pendingLocation = location
         renderDeviceLocation(location)
+    }
+
+    private fun renderDestination(
+        destination: VexMapCoordinate,
+    ) {
+        val style = style ?: return
+        val point =
+            Point.fromLngLat(
+                destination.longitude,
+                destination.latitude,
+            )
+        val existing =
+            style.getSource(
+                DESTINATION_SOURCE_ID,
+            ) as? GeoJsonSource
+
+        if (existing == null) {
+            style.addSource(
+                GeoJsonSource(
+                    DESTINATION_SOURCE_ID,
+                    point,
+                ),
+            )
+            style.addLayer(
+                CircleLayer(
+                    DESTINATION_LAYER_ID,
+                    DESTINATION_SOURCE_ID,
+                ).withProperties(
+                    circleRadius(9f),
+                    circleColor(
+                        Color.parseColor(
+                            "#B3261E",
+                        ),
+                    ),
+                    circleStrokeWidth(3f),
+                    circleStrokeColor(
+                        Color.WHITE,
+                    ),
+                ),
+            )
+        } else {
+            existing.setGeoJson(
+                point,
+            )
+        }
     }
 
     private fun renderRoute(
@@ -962,6 +1446,12 @@ private const val ROUTE_SOURCE_ID =
 
 private const val ROUTE_LAYER_ID =
     "vexmaps-route-layer"
+
+private const val DESTINATION_SOURCE_ID =
+    "vexmaps-destination"
+
+private const val DESTINATION_LAYER_ID =
+    "vexmaps-destination-layer"
 
 private const val DEVICE_LOCATION_SOURCE_ID =
     "vexmaps-device-location"
