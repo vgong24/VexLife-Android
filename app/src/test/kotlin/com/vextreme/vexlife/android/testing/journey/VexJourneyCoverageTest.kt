@@ -12,6 +12,15 @@ import org.junit.Test
 class VexJourneyCoverageTest {
     @Test
     fun everyRegisteredSemanticSurfaceIsNamedByAJourney() {
+        val duplicateTitles = VexJourneyCatalog.all
+            .groupBy { it.title }
+            .filterValues { it.size > 1 }
+            .keys
+        assertTrue(
+            "journey titles must be unique: $duplicateTitles",
+            duplicateTitles.isEmpty(),
+        )
+
         val recorder = VexJourneyCoverageRecorder()
         VexJourneyCatalog.all.forEach { journey ->
             // Validate the declared state/grammar sequence as part of the fast gate too.
