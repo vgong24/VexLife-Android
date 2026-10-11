@@ -47,6 +47,10 @@ object Journeys {
         val formSubmit = JourneyPath()
     }
 
+    object vexMaps : JourneyDomain() {
+        val destinationShell = JourneyPath()
+    }
+
     object vexStream : JourneyDomain() {
         val connectRefreshForget = JourneyPath()
     }
@@ -110,6 +114,14 @@ private val journeyDomainBindings: List<JourneyDomainBinding> =
             paths = mapOf(
                 Journeys.userProfile.formSubmit to
                     UserProfileJourneys.formSubmit,
+            ),
+        ),
+        JourneyDomainBinding(
+            domain = Journeys.vexMaps,
+            shard = VexMapsJourneys,
+            paths = mapOf(
+                Journeys.vexMaps.destinationShell to
+                    VexMapsJourneys.destinationShell,
             ),
         ),
         JourneyDomainBinding(

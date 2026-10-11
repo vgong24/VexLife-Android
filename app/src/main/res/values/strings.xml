@@ -10,6 +10,7 @@
     <string name="settings_title">Settings</string>
     <string name="debug_menu_title">Debug Menu</string>
     <string name="gallery_title">Gallery</string>
+    <string name="vexmaps_title">VexMaps</string>
     <string name="vexstream_music_title">VexStream</string>
     <string name="talk_to_vex_title">Talk to Vex</string>
 
@@ -23,6 +24,7 @@
     <string name="home_vexstream_connected">Connected to %1$s</string>
     <string name="home_vexstream_connected_body">Browse your library, continue playback, manage the queue, or download music for offline listening.</string>
     <string name="home_vexstream_offline">VexStream offline · downloaded music is still available</string>
+    <string name="home_vexmaps">VexMaps</string>
     <string name="home_talk_to_vex">Talk to Vex</string>
     <string name="events_preview_title">Events preview</string>
     <string name="events_preview_body">External information will appear here as stable chronological event rows.</string>
@@ -133,6 +135,9 @@
     <string name="vexstream_music_unknown_album">Unknown album</string>
     <string name="vexstream_music_unknown_artist">Unknown artist</string>
     <string name="vexstream_music_track_count">%1$d songs</string>
+
+    <string name="vexmaps_foundation_title">Maps and navigation</string>
+    <string name="vexmaps_foundation_body">VexMaps is ready for map, place, route, and navigation experiences. Opening this screen does not require location permission; device location will be requested only when a location-dependent action needs it.</string>
 
     <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
     <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>
