@@ -1,8 +1,9 @@
 package com.vextreme.vexlife.android.screens
 
+import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.AppBlueprint
-import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
@@ -25,13 +26,13 @@ import com.vextreme.vexlife.android.shell.AppShell
  * work in that screen's own folder rather than searching a large central screen registry.
  */
 object AppScreens {
-    val primary: List<ScreenBlueprint> = listOf(
+    val primary: List<AppScreenBlueprint> = listOf(
         HomeScreen,
         EventsScreen,
         SettingsScreen,
     )
 
-    val shared: List<ScreenBlueprint> = listOf(
+    val shared: List<AppScreenBlueprint> = listOf(
         DebugMenuScreen,
         GalleryScreen,
         UserProfileScreen,
@@ -39,7 +40,7 @@ object AppScreens {
         TalkToVexScreen,
     )
 
-    val all: List<ScreenBlueprint> = primary + shared
+    val all: List<AppScreenBlueprint> = primary + shared
 
     val registry = UIBlueprintRegistry(
         AppBlueprint(
@@ -47,4 +48,27 @@ object AppScreens {
             screens = all.map { it.asRegistration() },
         ),
     )
+
+    /**
+     * Forms one immutable action-wiring snapshot from the same registered Screen list.
+     *
+     * Adding a Screen to AppScreens is enough to include its local action owner. If the Screen
+     * declares an Invoke action but forgets its registration override, coverage fails here rather
+     * than waiting for the user to click an unwired control.
+     */
+    internal fun appActionRegistrations(
+        context: ScreenActionContext,
+    ): AppActionRegistrations {
+        val combined = AppActionRegistrations.combine(
+            *all
+                .map { screen -> screen.appActionRegistrations(context) }
+                .toTypedArray(),
+        )
+
+        val screenActionElements = all
+            .flatMap { screen -> registry.elementsForScreen(screen) }
+            .filterIsInstance<ActionElement>()
+
+        return combined.requireCoverage(screenActionElements)
+    }
 }
