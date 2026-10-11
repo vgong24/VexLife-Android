@@ -21,7 +21,7 @@ class VexScreenCrawlerPlannerTest {
         )
         assertTrue(
             plan.all { case ->
-                case.locale == VexCrawlerLocales.EnglishUs &&
+                case.locale == VexCrawlerLocale("en") &&
                     case.font == VexCrawlerFonts.Normal
             },
         )
@@ -32,8 +32,8 @@ class VexScreenCrawlerPlannerTest {
         val config = vexScreenCrawlerConfig {
             screens(UserProfileScreen)
             languages(
-                VexCrawlerLocales.EnglishUs,
-                VexCrawlerLocales.ChineseSimplified,
+                "en",
+                "zh",
             )
             fontProfiles(
                 VexCrawlerFonts.Normal,
@@ -47,7 +47,7 @@ class VexScreenCrawlerPlannerTest {
         // Current catalog has one Profile-owned journey that touches UserProfileScreen.
         assertEquals(4, plan.size)
         assertEquals(
-            setOf("en-us", "zh-cn"),
+            setOf("en", "zh"),
             plan.map { it.locale.id }.toSet(),
         )
         assertEquals(
@@ -68,7 +68,7 @@ class VexScreenCrawlerPlannerTest {
                 DebugJourneys,
                 GalleryJourneys,
             )
-            languages(VexCrawlerLocales.ChineseSimplified)
+            languages("zh")
             fontProfiles(VexCrawlerFonts.Large)
         }
 
@@ -85,6 +85,28 @@ class VexScreenCrawlerPlannerTest {
                 GalleryJourneys.shardId,
             ),
             plan.map { it.shardId }.toSet(),
+        )
+    }
+
+    @Test
+    fun allShardsExceptAutomaticallyIncludesCanonicalShards() {
+        val config = VexScreenCrawlerConfig(
+            selection = VexCrawlerSelection.AllShardsExcept(
+                excludedShardIds = setOf(DebugJourneys.shardId),
+            ),
+        )
+
+        val plan = VexScreenCrawlerPlanner.plan(config)
+
+        assertTrue(
+            plan.none { case ->
+                case.shardId == DebugJourneys.shardId
+            },
+        )
+        assertTrue(
+            plan.any { case ->
+                case.shardId == GalleryJourneys.shardId
+            },
         )
     }
 
