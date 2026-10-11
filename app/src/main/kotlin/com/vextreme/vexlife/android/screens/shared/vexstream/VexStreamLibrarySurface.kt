@@ -2030,26 +2030,6 @@ private fun VexStreamQueueSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .vexElement(
-                                    VexStreamMusicScreen.QueuePlay,
-                                )
-                                .clickable(
-                                    enabled = queuePlayEnabled,
-                                ) {
-                                    runtime.activate(
-                                        VexStreamMusicScreen.QueuePlay,
-                                    )
-                                    if (
-                                        latestIndex !=
-                                        playback.currentIndex
-                                    ) {
-                                        controller
-                                            ?.seekToDefaultPosition(
-                                                latestIndex,
-                                            )
-                                    }
-                                    controller?.play()
-                                }
                                 .graphicsLayer {
                                     translationY =
                                         if (isDragging) {
@@ -2075,65 +2055,96 @@ private fun VexStreamQueueSheet(
                             verticalAlignment =
                                 Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text =
-                                    if (index == playback.currentIndex) {
-                                        "▶"
-                                    } else {
-                                        (index + 1).toString()
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .vexElement(
+                                        VexStreamMusicScreen.QueuePlay,
+                                    )
+                                    .clickable(
+                                        enabled = queuePlayEnabled,
+                                    ) {
+                                        runtime.activate(
+                                            VexStreamMusicScreen.QueuePlay,
+                                        )
+                                        if (
+                                            latestIndex !=
+                                            playback.currentIndex
+                                        ) {
+                                            controller
+                                                ?.seekToDefaultPosition(
+                                                    latestIndex,
+                                                )
+                                        }
+                                        controller?.play()
                                     },
-                            )
-                            Column(
-                                modifier = Modifier.weight(1f),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        10.dp,
+                                    ),
+                                verticalAlignment =
+                                    Alignment.CenterVertically,
                             ) {
                                 Text(
                                     text =
-                                        track
-                                            ?.track
-                                            ?.title
-                                            ?: entry.mediaId,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
+                                        if (isCurrent) {
+                                            "▶"
+                                        } else {
+                                            (index + 1).toString()
+                                        },
                                 )
-                                if (isCurrent) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                ) {
                                     Text(
                                         text =
-                                            stringResource(
-                                                R.string
-                                                    .vexstream_music_queue_current,
-                                            ),
-                                        style =
-                                            MaterialTheme
-                                                .typography
-                                                .labelSmall,
-                                        color =
-                                            MaterialTheme
-                                                .colorScheme
-                                                .primary,
+                                            track
+                                                ?.track
+                                                ?.title
+                                                ?: entry.mediaId,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
-                                }
-                                track
-                                    ?.track
-                                    ?.artist
-                                    ?.takeIf {
-                                        it.isNotBlank()
-                                    }
-                                    ?.let { artist ->
+                                    if (isCurrent) {
                                         Text(
-                                            text = artist,
+                                            text =
+                                                stringResource(
+                                                    R.string
+                                                        .vexstream_music_queue_current,
+                                                ),
                                             style =
                                                 MaterialTheme
                                                     .typography
-                                                    .bodySmall,
+                                                    .labelSmall,
                                             color =
                                                 MaterialTheme
                                                     .colorScheme
-                                                    .onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow =
-                                                TextOverflow.Ellipsis,
+                                                    .primary,
                                         )
                                     }
+                                    track
+                                        ?.track
+                                        ?.artist
+                                        ?.takeIf {
+                                            it.isNotBlank()
+                                        }
+                                        ?.let { artist ->
+                                            Text(
+                                                text = artist,
+                                                style =
+                                                    MaterialTheme
+                                                        .typography
+                                                        .bodySmall,
+                                                color =
+                                                    MaterialTheme
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow =
+                                                    TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                }
                             }
 
                             Box(
