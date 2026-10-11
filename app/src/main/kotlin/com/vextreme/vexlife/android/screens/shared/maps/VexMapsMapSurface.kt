@@ -1,37 +1,54 @@
 package com.vextreme.vexlife.android.screens.shared.maps
 
+import android.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.locationbutton.compose.LocationButton
+import androidx.core.locationbutton.compose.LocationButtonTextType
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
+import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.CameraPosition
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.PropertyFactory.circleColor
+import org.maplibre.android.style.layers.PropertyFactory.circleRadius
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Point
 
 /**
- * Android-native realization of the VexMaps basemap.
+ * Android-native realization of the VexMaps basemap + explicit current-location capability.
  *
- * MapLibre owns rendering only. OpenFreeMap is the current zero-key online OSM tile/style source.
- * Neither becomes the owner of VexMaps route, navigation, location-permission, or guidance meaning.
- *
- * A later local/self-hosted tile source can replace [onlineStyleUri] without changing VM-02 route
- * semantics or the registered VexMaps destination.
+ * MapLibre owns rendering. OpenFreeMap is the current zero-key online OSM tile/style source.
+ * Android owns the one-session precise-location grant. Neither becomes the owner of route,
+ * navigation, or guidance meaning.
  */
 @Composable
 internal fun VexMapsMapSurface(
@@ -39,6 +56,25 @@ internal fun VexMapsMapSurface(
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val scope = rememberCoroutineScope()
+    val mapController =
+        remember {
+            VexMapsMapController()
+        }
+    val locationSource =
+        remember(context) {
+            VexDeviceLocationSource(
+                context,
+            )
+        }
+
+    var locationState by
+        remember {
+            mutableStateOf<VexMapsLocationState>(
+                VexMapsLocationState.Idle,
+            )
+        }
+
     val onlineStyleUri =
         if (darkTheme) {
             OPEN_FREE_MAP_DARK_STYLE
@@ -47,7 +83,11 @@ internal fun VexMapsMapSurface(
         }
 
     val mapView =
-        remember(context, onlineStyleUri) {
+        remember(
+            context,
+            onlineStyleUri,
+            mapController,
+        ) {
             MapLibre.getInstance(
                 context.applicationContext,
             )
@@ -55,7 +95,6 @@ internal fun VexMapsMapSurface(
             MapView(context).apply {
                 onCreate(null)
                 getMapAsync { map ->
-                    map.setStyle(onlineStyleUri)
                     map.cameraPosition =
                         CameraPosition.Builder()
                             .target(
@@ -66,6 +105,15 @@ internal fun VexMapsMapSurface(
                             )
                             .zoom(1.25)
                             .build()
+
+                    map.setStyle(
+                        onlineStyleUri,
+                    ) { style ->
+                        mapController.attach(
+                            map = map,
+                            style = style,
+                        )
+                    }
                 }
             }
         }
@@ -73,6 +121,7 @@ internal fun VexMapsMapSurface(
     DisposableEffect(
         lifecycle,
         mapView,
+        mapController,
     ) {
         val lifecycleBridge =
             VexMapsMapViewLifecycle(
@@ -92,6 +141,7 @@ internal fun VexMapsMapSurface(
 
         onDispose {
             lifecycle.removeObserver(observer)
+            mapController.detach()
             lifecycleBridge.dispose()
         }
     }
@@ -103,6 +153,93 @@ internal fun VexMapsMapSurface(
             factory = { mapView },
             modifier = Modifier.fillMaxSize(),
         )
+
+        Column(
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            LocationButton(
+                textType =
+                    LocationButtonTextType
+                        .UsePreciseLocation,
+                onPermissionResult = { granted ->
+                    if (!granted) {
+                        locationState =
+                            VexMapsLocationState.Denied
+                        return@LocationButton
+                    }
+
+                    locationState =
+                        VexMapsLocationState.Finding
+
+                    scope.launch {
+                        locationState =
+                            when (
+                                val result =
+                                    locationSource
+                                        .currentPreciseLocation()
+                            ) {
+                                is VexDeviceLocationResult.Located -> {
+                                    mapController
+                                        .showDeviceLocation(
+                                            result,
+                                        )
+                                    VexMapsLocationState.Ready
+                                }
+
+                                VexDeviceLocationResult.PermissionMissing ->
+                                    VexMapsLocationState.Denied
+
+                                VexDeviceLocationResult.LocationDisabled ->
+                                    VexMapsLocationState.Disabled
+
+                                VexDeviceLocationResult.Unavailable ->
+                                    VexMapsLocationState.Unavailable
+                            }
+                    }
+                },
+                onError = {
+                    locationState =
+                        VexMapsLocationState.Error
+                },
+            )
+
+            locationState.stringResOrNull
+                ?.let { stringRes ->
+                    Text(
+                        text =
+                            stringResource(
+                                stringRes,
+                            ),
+                        style =
+                            MaterialTheme
+                                .typography
+                                .labelMedium,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurface,
+                        modifier =
+                            Modifier
+                                .padding(top = 8.dp)
+                                .background(
+                                    MaterialTheme
+                                        .colorScheme
+                                        .surface
+                                        .copy(
+                                            alpha = 0.88f,
+                                        ),
+                                )
+                                .padding(
+                                    horizontal = 8.dp,
+                                    vertical = 5.dp,
+                                ),
+                    )
+                }
+        }
 
         Text(
             text = stringResource(
@@ -127,11 +264,144 @@ internal fun VexMapsMapSurface(
     }
 }
 
+private class VexMapsMapController {
+    private var map: MapLibreMap? = null
+    private var style: Style? = null
+    private var pendingLocation:
+        VexDeviceLocationResult.Located? = null
+
+    fun attach(
+        map: MapLibreMap,
+        style: Style,
+    ) {
+        this.map = map
+        this.style = style
+        pendingLocation?.let(
+            ::renderDeviceLocation,
+        )
+    }
+
+    fun detach() {
+        map = null
+        style = null
+    }
+
+    fun showDeviceLocation(
+        location: VexDeviceLocationResult.Located,
+    ) {
+        pendingLocation = location
+        renderDeviceLocation(location)
+    }
+
+    private fun renderDeviceLocation(
+        location: VexDeviceLocationResult.Located,
+    ) {
+        val map = map ?: return
+        val style = style ?: return
+
+        val point =
+            Point.fromLngLat(
+                location.longitude,
+                location.latitude,
+            )
+
+        val existingSource =
+            style.getSource(
+                DEVICE_LOCATION_SOURCE_ID,
+            ) as? GeoJsonSource
+
+        if (existingSource == null) {
+            style.addSource(
+                GeoJsonSource(
+                    DEVICE_LOCATION_SOURCE_ID,
+                    point,
+                ),
+            )
+
+            style.addLayer(
+                CircleLayer(
+                    DEVICE_LOCATION_LAYER_ID,
+                    DEVICE_LOCATION_SOURCE_ID,
+                ).withProperties(
+                    circleRadius(8f),
+                    circleColor(
+                        Color.parseColor(
+                            "#6750A4",
+                        ),
+                    ),
+                    circleStrokeWidth(3f),
+                    circleStrokeColor(
+                        Color.WHITE,
+                    ),
+                ),
+            )
+        } else {
+            existingSource.setGeoJson(
+                point,
+            )
+        }
+
+        map.animateCamera(
+            CameraUpdateFactory
+                .newLatLngZoom(
+                    LatLng(
+                        location.latitude,
+                        location.longitude,
+                    ),
+                    15.5,
+                ),
+        )
+    }
+}
+
+private sealed interface VexMapsLocationState {
+    val stringResOrNull: Int?
+
+    data object Idle :
+        VexMapsLocationState {
+        override val stringResOrNull:
+            Int? = null
+    }
+
+    data object Finding :
+        VexMapsLocationState {
+        override val stringResOrNull =
+            R.string.vexmaps_location_finding
+    }
+
+    data object Ready :
+        VexMapsLocationState {
+        override val stringResOrNull =
+            R.string.vexmaps_location_ready
+    }
+
+    data object Denied :
+        VexMapsLocationState {
+        override val stringResOrNull =
+            R.string.vexmaps_location_denied
+    }
+
+    data object Disabled :
+        VexMapsLocationState {
+        override val stringResOrNull =
+            R.string.vexmaps_location_disabled
+    }
+
+    data object Unavailable :
+        VexMapsLocationState {
+        override val stringResOrNull =
+            R.string.vexmaps_location_unavailable
+    }
+
+    data object Error :
+        VexMapsLocationState {
+        override val stringResOrNull =
+            R.string.vexmaps_location_error
+    }
+}
+
 /**
  * Keeps MapView's imperative Android lifecycle behind the screen-local realization boundary.
- *
- * The VexLife semantic session remains owned by VexLifeSession/VexRuntime. Destroying this MapView
- * when VexMaps leaves composition must not imply the VexLife app session restarted.
  */
 private class VexMapsMapViewLifecycle(
     private val mapView: MapView,
@@ -251,6 +521,12 @@ private class VexMapsMapViewLifecycle(
         started = false
     }
 }
+
+private const val DEVICE_LOCATION_SOURCE_ID =
+    "vexmaps-device-location"
+
+private const val DEVICE_LOCATION_LAYER_ID =
+    "vexmaps-device-location-layer"
 
 private const val OPEN_FREE_MAP_LIBERTY_STYLE =
     "https://tiles.openfreemap.org/styles/liberty"

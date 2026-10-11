@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.lifecycleViewModelCompose)
     implementation(libs.lifecycleRuntimeCompose)
     implementation(libs.maplibreAndroid)
+    implementation(libs.locationButtonCompose)
 
     implementation(libs.media3Common)
     implementation(libs.media3Exoplayer)

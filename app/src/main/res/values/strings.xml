@@ -139,6 +139,12 @@
     <string name="vexmaps_foundation_title">Maps and navigation</string>
     <string name="vexmaps_foundation_body">VexMaps is ready for map, place, route, and navigation experiences. Opening this screen does not require location permission; device location will be requested only when a location-dependent action needs it.</string>
     <string name="vexmaps_attribution">© OpenStreetMap contributors · OpenFreeMap</string>
+    <string name="vexmaps_location_finding">Finding your current location…</string>
+    <string name="vexmaps_location_ready">Current location centered for this Maps session.</string>
+    <string name="vexmaps_location_denied">Location was not shared. You can keep browsing VexMaps normally.</string>
+    <string name="vexmaps_location_disabled">Device location is turned off. VexMaps still works for browsing.</string>
+    <string name="vexmaps_location_unavailable">A current location fix is not available yet.</string>
+    <string name="vexmaps_location_error">VexMaps could not read the current location.</string>
 
     <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
     <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>
