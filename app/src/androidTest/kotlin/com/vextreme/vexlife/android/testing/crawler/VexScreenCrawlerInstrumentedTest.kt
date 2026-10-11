@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.testing.crawler
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.vextreme.vexlife.android.testing.journey.VexTestEngine
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,22 +16,29 @@ class VexScreenCrawlerInstrumentedTest(
 
     @Test
     fun runConfiguredScreenCrawler() {
-        assumeTrue(
-            parameter.disabledReason ?: "ScreenCrawler enabled",
-            parameter.enabled,
-        )
+        when (val selected = parameter) {
+            is VexScreenCrawlerParameter.Disabled -> {
+                println(
+                    "Vex ScreenCrawler disabled: ${selected.reason}",
+                )
+                return
+            }
 
-        val case = requireNotNull(parameter.case)
-        val evidence = VexScreenCrawlerEvidenceObserver(case)
+            is VexScreenCrawlerParameter.Case -> {
+                val case = selected.value
+                val evidence =
+                    VexScreenCrawlerEvidenceObserver(case)
 
-        VexTestEngine(
-            compose = compose,
-            observer = evidence,
-        ).run(
-            journey = case.journey,
-            environment = case.environment,
-            caseLabel = case.caseRef,
-        )
+                VexTestEngine(
+                    compose = compose,
+                    observer = evidence,
+                ).run(
+                    journey = case.journey,
+                    environment = case.environment,
+                    caseLabel = case.caseRef,
+                )
+            }
+        }
     }
 
     companion object {
