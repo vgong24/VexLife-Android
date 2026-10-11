@@ -6,6 +6,7 @@ enum class VexJourneyHistoryMismatchKind {
     DIFFERENT_RECORD,
     MISSING_ACTUAL_RECORD,
     UNEXPECTED_ACTUAL_RECORD,
+    REORDERED_RECORD,
 }
 
 data class VexJourneyHistoryMismatch(
@@ -75,12 +76,24 @@ object VexJourneyHistoryVerifier {
 
             if (wanted == observed) continue
 
+            val expectedTail = expected.drop(index + 1)
+            val actualTail = actual.drop(index + 1)
+
             val kind = when {
                 wanted == null ->
                     VexJourneyHistoryMismatchKind.UNEXPECTED_ACTUAL_RECORD
 
                 observed == null ->
                     VexJourneyHistoryMismatchKind.MISSING_ACTUAL_RECORD
+
+                observed in expectedTail && wanted in actualTail ->
+                    VexJourneyHistoryMismatchKind.REORDERED_RECORD
+
+                observed in expectedTail && wanted !in actualTail ->
+                    VexJourneyHistoryMismatchKind.MISSING_ACTUAL_RECORD
+
+                observed !in expectedTail && wanted in actualTail ->
+                    VexJourneyHistoryMismatchKind.UNEXPECTED_ACTUAL_RECORD
 
                 else ->
                     VexJourneyHistoryMismatchKind.DIFFERENT_RECORD
