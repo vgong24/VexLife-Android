@@ -150,7 +150,7 @@ Already source-formed and/or observed:
 5. VexStream-owned sanitized catalog + range-media producer.
 6. Physical Samsung proof through the development bridge: real desktop library -> phone playback.
 7. Same-Wi-Fi product pairing candidate: Android service picker/NSD, pinned TLS, matching-code
-   confirmation, explicit desktop Allow/Deny, remembered encrypted token, route rediscovery, and
+   confirmation, explicit desktop Allow/Deny, remembered encrypted token, certificate-identity re-selection after route change, and
    two-sided forget/revoke.
 
 The next unconsumed lived proofs are deliberately smaller:
@@ -159,8 +159,7 @@ The next unconsumed lived proofs are deliberately smaller:
 2. Download one real song.
 3. Stop or disconnect the desktop and play that song as LOCAL_ONLY.
 4. Restart VexLife and prove the verified offline copy is restored.
-5. Change/reacquire the desktop LAN route and prove certificate-identity rediscovery without
-   re-approval.
+5. Change/reacquire the desktop LAN route, use Find VexStream to re-select the same certificate identity, and prove no new desktop approval is required.
 
 Away-from-home streaming remains a later VexHome/Home-Safety authority problem rather than a reason
 to widen this local bridge.
@@ -276,9 +275,14 @@ one AppScreenBlueprint
   -> one registered Queue sheet
 
 custom feature renderer
-  -> dynamic tracks/albums/artists
-  -> feature-local album/artist drill-down state
+  -> dynamic tracks/albums/artists/playlists
+  -> NavigationTrail-owned collection drill-down
   -> MediaController commands
+
+VexRuntime Back chain
+  -> Queue sheet first
+  -> current collection detail next
+  -> VexStream Screen navigation after local depth reaches root
 
 MediaSessionService
   -> playback lifetime
@@ -292,6 +296,10 @@ durable semantic surfaces; repository data remains data.
 
 The semantic journey uses the current typed `Journeys.vexStream...` authoring surface and exercises
 connection, every registered library lens, Queue open/close, and forget.
+
+Blocking HTTPS/media/file work stays inside the repository/media boundary on `Dispatchers.IO`.
+Compose and Screen action scopes request semantic operations; they do not perform
+`HttpURLConnection` work on the Android UI dispatcher.
 
 ### Playlist ownership
 
