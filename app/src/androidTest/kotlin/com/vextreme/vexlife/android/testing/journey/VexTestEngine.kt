@@ -95,6 +95,32 @@ class VexTestEngine(
         )
     }
 
+    override fun signal(signal: VexJourneySignal) {
+        signal.applyTo(repositories)
+        compose.waitForIdle()
+        observe(
+            stepKind = "signal",
+            semanticRef = signal.signalRef,
+        )
+    }
+
+    override fun tapDynamic(element: VexDynamicElementRef) {
+        expected.tapDynamic(element)
+
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithTag(element.elementId)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        compose.onNodeWithTag(element.elementId)
+            .performClick()
+        compose.waitForIdle()
+        observe(
+            stepKind = "tap-dynamic",
+            semanticRef = element.elementId,
+        )
+    }
+
     override fun tap(element: ActionElement) {
         expected.tap(element)
         node(element)

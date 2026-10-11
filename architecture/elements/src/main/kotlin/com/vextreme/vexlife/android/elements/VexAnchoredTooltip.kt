@@ -116,11 +116,10 @@ fun resolveVexAnchoredTooltip(
                 room(placement) >= required(placement)
             }
             .maxWithOrNull(
-                compareBy<VexTooltipPlacement> {
-                    room(it)
-                }.thenByDescending {
-                    -preferred.indexOf(it)
-                },
+                compareBy<VexTooltipPlacement>(
+                    { placement -> room(placement) },
+                    { placement -> -preferred.indexOf(placement) },
+                ),
             )
 
     val placement =

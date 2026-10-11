@@ -161,17 +161,46 @@ fun EventsScreenContent(
                             event.eventRef
                         ],
                     onAcknowledge = {
+                        runtime.recordDynamicInteraction(
+                            EventsPresentationRefs.attentionAction(
+                                event.eventRef,
+                                "acknowledge",
+                            ),
+                        )
                         attentionPreferences.acknowledge(
                             event.eventRef,
                         )
                     },
                     onDefer = {
+                        runtime.recordDynamicInteraction(
+                            EventsPresentationRefs.attentionAction(
+                                event.eventRef,
+                                "later",
+                            ),
+                        )
                         attentionPreferences.defer(
                             event.eventRef,
                         )
                     },
                     onSuppress = {
+                        runtime.recordDynamicInteraction(
+                            EventsPresentationRefs.attentionAction(
+                                event.eventRef,
+                                "suppress",
+                            ),
+                        )
                         attentionPreferences.suppress(
+                            event.eventRef,
+                        )
+                    },
+                    onDismiss = {
+                        runtime.recordDynamicInteraction(
+                            EventsPresentationRefs.tooltip(
+                                event.eventRef,
+                            ),
+                            action = "Dismissed",
+                        )
+                        attentionPreferences.defer(
                             event.eventRef,
                         )
                     },
@@ -189,6 +218,7 @@ private fun EventRow(
     onAcknowledge: () -> Unit,
     onDefer: () -> Unit,
     onSuppress: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
     Box(
         modifier =
@@ -248,7 +278,7 @@ private fun EventRow(
                     EventsPresentationRefs.tooltip(
                         event.eventRef,
                     ),
-                onDismissRequest = onDefer,
+                onDismissRequest = onDismiss,
             ) {
                 Text(
                     text =

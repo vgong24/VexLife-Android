@@ -88,9 +88,34 @@ class VexLogger(
         action: String = "Clicked",
         detailsJson: String? = null,
     ) {
+        recordInteractionRef(
+            subjectRef = element.elementId,
+            screenBefore = screenBefore,
+            screenAfter = screenAfter,
+            action = action,
+            detailsJson = detailsJson,
+        )
+    }
+
+    /**
+     * Dynamic repeated elements use a stable semantic ref even though they cannot all be members of
+     * the static UI registry. This records that already-formed identity without creating a second
+     * logger or pretending list position is identity.
+     */
+    fun recordInteractionRef(
+        subjectRef: String,
+        screenBefore: ScreenElement,
+        screenAfter: ScreenElement? = null,
+        action: String = "Clicked",
+        detailsJson: String? = null,
+    ) {
+        require(subjectRef.isNotBlank()) {
+            "interaction subjectRef must not be blank"
+        }
+
         append(
             kind = VexLogKind.Interaction,
-            subjectRef = element.elementId,
+            subjectRef = subjectRef,
             action = action,
             screenBeforeId = screenBefore.screenId,
             screenAfterId = screenAfter?.screenId,

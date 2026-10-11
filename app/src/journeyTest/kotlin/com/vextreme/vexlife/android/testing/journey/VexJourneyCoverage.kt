@@ -40,6 +40,10 @@ class VexJourneyCoverageRecorder : VexJourneyScope {
         screens += screen.screenId
     }
 
+    override fun signal(signal: VexJourneySignal) = Unit
+
+    override fun tapDynamic(element: VexDynamicElementRef) = Unit
+
     override fun tap(element: ActionElement) {
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
