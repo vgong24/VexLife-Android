@@ -1530,6 +1530,9 @@ private fun VexStreamTrackCard(
                 horizontal = 8.dp,
                 vertical = 2.dp,
             )
+            .vexElement(
+                VexStreamMusicScreen.PlayTrack,
+            )
             .clickable(
                 enabled = controller != null,
             ) {
@@ -1684,6 +1687,7 @@ private fun VexStreamTrackMenuItem(
     enabled: Boolean = true,
 ) {
     DropdownMenuItem(
+        modifier = Modifier.vexElement(element),
         text = {
             Text(
                 stringResource(
