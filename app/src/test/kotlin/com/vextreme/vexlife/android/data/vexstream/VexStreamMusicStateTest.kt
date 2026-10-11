@@ -288,6 +288,34 @@ class VexStreamMusicStateTest {
         )
     }
 
+    @Test
+    fun pairedConnectionRequiresCompleteRemoteRouteBeforeFallbackIsEnabled() {
+        val localOnly =
+            VexStreamPairedConnection(
+                displayName = "VexStream",
+                host = "192.0.2.10",
+                port = 18766,
+                certificateSha256 = DIGEST_A,
+                token = "token",
+            )
+        assertFalse(
+            localOnly.remoteReady,
+        )
+
+        val remote =
+            localOnly.copy(
+                remoteHomeRef =
+                    "vexstream.home.$DIGEST_A",
+                remoteGatewayPublicKey =
+                    "gateway-public-key",
+                remoteRelayBaseUrl =
+                    "https://relay.example.test",
+            )
+        assertTrue(
+            remote.remoteReady,
+        )
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun mediaDigestMustBeExactSha256() {
         VexStreamMediaSha256("not-a-digest")
