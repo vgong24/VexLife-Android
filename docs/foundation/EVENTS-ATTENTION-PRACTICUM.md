@@ -534,6 +534,162 @@ removeOldest()
 Journey uses deterministic `signal(...)` snapshots instead of wall-clock sleeps, so causal
 instrumentation remains fast/repeatable while the Debug Menu preserves a human live-play path.
 
+## Attention expectation scenario lab
+
+The Debug fixture now owns a separate scenario planner. This is intentionally **not** external event
+truth and not part of a real service adapter.
+
+~~~text
+SyntheticExternalEventSource
+  -> produces external facts
+
+EventsAttentionRelay
+  -> owns queue + candidate + availability
+
+EventsAttentionLabRepository
+  -> chooses which edge condition the human is trying to prove next
+~~~
+
+Two modes are available:
+
+~~~text
+ROTATION
+  stable five-scenario cycle
+
+SEEDED_RANDOM
+  chooses from the same scenario templates
+  displayed seed + scenarioRef make the run reproducible
+~~~
+
+Current deterministic rotation:
+
+~~~text
+1. ANCHORED_TOP
+   target = row 1
+   preferred placement = BELOW
+   expected action = ACKNOWLEDGE
+
+2. ANCHORED_MIDDLE
+   target = middle row
+   preferred placement = ABOVE
+   expected action = LATER
+
+3. ANCHORED_BOTTOM
+   target = final row
+   preferred placement = ABOVE
+   expected action = SUSPEND
+
+4. ANCHORED_MIDDLE
+   target = middle row
+   preferred placement = BELOW
+   expected action = SUPPRESS
+
+5. BLOCKING_FREEZE_TOP
+   target = row 1
+   preferred placement = BELOW
+   expected action = ACKNOWLEDGE
+   displayed list projection freezes
+   external provider truth continues updating
+   outside/back dismissal is ignored
+   acknowledge releases the frozen projection
+~~~
+
+The planner stores the exact target eventRef, plan-time row position, list count, seed, ordinal,
+preferred placement, expected action and scenario ref. Row position is test expectation metadata;
+the attention relationship still addresses the event by eventRef.
+
+~~~text
+SCENARIO_POSITION = TEST_EXPECTATION_METADATA
+SCENARIO_TARGET = STABLE_EVENT_REF
+VISUAL_INDEX != SEMANTIC_IDENTITY
+~~~
+
+VexStableLazyColumn(requestedVisibleItemRef=...) brings a planned stable item into the viewport.
+VexAnchoredTooltip(preferredPlacements=...) tries the scenario's preferred side first and may use
+a documented safe fallback when the requested side does not fit.
+
+### Queue action law
+
+The lived buttons now exercise different queue semantics rather than three versions of 'not now':
+
+~~~text
+ACKNOWLEDGE
+  terminal handled for proactive attention
+  row remains canonical event truth
+
+SUPPRESS
+  terminal proactive suppression for this lab/session
+  row remains canonical event truth
+
+SUSPEND
+  remain in CURRENT sequence
+  move behind unsuspended current work
+  multiple suspends preserve human action order
+
+LATER
+  move into NEXT sequence
+  deferred items become eligible only after current queue drains
+  multiple Later actions preserve human action order
+~~~
+
+The Relay exposes:
+
+~~~text
+currentQueueCount
+nextSequenceCount
+queuedAfterCurrentCount
+acknowledgedCount
+deferredCount
+suspendedCount
+suppressedCount
+~~~
+
+These values are rendered directly in the attention popup. Compose does not maintain a second queue.
+
+One current limitation is deliberate and visible: if an item is already in the deferred next
+sequence and the human presses Later on that same item again after the next sequence becomes active,
+there is not yet a modeled next-next sequence. A real recurrence requirement should earn that
+additional sequence depth instead of silently inventing it.
+
+### Blocking freeze
+
+The blocking scenario proves a stronger distinction:
+
+~~~text
+CANONICAL_PROVIDER_TRUTH_CONTINUES
+!=
+DISPLAYED_EVENTS_PROJECTION_MUST_UPDATE_NOW
+~~~
+
+On scenario entry, Events captures the currently displayed row projection. The synthetic provider
+continues admitting newer snapshots underneath it. The blocking popup remains anchored to the exact
+planned event and exposes queue metadata while the visible list stays frozen.
+
+Acknowledge:
+
+~~~text
+mark blocking event ACKNOWLEDGED
+-> complete current lab scenario
+-> release frozen displayed projection
+-> reveal provider events accumulated while blocked
+-> normal attention processing may then continue
+~~~
+
+The timed source is source-lock gated so Reset can disable timed emission before publishing an empty
+projection. A waking five-second tick cannot legally repopulate the lab after Reset.
+
+### Human failure rule
+
+The attention popup displays the expected action and expected result contract. For a lab run:
+
+~~~text
+EXPECTED_NEXT_STATE != OBSERVED_NEXT_STATE
+-> FAILING_LIVED_CASE / BUG
+~~~
+
+Do not reinterpret a mismatch as a different button meaning after the fact. Preserve the scenario
+ref, random seed when present, event ref, queue metadata and screenshot so the exact condition can be
+replayed.
 ## Executable causal walk
 
 Human/IDE path:

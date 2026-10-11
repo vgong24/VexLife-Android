@@ -609,6 +609,14 @@ private fun EventRow(
                                 ),
                             )
                         }
+                    }
+                }
+
+                if (!blocking) {
+                    Row(
+                        horizontalArrangement =
+                            Arrangement.spacedBy(8.dp),
+                    ) {
                         TextButton(
                             onClick = onSuspend,
                             colors =
