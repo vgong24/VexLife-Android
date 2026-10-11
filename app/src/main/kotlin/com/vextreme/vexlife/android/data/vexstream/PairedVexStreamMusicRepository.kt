@@ -354,9 +354,95 @@ class PairedVexStreamMusicRepository(
             Dispatchers.IO,
         ) {
             refreshCatalogBlocking(
-                connection = connection,
+                connection =
+                    upgradeRemotePairingIfAvailable(
+                        connection,
+                    ),
             )
         }
+
+    private fun upgradeRemotePairingIfAvailable(
+        connection: VexStreamPairedConnection,
+    ): VexStreamPairedConnection {
+        if (connection.remoteReady) {
+            return connection
+        }
+
+        return runCatching {
+            val request =
+                authorizedConnection(
+                    connection = connection,
+                    path = "v1/pairing/remote-upgrade",
+                    method = "POST",
+                )
+            request.doOutput = true
+            request.setRequestProperty(
+                "Content-Type",
+                "application/json",
+            )
+            request.outputStream
+                .bufferedWriter()
+                .use {
+                    it.write(
+                        JSONObject()
+                            .put(
+                                "devicePublicKey",
+                                connectionStore
+                                    .deviceSigningPublicKey(),
+                            )
+                            .toString(),
+                    )
+                }
+
+            if (
+                request.responseCode !=
+                HttpURLConnection.HTTP_OK
+            ) {
+                request.disconnect()
+                return@runCatching connection
+            }
+
+            val response =
+                JSONObject(
+                    VexStreamPinnedTls.readText(
+                        request,
+                    ),
+                )
+            request.disconnect()
+
+            val upgraded =
+                connection.copy(
+                    remoteHomeRef =
+                        response.optString(
+                            "remoteHomeRef",
+                        ).takeIf {
+                            it.isNotBlank()
+                        },
+                    remoteGatewayPublicKey =
+                        response.optString(
+                            "remoteGatewayPublicKey",
+                        ).takeIf {
+                            it.isNotBlank()
+                        },
+                    remoteRelayBaseUrl =
+                        response.optString(
+                            "remoteRelayBaseUrl",
+                        ).takeIf {
+                            it.startsWith(
+                                "https://",
+                            )
+                        },
+                )
+            connectionStore.save(
+                upgraded,
+            )
+            upgraded
+        }.getOrElse {
+            // Remote enrollment is opportunistic while the already-paired desktop is directly
+            // reachable. Failure must not make the proven same-LAN product path unusable.
+            connection
+        }
+    }
 
     private fun refreshCatalogBlocking(
         connection: VexStreamPairedConnection,
