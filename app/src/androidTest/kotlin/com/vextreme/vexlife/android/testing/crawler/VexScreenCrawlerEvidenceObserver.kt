@@ -13,13 +13,14 @@ import java.security.MessageDigest
 /**
  * Writes crawler evidence through AndroidX PlatformTestStorage.
  *
- * Instrumented tests run inside Android's test-storage sandbox on modern Android. Writing to an
- * app-visible /storage path and then assuming adb shell sees the same mount is not reliable.
+ * Evidence layout is configuration-first for handoff/ZIP delivery:
  *
- * PlatformTestStorage is the instrumentation output boundary: screenshots/manifests are written as
- * named test outputs and the Gradle/test infrastructure can collect them back to the host.
+ *   vex-screen-crawler/<source>/<locale>/<font>/
+ *     screenshots/  <- all PNGs for this language/font batch
+ *     cases/        <- per-scenario manifests/start/complete markers
  *
- * No Activity/View/Compose/Bitmap is retained after a capture.
+ * Screenshot semantic identity is stable across locale/font configurations; locale/font only appear
+ * as the final filename suffix and folder grouping.
  */
 class VexScreenCrawlerEvidenceObserver(
     private val case: VexScreenCrawlerCase,
@@ -30,20 +31,31 @@ class VexScreenCrawlerEvidenceObserver(
     private val storage =
         PlatformTestStorageRegistry.getInstance()
 
-    private val caseRoot =
+    private val configurationRoot =
         "vex-screen-crawler/" +
             case.sourceRef.safePath() +
             "/" +
-            case.caseRef.safePath()
+            case.locale.id.safePath() +
+            "/" +
+            case.font.id.safePath()
+
+    private val screenshotsRoot =
+        "$configurationRoot/screenshots"
+
+    private val scenarioRoot =
+        "$configurationRoot/cases/" +
+            case.scenarioRef.safePath()
 
     private val manifestPath =
-        "$caseRoot/manifest.jsonl"
+        "$scenarioRoot/manifest.jsonl"
 
     init {
         writeText(
-            path = "$caseRoot/run-started.txt",
+            path = "$scenarioRoot/run-started.txt",
             value = buildString {
+                appendLine("scenarioRef=${case.scenarioRef}")
                 appendLine("caseRef=${case.caseRef}")
+                appendLine("configurationRef=${case.configurationRef}")
                 appendLine("sourceRef=${case.sourceRef}")
                 appendLine(
                     "targetPackage=${InstrumentationRegistry.getInstrumentation().targetContext.packageName}",
@@ -51,14 +63,16 @@ class VexScreenCrawlerEvidenceObserver(
                 appendLine("deviceModel=${Build.MODEL}")
                 appendLine("sdkInt=${Build.VERSION.SDK_INT}")
                 appendLine("storage=PlatformTestStorage")
+                appendLine("configurationRoot=$configurationRoot")
             },
         )
 
         Log.i(
             SCREEN_CRAWLER_LOG_TAG,
-            "START case=${case.caseRef} " +
-                "storage=PlatformTestStorage " +
-                "outputRoot=$caseRoot",
+            "START scenario=${case.scenarioRef} " +
+                "configuration=${case.configurationRef} " +
+                "case=${case.caseRef} " +
+                "outputRoot=$configurationRoot",
         )
     }
 
@@ -104,9 +118,11 @@ class VexScreenCrawlerEvidenceObserver(
         }
 
         writeText(
-            path = "$caseRoot/run-complete.txt",
+            path = "$scenarioRoot/run-complete.txt",
             value = buildString {
+                appendLine("scenarioRef=${case.scenarioRef}")
                 appendLine("caseRef=${case.caseRef}")
+                appendLine("configurationRef=${case.configurationRef}")
                 appendLine("screenshots=$capturedScreenshotCount")
                 appendLine("manifest=manifest.jsonl")
                 appendLine("result=COMPLETE")
@@ -115,18 +131,18 @@ class VexScreenCrawlerEvidenceObserver(
 
         Log.i(
             SCREEN_CRAWLER_LOG_TAG,
-            "COMPLETE case=${case.caseRef} " +
-                "screenshots=$capturedScreenshotCount " +
-                "outputRoot=$caseRoot",
+            "COMPLETE scenario=${case.scenarioRef} " +
+                "configuration=${case.configurationRef} " +
+                "screenshots=$capturedScreenshotCount",
         )
         println(
             "Vex ScreenCrawler captured $capturedScreenshotCount screenshot(s).",
         )
         println(
-            "Vex ScreenCrawler outputs were handed to PlatformTestStorage under: $caseRoot",
+            "Vex ScreenCrawler configuration batch: $configurationRoot",
         )
         println(
-            "Collect them from repo root with:",
+            "Collect from repo root with:",
         )
         println(
             "  macOS/Linux: bash tools/pull-vex-screen-crawler.sh",
@@ -174,24 +190,25 @@ class VexScreenCrawlerEvidenceObserver(
             "crawler screenshot encoded to zero bytes for ${case.caseRef}"
         }
 
-        val stepLabel =
-            if (observation.stepIndex == Int.MAX_VALUE) {
-                "final"
-            } else {
-                observation.stepIndex
-                    .toString()
-                    .padStart(3, '0')
-            }
+        val identity =
+            case.evidenceIdentity(
+                screenId = observation.screenId,
+                stepIndex = observation.stepIndex,
+                stepKind = observation.stepKind,
+                semanticRef = observation.semanticRef,
+            )
+
+        val stablePrefix =
+            identity.evidenceRef.safePath()
 
         val filename =
-            listOf(
-                stepLabel,
-                observation.screenId.safePath(),
-                observation.stepKind.safePath(),
-            ).joinToString("__") + ".png"
+            stablePrefix +
+                "__" + case.locale.id.safePath() +
+                "__" + case.font.id.safePath() +
+                ".png"
 
         val screenshotPath =
-            "$caseRoot/$filename"
+            "$screenshotsRoot/$filename"
 
         storage.openOutputFile(screenshotPath).buffered().use { output ->
             output.write(bytes)
@@ -206,6 +223,7 @@ class VexScreenCrawlerEvidenceObserver(
         ).bufferedWriter().use { writer ->
             writer.appendLine(
                 observation.toManifestLine(
+                    identity = identity,
                     screenshot = filename,
                     screenshotSha256 = screenshotSha256,
                     screenshotBytes = bytes.size,
@@ -217,10 +235,9 @@ class VexScreenCrawlerEvidenceObserver(
 
         Log.i(
             SCREEN_CRAWLER_LOG_TAG,
-            "CAPTURE case=${case.caseRef} " +
-                "step=${observation.stepIndex} " +
-                "kind=${observation.stepKind} " +
-                "screen=${observation.screenId} " +
+            "CAPTURE scenario=${identity.scenarioRef} " +
+                "evidence=${identity.evidenceRef} " +
+                "configuration=${case.configurationRef} " +
                 "output=$screenshotPath " +
                 "bytes=${bytes.size} " +
                 "uri=${storage.getOutputFileUri(screenshotPath)}",
@@ -237,12 +254,19 @@ class VexScreenCrawlerEvidenceObserver(
     }
 
     private fun VexJourneyStepObservation.toManifestLine(
+        identity: VexCrawlerEvidenceIdentity,
         screenshot: String,
         screenshotSha256: String,
         screenshotBytes: Int,
     ): String =
         buildString {
             append("{")
+            appendJson("scenarioRef", identity.scenarioRef)
+            append(",")
+            appendJson("evidenceRef", identity.evidenceRef)
+            append(",")
+            appendJson("configurationRef", case.configurationRef)
+            append(",")
             appendJson("caseRef", case.caseRef)
             append(",")
             appendJson("sourceRef", case.sourceRef)
@@ -273,7 +297,7 @@ class VexScreenCrawlerEvidenceObserver(
             append(",\"sdkInt\":")
             append(Build.VERSION.SDK_INT)
             append(",")
-            appendJson("file", screenshot)
+            appendJson("file", "screenshots/$screenshot")
             append(",\"bytes\":")
             append(screenshotBytes)
             append(",")
