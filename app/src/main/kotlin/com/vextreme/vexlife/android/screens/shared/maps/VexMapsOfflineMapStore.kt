@@ -177,15 +177,19 @@ internal class VexMapsOfflineMapStore(
                         }
                     }
 
-            if (completeMerged.isNotEmpty()) {
-                preferences
-                    .edit()
-                    .putLong(
-                        KEY_PREFERRED_REGION_ID,
-                        completeMerged.max(),
-                    )
-                    .apply()
+            require(
+                completeMerged.isNotEmpty(),
+            ) {
+                "imported map database contains no complete offline region"
             }
+
+            preferences
+                .edit()
+                .putLong(
+                    KEY_PREFERRED_REGION_ID,
+                    completeMerged.max(),
+                )
+                .apply()
 
             return load()
         } finally {
