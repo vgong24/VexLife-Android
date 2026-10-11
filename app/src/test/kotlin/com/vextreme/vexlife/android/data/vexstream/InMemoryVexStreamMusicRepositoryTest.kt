@@ -76,18 +76,36 @@ class InMemoryVexStreamMusicRepositoryTest {
     }
 
     @Test
-    fun reconnectUsesThePairedRepositoryRouteInsteadOfDiscoverySemantics() = runTest {
+    fun reconnectRestoresPairedHubReachabilityWithoutDiscoverySemantics() = runTest {
+        val trackRef =
+            VexStreamTrackRef(
+                "hub.track.reconnect",
+            )
         val repository =
             InMemoryVexStreamMusicRepository(
                 VexStreamMusicState(
                     hubState =
-                        VexStreamHubState.Ready(
-                            hubRef = "hub.fixture",
-                            catalogRevision = "catalog.fixture.1",
-                        ),
+                        VexStreamHubState.Unreachable,
                     connectionState =
                         VexStreamConnectionState.Paired(
                             displayName = "VexStream on Test PC",
+                        ),
+                    tracks =
+                        listOf(
+                            VexStreamTrackState(
+                                track =
+                                    VexStreamTrack(
+                                        trackRef = trackRef,
+                                        mediaSha256 =
+                                            VexStreamMediaSha256(
+                                                DIGEST,
+                                            ),
+                                        mediaByteLength = 1_234,
+                                        title = "Reconnect Track",
+                                        artist = "Vex",
+                                    ),
+                                hubAvailable = false,
+                            ),
                         ),
                 ),
             )
@@ -99,6 +117,14 @@ class InMemoryVexStreamMusicRepositoryTest {
         assertTrue(
             repository.state.value.connectionState is
                 VexStreamConnectionState.Paired,
+        )
+        assertTrue(
+            repository.state.value.hubState is
+                VexStreamHubState.Ready,
+        )
+        assertEquals(
+            VexStreamTrackAvailability.HUB_ONLY,
+            repository.state.value.track(trackRef)?.availability,
         )
     }
 
