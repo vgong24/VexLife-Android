@@ -303,7 +303,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val ToggleShuffle = buttonRef(
+    val ShuffleQueue = buttonRef(
         id = "body.player.shuffle",
         labelRes = R.string.vexstream_music_shuffle,
         style = VexElementStyles.SecondaryAction,
@@ -311,7 +311,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val QueueToggleShuffle = buttonRef(
+    val QueueShuffle = buttonRef(
         id = "body.queue.sheet.shuffle",
         labelRes = R.string.vexstream_music_shuffle,
         style = VexElementStyles.SecondaryAction,
@@ -330,6 +330,13 @@ object VexStreamMusicScreen : AppScreenBlueprint(
     val ClearQueue = buttonRef(
         id = "body.queue.sheet.clear",
         labelRes = R.string.vexstream_music_clear_queue,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val QueuePlay = buttonRef(
+        id = "body.queue.sheet.play",
+        labelRes = R.string.vexstream_music_queue_play,
         style = VexElementStyles.SecondaryAction,
         intent = localEffect(),
     )
@@ -417,14 +424,15 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                     button(PreviousTrack)
                     button(TogglePlayback)
                     button(NextTrack)
-                    button(ToggleShuffle)
+                    button(ShuffleQueue)
                 }
             }
 
             modalBottomSheet(QueueSheet) {
-                button(QueueToggleShuffle)
+                button(QueueShuffle)
                 button(ToggleRepeat)
                 button(ClearQueue)
+                button(QueuePlay)
                 button(QueueReorder)
                 button(CloseQueue)
             }
