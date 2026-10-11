@@ -9,6 +9,7 @@ object DebugJourneys : VexJourneyShard {
 
     override val journeys = listOf(
         vexJourney(
+            id = "log-history-dismiss",
             title = "Debug Log History gesture dismissal",
             environments = listOf(
                 VexJourneyEnvironments.Baseline,
@@ -24,7 +25,10 @@ object DebugJourneys : VexJourneyShard {
             tap(AppShell.Elements.Back)
         },
 
-        vexJourney("Debug Reset starts a fresh history") {
+        vexJourney(
+            id = "reset-fresh-history",
+            title = "Debug Reset starts a fresh history",
+        ) {
             start(HomeScreen)
             tap(AppShell.Elements.Add)
             tap(AppShell.Elements.DebugMenu)
