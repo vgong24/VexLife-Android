@@ -19,6 +19,7 @@ import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.close
 import com.vextreme.vexlife.android.elements.invoke
+import com.vextreme.vexlife.android.elements.localEffect
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.elements.swapTo
 import com.vextreme.vexlife.android.preview.VexPreviewHost
@@ -137,6 +138,62 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         ),
     )
 
+    val PlayAll = buttonRef(
+        id = "body.library-actions.play-all",
+        labelRes = R.string.vexstream_music_play_all,
+        style = VexElementStyles.PrimaryAction,
+        intent = localEffect(),
+    )
+
+    val ShuffleAll = buttonRef(
+        id = "body.library-actions.shuffle-all",
+        labelRes = R.string.vexstream_music_shuffle_all,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val PreviousTrack = buttonRef(
+        id = "body.player.previous",
+        labelRes = R.string.vexstream_music_previous,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val TogglePlayback = buttonRef(
+        id = "body.player.play-pause",
+        labelRes = R.string.vexstream_music_play_pause,
+        style = VexElementStyles.PrimaryAction,
+        intent = localEffect(),
+    )
+
+    val NextTrack = buttonRef(
+        id = "body.player.next",
+        labelRes = R.string.vexstream_music_next,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val ToggleShuffle = buttonRef(
+        id = "body.player.shuffle",
+        labelRes = R.string.vexstream_music_shuffle,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val ToggleRepeat = buttonRef(
+        id = "body.queue.sheet.repeat",
+        labelRes = R.string.vexstream_music_repeat,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val ClearQueue = buttonRef(
+        id = "body.queue.sheet.clear",
+        labelRes = R.string.vexstream_music_clear_queue,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
     val ShowQueue = buttonRef(
         id = "body.player.queue.show",
         labelRes = R.string.vexstream_music_queue,
@@ -184,9 +241,22 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 scrollableColumn(DownloadsPanel) {}
             }
 
-            button(ShowQueue)
+            row("library-actions") {
+                button(PlayAll)
+                button(ShuffleAll)
+                button(ShowQueue)
+            }
+
+            row("player-controls") {
+                button(PreviousTrack)
+                button(TogglePlayback)
+                button(NextTrack)
+                button(ToggleShuffle)
+            }
 
             modalBottomSheet(QueueSheet) {
+                button(ToggleRepeat)
+                button(ClearQueue)
                 button(CloseQueue)
             }
         }
