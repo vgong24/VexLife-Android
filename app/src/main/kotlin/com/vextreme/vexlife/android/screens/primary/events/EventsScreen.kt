@@ -141,7 +141,7 @@ fun EventsScreenContent(
                 output.availability ==
                     EventsAttentionAvailability.READY
             }
-            .candidate
+            ?.candidate
             ?.eventRef
 
     /*
