@@ -86,7 +86,7 @@ VexTestEngine
   real Compose/runtime/logging verification
         +
 VexScreenCrawlerEvidenceObserver
-  screenshots + JSONL manifest + SHA-256
+  bulk screenshots + stable evidence identity + SHA-256 Logcat diagnostics
 ~~~
 
 The crawler reuses the accepted interactions rather than constructing another app-walk language.
@@ -140,7 +140,7 @@ tag:VexScreenCrawler
 
 `VexJourneyCatalog.shardsById` is derived from that list for orientation/reporting only.
 
-ScreenCrawler selection stores actual `VexJourneyShard` objects:
+ScreenCrawler selection stores typed `JourneyDomain` identities:
 
 ~~~kotlin
 shards(Journeys.debug, Journeys.gallery)
@@ -235,8 +235,8 @@ Screens do not automatically become translation screenshots.
 ~~~kotlin
 val config = vexScreenCrawlerConfig {
     shards(
-        DebugJourneys,
-        GalleryJourneys,
+        Journeys.debug,
+        Journeys.gallery,
     )
     languages(language("zh"))
     fontProfiles(VexCrawlerFonts.Large)
@@ -274,7 +274,7 @@ those conditions once admitted.
 
 ## Evidence artifacts
 
-The evidence layout is an invariant designed for bulk handoff / ZIP delivery:
+The delivery layout is intentionally screenshot-only and configuration-first:
 
 ~~~text
 vex-screen-crawler/
@@ -283,25 +283,19 @@ vex-screen-crawler/
       <fontProfile>/
         screenshots/
           <all PNGs for this configuration>
-        cases/
-          <scenarioRef>/
-            manifest.jsonl
-            run-started.txt
-            run-complete.txt
 ~~~
 
-The useful delivery unit is therefore one configuration folder:
+The useful delivery/ZIP unit is therefore one configuration folder:
 
 ~~~text
 <locale>/<fontProfile>/
 ~~~
 
-A translator/reviewer can receive that folder (or ZIP it) without manually regrouping journey
-directories after delivery.
+A translator/reviewer can receive that folder directly without regrouping per-journey directories.
 
 ### Stable evidence identity
 
-Each executable case has three distinct references:
+Each crawler case exposes:
 
 ~~~text
 scenarioRef
@@ -317,7 +311,7 @@ caseRef
   concrete executable scenario + configuration
 ~~~
 
-Each screenshot also gets an `evidenceRef` formed from stable semantic coordinates:
+Each screenshot also gets an `evidenceRef` built only from semantic coordinates:
 
 ~~~text
 scenarioRef
@@ -327,10 +321,10 @@ scenarioRef
 + semanticRef
 ~~~
 
-`evidenceRef` deliberately excludes locale/font. Therefore the same screenshot condition can be
-matched directly across configurations.
+`evidenceRef` deliberately excludes locale/font. Therefore the same semantic frame has the same
+stable prefix across every language/font batch.
 
-Filename pattern:
+Filename invariant:
 
 ~~~text
 <stable-evidence-prefix>__<locale>__<font>.png
@@ -345,32 +339,22 @@ shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__en__la
 shared.user-profile_form-submit__screen.user-profile__step-002__tap__...__zh__large-1-45x.png
 ~~~
 
-The common prefix tells reviewers these images represent the same semantic condition before opening
-them.
+The common prefix is the referenceable map. Reviewers can identify equivalent frames before opening
+the screenshots.
 
-Manifest metadata includes:
+There are intentionally no per-case manifests in the delivery tree. Live diagnostic/integrity detail
+is available through:
 
 ~~~text
-scenarioRef
-evidenceRef
-configurationRef
-caseRef
-sourceRef
-shardId / journeyId
-localeId / localeTag
-fontId / fontScale
-capturePolicy
-screenId
-stepIndex / stepKind / semanticRef
-deviceModel / sdkInt
-configuration-relative screenshot path
-screenshot bytes
-screenshot SHA-256
+tag:VexScreenCrawler
 ~~~
 
-Artifacts are written through AndroidX PlatformTestStorage so Android instrumentation storage
-isolation does not break host retrieval. The Gradle/test infrastructure returns the outputs; the repo
-helper then assembles the configuration-first delivery tree in `./vex-screen-crawler`.
+Each CAPTURE line includes scenarioRef, evidenceRef, configurationRef, output path, byte count and
+SHA-256.
+
+Artifacts are transferred through AndroidX PlatformTestStorage so instrumentation storage isolation
+does not break host retrieval. The Gradle/test infrastructure returns the outputs; the repo helper
+replaces `./vex-screen-crawler` with the current returned configuration tree.
 
 This improves traceability and handoff quality; it is not by itself regulatory compliance.
 
@@ -388,8 +372,8 @@ The evidence observer:
 - uses PlatformTestStorage as the instrumentation-output boundary;
 - obtains a screenshot Bitmap;
 - encodes PNG bytes in memory;
-- calculates SHA-256;
-- writes PNG/manifest/start/complete outputs through test storage;
+- calculates SHA-256 for live diagnostics;
+- writes only the PNG delivery artifact through test storage;
 - recycles the Bitmap;
 - retains only semantic metadata afterward.
 
