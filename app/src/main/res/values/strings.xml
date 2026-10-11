@@ -155,6 +155,7 @@
     <string name="vexmaps_navigation_notification_location">Navigation location is temporarily unavailable</string>
     <string name="vexmaps_navigation_notification_arrived">Arrived</string>
     <string name="vexmaps_navigation_stop">Stop navigation</string>
+    <string name="vexmaps_navigation_recenter">Recenter</string>
     <string name="vexmaps_navigation_ready">Route to %1$s · %2$d m</string>
     <string name="vexmaps_navigation_route_mode">Mode: %1$s</string>
     <string name="vexmaps_navigation_eta_minutes">About %1$d min</string>

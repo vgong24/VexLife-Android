@@ -457,6 +457,15 @@ internal object VexMapsNavigationProcess {
     val session =
         VexNavigationSession()
 
+    private val mutableVisualLocation =
+        MutableStateFlow<
+            VexMapsNavigationVisualLocation?
+        >(null)
+
+    val visualLocations:
+        StateFlow<VexMapsNavigationVisualLocation?> =
+        mutableVisualLocation.asStateFlow()
+
     private val lock = Any()
     private var activeRoutingPack:
         VexMapsRegionPack? = null
@@ -468,10 +477,27 @@ internal object VexMapsNavigationProcess {
         synchronized(lock) {
             activeRoutingPack =
                 routingPack
+            mutableVisualLocation.value =
+                null
             session.prepare(
                 routeResult,
             )
         }
+    }
+
+    fun acceptLocation(
+        sample: VexNavigationLocationSample,
+        nowElapsedRealtimeMillis: Long,
+    ) {
+        mutableVisualLocation.value =
+            sample
+                .toVexMapsNavigationVisualLocation()
+
+        session.acceptLocation(
+            sample = sample,
+            nowElapsedRealtimeMillis =
+                nowElapsedRealtimeMillis,
+        )
     }
 
     suspend fun reroutePending(
@@ -537,6 +563,8 @@ internal object VexMapsNavigationProcess {
     fun stop() {
         synchronized(lock) {
             activeRoutingPack = null
+            mutableVisualLocation.value =
+                null
             session.stop()
         }
     }

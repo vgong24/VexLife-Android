@@ -160,11 +160,13 @@ class VexMapsNavigationService :
                         }
                     }
                     .collect { sample ->
-                        session.acceptLocation(
-                            sample = sample,
-                            nowElapsedRealtimeMillis =
-                                SystemClock.elapsedRealtime(),
-                        )
+                        VexMapsNavigationProcess
+                            .acceptLocation(
+                                sample = sample,
+                                nowElapsedRealtimeMillis =
+                                    SystemClock
+                                        .elapsedRealtime(),
+                            )
 
                         session
                             .current

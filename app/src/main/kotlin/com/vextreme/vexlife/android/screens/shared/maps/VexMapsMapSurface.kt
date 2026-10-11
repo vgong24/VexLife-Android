@@ -79,6 +79,10 @@ internal fun VexMapsMapSurface(
             .session
             .states
             .collectAsState()
+    val navigationVisualLocation by
+        VexMapsNavigationProcess
+            .visualLocations
+            .collectAsState()
 
     val mapController =
         remember {
@@ -494,6 +498,26 @@ internal fun VexMapsMapSurface(
         }
 
     LaunchedEffect(
+        navigationVisualLocation
+            ?.sampleRef,
+        mapController,
+    ) {
+        navigationVisualLocation
+            ?.let { visual ->
+                mapController.showDeviceLocation(
+                    VexDeviceLocationResult.Located(
+                        latitude =
+                            visual.coordinate.latitude,
+                        longitude =
+                            visual.coordinate.longitude,
+                        accuracyMeters =
+                            visual.accuracyMeters,
+                    ),
+                )
+            }
+    }
+
+    LaunchedEffect(
         navigationState
             .routeResult
             ?.route
@@ -839,6 +863,17 @@ internal fun VexMapsMapSurface(
                 state = navigationState,
                 locationReady =
                     preciseLocationActive,
+                canRecenter =
+                    navigationVisualLocation !=
+                        null,
+                onRecenter = {
+                    navigationVisualLocation
+                        ?.let { visual ->
+                            mapController.focusOn(
+                                visual.coordinate,
+                            )
+                        }
+                },
                 onEditRoute = {
                     runtime.recordDynamicInteraction(
                         subjectRef =
@@ -1518,6 +1553,8 @@ private fun VexMapsRoutePlannerCard(
 private fun VexMapsNavigationCard(
     state: VexNavigationSessionState,
     locationReady: Boolean,
+    canRecenter: Boolean,
+    onRecenter: () -> Unit,
     onEditRoute: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
@@ -1783,6 +1820,29 @@ private fun VexMapsNavigationCard(
 
                 VexNavigationSessionPhase.IDLE ->
                     Unit
+            }
+
+            if (
+                canRecenter &&
+                (
+                    state.phase ==
+                        VexNavigationSessionPhase.ACTIVE ||
+                    state.phase ==
+                        VexNavigationSessionPhase.OFF_ROUTE ||
+                    state.phase ==
+                        VexNavigationSessionPhase.LOCATION_HELD
+                )
+            ) {
+                OutlinedButton(
+                    onClick = onRecenter,
+                ) {
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_navigation_recenter,
+                        ),
+                    )
+                }
             }
         }
     }
