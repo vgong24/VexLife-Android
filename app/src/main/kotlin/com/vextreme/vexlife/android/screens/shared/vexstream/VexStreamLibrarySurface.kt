@@ -1016,6 +1016,8 @@ private fun VexStreamCollectionActions(
                         resolver = resolver,
                         shuffled = true,
                     )
+
+                else -> Unit
             }
         }
 
@@ -1079,6 +1081,8 @@ private fun VexStreamTrackCard(
 
                 VexStreamMusicScreen.RemoveTrackDownload ->
                     onRemoveDownload()
+
+                else -> Unit
             }
         }
 
@@ -1205,21 +1209,18 @@ private fun VexStreamMiniPlayer(
 
                 VexStreamMusicScreen.ToggleShuffle ->
                     controller?.toggleVexStreamShuffle()
+
+                else -> Unit
             }
         }
 
-    Card(
+    VexContainer(
+        element = VexStreamMusicScreen.PlayerSection,
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
+        style = VexElementStyles.RaisedSurface,
     ) {
-        Column(
-            modifier = Modifier.padding(
-                horizontal = 12.dp,
-                vertical = 8.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
             Text(
                 text =
                     playback.currentTitle.ifBlank {
@@ -1269,7 +1270,6 @@ private fun VexStreamMiniPlayer(
                 )
             }
         }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
