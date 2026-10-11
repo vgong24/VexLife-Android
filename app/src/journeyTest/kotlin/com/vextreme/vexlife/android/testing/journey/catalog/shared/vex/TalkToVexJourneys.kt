@@ -9,13 +9,13 @@ object TalkToVexJourneys : VexJourneyShard {
 
     val placeholder = vexJourney(
         id = "placeholder",
-            title = "Talk to Vex placeholder",
-        ) {
-            start(HomeScreen)
-            tap(HomeScreen.TalkToVex)
-            tap(TalkToVexScreen.PlaceholderAction)
-            tap(AppShell.Elements.Back)
-        }
+        title = "Talk to Vex placeholder",
+    ) {
+        start(HomeScreen)
+        tap(HomeScreen.TalkToVex)
+        tap(TalkToVexScreen.PlaceholderAction)
+        tap(AppShell.Elements.Back)
+    }
 
     override val journeys = listOf(
         placeholder,
