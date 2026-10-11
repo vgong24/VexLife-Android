@@ -379,6 +379,81 @@ GEOMETRY_CHANGE != SEMANTIC_EVENT_CHANGE
 AUTOMATIC_REPOSITION != HUMAN_PREFERENCE
 ~~~
 
+## Lived attention contract
+
+The attention popup is an **interactive anchored rich tooltip / popover**, not another Events row.
+
+A lived-device review exposed two requirements that are now part of the practicum:
+
+~~~text
+TRANSIENT_SURFACE_MUST_LOOK_TRANSIENT
+PROVIDER_UPDATE != VISIBILITY_OBSERVER_RESTART
+~~~
+
+The tooltip therefore uses an inverse/outlined surface rather than the ordinary event-card surface,
+and the stable-list visibility observer remains alive across provider ref-set changes so a five-second
+arrival cannot create a false READY -> HELD_TARGET_UNREACHABLE -> READY blink.
+
+The popup renders Relay-owned metadata:
+
+~~~text
+Current 1 of N
+N-1 queued
+current eventRef
+availability state
+acknowledged / later / suppressed counts
+why this event is READY
+~~~
+
+Compose does not recompute those queue counts. If the metadata is wrong, the Relay relationship is
+wrong.
+
+### Button outcomes are executable expectations
+
+~~~text
+ACKNOWLEDGE
+  event row remains
+  disposition becomes ACKNOWLEDGED
+  current tooltip leaves that event
+  next queued unhandled event becomes current
+  if none remain, no attention tooltip remains
+
+LATER
+  event row remains
+  disposition becomes DEFERRED for the current lab/session
+  current tooltip leaves that event
+  next queued unhandled event becomes current
+  Reset lab clears the disposition
+
+SUPPRESS
+  event row remains
+  disposition becomes SUPPRESSED for the current lab/session
+  current tooltip leaves that event
+  next queued unhandled event becomes current
+  Reset lab clears the disposition
+~~~
+
+At this practicum stage, **Later is not a timed snooze**. It is a distinct deferred disposition that
+removes proactive attention for the current lab/session until Reset lab. A real service may later
+earn a time/re-entry policy; do not infer one before it exists.
+
+If any stated next state above does not occur, preserve it as a failing lived case / bug rather than
+reinterpreting the button after the fact.
+
+### Repeatable lab reset
+
+`Reset lab`:
+
+~~~text
+stop timed producer
+-> publish an empty current source projection at a newer sourceRevision
+-> clear attention dispositions
+-> preserve monotonic provider/event identity for later emissions
+~~~
+
+This gives a human a reproducible clean starting point without teaching the mock provider that reset
+means returning to revision 1.
+
 ## Synthetic fixture and live condition lab
 
 The Debug Menu owns a session-scoped deterministic fixture. All controls operate the **same**
