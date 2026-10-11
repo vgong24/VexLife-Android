@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.vextreme.vexlife.android"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 37
         versionCode = 1
         versionName = "0.0.1-foundation"
