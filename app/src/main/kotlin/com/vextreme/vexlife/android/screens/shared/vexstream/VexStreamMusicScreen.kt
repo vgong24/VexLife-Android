@@ -10,6 +10,8 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylist
+import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylistRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
@@ -332,6 +334,21 @@ private fun previewState(): VexStreamMusicState {
                             mediaSha256 = downloaded.mediaSha256,
                             byteLength = downloaded.mediaByteLength,
                             localMediaRef = "preview.local",
+                        ),
+                ),
+            ),
+        playlists =
+            listOf(
+                VexStreamPlaylist(
+                    playlistRef =
+                        VexStreamPlaylistRef(
+                            "preview.playlist.mobile",
+                        ),
+                    name = "Road Trip",
+                    trackRefs =
+                        listOf(
+                            streamed.trackRef,
+                            downloaded.trackRef,
                         ),
                 ),
             ),
