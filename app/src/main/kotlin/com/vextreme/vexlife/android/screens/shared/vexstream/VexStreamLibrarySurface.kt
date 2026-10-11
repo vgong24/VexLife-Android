@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -23,6 +24,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -35,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -50,10 +53,12 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
+import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexContainer
 import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.VexIconButton
 import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.elements.vexElement
@@ -218,7 +223,12 @@ internal fun VexStreamLibrarySurface(
     if (runtime.presentation.isOpen(VexStreamMusicScreen.SearchSheet)) {
         VexStreamSearchSheet(
             runtime = runtime,
-            tracks = searchResults,
+            tracks =
+                if (searchQuery.isBlank()) {
+                    emptyList()
+                } else {
+                    searchResults
+                },
             repository = repository,
             controller = controller,
             resolver = resolver,
@@ -457,6 +467,174 @@ private fun VexStreamConnectionHeader(
                         Unit
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun VexStreamLibraryFabActions(
+    runtime: VexRuntime,
+    tracks: List<VexStreamTrackState>,
+    controller: androidx.media3.session.MediaController?,
+    resolver: VexStreamPlaybackSourceResolver,
+) {
+    val canPlay =
+        controller != null &&
+            tracks.isNotEmpty()
+    val handler =
+        ElementActionHandler { element ->
+            runtime.activate(
+                element,
+            )
+            when (element) {
+                VexStreamMusicScreen.PlayAll ->
+                    controller?.playVexStreamCollection(
+                        tracks = tracks,
+                        resolver = resolver,
+                    )
+
+                VexStreamMusicScreen.ShuffleAll ->
+                    controller?.playVexStreamCollection(
+                        tracks = tracks,
+                        resolver = resolver,
+                        shuffled = true,
+                    )
+
+                else -> Unit
+            }
+        }
+
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        VexActionFab(
+            element = VexStreamMusicScreen.PlayAll,
+            handler = handler,
+            enabled = canPlay,
+        )
+        VexActionFab(
+            element = VexStreamMusicScreen.ShuffleAll,
+            handler = handler,
+            enabled = canPlay,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VexStreamSearchSheet(
+    runtime: VexRuntime,
+    tracks: List<VexStreamTrackState>,
+    repository: VexStreamMusicRepository,
+    controller: androidx.media3.session.MediaController?,
+    resolver: VexStreamPlaybackSourceResolver,
+    query: String,
+    onQueryChange: (String) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var selectedTrackRef by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    ModalBottomSheet(
+        modifier = Modifier
+            .fillMaxHeight()
+            .vexElement(
+                VexStreamMusicScreen.SearchSheet,
+            ),
+        onDismissRequest = {
+            runtime.dismissPresentation(
+                VexStreamMusicScreen.SearchSheet,
+            )
+        },
+        sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+        ),
+        dragHandle = {
+            BottomSheetDefaults.DragHandle()
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            VexTextField(
+                element = VexStreamMusicScreen.SearchQuery,
+                value = query,
+                onValueChange = onQueryChange,
+            )
+
+            if (query.isBlank()) {
+                Text(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_search,
+                        ),
+                    modifier = Modifier.padding(
+                        vertical = 20.dp,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (tracks.isEmpty()) {
+                VexStreamEmptyMessage(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_no_search_results,
+                        ),
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(
+                        items = tracks,
+                        key = {
+                            it.track.trackRef.value
+                        },
+                    ) { track ->
+                        VexStreamTrackCard(
+                            runtime = runtime,
+                            state = track,
+                            contextTracks = tracks,
+                            selected =
+                                selectedTrackRef ==
+                                    track.track.trackRef.value,
+                            onSelect = {
+                                selectedTrackRef =
+                                    track.track.trackRef.value
+                            },
+                            controller = controller,
+                            resolver = resolver,
+                            onDownload = {
+                                scope.launch {
+                                    repository.downloadForOffline(
+                                        track.track.trackRef,
+                                    )
+                                }
+                            },
+                            onRemoveDownload = {
+                                scope.launch {
+                                    repository.removeOfflineCopy(
+                                        track.track.trackRef,
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+
+            VexButton(
+                element = VexStreamMusicScreen.CloseSearch,
+                handler = runtime,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -1550,6 +1728,12 @@ private fun VexStreamMiniPlayer(
                 element = VexStreamMusicScreen.TogglePlayback,
                 handler = handler,
                 enabled = controller != null,
+                iconOverride =
+                    if (playback.isPlaying) {
+                        ElementIcon.Pause
+                    } else {
+                        ElementIcon.Play
+                    },
             )
             VexIconButton(
                 element = VexStreamMusicScreen.NextTrack,
@@ -1561,6 +1745,7 @@ private fun VexStreamMiniPlayer(
                 element = VexStreamMusicScreen.ToggleShuffle,
                 handler = handler,
                 enabled = controller != null,
+                selected = playback.shuffleEnabled,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
@@ -1654,27 +1839,17 @@ private fun VexStreamQueueSheet(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                VexButton(
+                VexIconButton(
                     element = VexStreamMusicScreen.QueueToggleShuffle,
                     handler = handler,
-                    style =
-                        if (playback.shuffleEnabled) {
-                            VexElementStyles.PrimaryAction
-                        } else {
-                            VexElementStyles.SecondaryAction
-                        },
                     enabled = controller != null,
+                    selected = playback.shuffleEnabled,
                 )
-                VexButton(
+                VexIconButton(
                     element = VexStreamMusicScreen.ToggleRepeat,
                     handler = handler,
-                    style =
-                        if (playback.repeatEnabled) {
-                            VexElementStyles.PrimaryAction
-                        } else {
-                            VexElementStyles.SecondaryAction
-                        },
                     enabled = controller != null,
+                    selected = playback.repeatEnabled,
                 )
                 VexButton(
                     element = VexStreamMusicScreen.ClearQueue,
