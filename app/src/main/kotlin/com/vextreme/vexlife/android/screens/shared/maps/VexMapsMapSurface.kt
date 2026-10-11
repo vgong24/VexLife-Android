@@ -191,17 +191,12 @@ internal fun VexMapsMapSurface(
             VexMapsLocationState.Finding
 
         scope.launch {
-            when (
-                val result =
-                    locationSource
-                        .currentPreciseLocation()
-            ) {
+            val result =
+                locationSource
+                    .currentPreciseLocation()
+
+            when (result) {
                 is VexDeviceLocationResult.Located -> {
-                    check(
-                        isVexMapsNavigationStartPreflightSatisfied(
-                            result,
-                        ),
-                    )
                     currentLocation =
                         result
                     mapController
@@ -210,7 +205,6 @@ internal fun VexMapsMapSurface(
                         )
                     locationState =
                         VexMapsLocationState.Ready
-                    onLocated?.invoke()
                 }
 
                 VexDeviceLocationResult.PermissionMissing -> {
@@ -236,6 +230,14 @@ internal fun VexMapsMapSurface(
                     locationState =
                         VexMapsLocationState.Unavailable
                 }
+            }
+
+            if (
+                isVexMapsNavigationStartPreflightSatisfied(
+                    result,
+                )
+            ) {
+                onLocated?.invoke()
             }
         }
     }
