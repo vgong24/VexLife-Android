@@ -4,12 +4,14 @@ import android.content.Context
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URLEncoder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 
@@ -188,15 +190,19 @@ class PairedVexStreamMusicRepository(
     override suspend fun forgetPairedVexStream(): VexStreamRepositoryResult =
         operationMutex.withLock {
             connectionStore.load()?.let { connection ->
-                runCatching {
-                    val response =
-                        authorizedConnection(
-                            connection = connection,
-                            path = "v1/pairing/revoke-self",
-                            method = "POST",
-                        )
-                    response.responseCode
-                    response.disconnect()
+                withContext(
+                    Dispatchers.IO,
+                ) {
+                    runCatching {
+                        val response =
+                            authorizedConnection(
+                                connection = connection,
+                                path = "v1/pairing/revoke-self",
+                                method = "POST",
+                            )
+                        response.responseCode
+                        response.disconnect()
+                    }
                 }
             }
 
@@ -275,103 +281,11 @@ class PairedVexStreamMusicRepository(
                     ),
             )
 
-            try {
-                val response =
-                    authorizedConnection(
-                        connection = connection,
-                        path =
-                            "v1/media/" +
-                                encodePathSegment(
-                                    trackRef.value,
-                                ),
-                    )
-
-                if (response.responseCode != HttpURLConnection.HTTP_OK) {
-                    val status = response.responseCode
-                    response.disconnect()
-                    updateLocalCopy(
-                        trackRef,
-                        VexStreamLocalCopyState.Failed(
-                            reasonCode = "HTTP_$status",
-                            retryable = status >= 500,
-                        ),
-                    )
-
-                    return VexStreamRepositoryResult.Rejected(
-                        reason = VexStreamRepositoryRejection.MEDIA_NOT_AVAILABLE_FROM_HUB,
-                        trackRef = trackRef,
-                    )
-                }
-
-                val stored =
-                    response.inputStream.use { input ->
-                        mediaStore.store(
-                            expectedSha256 = target.track.mediaSha256,
-                            expectedByteLength = target.track.mediaByteLength,
-                            input = input,
-                        )
-                    }
-                response.disconnect()
-
-                when (stored) {
-                    is VexStreamMediaStoreResult.Stored -> {
-                        updateLocalCopy(
-                            trackRef,
-                            stored.localCopy,
-                        )
-                        if (!offlineIndex.persist(mutableState.value)) {
-                            updateLocalCopy(
-                                trackRef,
-                                VexStreamLocalCopyState.Failed(
-                                    reasonCode = "OFFLINE_INDEX_PERSISTENCE_FAILURE",
-                                    retryable = true,
-                                ),
-                            )
-                            return VexStreamRepositoryResult.Rejected(
-                                reason = VexStreamRepositoryRejection.MEDIA_NOT_AVAILABLE_FROM_HUB,
-                                trackRef = trackRef,
-                            )
-                        }
-
-                        VexStreamRepositoryResult.Accepted(
-                            trackRef,
-                        )
-                    }
-
-                    is VexStreamMediaStoreResult.Rejected -> {
-                        updateLocalCopy(
-                            trackRef,
-                            VexStreamLocalCopyState.Failed(
-                                reasonCode = stored.reason.name,
-                                retryable =
-                                    stored.reason == VexStreamMediaStoreRejection.IO_FAILURE,
-                            ),
-                        )
-
-                        VexStreamRepositoryResult.Rejected(
-                            reason = VexStreamRepositoryRejection.MEDIA_NOT_AVAILABLE_FROM_HUB,
-                            trackRef = trackRef,
-                        )
-                    }
-                }
-            } catch (_: Exception) {
-                mutableState.value =
-                    mutableState.value.withHubUnavailable(
-                        VexStreamHubState.Unreachable,
-                    )
-                updateLocalCopy(
-                    trackRef,
-                    VexStreamLocalCopyState.Failed(
-                        reasonCode = "TRANSPORT_FAILURE",
-                        retryable = true,
-                    ),
-                )
-
-                VexStreamRepositoryResult.Rejected(
-                    reason = VexStreamRepositoryRejection.MEDIA_NOT_AVAILABLE_FROM_HUB,
-                    trackRef = trackRef,
-                )
-            }
+            downloadMedia(
+                connection = connection,
+                target = target,
+                trackRef = trackRef,
+            )
         }
 
     override suspend fun removeOfflineCopy(
@@ -392,7 +306,15 @@ class PairedVexStreamMusicRepository(
                         trackRef = trackRef,
                     )
 
-            if (!mediaStore.remove(local)) {
+            val removed =
+                withContext(
+                    Dispatchers.IO,
+                ) {
+                    mediaStore.remove(
+                        local,
+                    )
+                }
+            if (!removed) {
                 return VexStreamRepositoryResult.Rejected(
                     reason = VexStreamRepositoryRejection.NOT_DOWNLOADED,
                     trackRef = trackRef,
@@ -403,9 +325,13 @@ class PairedVexStreamMusicRepository(
                 trackRef,
                 VexStreamLocalCopyState.NotDownloaded,
             )
-            offlineIndex.persist(
-                mutableState.value,
-            )
+            withContext(
+                Dispatchers.IO,
+            ) {
+                offlineIndex.persist(
+                    mutableState.value,
+                )
+            }
 
             VexStreamRepositoryResult.Accepted(
                 trackRef,
@@ -413,6 +339,17 @@ class PairedVexStreamMusicRepository(
         }
 
     private suspend fun refreshCatalogLocked(
+        connection: VexStreamPairedConnection,
+    ): VexStreamRepositoryResult =
+        withContext(
+            Dispatchers.IO,
+        ) {
+            refreshCatalogBlocking(
+                connection = connection,
+            )
+        }
+
+    private fun refreshCatalogBlocking(
         connection: VexStreamPairedConnection,
     ): VexStreamRepositoryResult {
         mutableState.value = mutableState.value.copy(
@@ -502,7 +439,18 @@ class PairedVexStreamMusicRepository(
         }
     }
 
-    private fun readPairingInfo(
+    private suspend fun readPairingInfo(
+        selected: VexStreamSelectedService,
+    ): PairingInfo =
+        withContext(
+            Dispatchers.IO,
+        ) {
+            readPairingInfoBlocking(
+                selected = selected,
+            )
+        }
+
+    private fun readPairingInfoBlocking(
         selected: VexStreamSelectedService,
     ): PairingInfo {
         val connection =
@@ -557,7 +505,18 @@ class PairedVexStreamMusicRepository(
         )
     }
 
-    private fun createPairingRequest(
+    private suspend fun createPairingRequest(
+        selected: VexStreamSelectedService,
+    ): String =
+        withContext(
+            Dispatchers.IO,
+        ) {
+            createPairingRequestBlocking(
+                selected = selected,
+            )
+        }
+
+    private fun createPairingRequestBlocking(
         selected: VexStreamSelectedService,
     ): String {
         val connection =
@@ -615,30 +574,15 @@ class PairedVexStreamMusicRepository(
     ): String =
         withTimeout(PAIRING_APPROVAL_TIMEOUT_MS) {
             while (true) {
-                val connection =
-                    VexStreamPinnedTls.open(
-                        baseUrl = selected.baseUrl(),
-                        certificateSha256 = selected.certificateSha256,
-                        path =
-                            "v1/pairing/status?requestRef=" +
-                                encodeQueryComponent(
-                                    requestRef,
-                                ),
-                    )
-
-                check(
-                    connection.responseCode == HttpURLConnection.HTTP_OK,
-                ) {
-                    "pairing request disappeared"
-                }
-
                 val response =
-                    JSONObject(
-                        VexStreamPinnedTls.readText(
-                            connection,
-                        ),
-                    )
-                connection.disconnect()
+                    withContext(
+                        Dispatchers.IO,
+                    ) {
+                        readPairingStatusBlocking(
+                            selected = selected,
+                            requestRef = requestRef,
+                        )
+                    }
 
                 when (
                     response.getString(
@@ -664,6 +608,164 @@ class PairedVexStreamMusicRepository(
             error(
                 "pairing approval unavailable",
             )
+        }
+
+    private fun readPairingStatusBlocking(
+        selected: VexStreamSelectedService,
+        requestRef: String,
+    ): JSONObject {
+        val connection =
+            VexStreamPinnedTls.open(
+                baseUrl = selected.baseUrl(),
+                certificateSha256 = selected.certificateSha256,
+                path =
+                    "v1/pairing/status?requestRef=" +
+                        encodeQueryComponent(
+                            requestRef,
+                        ),
+            )
+
+        check(
+            connection.responseCode == HttpURLConnection.HTTP_OK,
+        ) {
+            "pairing request disappeared"
+        }
+
+        return try {
+            JSONObject(
+                VexStreamPinnedTls.readText(
+                    connection,
+                ),
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private suspend fun downloadMedia(
+        connection: VexStreamPairedConnection,
+        target: VexStreamTrackState,
+        trackRef: VexStreamTrackRef,
+    ): VexStreamRepositoryResult =
+        withContext(
+            Dispatchers.IO,
+        ) {
+            try {
+                val response =
+                    authorizedConnection(
+                        connection = connection,
+                        path =
+                            "v1/media/" +
+                                encodePathSegment(
+                                    trackRef.value,
+                                ),
+                    )
+
+                if (response.responseCode != HttpURLConnection.HTTP_OK) {
+                    val status =
+                        response.responseCode
+                    response.disconnect()
+                    updateLocalCopy(
+                        trackRef,
+                        VexStreamLocalCopyState.Failed(
+                            reasonCode = "HTTP_$status",
+                            retryable = status >= 500,
+                        ),
+                    )
+
+                    return@withContext VexStreamRepositoryResult.Rejected(
+                        reason =
+                            VexStreamRepositoryRejection
+                                .MEDIA_NOT_AVAILABLE_FROM_HUB,
+                        trackRef = trackRef,
+                    )
+                }
+
+                val stored =
+                    response.inputStream.use { input ->
+                        mediaStore.store(
+                            expectedSha256 =
+                                target.track.mediaSha256,
+                            expectedByteLength =
+                                target.track.mediaByteLength,
+                            input = input,
+                        )
+                    }
+                response.disconnect()
+
+                when (stored) {
+                    is VexStreamMediaStoreResult.Stored -> {
+                        updateLocalCopy(
+                            trackRef,
+                            stored.localCopy,
+                        )
+                        if (
+                            !offlineIndex.persist(
+                                mutableState.value,
+                            )
+                        ) {
+                            updateLocalCopy(
+                                trackRef,
+                                VexStreamLocalCopyState.Failed(
+                                    reasonCode =
+                                        "OFFLINE_INDEX_PERSISTENCE_FAILURE",
+                                    retryable = true,
+                                ),
+                            )
+                            return@withContext VexStreamRepositoryResult.Rejected(
+                                reason =
+                                    VexStreamRepositoryRejection
+                                        .MEDIA_NOT_AVAILABLE_FROM_HUB,
+                                trackRef = trackRef,
+                            )
+                        }
+
+                        VexStreamRepositoryResult.Accepted(
+                            trackRef,
+                        )
+                    }
+
+                    is VexStreamMediaStoreResult.Rejected -> {
+                        updateLocalCopy(
+                            trackRef,
+                            VexStreamLocalCopyState.Failed(
+                                reasonCode =
+                                    stored.reason.name,
+                                retryable =
+                                    stored.reason ==
+                                        VexStreamMediaStoreRejection
+                                            .IO_FAILURE,
+                            ),
+                        )
+
+                        VexStreamRepositoryResult.Rejected(
+                            reason =
+                                VexStreamRepositoryRejection
+                                    .MEDIA_NOT_AVAILABLE_FROM_HUB,
+                            trackRef = trackRef,
+                        )
+                    }
+                }
+            } catch (_: Exception) {
+                mutableState.value =
+                    mutableState.value.withHubUnavailable(
+                        VexStreamHubState.Unreachable,
+                    )
+                updateLocalCopy(
+                    trackRef,
+                    VexStreamLocalCopyState.Failed(
+                        reasonCode = "TRANSPORT_FAILURE",
+                        retryable = true,
+                    ),
+                )
+
+                VexStreamRepositoryResult.Rejected(
+                    reason =
+                        VexStreamRepositoryRejection
+                            .MEDIA_NOT_AVAILABLE_FROM_HUB,
+                    trackRef = trackRef,
+                )
+            }
         }
 
     private fun authorizedConnection(
