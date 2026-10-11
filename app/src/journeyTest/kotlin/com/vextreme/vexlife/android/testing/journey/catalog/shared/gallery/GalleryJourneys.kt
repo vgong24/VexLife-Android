@@ -9,30 +9,30 @@ object GalleryJourneys : VexJourneyShard {
 
     val elementsModalsSwap = vexJourney(
         id = "elements-modals-swap",
-            title = "Gallery elements, modals and local panel swap",
-            environments = listOf(
-                VexJourneyEnvironments.Baseline,
-                VexJourneyEnvironments.LargeText,
-            ),
-        ) {
-            start(HomeScreen)
-            tap(AppShell.Elements.Add)
-            tap(AppShell.Elements.Gallery)
+        title = "Gallery elements, modals and local panel swap",
+        environments = listOf(
+            VexJourneyEnvironments.Baseline,
+            VexJourneyEnvironments.LargeText,
+        ),
+    ) {
+        start(HomeScreen)
+        tap(AppShell.Elements.Add)
+        tap(AppShell.Elements.Gallery)
 
-            tap(GalleryScreen.SampleButton)
-            tap(GalleryScreen.SampleToggle)
-            tap(GalleryScreen.SampleFab)
+        tap(GalleryScreen.SampleButton)
+        tap(GalleryScreen.SampleToggle)
+        tap(GalleryScreen.SampleFab)
 
-            tap(GalleryScreen.ShowDialogModalSample)
-            tap(GalleryScreen.CloseDialogModalSample)
+        tap(GalleryScreen.ShowDialogModalSample)
+        tap(GalleryScreen.CloseDialogModalSample)
 
-            tap(GalleryScreen.ShowBottomSheetModalSample)
-            tap(GalleryScreen.CloseBottomSheetModalSample)
+        tap(GalleryScreen.ShowBottomSheetModalSample)
+        tap(GalleryScreen.CloseBottomSheetModalSample)
 
-            tap(GalleryScreen.AppGraphTab)
-            tap(GalleryScreen.ElementsTab)
-            tap(AppShell.Elements.Back)
-        }
+        tap(GalleryScreen.AppGraphTab)
+        tap(GalleryScreen.ElementsTab)
+        tap(AppShell.Elements.Back)
+    }
 
     override val journeys = listOf(
         elementsModalsSwap,
