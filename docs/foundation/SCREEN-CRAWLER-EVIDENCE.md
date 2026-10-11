@@ -307,8 +307,12 @@ screenshot SHA-256
 
 This improves traceability; it is not by itself regulatory compliance.
 
-Artifacts are written under the target app's external-files area in a `vex-screen-crawler` tree.
-A later host/export workflow may collect/package those artifacts without changing crawler semantics.
+Artifacts are written through AndroidX PlatformTestStorage under a `vex-screen-crawler/` relative
+output tree. Modern instrumented tests run inside a storage sandbox, so an app-visible /storage path
+must not be assumed to be adb-shell-visible after the test process exits.
+
+The AndroidX test/Gradle infrastructure owns transfer back to the host. The repo helper then collects
+returned crawler output from `app/build` into `./vex-screen-crawler`.
 
 ## Lifecycle / leak boundary
 
@@ -321,12 +325,13 @@ They must never retain:
 - screenshot Bitmap after the write completes.
 
 The evidence observer:
-- acquires target Context only while resolving app-scoped storage;
+- uses PlatformTestStorage as the instrumentation-output boundary;
 - obtains a screenshot Bitmap;
-- writes PNG;
+- encodes PNG bytes in memory;
 - calculates SHA-256;
+- writes PNG/manifest/start/complete outputs through test storage;
 - recycles the Bitmap;
-- retains only strings/files/IDs afterward.
+- retains only semantic metadata afterward.
 
 Production Room uses `applicationContext`; VexLifeSession is retained by AndroidViewModel /
 `viewModelScope`. No current crawler/catalog path retains an Activity.
