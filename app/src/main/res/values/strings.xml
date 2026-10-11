@@ -130,7 +130,7 @@
     <string name="vexstream_music_clear_queue">Clear queue</string>
     <string name="vexstream_music_queue_reorder">Reorder queue</string>
     <string name="vexstream_music_queue_reorder_hint">Drag a handle to change what plays next.</string>
-    <string name="vexstream_music_queue_reorder_shuffle_hint">Turn off shuffle to reorder the queue.</string>
+    <string name="vexstream_music_queue_reorder_shuffle_hint">Drag a handle to reorder; manual reordering turns off shuffle.</string>
     <string name="vexstream_music_queue_empty">Nothing is queued yet.</string>
     <string name="vexstream_music_no_downloads">No downloaded songs yet.</string>
     <string name="vexstream_music_unknown_album">Unknown album</string>
