@@ -43,6 +43,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
     val SongsPanel = scrollableColumnRef("body.library.songs")
     val AlbumsPanel = scrollableColumnRef("body.library.albums")
     val ArtistsPanel = scrollableColumnRef("body.library.artists")
+    val PlaylistsPanel = scrollableColumnRef("body.library.playlists")
     val DownloadsPanel = scrollableColumnRef("body.library.downloads")
 
     val LibraryContent = swappableRef(
@@ -112,6 +113,16 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         ),
     )
 
+    val PlaylistsTab = buttonRef(
+        id = "body.library-tabs.playlists",
+        labelRes = R.string.vexstream_music_playlists,
+        style = VexElementStyles.Navigation,
+        intent = swapTo(
+            container = LibraryContent,
+            child = PlaylistsPanel,
+        ),
+    )
+
     val DownloadsTab = buttonRef(
         id = "body.library-tabs.downloads",
         labelRes = R.string.vexstream_music_downloads,
@@ -154,6 +165,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 button(SongsTab)
                 button(AlbumsTab)
                 button(ArtistsTab)
+                button(PlaylistsTab)
                 button(DownloadsTab)
             }
 
@@ -161,6 +173,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 scrollableColumn(SongsPanel) {}
                 scrollableColumn(AlbumsPanel) {}
                 scrollableColumn(ArtistsPanel) {}
+                scrollableColumn(PlaylistsPanel) {}
                 scrollableColumn(DownloadsPanel) {}
             }
 
