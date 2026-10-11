@@ -192,8 +192,29 @@ preview/VexPreview.kt
   owns HOW to host those states, not WHAT those states mean
 ~~~
 
-A preview's `prepare` step is therefore a local example of that Screen's runtime state, not a hidden
-central scenario registry.
+A preview's `prepareRuntime` step is therefore a local example of that Screen's initial runtime
+state, not a hidden central scenario registry or simulated user interaction.
+
+## Local presentation mutations stay local
+
+```text
+NavigateTo
+  explicit cross-Screen movement
+
+Open / Close / Toggle / SwapTo
+  local presentation mutation
+  same Screen/shell ownership only
+
+SwapTo(container, child)
+  child must be a direct child of that exact swappable container
+```
+
+The registry rejects local intents that target another Screen's elements. VexRuntime also rejects
+manual activation of a Screen-owned element when that Screen is not current, and PresentationState
+rejects direct mutation of inactive Screen-owned presentation state.
+
+This prevents hidden cross-feature effects such as Home mutating Gallery's selected panel before
+Gallery is opened.
 
 ## Static alignment is not behavioral proof
 

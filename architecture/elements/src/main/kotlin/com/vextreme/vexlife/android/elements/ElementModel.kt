@@ -89,7 +89,16 @@ sealed interface ElementIntent {
     data class Open(val element: UIElement) : ElementIntent
     data class Close(val element: UIElement) : ElementIntent
     data class Toggle(val element: UIElement) : ElementIntent
-    data class SwapTo(val element: UIElement) : ElementIntent
+    /**
+     * Selects one direct child inside one explicit swappable container.
+     *
+     * Naming both sides makes the local state owner visible and lets registry/runtime validation
+     * reject cross-Screen mutations instead of inferring scope from the child alone.
+     */
+    data class SwapTo(
+        val container: SwappableContainerElement,
+        val child: UIElement,
+    ) : ElementIntent
     data class Invoke(val action: ActionKey) : ElementIntent
     data class Sequence(val intents: List<ElementIntent>) : ElementIntent {
         init {
@@ -290,7 +299,7 @@ open class SwappableContainerElement(
 ) : ContainerElement(elementId, "SwappableContainer", style)
 
 /**
- * App-level semantic navigation. The destination becomes [VexRuntime.currentScreen] and therefore
+ * App-level semantic navigation. The destination becomes the runtime's current Screen and therefore
  * participates in the app Back chain.
  */
 fun navigateTo(screen: ScreenElement): ElementIntent = ElementIntent.NavigateTo(screen)
@@ -307,7 +316,14 @@ fun toggle(element: UIElement): ElementIntent = ElementIntent.Toggle(element)
  * Gallery Elements <-> AppGraph. If a local interaction needs Back depth, give that feature its own
  * NavigationTrail; if it is a true app destination, use [navigateTo].
  */
-fun swapTo(element: UIElement): ElementIntent = ElementIntent.SwapTo(element)
+fun swapTo(
+    container: SwappableContainerElement,
+    child: UIElement,
+): ElementIntent =
+    ElementIntent.SwapTo(
+        container = container,
+        child = child,
+    )
 
 fun invoke(action: ActionKey): ElementIntent = ElementIntent.Invoke(action)
 

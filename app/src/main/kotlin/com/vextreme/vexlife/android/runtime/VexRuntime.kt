@@ -27,6 +27,7 @@ import com.vextreme.vexlife.android.elements.navigation.BackLayer
  */
 class PresentationState(
     private val registry: UIBlueprintRegistry,
+    private val currentScreen: () -> ScreenElement,
 ) {
     /*
      * Session memory kept by semantic identity, not by retaining Composable trees:
@@ -53,11 +54,13 @@ class PresentationState(
         element.elementId in openElementIds
 
     fun open(element: UIElement) {
+        requireActiveScope(element)
         openElementIds = openElementIds
             .filterNot { it == element.elementId } + element.elementId
     }
 
     fun close(element: UIElement) {
+        requireActiveScope(element)
         openElementIds = openElementIds.filterNot { it == element.elementId }
     }
 
@@ -68,13 +71,28 @@ class PresentationState(
     }
 
     fun toggle(element: UIElement) {
-        if (isOpen(element)) close(element) else open(element)
+        requireActiveScope(element)
+        if (isOpen(element)) {
+            openElementIds = openElementIds.filterNot { it == element.elementId }
+        } else {
+            openElementIds = openElementIds
+                .filterNot { it == element.elementId } + element.elementId
+        }
     }
 
-    fun swapTo(element: UIElement) {
-        val container = registry.parentOf(element) as? SwappableContainerElement
-            ?: error("swap target must have a swappable parent: ${element.elementId}")
-        selectedByContainer = selectedByContainer + (container.elementId to element.elementId)
+    internal fun select(
+        container: SwappableContainerElement,
+        child: UIElement,
+    ) {
+        requireActiveScope(container)
+
+        val parent = registry.parentOf(child)
+        check(parent?.elementId == container.elementId) {
+            "selected child ${child.elementId} must be a direct child of ${container.elementId}"
+        }
+
+        selectedByContainer =
+            selectedByContainer + (container.elementId to child.elementId)
     }
 
     fun selected(container: SwappableContainerElement): UIElement {
@@ -84,6 +102,16 @@ class PresentationState(
         return registry.childrenOf(container)
             .firstOrNull { it.elementId == selectedId }
             ?: container.defaultChild
+    }
+
+    private fun requireActiveScope(element: UIElement) {
+        val owner = registry.ownerScreenOf(element) ?: return
+        val active = currentScreen()
+
+        check(owner.screenId == active.screenId) {
+            "cannot mutate ${element.elementId} owned by ${owner.screenId} " +
+                "while current screen is ${active.screenId}"
+        }
     }
 }
 
@@ -225,8 +253,11 @@ class VexRuntime(
     private var appOpenedRecorded = false
     private var activeBackLayer: BackLayer? by mutableStateOf(null)
 
-    val presentation = PresentationState(registry)
     val navigation = AppNavigationState(initialScreen, primaryScreens)
+    val presentation = PresentationState(
+        registry = registry,
+        currentScreen = { navigation.current },
+    )
 
     /**
      * Current immutable app-action wiring snapshot.
@@ -331,6 +362,8 @@ class VexRuntime(
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
 
+        requireActiveSource(uiElement)
+
         val before = currentScreen
         val target = navigationTarget(element.intent)
             ?.takeIf { it.screenId != before.screenId }
@@ -360,6 +393,26 @@ class VexRuntime(
 
         logger.recordScreenGesture(before, target)
         navigation.selectPrimary(target)
+    }
+
+    /**
+     * Preview/test setup seam for one local swappable container on the current Screen.
+     *
+     * This seeds initial visual state directly and intentionally does not log a user interaction.
+     * Production interaction should use an element whose intent is SwapTo.
+     */
+    internal fun prepareSelectedChild(
+        container: SwappableContainerElement,
+        child: UIElement,
+    ) {
+        val owner = registry.ownerScreenOf(container)
+        check(owner?.screenId == currentScreen.screenId) {
+            "cannot prepare ${container.elementId} while current screen is ${currentScreen.screenId}"
+        }
+        presentation.select(
+            container = container,
+            child = child,
+        )
     }
 
     /**
@@ -413,6 +466,25 @@ class VexRuntime(
         }
     }
 
+    /**
+     * A Screen-owned element may only be activated while that Screen is current.
+     *
+     * Shell elements have no Screen owner and remain app-wide. This prevents code from manually
+     * activating an off-screen feature element and causing hidden cross-feature state mutation.
+     */
+    private fun requireActiveSource(source: UIElement) {
+        val registered = registry.element(source.elementId)
+        check(registered === source) {
+            "cannot activate unregistered element instance: ${source.elementId}"
+        }
+
+        val owner = registry.ownerScreenOf(source) ?: return
+        check(owner.screenId == currentScreen.screenId) {
+            "cannot activate ${source.elementId} owned by ${owner.screenId} " +
+                "while current screen is ${currentScreen.screenId}"
+        }
+    }
+
     private fun navigationTarget(intent: ElementIntent): ScreenElement? = when (intent) {
         is ElementIntent.NavigateTo -> intent.screen
         ElementIntent.NavigateBack ->
@@ -439,7 +511,12 @@ class VexRuntime(
             is ElementIntent.Open -> presentation.open(intent.element)
             is ElementIntent.Close -> presentation.close(intent.element)
             is ElementIntent.Toggle -> presentation.toggle(intent.element)
-            is ElementIntent.SwapTo -> presentation.swapTo(intent.element)
+            is ElementIntent.SwapTo -> {
+                presentation.select(
+                    container = intent.container,
+                    child = intent.child,
+                )
+            }
             is ElementIntent.Invoke -> appActions.dispatch(
                 AppActionRequest(
                     action = intent.action,

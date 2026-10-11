@@ -8,6 +8,7 @@ import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
+import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.appAction
@@ -18,7 +19,9 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppShell
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class VexRuntimeNavigationTest {
@@ -100,6 +103,52 @@ class VexRuntimeNavigationTest {
         runtime.goBack()
 
         assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
+    }
+
+    @Test
+    fun swapChangesLocalSelectionWithoutAddingBackDepth() {
+        val runtime = runtime()
+
+        runtime.activate(AppShell.Elements.Gallery)
+        runtime.activate(GalleryScreen.AppGraphTab)
+
+        assertSame(
+            GalleryScreen.AppGraphPanel,
+            runtime.presentation.selected(GalleryScreen.Content),
+        )
+
+        runtime.goBack()
+
+        assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
+    }
+
+    @Test
+    fun offScreenOwnedElementCannotBeActivatedDirectly() {
+        val runtime = runtime()
+
+        try {
+            runtime.activate(UserProfileScreen.Save)
+            fail("off-screen feature element activation should fail")
+        } catch (error: IllegalStateException) {
+            assertTrue(error.message.orEmpty().contains(UserProfileScreen.screenId))
+            assertTrue(error.message.orEmpty().contains(HomeScreen.screenId))
+        }
+    }
+
+    @Test
+    fun previewStateSeedingCannotMutateAnotherScreensContainer() {
+        val runtime = runtime()
+
+        try {
+            runtime.prepareSelectedChild(
+                container = GalleryScreen.Content,
+                child = GalleryScreen.AppGraphPanel,
+            )
+            fail("off-screen preview state mutation should fail")
+        } catch (error: IllegalStateException) {
+            assertTrue(error.message.orEmpty().contains(GalleryScreen.Content.elementId))
+            assertTrue(error.message.orEmpty().contains(HomeScreen.screenId))
+        }
     }
 
     @Test

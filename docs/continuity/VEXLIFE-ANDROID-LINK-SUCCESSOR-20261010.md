@@ -91,6 +91,28 @@ evidence, examples, and tests to review—not as a branch to merge or cherry-pic
 
 ## Screen / Preview / action ownership conventions
 
+Preserve the local-presentation scope law:
+
+~~~text
+NavigateTo
+  explicit cross-Screen movement
+
+Open / Close / Toggle / SwapTo
+  local mutation only
+
+SwapTo(container, child)
+  child must be a direct child of that container
+  source/container/child must share Screen or shell ownership
+
+LOCAL_PRESENTATION_MUTATION != CROSS_SCREEN_NAVIGATION
+~~~
+
+VexRuntime rejects direct activation of an off-screen Screen-owned element, and PresentationState
+rejects direct mutation of inactive Screen-owned presentation state. Preview setup may seed only the
+current Screen's local state.
+
+
+
 Use Screen for app destinations. Do not reintroduce Page as a parallel destination vocabulary.
 
 Each authored `*Screen.kt` keeps its ordinary `@VexScreenPreviews` entry beside the Screen source.

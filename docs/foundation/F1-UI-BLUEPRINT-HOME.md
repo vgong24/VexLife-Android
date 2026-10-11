@@ -96,8 +96,8 @@ visible beside the source that owns it.
 
 Feature-specific preview states stay in that same Screen file. `VexPreview.kt` provides only the
 generic host/environment. For example, Gallery's AppGraph preview locally calls
-`runtime.presentation.swapTo(GalleryScreen.AppGraphPanel)`; the shared preview layer does not know
-that Gallery has an AppGraph panel.
+`runtime.prepareSelectedChild(GalleryScreen.Content, GalleryScreen.AppGraphPanel)`; the shared
+preview layer does not know that Gallery has an AppGraph panel.
 
 ## Source alignment
 
@@ -122,14 +122,18 @@ navigateTo(Screen)
   changes the semantic current Screen
   participates in app Back
 
-swapTo(child)
-  changes the selected child of one SwappableContainer inside the current Screen
+swapTo(container, child)
+  changes one explicitly named SwappableContainer inside the current Screen
+  child must be a direct child of that container
   does NOT create app Back depth
 ```
 
-Gallery Elements/AppGraph are peer tabs inside GalleryScreen, so they use `swapTo`. Deeper AppGraph
-exploration uses `NavigationTrail`, which supplies local Back depth. If a future panel is a true app
-destination rather than a peer mode, use `navigateTo` instead.
+Gallery Elements/AppGraph are peer tabs inside GalleryScreen, so they use `swapTo`. The registry
+also verifies the source button, container, and child share GalleryScreen ownership; runtime
+activation fails if a Screen-owned source is activated while another Screen is current.
+
+Deeper AppGraph exploration uses `NavigationTrail`, which supplies local Back depth. If a future
+panel is a true app destination rather than a peer mode, use `navigateTo` instead.
 
 ## AppGraph
 

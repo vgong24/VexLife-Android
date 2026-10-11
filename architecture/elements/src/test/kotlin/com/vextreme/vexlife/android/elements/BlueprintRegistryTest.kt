@@ -19,6 +19,22 @@ class BlueprintRegistryTest {
     private object HomeBody : ScrollableColumnElement("element.home.body")
     private object HomeText : TextElement("element.home.preview", 4)
 
+    private object HomePanelA : ColumnElement("element.home.panel-a")
+    private object HomePanelB : ColumnElement("element.home.panel-b")
+    private object HomeSwap : SwappableContainerElement(
+        elementId = "element.home.swap",
+        defaultChild = HomePanelA,
+    )
+
+    private object HelpCrossScreenSwap : ButtonElement(
+        elementId = "element.help.cross-screen-swap",
+        labelRes = 5,
+        intent = swapTo(
+            container = HomeSwap,
+            child = HomePanelB,
+        ),
+    )
+
     private object HelpRoot : ColumnElement("element.help.root")
 
     @Test
@@ -64,6 +80,32 @@ class BlueprintRegistryTest {
 
         assertEquals(VexElementStyles.PrimaryAction, ShellButton.style)
         assertEquals(VexElementStyles.Navigation, registry.styleOf(ShellButton))
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun localPresentationIntentCannotMutateAnotherScreensContainer() {
+        UIBlueprintRegistry(
+            AppBlueprint(
+                shell = column(ShellRoot) {},
+                screens = listOf(
+                    ScreenRegistration(
+                        Home,
+                        column(HomeRoot) {
+                            swappable(HomeSwap) {
+                                column(HomePanelA) {}
+                                column(HomePanelB) {}
+                            }
+                        },
+                    ),
+                    ScreenRegistration(
+                        Help,
+                        column(HelpRoot) {
+                            button(HelpCrossScreenSwap)
+                        },
+                    ),
+                ),
+            ),
+        )
     }
 
     @Test(expected = IllegalStateException::class)

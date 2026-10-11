@@ -57,14 +57,20 @@ object GalleryScreen : ScreenBlueprint(
         id = "page.bottom-navigation.elements",
         labelRes = R.string.gallery_elements,
         style = VexElementStyles.Navigation,
-        intent = swapTo(ElementsPanel),
+        intent = swapTo(
+            container = Content,
+            child = ElementsPanel,
+        ),
     )
 
     val AppGraphTab = buttonRef(
         id = "page.bottom-navigation.app-graph",
         labelRes = R.string.gallery_app_graph,
         style = VexElementStyles.Navigation,
-        intent = swapTo(AppGraphPanel),
+        intent = swapTo(
+            container = Content,
+            child = AppGraphPanel,
+        ),
     )
 
     override val content = layout {
@@ -212,7 +218,10 @@ private fun GalleryAppGraphPreview() {
              * and intentionally does not add app Back depth; deeper AppGraph traversal uses
              * NavigationTrail when Back semantics are required.
              */
-            runtime.presentation.swapTo(GalleryScreen.AppGraphPanel)
+            runtime.prepareSelectedChild(
+                container = GalleryScreen.Content,
+                child = GalleryScreen.AppGraphPanel,
+            )
         },
     ) { context ->
         GalleryScreenContent(context.runtime)

@@ -211,8 +211,12 @@ class UIBlueprintRegistry(
         }
 
         placementByElementId.values.forEach { placement ->
-            val action = placement.element as? ActionElement ?: return@forEach
-            validateIntent(action.intent)
+            val source = placement.element
+            val action = source as? ActionElement ?: return@forEach
+            validateIntent(
+                source = source,
+                intent = action.intent,
+            )
         }
 
         placementByElementId.values.forEach { placement ->
@@ -248,7 +252,10 @@ class UIBlueprintRegistry(
         }
     }
 
-    private fun validateIntent(intent: ElementIntent) {
+    private fun validateIntent(
+        source: UIElement,
+        intent: ElementIntent,
+    ) {
         intent.referencedScreens().forEach { screen ->
             check(screen.screenId in screenById) {
                 "intent references unregistered screen ${screen.screenId}"
@@ -256,18 +263,63 @@ class UIBlueprintRegistry(
         }
 
         when (intent) {
-            is ElementIntent.Open -> requireRegistered(intent.element)
-            is ElementIntent.Close -> requireRegistered(intent.element)
-            is ElementIntent.Toggle -> requireRegistered(intent.element)
-            is ElementIntent.SwapTo -> {
+            is ElementIntent.Open -> {
                 requireRegistered(intent.element)
-                val parent = parentByElementId[intent.element.elementId]
-                check(parent is SwappableContainerElement) {
-                    "swap target ${intent.element.elementId} must be inside a SwappableContainerElement"
-                }
+                requireSameScope(source, intent.element)
             }
-            is ElementIntent.Sequence -> intent.intents.forEach(::validateIntent)
+
+            is ElementIntent.Close -> {
+                requireRegistered(intent.element)
+                requireSameScope(source, intent.element)
+            }
+
+            is ElementIntent.Toggle -> {
+                requireRegistered(intent.element)
+                requireSameScope(source, intent.element)
+            }
+
+            is ElementIntent.SwapTo -> {
+                requireRegistered(intent.container)
+                requireRegistered(intent.child)
+
+                val parent = parentByElementId[intent.child.elementId]
+                check(parent?.elementId == intent.container.elementId) {
+                    "swap child ${intent.child.elementId} must be a direct child of " +
+                        intent.container.elementId
+                }
+
+                requireSameScope(source, intent.container)
+                requireSameScope(intent.container, intent.child)
+            }
+
+            is ElementIntent.Sequence ->
+                intent.intents.forEach { nested ->
+                    validateIntent(
+                        source = source,
+                        intent = nested,
+                    )
+                }
+
             else -> Unit
+        }
+    }
+
+    /**
+     * Local presentation mutations may not cross Screen/shell ownership boundaries.
+     *
+     * NavigateTo is the explicit cross-Screen operation; Open/Close/Toggle/SwapTo remain local to the
+     * source feature (or local to the app-wide shell when both owners are null).
+     */
+    private fun requireSameScope(
+        source: UIElement,
+        target: UIElement,
+    ) {
+        val sourceOwner = ownerScreenByElementId[source.elementId]
+        val targetOwner = ownerScreenByElementId[target.elementId]
+
+        check(sourceOwner?.screenId == targetOwner?.screenId) {
+            "local intent from ${source.elementId} (${sourceOwner?.screenId ?: "shell"}) " +
+                "cannot mutate ${target.elementId} (${targetOwner?.screenId ?: "shell"})"
         }
     }
 

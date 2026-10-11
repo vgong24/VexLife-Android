@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android
 
+import com.vextreme.vexlife.android.elements.ElementIntent
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
@@ -100,6 +101,22 @@ class AppBlueprintTest {
         assertSame(persistedParent, editParent)
         assertSame(editParent, saveParent)
         assertTrue(editParent?.elementId?.endsWith("body.profile") == true)
+    }
+
+    @Test
+    fun gallerySwapIntentNamesItsLocalContainerAndChildExplicitly() {
+        val intent = GalleryScreen.AppGraphTab.intent as ElementIntent.SwapTo
+
+        assertSame(GalleryScreen.Content, intent.container)
+        assertSame(GalleryScreen.AppGraphPanel, intent.child)
+        assertSame(
+            GalleryScreen,
+            registry.ownerScreenOf(intent.container),
+        )
+        assertSame(
+            GalleryScreen,
+            registry.ownerScreenOf(intent.child),
+        )
     }
 
     @Test
