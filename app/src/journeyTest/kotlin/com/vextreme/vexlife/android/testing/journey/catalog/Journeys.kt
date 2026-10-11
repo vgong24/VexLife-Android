@@ -30,6 +30,10 @@ object Journeys {
         val primaryPeersNativeBack = JourneyPath()
     }
 
+    object events : JourneyDomain() {
+        val externalAttention = JourneyPath()
+    }
+
     object debug : JourneyDomain() {
         val logHistoryDismiss = JourneyPath()
         val resetFreshHistory = JourneyPath()
@@ -72,6 +76,14 @@ private val journeyDomainBindings: List<JourneyDomainBinding> =
             paths = mapOf(
                 Journeys.shell.primaryPeersNativeBack to
                     AppShellJourneys.primaryPeersNativeBack,
+            ),
+        ),
+        JourneyDomainBinding(
+            domain = Journeys.events,
+            shard = EventsJourneys,
+            paths = mapOf(
+                Journeys.events.externalAttention to
+                    EventsJourneys.externalAttention,
             ),
         ),
         JourneyDomainBinding(
