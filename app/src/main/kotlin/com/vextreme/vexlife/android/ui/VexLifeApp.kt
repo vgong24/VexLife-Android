@@ -18,18 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.screens.AppScreens
-import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
-import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreenContent
-import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
-import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreenContent
-import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
-import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreenContent
-import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
-import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreenContent
-import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
-import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreenContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -154,32 +143,21 @@ private fun VexLifeScaffold(
                 modifier = Modifier.fillMaxSize(),
                 key = { primaryScreens[it].screenId },
             ) { screenIndex ->
-                VexElementTree(
-                    placement = primaryScreens[screenIndex].content,
-                    registry = runtime.registry,
-                    handler = runtime,
-                    modifier = Modifier.fillMaxSize(),
-                    selectedChild = runtime.presentation::selected,
+                primaryScreens[screenIndex].renderContent(
+                    runtime = runtime,
+                    repositories = repositories,
+                    darkTheme = darkTheme,
                 )
             }
         } else {
             /*
              * VISUAL ORIENTATION — pushed/shared screen body
              *
-             * Shared screens are not children of whichever primary screen opened them. They live under
-             * screens/shared because Home, Events, or Settings may all navigate to the same destination.
+             * VexLifeApp owns the app-level transition only. The registered AppScreenBlueprint owns
+             * how its Screen is realized and which broad composition dependencies it narrows into the
+             * actual ScreenContent call.
              *
-             * currentScreen tells us WHICH shared screen is active; the screen-specific file tells us
-             * WHAT it looks like:
-             *
-             * DebugMenuScreen -> screens/shared/debug/DebugMenuScreen.kt
-             * GalleryScreen     -> screens/shared/gallery/GalleryScreen.kt
-             * UserProfileScreen   -> screens/shared/profile/UserProfileScreen.kt
-             * VexStreamMusicScreen -> screens/shared/vexstream/VexStreamMusicScreen.kt
-             * TalkToVexScreen      -> screens/shared/vex/TalkToVexScreen.kt
-             *
-             * If this list grows enough to become hard to scan, earn a renderer/registry abstraction
-             * then. For the current small set, this explicit switch is easier to debug than hidden magic.
+             * Adding another registered Screen must not require another case here.
              */
             AnimatedContent(
                 targetState = runtime.currentScreen.screenId,
@@ -190,26 +168,11 @@ private fun VexLifeScaffold(
                 },
                 label = "shared-screen",
             ) { screenId ->
-                when (screenId) {
-                    DebugMenuScreen.screenId -> DebugMenuScreenContent(
-                        runtime = runtime,
-                        logHistoryRepository = repositories.logHistory,
-                        darkTheme = darkTheme,
-                    )
-
-                    GalleryScreen.screenId -> GalleryScreenContent(runtime)
-
-                    UserProfileScreen.screenId -> UserProfileScreenContent(
-                        runtime = runtime,
-                        repository = repositories.userProfile,
-                    )
-
-                    VexStreamMusicScreen.screenId ->
-                        VexStreamMusicScreenContent(runtime)
-
-                    TalkToVexScreen.screenId ->
-                        TalkToVexScreenContent(runtime)
-                }
+                AppScreens.require(screenId).renderContent(
+                    runtime = runtime,
+                    repositories = repositories,
+                    darkTheme = darkTheme,
+                )
             }
         }
     }
