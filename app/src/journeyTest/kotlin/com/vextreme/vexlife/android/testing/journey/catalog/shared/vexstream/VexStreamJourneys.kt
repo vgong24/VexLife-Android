@@ -18,6 +18,7 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.RefreshCatalog)
         tap(VexStreamMusicScreen.AlbumsTab)
         tap(VexStreamMusicScreen.ArtistsTab)
+        tap(VexStreamMusicScreen.PlaylistsTab)
         tap(VexStreamMusicScreen.DownloadsTab)
         tap(VexStreamMusicScreen.SongsTab)
         tap(VexStreamMusicScreen.ShowQueue)
