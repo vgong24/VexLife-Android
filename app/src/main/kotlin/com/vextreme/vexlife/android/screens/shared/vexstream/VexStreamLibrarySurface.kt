@@ -402,6 +402,21 @@ private fun VexStreamSongsPane(
                 it.track.title.lowercase()
             }
         }
+    var selectedTrackRef by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    val sortedRefs =
+        remember(sorted) {
+            sorted.map {
+                it.track.trackRef.value
+            }
+        }
+    LaunchedEffect(sortedRefs) {
+        if (selectedTrackRef !in sortedRefs) {
+            selectedTrackRef =
+                sortedRefs.firstOrNull()
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -439,8 +454,16 @@ private fun VexStreamSongsPane(
                 key = { it.track.trackRef.value },
             ) { track ->
                 VexStreamTrackCard(
+                    runtime = runtime,
                     state = track,
                     contextTracks = sorted,
+                    selected =
+                        selectedTrackRef ==
+                            track.track.trackRef.value,
+                    onSelect = {
+                        selectedTrackRef =
+                            track.track.trackRef.value
+                    },
                     controller = controller,
                     resolver = resolver,
                     onDownload = {
@@ -482,6 +505,21 @@ private fun VexStreamDownloadsPane(
                     it.track.title.lowercase()
                 }
         }
+    var selectedTrackRef by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    val downloadedRefs =
+        remember(downloaded) {
+            downloaded.map {
+                it.track.trackRef.value
+            }
+        }
+    LaunchedEffect(downloadedRefs) {
+        if (selectedTrackRef !in downloadedRefs) {
+            selectedTrackRef =
+                downloadedRefs.firstOrNull()
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -519,8 +557,16 @@ private fun VexStreamDownloadsPane(
                 key = { it.track.trackRef.value },
             ) { track ->
                 VexStreamTrackCard(
+                    runtime = runtime,
                     state = track,
                     contextTracks = downloaded,
+                    selected =
+                        selectedTrackRef ==
+                            track.track.trackRef.value,
+                    onSelect = {
+                        selectedTrackRef =
+                            track.track.trackRef.value
+                    },
                     controller = controller,
                     resolver = resolver,
                     onDownload = {},
@@ -818,6 +864,24 @@ private fun VexStreamCollectionDetail(
     resolver: VexStreamPlaybackSourceResolver,
     onBack: () -> Unit,
 ) {
+    var selectedTrackRef by rememberSaveable(
+        title,
+    ) {
+        mutableStateOf<String?>(null)
+    }
+    val trackRefs =
+        remember(tracks) {
+            tracks.map {
+                it.track.trackRef.value
+            }
+        }
+    LaunchedEffect(trackRefs) {
+        if (selectedTrackRef !in trackRefs) {
+            selectedTrackRef =
+                trackRefs.firstOrNull()
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -864,8 +928,16 @@ private fun VexStreamCollectionDetail(
             key = { it.track.trackRef.value },
         ) { track ->
             VexStreamTrackCard(
+                runtime = runtime,
                 state = track,
                 contextTracks = tracks,
+                selected =
+                    selectedTrackRef ==
+                        track.track.trackRef.value,
+                onSelect = {
+                    selectedTrackRef =
+                        track.track.trackRef.value
+                },
                 controller = controller,
                 resolver = resolver,
                 onDownload = {},
@@ -966,18 +1038,57 @@ private fun VexStreamCollectionActions(
 
 @Composable
 private fun VexStreamTrackCard(
+    runtime: VexRuntime,
     state: VexStreamTrackState,
     contextTracks: List<VexStreamTrackState>,
+    selected: Boolean,
+    onSelect: () -> Unit,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onDownload: () -> Unit,
     onRemoveDownload: () -> Unit,
     showDownloadAction: Boolean = true,
 ) {
+    val handler =
+        ElementActionHandler { element ->
+            runtime.activate(
+                element,
+            )
+            when (element) {
+                VexStreamMusicScreen.PlayTrack ->
+                    controller?.playVexStreamContext(
+                        selected = state,
+                        contextTracks = contextTracks,
+                        resolver = resolver,
+                    )
+
+                VexStreamMusicScreen.PlayTrackNext ->
+                    controller?.playNextVexStream(
+                        state = state,
+                        resolver = resolver,
+                    )
+
+                VexStreamMusicScreen.AddTrackToQueue ->
+                    controller?.queueVexStream(
+                        state = state,
+                        resolver = resolver,
+                    )
+
+                VexStreamMusicScreen.DownloadTrack ->
+                    onDownload()
+
+                VexStreamMusicScreen.RemoveTrackDownload ->
+                    onRemoveDownload()
+            }
+        }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 12.dp)
+            .clickable(
+                onClick = onSelect,
+            ),
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -1005,93 +1116,62 @@ private fun VexStreamTrackCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Button(
-                    onClick = {
-                        controller?.playVexStreamContext(
-                            selected = state,
-                            contextTracks = contextTracks,
-                            resolver = resolver,
-                        )
-                    },
-                    enabled = controller != null,
+            if (selected) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(
-                        stringResource(
-                            R.string.vexstream_music_play,
-                        ),
+                    VexButton(
+                        element = VexStreamMusicScreen.PlayTrack,
+                        handler = handler,
+                        enabled = controller != null,
+                    )
+                    VexButton(
+                        element = VexStreamMusicScreen.PlayTrackNext,
+                        handler = handler,
+                        enabled = controller != null,
+                    )
+                    VexButton(
+                        element = VexStreamMusicScreen.AddTrackToQueue,
+                        handler = handler,
+                        enabled = controller != null,
                     )
                 }
-                TextButton(
-                    onClick = {
-                        controller?.playNextVexStream(
-                            state = state,
-                            resolver = resolver,
-                        )
-                    },
-                    enabled = controller != null,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexstream_music_play_next,
-                        ),
-                    )
-                }
-                TextButton(
-                    onClick = {
-                        controller?.queueVexStream(
-                            state = state,
-                            resolver = resolver,
-                        )
-                    },
-                    enabled = controller != null,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexstream_music_add_queue,
-                        ),
-                    )
-                }
-            }
 
-            if (showDownloadAction) {
-                when (state.localCopy) {
-                    is VexStreamLocalCopyState.Downloaded -> {
-                        OutlinedButton(
-                            onClick = onRemoveDownload,
-                        ) {
-                            Text(
-                                stringResource(
-                                    R.string.vexstream_music_remove_download,
-                                ),
+                if (showDownloadAction) {
+                    when (state.localCopy) {
+                        is VexStreamLocalCopyState.Downloaded -> {
+                            VexButton(
+                                element =
+                                    VexStreamMusicScreen
+                                        .RemoveTrackDownload,
+                                handler = handler,
                             )
                         }
-                    }
 
-                    is VexStreamLocalCopyState.Downloading -> {
-                        Button(
-                            onClick = {},
-                            enabled = false,
-                        ) {
+                        is VexStreamLocalCopyState.Downloading -> {
                             Text(
-                                stringResource(
-                                    R.string.vexstream_music_downloading,
-                                ),
-                            )
-                        }
-                    }
-
-                    else -> {
-                        if (state.hubAvailable) {
-                            OutlinedButton(
-                                onClick = onDownload,
-                            ) {
-                                Text(
+                                text =
                                     stringResource(
-                                        R.string.vexstream_music_download,
+                                        R.string.vexstream_music_downloading,
                                     ),
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .bodySmall,
+                                color =
+                                    MaterialTheme
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                            )
+                        }
+
+                        else -> {
+                            if (state.hubAvailable) {
+                                VexButton(
+                                    element =
+                                        VexStreamMusicScreen
+                                            .DownloadTrack,
+                                    handler = handler,
                                 )
                             }
                         }
