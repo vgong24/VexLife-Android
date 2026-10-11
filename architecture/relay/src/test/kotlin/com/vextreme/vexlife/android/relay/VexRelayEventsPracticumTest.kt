@@ -411,6 +411,15 @@ class VexRelayEventsPracticumTest {
                 currentScreenId = "home",
             ),
         )
+
+        /*
+         * inputStates is backed by StateFlow and is therefore conflated. Give the already-started
+         * collector a scheduling point before publishing the next distinct dependency snapshot so
+         * this test proves the intermediate coherent projection rather than relying on scheduler
+         * timing to preserve every synchronous write.
+         */
+        yield()
+
         events.preferenceChanged(
             AttentionPreferenceState(
                 acknowledgedEventRefs =
