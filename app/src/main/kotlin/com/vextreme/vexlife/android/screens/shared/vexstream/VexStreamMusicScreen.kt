@@ -1,29 +1,6 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
@@ -34,13 +11,14 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.close
 import com.vextreme.vexlife.android.elements.invoke
-import com.vextreme.vexlife.android.elements.vexElement
+import com.vextreme.vexlife.android.elements.open
+import com.vextreme.vexlife.android.elements.swapTo
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -52,10 +30,30 @@ import com.vextreme.vexlife.android.screens.ScreenActionContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/**
+ * One registered VexLife Screen, with feature-local library lenses.
+ *
+ * The static blueprint names only durable semantic surfaces. Songs/albums/artists remain dynamic
+ * repository data; playback lifetime/queue belongs to MediaSessionService.
+ */
 object VexStreamMusicScreen : AppScreenBlueprint(
     screenKey = "vexstream-music",
     titleRes = R.string.vexstream_music_title,
 ) {
+    val SongsPanel = scrollableColumnRef("body.library.songs")
+    val AlbumsPanel = scrollableColumnRef("body.library.albums")
+    val ArtistsPanel = scrollableColumnRef("body.library.artists")
+    val DownloadsPanel = scrollableColumnRef("body.library.downloads")
+
+    val LibraryContent = swappableRef(
+        id = "body.library",
+        defaultChild = SongsPanel,
+    )
+
+    val QueueSheet = modalBottomSheetRef(
+        id = "body.queue.sheet",
+    )
+
     val FindNearby = buttonRef(
         id = "body.connection.find",
         labelRes = R.string.vexstream_music_find,
@@ -84,8 +82,62 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = invoke(AppActions.ForgetPairedVexStream),
     )
 
+    val SongsTab = buttonRef(
+        id = "body.library-tabs.songs",
+        labelRes = R.string.vexstream_music_songs,
+        style = VexElementStyles.Navigation,
+        intent = swapTo(
+            container = LibraryContent,
+            child = SongsPanel,
+        ),
+    )
+
+    val AlbumsTab = buttonRef(
+        id = "body.library-tabs.albums",
+        labelRes = R.string.vexstream_music_albums,
+        style = VexElementStyles.Navigation,
+        intent = swapTo(
+            container = LibraryContent,
+            child = AlbumsPanel,
+        ),
+    )
+
+    val ArtistsTab = buttonRef(
+        id = "body.library-tabs.artists",
+        labelRes = R.string.vexstream_music_artists,
+        style = VexElementStyles.Navigation,
+        intent = swapTo(
+            container = LibraryContent,
+            child = ArtistsPanel,
+        ),
+    )
+
+    val DownloadsTab = buttonRef(
+        id = "body.library-tabs.downloads",
+        labelRes = R.string.vexstream_music_downloads,
+        style = VexElementStyles.Navigation,
+        intent = swapTo(
+            container = LibraryContent,
+            child = DownloadsPanel,
+        ),
+    )
+
+    val ShowQueue = buttonRef(
+        id = "body.player.queue.show",
+        labelRes = R.string.vexstream_music_queue,
+        style = VexElementStyles.SecondaryAction,
+        intent = open(QueueSheet),
+    )
+
+    val CloseQueue = buttonRef(
+        id = "body.queue.sheet.close",
+        labelRes = R.string.close,
+        style = VexElementStyles.SecondaryAction,
+        intent = close(QueueSheet),
+    )
+
     override val content = layout {
-        scrollableColumn("body") {
+        column("body") {
             card("connection") {
                 text(
                     id = "intro",
@@ -96,6 +148,26 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 button(ConfirmPairingCode)
                 button(RefreshCatalog)
                 button(ForgetPaired)
+            }
+
+            row("library-tabs") {
+                button(SongsTab)
+                button(AlbumsTab)
+                button(ArtistsTab)
+                button(DownloadsTab)
+            }
+
+            swappable(LibraryContent) {
+                scrollableColumn(SongsPanel) {}
+                scrollableColumn(AlbumsPanel) {}
+                scrollableColumn(ArtistsPanel) {}
+                scrollableColumn(DownloadsPanel) {}
+            }
+
+            button(ShowQueue)
+
+            modalBottomSheet(QueueSheet) {
+                button(CloseQueue)
             }
         }
     }
@@ -165,435 +237,11 @@ fun VexStreamMusicScreenContent(
     runtime: VexRuntime,
     repository: VexStreamMusicRepository,
 ) {
-    val state by repository.state.collectAsState()
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val inspectionMode = LocalInspectionMode.current
-    val mediaController =
-        if (inspectionMode) {
-            null
-        } else {
-            rememberVexStreamMediaController()
-        }
-    val playbackResolver =
-        remember(context.filesDir) {
-            VexStreamPlaybackSourceResolver(
-                context = context,
-            )
-        }
-
-    LaunchedEffect(repository) {
-        if (
-            repository.state.value.connectionState is VexStreamConnectionState.Paired
-        ) {
-            repository.refreshCatalog()
-        }
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item(key = "vexstream-connection") {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.vexstream_music_intro),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-
-                    VexStreamConnectionCardBody(
-                        state = state,
-                        runtime = runtime,
-                    )
-                }
-            }
-        }
-
-        val tracks = state.playableTracks()
-        if (tracks.isEmpty()) {
-            item(key = "vexstream-empty") {
-                Text(
-                    text = stringResource(R.string.vexstream_music_empty),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(vertical = 12.dp),
-                )
-            }
-        } else {
-            items(
-                items = tracks,
-                key = { it.track.trackRef.value },
-            ) { trackState ->
-                VexStreamTrackCard(
-                    state = trackState,
-                    canPlay = mediaController != null,
-                    onPlay = {
-                        mediaController?.playVexStream(
-                            state = trackState,
-                            resolver = playbackResolver,
-                        )
-                    },
-                    onDownload = {
-                        scope.launch {
-                            repository.downloadForOffline(
-                                trackState.track.trackRef,
-                            )
-                        }
-                    },
-                    onRemoveDownload = {
-                        scope.launch {
-                            repository.removeOfflineCopy(
-                                trackState.track.trackRef,
-                            )
-                        }
-                    },
-                )
-            }
-        }
-
-        item(key = "vexstream-bottom-space") {
-            Text(
-                text = "",
-                modifier = Modifier.padding(bottom = 20.dp),
-            )
-        }
-    }
+    VexStreamLibrarySurface(
+        runtime = runtime,
+        repository = repository,
+    )
 }
-
-@Composable
-private fun VexStreamConnectionCardBody(
-    state: VexStreamMusicState,
-    runtime: VexRuntime,
-) {
-    when (
-        val connection = state.connectionState
-    ) {
-        VexStreamConnectionState.NotPaired -> {
-            Text(
-                text = stringResource(
-                    R.string.vexstream_music_status_not_configured,
-                ),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Button(
-                onClick = {
-                    runtime.activate(
-                        VexStreamMusicScreen.FindNearby,
-                    )
-                },
-                modifier = Modifier.vexElement(
-                    VexStreamMusicScreen.FindNearby,
-                ),
-            ) {
-                Text(
-                    stringResource(
-                        R.string.vexstream_music_find,
-                    ),
-                )
-            }
-        }
-
-        VexStreamConnectionState.Searching -> {
-            Text(
-                text = stringResource(
-                    R.string.vexstream_music_status_searching,
-                ),
-                style = MaterialTheme.typography.titleMedium,
-            )
-        }
-
-        is VexStreamConnectionState.ConfirmCode -> {
-            Text(
-                text = connection.displayName,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(
-                    R.string.vexstream_music_pairing_code_title,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = formatPairingCode(
-                    connection.pairingCode,
-                ),
-                style = MaterialTheme.typography.headlineLarge,
-            )
-            Text(
-                text = stringResource(
-                    R.string.vexstream_music_pairing_code_help,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Button(
-                onClick = {
-                    runtime.activate(
-                        VexStreamMusicScreen.ConfirmPairingCode,
-                    )
-                },
-                modifier = Modifier.vexElement(
-                    VexStreamMusicScreen.ConfirmPairingCode,
-                ),
-            ) {
-                Text(
-                    stringResource(
-                        R.string.vexstream_music_confirm_code,
-                    ),
-                )
-            }
-        }
-
-        is VexStreamConnectionState.WaitingForDesktopApproval -> {
-            Text(
-                text = connection.displayName,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(
-                    R.string.vexstream_music_waiting_approval,
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-
-        is VexStreamConnectionState.Paired -> {
-            Text(
-                text =
-                    if (state.hubState is VexStreamHubState.Ready) {
-                        stringResource(
-                            R.string.vexstream_music_status_ready,
-                        ) + " · " + connection.displayName
-                    } else {
-                        stringResource(
-                            R.string.vexstream_music_status_unreachable,
-                        ) + " · " + connection.displayName
-                    },
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (state.hubState is VexStreamHubState.Ready) {
-                    Button(
-                        onClick = {
-                            runtime.activate(
-                                VexStreamMusicScreen.RefreshCatalog,
-                            )
-                        },
-                        modifier = Modifier.vexElement(
-                            VexStreamMusicScreen.RefreshCatalog,
-                        ),
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string.vexstream_music_refresh,
-                            ),
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            runtime.activate(
-                                VexStreamMusicScreen.FindNearby,
-                            )
-                        },
-                        modifier = Modifier.vexElement(
-                            VexStreamMusicScreen.FindNearby,
-                        ),
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string.vexstream_music_find,
-                            ),
-                        )
-                    }
-                }
-                OutlinedButton(
-                    onClick = {
-                        runtime.activate(
-                            VexStreamMusicScreen.ForgetPaired,
-                        )
-                    },
-                    modifier = Modifier.vexElement(
-                        VexStreamMusicScreen.ForgetPaired,
-                    ),
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexstream_music_forget,
-                        ),
-                    )
-                }
-            }
-        }
-
-        is VexStreamConnectionState.Failed -> {
-            Text(
-                text = stringResource(
-                    R.string.vexstream_music_pairing_failed,
-                ),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Button(
-                onClick = {
-                    runtime.activate(
-                        VexStreamMusicScreen.FindNearby,
-                    )
-                },
-                modifier = Modifier.vexElement(
-                    VexStreamMusicScreen.FindNearby,
-                ),
-            ) {
-                Text(
-                    stringResource(
-                        R.string.vexstream_music_find,
-                    ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun VexStreamTrackCard(
-    state: VexStreamTrackState,
-    canPlay: Boolean,
-    onPlay: () -> Unit,
-    onDownload: () -> Unit,
-    onRemoveDownload: () -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = state.track.title,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            if (state.track.artist.isNotBlank()) {
-                Text(
-                    text = state.track.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            if (state.track.album.isNotBlank()) {
-                Text(
-                    text = state.track.album,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                text = trackAvailabilityText(state),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Button(
-                    onClick = onPlay,
-                    enabled = canPlay,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexstream_music_play,
-                        ),
-                    )
-                }
-
-                when (state.localCopy) {
-                    is VexStreamLocalCopyState.Downloaded -> {
-                        OutlinedButton(
-                            onClick = onRemoveDownload,
-                        ) {
-                            Text(
-                                stringResource(
-                                    R.string.vexstream_music_remove_download,
-                                ),
-                            )
-                        }
-                    }
-
-                    is VexStreamLocalCopyState.Downloading -> {
-                        Button(
-                            onClick = {},
-                            enabled = false,
-                        ) {
-                            Text(
-                                stringResource(
-                                    R.string.vexstream_music_downloading,
-                                ),
-                            )
-                        }
-                    }
-
-                    else -> {
-                        if (state.hubAvailable) {
-                            Button(
-                                onClick = onDownload,
-                            ) {
-                                Text(
-                                    stringResource(
-                                        R.string.vexstream_music_download,
-                                    ),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun trackAvailabilityText(
-    state: VexStreamTrackState,
-): String =
-    when {
-        state.localCopy is VexStreamLocalCopyState.Downloading ->
-            stringResource(R.string.vexstream_music_downloading)
-
-        state.localCopy is VexStreamLocalCopyState.Downloaded ->
-            if (state.hubAvailable) {
-                stringResource(R.string.vexstream_music_downloaded)
-            } else {
-                stringResource(R.string.vexstream_music_local_only)
-            }
-
-        state.availability == VexStreamTrackAvailability.HUB_ONLY ->
-            stringResource(R.string.vexstream_music_hub_only)
-
-        state.availability == VexStreamTrackAvailability.LOCAL_ONLY ->
-            stringResource(R.string.vexstream_music_local_only)
-
-        else ->
-            stringResource(R.string.vexstream_music_unavailable)
-    }
-
-private fun formatPairingCode(
-    code: String,
-): String =
-    if (code.length == 6) {
-        code.take(3) + " " + code.takeLast(3)
-    } else {
-        code
-    }
 
 @VexScreenPreviews
 @Composable
@@ -602,14 +250,13 @@ private fun VexStreamMusicScreenPreview() {
         id = "vexstream-music",
         startScreen = VexStreamMusicScreen,
         repositoriesFactory = {
-            val repository =
-                InMemoryVexStreamMusicRepository(
-                    initialState = previewState(),
-                )
             com.vextreme.vexlife.android.preview.VexPreviewRepositories
                 .empty()
                 .copy(
-                    vexStream = repository,
+                    vexStream =
+                        InMemoryVexStreamMusicRepository(
+                            initialState = previewState(),
+                        ),
                 )
         },
     ) { context ->
@@ -623,10 +270,7 @@ private fun VexStreamMusicScreenPreview() {
 private fun previewState(): VexStreamMusicState {
     val streamed =
         VexStreamTrack(
-            trackRef =
-                VexStreamTrackRef(
-                    "preview.streamed",
-                ),
+            trackRef = VexStreamTrackRef("preview.streamed"),
             mediaSha256 =
                 VexStreamMediaSha256(
                     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -639,10 +283,7 @@ private fun previewState(): VexStreamMusicState {
         )
     val downloaded =
         VexStreamTrack(
-            trackRef =
-                VexStreamTrackRef(
-                    "preview.downloaded",
-                ),
+            trackRef = VexStreamTrackRef("preview.downloaded"),
             mediaSha256 =
                 VexStreamMediaSha256(
                     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
