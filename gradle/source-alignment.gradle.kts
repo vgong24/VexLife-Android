@@ -41,8 +41,8 @@ val collectSourceAlignmentViolations: () -> List<String> = {
             val source = file.readText()
             val relative = file.relativeTo(project.projectDir)
 
-            if (!source.contains("object $screenName : ScreenBlueprint")) {
-                violations += "$relative should declare 'object $screenName : ScreenBlueprint'"
+            if (!source.contains("object $screenName : AppScreenBlueprint")) {
+                violations += "$relative should declare 'object $screenName : AppScreenBlueprint'"
             }
 
             if (!source.contains("@VexScreenPreviews")) {
