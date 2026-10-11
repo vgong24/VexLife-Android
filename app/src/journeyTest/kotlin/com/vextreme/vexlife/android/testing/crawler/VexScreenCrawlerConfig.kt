@@ -248,9 +248,26 @@ data class VexScreenCrawlerCase(
             localeTag = locale.localeTag,
         )
 
+    /**
+     * Semantic scenario identity. Stable across locale/font configurations.
+     */
+    val scenarioRef: String
+        get() =
+            "$shardId/${journey.id}"
+
+    /**
+     * Evidence configuration identity. Stable for every scenario in the same batch folder.
+     */
+    val configurationRef: String
+        get() =
+            "${locale.id}/${font.id}"
+
+    /**
+     * Executable case identity = stable scenario + concrete configuration.
+     */
     val caseRef: String
         get() =
-            "crawler/$shardId/${journey.id}@${locale.id}+${font.id}"
+            "crawler/$scenarioRef@${locale.id}+${font.id}"
 
     override fun toString(): String =
         "$caseRef :: ${journey.title}"
