@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
@@ -49,6 +50,7 @@ import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexContainer
 import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
@@ -83,6 +85,21 @@ internal fun VexStreamLibrarySurface(
             VexStreamPlaybackSourceResolver(
                 context = context,
             )
+        }
+
+    var searchQuery by rememberSaveable {
+        mutableStateOf("")
+    }
+    val visibleTracks =
+        remember(
+            state.tracks,
+            searchQuery,
+        ) {
+            state.playableTracks().filter {
+                it.matchesSearch(
+                    searchQuery,
+                )
+            }
         }
 
     LaunchedEffect(repository) {
@@ -123,6 +140,18 @@ internal fun VexStreamLibrarySurface(
                     ),
             )
 
+            VexTextField(
+                element = VexStreamMusicScreen.SearchQuery,
+                value = searchQuery,
+                onValueChange = {
+                    searchQuery = it
+                },
+                modifier = Modifier.padding(
+                    horizontal = 12.dp,
+                    vertical = 4.dp,
+                ),
+            )
+
             VexStreamLibraryTabs(
                 selectedElementId = selected.elementId,
                 runtime = runtime,
@@ -137,7 +166,7 @@ internal fun VexStreamLibrarySurface(
                     VexStreamMusicScreen.AlbumsPanel.elementId ->
                         VexStreamAlbumsPane(
                             runtime = runtime,
-                            tracks = state.playableTracks(),
+                            tracks = visibleTracks,
                             controller = controller,
                             resolver = resolver,
                         )
@@ -145,7 +174,7 @@ internal fun VexStreamLibrarySurface(
                     VexStreamMusicScreen.ArtistsPanel.elementId ->
                         VexStreamArtistsPane(
                             runtime = runtime,
-                            tracks = state.playableTracks(),
+                            tracks = visibleTracks,
                             controller = controller,
                             resolver = resolver,
                         )
@@ -154,6 +183,8 @@ internal fun VexStreamLibrarySurface(
                         VexStreamPlaylistsPane(
                             runtime = runtime,
                             state = state,
+                            visibleTracks = visibleTracks,
+                            searchQuery = searchQuery,
                             controller = controller,
                             resolver = resolver,
                         )
@@ -161,7 +192,7 @@ internal fun VexStreamLibrarySurface(
                     VexStreamMusicScreen.DownloadsPanel.elementId ->
                         VexStreamDownloadsPane(
                             runtime = runtime,
-                            tracks = state.playableTracks(),
+                            tracks = visibleTracks,
                             repository = repository,
                             controller = controller,
                             resolver = resolver,
@@ -170,7 +201,7 @@ internal fun VexStreamLibrarySurface(
                     else ->
                         VexStreamSongsPane(
                             runtime = runtime,
-                            tracks = state.playableTracks(),
+                            tracks = visibleTracks,
                             repository = repository,
                             controller = controller,
                             resolver = resolver,
@@ -709,6 +740,8 @@ private fun VexStreamArtistsPane(
 private fun VexStreamPlaylistsPane(
     runtime: VexRuntime,
     state: VexStreamMusicState,
+    visibleTracks: List<VexStreamTrackState>,
+    searchQuery: String,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
 ) {
@@ -718,25 +751,62 @@ private fun VexStreamPlaylistsPane(
                 it.track.trackRef
             }
         }
+    val visibleRefs =
+        remember(visibleTracks) {
+            visibleTracks
+                .map { it.track.trackRef }
+                .toSet()
+        }
+    val normalizedQuery =
+        searchQuery.trim()
     val syncedLabel =
         stringResource(
             R.string.vexstream_music_playlist_synced,
         )
     val rows =
         state.playlists
-            .map { playlist ->
-                VexStreamCollectionRow(
-                    key =
-                        "playlist:" +
-                            playlist.playlistRef.value,
-                    title = playlist.name,
-                    subtitle = syncedLabel,
-                    tracks =
-                        playlist.trackRefs
-                            .mapNotNull(
-                                tracksByRef::get,
-                            ),
-                )
+            .mapNotNull { playlist ->
+                val allTracks =
+                    playlist.trackRefs
+                        .mapNotNull(
+                            tracksByRef::get,
+                        )
+                val playlistNameMatches =
+                    normalizedQuery.isNotBlank() &&
+                        playlist.name.contains(
+                            normalizedQuery,
+                            ignoreCase = true,
+                        )
+                val projectedTracks =
+                    when {
+                        normalizedQuery.isBlank() ->
+                            allTracks
+
+                        playlistNameMatches ->
+                            allTracks
+
+                        else ->
+                            allTracks.filter {
+                                it.track.trackRef in visibleRefs
+                            }
+                    }
+
+                if (
+                    normalizedQuery.isNotBlank() &&
+                    !playlistNameMatches &&
+                    projectedTracks.isEmpty()
+                ) {
+                    null
+                } else {
+                    VexStreamCollectionRow(
+                        key =
+                            "playlist:" +
+                                playlist.playlistRef.value,
+                        title = playlist.name,
+                        subtitle = syncedLabel,
+                        tracks = projectedTracks,
+                    )
+                }
             }
             .sortedBy {
                 it.title.lowercase()
@@ -1101,17 +1171,39 @@ private fun VexStreamTrackCard(
             Text(
                 text = state.track.title,
                 style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
-            if (state.track.artist.isNotBlank()) {
+            if (
+                state.track.artist.isNotBlank() &&
+                !state.track.artist.equals(
+                    state.track.title,
+                    ignoreCase = true,
+                )
+            ) {
                 Text(
                     text = state.track.artist,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (state.track.album.isNotBlank()) {
+            if (
+                state.track.album.isNotBlank() &&
+                !state.track.album.equals(
+                    state.track.title,
+                    ignoreCase = true,
+                ) &&
+                !state.track.album.equals(
+                    state.track.artist,
+                    ignoreCase = true,
+                )
+            ) {
                 Text(
                     text = state.track.album,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Text(
@@ -1229,12 +1321,16 @@ private fun VexStreamMiniPlayer(
                         )
                     },
                 style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             if (playback.currentArtist.isNotBlank()) {
                 Text(
                     text = playback.currentArtist,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Row(
@@ -1257,18 +1353,18 @@ private fun VexStreamMiniPlayer(
                     enabled =
                         controller?.hasNextMediaItem() == true,
                 )
-                VexButton(
-                    element = VexStreamMusicScreen.ToggleShuffle,
-                    handler = handler,
-                    style =
-                        if (playback.shuffleEnabled) {
-                            VexElementStyles.PrimaryAction
-                        } else {
-                            VexElementStyles.SecondaryAction
-                        },
-                    enabled = controller != null,
-                )
             }
+            VexButton(
+                element = VexStreamMusicScreen.ToggleShuffle,
+                handler = handler,
+                style =
+                    if (playback.shuffleEnabled) {
+                        VexElementStyles.PrimaryAction
+                    } else {
+                        VexElementStyles.SecondaryAction
+                    },
+                enabled = controller != null,
+            )
         }
 }
 
@@ -1526,6 +1622,29 @@ private fun trackAvailabilityText(
                 R.string.vexstream_music_unavailable,
             )
     }
+
+private fun VexStreamTrackState.matchesSearch(
+    query: String,
+): Boolean {
+    val normalized =
+        query.trim()
+    if (normalized.isBlank()) {
+        return true
+    }
+
+    return sequenceOf(
+        track.title,
+        track.artist,
+        track.album,
+        track.genre,
+        track.year,
+    ).any {
+        it.contains(
+            normalized,
+            ignoreCase = true,
+        )
+    }
+}
 
 private fun formatPairingCode(
     code: String,
