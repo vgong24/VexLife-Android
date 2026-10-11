@@ -15,6 +15,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import org.json.JSONArray
 
 data class VexStreamPairedConnection(
     val displayName: String,
@@ -24,6 +25,7 @@ data class VexStreamPairedConnection(
     val token: String,
     val remoteHomeRef: String? = null,
     val remoteGatewayPublicKey: String? = null,
+    val remoteDirectBaseUrls: List<String> = emptyList(),
     val remoteRelayBaseUrl: String? = null,
 ) {
     init {
@@ -34,6 +36,13 @@ data class VexStreamPairedConnection(
         require(token.isNotBlank())
         require(remoteHomeRef == null || remoteHomeRef.isNotBlank())
         require(remoteGatewayPublicKey == null || remoteGatewayPublicKey.isNotBlank())
+        require(remoteDirectBaseUrls.size <= MAX_REMOTE_DIRECT_ROUTES)
+        require(
+            remoteDirectBaseUrls.all {
+                it.startsWith("https://") &&
+                    it.length <= MAX_REMOTE_DIRECT_ROUTE_LENGTH
+            },
+        )
         require(remoteRelayBaseUrl == null || remoteRelayBaseUrl.startsWith("https://"))
     }
 
@@ -41,7 +50,10 @@ data class VexStreamPairedConnection(
         get() =
             !remoteHomeRef.isNullOrBlank() &&
                 !remoteGatewayPublicKey.isNullOrBlank() &&
-                !remoteRelayBaseUrl.isNullOrBlank()
+                (
+                    remoteDirectBaseUrls.isNotEmpty() ||
+                        !remoteRelayBaseUrl.isNullOrBlank()
+                )
 
     fun endpointBaseUrl(): String {
         val normalizedHost =
@@ -191,7 +203,8 @@ class VexStreamConnectionStore(
                 )
             if (
                 schema != SCHEMA_VERSION &&
-                schema != LEGACY_SCHEMA_VERSION
+                schema != LEGACY_SCHEMA_VERSION_V2 &&
+                schema != LEGACY_SCHEMA_VERSION_V1
             ) {
                 return null
             }
@@ -213,6 +226,13 @@ class VexStreamConnectionStore(
                     preferences.getString(
                         KEY_REMOTE_GATEWAY_PUBLIC_KEY,
                         null,
+                    ),
+                remoteDirectBaseUrls =
+                    decodeRemoteDirectBaseUrls(
+                        preferences.getString(
+                            KEY_REMOTE_DIRECT_BASE_URLS,
+                            null,
+                        ),
                     ),
                 remoteRelayBaseUrl =
                     preferences.getString(
@@ -238,6 +258,12 @@ class VexStreamConnectionStore(
                 connection.remoteGatewayPublicKey,
             )
             .putString(
+                KEY_REMOTE_DIRECT_BASE_URLS,
+                encodeRemoteDirectBaseUrls(
+                    connection.remoteDirectBaseUrls,
+                ),
+            )
+            .putString(
                 KEY_REMOTE_RELAY_BASE_URL,
                 connection.remoteRelayBaseUrl,
             )
@@ -254,8 +280,59 @@ class VexStreamConnectionStore(
             .remove(KEY_ENCRYPTED_TOKEN)
             .remove(KEY_REMOTE_HOME_REF)
             .remove(KEY_REMOTE_GATEWAY_PUBLIC_KEY)
+            .remove(KEY_REMOTE_DIRECT_BASE_URLS)
             .remove(KEY_REMOTE_RELAY_BASE_URL)
             .apply()
+    }
+
+    private fun encodeRemoteDirectBaseUrls(
+        routes: List<String>,
+    ): String =
+        JSONArray(
+            routes
+                .distinct()
+                .take(
+                    MAX_REMOTE_DIRECT_ROUTES,
+                ),
+        ).toString()
+
+    private fun decodeRemoteDirectBaseUrls(
+        encoded: String?,
+    ): List<String> {
+        if (encoded.isNullOrBlank()) {
+            return emptyList()
+        }
+
+        return runCatching {
+            val array =
+                JSONArray(
+                    encoded,
+                )
+            buildList {
+                for (
+                    index in
+                        0 until
+                            minOf(
+                                array.length(),
+                                MAX_REMOTE_DIRECT_ROUTES,
+                            )
+                ) {
+                    array.optString(
+                        index,
+                    ).takeIf {
+                        it.startsWith(
+                            "https://",
+                        ) &&
+                            it.length <=
+                            MAX_REMOTE_DIRECT_ROUTE_LENGTH
+                    }?.let(
+                        ::add,
+                    )
+                }
+            }.distinct()
+        }.getOrDefault(
+            emptyList(),
+        )
     }
 
     private fun encrypt(
@@ -352,8 +429,9 @@ class VexStreamConnectionStore(
 
     companion object {
         private const val PREFERENCES_NAME = "vexstream-mobile-connection"
-        private const val LEGACY_SCHEMA_VERSION = "vexstream.android.local-pairing/v1"
-        private const val SCHEMA_VERSION = "vexstream.android.local-pairing/v2"
+        private const val LEGACY_SCHEMA_VERSION_V1 = "vexstream.android.local-pairing/v1"
+        private const val LEGACY_SCHEMA_VERSION_V2 = "vexstream.android.local-pairing/v2"
+        private const val SCHEMA_VERSION = "vexstream.android.local-pairing/v3"
 
         private const val KEY_SCHEMA = "schema"
         private const val KEY_DEVICE_REF = "deviceRef"
@@ -364,7 +442,11 @@ class VexStreamConnectionStore(
         private const val KEY_ENCRYPTED_TOKEN = "encryptedToken"
         private const val KEY_REMOTE_HOME_REF = "remoteHomeRef"
         private const val KEY_REMOTE_GATEWAY_PUBLIC_KEY = "remoteGatewayPublicKey"
+        private const val KEY_REMOTE_DIRECT_BASE_URLS = "remoteDirectBaseUrls"
         private const val KEY_REMOTE_RELAY_BASE_URL = "remoteRelayBaseUrl"
+
+        private const val MAX_REMOTE_DIRECT_ROUTES = 8
+        private const val MAX_REMOTE_DIRECT_ROUTE_LENGTH = 512
 
         private const val ANDROID_KEY_STORE = "AndroidKeyStore"
         private const val KEY_ALIAS = "vexstream.mobile.connection.token.v1"
