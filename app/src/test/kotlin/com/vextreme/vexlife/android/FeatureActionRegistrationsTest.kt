@@ -36,6 +36,10 @@ class FeatureActionRegistrationsTest {
                 .single()
                 .ownerRef,
         )
+        assertTrue(
+            registrations[VexStreamMusicScreen.TogglePlayback]
+                .isEmpty(),
+        )
         assertEquals(
             TalkToVexScreen.screenId,
             registrations[TalkToVexScreen.PlaceholderAction]
