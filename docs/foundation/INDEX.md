@@ -101,6 +101,18 @@ creating a second mock data model.
 
 No generic `BaseRepository<T>` is admitted by this candidate.
 
+## ScreenCrawler evidence candidate
+
+Canonical detail: [`SCREEN-CRAWLER-EVIDENCE.md`](SCREEN-CRAWLER-EVIDENCE.md)
+
+### Intention
+
+A reviewer or localization/accessibility workflow should be able to select all shards, a subset of
+feature shards, one or more Screens, or exact journey refs, then execute those accepted semantic
+walks under chosen locale/font profiles and capture traceable screenshot evidence.
+
+This matrix is opt-in. Ordinary journey instrumentation remains baseline-only by default.
+
 ## Journey / Instrumentation candidate
 
 Canonical detail: [`JOURNEY-INSTRUMENTATION.md`](JOURNEY-INSTRUMENTATION.md)
