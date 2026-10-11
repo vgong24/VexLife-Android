@@ -37,6 +37,7 @@ coroutinesAndroid = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android
 coreKtx = { module = "androidx.core:core-ktx", version.ref = "core" }
 lifecycleViewModelKtx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 lifecycleViewModelCompose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+lifecycleRuntimeCompose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 coroutinesTest = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 androidxTestRunner = { module = "androidx.test:runner", version.ref = "androidxTest" }
 androidxTestExtJunit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }
