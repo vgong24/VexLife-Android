@@ -25,11 +25,11 @@ The standalone Android repository has a real lived body rather than only archite
 Android Window
 └── AppFrame
     ├── AppBar
-    ├── PageViewport
+    ├── ScreenViewport
     ├── BottomNavigation
     └── FAB / overlay slot
 
-pages/
+screens/
 ├── primary/
 │   ├── home/
 │   ├── events/
@@ -41,21 +41,27 @@ pages/
         └── graph/
 ~~~
 
-Ordinary pages declare their shape once through `PageBlueprint`; `VexElementTree` renders that
-same registered tree. Repository folders, page objects, element identities, AppGraph inspection, and
+Ordinary screens declare their shape once through `ScreenBlueprint`; `VexElementTree` renders that
+same registered tree. Repository folders, screen objects, element identities, AppGraph inspection, and
 command-click navigation now point toward the same structure.
 
 Lived-device feedback corrected:
 
 - Android safe-drawing / native phone boundary ownership through `AppFrame`;
 - Home / Events / Settings as primary peers with Home as root Back fallback;
-- shared/detail pages as pushed navigation;
-- transient presentation above page navigation;
-- page-local `NavigationTrail` for layered views such as AppGraph;
+- shared/detail screens as pushed navigation;
+- transient presentation above screen navigation;
+- screen-local `NavigationTrail` for layered views such as AppGraph;
 - one `BackResolution` consumed by native Android Back, toolbar visibility/execution, logging, and local/pushed/root behavior;
 - forward/backward local navigation animations as spatial opposites;
 - AppGraph self/cycle relationships visible without endless traversable loops;
-- readable source-adjacent debugging comments.
+- readable source-adjacent debugging comments;
+- one Screen destination vocabulary (`*Screen.kt`, `ScreenBlueprint`, `AppScreens`);
+- colocated `@VexScreenPreviews` plus reusable preview fixtures;
+- source-alignment Gradle checks that warn/fail on convention drift without pretending to prove behavior;
+- feature-local AppActionRegistration ownership behind one duplicate-safe AppActionRouter;
+- Vex launcher mark reused as the Android app icon;
+- themed system-bar background/icon appearance that follows current dark/light mode.
 
 ## Fresh successor reading order
 
@@ -64,20 +70,46 @@ Read narrowly, in this order:
 1. `README.md`
 2. `docs/foundation/INDEX.md`
 3. `docs/foundation/F1-UI-BLUEPRINT-HOME.md`
-4. `app/src/main/kotlin/com/vextreme/vexlife/android/pages/AppPages.kt`
-5. one ordinary page, preferably `pages/primary/home/HomePage.kt`
+4. `app/src/main/kotlin/com/vextreme/vexlife/android/screens/AppScreens.kt`
+5. one ordinary screen, preferably `screens/primary/home/HomeScreen.kt`
 6. `app/src/main/kotlin/com/vextreme/vexlife/android/ui/VexLifeApp.kt`
 7. `app/src/main/kotlin/com/vextreme/vexlife/android/runtime/VexRuntime.kt`
 8. `architecture/elements/src/main/kotlin/com/vextreme/vexlife/android/elements/ElementCells.kt`
 9. `architecture/elements/src/main/kotlin/com/vextreme/vexlife/android/elements/navigation/NavigationTrail.kt`
-10. `architecture/logging/README.md`
+10. `app/src/main/kotlin/com/vextreme/vexlife/android/preview/VexPreview.kt`
+11. `gradle/source-alignment.gradle.kts`
+12. `architecture/logging/README.md`
 
 Then re-ground the old architecture quarry:
 
-11. open draft PR #3, `[VexLife Android][F1-F3][REVIEW] Relay + VexAppScope + VexLogger foundations`
+13. open draft PR #3, `[VexLife Android][F1-F3][REVIEW] Relay + VexAppScope + VexLogger foundations`
 
 PR #3 predates the accepted UI/body work and is based on the old standalone base. Treat it as design
 evidence, examples, and tests to review—not as a branch to merge or cherry-pick wholesale.
+
+## Screen / Preview / action ownership conventions
+
+Use Screen for app destinations. Do not reintroduce Page as a parallel destination vocabulary.
+
+Each authored `*Screen.kt` keeps its ordinary `@VexScreenPreviews` entry beside the Screen source.
+Shared preview hosts/fixtures remain reusable, but the discoverable visual entry stays colocated.
+
+Static alignment and behavioral proof stay separate:
+
+~~~text
+:app:sourceAlignmentReport
+  warning-only convention drift
+
+:app:verifySourceAlignment
+  failing convention gate
+
+unit/integration/build/device proof
+  actual behavior
+~~~
+
+VexRuntime delivers semantic app actions to one AppActionRouter. Feature effects are registered beside
+their owning Screen and duplicate ActionKey ownership fails closed. VexLifeApp assembles registrations
+and broad-lifetime dependencies; it should not become a giant feature-action switchboard.
 
 ## Current state/memory model
 
@@ -85,10 +117,10 @@ Keep these lifetimes distinct:
 
 ~~~text
 UIBlueprintRegistry
-  fixed structural map for declared pages/elements during process life
+  fixed structural map for declared screens/elements during process life
 
 AppNavigationState
-  current primary selection + pushed shared/detail page stack
+  current primary selection + pushed shared/detail screen stack
 
 PresentationState.openElementIds
   transient presentation currently open
@@ -113,6 +145,9 @@ Do not silently turn one of these into persistence simply because future service
 
 Victor explicitly wants the database/repository architecture next, before returning to the broader
 Relay/AppScope nervous-system work.
+
+Current source candidate: draft PR #9, `[Data][DRAFT] Repository boundary + Room-backed Log History`.
+Ground its live head rather than trusting a chat-copied hash.
 
 The first consumer is Debug -> Log History, with User Profile added as the second repository proof:
 
@@ -150,7 +185,7 @@ Do NOT spend the next lane polishing more UI cells by default.
 
 The next useful question is:
 
-> Now that pages/elements/actions can be perceived and exercised, how do multiple real services,
+> Now that screens/elements/actions can be perceived and exercised, how do multiple real services,
 > systems, asynchronous lifetimes, and Sources of Truth become observable/controllable without the UI
 > becoming their semantic owner?
 
@@ -163,7 +198,7 @@ Use the existing UI as the proving surface:
 real service/source state
 -> rightful Relay / source owner
 -> runtime projection
--> page observes current truth
+-> screen observes current truth
 -> available actions are derived from that truth
 -> user intention routes to operation owner
 -> lifecycle/AppScope owns asynchronous work
@@ -185,7 +220,7 @@ systems and expose only actions that are valid for their current states.
    - operation/attempt owner,
    - Android presentation projection?
 
-3. How does a page observe that truth without becoming the owner of it?
+3. How does a screen observe that truth without becoming the owner of it?
 
 4. Which actions are currently available given the combined service/source states, and where is that
    availability decided?
@@ -250,10 +285,14 @@ Finish/prove the data-repository candidate first:
 Room/KSP Sync + compile
 -> LogHistory transaction + UserProfile update fixture/in-memory/unit tests
 -> Room v1 -> v2 migration + repository integration proof
+-> :app:verifySourceAlignment
+-> Android Studio Screen previews render
 -> physical-device User Profile: edit name -> Save -> persisted name visibly updates
 -> relaunch -> persisted name remains
 -> physical-device Log History persistence
 -> Reset clears persistence
+-> dark/light toggle keeps status + native navigation bars legible/themed
+-> launcher shows the Vex mark
 -> clean source state
 ~~~
 

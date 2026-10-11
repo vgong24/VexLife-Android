@@ -7,6 +7,7 @@ junit = "4.13.2"
 room = "2.8.5"
 ksp = "2.3.12"
 coroutines = "1.11.0"
+core = "1.19.1"
 
 [libraries]
 composeBom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -24,6 +25,7 @@ roomKtx = { module = "androidx.room:room-ktx", version.ref = "room" }
 roomCompiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 roomTesting = { module = "androidx.room:room-testing", version.ref = "room" }
 coroutinesAndroid = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+coreKtx = { module = "androidx.core:core-ktx", version.ref = "core" }
 coroutinesTest = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]

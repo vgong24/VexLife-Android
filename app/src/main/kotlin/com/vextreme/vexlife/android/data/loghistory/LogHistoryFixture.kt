@@ -13,12 +13,12 @@ import java.time.Instant
  * Example:
  *
  * val repeatedReset = LogHistoryFixture.build(startAt) {
- *     appOpened(HomePage)
+ *     appOpened(HomeScreen)
  *     afterSeconds(120)
- *     click(DebugButton, from = HomePage, to = DebugMenuPage)
+ *     click(DebugButton, from = HomeScreen, to = DebugMenuScreen)
  * }.append {
  *     afterSeconds(30)
- *     click(ResetButton, from = DebugMenuPage)
+ *     click(ResetButton, from = DebugMenuScreen)
  * }
  *
  * The fixture creates app/domain records, not Room entities. The same fixture can seed an

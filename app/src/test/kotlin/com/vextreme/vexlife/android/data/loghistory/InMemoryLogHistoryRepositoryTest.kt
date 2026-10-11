@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.data.loghistory
 
-import com.vextreme.vexlife.android.pages.primary.home.HomePage
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -12,7 +12,7 @@ class InMemoryLogHistoryRepositoryTest {
         val fixture = LogHistoryFixture.build(
             startAt = Instant.parse("2026-10-11T01:51:00Z"),
         ) {
-            appOpened(HomePage)
+            appOpened(HomeScreen)
         }
         val repository = InMemoryLogHistoryRepository(fixture.records)
 
@@ -21,7 +21,7 @@ class InMemoryLogHistoryRepositoryTest {
         repository.append(
             fixture.append {
                 afterSeconds(10)
-                back(from = HomePage)
+                back(from = HomeScreen)
             }.records.last(),
         )
         assertEquals(2, repository.records.value.size)

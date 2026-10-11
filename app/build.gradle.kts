@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.roomRuntime)
     implementation(libs.roomKtx)
     implementation(libs.coroutinesAndroid)
+    implementation(libs.coreKtx)
     ksp(libs.roomCompiler)
 
     testImplementation(libs.junit)
@@ -57,3 +58,6 @@ dependencies {
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+
+apply(from = rootProject.file("gradle/source-alignment.gradle.kts"))

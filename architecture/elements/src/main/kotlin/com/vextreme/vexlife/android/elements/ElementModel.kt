@@ -11,7 +11,7 @@ import androidx.annotation.StringRes
 value class ElementStyleKey(val value: String)
 
 /**
- * Small style vocabulary shared by page blueprints and the generic renderer.
+ * Small style vocabulary shared by screen blueprints and the generic renderer.
  */
 object VexElementStyles {
     val Default = ElementStyleKey("style.default")
@@ -38,7 +38,7 @@ enum class TextRole {
 }
 
 /**
- * Stable runtime identity for one semantic screen/page.
+ * Stable runtime identity for one semantic screen.
  *
  * It is deliberately smaller than a Composable: navigation, logging and AppGraph can refer to the
  * screen without owning how it is currently rendered.
@@ -138,7 +138,7 @@ open class ButtonElement(
 ) : UIElement(elementId, "Button", labelRes, style), ActionElement
 
 /**
- * Floating-action-button identity used by shell/page blueprints.
+ * Floating-action-button identity used by shell/screen blueprints.
  */
 open class FabElement(
     elementId: String,
@@ -172,7 +172,7 @@ open class TextElement(
 /**
  * Blueprint identity for an editable/read-only text field.
  *
- * The element owns label/identity, not the actual typed value. Page/runtime state supplies the value
+ * The element owns label/identity, not the actual typed value. Screen/runtime state supplies the value
  * through VexElementTree so production data is not stored inside the static blueprint.
  */
 open class TextFieldElement(

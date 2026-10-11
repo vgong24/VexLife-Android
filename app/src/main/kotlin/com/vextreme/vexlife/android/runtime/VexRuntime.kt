@@ -16,14 +16,14 @@ import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.elements.navigation.BackLayer
 
 /**
- * Owns transient presentation that sits above the current page.
+ * Owns transient presentation that sits above the current screen.
  *
  * Examples: an expanded FAB menu, dialog, or later a sheet. Opening one of these does NOT mean the
- * user navigated to another page, so it deliberately does not change [VexRuntime.currentScreen].
+ * user navigated to another screen, so it deliberately does not change [VexRuntime.currentScreen].
  *
  * Debugging:
  * - breakpoint [open], [close], or [closeTop] when a transient surface behaves incorrectly;
- * - inspect this object when the correct page is active but something is unexpectedly covering it.
+ * - inspect this object when the correct screen is active but something is unexpectedly covering it.
  */
 class PresentationState(
     private val registry: UIBlueprintRegistry,
@@ -88,17 +88,17 @@ class PresentationState(
 }
 
 /**
- * Owns the semantic page position of the app.
+ * Owns the semantic screen position of the app.
  *
- * Primary pages are peers: selecting Home -> Events changes [primarySelection] and does not build a
+ * Primary screens are peers: selecting Home -> Events changes [primarySelection] and does not build a
  * back stack. Home is also the primary-root fallback: Back from Events/Settings returns to Home
- * before Android is allowed to close the app. Shared/detail pages are pushed into [pageStack], so
+ * before Android is allowed to close the app. Shared/detail screens are pushed into [screenStack], so
  * Debug opened from Events still pops to Events first.
  *
  * Debugging a navigation problem:
- * - [current] answers "which page is active right now?";
+ * - [current] answers "which screen is active right now?";
  * - [primarySelection] answers "which Home/Events/Settings peer is underneath?";
- * - [pageStack] answers "which pushed pages led from that primary page to the current page?".
+ * - [screenStack] answers "which pushed screens led from that primary screen to the current screen?".
  */
 class AppNavigationState(
     initialPrimary: ScreenElement,
@@ -110,17 +110,17 @@ class AppNavigationState(
     var primarySelection by mutableStateOf(initialPrimary)
         private set
 
-    var pageStack by mutableStateOf<List<ScreenElement>>(emptyList())
+    var screenStack by mutableStateOf<List<ScreenElement>>(emptyList())
         private set
 
     val current: ScreenElement
-        get() = pageStack.lastOrNull() ?: primarySelection
+        get() = screenStack.lastOrNull() ?: primarySelection
 
     val nextBack: AppNavigationBack?
         get() = when {
-            pageStack.isNotEmpty() ->
-                AppNavigationBack.PopPage(
-                    target = pageStack.dropLast(1).lastOrNull() ?: primarySelection,
+            screenStack.isNotEmpty() ->
+                AppNavigationBack.PopScreen(
+                    target = screenStack.dropLast(1).lastOrNull() ?: primarySelection,
                 )
 
             primarySelection.screenId != primaryRoot.screenId ->
@@ -133,7 +133,7 @@ class AppNavigationState(
         }
 
     fun isPrimary(screen: ScreenElement = current): Boolean =
-        screen.screenId in primaryIds && pageStack.isEmpty()
+        screen.screenId in primaryIds && screenStack.isEmpty()
 
     fun selectPrimary(screen: ScreenElement) {
         require(screen.screenId in primaryIds) {
@@ -141,7 +141,7 @@ class AppNavigationState(
         }
 
         primarySelection = screen
-        pageStack = emptyList()
+        screenStack = emptyList()
     }
 
     fun push(screen: ScreenElement) {
@@ -151,19 +151,19 @@ class AppNavigationState(
         }
 
         if (current.screenId == screen.screenId) return
-        pageStack = pageStack + screen
+        screenStack = screenStack + screen
     }
 
-    fun popPage(): ScreenElement? {
-        if (pageStack.isEmpty()) return null
-        pageStack = pageStack.dropLast(1)
+    fun popScreen(): ScreenElement? {
+        if (screenStack.isEmpty()) return null
+        screenStack = screenStack.dropLast(1)
         return current
     }
 
     fun applyBack(step: AppNavigationBack): ScreenElement =
         when (step) {
-            is AppNavigationBack.PopPage -> {
-                pageStack = pageStack.dropLast(1)
+            is AppNavigationBack.PopScreen -> {
+                screenStack = screenStack.dropLast(1)
                 current
             }
 
@@ -190,7 +190,7 @@ data class AppActionRequest(
  * Front-door coordinator between declared UI intentions and the current running app.
  *
  * This is the most useful first breakpoint when an interaction or navigation result is surprising.
- * It does not contain page UI; page structure lives under `pages/`. It translates an element's
+ * It does not contain screen UI; screen structure lives under `screens/`. It translates an element's
  * declared intent into runtime state, logs the accepted action in semantic order, and lets Compose
  * re-render from the new state.
  *
@@ -199,17 +199,18 @@ data class AppActionRequest(
  * element click/toggle/FAB
  * -> [activate]
  * -> snapshot [currentScreen] BEFORE changing navigation
- * -> record the action + before/after page meaning
+ * -> record the action + before/after screen meaning
  * -> [applyIntent]
- * -> navigation/presentation state changes
- * -> Compose observes that state and renders the new result
+ * -> navigation/presentation state changes OR Invoke is handed to the app action dispatcher
+ * -> feature-local AppActionRegistration owns the effect
+ * -> Compose observes resulting state and renders the new result
  *
  * Debugging map:
- * - "What page is active?" -> [currentScreen]
+ * - "What screen is active?" -> [currentScreen]
  * - "How did I get here?" -> [navigation]
  * - "Is a dialog/FAB layer open above it?" -> [presentation]
  * - "What did this button actually request?" -> breakpoint [activate] and inspect element.intent
- * - "Why did a horizontal swipe change pages?" -> [onPagerSettled]
+ * - "Why did a horizontal swipe change screens?" -> [onPagerSettled]
  * - "Why did Back go here?" -> [goBack]
  */
 class VexRuntime(
@@ -226,9 +227,9 @@ class VexRuntime(
     val navigation = AppNavigationState(initialScreen, primaryScreens)
 
     /**
-     * The single runtime answer to "which semantic page is active right now?".
+     * The single runtime answer to "which semantic screen is active right now?".
      *
-     * This is intentionally easy to inspect in the debugger. Do not infer the active page from
+     * This is intentionally easy to inspect in the debugger. Do not infer the active screen from
      * whichever Composable happens to be mounted or from Android lifecycle callbacks.
      */
     val currentScreen: ScreenElement
@@ -259,10 +260,10 @@ class VexRuntime(
     }
 
     /**
-     * Makes one page-local navigation trail participate in the same Back chain as the app.
+     * Makes one screen-local navigation trail participate in the same Back chain as the app.
      *
      * A local layer is active only while its UI is mounted. Call [detachBackLayer] when that UI
-     * leaves composition so Back can fall through to the pushed page underneath.
+     * leaves composition so Back can fall through to the pushed screen underneath.
      */
     fun attachBackLayer(layer: BackLayer) {
         activeBackLayer = layer
@@ -286,7 +287,7 @@ class VexRuntime(
      *
      * Put a breakpoint here to observe every framework-routed button/FAB/toggle interaction before
      * it mutates navigation or presentation. [before] is captured first so logging cannot accidentally
-     * attribute a click to the destination page after navigation has already changed.
+     * attribute a click to the destination screen after navigation has already changed.
      */
     override fun activate(element: ActionElement) {
         activate(
@@ -337,7 +338,7 @@ class VexRuntime(
     }
 
     /**
-     * Commits a horizontal pager gesture only after the pager has settled on a primary page.
+     * Commits a horizontal pager gesture only after the pager has settled on a primary screen.
      *
      * Keeping this separate from raw scroll motion prevents half-finished swipes from becoming
      * semantic navigation history.
@@ -355,8 +356,8 @@ class VexRuntime(
      *
      * Resolution priority remains:
      * 1. transient presentation;
-     * 2. active page-local trail;
-     * 3. pushed app page;
+     * 2. active screen-local trail;
+     * 3. pushed app screen;
      * 4. primary peer fallback to Home;
      * 5. null at Home/root, allowing Android to own app exit.
      *
@@ -410,11 +411,11 @@ class VexRuntime(
     }
 
     /**
-     * The small interpreter for the sentence-like intent grammar declared by page elements.
+     * The small interpreter for the sentence-like intent grammar declared by screen elements.
      *
      * If an element's visible behavior is wrong but [activate] received the correct element, step
-     * through this method next. It is the point where NavigateTo/Open/Close/Toggle/SwapTo/Invoke
-     * become actual runtime changes.
+     * through this method next. It is the point where NavigateTo/Open/Close/Toggle/SwapTo become
+     * runtime changes and Invoke leaves the runtime for the single app-action dispatcher.
      */
     private fun applyIntent(
         intent: ElementIntent,

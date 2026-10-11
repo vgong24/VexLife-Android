@@ -51,21 +51,21 @@ import com.vextreme.vexlife.android.elements.navigateTo
 import com.vextreme.vexlife.android.elements.then
 import com.vextreme.vexlife.android.elements.toggle
 import com.vextreme.vexlife.android.elements.vexElement
-import com.vextreme.vexlife.android.pages.primary.events.EventsPage
-import com.vextreme.vexlife.android.pages.primary.home.HomePage
-import com.vextreme.vexlife.android.pages.primary.settings.SettingsPage
-import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
-import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPage
-import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePage
+import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
+import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
+import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
+import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.ui.VexLayoutTokens
 
 /**
  * App-wide chrome and its stable element identities.
  *
- * This owns toolbar, primary navigation, and FAB destinations that exist outside any one page.
- * Feature pages should be registered in AppPages and referenced here rather than rebuilding shell
- * controls inside the page.
+ * This owns toolbar, primary navigation, and FAB destinations that exist outside any one screen.
+ * Feature screens should be registered in AppScreens and referenced here rather than rebuilding shell
+ * controls inside the screen.
  */
 object AppShell {
     object Elements {
@@ -90,7 +90,7 @@ object AppShell {
             labelRes = R.string.nav_home,
             style = VexElementStyles.Navigation,
             icon = ElementIcon.Home,
-            intent = navigateTo(HomePage),
+            intent = navigateTo(HomeScreen),
         )
 
         object Events : ButtonElement(
@@ -98,7 +98,7 @@ object AppShell {
             labelRes = R.string.nav_events,
             style = VexElementStyles.Navigation,
             icon = ElementIcon.Events,
-            intent = navigateTo(EventsPage),
+            intent = navigateTo(EventsScreen),
         )
 
         object Settings : ButtonElement(
@@ -106,7 +106,7 @@ object AppShell {
             labelRes = R.string.nav_settings,
             style = VexElementStyles.Navigation,
             icon = ElementIcon.Settings,
-            intent = navigateTo(SettingsPage),
+            intent = navigateTo(SettingsScreen),
         )
 
         object FabCluster : StackElement("element.shell.fab-cluster")
@@ -124,7 +124,7 @@ object AppShell {
             labelRes = R.string.fab_debug,
             icon = ElementIcon.Debug,
             style = VexElementStyles.FabOption,
-            intent = close(FabOptions) then navigateTo(DebugMenuPage),
+            intent = close(FabOptions) then navigateTo(DebugMenuScreen),
         )
 
         object Gallery : FabElement(
@@ -132,7 +132,7 @@ object AppShell {
             labelRes = R.string.fab_gallery,
             icon = ElementIcon.Gallery,
             style = VexElementStyles.FabOption,
-            intent = close(FabOptions) then navigateTo(GalleryPage),
+            intent = close(FabOptions) then navigateTo(GalleryScreen),
         )
 
         object UserProfile : FabElement(
@@ -140,7 +140,7 @@ object AppShell {
             labelRes = R.string.fab_profile,
             icon = ElementIcon.Person,
             style = VexElementStyles.FabOption,
-            intent = close(FabOptions) then navigateTo(UserProfilePage),
+            intent = close(FabOptions) then navigateTo(UserProfileScreen),
         )
     }
 
@@ -246,9 +246,9 @@ fun PrimaryBottomNavigation(
         containerColor = MaterialTheme.colorScheme.surface,
         windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
-        PrimaryNavigationItem(AppShell.Elements.Home, HomePage, currentScreen, runtime)
-        PrimaryNavigationItem(AppShell.Elements.Events, EventsPage, currentScreen, runtime)
-        PrimaryNavigationItem(AppShell.Elements.Settings, SettingsPage, currentScreen, runtime)
+        PrimaryNavigationItem(AppShell.Elements.Home, HomeScreen, currentScreen, runtime)
+        PrimaryNavigationItem(AppShell.Elements.Events, EventsScreen, currentScreen, runtime)
+        PrimaryNavigationItem(AppShell.Elements.Settings, SettingsScreen, currentScreen, runtime)
     }
 }
 

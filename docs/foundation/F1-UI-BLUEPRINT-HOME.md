@@ -4,9 +4,11 @@
 
 ## Question
 
-> Can a developer open one page file, understand what it contains and where it can lead, then run the same structure without rebuilding it elsewhere?
+> Can a developer open one screen file, understand what it contains and where it can lead, then run
+> the same structure without rebuilding it elsewhere?
 
-The Home practicum is the first consumer. Lived use may correct the foundation when it exposes missing structure.
+The Home practicum is the first consumer. Lived use may correct the foundation when it exposes
+missing structure.
 
 ## Current construction shape
 
@@ -14,11 +16,11 @@ The Home practicum is the first consumer. Lived use may correct the foundation w
 Android window
   -> AppFrame
        -> AppBar
-       -> PageViewport
+       -> ScreenViewport
        -> BottomNavigation
        -> Overlay/FAB slot
 
-pages/
+screens/
   primary/
     home/
     events/
@@ -30,27 +32,28 @@ pages/
       elements/
       graph/
     profile/
-      UserProfilePage.kt
+      UserProfileScreen.kt
 ~~~
 
-AppFrame owns the safe drawing boundary relative to Android status/navigation/cutout space. Pages own their internal structural tree. The shell owns app-wide chrome.
+AppFrame owns the safe drawing boundary relative to Android status/navigation/cutout space. Screens
+own their internal structural tree. The shell owns app-wide chrome.
 
 ## Navigation
 
-Primary pages are peers, not accumulated history:
+Primary screens are peers, not accumulated history:
 
 ~~~text
 primarySelection = Home | Events | Settings
 ~~~
 
-Shared destinations are pushed over the selected primary page:
+Shared destinations are pushed over the selected primary screen:
 
 ~~~text
 Events
   -> Debug
 ~~~
 
-Transient presentation is shallower than a pushed page:
+Transient presentation is shallower than a pushed screen:
 
 ~~~text
 Events
@@ -62,8 +65,8 @@ Back resolves from one runtime plan, from the shallowest visible layer outward:
 
 ~~~text
 1. dismiss transient presentation
-2. else pop page-local NavigationTrail depth
-3. else pop pushed shared/detail page
+2. else pop screen-local NavigationTrail depth
+3. else pop pushed shared/detail screen
 4. else return Events/Settings to primary root Home
 5. else leave Home/root behavior to Android
 ~~~
@@ -71,9 +74,10 @@ Back resolves from one runtime plan, from the shallowest visible layer outward:
 The toolbar Back action and Android system Back consume the same resolved `BackResolution`; they do
 not independently recompute separate `canGoBack` condition trees.
 
-## Page authoring
+## Screen authoring
 
-A normal page declares its layout once through PageBlueprint. The renderer walks that same tree. Named elements are reserved for things another relationship must address.
+A normal screen declares its layout once through `ScreenBlueprint`. The renderer walks that same
+tree. Named elements are reserved for things another relationship must address.
 
 This removes the former duplication:
 
@@ -83,11 +87,32 @@ blueprint layout
 second handwritten Compose reconstruction
 ~~~
 
+Each `*Screen.kt` file also carries its ordinary `@VexScreenPreviews` entry so the visual form is
+visible beside the source that owns it.
+
+## Source alignment
+
+The Gradle source-alignment gate intentionally checks convention drift, not runtime behavior:
+
+~~~text
+./gradlew :app:sourceAlignmentReport
+  warning-only
+
+./gradlew :app:verifySourceAlignment
+  fails on source convention drift
+~~~
+
+It watches narrow contracts such as `*Screen.kt`/ScreenBlueprint/colocated Preview naming and
+explicit Room physical schema names. Navigation behavior, migrations, transactions, persistence, and
+device behavior remain unit/integration/lived proof responsibilities.
+
 ## AppGraph
 
 The graph is a projection of registered relationships, not a second registry.
 
-A current screen is not emitted as a traversable next target. A screen already present in the current exploration path may be shown as an existing relationship but cannot be descended into again. Cycles stay visible without becoming endless traversal.
+A current screen is not emitted as a traversable next target. A screen already present in the current
+exploration path may be shown as an existing relationship but cannot be descended into again. Cycles
+stay visible without becoming endless traversal.
 
 ## Session memory
 
@@ -103,10 +128,10 @@ PresentationState.selectedByContainer
   e.g. Gallery Content -> AppGraph
 
 NavigationTrail.path
-  page-local depth while that local view is mounted
+  screen-local depth while that local view is mounted
 
 AppNavigationState
-  selected primary page + pushed shared/detail pages
+  selected primary screen + pushed shared/detail screens
 
 VexLogger.history
   bounded recent records (currently 256)
@@ -124,9 +149,37 @@ A submit control such as User Profile Save creates one immutable `FormSubmission
 TextFieldElement identities. VexRuntime logs the Save interaction once, forwards the submission to
 the app-action owner, and does not include raw submitted field values in the readable diagnostic log.
 
+## Scoped app-action ownership
+
+A Screen may declare an Invoke action, but its feature effect should remain perceptible beside the
+Screen/domain that owns it.
+
+~~~text
+Screen element
+-> VexRuntime semantic logging
+-> AppActionRouter
+-> exactly one feature-local AppActionRegistration
+-> effect
+~~~
+
+VexLifeApp assembles registrations and broad-lifetime dependencies only. It should not accumulate a
+global feature `when` statement, and Screens should not subscribe as broadcast listeners.
+AppActionRouter rejects duplicate ActionKey ownership; unit tests protect that delivery behavior.
+
+## Android system surface
+
+VexLifeTheme draws the app background across the full edge-to-edge window while AppFrame applies
+safeDrawing to the usable screen shell. Status/navigation icon appearance follows the active
+dark/light theme, so Android-owned controls remain legible without white default strips around a
+dark app.
+
+The launcher icon reuses the canonical Vex mark with Android adaptive-icon resources rather than
+introducing a separate app identity.
+
 ## Logging
 
-Navigation intent is observed against the current runtime page before navigation state changes. System Back is also recorded when it changes presentation/page state.
+Navigation intent is observed against the current runtime screen before navigation state changes.
+System Back is also recorded when it changes presentation/screen state.
 
 Platform lifecycle callback order remains separate from semantic navigation order.
 

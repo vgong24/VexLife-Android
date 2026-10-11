@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.data.loghistory
 
-import com.vextreme.vexlife.android.pages.primary.home.HomePage
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -18,11 +18,11 @@ class LogHistoryPersistenceQueueTest {
         val fixture = LogHistoryFixture.build(
             startAt = Instant.parse("2026-10-11T01:51:00Z"),
         ) {
-            appOpened(HomePage)
+            appOpened(HomeScreen)
         }
         val afterReset = fixture.append {
             afterSeconds(10)
-            back(from = HomePage)
+            back(from = HomeScreen)
         }.records.last()
 
         val queue = LogHistoryPersistenceQueue(

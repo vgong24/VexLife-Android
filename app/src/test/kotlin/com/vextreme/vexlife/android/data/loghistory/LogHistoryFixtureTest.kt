@@ -1,7 +1,7 @@
 package com.vextreme.vexlife.android.data.loghistory
 
-import com.vextreme.vexlife.android.pages.primary.home.HomePage
-import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.shell.AppShell
 import java.time.Instant
 import org.junit.Assert.assertEquals
@@ -13,20 +13,20 @@ class LogHistoryFixtureTest {
         val base = LogHistoryFixture.build(
             startAt = Instant.parse("2026-10-11T01:51:00Z"),
         ) {
-            appOpened(HomePage)
+            appOpened(HomeScreen)
             afterSeconds(120)
             click(
                 element = AppShell.Elements.DebugMenu,
-                from = HomePage,
-                to = DebugMenuPage,
+                from = HomeScreen,
+                to = DebugMenuScreen,
             )
         }
 
         val extended = base.append {
             afterSeconds(30)
             click(
-                element = DebugMenuPage.ResetLog,
-                from = DebugMenuPage,
+                element = DebugMenuScreen.ResetLog,
+                from = DebugMenuScreen,
             )
         }
 

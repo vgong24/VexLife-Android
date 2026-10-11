@@ -119,7 +119,7 @@ prefers a different aesthetic.
 ```text
 Kotlin type / object / enum names
   PascalCase
-  UserProfileRepository, DebugMenuPage
+  UserProfileRepository, DebugMenuScreen
 
 Kotlin functions / properties / locals / parameters
   camelCase
@@ -154,6 +154,78 @@ across Kotlin, SQL, Android resources, semantic refs, and wire protocols.
 
 If a rename changes persisted SQL or an external serialized name, it is a compatibility/migration
 change, not a cosmetic refactor.
+
+## Screen is the UI destination vocabulary
+
+Use **Screen** for app destinations and their source files:
+
+```text
+ScreenElement
+ScreenBlueprint
+ScreenRegistration
+HomeScreen.kt
+AppScreens
+screens/primary/...
+screens/shared/...
+```
+
+Do not alternate between Page and Screen for the same app-destination concept. Framework APIs may
+still use their own terms (for example HorizontalPager's page index); do not rename framework
+vocabulary merely to mimic the domain.
+
+Every authored `*Screen.kt` keeps its ordinary `@VexScreenPreviews` entry in the same source file.
+Shared preview fixtures/hosts may be centralized, but the visible preview entry point stays beside
+the Screen a worker is editing.
+
+## Static alignment is not behavioral proof
+
+The Gradle source-alignment gate answers only:
+
+> did source drift away from repository-owned naming/placement conventions?
+
+It may check cheap structural facts such as:
+
+- `*Screen.kt` + `ScreenBlueprint` + colocated Preview;
+- Screen registration in `AppScreens`;
+- absence of retired `*Page.kt` / `PageBlueprint` destination vocabulary;
+- explicit Room table/column names.
+
+It must not pretend source scanning proves navigation, migrations, transactions, persistence,
+cancellation, or device behavior. Those remain unit/integration/build/lived proof.
+
+Use:
+
+```text
+:app:sourceAlignmentReport
+  warning-only orientation
+
+:app:verifySourceAlignment
+  failing verification
+```
+
+## Action ownership stays scoped
+
+VexRuntime may deliver an app action through one dispatcher, but feature effects should remain beside
+the Screen/domain that owns them.
+
+```text
+Screen declares action
+-> VexRuntime logs semantic interaction
+-> AppActionRouter
+-> exactly one feature-local AppActionRegistration
+-> effect owner
+```
+
+Do not grow a giant action `when` in VexLifeApp, and do not create broadcast listeners on multiple
+Screens. `AppActionRouter` rejects duplicate ActionKey ownership so two features cannot silently
+respond to one Save/Reset action.
+
+Registrations are not accumulating subscriptions. App composition builds a fresh immutable router
+view; recomposition replaces that view rather than adding another listener. A duplicate owner fails
+at router construction, and an invoked action with no owner fails at dispatch.
+
+The app composition may assemble registrations and supply broader-lifetime dependencies; it should
+not re-describe the feature's business effect.
 
 ## Platform-native responsibility
 

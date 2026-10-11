@@ -3,12 +3,12 @@ package com.vextreme.vexlife.android
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.elements.FormSubmission
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
-import com.vextreme.vexlife.android.pages.AppPages
-import com.vextreme.vexlife.android.pages.primary.events.EventsPage
-import com.vextreme.vexlife.android.pages.primary.home.HomePage
-import com.vextreme.vexlife.android.pages.primary.settings.SettingsPage
-import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
-import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePage
+import com.vextreme.vexlife.android.screens.AppScreens
+import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
+import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
+import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.runtime.AppActionRequest
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.AppNavigationBack
@@ -26,25 +26,25 @@ class VexRuntimeNavigationTest {
         onAppAction: (AppActionRequest) -> Unit = {},
     ): VexRuntime =
         VexRuntime(
-            registry = AppPages.registry,
+            registry = AppScreens.registry,
             logger = logger,
-            initialScreen = HomePage,
-            primaryScreens = AppPages.primary,
+            initialScreen = HomeScreen,
+            primaryScreens = AppScreens.primary,
             onAppAction = onAppAction,
         )
 
     @Test
-    fun primaryPagesArePeersNotAStack() {
+    fun primaryScreensArePeersNotAStack() {
         val runtime = runtime()
 
         runtime.activate(AppShell.Elements.Events)
 
-        assertEquals(EventsPage.screenId, runtime.currentScreen.screenId)
-        assertTrue(runtime.navigation.pageStack.isEmpty())
+        assertEquals(EventsScreen.screenId, runtime.currentScreen.screenId)
+        assertTrue(runtime.navigation.screenStack.isEmpty())
 
         val back = runtime.nextBack as BackResolution.AppNavigation
         val root = back.step as AppNavigationBack.ReturnToPrimaryRoot
-        assertEquals(HomePage.screenId, root.target.screenId)
+        assertEquals(HomeScreen.screenId, root.target.screenId)
     }
 
     @Test
@@ -53,35 +53,35 @@ class VexRuntimeNavigationTest {
 
         runtime.activate(AppShell.Elements.Settings)
 
-        assertEquals(SettingsPage.screenId, runtime.currentScreen.screenId)
+        assertEquals(SettingsScreen.screenId, runtime.currentScreen.screenId)
         assertTrue(runtime.goBack())
-        assertEquals(HomePage.screenId, runtime.currentScreen.screenId)
+        assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
 
         assertEquals(null, runtime.nextBack)
         assertFalse(runtime.goBack())
     }
 
     @Test
-    fun sharedPagePushesAndBackReturnsToTheSelectedPrimaryPage() {
+    fun sharedScreenPushesAndBackReturnsToTheSelectedPrimaryScreen() {
         val runtime = runtime()
 
         runtime.activate(AppShell.Elements.Events)
         runtime.activate(AppShell.Elements.DebugMenu)
 
-        assertEquals(DebugMenuPage.screenId, runtime.currentScreen.screenId)
+        assertEquals(DebugMenuScreen.screenId, runtime.currentScreen.screenId)
 
         val back = runtime.nextBack as BackResolution.AppNavigation
-        val pop = back.step as AppNavigationBack.PopPage
-        assertEquals(EventsPage.screenId, pop.target.screenId)
+        val pop = back.step as AppNavigationBack.PopScreen
+        assertEquals(EventsScreen.screenId, pop.target.screenId)
 
         runtime.goBack(back)
 
-        assertEquals(EventsPage.screenId, runtime.currentScreen.screenId)
-        assertTrue(runtime.navigation.pageStack.isEmpty())
+        assertEquals(EventsScreen.screenId, runtime.currentScreen.screenId)
+        assertTrue(runtime.navigation.screenStack.isEmpty())
     }
 
     @Test
-    fun pageLocalBackLayerPopsBeforeLeavingThePushedPage() {
+    fun screenLocalBackLayerPopsBeforeLeavingThePushedScreen() {
         val runtime = runtime()
         val trail = NavigationTrail("root")
 
@@ -98,7 +98,7 @@ class VexRuntimeNavigationTest {
 
         runtime.goBack()
 
-        assertEquals(HomePage.screenId, runtime.currentScreen.screenId)
+        assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
     }
 
     @Test
@@ -114,15 +114,15 @@ class VexRuntimeNavigationTest {
 
         val typedName = "Victor Private Draft"
         runtime.submit(
-            element = UserProfilePage.Save,
+            element = UserProfileScreen.Save,
             submission = FormSubmission.of(
-                UserProfilePage.DisplayName to typedName,
+                UserProfileScreen.DisplayName to typedName,
             ),
         )
 
-        assertEquals(typedName, request?.submission?.value(UserProfilePage.DisplayName))
+        assertEquals(typedName, request?.submission?.value(UserProfileScreen.DisplayName))
         assertEquals(AppActions.SaveUserProfile, request?.action)
-        assertEquals(UserProfilePage.Save.elementId, request?.source?.elementId)
+        assertEquals(UserProfileScreen.Save.elementId, request?.source?.elementId)
 
         val text = logger.renderHistory()
         assertTrue(text.contains("UserProfile.Body.Profile.Actions.Save"))
@@ -130,23 +130,23 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
-    fun backDismissesPresentationBeforePoppingItsPage() {
+    fun backDismissesPresentationBeforePoppingItsScreen() {
         val runtime = runtime()
 
         runtime.activate(AppShell.Elements.DebugMenu)
-        runtime.activate(DebugMenuPage.ShowLog)
+        runtime.activate(DebugMenuScreen.ShowLog)
 
-        assertTrue(runtime.presentation.isOpen(DebugMenuPage.LogDialog))
-        assertEquals(DebugMenuPage.screenId, runtime.currentScreen.screenId)
+        assertTrue(runtime.presentation.isOpen(DebugMenuScreen.LogDialog))
+        assertEquals(DebugMenuScreen.screenId, runtime.currentScreen.screenId)
         assertEquals(BackResolution.DismissPresentation, runtime.nextBack)
 
         runtime.goBack(requireNotNull(runtime.nextBack))
 
-        assertFalse(runtime.presentation.isOpen(DebugMenuPage.LogDialog))
-        assertEquals(DebugMenuPage.screenId, runtime.currentScreen.screenId)
+        assertFalse(runtime.presentation.isOpen(DebugMenuScreen.LogDialog))
+        assertEquals(DebugMenuScreen.screenId, runtime.currentScreen.screenId)
 
         runtime.goBack()
 
-        assertEquals(HomePage.screenId, runtime.currentScreen.screenId)
+        assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
     }
 }

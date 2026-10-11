@@ -26,37 +26,37 @@ import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
-import com.vextreme.vexlife.android.data.userprofile.UserProfile
-import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
-import com.vextreme.vexlife.android.pages.AppPages
-import com.vextreme.vexlife.android.pages.primary.home.HomePage
-import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
-import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPageContent
-import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPage
-import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPageContent
-import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePage
-import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePageContent
-import com.vextreme.vexlife.android.runtime.AppActionRequest
-import com.vextreme.vexlife.android.runtime.AppActions
+import com.vextreme.vexlife.android.screens.AppScreens
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
+import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreenContent
+import com.vextreme.vexlife.android.screens.shared.debug.debugMenuActionRegistrations
+import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
+import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreenContent
+import com.vextreme.vexlife.android.screens.shared.gallery.galleryActionRegistrations
+import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreenContent
+import com.vextreme.vexlife.android.screens.shared.profile.userProfileActionRegistrations
+import com.vextreme.vexlife.android.runtime.AppActionRouter
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.preview.VexPreviewRepositories
+import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.shell.AppFrame
-import java.time.Instant
-import kotlinx.coroutines.launch
 
 /**
  * Application composition root.
  *
- * Read this file for "what gets wired together?", not for individual page layout. The useful descent
+ * Read this file for "what gets wired together?", not for individual screen layout. The useful descent
  * path while debugging is:
  *
  * VexLifeApp
  * -> AppFrame (phone-safe shell)
- * -> VexRuntime (current page + navigation/presentation transitions)
- * -> AppPages (registered page objects)
- * -> pages/<role>/<page>/... (the page's actual blueprint/source)
+ * -> VexRuntime (current screen + navigation/presentation transitions)
+ * -> AppScreens (registered screen objects)
+ * -> screens/<role>/<screen>/... (the screen's actual blueprint/source)
  */
 @Composable
 fun VexLifeApp() {
@@ -91,58 +91,37 @@ internal fun VexLifeApp(
     val logger = remember(logPersistence) {
         VexLogger(onRecord = logPersistence::record)
     }
-    val registry = remember { AppPages.registry }
+    val registry = remember { AppScreens.registry }
 
-    val currentActionHandler by rememberUpdatedState<(AppActionRequest) -> Unit> { request ->
-        when (request.action.actionId) {
-            AppActions.ToggleDarkMode.actionId -> darkTheme = !darkTheme
-
-            AppActions.ClearLogHistory.actionId -> {
-                // Reset is one user intention projected to both current-memory and persisted history.
-                logger.clearHistory()
-                logPersistence.clear()
-            }
-
-            AppActions.SaveUserProfile.actionId -> {
-                val requestedName = request.submission
-                    ?.value(UserProfilePage.DisplayName)
-                    ?.trim()
-                    .orEmpty()
-
-                if (requestedName.isNotEmpty()) {
-                    /*
-                     * The form submitted one immutable snapshot. Persist that snapshot; do not read
-                     * mutable Compose draft state from here.
-                     *
-                     * This composition scope is the temporary async owner. VexAppScope can replace
-                     * it later without changing the action/repository/page contracts.
-                     */
-                    appScope.launch {
-                        repositories.userProfile.upsert(
-                            UserProfile(
-                                profileRef = UserProfileRefs.local,
-                                displayName = requestedName,
-                                updatedAt = Instant.now(),
-                            ),
-                        )
-                    }
-                }
-            }
-
-            else -> Unit
-        }
-    }
+    /*
+     * Feature effects stay beside the Screens that declare them. This root only composes the
+     * registrations. AppActionRouter rejects duplicate ActionKey ownership before dispatch.
+     */
+    val actionRouter = AppActionRouter(
+        registrations =
+            debugMenuActionRegistrations(
+                toggleDarkMode = { darkTheme = !darkTheme },
+                logger = logger,
+                logPersistence = logPersistence,
+            ) +
+                galleryActionRegistrations() +
+                userProfileActionRegistrations(
+                    repository = repositories.userProfile,
+                    scope = appScope,
+                ),
+    )
+    val currentActionRouter by rememberUpdatedState(actionRouter)
 
     // One runtime instance owns the current navigation/presentation state for this app composition.
-    // In a debugger, inspect this variable first; runtime.currentScreen is the active semantic page.
+    // In a debugger, inspect this variable first; runtime.currentScreen is the active semantic screen.
     val runtime = remember(registry, logger) {
         VexRuntime(
             registry = registry,
             logger = logger,
-            initialScreen = HomePage,
-            primaryScreens = AppPages.primary,
+            initialScreen = HomeScreen,
+            primaryScreens = AppScreens.primary,
             onAppAction = { request ->
-                currentActionHandler(request)
+                currentActionRouter.dispatch(request)
             },
         )
     }
@@ -168,23 +147,23 @@ private fun VexLifeScaffold(
     userProfileRepository: UserProfileRepository,
     darkTheme: Boolean,
 ) {
-    val primaryPages = AppPages.primary
+    val primaryScreens = AppScreens.primary
     val pagerState = rememberPagerState(
-        initialPage = primaryPages.indexOfFirst {
+        initialPage = primaryScreens.indexOfFirst {
             it.screenId == runtime.currentScreen.screenId
         }.coerceAtLeast(0),
-        pageCount = { primaryPages.size },
+        pageCount = { primaryScreens.size },
     )
 
-    // Runtime navigation -> pager: taps/navigation intents move the visible primary pager.
+    // Runtime navigation -> pager: taps/navigation intents move the visible primary screen pager.
     LaunchedEffect(runtime.currentScreen.screenId) {
-        val targetPage = primaryPages.indexOfFirst {
+        val targetScreenIndex = primaryScreens.indexOfFirst {
             it.screenId == runtime.currentScreen.screenId
         }
 
-        if (targetPage >= 0 && pagerState.settledPage != targetPage) {
+        if (targetScreenIndex >= 0 && pagerState.settledPage != targetScreenIndex) {
             pagerState.animateScrollToPage(
-                page = targetPage,
+                page = targetScreenIndex,
                 animationSpec = tween(VexMotionTokens.SpatialMs),
             )
         }
@@ -193,7 +172,7 @@ private fun VexLifeScaffold(
     // Pager -> runtime navigation: a completed swipe becomes semantic navigation only after settling.
     LaunchedEffect(pagerState.settledPage, pagerState.isScrollInProgress) {
         if (!pagerState.isScrollInProgress && runtime.isPrimary()) {
-            runtime.onPagerSettled(primaryPages[pagerState.settledPage])
+            runtime.onPagerSettled(primaryScreens[pagerState.settledPage])
         }
     }
 
@@ -207,22 +186,22 @@ private fun VexLifeScaffold(
              * AppFrame
              * ├── toolbar / FAB / bottom navigation      (shell/AppShell.kt)
              * └── HorizontalPager
-             *     ├── HomePage.content                  (pages/primary/home/HomePage.kt)
-             *     ├── EventsPage.content                (pages/primary/events/EventsPage.kt)
-             *     └── SettingsPage.content              (pages/primary/settings/SettingsPage.kt)
+             *     ├── HomeScreen.content                  (screens/primary/home/HomeScreen.kt)
+             *     ├── EventsScreen.content                (screens/primary/events/EventsScreen.kt)
+             *     └── SettingsScreen.content              (screens/primary/settings/SettingsScreen.kt)
              *
-             * "page" below is only the pager index. The page's real readable blueprint lives in the
-             * corresponding PageBlueprint file. Start at AppPages.primary and command-click the page
+             * "screenIndex" below is only the pager index. The screen's real readable blueprint lives in the
+             * corresponding ScreenBlueprint file. Start at AppScreens.primary and command-click the screen
              * object when you want to change what a screen looks like; do not edit VexElementTree to
-             * make one page-specific visual change.
+             * make one screen-specific visual change.
              */
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
-                key = { primaryPages[it].screenId },
-            ) { page ->
+                key = { primaryScreens[it].screenId },
+            ) { screenIndex ->
                 VexElementTree(
-                    placement = primaryPages[page].content,
+                    placement = primaryScreens[screenIndex].content,
                     registry = runtime.registry,
                     handler = runtime,
                     modifier = Modifier.fillMaxSize(),
@@ -231,17 +210,17 @@ private fun VexLifeScaffold(
             }
         } else {
             /*
-             * VISUAL ORIENTATION — pushed/shared page body
+             * VISUAL ORIENTATION — pushed/shared screen body
              *
-             * Shared pages are not children of whichever primary page opened them. They live under
-             * pages/shared because Home, Events, or Settings may all navigate to the same destination.
+             * Shared screens are not children of whichever primary screen opened them. They live under
+             * screens/shared because Home, Events, or Settings may all navigate to the same destination.
              *
-             * currentScreen tells us WHICH shared page is active; the page-specific file tells us
+             * currentScreen tells us WHICH shared screen is active; the screen-specific file tells us
              * WHAT it looks like:
              *
-             * DebugMenuPage -> pages/shared/debug/DebugMenuPage.kt
-             * GalleryPage     -> pages/shared/gallery/GalleryPage.kt
-             * UserProfilePage -> pages/shared/profile/UserProfilePage.kt
+             * DebugMenuScreen -> screens/shared/debug/DebugMenuScreen.kt
+             * GalleryScreen     -> screens/shared/gallery/GalleryScreen.kt
+             * UserProfileScreen -> screens/shared/profile/UserProfileScreen.kt
              *
              * If this list grows enough to become hard to scan, earn a renderer/registry abstraction
              * then. For the current small set, this explicit switch is easier to debug than hidden magic.
@@ -253,18 +232,18 @@ private fun VexLifeScaffold(
                     (slideInHorizontally { it } + fadeIn())
                         .togetherWith(slideOutHorizontally { -it / 3 } + fadeOut())
                 },
-                label = "shared-page",
+                label = "shared-screen",
             ) { screenId ->
                 when (screenId) {
-                    DebugMenuPage.screenId -> DebugMenuPageContent(
+                    DebugMenuScreen.screenId -> DebugMenuScreenContent(
                         runtime = runtime,
                         logHistoryRepository = logHistoryRepository,
                         darkTheme = darkTheme,
                     )
 
-                    GalleryPage.screenId -> GalleryPageContent(runtime)
+                    GalleryScreen.screenId -> GalleryScreenContent(runtime)
 
-                    UserProfilePage.screenId -> UserProfilePageContent(
+                    UserProfileScreen.screenId -> UserProfileScreenContent(
                         runtime = runtime,
                         repository = userProfileRepository,
                     )
@@ -274,3 +253,18 @@ private fun VexLifeScaffold(
     }
 }
 
+
+
+/**
+ * Whole-app smoke preview.
+ *
+ * Screen previews answer "does this screen/state look right?" This checks the composition of shell,
+ * system-safe frame, initial Home screen, and in-memory repository environment without opening Room.
+ */
+@VexScreenPreviews
+@Composable
+private fun VexLifeAppPreview() {
+    VexLifeApp(
+        repositories = VexPreviewRepositories.empty(),
+    )
+}

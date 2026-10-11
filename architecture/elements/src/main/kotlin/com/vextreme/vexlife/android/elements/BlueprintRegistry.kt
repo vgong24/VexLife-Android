@@ -1,11 +1,23 @@
 package com.vextreme.vexlife.android.elements
 
+/**
+ * One element at one declared structural position, plus its placed children/style override.
+ *
+ * UIElement owns semantic identity; ElementPlacement owns where that identity sits in a Screen/shell
+ * tree. Keeping those concerns separate lets one registry answer parent/child/owner questions.
+ */
 data class ElementPlacement(
     val element: UIElement,
     val styleOverride: ElementStyleKey? = null,
     val children: List<ElementPlacement> = emptyList(),
 )
 
+/**
+ * Small shell/legacy placement DSL used when elements already have explicit identities.
+ *
+ * Screen authors normally use ScreenLayoutScope; AppShell uses this scope because its identities are
+ * app-wide rather than generated from one Screen key.
+ */
 class PlacementScope internal constructor() {
     private val placements = mutableListOf<ElementPlacement>()
 
@@ -126,16 +138,33 @@ fun scrollableColumn(
     block: PlacementScope.() -> Unit,
 ): ElementPlacement = rootPlacement(item, style, block)
 
-data class ScreenBlueprint(
+/**
+ * Registry projection of one screen and its root placement.
+ *
+ * Screen authors normally work in ScreenBlueprint; this compact pair is what AppBlueprint indexes.
+ */
+data class ScreenRegistration(
     val screen: ScreenElement,
     val root: ElementPlacement,
 )
 
+/**
+ * Complete static UI registration input: one app-wide shell tree plus all Screen registrations.
+ *
+ * This is construction data for UIBlueprintRegistry, not mutable runtime navigation state.
+ */
 data class AppBlueprint(
     val shell: ElementPlacement,
-    val screens: List<ScreenBlueprint>,
+    val screens: List<ScreenRegistration>,
 )
 
+/**
+ * Indexed read model of the declared shell/Screen element graph.
+ *
+ * It answers stable structural questions (owner Screen, parent, children, style, navigation targets)
+ * without becoming runtime navigation/presentation truth. Build-time validation also fails closed on
+ * duplicate identities and intents that point at unregistered targets.
+ */
 class UIBlueprintRegistry(
     app: AppBlueprint,
 ) {

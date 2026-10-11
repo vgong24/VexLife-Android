@@ -29,7 +29,7 @@ class BlueprintRegistryTest {
                     button(ShellButton)
                 },
                 screens = listOf(
-                    ScreenBlueprint(
+                    ScreenRegistration(
                         Home,
                         column(HomeRoot) {
                             scrollableColumn(HomeBody) {
@@ -37,7 +37,7 @@ class BlueprintRegistryTest {
                             }
                         },
                     ),
-                    ScreenBlueprint(Help, column(HelpRoot) {}),
+                    ScreenRegistration(Help, column(HelpRoot) {}),
                 ),
             ),
         )
@@ -56,8 +56,8 @@ class BlueprintRegistryTest {
                     button(ShellButton, style = VexElementStyles.Navigation)
                 },
                 screens = listOf(
-                    ScreenBlueprint(Home, column(HomeRoot) {}),
-                    ScreenBlueprint(Help, column(HelpRoot) {}),
+                    ScreenRegistration(Home, column(HomeRoot) {}),
+                    ScreenRegistration(Help, column(HelpRoot) {}),
                 ),
             ),
         )
@@ -74,13 +74,13 @@ class BlueprintRegistryTest {
                     button(ShellButton)
                 },
                 screens = listOf(
-                    ScreenBlueprint(
+                    ScreenRegistration(
                         Home,
                         column(HomeRoot) {
                             element(ShellButton)
                         },
                     ),
-                    ScreenBlueprint(Help, column(HelpRoot) {}),
+                    ScreenRegistration(Help, column(HelpRoot) {}),
                 ),
             ),
         )

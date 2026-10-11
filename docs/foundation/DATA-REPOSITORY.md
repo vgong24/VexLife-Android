@@ -4,7 +4,7 @@
 
 ## The question
 
-> How can a page observe/persist data without knowing whether it came from Room, memory, a backend,
+> How can a screen observe/persist data without knowing whether it came from Room, memory, a backend,
 > or a future synchronization policy?
 
 The first real consumer is Debug -> Log History. The architecture is intentionally learned through
@@ -13,7 +13,7 @@ that concrete need rather than by introducing a generic BaseRepository hierarchy
 ## Shape
 
 ~~~text
-page / runtime consumer
+screen / runtime consumer
         |
         v
 domain-specific repository contract
@@ -181,20 +181,20 @@ Use domain fixtures rather than Room entities:
 
 ~~~kotlin
 val typical = LogHistoryFixture.build {
-    appOpened(HomePage)
+    appOpened(HomeScreen)
     afterSeconds(120)
     click(
         element = AppShell.Elements.DebugMenu,
-        from = HomePage,
-        to = DebugMenuPage,
+        from = HomeScreen,
+        to = DebugMenuScreen,
     )
 }
 
 val repeatedReset = typical.append {
     afterSeconds(30)
     click(
-        element = DebugMenuPage.ResetLog,
-        from = DebugMenuPage,
+        element = DebugMenuScreen.ResetLog,
+        from = DebugMenuScreen,
     )
 }
 
@@ -232,12 +232,17 @@ repository
 ~~~
 
 The submitted field values are intentionally not included in VexLogger output by default. The useful
-diagnostic fact is that Save occurred on UserProfilePage, not the user's raw profile text or the order
+diagnostic fact is that Save occurred on UserProfileScreen, not the user's raw profile text or the order
 in which they typed it.
 
-A form page may know how to assemble its draft values into FormSubmission. It must not perform the
-repository mutation secretly after calling runtime.activate; persistence remains with the app/operation
-owner reached through the declared Save action.
+A form screen may know how to assemble its draft values into FormSubmission. It must not perform the
+repository mutation secretly after calling runtime.activate.
+
+The declared Save action is delivered through AppActionRouter to one feature-local
+AppActionRegistration kept beside UserProfileScreen. VexLifeApp only assembles registrations and
+supplies broader-lifetime dependencies; it does not own a giant feature-action when statement.
+AppActionRouter rejects duplicate ActionKey ownership so two screens cannot accidentally respond to
+the same submission.
 
 ## User Profile proof domain
 
@@ -282,17 +287,21 @@ Use narrow purpose bridges:
 AppRepositories
   composition-only bundle
 
+AppActionRouter
+  one dispatcher
+  duplicate-safe feature-local action ownership
+
 VexLogger
   receives one record endpoint (logPersistence::record)
 
 future UserHub
   may intentionally combine UserProfileRepository + LinkedSystemRepository
 
-page
+screen
   receives the smallest repository/facade that answers its question
 ~~~
 
-Do not pass the entire AppRepositories bundle into VexLogger or ordinary pages merely for convenience.
+Do not pass the entire AppRepositories bundle into VexLogger or ordinary screens merely for convenience.
 That turns composition into a service locator and makes unrelated data reachable from unrelated code.
 
 A bridge is successful when it hides plumbing while preserving dependency meaning.

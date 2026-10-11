@@ -4,7 +4,7 @@
 
 Start here when asking:
 
-> Where does this page's data come from, and who owns persistence?
+> Where does this screen's data come from, and who owns persistence?
 
 ## Folder shape
 
@@ -33,13 +33,13 @@ data/
 The important command-click direction is:
 
 ~~~text
-page
+screen
 -> repository interface
 -> production implementation
 -> DAO/entity only when debugging storage
 ~~~
 
-Do not make pages consume DAOs or entities directly.
+Do not make screens consume DAOs or entities directly.
 
 `InMemoryLogHistoryRepository` and `LogHistoryFixture` exist so previews/tests can reproduce exact
 states through the same repository contract instead of teaching production code about mocks.

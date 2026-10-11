@@ -6,13 +6,13 @@ import com.vextreme.vexlife.android.elements.navigation.BackLayer
 /**
  * The app-navigation part of Back.
  *
- * Primary peers are not stored in pageStack, so returning Events/Settings to Home is represented
- * explicitly instead of pretending those peers were pushed pages.
+ * Primary peers are not stored in screenStack, so returning Events/Settings to Home is represented
+ * explicitly instead of pretending those peers were pushed screens.
  */
 sealed interface AppNavigationBack {
     val target: ScreenElement
 
-    data class PopPage(
+    data class PopScreen(
         override val target: ScreenElement,
     ) : AppNavigationBack
 
@@ -48,7 +48,7 @@ sealed interface BackResolution {
         val step: AppNavigationBack,
     ) : BackResolution {
         override val showToolbarBack: Boolean
-            get() = step is AppNavigationBack.PopPage
+            get() = step is AppNavigationBack.PopScreen
 
         override val screenAfter: ScreenElement
             get() = step.target
