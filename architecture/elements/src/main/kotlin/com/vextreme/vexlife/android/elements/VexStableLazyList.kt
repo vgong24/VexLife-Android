@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * rediscover:
  *
  * - one stable semantic ref per item becomes the Compose lazy-list key;
+ * - callers may supply [contentType] so Compose only reuses item compositions across compatible
+ *   row shapes;
  * - the list itself has one stable semantic ref/test tag;
  * - current visible item refs are projected as a Set for relationships such as anchored attention;
  * - item meaning, actions, row layout, repositories, ordering policy, and presentation eligibility
@@ -43,6 +45,7 @@ fun <Item> VexStableLazyColumn(
     listRef: String,
     items: List<Item>,
     itemRef: (Item) -> String,
+    contentType: (Item) -> Any? = { null },
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     verticalArrangement: Arrangement.Vertical =
@@ -99,6 +102,7 @@ fun <Item> VexStableLazyColumn(
             items(
                 items = items,
                 key = itemRef,
+                contentType = contentType,
                 itemContent = itemContent,
             )
         }

@@ -90,6 +90,7 @@ app/.../screens/primary/events/
   EventsAttentionRelay
 
 architecture/elements/
+  VexStableLazyColumn
   VexAnchoredTooltip
 
 testing/journey/catalog/primary/events/
@@ -279,6 +280,47 @@ TARGET_UNREACHABLE != EVENT_DISAPPEARED
 TRANSIENT_BLOCKED != EVENT_REJECTED
 ~~~
 
+## Stable dynamic-list component boundary
+
+Events is the first real consumer of a reusable Android-native list primitive:
+
+~~~text
+VexStableLazyColumn
+  stable itemRef -> Lazy list key
+  optional contentType -> compatible Compose reuse family
+  listRef -> stable list test tag
+  visible item refs -> bounded current visibility projection
+  caller-owned row Composable
+~~~
+
+It deliberately does **not** know:
+
+~~~text
+EventsRepository
+EventsAttentionRelay
+event kind/title/detail
+ack/defer/suppress
+tooltip policy
+provider ordering semantics
+~~~
+
+Events supplies its own private `EventRow` Composable. That is product meaning and stays beside the
+Screen.
+
+This separation answers two different developer questions:
+
+~~~text
+"How does a dynamic Android list preserve repeated identity and expose what is visible?"
+-> VexStableLazyColumn
+
+"What does one Events row look like and what can the human do with it?"
+-> EventRow in EventsScreen.kt
+~~~
+
+The list primitive fails closed on blank/duplicate item refs. Stable string keys are also valid
+Android Bundle-saveable lazy-list keys, so Compose can preserve item state across insertion/reorder
+instead of falling back to visual position.
+
 ## Stable repeated presentation identity
 
 Current rows use:
@@ -337,28 +379,85 @@ GEOMETRY_CHANGE != SEMANTIC_EVENT_CHANGE
 AUTOMATIC_REPOSITION != HUMAN_PREFERENCE
 ~~~
 
-## Synthetic fixture
+## Synthetic fixture and live condition lab
 
-The Debug Menu owns explicit Start/Stop controls for a session-scoped five-second deterministic
-fixture.
+The Debug Menu owns a session-scoped deterministic fixture. All controls operate the **same**
+SyntheticExternalEventSource and normalized EventsRepository ingress; there is no second fake test
+architecture.
+
+| Control | Condition it is meant to provoke |
+|---|---|
+| Start 5-second feed | information arriving asynchronously while another Screen is current |
+| Stop feed | producer cancellation / no further admission while stopped |
+| Emit next | immediate one-event cause/effect without waiting for wall clock |
+| Emit 12-event burst | enough stable rows to exercise lazy virtualization, scrolling and target reachability |
+| Insert older event | provider insertion/reorder pressure without changing existing eventRefs |
+| Remove oldest | provider removal of a current event so retained-candidate advancement can be observed |
+
+Useful live play:
 
 ~~~text
 Debug Menu
--> Start 5-second feed
--> navigate Home / Settings / another surface
--> wait for external fixture information
--> open Events
--> observe stable rows + attention candidate
--> Stop feed
+-> Emit 12-event burst
+-> Events
+-> note the current tooltip candidate
+-> scroll that row off-screen
+   => same candidate becomes HELD_TARGET_UNREACHABLE
+-> scroll it back
+   => same candidate becomes READY again
+-> open another transient
+   => same candidate becomes HELD_TRANSIENT_OCCUPIED
+-> dismiss transient
+   => same candidate becomes READY
+-> Insert older event
+   => existing candidate does not get stolen by reorder
+-> Remove oldest
+   => if that removes the retained candidate, Relay advances to the next unhandled event
 ~~~
 
 The source cycles through message-like, call-like, map-like and media-like information. Those labels
 are **fixtures only** and do not claim those real integrations exist.
 
 Stop/restart reuses the same synthetic source instance so its provider revision continues rather than
-restarting at 1 over newer retained truth.
+restarting at 1 over newer retained truth. An immediate Start while cancellation is still completing
+cannot create a second producer loop.
 
 Normal production composition does not silently auto-start the fixture.
+
+### Android Studio visual play
+
+Events keeps two feature-owned previews beside `EventsScreen.kt`:
+
+~~~text
+EventsScreenPreview
+  empty/default state
+
+EventsAttentionPreview
+  populated message/call/map rows
+  attention candidate active
+  rendered through all @VexScreenPreviews device/theme/font forms
+~~~
+
+The preview fixture uses the real Events repository contract and real Screen content. It does not add
+Preview-only behavior to VexRuntime or create another scenario registry.
+
+### Test-time customizability
+
+The same fixture is parameterized where tests actually need control:
+
+~~~text
+intervalMillis
+clock
+maxEvents
+sourceFactory
+emitNext()
+emitBurst(count)
+insertHistorical()
+removeOldest()
+~~~
+
+Journey uses deterministic `signal(...)` snapshots instead of wall-clock sleeps, so causal
+instrumentation remains fast/repeatable while the Debug Menu preserves a human live-play path.
 
 ## Executable causal walk
 

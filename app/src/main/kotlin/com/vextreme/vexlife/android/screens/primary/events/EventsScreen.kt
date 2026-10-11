@@ -127,6 +127,7 @@ fun EventsScreenContent(
         listRef = EventsScreen.content.element.elementId,
         items = feed.events,
         itemRef = VexExternalEvent::eventRef,
+        contentType = { "events-event-row" },
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         onVisibleItemRefsChanged =
