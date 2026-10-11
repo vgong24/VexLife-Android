@@ -1427,19 +1427,20 @@ private fun VexStreamTrackCard(
                     (it * 1_000.0).toLong(),
                 )
             }
+    val artistText =
+        state.track.artist
+            .takeIf {
+                it.isNotBlank() &&
+                    !it.equals(
+                        state.track.title,
+                        ignoreCase = true,
+                    )
+            }
     val secondaryText =
-        buildList {
-            state.track.artist
-                .takeIf {
-                    it.isNotBlank() &&
-                        !it.equals(
-                            state.track.title,
-                            ignoreCase = true,
-                        )
-                }
-                ?.let(::add)
-            durationText?.let(::add)
-        }.joinToString(" · ")
+        listOfNotNull(
+            artistText,
+            durationText,
+        ).joinToString(" · ")
     val compactStatus =
         when {
             state.localCopy is VexStreamLocalCopyState.Downloading ->
