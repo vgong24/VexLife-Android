@@ -839,6 +839,15 @@ internal fun VexMapsMapSurface(
                 state = navigationState,
                 locationReady =
                     preciseLocationActive,
+                onEditRoute = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.route.edit",
+                        action = "Clicked",
+                    )
+                    VexMapsNavigationProcess
+                        .stop()
+                },
                 onStart = {
                     runtime.recordDynamicInteraction(
                         subjectRef =
@@ -1509,6 +1518,7 @@ private fun VexMapsRoutePlannerCard(
 private fun VexMapsNavigationCard(
     state: VexNavigationSessionState,
     locationReady: Boolean,
+    onEditRoute: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onDone: () -> Unit,
@@ -1556,6 +1566,37 @@ private fun VexMapsNavigationCard(
                                 .typography
                                 .titleMedium,
                     )
+
+                    state
+                        .routeResult
+                        ?.travelMode
+                        ?.let { mode ->
+                            Text(
+                                text =
+                                    stringResource(
+                                        R.string
+                                            .vexmaps_navigation_route_mode,
+                                        stringResource(
+                                            mode.labelRes,
+                                        ),
+                                    ),
+                                style =
+                                    MaterialTheme
+                                        .typography
+                                        .bodyMedium,
+                            )
+                        }
+
+                    OutlinedButton(
+                        onClick = onEditRoute,
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_navigation_edit_route,
+                            ),
+                        )
+                    }
 
                     if (locationReady) {
                         Button(

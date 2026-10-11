@@ -351,6 +351,26 @@ class VexNavigationSessionTest {
     }
 
     @Test
+    fun preparedRouteCanReturnToPlanningWithoutStartingNavigation() {
+        val session =
+            VexNavigationSession()
+
+        session.prepare(
+            routeResult,
+        )
+        session.stop()
+
+        assertEquals(
+            VexNavigationSessionPhase.IDLE,
+            session.current.phase,
+        )
+        assertEquals(
+            null,
+            session.current.routeResult,
+        )
+    }
+
+    @Test
     fun stopReleasesRouteAndReturnsToIdle() {
         val session =
             VexNavigationSession()
