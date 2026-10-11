@@ -13,6 +13,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /**
@@ -120,6 +121,73 @@ class PairedVexStreamMusicRepository(
                     reason = VexStreamRepositoryRejection.DISCOVERY_UNAVAILABLE,
                 )
             }
+        }
+
+    override suspend fun reconnectPairedVexStream(): VexStreamRepositoryResult =
+        operationMutex.withLock {
+            val remembered =
+                connectionStore.load()
+                    ?: return VexStreamRepositoryResult.Rejected(
+                        reason = VexStreamRepositoryRejection.HUB_NOT_READY,
+                    )
+
+            val rememberedRouteResult =
+                refreshCatalogLocked(
+                    connection = remembered,
+                )
+            if (
+                rememberedRouteResult is
+                    VexStreamRepositoryResult.Accepted
+            ) {
+                return rememberedRouteResult
+            }
+
+            // An authorization failure clears pairing inside refreshCatalogBlocking. Do not
+            // rediscover and silently rebind a credential that the desktop has revoked.
+            val stillPaired =
+                connectionStore.load()
+                    ?: return rememberedRouteResult
+
+            // Reconnect means "reach this paired PC", not "LAN discovery". Nearby discovery is a
+            // bounded recovery only after the remembered local/direct/relay routes all fail. It
+            // can refresh a DHCP-changed LAN address, but only for the exact pinned certificate.
+            val selected =
+                withTimeoutOrNull(
+                    RECONNECT_DISCOVERY_TIMEOUT_MS,
+                ) {
+                    runCatching {
+                        nearbyDiscovery.selectService()
+                    }.getOrNull()
+                }
+                    ?: return rememberedRouteResult
+
+            if (
+                selected.certificateSha256 !=
+                stillPaired.certificateSha256
+            ) {
+                return rememberedRouteResult
+            }
+
+            val rerouted =
+                stillPaired.copy(
+                    displayName = selected.displayName,
+                    host = selected.host,
+                    port = selected.port,
+                )
+            connectionStore.save(
+                rerouted,
+            )
+            selectedService = null
+            mutableState.value = mutableState.value.copy(
+                connectionState =
+                    VexStreamConnectionState.Paired(
+                        displayName = rerouted.displayName,
+                    ),
+            )
+
+            refreshCatalogLocked(
+                connection = rerouted,
+            )
         }
 
     override suspend fun confirmPairingCode(): VexStreamRepositoryResult =
@@ -1292,6 +1360,7 @@ class PairedVexStreamMusicRepository(
         private const val MAX_REMOTE_DIRECT_ROUTE_LENGTH = 512
         private const val PAIRING_POLL_MS = 750L
         private const val PAIRING_APPROVAL_TIMEOUT_MS = 5 * 60 * 1000L
+        private const val RECONNECT_DISCOVERY_TIMEOUT_MS = 8_000L
 
         fun production(
             context: Context,

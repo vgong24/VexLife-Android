@@ -130,7 +130,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.connection.reconnect",
         labelRes = R.string.vexstream_music_reconnect,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.FindNearbyVexStream),
+        intent = invoke(AppActions.ReconnectVexStream),
     )
 
     val RequestForgetPaired = buttonRef(
@@ -479,6 +479,14 @@ internal fun vexStreamActionRegistrations(
         ) {
             scope.launch {
                 repository.findNearbyVexStream()
+            }
+        },
+        appAction(
+            action = AppActions.ReconnectVexStream,
+            ownerRef = VexStreamMusicScreen.screenId,
+        ) {
+            scope.launch {
+                repository.reconnectPairedVexStream()
             }
         },
         appAction(

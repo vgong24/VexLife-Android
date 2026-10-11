@@ -47,6 +47,9 @@ class InMemoryVexStreamMusicRepository(
         return VexStreamRepositoryResult.Accepted()
     }
 
+    override suspend fun reconnectPairedVexStream(): VexStreamRepositoryResult =
+        refreshCatalog()
+
     override suspend fun confirmPairingCode(): VexStreamRepositoryResult {
         val current = mutableState.value
         if (current.connectionState !is VexStreamConnectionState.ConfirmCode) {

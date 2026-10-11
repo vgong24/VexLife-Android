@@ -76,6 +76,33 @@ class InMemoryVexStreamMusicRepositoryTest {
     }
 
     @Test
+    fun reconnectUsesThePairedRepositoryRouteInsteadOfDiscoverySemantics() = runTest {
+        val repository =
+            InMemoryVexStreamMusicRepository(
+                VexStreamMusicState(
+                    hubState =
+                        VexStreamHubState.Ready(
+                            hubRef = "hub.fixture",
+                            catalogRevision = "catalog.fixture.1",
+                        ),
+                    connectionState =
+                        VexStreamConnectionState.Paired(
+                            displayName = "VexStream on Test PC",
+                        ),
+                ),
+            )
+
+        assertTrue(
+            repository.reconnectPairedVexStream() is
+                VexStreamRepositoryResult.Accepted,
+        )
+        assertTrue(
+            repository.state.value.connectionState is
+                VexStreamConnectionState.Paired,
+        )
+    }
+
+    @Test
     fun removeDownloadReturnsTrackToHubOnlyWhenHubRemainsAvailable() = runTest {
         val repository = InMemoryVexStreamMusicRepository()
         val trackRef = VexStreamTrackRef("hub.track.one")

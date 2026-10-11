@@ -25,6 +25,7 @@ object AppActions {
     val GallerySample = ActionKey("action.gallery.sample")
     val SaveUserProfile = ActionKey("action.user-profile.save")
     val FindNearbyVexStream = ActionKey("action.vexstream-music.connection.find")
+    val ReconnectVexStream = ActionKey("action.vexstream-music.connection.reconnect")
     val ConfirmVexStreamPairingCode = ActionKey("action.vexstream-music.connection.confirm-code")
     val ForgetPairedVexStream = ActionKey("action.vexstream-music.connection.forget")
     val RefreshVexStreamCatalog = ActionKey("action.vexstream-music.catalog.refresh")
