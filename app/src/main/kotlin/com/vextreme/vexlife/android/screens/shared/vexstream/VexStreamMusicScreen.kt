@@ -15,6 +15,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylistRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.close
@@ -149,6 +150,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.collection.back",
         labelRes = R.string.back,
         style = VexElementStyles.Navigation,
+        icon = ElementIcon.Back,
         intent = localEffect(),
     )
 
@@ -156,6 +158,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.track-actions.play",
         labelRes = R.string.vexstream_music_play,
         style = VexElementStyles.PrimaryAction,
+        icon = ElementIcon.Play,
         intent = localEffect(),
     )
 
@@ -163,6 +166,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.track-actions.play-next",
         labelRes = R.string.vexstream_music_play_next,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.PlayNext,
         intent = localEffect(),
     )
 
@@ -170,6 +174,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.track-actions.add-queue",
         labelRes = R.string.vexstream_music_add_queue,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Queue,
         intent = localEffect(),
     )
 
@@ -177,6 +182,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.track-actions.download",
         labelRes = R.string.vexstream_music_download,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Download,
         intent = localEffect(),
     )
 
@@ -184,6 +190,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.track-actions.remove-download",
         labelRes = R.string.vexstream_music_remove_download,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.RemoveDownload,
         intent = localEffect(),
     )
 
@@ -191,6 +198,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.library-actions.play-all",
         labelRes = R.string.vexstream_music_play_all,
         style = VexElementStyles.PrimaryAction,
+        icon = ElementIcon.Play,
         intent = localEffect(),
     )
 
@@ -198,6 +206,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.library-actions.shuffle-all",
         labelRes = R.string.vexstream_music_shuffle_all,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Shuffle,
         intent = localEffect(),
     )
 
@@ -205,6 +214,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.player.previous",
         labelRes = R.string.vexstream_music_previous,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Previous,
         intent = localEffect(),
     )
 
@@ -212,6 +222,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.player.play-pause",
         labelRes = R.string.vexstream_music_play_pause,
         style = VexElementStyles.PrimaryAction,
+        icon = ElementIcon.PlayPause,
         intent = localEffect(),
     )
 
@@ -219,6 +230,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.player.next",
         labelRes = R.string.vexstream_music_next,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Next,
         intent = localEffect(),
     )
 
@@ -226,6 +238,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.player.shuffle",
         labelRes = R.string.vexstream_music_shuffle,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Shuffle,
         intent = localEffect(),
     )
 
@@ -233,6 +246,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.queue.sheet.shuffle",
         labelRes = R.string.vexstream_music_shuffle,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Shuffle,
         intent = localEffect(),
     )
 
@@ -240,6 +254,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.queue.sheet.repeat",
         labelRes = R.string.vexstream_music_repeat,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Repeat,
         intent = localEffect(),
     )
 
@@ -254,6 +269,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.player.queue.show",
         labelRes = R.string.vexstream_music_queue,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Queue,
         intent = open(QueueSheet),
     )
 
@@ -261,6 +277,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.queue.sheet.close",
         labelRes = R.string.close,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Close,
         intent = close(QueueSheet),
     )
 
