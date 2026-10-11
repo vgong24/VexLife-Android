@@ -71,6 +71,19 @@ class VexLogger(
         )
     }
 
+    fun recordBack(
+        screenBefore: ScreenElement,
+        screenAfter: ScreenElement? = null,
+    ) {
+        append(
+            kind = VexLogKind.Gesture,
+            subjectRef = "system.back",
+            action = "Back",
+            screenBeforeId = screenBefore.screenId,
+            screenAfterId = screenAfter?.screenId,
+        )
+    }
+
     fun recordScreenGesture(
         screenBefore: ScreenElement,
         screenAfter: ScreenElement,

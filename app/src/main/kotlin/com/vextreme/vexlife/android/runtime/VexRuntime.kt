@@ -16,17 +16,28 @@ import com.vextreme.vexlife.android.logging.VexLogger
 class PresentationState(
     private val registry: UIBlueprintRegistry,
 ) {
-    private var openElementIds by mutableStateOf<Set<String>>(emptySet())
+    private var openElementIds by mutableStateOf<List<String>>(emptyList())
     private var selectedByContainer by mutableStateOf<Map<String, String>>(emptyMap())
 
-    fun isOpen(element: UIElement): Boolean = element.elementId in openElementIds
+    val hasOpenPresentation: Boolean
+        get() = openElementIds.isNotEmpty()
+
+    fun isOpen(element: UIElement): Boolean =
+        element.elementId in openElementIds
 
     fun open(element: UIElement) {
-        openElementIds = openElementIds + element.elementId
+        openElementIds = openElementIds
+            .filterNot { it == element.elementId } + element.elementId
     }
 
     fun close(element: UIElement) {
-        openElementIds = openElementIds - element.elementId
+        openElementIds = openElementIds.filterNot { it == element.elementId }
+    }
+
+    fun closeTop(): UIElement? {
+        val topId = openElementIds.lastOrNull() ?: return null
+        openElementIds = openElementIds.dropLast(1)
+        return registry.element(topId)
     }
 
     fun toggle(element: UIElement) {
@@ -40,31 +51,67 @@ class PresentationState(
     }
 
     fun selected(container: SwappableContainerElement): UIElement {
-        val selectedId = selectedByContainer[container.elementId] ?: container.defaultChild.elementId
+        val selectedId = selectedByContainer[container.elementId]
+            ?: container.defaultChild.elementId
+
         return registry.childrenOf(container)
             .firstOrNull { it.elementId == selectedId }
             ?: container.defaultChild
     }
 }
 
-class ScreenRelay(
-    initialScreen: ScreenElement,
-    private val primaryScreenIds: Set<String>,
+class AppNavigationState(
+    initialPrimary: ScreenElement,
+    primaryScreens: List<ScreenElement>,
 ) {
-    var current by mutableStateOf(initialScreen)
+    private val primaryIds = primaryScreens.map { it.screenId }.toSet()
+
+    var primarySelection by mutableStateOf(initialPrimary)
         private set
 
-    var lastPrimary by mutableStateOf(initialScreen)
+    var pageStack by mutableStateOf<List<ScreenElement>>(emptyList())
         private set
 
-    fun transitionTo(screen: ScreenElement) {
-        current = screen
-        if (screen.screenId in primaryScreenIds) {
-            lastPrimary = screen
+    val current: ScreenElement
+        get() = pageStack.lastOrNull() ?: primarySelection
+
+    val canPopPage: Boolean
+        get() = pageStack.isNotEmpty()
+
+    fun isPrimary(screen: ScreenElement = current): Boolean =
+        screen.screenId in primaryIds && pageStack.isEmpty()
+
+    fun selectPrimary(screen: ScreenElement) {
+        require(screen.screenId in primaryIds) {
+            "not a registered primary screen: ${screen.screenId}"
         }
+
+        primarySelection = screen
+        pageStack = emptyList()
     }
 
-    fun backTarget(): ScreenElement = lastPrimary
+    fun push(screen: ScreenElement) {
+        if (screen.screenId in primaryIds) {
+            selectPrimary(screen)
+            return
+        }
+
+        if (current.screenId == screen.screenId) return
+        pageStack = pageStack + screen
+    }
+
+    fun popPage(): ScreenElement? {
+        if (pageStack.isEmpty()) return null
+        pageStack = pageStack.dropLast(1)
+        return current
+    }
+
+    fun peekBackTarget(): ScreenElement? =
+        if (pageStack.isNotEmpty()) {
+            pageStack.dropLast(1).lastOrNull() ?: primarySelection
+        } else {
+            null
+        }
 }
 
 class VexRuntime(
@@ -74,17 +121,19 @@ class VexRuntime(
     primaryScreens: List<ScreenElement>,
     private val onAppAction: (ActionKey, UIElement) -> Unit,
 ) : ElementActionHandler {
-    private val primaryScreenIds = primaryScreens.map { it.screenId }.toSet()
     private var appOpenedRecorded = false
 
     val presentation = PresentationState(registry)
-    val screens = ScreenRelay(initialScreen, primaryScreenIds)
+    val navigation = AppNavigationState(initialScreen, primaryScreens)
 
     val currentScreen: ScreenElement
-        get() = screens.current
+        get() = navigation.current
+
+    val canGoBack: Boolean
+        get() = presentation.hasOpenPresentation || navigation.canPopPage
 
     fun isPrimary(screen: ScreenElement = currentScreen): Boolean =
-        screen.screenId in primaryScreenIds
+        navigation.isPrimary(screen)
 
     fun appOpened() {
         if (!appOpenedRecorded) {
@@ -115,12 +164,35 @@ class VexRuntime(
         if (!isPrimary(before) || before.screenId == target.screenId) return
 
         logger.recordScreenGesture(before, target)
-        screens.transitionTo(target)
+        navigation.selectPrimary(target)
+    }
+
+    fun goBack(logEvent: Boolean = true): Boolean {
+        val before = currentScreen
+
+        if (presentation.hasOpenPresentation) {
+            if (logEvent) {
+                logger.recordBack(screenBefore = before)
+            }
+            presentation.closeTop()
+            return true
+        }
+
+        val target = navigation.peekBackTarget() ?: return false
+        if (logEvent) {
+            logger.recordBack(
+                screenBefore = before,
+                screenAfter = target,
+            )
+        }
+        navigation.popPage()
+        return true
     }
 
     private fun navigationTarget(intent: ElementIntent): ScreenElement? = when (intent) {
         is ElementIntent.NavigateTo -> intent.screen
-        ElementIntent.NavigateBack -> screens.backTarget()
+        ElementIntent.NavigateBack ->
+            if (presentation.hasOpenPresentation) null else navigation.peekBackTarget()
         is ElementIntent.Sequence -> intent.intents.mapNotNull(::navigationTarget).lastOrNull()
         else -> null
     }
@@ -130,8 +202,8 @@ class VexRuntime(
         source: UIElement,
     ) {
         when (intent) {
-            is ElementIntent.NavigateTo -> screens.transitionTo(intent.screen)
-            ElementIntent.NavigateBack -> screens.transitionTo(screens.backTarget())
+            is ElementIntent.NavigateTo -> navigation.push(intent.screen)
+            ElementIntent.NavigateBack -> goBack(logEvent = false)
             is ElementIntent.Open -> presentation.open(intent.element)
             is ElementIntent.Close -> presentation.close(intent.element)
             is ElementIntent.Toggle -> presentation.toggle(intent.element)

@@ -17,7 +17,13 @@ object VexElementStyles {
     val Surface = ElementStyleKey("style.surface")
     val RaisedSurface = ElementStyleKey("style.surface.raised")
     val Row = ElementStyleKey("style.row")
-    val GraphRow = ElementStyleKey("style.graph.row")
+}
+
+enum class TextRole {
+    Title,
+    Body,
+    Supporting,
+    Label,
 }
 
 open class ScreenElement(
@@ -87,12 +93,7 @@ open class ButtonElement(
     style: ElementStyleKey = VexElementStyles.PrimaryAction,
     val icon: ElementIcon? = null,
     override val intent: ElementIntent,
-) : UIElement(
-    elementId = elementId,
-    kind = "Button",
-    labelRes = labelRes,
-    style = style,
-), ActionElement
+) : UIElement(elementId, "Button", labelRes, style), ActionElement
 
 open class FabElement(
     elementId: String,
@@ -100,61 +101,43 @@ open class FabElement(
     val icon: ElementIcon,
     style: ElementStyleKey = VexElementStyles.FabPrimary,
     override val intent: ElementIntent,
-) : UIElement(
-    elementId = elementId,
-    kind = "FAB",
-    labelRes = labelRes,
-    style = style,
-), ActionElement
+) : UIElement(elementId, "FAB", labelRes, style), ActionElement
 
 open class ToggleElement(
     elementId: String,
     @StringRes labelRes: Int,
     style: ElementStyleKey = VexElementStyles.Row,
     override val intent: ElementIntent,
-) : UIElement(
-    elementId = elementId,
-    kind = "Toggle",
-    labelRes = labelRes,
-    style = style,
-), ActionElement
+) : UIElement(elementId, "Toggle", labelRes, style), ActionElement
 
 open class TextElement(
     elementId: String,
     @StringRes val textRes: Int,
+    val role: TextRole = TextRole.Body,
     style: ElementStyleKey = VexElementStyles.Default,
-) : UIElement(
-    elementId = elementId,
-    kind = "Text",
-    labelRes = textRes,
-    style = style,
-)
+) : UIElement(elementId, "Text", textRes, style)
 
 open class ImageElement(
     elementId: String,
     @StringRes val contentDescriptionRes: Int? = null,
     style: ElementStyleKey = VexElementStyles.Default,
-) : UIElement(
-    elementId = elementId,
-    kind = "Image",
-    labelRes = contentDescriptionRes,
-    style = style,
-)
+) : UIElement(elementId, "Image", contentDescriptionRes, style)
 
 open class ContainerElement(
     elementId: String,
     kind: String,
-    style: ElementStyleKey = VexElementStyles.Surface,
-) : UIElement(
-    elementId = elementId,
-    kind = kind,
-    style = style,
-)
+    style: ElementStyleKey = VexElementStyles.Default,
+) : UIElement(elementId, kind, style = style)
 
 open class ColumnElement(
     elementId: String,
-    style: ElementStyleKey = VexElementStyles.Surface,
+    style: ElementStyleKey = VexElementStyles.Default,
 ) : ContainerElement(elementId, "Column", style)
+
+open class CardElement(
+    elementId: String,
+    style: ElementStyleKey = VexElementStyles.RaisedSurface,
+) : ContainerElement(elementId, "Card", style)
 
 open class RowElement(
     elementId: String,
@@ -168,7 +151,7 @@ open class StackElement(
 
 open class ScrollableColumnElement(
     elementId: String,
-    style: ElementStyleKey = VexElementStyles.Surface,
+    style: ElementStyleKey = VexElementStyles.Default,
 ) : ContainerElement(elementId, "ScrollableColumn", style)
 
 open class DialogElement(
@@ -179,7 +162,7 @@ open class DialogElement(
 open class SwappableContainerElement(
     elementId: String,
     val defaultChild: UIElement,
-    style: ElementStyleKey = VexElementStyles.Surface,
+    style: ElementStyleKey = VexElementStyles.Default,
 ) : ContainerElement(elementId, "SwappableContainer", style)
 
 fun navigateTo(screen: ScreenElement): ElementIntent = ElementIntent.NavigateTo(screen)

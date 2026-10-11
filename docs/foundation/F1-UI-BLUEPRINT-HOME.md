@@ -1,106 +1,97 @@
 # F1 — UI Blueprint / Home Practicum
 
-`[VXG RealForever]`
+[VXG RealForever]
 
-## The question
+## Question
 
-> Can a human or AI define a UI from small reusable cells, understand its placement before reading
-> Compose code, and let runtime behavior reuse the same identity for navigation, logging, tests, and
-> inspection?
+> Can a developer open one page file, understand what it contains and where it can lead, then run the same structure without rebuilding it elsewhere?
 
-This foundation is intentionally learned through one real practicum rather than designed as a
-complete UI framework in advance.
+The Home practicum is the first consumer. Lived use may correct the foundation when it exposes missing structure.
 
-## Developer path
+## Current construction shape
 
-A new screen should be understandable in this order:
+~~~text
+Android window
+  -> AppFrame
+       -> AppBar
+       -> PageViewport
+       -> BottomNavigation
+       -> Overlay/FAB slot
 
-```text
-1. define the screen identity
-2. define its meaningful elements
-3. give action-bearing elements a small sentence-like intent
-4. compose those elements with row / column / stack / scrollable / dialog / swappable placement
-5. register the ScreenBlueprint
-6. render with reusable cells
-```
+pages/
+  primary/
+    home/
+    events/
+    settings/
+  shared/
+    debug/
+      loghistory/
+    gallery/
+      elements/
+      graph/
+~~~
 
-The declaration carries what an element is. The placement tree carries where it sits. Runtime state
-carries where the user actually is now.
+AppFrame owns the safe drawing boundary relative to Android status/navigation/cutout space. Pages own their internal structural tree. The shell owns app-wide chrome.
 
-```text
-ELEMENT DECLARATION != PLACEMENT
-PLACEMENT != RUNTIME SCREEN CONTEXT
-PLATFORM LIFECYCLE ORDER != SEMANTIC SCREEN HISTORY
-```
+## Navigation
 
-## First practicum
+Primary pages are peers, not accumulated history:
 
-The first application specimen provides:
+~~~text
+primarySelection = Home | Events | Settings
+~~~
 
-- VexLife toolbar using the current Vex mark and brand language;
-- Home / Events / Settings primary screens in one horizontal pager;
-- intentionally provisional scrollable preview bodies;
-- shared expandable FAB with Debug Menu and Gallery;
-- Debug Menu with dark-mode toggle and readable Log History;
-- Gallery with reusable Elements and generated AppGraph views;
-- AppGraph depth navigation derived from the registered blueprint rather than another hand-maintained
-  topology;
-- ordered local action history with elapsed seconds between accepted events.
+Shared destinations are pushed over the selected primary page:
 
-The primary shell owns toolbar, bottom navigation, and FAB placement. Those elements deliberately
-have no static owning screen. Runtime ScreenRelay context supplies the actual screen from which a
-shared-shell interaction occurred.
+~~~text
+Events
+  -> Debug
+~~~
 
-## Design lineage used
+Transient presentation is shallower than a pushed page:
 
-The Android practicum ports the current VexLife visual vocabulary rather than copying browser
-implementation structure:
+~~~text
+Events
+  -> Debug
+       -> LogHistoryDialog
+~~~
 
-- dark/light surface palette;
-- Vex mark geometry;
-- VexLife brand and current-context tagline;
-- 70-unit top/bottom shell proportions;
-- existing tactile/surface/spatial motion timing as Android animation tokens.
+Back resolves from the topmost semantic layer:
 
-These values are now Android-owned source. There is no runtime or build-time coupling to a VexLife
-checkout.
+~~~text
+1. dismiss transient presentation
+2. else pop pushed page
+3. else leave root behavior to Android
+~~~
 
-## Logging order
+The toolbar Back action and Android system Back consume the same navigation owner.
 
-A navigation interaction is accepted and logged before ScreenRelay changes current screen:
+## Page authoring
 
-```text
-Button/FAB activation
--> snapshot current semantic screen
--> record Clicked with before/after semantic screen
--> apply declared navigation intent
--> commit ScreenRelay target
-```
+A normal page declares its layout once through PageBlueprint. The renderer walks that same tree. Named elements are reserved for things another relationship must address.
 
-This is deliberate. Android Activity/Compose lifecycle callback ordering does not define VexLife
-semantic screen history.
+This removes the former duplication:
 
-The readable projection can therefore preserve:
+~~~text
+blueprint layout
++
+second handwritten Compose reconstruction
+~~~
 
-```text
-[time | duration][DebugMenu | Clicked]
-[HomeScreen ScreenDisappeared -> DebugMenuScreen ScreenAppeared]
-```
+## AppGraph
 
-even if native composition/lifecycle callbacks occur in a different implementation order.
+The graph is a projection of registered relationships, not a second registry.
 
-## What this slice does not claim
+A current screen is not emitted as a traversable next target. A screen already present in the current exploration path may be shown as an existing relationship but cannot be descended into again. Cycles stay visible without becoming endless traversal.
 
-- no BulkData/API export or durable log persistence;
-- no product content for Home, Events, or Settings beyond the explicit preview;
-- no persistent theme preference;
-- no Home/network/model integration;
-- no claim that the current cell vocabulary is complete;
-- no claim that source tests or APK build have run merely because the source is formed;
-- no physical-device acceptance yet.
+## Logging
 
-The next proof for this candidate is focused unit tests + app unit tests + debug APK assembly, then a
-real-device walk of pager navigation, FAB expansion, Debug history, theme toggle, Gallery elements,
-and AppGraph depth navigation.
+Navigation intent is observed against the current runtime page before navigation state changes. System Back is also recorded when it changes presentation/page state.
+
+Platform lifecycle callback order remains separate from semantic navigation order.
+
+## Proof state
+
+Source remains a draft candidate until the exact head compiles/tests and Victor completes the lived device walk.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][F1-UI-BLUEPRINT-HOME] -->

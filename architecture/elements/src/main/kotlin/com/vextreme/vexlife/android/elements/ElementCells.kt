@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.elements
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -35,7 +36,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -46,26 +46,15 @@ fun interface ElementActionHandler {
     fun activate(element: ActionElement)
 }
 
-val LocalElementActionHandler = staticCompositionLocalOf<ElementActionHandler> {
-    error("ElementActionHandler has not been provided")
-}
-
-val LocalUIBlueprintRegistry = staticCompositionLocalOf<UIBlueprintRegistry?> { null }
-
-@Composable
-private fun blueprintStyle(element: UIElement): ElementStyleKey =
-    LocalUIBlueprintRegistry.current?.styleOf(element) ?: element.style
-
 fun Modifier.vexElement(element: UIElement): Modifier = testTag(element.elementId)
 
 @Composable
 fun VexButton(
     element: ButtonElement,
+    handler: ElementActionHandler,
     modifier: Modifier = Modifier,
-    style: ElementStyleKey? = null,
+    style: ElementStyleKey = element.style,
 ) {
-    val handler = LocalElementActionHandler.current
-    val resolvedStyle = style ?: blueprintStyle(element)
     val label = stringResource(requireNotNull(element.labelRes))
     val content: @Composable RowScope.() -> Unit = {
         element.icon?.let {
@@ -74,7 +63,7 @@ fun VexButton(
         Text(label)
     }
 
-    when (resolvedStyle) {
+    when (style) {
         VexElementStyles.SecondaryAction -> FilledTonalButton(
             onClick = { handler.activate(element) },
             modifier = modifier.vexElement(element),
@@ -108,9 +97,9 @@ fun VexButton(
 @Composable
 fun VexIconButton(
     element: ButtonElement,
+    handler: ElementActionHandler,
     modifier: Modifier = Modifier,
 ) {
-    val handler = LocalElementActionHandler.current
     val label = stringResource(requireNotNull(element.labelRes))
     IconButton(
         onClick = { handler.activate(element) },
@@ -126,19 +115,19 @@ fun VexIconButton(
 @Composable
 fun VexFab(
     element: FabElement,
+    handler: ElementActionHandler,
     modifier: Modifier = Modifier,
+    style: ElementStyleKey = element.style,
 ) {
-    val handler = LocalElementActionHandler.current
-    val resolvedStyle = blueprintStyle(element)
     val label = stringResource(requireNotNull(element.labelRes))
     FloatingActionButton(
         onClick = { handler.activate(element) },
         modifier = modifier.vexElement(element),
-        containerColor = when (resolvedStyle) {
+        containerColor = when (style) {
             VexElementStyles.FabOption -> MaterialTheme.colorScheme.secondaryContainer
             else -> MaterialTheme.colorScheme.primaryContainer
         },
-        contentColor = when (resolvedStyle) {
+        contentColor = when (style) {
             VexElementStyles.FabOption -> MaterialTheme.colorScheme.onSecondaryContainer
             else -> MaterialTheme.colorScheme.onPrimaryContainer
         },
@@ -154,9 +143,9 @@ fun VexFab(
 fun VexToggleRow(
     element: ToggleElement,
     checked: Boolean,
+    handler: ElementActionHandler,
     modifier: Modifier = Modifier,
 ) {
-    val handler = LocalElementActionHandler.current
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -185,15 +174,15 @@ fun VexToggleRow(
 fun VexContainer(
     element: UIElement,
     modifier: Modifier = Modifier,
+    style: ElementStyleKey = element.style,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val resolvedStyle = blueprintStyle(element)
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .vexElement(element),
         shape = MaterialTheme.shapes.large,
-        color = when (resolvedStyle) {
+        color = when (style) {
             VexElementStyles.RaisedSurface -> MaterialTheme.colorScheme.surfaceContainerHigh
             else -> MaterialTheme.colorScheme.surfaceContainer
         },
@@ -254,6 +243,146 @@ fun VexScrollableColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         content = content,
     )
+}
+
+@Composable
+fun VexElementTree(
+    placement: ElementPlacement,
+    registry: UIBlueprintRegistry,
+    handler: ElementActionHandler,
+    modifier: Modifier = Modifier,
+    toggleChecked: (ToggleElement) -> Boolean = { false },
+    selectedChild: (SwappableContainerElement) -> UIElement = { it.defaultChild },
+) {
+    val element = placement.element
+    val style = registry.styleOf(element)
+
+    when (element) {
+        is DialogElement -> Unit
+
+        is SwappableContainerElement -> {
+            val selected = selectedChild(element)
+            val child = placement.children.firstOrNull {
+                it.element.elementId == selected.elementId
+            } ?: placement.children.firstOrNull()
+            if (child != null) {
+                VexElementTree(
+                    placement = child,
+                    registry = registry,
+                    handler = handler,
+                    modifier = modifier,
+                    toggleChecked = toggleChecked,
+                    selectedChild = selectedChild,
+                )
+            }
+        }
+
+        is ScrollableColumnElement -> VexScrollableColumn(
+            element = element,
+            modifier = modifier,
+        ) {
+            RenderChildren(placement, registry, handler, toggleChecked, selectedChild)
+        }
+
+        is CardElement -> VexContainer(
+            element = element,
+            modifier = modifier,
+            style = style,
+        ) {
+            RenderChildren(placement, registry, handler, toggleChecked, selectedChild)
+        }
+
+        is ColumnElement -> VexColumn(
+            element = element,
+            modifier = modifier,
+        ) {
+            RenderChildren(placement, registry, handler, toggleChecked, selectedChild)
+        }
+
+        is RowElement -> VexRow(
+            element = element,
+            modifier = modifier,
+        ) {
+            placement.children.forEach { child ->
+                VexElementTree(child, registry, handler, toggleChecked = toggleChecked, selectedChild = selectedChild)
+            }
+        }
+
+        is StackElement -> Box(
+            modifier = modifier.vexElement(element),
+        ) {
+            placement.children.forEach { child ->
+                VexElementTree(child, registry, handler, toggleChecked = toggleChecked, selectedChild = selectedChild)
+            }
+        }
+
+        is ButtonElement -> VexButton(
+            element = element,
+            handler = handler,
+            modifier = modifier,
+            style = style,
+        )
+
+        is FabElement -> VexFab(
+            element = element,
+            handler = handler,
+            modifier = modifier,
+            style = style,
+        )
+
+        is ToggleElement -> VexToggleRow(
+            element = element,
+            checked = toggleChecked(element),
+            handler = handler,
+            modifier = modifier,
+        )
+
+        is TextElement -> Text(
+            text = stringResource(element.textRes),
+            modifier = modifier.vexElement(element),
+            style = when (element.role) {
+                TextRole.Title -> MaterialTheme.typography.headlineMedium
+                TextRole.Body -> MaterialTheme.typography.bodyLarge
+                TextRole.Supporting -> MaterialTheme.typography.bodyMedium
+                TextRole.Label -> MaterialTheme.typography.labelSmall
+            },
+            color = when (element.role) {
+                TextRole.Supporting,
+                TextRole.Label,
+                -> MaterialTheme.colorScheme.onSurfaceVariant
+                else -> MaterialTheme.colorScheme.onSurface
+            },
+        )
+
+        is ImageElement -> Unit
+
+        is ContainerElement -> VexContainer(
+            element = element,
+            modifier = modifier,
+            style = style,
+        ) {
+            RenderChildren(placement, registry, handler, toggleChecked, selectedChild)
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.RenderChildren(
+    placement: ElementPlacement,
+    registry: UIBlueprintRegistry,
+    handler: ElementActionHandler,
+    toggleChecked: (ToggleElement) -> Boolean,
+    selectedChild: (SwappableContainerElement) -> UIElement,
+) {
+    placement.children.forEach { child ->
+        VexElementTree(
+            placement = child,
+            registry = registry,
+            handler = handler,
+            toggleChecked = toggleChecked,
+            selectedChild = selectedChild,
+        )
+    }
 }
 
 @Composable

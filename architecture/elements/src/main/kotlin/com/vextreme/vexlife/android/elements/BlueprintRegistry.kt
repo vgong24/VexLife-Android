@@ -250,6 +250,9 @@ class UIBlueprintRegistry(
 
     fun screen(screenId: String): ScreenElement? = screenById[screenId]
 
+    fun element(elementId: String): UIElement? =
+        placementByElementId[elementId]?.element
+
     fun screenRoot(screen: ScreenElement): ElementPlacement =
         requireNotNull(screenRootById[screen.screenId]) { "screen not registered: ${screen.screenId}" }
 
