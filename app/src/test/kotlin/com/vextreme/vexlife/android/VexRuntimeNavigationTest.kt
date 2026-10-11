@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.AppActions
@@ -172,6 +173,31 @@ class VexRuntimeNavigationTest {
         assertTrue(
             text.contains(
                 UserProfileScreen.DisplayName.elementId,
+            ),
+        )
+    }
+
+    @Test
+    fun rendererLocalEffectIsValidatedAndLoggedWithoutAppActionDispatch() {
+        val logger = VexLogger()
+        val runtime = runtime(
+            logger = logger,
+        )
+
+        runtime.activate(
+            HomeScreen.VexStreamMusic,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.TogglePlayback,
+        )
+
+        assertEquals(
+            VexStreamMusicScreen.screenId,
+            runtime.currentScreen.screenId,
+        )
+        assertTrue(
+            logger.renderHistory().contains(
+                "PlayPause Clicked",
             ),
         )
     }
