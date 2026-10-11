@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -97,6 +98,12 @@ internal fun VexMapsMapSurface(
                 context,
             )
         }
+    val placeSearchStore =
+        remember(context) {
+            VexMapsPlaceSearchStore(
+                context,
+            )
+        }
 
     var locationState by
         remember {
@@ -120,6 +127,28 @@ internal fun VexMapsMapSurface(
         remember {
             mutableStateOf<VexMapCoordinate?>(
                 null,
+            )
+        }
+    var destinationLabel by
+        remember {
+            mutableStateOf<String?>(
+                null,
+            )
+        }
+    var placeSearchPack by
+        remember {
+            mutableStateOf(
+                placeSearchStore.currentPack(),
+            )
+        }
+    var placeSearchQuery by
+        remember {
+            mutableStateOf("")
+        }
+    var placeSearchState by
+        remember {
+            mutableStateOf<VexMapsPlaceSearchState>(
+                VexMapsPlaceSearchState.Idle,
             )
         }
     var mapSelectionTarget by
@@ -279,6 +308,41 @@ internal fun VexMapsMapSurface(
             }
         }
 
+    val placeSearchImportLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .OpenDocument(),
+        ) { uri ->
+            if (uri == null) {
+                return@rememberLauncherForActivityResult
+            }
+
+            runtime.recordDynamicInteraction(
+                subjectRef =
+                    "presentation.vexmaps.place-search.import",
+                action = "Selected",
+            )
+            placeSearchState =
+                VexMapsPlaceSearchState.Importing
+
+            scope.launch {
+                runCatching {
+                    placeSearchStore.import(
+                        uri,
+                    )
+                }.onSuccess { imported ->
+                    placeSearchPack = imported
+                    placeSearchState =
+                        VexMapsPlaceSearchState.Idle
+                }.onFailure {
+                    placeSearchState =
+                        VexMapsPlaceSearchState.Error(
+                            VexMapsPlaceSearchError.IMPORT,
+                        )
+                }
+            }
+        }
+
     val importLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts
@@ -347,6 +411,11 @@ internal fun VexMapsMapSurface(
                                 )
                                 destination =
                                     selected
+                                destinationLabel =
+                                    context.getString(
+                                        R.string
+                                            .vexmaps_route_destination_label,
+                                    )
                                 planningState =
                                     VexMapsPlanningState.Idle
                                 mapController
@@ -514,8 +583,97 @@ internal fun VexMapsMapSurface(
                     deviceRouteOrigin != null,
                 destination =
                     destination,
+                placeSearchPack =
+                    placeSearchPack,
+                placeSearchQuery =
+                    placeSearchQuery,
+                placeSearchState =
+                    placeSearchState,
                 planningState =
                     planningState,
+                onPlaceSearchQueryChange = { query ->
+                    placeSearchQuery = query
+                    if (
+                        placeSearchState !is
+                            VexMapsPlaceSearchState.Importing
+                    ) {
+                        placeSearchState =
+                            VexMapsPlaceSearchState.Idle
+                    }
+                },
+                onImportPlaceSearch = {
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.place-search.import",
+                        action = "Clicked",
+                    )
+                    placeSearchImportLauncher.launch(
+                        arrayOf("*/*"),
+                    )
+                },
+                onSearchPlaces = {
+                    val pack =
+                        placeSearchPack
+                            ?: return@VexMapsRoutePlannerCard
+                    val query =
+                        placeSearchQuery
+                            .trim()
+                    if (query.isEmpty()) {
+                        return@VexMapsRoutePlannerCard
+                    }
+
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.place-search.query",
+                        action = "Submitted",
+                    )
+                    placeSearchState =
+                        VexMapsPlaceSearchState.Searching
+
+                    scope.launch {
+                        runCatching {
+                            placeSearchStore.search(
+                                pack = pack,
+                                query = query,
+                            )
+                        }.onSuccess { places ->
+                            placeSearchState =
+                                VexMapsPlaceSearchState.Results(
+                                    places,
+                                )
+                        }.onFailure {
+                            placeSearchState =
+                                VexMapsPlaceSearchState.Error(
+                                    VexMapsPlaceSearchError.SEARCH,
+                                )
+                        }
+                    }
+                },
+                onPlaceSelected = { place ->
+                    runtime.recordDynamicInteraction(
+                        subjectRef =
+                            "presentation.vexmaps.place-search.result",
+                        action = "Selected",
+                    )
+                    destination =
+                        place.coordinate
+                    destinationLabel =
+                        place.name
+                    mapSelectionTarget =
+                        VexMapsMapSelectionTarget.DESTINATION
+                    planningState =
+                        VexMapsPlanningState.Idle
+                    placeSearchState =
+                        VexMapsPlaceSearchState.Idle
+                    mapController
+                        .showDestination(
+                            place.coordinate,
+                        )
+                    mapController
+                        .focusOn(
+                            place.coordinate,
+                        )
+                },
                 onChooseOriginOnMap = {
                     runtime.recordDynamicInteraction(
                         subjectRef =
@@ -598,10 +756,11 @@ internal fun VexMapsMapSurface(
                                             destination =
                                                 target,
                                             destinationLabel =
-                                                context.getString(
-                                                    R.string
-                                                        .vexmaps_route_destination_label,
-                                                ),
+                                                destinationLabel
+                                                    ?: context.getString(
+                                                        R.string
+                                                            .vexmaps_route_destination_label,
+                                                    ),
                                         ),
                                 )
                         }.onSuccess { route ->
@@ -791,7 +950,14 @@ private fun VexMapsRoutePlannerCard(
     selectingOrigin: Boolean,
     canUseDeviceOrigin: Boolean,
     destination: VexMapCoordinate?,
+    placeSearchPack: VexMapsPlaceSearchPack?,
+    placeSearchQuery: String,
+    placeSearchState: VexMapsPlaceSearchState,
     planningState: VexMapsPlanningState,
+    onPlaceSearchQueryChange: (String) -> Unit,
+    onImportPlaceSearch: () -> Unit,
+    onSearchPlaces: () -> Unit,
+    onPlaceSelected: (VexMapsPlaceSearchResult) -> Unit,
     onChooseOriginOnMap: () -> Unit,
     onUseDeviceOrigin: () -> Unit,
     onImportOfflineMap: () -> Unit,
@@ -808,6 +974,163 @@ private fun VexMapsRoutePlannerCard(
             verticalArrangement =
                 Arrangement.spacedBy(8.dp),
         ) {
+            Text(
+                text =
+                    stringResource(
+                        if (placeSearchPack == null) {
+                            R.string
+                                .vexmaps_place_search_none
+                        } else {
+                            R.string
+                                .vexmaps_place_search_ready
+                        },
+                    ),
+                style =
+                    MaterialTheme
+                        .typography
+                        .titleMedium,
+            )
+
+            OutlinedButton(
+                onClick = onImportPlaceSearch,
+                enabled =
+                    placeSearchState !is
+                        VexMapsPlaceSearchState.Importing &&
+                        placeSearchState !is
+                        VexMapsPlaceSearchState.Searching,
+            ) {
+                Text(
+                    stringResource(
+                        if (placeSearchPack == null) {
+                            R.string
+                                .vexmaps_place_search_import
+                        } else {
+                            R.string
+                                .vexmaps_place_search_replace
+                        },
+                    ),
+                )
+            }
+
+            if (placeSearchPack != null) {
+                OutlinedTextField(
+                    value = placeSearchQuery,
+                    onValueChange =
+                        onPlaceSearchQueryChange,
+                    singleLine = true,
+                    label = {
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_place_search_query,
+                            ),
+                        )
+                    },
+                )
+
+                OutlinedButton(
+                    onClick = onSearchPlaces,
+                    enabled =
+                        placeSearchQuery
+                            .isNotBlank() &&
+                            placeSearchState !is
+                            VexMapsPlaceSearchState.Importing &&
+                            placeSearchState !is
+                            VexMapsPlaceSearchState.Searching,
+                ) {
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_place_search_action,
+                        ),
+                    )
+                }
+
+                when (placeSearchState) {
+                    VexMapsPlaceSearchState.Searching ->
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_place_searching,
+                            ),
+                        )
+
+                    is VexMapsPlaceSearchState.Results ->
+                        if (
+                            placeSearchState
+                                .places
+                                .isEmpty()
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string
+                                        .vexmaps_place_search_no_results,
+                                ),
+                            )
+                        } else {
+                            placeSearchState
+                                .places
+                                .forEach { place ->
+                                    OutlinedButton(
+                                        onClick = {
+                                            onPlaceSelected(
+                                                place,
+                                            )
+                                        },
+                                    ) {
+                                        Column {
+                                            Text(
+                                                place.name,
+                                            )
+                                            place.subtitle
+                                                ?.takeIf {
+                                                    it.isNotBlank()
+                                                }
+                                                ?.let { subtitle ->
+                                                    Text(
+                                                        text =
+                                                            subtitle,
+                                                        style =
+                                                            MaterialTheme
+                                                                .typography
+                                                                .bodySmall,
+                                                    )
+                                                }
+                                        }
+                                    }
+                                }
+                        }
+
+                    is VexMapsPlaceSearchState.Error ->
+                        Text(
+                            stringResource(
+                                when (
+                                    placeSearchState.error
+                                ) {
+                                    VexMapsPlaceSearchError.IMPORT ->
+                                        R.string
+                                            .vexmaps_place_search_import_error
+
+                                    VexMapsPlaceSearchError.SEARCH ->
+                                        R.string
+                                            .vexmaps_place_search_error
+                                },
+                            ),
+                        )
+
+                    VexMapsPlaceSearchState.Importing ->
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_place_search_importing,
+                            ),
+                        )
+
+                    VexMapsPlaceSearchState.Idle ->
+                        Unit
+                }
+            }
+
             Text(
                 text =
                     when {
@@ -1284,6 +1607,30 @@ private fun NavigationStopButton(
     }
 }
 
+internal sealed interface VexMapsPlaceSearchState {
+    data object Idle :
+        VexMapsPlaceSearchState
+
+    data object Importing :
+        VexMapsPlaceSearchState
+
+    data object Searching :
+        VexMapsPlaceSearchState
+
+    data class Results(
+        val places: List<VexMapsPlaceSearchResult>,
+    ) : VexMapsPlaceSearchState
+
+    data class Error(
+        val error: VexMapsPlaceSearchError,
+    ) : VexMapsPlaceSearchState
+}
+
+internal enum class VexMapsPlaceSearchError {
+    IMPORT,
+    SEARCH,
+}
+
 internal fun resolveVexMapsRouteOrigin(
     selectedOrigin: VexMapCoordinate?,
     deviceOrigin: VexMapCoordinate?,
@@ -1391,6 +1738,21 @@ private class VexMapsMapController {
         map = null
         style = null
         lastFittedRouteKey = null
+    }
+
+    fun focusOn(
+        coordinate: VexMapCoordinate,
+    ) {
+        map?.animateCamera(
+            CameraUpdateFactory
+                .newLatLngZoom(
+                    LatLng(
+                        coordinate.latitude,
+                        coordinate.longitude,
+                    ),
+                    15.5,
+                ),
+        )
     }
 
     fun showOrigin(

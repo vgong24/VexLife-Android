@@ -166,6 +166,17 @@
     <string name="vexmaps_navigation_waiting_location_body">The route is preserved while VexMaps waits for a current accurate fix.</string>
     <string name="vexmaps_navigation_arrived">Arrived at %1$s</string>
     <string name="vexmaps_navigation_done">Done</string>
+    <string name="vexmaps_place_search_none">Offline place search needs a local place index.</string>
+    <string name="vexmaps_place_search_ready">Offline place search ready.</string>
+    <string name="vexmaps_place_search_import">Import place search region</string>
+    <string name="vexmaps_place_search_replace">Replace place search region</string>
+    <string name="vexmaps_place_search_importing">Importing place search region…</string>
+    <string name="vexmaps_place_search_import_error">That file could not be used as a local place index.</string>
+    <string name="vexmaps_place_search_query">Find a place</string>
+    <string name="vexmaps_place_search_action">Search offline</string>
+    <string name="vexmaps_place_searching">Searching this phone…</string>
+    <string name="vexmaps_place_search_no_results">No matching places in this local index.</string>
+    <string name="vexmaps_place_search_error">The local place index could not be searched.</string>
     <string name="vexmaps_offline_map_loading">Checking offline map regions…</string>
     <string name="vexmaps_offline_map_none">Offline map: no complete region installed.</string>
     <string name="vexmaps_offline_map_ready">Offline map: %1$d complete region(s) installed.</string>
