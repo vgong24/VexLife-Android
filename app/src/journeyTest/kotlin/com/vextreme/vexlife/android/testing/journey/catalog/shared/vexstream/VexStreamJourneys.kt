@@ -15,6 +15,8 @@ object VexStreamJourneys : VexJourneyShard {
         tap(HomeScreen.ConnectVexStreamMusic)
         tap(VexStreamMusicScreen.FindNearby)
         tap(VexStreamMusicScreen.ConfirmPairingCode)
+        tap(AppShell.Elements.Back)
+        tap(HomeScreen.VexStreamMusic)
         tap(VexStreamMusicScreen.RefreshCatalog)
         type(
             VexStreamMusicScreen.SearchQuery,
