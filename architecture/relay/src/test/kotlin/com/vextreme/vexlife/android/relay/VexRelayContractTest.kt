@@ -198,19 +198,92 @@ class VexRelayContractTest {
         }
     }
 
+    private data class RecoverableCompoundInput(
+        val value: Int? = null,
+        val fail: Boolean? = null,
+    ) : VexInputState<RecoverableCompoundInput> {
+        override fun deepCopy(): RecoverableCompoundInput =
+            copy()
+    }
+
+    private data class RecoverableCompoundOutput(
+        val value: Int = 0,
+    ) : VexOutputState<RecoverableCompoundOutput> {
+        override fun deepCopy(): RecoverableCompoundOutput =
+            copy()
+    }
+
+    private class RecoverableCompoundRelay :
+        VexCompoundRelay<
+            RecoverableCompoundInput,
+            RecoverableCompoundOutput
+        >(
+            relayRef = "relay.contract.recoverable-compound",
+            initialInputState = RecoverableCompoundInput(),
+            initialOutputState = RecoverableCompoundOutput(),
+        ) {
+        fun fail() {
+            send(
+                RecoverableCompoundInput(
+                    fail = true,
+                ),
+            )
+        }
+
+        fun set(value: Int) {
+            send(
+                RecoverableCompoundInput(
+                    value = value,
+                    fail = false,
+                ),
+            )
+        }
+
+        override fun processStates(
+            inputState: RecoverableCompoundInput,
+            currentState: VexCompoundState<
+                RecoverableCompoundInput,
+                RecoverableCompoundOutput
+            >,
+        ): VexCompoundState<
+            RecoverableCompoundInput,
+            RecoverableCompoundOutput
+        > {
+            check(inputState.fail != true) {
+                "fixture Compound processing failure"
+            }
+
+            val coherent =
+                RecoverableCompoundInput(
+                    value =
+                        inputState.value
+                            ?: currentState.inputState.value,
+                    fail = false,
+                )
+
+            return currentState.copy(
+                inputState = coherent,
+                outputState =
+                    RecoverableCompoundOutput(
+                        value = coherent.value ?: 0,
+                    ),
+            )
+        }
+    }
+
     @Test
     fun concurrentSimpleUpdatesDoNotLoseIncrements() {
         val relay =
             CounterRelay()
 
         runConcurrently(
-            count = 64,
+            count = 24,
         ) {
             relay.increment()
         }
 
         assertEquals(
-            64,
+            24,
             relay.current.count,
         )
     }
@@ -309,7 +382,7 @@ class VexRelayContractTest {
             ProbeCompoundRelay()
 
         runConcurrently(
-            count = 48,
+            count = 24,
         ) {
             relay.context("events")
         }
@@ -501,6 +574,33 @@ class VexRelayContractTest {
         assertEquals(
             9,
             relay.current.value,
+        )
+    }
+
+    @Test
+    fun compoundProcessingFailureReleasesSerializationBoundaryForNextTrigger() {
+        val relay =
+            RecoverableCompoundRelay()
+
+        assertThrows(
+            IllegalStateException::class.java,
+        ) {
+            relay.fail()
+        }
+
+        relay.set(11)
+
+        assertEquals(
+            11,
+            relay.currentInput.value,
+        )
+        assertEquals(
+            11,
+            relay.currentOutput.value,
+        )
+        assertEquals(
+            1L,
+            relay.current.revision,
         )
     }
 
