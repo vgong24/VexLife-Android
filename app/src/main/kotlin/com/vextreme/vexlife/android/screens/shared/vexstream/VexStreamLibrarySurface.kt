@@ -21,6 +21,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragHandle
@@ -64,6 +66,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.VexActionFab
@@ -124,6 +127,30 @@ internal fun VexStreamLibrarySurface(
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
+    var artistVisitRequest by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    fun visitArtist(artist: String) {
+        if (artist.isBlank()) {
+            return
+        }
+
+        artistVisitRequest = artist
+        if (
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.SearchSheet,
+            )
+        ) {
+            runtime.presentation.close(
+                VexStreamMusicScreen.SearchSheet,
+            )
+        }
+        runtime.presentation.select(
+            container = VexStreamMusicScreen.LibraryContent,
+            child = VexStreamMusicScreen.ArtistsPanel,
+        )
+    }
+
     val libraryTracks =
         remember(state.tracks) {
             state.playableTracks()
@@ -203,6 +230,7 @@ internal fun VexStreamLibrarySurface(
                             tracks = libraryTracks,
                             controller = controller,
                             resolver = resolver,
+                            onVisitArtist = ::visitArtist,
                         )
 
                     VexStreamMusicScreen.ArtistsPanel.elementId ->
@@ -211,6 +239,11 @@ internal fun VexStreamLibrarySurface(
                             tracks = libraryTracks,
                             controller = controller,
                             resolver = resolver,
+                            requestedArtist = artistVisitRequest,
+                            onRequestedArtistConsumed = {
+                                artistVisitRequest = null
+                            },
+                            onVisitArtist = ::visitArtist,
                         )
 
                     VexStreamMusicScreen.PlaylistsPanel.elementId ->
@@ -219,6 +252,7 @@ internal fun VexStreamLibrarySurface(
                             state = state,
                             controller = controller,
                             resolver = resolver,
+                            onVisitArtist = ::visitArtist,
                         )
 
                     VexStreamMusicScreen.DownloadsPanel.elementId ->
@@ -228,6 +262,7 @@ internal fun VexStreamLibrarySurface(
                             repository = repository,
                             controller = controller,
                             resolver = resolver,
+                            onVisitArtist = ::visitArtist,
                         )
 
                     else ->
@@ -237,6 +272,7 @@ internal fun VexStreamLibrarySurface(
                             repository = repository,
                             controller = controller,
                             resolver = resolver,
+                            onVisitArtist = ::visitArtist,
                         )
                 }
             }
@@ -272,6 +308,7 @@ internal fun VexStreamLibrarySurface(
             onQueryChange = {
                 searchQuery = it
             },
+            onVisitArtist = ::visitArtist,
         )
     }
 
