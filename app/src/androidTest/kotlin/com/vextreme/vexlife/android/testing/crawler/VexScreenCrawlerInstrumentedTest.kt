@@ -4,6 +4,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.testing.journey.DebugJourneys
 import com.vextreme.vexlife.android.testing.journey.GalleryJourneys
+import com.vextreme.vexlife.android.testing.journey.UserProfileJourneys
 import com.vextreme.vexlife.android.testing.journey.VexTestEngine
 import org.junit.Rule
 import org.junit.Test
@@ -37,11 +38,19 @@ import org.junit.runners.Parameterized
  *
  *    No selection line means ALL current/future canonical journey shards.
  *
- *    One Screen only:
+ *    EXACTLY ONE PATH:
+ *
+ *      journey(UserProfileJourneys.formSubmit)
+ *
+ *    Another exact path:
+ *
+ *      journey(DebugJourneys.logHistoryDismiss)
+ *
+ *    One Screen (runs every declared journey that touches that Screen):
  *
  *      screens(UserProfileScreen)
  *
- *    A shard subset:
+ *    A whole feature/shard subset:
  *
  *      shards(DebugJourneys, GalleryJourneys)
  *
@@ -76,25 +85,24 @@ import org.junit.runners.Parameterized
  *
  * 4. WHERE ARE SCREENSHOTS AND HOW DO I PULL THEM?
  *
- *    Device/app path:
- *
- *      /sdcard/Android/data/com.vextreme.vexlife.android/files/vex-screen-crawler
+ *    From the REPOSITORY ROOT, use exactly one of these:
  *
  *    macOS / Linux:
  *
- *      adb pull "/sdcard/Android/data/com.vextreme.vexlife.android/files/vex-screen-crawler" "./vex-screen-crawler"
+ *      bash tools/pull-vex-screen-crawler.sh
  *
  *    Windows PowerShell:
  *
- *      adb pull "/sdcard/Android/data/com.vextreme.vexlife.android/files/vex-screen-crawler" ".\\vex-screen-crawler"
+ *      powershell -ExecutionPolicy Bypass -File .\\tools\\pull-vex-screen-crawler.ps1
  *
- *    If more than one device/emulator is attached:
+ *    The scripts:
+ *    - derive the current applicationId from app/build.gradle.kts;
+ *    - auto-select the only connected adb target;
+ *    - verify crawler artifacts exist;
+ *    - pull everything to ./vex-screen-crawler.
  *
- *      adb devices
- *
- *    then:
- *
- *      adb -s <device-serial> pull "<device-path>" "<local-destination>"
+ *    If multiple adb targets are connected, the script stops and prints the exact one-time
+ *    ANDROID_SERIAL command instead of guessing.
  *
  *    The test also prints the actual device artifact directory after each crawler case.
  *
@@ -111,22 +119,28 @@ import org.junit.runners.Parameterized
  */
 @RunWith(Parameterized::class)
 class VexScreenCrawlerInstrumentedTest(
-    private val parameter: Parameter,
+    /**
+     * AUTOMATIC JUNIT INPUT — DO NOT EDIT/CONSTRUCT THIS.
+     *
+     * JUnit's Parameterized runner calls [plannedRuns] below. Each returned PlannedRun becomes one
+     * fresh test-class instance and is injected here. Change the CONFIG below; JUnit supplies this.
+     */
+    private val plannedRun: PlannedRun,
 ) {
     @get:Rule
     val compose = createComposeRule()
 
     @Test
     fun runConfiguredScreenCrawler() {
-        when (val selected = parameter) {
-            is Parameter.Disabled -> {
+        when (val selected = plannedRun) {
+            is PlannedRun.Disabled -> {
                 println(
                     "Vex ScreenCrawler disabled: ${selected.reason}",
                 )
                 return
             }
 
-            is Parameter.Case -> {
+            is PlannedRun.Case -> {
                 val case = selected.value
                 val evidence =
                     VexScreenCrawlerEvidenceObserver(case)
@@ -174,9 +188,19 @@ class VexScreenCrawlerInstrumentedTest(
                  * reads VexJourneyCatalog; this file is not another shard registry.
                  */
 
+                // EXACT ONE PATH:
+                // journey(UserProfileJourneys.formSubmit)
+                // journey(DebugJourneys.logHistoryDismiss)
+                // journey(DebugJourneys.resetFreshHistory)
+
+                // ALL PATHS THAT TOUCH ONE SCREEN:
                 // screens(UserProfileScreen)
+
+                // WHOLE FEATURE/SHARD PARTITIONS:
                 // shards(DebugJourneys)
                 // shards(DebugJourneys, GalleryJourneys)
+
+                // EVERYTHING EXCEPT:
                 // allShardsExcept(DebugJourneys)
 
                 /*
@@ -221,17 +245,24 @@ class VexScreenCrawlerInstrumentedTest(
                 sourceRef(sourceRef)
             }
 
+        /**
+         * JUnit plumbing:
+         *
+         * CONFIG -> VexScreenCrawlerPlanner -> List<PlannedRun> -> constructor [plannedRun].
+         *
+         * Humans configure above. This function only adapts the plan to JUnit's parameter format.
+         */
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun cases(): List<Array<Any>> =
-            parameters().map { parameter ->
-                arrayOf<Any>(parameter)
+        fun plannedRuns(): List<Array<Any>> =
+            buildPlannedRuns().map { run ->
+                arrayOf<Any>(run)
             }
 
-        private fun parameters(): List<Parameter> {
+        private fun buildPlannedRuns(): List<PlannedRun> {
             if (!enabled) {
                 return listOf(
-                    Parameter.Disabled(
+                    PlannedRun.Disabled(
                         reason =
                             "set VexScreenCrawlerInstrumentedTest.enabled = true",
                     ),
@@ -243,23 +274,21 @@ class VexScreenCrawlerInstrumentedTest(
                 "ScreenCrawler config selected zero journey cases"
             }
 
-            return cases.map { case ->
-                Parameter.Case(case)
-            }
+            return cases.map(PlannedRun::Case)
         }
     }
 
-    sealed interface Parameter {
+    sealed interface PlannedRun {
         data class Disabled(
             val reason: String,
-        ) : Parameter {
+) : PlannedRun {
             override fun toString(): String =
                 "screen-crawler-disabled"
         }
 
         data class Case(
             val value: VexScreenCrawlerCase,
-        ) : Parameter {
+) : PlannedRun {
             override fun toString(): String =
                 value.caseRef
         }
