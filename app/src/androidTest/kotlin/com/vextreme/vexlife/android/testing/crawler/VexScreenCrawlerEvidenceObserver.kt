@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.testing.crawler
 
 import android.graphics.Bitmap
 import android.os.Build
+import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vextreme.vexlife.android.testing.journey.VexJourneyExecutionObserver
 import com.vextreme.vexlife.android.testing.journey.VexJourneyStepObservation
@@ -22,10 +23,19 @@ class VexScreenCrawlerEvidenceObserver(
     private val crawlerRootDirectory: File by lazy {
         val targetContext =
             InstrumentationRegistry.getInstrumentation().targetContext
-        requireNotNull(
-            targetContext.getExternalFilesDir("vex-screen-crawler"),
-        ) {
-            "crawler external files directory is unavailable"
+        val mediaDirectory =
+            requireNotNull(targetContext.externalMediaDirs.firstOrNull()) {
+                "crawler external media directory is unavailable"
+            }
+
+        File(
+            mediaDirectory,
+            "vex-screen-crawler",
+        ).also { directory ->
+            check(directory.mkdirs() || directory.isDirectory) {
+                "failed to create crawler media root: " +
+                    directory.absolutePath
+            }
         }
     }
 
@@ -72,6 +82,13 @@ class VexScreenCrawlerEvidenceObserver(
         )
         println(
             "Vex ScreenCrawler artifact root: ${crawlerRootDirectory.absolutePath}",
+        )
+        Log.i(
+            SCREEN_CRAWLER_LOG_TAG,
+            "START case=${case.caseRef} " +
+                "targetPackage=${targetContext.packageName} " +
+                "artifactRoot=${crawlerRootDirectory.absolutePath} " +
+                "caseDirectory=${rootDirectory.absolutePath}",
         )
     }
 
@@ -130,6 +147,12 @@ class VexScreenCrawlerEvidenceObserver(
 
         println(
             "Vex ScreenCrawler captured $capturedScreenshotCount screenshot(s).",
+        )
+        Log.i(
+            SCREEN_CRAWLER_LOG_TAG,
+            "COMPLETE case=${case.caseRef} " +
+                "screenshots=$capturedScreenshotCount " +
+                "manifest=${manifest.absolutePath}",
         )
         println(
             "Vex ScreenCrawler case artifacts: ${rootDirectory.absolutePath}",
@@ -207,6 +230,15 @@ class VexScreenCrawlerEvidenceObserver(
             "crawler screenshot was not written: ${screenshot.absolutePath}"
         }
         capturedScreenshotCount += 1
+        Log.i(
+            SCREEN_CRAWLER_LOG_TAG,
+            "CAPTURE case=${case.caseRef} " +
+                "step=${observation.stepIndex} " +
+                "kind=${observation.stepKind} " +
+                "screen=${observation.screenId} " +
+                "file=${screenshot.absolutePath} " +
+                "bytes=${screenshot.length()}",
+        )
     }
 
     private fun VexJourneyStepObservation.toManifestLine(
@@ -302,3 +334,6 @@ private fun File.sha256(): String {
         "%02x".format(byte)
     }
 }
+
+
+private const val SCREEN_CRAWLER_LOG_TAG = "VexScreenCrawler"
