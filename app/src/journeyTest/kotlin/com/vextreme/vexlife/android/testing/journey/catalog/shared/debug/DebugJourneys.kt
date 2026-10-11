@@ -18,6 +18,8 @@ object DebugJourneys : VexJourneyShard {
         start(HomeScreen)
         tap(AppShell.Elements.Add)
         tap(AppShell.Elements.DebugMenu)
+        tap(DebugMenuScreen.StartSyntheticEvents)
+        tap(DebugMenuScreen.StopSyntheticEvents)
         tap(DebugMenuScreen.DarkMode)
         tap(DebugMenuScreen.ShowLog)
         dismiss(DebugMenuScreen.LogSheet)

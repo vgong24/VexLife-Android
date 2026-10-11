@@ -14,6 +14,7 @@ import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.open
+import com.vextreme.vexlife.android.data.events.SyntheticExternalEventController
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
@@ -54,6 +55,20 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.ClearLogHistory),
     )
 
+    val StartSyntheticEvents = buttonRef(
+        id = "body.events-simulator.actions.start",
+        labelRes = R.string.events_simulator_start,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.StartSyntheticEvents),
+    )
+
+    val StopSyntheticEvents = buttonRef(
+        id = "body.events-simulator.actions.stop",
+        labelRes = R.string.events_simulator_stop,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.StopSyntheticEvents),
+    )
+
     override val content = layout {
         scrollableColumn("body") {
             toggle(DarkMode)
@@ -75,6 +90,23 @@ object DebugMenuScreen : AppScreenBlueprint(
                 )
             }
 
+            card("events-simulator") {
+                text(
+                    id = "title",
+                    textRes = R.string.events_simulator_title,
+                    role = TextRole.Title,
+                )
+                row("actions") {
+                    button(StartSyntheticEvents)
+                    button(StopSyntheticEvents)
+                }
+                text(
+                    id = "helper",
+                    textRes = R.string.events_simulator_helper,
+                    role = TextRole.Supporting,
+                )
+            }
+
             modalBottomSheet(LogSheet) {}
         }
     }
@@ -87,6 +119,11 @@ object DebugMenuScreen : AppScreenBlueprint(
         val toggleDarkMode = context.toggleDarkMode
         val logger = context.logger
         val logPersistence = context.logPersistence
+        val syntheticEvents =
+            SyntheticExternalEventController(
+                repository = context.repositories.events,
+                scope = context.scope,
+            )
 
         return AppActionRegistrations.of(
             appAction(
@@ -101,6 +138,18 @@ object DebugMenuScreen : AppScreenBlueprint(
             ) {
                 logger.clearHistory()
                 logPersistence.clear()
+            },
+            appAction(
+                action = AppActions.StartSyntheticEvents,
+                ownerRef = screenId,
+            ) {
+                syntheticEvents.start()
+            },
+            appAction(
+                action = AppActions.StopSyntheticEvents,
+                ownerRef = screenId,
+            ) {
+                syntheticEvents.stop()
             },
         )
     }

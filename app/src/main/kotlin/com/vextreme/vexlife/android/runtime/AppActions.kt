@@ -12,6 +12,8 @@ import com.vextreme.vexlife.android.elements.ActionKey
 object AppActions {
     val ToggleDarkMode = ActionKey("action.theme.dark-mode.toggle")
     val ClearLogHistory = ActionKey("action.log-history.clear")
+    val StartSyntheticEvents = ActionKey("action.events.synthetic.start")
+    val StopSyntheticEvents = ActionKey("action.events.synthetic.stop")
     val GallerySample = ActionKey("action.gallery.sample")
     val SaveUserProfile = ActionKey("action.user-profile.save")
     val VexStreamMusicPlaceholder = ActionKey("action.vexstream-music.placeholder")

@@ -8,7 +8,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
-import com.vextreme.vexlife.android.data.events.SyntheticExternalEventSource
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -17,7 +16,6 @@ import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 /**
  * One in-process VexLife app session.
@@ -36,7 +34,6 @@ internal class VexLifeSession(
     val repositories: AppRepositories,
     scope: CoroutineScope,
     initialDarkTheme: Boolean = true,
-    enableSyntheticEvents: Boolean = false,
 ) {
     var darkTheme by mutableStateOf(initialDarkTheme)
         private set
@@ -60,16 +57,6 @@ internal class VexLifeSession(
                 toggleDarkMode = ::toggleDarkMode,
             ),
         )
-
-    init {
-        if (enableSyntheticEvents) {
-            scope.launch {
-                SyntheticExternalEventSource(
-                    sink = repositories.events::accept,
-                ).runForever()
-            }
-        }
-    }
 
     val runtime = VexRuntime(
         registry = AppScreens.registry,
@@ -96,6 +83,5 @@ internal class VexLifeViewModel(
     val session = VexLifeSession(
         repositories = AppRepositoryFactory.production(application),
         scope = viewModelScope,
-        enableSyntheticEvents = true,
     )
 }

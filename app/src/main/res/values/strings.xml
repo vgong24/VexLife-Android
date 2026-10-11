@@ -56,6 +56,10 @@
     <string name="log_history_show">Show</string>
     <string name="log_history_reset">Reset</string>
     <string name="log_history_helper">Reset clears the persisted Log History. New actions begin a fresh history immediately after.</string>
+    <string name="events_simulator_title">Events simulator</string>
+    <string name="events_simulator_start">Start 5-second feed</string>
+    <string name="events_simulator_stop">Stop feed</string>
+    <string name="events_simulator_helper">Debug fixture only. Start a deterministic external-information source, navigate elsewhere, then inspect Events as new information arrives.</string>
     <string name="close">Close</string>
 
     <string name="gallery_elements">Elements</string>

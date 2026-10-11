@@ -13,10 +13,10 @@ class SyntheticExternalEventSource(
         }
     }
 
-    suspend fun runForever() {
-        var sourceRevision = 0L
-        val emitted = mutableListOf<VexExternalEvent>()
+    private var sourceRevision = 0L
+    private val emitted = mutableListOf<VexExternalEvent>()
 
+    suspend fun runForever() {
         while (true) {
             delay(intervalMillis)
 
