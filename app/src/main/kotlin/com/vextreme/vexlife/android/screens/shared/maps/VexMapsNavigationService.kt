@@ -41,6 +41,11 @@ class VexMapsNavigationService :
 
     private lateinit var locationSource:
         VexDeviceLocationSource
+    private lateinit var navigationSpeech:
+        VexNavigationSpeech
+
+    private val speechGate =
+        VexNavigationCueSpeechGate()
 
     private var locationJob: Job? = null
     private var stateJob: Job? = null
@@ -50,6 +55,8 @@ class VexMapsNavigationService :
         super.onCreate()
         locationSource =
             VexDeviceLocationSource(this)
+        navigationSpeech =
+            VexNavigationSpeech(this)
         ensureNotificationChannel()
     }
 
@@ -65,7 +72,26 @@ class VexMapsNavigationService :
             }
 
             ACTION_START,
-            null -> startPreparedNavigation()
+            null -> {
+                when (
+                    VexMapsNavigationProcess
+                        .session
+                        .current
+                        .phase
+                ) {
+                    VexNavigationSessionPhase.READY ->
+                        startPreparedNavigation()
+
+                    VexNavigationSessionPhase.ACTIVE,
+                    VexNavigationSessionPhase.OFF_ROUTE,
+                    VexNavigationSessionPhase.LOCATION_HELD ->
+                        Unit
+
+                    VexNavigationSessionPhase.IDLE,
+                    VexNavigationSessionPhase.ARRIVED ->
+                        stopSelf()
+                }
+            }
 
             else -> {
                 stopSelf()
@@ -97,6 +123,7 @@ class VexMapsNavigationService :
                 .stop()
         }
 
+        navigationSpeech.close()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -147,6 +174,14 @@ class VexMapsNavigationService :
             serviceScope.launch {
                 session.states.collect { state ->
                     updateNotification(state)
+
+                    speechGate
+                        .nextCue(state)
+                        ?.let { cue ->
+                            navigationSpeech.speak(
+                                cue,
+                            )
+                        }
 
                     if (
                         state.phase ==
