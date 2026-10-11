@@ -35,6 +35,8 @@ import org.junit.Assert.fail
  */
 class VexTestEngine(
     private val compose: ComposeContentTestRule,
+    private val observer: VexJourneyExecutionObserver =
+        VexJourneyExecutionObserver.None,
 ) : VexJourneyScope {
     private val logHistory = InMemoryLogHistoryRepository()
     private val repositories = AppRepositories(
@@ -42,16 +44,33 @@ class VexTestEngine(
         userProfile = InMemoryUserProfileRepository(),
     )
     private val expected = VexExpectedWalk()
+    private var stepIndex = 0
 
     fun run(case: VexJourneyCase) {
+        run(
+            journey = case.journey,
+            environment = case.environment,
+            caseLabel = case.toString(),
+        )
+    }
+
+    fun run(
+        journey: VexJourney,
+        environment: VexJourneyEnvironment,
+        caseLabel: String,
+    ) {
         compose.setContent {
-            case.environment.Host {
+            environment.Host {
                 VexLifeApp(repositories = repositories)
             }
         }
 
-        case.journey.walk(this)
-        verifyWalkHistory(case.toString())
+        journey.walk(this)
+        verifyWalkHistory(caseLabel)
+        observer.afterJourney(
+            caseLabel = caseLabel,
+            finalScreenId = expected.currentScreen.screenId,
+        )
     }
 
     override fun start(screen: ScreenElement) {
@@ -65,6 +84,10 @@ class VexTestEngine(
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
+        observe(
+            stepKind = "start",
+            semanticRef = screen.screenId,
+        )
     }
 
     override fun tap(element: ActionElement) {
@@ -73,6 +96,10 @@ class VexTestEngine(
             .scrollIntoViewIfPossible()
             .performClick()
         compose.waitForIdle()
+        observe(
+            stepKind = "tap",
+            semanticRef = (element as UIElement).elementId,
+        )
     }
 
     override fun type(
@@ -86,6 +113,10 @@ class VexTestEngine(
         node.performTextClearance()
         node.performTextInput(value)
         compose.waitForIdle()
+        observe(
+            stepKind = "type",
+            semanticRef = field.elementId,
+        )
     }
 
     override fun submit(element: ActionElement) {
@@ -94,6 +125,10 @@ class VexTestEngine(
             .scrollIntoViewIfPossible()
             .performClick()
         compose.waitForIdle()
+        observe(
+            stepKind = "submit",
+            semanticRef = (element as UIElement).elementId,
+        )
     }
 
     override fun dismiss(element: UIElement) {
@@ -109,12 +144,34 @@ class VexTestEngine(
                 .fetchSemanticsNodes()
                 .isEmpty()
         }
+        observe(
+            stepKind = "dismiss",
+            semanticRef = element.elementId,
+        )
     }
 
     override fun back() {
         expected.back()
         Espresso.pressBack()
         compose.waitForIdle()
+        observe(
+            stepKind = "back",
+            semanticRef = "system.back",
+        )
+    }
+
+    private fun observe(
+        stepKind: String,
+        semanticRef: String?,
+    ) {
+        observer.afterStep(
+            VexJourneyStepObservation(
+                stepIndex = stepIndex++,
+                stepKind = stepKind,
+                screenId = expected.currentScreen.screenId,
+                semanticRef = semanticRef,
+            ),
+        )
     }
 
     private fun verifyWalkHistory(title: String) {
