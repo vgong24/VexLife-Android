@@ -45,6 +45,11 @@ object VexStreamMusicScreen : AppScreenBlueprint(
 ) {
     val ConnectionSection = columnRef("body.connection")
 
+    val SearchQuery = textFieldRef(
+        id = "body.library.search",
+        labelRes = R.string.vexstream_music_search,
+    )
+
     val SongsPanel = scrollableColumnRef("body.library.songs")
     val AlbumsPanel = scrollableColumnRef("body.library.albums")
     val ArtistsPanel = scrollableColumnRef("body.library.artists")
@@ -275,6 +280,8 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 button(RefreshCatalog)
                 button(ForgetPaired)
             }
+
+            textField(SearchQuery)
 
             row("library-tabs") {
                 button(SongsTab)
