@@ -96,6 +96,19 @@ object DebugMenuScreen : AppScreenBlueprint(
                 context.logPersistence.clear()
             },
         )
+
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: com.vextreme.vexlife.android.data.AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        DebugMenuScreenContent(
+            runtime = runtime,
+            logHistoryRepository = repositories.logHistory,
+            darkTheme = darkTheme,
+        )
+    }
 }
 
 @Composable
