@@ -127,12 +127,12 @@ class VexStreamConnectionStore(
     fun signRemotePayload(
         payload: ByteArray,
     ): String {
+        deviceSigningPublicKey()
         val keyStore =
             KeyStore.getInstance(ANDROID_KEY_STORE)
                 .apply {
                     load(null)
                 }
-        deviceSigningPublicKey()
         val privateKey =
             requireNotNull(
                 keyStore.getKey(
