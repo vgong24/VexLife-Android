@@ -489,15 +489,22 @@ internal object VexMapsNavigationProcess {
         sample: VexNavigationLocationSample,
         nowElapsedRealtimeMillis: Long,
     ) {
-        mutableVisualLocation.value =
-            sample
-                .toVexMapsNavigationVisualLocation()
+        synchronized(lock) {
+            mutableVisualLocation.value =
+                advanceVexMapsNavigationVisualLocation(
+                    current =
+                        mutableVisualLocation.value,
+                    sample = sample,
+                    phase =
+                        session.current.phase,
+                )
 
-        session.acceptLocation(
-            sample = sample,
-            nowElapsedRealtimeMillis =
-                nowElapsedRealtimeMillis,
-        )
+            session.acceptLocation(
+                sample = sample,
+                nowElapsedRealtimeMillis =
+                    nowElapsedRealtimeMillis,
+            )
+        }
     }
 
     suspend fun reroutePending(
