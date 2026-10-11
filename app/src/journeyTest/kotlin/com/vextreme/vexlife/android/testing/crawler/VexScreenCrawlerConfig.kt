@@ -102,6 +102,11 @@ sealed interface VexCrawlerSelection {
     data class Screens(
         val screens: Set<ScreenElement>,
     ) : VexCrawlerSelection
+
+    /** Select exactly these canonical journey objects. */
+    data class Journeys(
+        val journeys: Set<VexJourney>,
+    ) : VexCrawlerSelection
 }
 
 data class VexScreenCrawlerConfig(
@@ -159,10 +164,28 @@ class VexScreenCrawlerConfigBuilder {
         )
     }
 
+    /** Run exactly one named journey/path. */
+    fun journey(journey: VexJourney) {
+        setSelection(
+            VexCrawlerSelection.Journeys(
+                journeys = setOf(journey),
+            ),
+        )
+    }
+
+    /** Run an explicit typed set of named journeys/paths. */
+    fun journeys(vararg journeys: VexJourney) {
+        setSelection(
+            VexCrawlerSelection.Journeys(
+                journeys = journeys.toSet(),
+            ),
+        )
+    }
+
     private fun setSelection(value: VexCrawlerSelection) {
         check(!selectionWasExplicitlySet) {
             "ScreenCrawler config declares more than one selection; " +
-                "keep only one of screens/shards/allShardsExcept/allShards"
+                "keep only one of journey(s)/screens/shards/allShardsExcept/allShards"
         }
         selection = value
         selectionWasExplicitlySet = true
@@ -314,6 +337,20 @@ object VexScreenCrawlerPlanner {
                     journey.walk(recorder)
                     recorder.snapshot().screenIds
                         .any(selectedIds::contains)
+                }
+            }
+
+            is VexCrawlerSelection.Journeys -> {
+                val registered =
+                    all.map { (_, journey) -> journey }.toSet()
+                val unknown = selection.journeys - registered
+                require(unknown.isEmpty()) {
+                    "crawler selection contains unregistered journey(s): " +
+                        unknown.joinToString { journey -> journey.id }
+                }
+
+                all.filter { (_, journey) ->
+                    journey in selection.journeys
                 }
             }
         }
