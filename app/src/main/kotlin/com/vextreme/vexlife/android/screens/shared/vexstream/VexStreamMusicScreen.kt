@@ -4,13 +4,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.R
-import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.preview.VexPreviewHost
+import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -23,7 +24,7 @@ import com.vextreme.vexlife.android.runtime.appAction
  * It proves that Home can navigate to a stable destination and that feature-specific Invoke effects
  * stay registered beside the feature instead of accumulating in VexLifeApp.
  */
-object VexStreamMusicScreen : ScreenBlueprint(
+object VexStreamMusicScreen : AppScreenBlueprint(
     screenKey = "vexstream-music",
     titleRes = R.string.vexstream_music_title,
 ) {
@@ -51,6 +52,18 @@ object VexStreamMusicScreen : ScreenBlueprint(
             }
         }
     }
+
+    internal override fun appActionRegistrations(
+        context: ScreenActionContext,
+    ): AppActionRegistrations =
+        AppActionRegistrations.of(
+            appAction(
+                action = AppActions.VexStreamMusicPlaceholder,
+                ownerRef = screenId,
+            ) {
+                // No product effect yet.
+            },
+        )
 }
 
 @Composable
@@ -65,22 +78,6 @@ fun VexStreamMusicScreenContent(
         selectedChild = runtime.presentation::selected,
     )
 }
-
-/**
- * Feature-local owner for the placeholder Invoke action.
- *
- * The action is intentionally no-op beyond normal VexRuntime logging. Its purpose is to prove the
- * registration shape before a real VexStream source/service contract exists.
- */
-internal fun vexStreamMusicActionRegistrations(): AppActionRegistrations =
-    AppActionRegistrations.of(
-        appAction(
-            action = AppActions.VexStreamMusicPlaceholder,
-            ownerRef = VexStreamMusicScreen.screenId,
-        ) {
-            // No product effect yet.
-        },
-    )
 
 @VexScreenPreviews
 @Composable
