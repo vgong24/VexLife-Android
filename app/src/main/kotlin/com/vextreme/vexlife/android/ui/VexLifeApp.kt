@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
@@ -53,13 +54,28 @@ import com.vextreme.vexlife.android.shell.AppFrame
  */
 @Composable
 fun VexLifeApp() {
-    var darkTheme by rememberSaveable { mutableStateOf(true) }
-
     val appContext = LocalContext.current.applicationContext
-    val persistenceScope = rememberCoroutineScope()
     val repositories = remember(appContext) {
         AppRepositoryFactory.production(appContext)
     }
+
+    VexLifeApp(repositories = repositories)
+}
+
+/**
+ * Injectable composition root used by previews/tests and, later, alternate repository environments.
+ *
+ * Production calls the zero-argument wrapper above. Tooling can supply InMemory repositories without
+ * teaching production repositories how to mock themselves or requiring Android Studio Preview to
+ * open the real Room database.
+ */
+@Composable
+internal fun VexLifeApp(
+    repositories: AppRepositories,
+) {
+    var darkTheme by rememberSaveable { mutableStateOf(true) }
+
+    val persistenceScope = rememberCoroutineScope()
     val logPersistence = remember(repositories.logHistory, persistenceScope) {
         LogHistoryPersistenceQueue(
             repository = repositories.logHistory,
