@@ -49,7 +49,7 @@ fi
 if ! adb -s "$SERIAL" shell "test -d '$REMOTE'" >/dev/null 2>&1; then
   echo "ERROR: no ScreenCrawler artifacts found on $SERIAL at:" >&2
   echo "  $REMOTE" >&2
-  echo "Run VexScreenCrawlerInstrumentedTest with enabled=true first." >&2
+  echo "Run VexScreenCrawlerInstrumentedTest directly first; an explicit crawler run must produce screenshot evidence." >&2
   exit 1
 fi
 
