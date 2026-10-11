@@ -47,6 +47,7 @@ kotlin {
 dependencies {
     implementation(project(":architecture:elements"))
     implementation(project(":architecture:logging"))
+    implementation(project(":architecture:relay"))
 
     implementation(libs.activityCompose)
     implementation(platform(libs.composeBom))

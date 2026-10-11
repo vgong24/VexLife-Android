@@ -345,6 +345,31 @@ class VexRuntime(
     }
 
     /**
+     * Bounded semantic logging seam for dynamic repeated presentation identity.
+     *
+     * Static registered actions should continue through [activate]. Use this only when the item is
+     * inherently runtime data (for example one external Events row) and therefore cannot be a
+     * permanent AppScreens registry element.
+     */
+    fun recordDynamicInteraction(
+        subjectRef: String,
+        action: String = "Clicked",
+    ) {
+        require(
+            subjectRef.startsWith("element.") ||
+                subjectRef.startsWith("presentation."),
+        ) {
+            "dynamic interaction ref must be element.* or presentation.*: $subjectRef"
+        }
+
+        logger.recordInteractionRef(
+            subjectRef = subjectRef,
+            screenBefore = currentScreen,
+            action = action,
+        )
+    }
+
+    /**
      * Entry point for action-bearing UI elements.
      *
      * Put a breakpoint here to observe every framework-routed button/FAB/toggle interaction before

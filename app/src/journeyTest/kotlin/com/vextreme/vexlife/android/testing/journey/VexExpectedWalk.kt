@@ -69,6 +69,20 @@ class VexExpectedWalk : VexJourneyScope {
         )
     }
 
+    override fun signal(signal: VexJourneySignal) = Unit
+
+    override fun tapDynamic(element: VexDynamicElementRef) {
+        requireStarted()
+
+        expected += VexExpectedRecord(
+            kind = VexLogKind.Interaction,
+            subjectRef = element.elementId,
+            action = "Clicked",
+            screenBeforeId = currentScreen.screenId,
+            screenAfterId = null,
+        )
+    }
+
     override fun tap(element: ActionElement) {
         requireStarted()
         val source = element as? UIElement
