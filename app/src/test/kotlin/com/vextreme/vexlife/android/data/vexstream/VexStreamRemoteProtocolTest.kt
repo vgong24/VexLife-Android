@@ -1,7 +1,6 @@
 package com.vextreme.vexlife.android.data.vexstream
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 
 class VexStreamRemoteProtocolTest {
