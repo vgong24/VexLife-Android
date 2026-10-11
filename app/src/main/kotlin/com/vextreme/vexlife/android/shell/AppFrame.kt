@@ -30,8 +30,12 @@ fun AppFrame(
     runtime: VexRuntime,
     content: @Composable () -> Unit,
 ) {
-    BackHandler(enabled = runtime.canGoBack) {
-        runtime.goBack()
+    // One resolved Back plan drives both Android native Back and the toolbar affordance below.
+    // Do not re-derive "can go back" independently here.
+    val nextBack = runtime.nextBack
+
+    BackHandler(enabled = nextBack != null) {
+        nextBack?.let { runtime.goBack(it) }
     }
 
     Box(
@@ -47,7 +51,7 @@ fun AppFrame(
                 AppToolbar(
                     currentScreen = runtime.currentScreen,
                     runtime = runtime,
-                    showBack = runtime.showToolbarBack,
+                    showBack = nextBack?.showToolbarBack == true,
                 )
             },
             bottomBar = {
