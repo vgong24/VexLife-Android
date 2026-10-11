@@ -83,6 +83,28 @@ class AppActionRegistrations private constructor(
         invokedActionKeys(element.intent)
             .distinctBy { it.actionId }
 
+    /**
+     * Fails construction when registered Screen elements declare Invoke actions with no owner.
+     *
+     * This lets AppScreens discover feature registrations from the Screen list instead of keeping a
+     * second hand-maintained feature list in VexLifeSession.
+     */
+    fun requireCoverage(
+        elements: Iterable<ActionElement>,
+    ): AppActionRegistrations {
+        val missing = elements
+            .flatMap(::actionKeysFor)
+            .distinctBy { it.actionId }
+            .filter { action -> this[action] == null }
+
+        check(missing.isEmpty()) {
+            "missing app action ownership for registered Screen actions: " +
+                missing.joinToString { it.actionId }
+        }
+
+        return this
+    }
+
     fun dispatch(request: AppActionRequest) {
         require(request.action).handle(request)
     }
