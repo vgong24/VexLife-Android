@@ -239,8 +239,12 @@ event truth.
 
 Candidate selection happens **before** target reachability.
 
-The current policy chooses the oldest unhandled event from normalized event truth so a newly arriving
-event cannot steal attention merely because it arrived later.
+The current policy first retains the already-selected candidate while that exact event still exists
+in the provider projection and remains unhandled. This means insertion, reorder, timestamp change,
+or a newer arrival cannot steal the active attention identity.
+
+When no retained candidate remains, the Relay chooses the oldest unhandled event from normalized
+event truth. A provider removal of the retained event is therefore allowed to advance the candidate.
 
 Then availability is classified:
 
@@ -268,7 +272,9 @@ Therefore:
 
 ~~~text
 SCROLL != NEW_CANDIDATE_IDENTITY
-REORDER != NEW_EVENT_IDENTITY
+INSERT != NEW_CANDIDATE_IDENTITY
+REORDER != NEW_CANDIDATE_IDENTITY
+PROVIDER_REMOVAL_MAY_ADVANCE_CANDIDATE
 TARGET_UNREACHABLE != EVENT_DISAPPEARED
 TRANSIENT_BLOCKED != EVENT_REJECTED
 ~~~
@@ -410,14 +416,25 @@ screenshot-only scenario.
 
 Current draft candidate: GitHub PR #15.
 
-Source-formation evidence already obtained in this environment:
+Current pure-domain checkpoint:
 
 ~~~text
-Relay kernel local Kotlin compile = PASS
-Relay lattice executable smoke = PASS
-synthetic source/data executable smoke = PASS
-synthetic stop/restart provider-revision smoke = PASS
+candidateHead=f4eab480ff403c7f4b9fafaac35a68b488768d8c
+
+local Kotlin/coroutines compile + semantic smoke = PASS
+  - stale source revision rejection
+  - bounded normalized synthetic projection
+  - candidate HELD/READY progression
+  - concurrent sibling dependency patch composition
+  - single-producer stop/restart revision continuity
+  - candidate retention across provider insert/reorder
+  - provider removal advances the retained candidate
 ~~~
+
+This is a pure-domain reproduction using the current source contracts with a tiny
+`EventsScreen.screenId` stub because the local container does not carry the Android/Compose
+dependency graph. It is evidence for the Relay/data law only; it is not relabeled as repository
+Gradle or Android UI proof.
 
 Not yet truthfully claimed:
 
