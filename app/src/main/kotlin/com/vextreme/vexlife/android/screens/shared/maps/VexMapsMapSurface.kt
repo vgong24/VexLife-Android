@@ -308,43 +308,40 @@ internal fun VexMapsMapSurface(
             val result =
                 locationSource
                     .currentPreciseLocation()
+            val projectedLocation =
+                projectVexMapsDeviceLocation(
+                    result,
+                )
 
-            when (result) {
-                is VexDeviceLocationResult.Located -> {
-                    currentLocation =
-                        result
-                    mapController
-                        .showDeviceLocation(
-                            result,
-                        )
-                    locationState =
+            currentLocation =
+                projectedLocation
+            if (projectedLocation == null) {
+                mapController
+                    .clearDeviceLocation()
+            } else {
+                mapController
+                    .showDeviceLocation(
+                        projectedLocation,
+                    )
+            }
+
+            locationState =
+                when (result) {
+                    is VexDeviceLocationResult.Located ->
                         VexMapsLocationState.Ready
-                }
 
-                VexDeviceLocationResult.PermissionMissing -> {
-                    currentLocation = null
-                    locationState =
+                    VexDeviceLocationResult.PermissionMissing ->
                         VexMapsLocationState.Denied
-                }
 
-                VexDeviceLocationResult.ApproximateOnly -> {
-                    currentLocation = null
-                    locationState =
+                    VexDeviceLocationResult.ApproximateOnly ->
                         VexMapsLocationState.Approximate
-                }
 
-                VexDeviceLocationResult.LocationDisabled -> {
-                    currentLocation = null
-                    locationState =
+                    VexDeviceLocationResult.LocationDisabled ->
                         VexMapsLocationState.Disabled
-                }
 
-                VexDeviceLocationResult.Unavailable -> {
-                    currentLocation = null
-                    locationState =
+                    VexDeviceLocationResult.Unavailable ->
                         VexMapsLocationState.Unavailable
                 }
-            }
 
             if (
                 isVexMapsNavigationStartPreflightSatisfied(
@@ -379,6 +376,8 @@ internal fun VexMapsMapSurface(
                 readCurrentPreciseLocation()
             } else {
                 currentLocation = null
+                mapController
+                    .clearDeviceLocation()
                 val coarseGranted =
                     grants[
                         Manifest.permission
@@ -2257,6 +2256,11 @@ internal fun restoreVexMapsTravelMode(
         }
         ?: VexMapsTravelMode.DRIVE
 
+internal fun projectVexMapsDeviceLocation(
+    result: VexDeviceLocationResult,
+): VexDeviceLocationResult.Located? =
+    result as? VexDeviceLocationResult.Located
+
 internal fun isVexMapsNavigationStartPreflightSatisfied(
     result: VexDeviceLocationResult,
 ): Boolean =
@@ -2592,6 +2596,30 @@ private class VexMapsMapController {
     ) {
         pendingLocation = location
         renderDeviceLocation(location)
+    }
+
+    fun clearDeviceLocation() {
+        pendingLocation = null
+
+        val style = style ?: return
+        if (
+            style.getLayer(
+                DEVICE_LOCATION_LAYER_ID,
+            ) != null
+        ) {
+            style.removeLayer(
+                DEVICE_LOCATION_LAYER_ID,
+            )
+        }
+        if (
+            style.getSource(
+                DEVICE_LOCATION_SOURCE_ID,
+            ) != null
+        ) {
+            style.removeSource(
+                DEVICE_LOCATION_SOURCE_ID,
+            )
+        }
     }
 
     private fun renderOrigin(
