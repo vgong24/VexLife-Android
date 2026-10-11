@@ -103,8 +103,10 @@ sealed interface ElementIntent {
      * Semantic interaction whose effect is intentionally owned by the current custom renderer.
      *
      * VexRuntime still validates/logs the registered element, but does not dispatch an app action.
-     * Use this only for already-local platform effects (for example MediaController commands), not
-     * as a shortcut around a repository/domain action owner.
+     * Use this when the concrete effect needs renderer-scoped context (for example the current
+     * MediaController or currently selected dynamic row) and the narrow feature/repository/service
+     * owner is already explicit there. Stable app actions with construction-time owners still use
+     * Invoke/AppActionRegistrations; LocalEffect is not a generic escape hatch.
      */
     data object LocalEffect : ElementIntent
 
