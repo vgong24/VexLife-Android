@@ -429,7 +429,7 @@ internal class VexStreamRemoteTransport(
         expectedLength: Long?,
     ) : InputStream() {
         private var position = start
-        private val endExclusive =
+        private var endExclusive =
             expectedLength
                 ?.let {
                     start + it
@@ -517,6 +517,31 @@ internal class VexStreamRemoteTransport(
                 ) {
                     exhausted = true
                     return -1
+                }
+
+                if (endExclusive == null) {
+                    response.headers
+                        .entries
+                        .firstOrNull {
+                            it.key.equals(
+                                "Content-Range",
+                                ignoreCase = true,
+                            )
+                        }
+                        ?.value
+                        ?.substringAfterLast(
+                            "/",
+                        )
+                        ?.takeIf {
+                            it != "*"
+                        }
+                        ?.toLongOrNull()
+                        ?.takeIf {
+                            it >= 0L
+                        }
+                        ?.let {
+                            endExclusive = it
+                        }
                 }
 
                 position +=
