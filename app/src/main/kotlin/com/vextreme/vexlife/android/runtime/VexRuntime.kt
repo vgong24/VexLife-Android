@@ -100,16 +100,21 @@ class AppNavigationState(
     val current: ScreenElement
         get() = pageStack.lastOrNull() ?: primarySelection
 
-    val canPopPage: Boolean
-        get() = pageStack.isNotEmpty()
+    val nextBack: AppNavigationBack?
+        get() = when {
+            pageStack.isNotEmpty() ->
+                AppNavigationBack.PopPage(
+                    target = pageStack.dropLast(1).lastOrNull() ?: primarySelection,
+                )
 
-    val canReturnToPrimaryRoot: Boolean
-        get() =
-            pageStack.isEmpty() &&
-                primarySelection.screenId != primaryRoot.screenId
+            primarySelection.screenId != primaryRoot.screenId ->
+                AppNavigationBack.ReturnToPrimaryRoot(
+                    target = primaryRoot,
+                )
 
-    val canGoBack: Boolean
-        get() = canPopPage || canReturnToPrimaryRoot
+            else ->
+                null
+        }
 
     fun isPrimary(screen: ScreenElement = current): Boolean =
         screen.screenId in primaryIds && pageStack.isEmpty()
@@ -139,29 +144,17 @@ class AppNavigationState(
         return current
     }
 
-    fun goBack(): ScreenElement? {
-        if (pageStack.isNotEmpty()) {
-            return popPage()
-        }
+    fun applyBack(step: AppNavigationBack): ScreenElement =
+        when (step) {
+            is AppNavigationBack.PopPage -> {
+                pageStack = pageStack.dropLast(1)
+                current
+            }
 
-        if (canReturnToPrimaryRoot) {
-            selectPrimary(primaryRoot)
-            return current
-        }
-
-        return null
-    }
-
-    fun peekBackTarget(): ScreenElement? =
-        when {
-            pageStack.isNotEmpty() ->
-                pageStack.dropLast(1).lastOrNull() ?: primarySelection
-
-            canReturnToPrimaryRoot ->
-                primaryRoot
-
-            else ->
-                null
+            is AppNavigationBack.ReturnToPrimaryRoot -> {
+                selectPrimary(primaryRoot)
+                current
+            }
         }
 }
 
@@ -213,17 +206,29 @@ class VexRuntime(
     val currentScreen: ScreenElement
         get() = navigation.current
 
-    val canGoBack: Boolean
-        get() =
-            presentation.hasOpenPresentation ||
-                activeBackLayer?.canGoBack == true ||
-                navigation.canGoBack
-
-    val showToolbarBack: Boolean
-        get() = activeBackLayer?.canGoBack == true || navigation.canPopPage
+    /**
+     * Single resolved answer for the entire app Back chain.
+     *
+     * This is deliberately not exposed as several independent booleans. If Back behavior changes,
+     * inspect this value first: it tells you exactly which layer currently owns Back.
+     */
+    val nextBack: BackResolution?
+        get() = resolveBack()
 
     fun isPrimary(screen: ScreenElement = currentScreen): Boolean =
         navigation.isPrimary(screen)
+
+    private fun resolveBack(): BackResolution? {
+        if (presentation.hasOpenPresentation) {
+            return BackResolution.DismissPresentation
+        }
+
+        activeBackLayer
+            ?.takeIf { it.canGoBack }
+            ?.let { return BackResolution.PopLocalLayer(it) }
+
+        return navigation.nextBack?.let { BackResolution.AppNavigation(it) }
+    }
 
     /**
      * Makes one page-local navigation trail participate in the same Back chain as the app.
@@ -287,50 +292,60 @@ class VexRuntime(
     }
 
     /**
-     * Resolves Back from the shallowest visible layer inward:
+     * Executes [nextBack], the single resolved Back plan for the current state.
      *
-     * 1. dismiss a transient presentation (dialog/FAB layer);
-     * 2. otherwise pop the active page-local navigation layer;
-     * 3. otherwise pop a pushed app page;
-     * 4. otherwise return Events/Settings to the primary root (Home);
-     * 5. return false only when already at Home with no shallower layer, so Android may own root Back.
+     * Resolution priority remains:
+     * 1. transient presentation;
+     * 2. active page-local trail;
+     * 3. pushed app page;
+     * 4. primary peer fallback to Home;
+     * 5. null at Home/root, allowing Android to own app exit.
      *
-     * Toolbar Back and Android system Back both end up here.
+     * Toolbar Back and Android system Back both consume this same resolved value.
      */
     fun goBack(logEvent: Boolean = true): Boolean {
+        val resolution = nextBack ?: return false
+        return goBack(resolution, logEvent)
+    }
+
+    /**
+     * Executes an already-resolved Back plan.
+     *
+     * AppFrame uses this overload so the same [BackResolution] instance that enabled native Back is
+     * the one that executes when Android dispatches it. This prevents enablement and execution from
+     * being derived from different condition checks.
+     */
+    fun goBack(
+        resolution: BackResolution,
+        logEvent: Boolean = true,
+    ): Boolean {
         val before = currentScreen
 
-        if (presentation.hasOpenPresentation) {
-            if (logEvent) {
-                logger.recordBack(screenBefore = before)
-            }
-            presentation.closeTop()
-            return true
-        }
-
-        val localLayer = activeBackLayer
-        if (localLayer?.canGoBack == true) {
-            if (logEvent) {
-                logger.recordBack(screenBefore = before)
-            }
-            return localLayer.goBack()
-        }
-
-        val target = navigation.peekBackTarget() ?: return false
         if (logEvent) {
             logger.recordBack(
                 screenBefore = before,
-                screenAfter = target,
+                screenAfter = resolution.screenAfter,
             )
         }
-        navigation.goBack()
-        return true
+
+        return when (resolution) {
+            BackResolution.DismissPresentation ->
+                presentation.closeTop() != null
+
+            is BackResolution.PopLocalLayer ->
+                resolution.layer.goBack()
+
+            is BackResolution.AppNavigation -> {
+                navigation.applyBack(resolution.step)
+                true
+            }
+        }
     }
 
     private fun navigationTarget(intent: ElementIntent): ScreenElement? = when (intent) {
         is ElementIntent.NavigateTo -> intent.screen
         ElementIntent.NavigateBack ->
-            if (presentation.hasOpenPresentation) null else navigation.peekBackTarget()
+            nextBack?.screenAfter
         is ElementIntent.Sequence -> intent.intents.mapNotNull(::navigationTarget).lastOrNull()
         else -> null
     }

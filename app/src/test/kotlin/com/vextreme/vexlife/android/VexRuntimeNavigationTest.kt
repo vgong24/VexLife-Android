@@ -7,6 +7,8 @@ import com.vextreme.vexlife.android.pages.primary.events.EventsPage
 import com.vextreme.vexlife.android.pages.primary.home.HomePage
 import com.vextreme.vexlife.android.pages.primary.settings.SettingsPage
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
+import com.vextreme.vexlife.android.runtime.AppNavigationBack
+import com.vextreme.vexlife.android.runtime.BackResolution
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppShell
 import org.junit.Assert.assertEquals
@@ -31,8 +33,11 @@ class VexRuntimeNavigationTest {
         runtime.activate(AppShell.Elements.Events)
 
         assertEquals(EventsPage.screenId, runtime.currentScreen.screenId)
-        assertTrue(runtime.canGoBack)
         assertTrue(runtime.navigation.pageStack.isEmpty())
+
+        val back = runtime.nextBack as BackResolution.AppNavigation
+        val root = back.step as AppNavigationBack.ReturnToPrimaryRoot
+        assertEquals(HomePage.screenId, root.target.screenId)
     }
 
     @Test
@@ -45,7 +50,7 @@ class VexRuntimeNavigationTest {
         assertTrue(runtime.goBack())
         assertEquals(HomePage.screenId, runtime.currentScreen.screenId)
 
-        assertFalse(runtime.canGoBack)
+        assertEquals(null, runtime.nextBack)
         assertFalse(runtime.goBack())
     }
 
@@ -57,12 +62,15 @@ class VexRuntimeNavigationTest {
         runtime.activate(AppShell.Elements.DebugMenu)
 
         assertEquals(DebugMenuPage.screenId, runtime.currentScreen.screenId)
-        assertTrue(runtime.navigation.canPopPage)
 
-        runtime.goBack()
+        val back = runtime.nextBack as BackResolution.AppNavigation
+        val pop = back.step as AppNavigationBack.PopPage
+        assertEquals(EventsPage.screenId, pop.target.screenId)
+
+        runtime.goBack(back)
 
         assertEquals(EventsPage.screenId, runtime.currentScreen.screenId)
-        assertFalse(runtime.navigation.canPopPage)
+        assertTrue(runtime.navigation.pageStack.isEmpty())
     }
 
     @Test
@@ -74,7 +82,8 @@ class VexRuntimeNavigationTest {
         trail.push("child")
         runtime.attachBackLayer(trail)
 
-        runtime.goBack()
+        val localBack = runtime.nextBack as BackResolution.PopLocalLayer
+        runtime.goBack(localBack)
 
         assertEquals("root", trail.current)
         assertEquals("screen.gallery", runtime.currentScreen.screenId)
@@ -94,8 +103,9 @@ class VexRuntimeNavigationTest {
 
         assertTrue(runtime.presentation.isOpen(DebugMenuPage.LogDialog))
         assertEquals(DebugMenuPage.screenId, runtime.currentScreen.screenId)
+        assertEquals(BackResolution.DismissPresentation, runtime.nextBack)
 
-        runtime.goBack()
+        runtime.goBack(requireNotNull(runtime.nextBack))
 
         assertFalse(runtime.presentation.isOpen(DebugMenuPage.LogDialog))
         assertEquals(DebugMenuPage.screenId, runtime.currentScreen.screenId)
