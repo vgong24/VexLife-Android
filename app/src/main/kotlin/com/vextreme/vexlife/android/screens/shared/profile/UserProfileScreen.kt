@@ -20,11 +20,12 @@ import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.FormSubmission
-import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
+import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -42,7 +43,7 @@ import kotlinx.coroutines.launch
  * Future VexHome/VexStream/device links do NOT belong in this screen's profile row. A future User Hub
  * may compose profile + linked-system state from separate owners.
  */
-object UserProfileScreen : ScreenBlueprint(
+object UserProfileScreen : AppScreenBlueprint(
     screenKey = "user-profile",
     titleRes = R.string.user_profile_title,
 ) {
@@ -78,6 +79,14 @@ object UserProfileScreen : ScreenBlueprint(
             }
         }
     }
+
+    internal override fun appActionRegistrations(
+        context: ScreenActionContext,
+    ): AppActionRegistrations =
+        userProfileActionRegistrations(
+            repository = context.repositories.userProfile,
+            scope = context.scope,
+        )
 }
 
 /**
