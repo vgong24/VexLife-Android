@@ -4,10 +4,10 @@ import androidx.compose.runtime.Composable
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.preview.VexBlueprintScreenPreview
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
-import com.vextreme.vexlife.android.elements.ScreenBlueprint
+import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.elements.TextRole
 
-object EventsScreen : ScreenBlueprint(
+object EventsScreen : AppScreenBlueprint(
     screenKey = "events",
     titleRes = R.string.events_title,
 ) {
