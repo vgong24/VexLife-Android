@@ -156,7 +156,7 @@ internal fun VexStreamLibrarySurface(
                 .padding(innerPadding),
         ) {
             if (state.connectionState !is VexStreamConnectionState.Paired) {
-                VexStreamConnectionHeader(
+                VexStreamConnectionSetup(
                     state = state,
                     runtime = runtime,
                 )
@@ -310,166 +310,117 @@ private fun VexStreamLibraryTabs(
 }
 
 @Composable
-private fun VexStreamConnectionHeader(
+private fun VexStreamConnectionSetup(
     state: VexStreamMusicState,
     runtime: VexRuntime,
 ) {
-    when (
-        val connection = state.connectionState
-    ) {
-        is VexStreamConnectionState.Paired -> {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = 12.dp,
-                        vertical = 4.dp,
-                    )
-                    .vexElement(
-                        VexStreamMusicScreen.ConnectionSection,
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(
-                        text = connection.displayName,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text =
-                            if (state.hubState is VexStreamHubState.Ready) {
-                                stringResource(
-                                    R.string.vexstream_music_status_ready,
-                                )
-                            } else {
-                                stringResource(
-                                    R.string.vexstream_music_status_unreachable,
-                                )
-                            },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+    val connection = state.connectionState
 
-                VexIconButton(
-                    element = VexStreamMusicScreen.ManageConnection,
+    VexContainer(
+        element = VexStreamMusicScreen.ConnectionSection,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 12.dp,
+                vertical = 8.dp,
+            ),
+        style = VexElementStyles.RaisedSurface,
+    ) {
+        when (connection) {
+            VexStreamConnectionState.NotPaired -> {
+                Text(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_status_not_configured,
+                        ),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_intro,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                VexButton(
+                    element = VexStreamMusicScreen.FindNearby,
                     handler = runtime,
                 )
             }
-        }
 
-        else -> {
-            VexContainer(
-                element = VexStreamMusicScreen.ConnectionSection,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = 12.dp,
-                        vertical = 8.dp,
-                    ),
-                style = VexElementStyles.RaisedSurface,
-            ) {
-                when (connection) {
-                    VexStreamConnectionState.NotPaired -> {
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexstream_music_status_not_configured,
-                                ),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexstream_music_intro,
-                                ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        VexButton(
-                            element = VexStreamMusicScreen.FindNearby,
-                            handler = runtime,
-                        )
-                    }
-
-                    VexStreamConnectionState.Searching -> {
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexstream_music_status_searching,
-                                ),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-
-                    is VexStreamConnectionState.ConfirmCode -> {
-                        Text(
-                            text = connection.displayName,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexstream_music_pairing_code_title,
-                                ),
-                        )
-                        Text(
-                            text =
-                                formatPairingCode(
-                                    connection.pairingCode,
-                                ),
-                            style = MaterialTheme.typography.headlineLarge,
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexstream_music_pairing_code_help,
-                                ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        VexButton(
-                            element =
-                                VexStreamMusicScreen
-                                    .ConfirmPairingCode,
-                            handler = runtime,
-                        )
-                    }
-
-                    is VexStreamConnectionState.WaitingForDesktopApproval -> {
-                        Text(
-                            text = connection.displayName,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexstream_music_waiting_approval,
-                                ),
-                        )
-                    }
-
-                    is VexStreamConnectionState.Failed -> {
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexstream_music_pairing_failed,
-                                ),
-                        )
-                        VexButton(
-                            element = VexStreamMusicScreen.FindNearby,
-                            handler = runtime,
-                        )
-                    }
-
-                    is VexStreamConnectionState.Paired ->
-                        Unit
-                }
+            VexStreamConnectionState.Searching -> {
+                Text(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_status_searching,
+                        ),
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
+
+            is VexStreamConnectionState.ConfirmCode -> {
+                Text(
+                    text = connection.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_pairing_code_title,
+                        ),
+                )
+                Text(
+                    text =
+                        formatPairingCode(
+                            connection.pairingCode,
+                        ),
+                    style = MaterialTheme.typography.headlineLarge,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_pairing_code_help,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                VexButton(
+                    element =
+                        VexStreamMusicScreen
+                            .ConfirmPairingCode,
+                    handler = runtime,
+                )
+            }
+
+            is VexStreamConnectionState.WaitingForDesktopApproval -> {
+                Text(
+                    text = connection.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_waiting_approval,
+                        ),
+                )
+            }
+
+            is VexStreamConnectionState.Failed -> {
+                Text(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_pairing_failed,
+                        ),
+                )
+                VexButton(
+                    element = VexStreamMusicScreen.FindNearby,
+                    handler = runtime,
+                )
+            }
+
+            is VexStreamConnectionState.Paired ->
+                Unit
         }
     }
 }
