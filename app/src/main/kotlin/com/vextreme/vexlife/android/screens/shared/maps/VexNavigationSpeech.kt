@@ -7,12 +7,10 @@ import android.media.AudioManager
 import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import androidx.annotation.RequiresApi
 import java.io.Closeable
 import java.util.Locale
 
-/**
- * Pure gate between navigation state emissions and one spoken utterance per newly issued cue key.
- */
 internal class VexNavigationCueSpeechGate {
     private var lastSpoken:
         VexNavigationGuidanceCueKey? = null
@@ -47,9 +45,8 @@ internal class VexNavigationCueSpeechGate {
 /**
  * Android-native speech realization for deterministic navigation cues.
  *
- * Navigation meaning and timing are already decided before this class is called. TTS failure never
- * changes route progress. Audio focus is short-lived and marked as navigation guidance so Android
- * can duck compatible media without VexMaps reaching into another feature's player.
+ * The navigation core already decided what the cue means and when it became newly eligible. This
+ * layer only realizes that meaning through local TTS and short-lived navigation audio focus.
  */
 internal class VexNavigationSpeech(
     context: Context,
@@ -79,102 +76,109 @@ internal class VexNavigationSpeech(
     private val focusListener =
         AudioManager
             .OnAudioFocusChangeListener {
-                // Each utterance is short and independently eligible. A focus loss simply means
-                // the current TTS output should not fight another higher-priority audio owner.
+                // Turn cues are short. Android owns the actual focus transition/ducking.
             }
 
-    private val focusRequest:
-        AudioFocusRequest? =
+    /*
+     * Keep the API-26 AudioFocusRequest out of the loaded field signature on API 23-25. The helper
+     * is entered only behind the runtime SDK guard.
+     */
+    private val platformFocusRequest:
+        Any? =
         if (
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.O
         ) {
-            AudioFocusRequest.Builder(
-                AudioManager
-                    .AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
-            )
-                .setAudioAttributes(
+            AudioFocusApi26.create(
+                attributes =
                     audioAttributes,
-                )
-                .setOnAudioFocusChangeListener(
+                listener =
                     focusListener,
-                )
-                .build()
+            )
         } else {
             null
         }
 
+    private var tts:
+        TextToSpeech? = null
+    private var earlyInitStatus:
+        Int? = null
     private var ttsReady = false
     private var closed = false
     private var pendingCue:
         VexNavigationGuidanceCue? = null
 
-    private val tts =
-        TextToSpeech(
-            appContext,
-        ) { status ->
-            if (
-                closed ||
-                status !=
-                TextToSpeech.SUCCESS
-            ) {
-                return@TextToSpeech
+    init {
+        val created =
+            TextToSpeech(
+                appContext,
+            ) { status ->
+                val engine =
+                    tts
+
+                if (engine == null) {
+                    earlyInitStatus =
+                        status
+                } else {
+                    onTtsInitialized(
+                        status = status,
+                        engine = engine,
+                    )
+                }
             }
 
-            ttsReady = true
+        created.setOnUtteranceProgressListener(
+            object :
+                UtteranceProgressListener() {
+                override fun onStart(
+                    utteranceId: String?,
+                ) = Unit
 
-            runCatching {
-                tts.language =
-                    Locale.getDefault()
-                tts.setAudioAttributes(
-                    audioAttributes,
+                override fun onDone(
+                    utteranceId: String?,
+                ) {
+                    abandonAudioFocus()
+                }
+
+                @Deprecated(
+                    "Legacy TextToSpeech callback",
+                )
+                override fun onError(
+                    utteranceId: String?,
+                ) {
+                    abandonAudioFocus()
+                }
+
+                override fun onError(
+                    utteranceId: String?,
+                    errorCode: Int,
+                ) {
+                    abandonAudioFocus()
+                }
+
+                override fun onStop(
+                    utteranceId: String?,
+                    interrupted: Boolean,
+                ) {
+                    abandonAudioFocus()
+                }
+            },
+        )
+
+        tts =
+            created
+
+        earlyInitStatus
+            ?.also {
+                earlyInitStatus = null
+            }
+            ?.let { status ->
+                onTtsInitialized(
+                    status = status,
+                    engine = created,
                 )
             }
-
-            pendingCue
-                ?.also {
-                    pendingCue = null
-                }
-                ?.let(::speak)
-        }.apply {
-            setOnUtteranceProgressListener(
-                object :
-                    UtteranceProgressListener() {
-                    override fun onStart(
-                        utteranceId: String?,
-                    ) = Unit
-
-                    override fun onDone(
-                        utteranceId: String?,
-                    ) {
-                        abandonAudioFocus()
-                    }
-
-                    @Deprecated(
-                        "Legacy TextToSpeech callback",
-                    )
-                    override fun onError(
-                        utteranceId: String?,
-                    ) {
-                        abandonAudioFocus()
-                    }
-
-                    override fun onError(
-                        utteranceId: String?,
-                        errorCode: Int,
-                    ) {
-                        abandonAudioFocus()
-                    }
-
-                    override fun onStop(
-                        utteranceId: String?,
-                        interrupted: Boolean,
-                    ) {
-                        abandonAudioFocus()
-                    }
-                },
-            )
-        }
+    }
 
     fun speak(
         cue: VexNavigationGuidanceCue,
@@ -189,12 +193,15 @@ internal class VexNavigationSpeech(
             return
         }
 
+        val engine =
+            tts ?: return
+
         if (!requestAudioFocus()) {
             return
         }
 
         val result =
-            tts.speak(
+            engine.speak(
                 cue.instructionProjection,
                 TextToSpeech.QUEUE_FLUSH,
                 null,
@@ -216,9 +223,40 @@ internal class VexNavigationSpeech(
 
         closed = true
         pendingCue = null
-        tts.stop()
-        tts.shutdown()
+        ttsReady = false
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
         abandonAudioFocus()
+    }
+
+    private fun onTtsInitialized(
+        status: Int,
+        engine: TextToSpeech,
+    ) {
+        if (
+            closed ||
+            status !=
+            TextToSpeech.SUCCESS
+        ) {
+            return
+        }
+
+        ttsReady = true
+
+        runCatching {
+            engine.language =
+                Locale.getDefault()
+            engine.setAudioAttributes(
+                audioAttributes,
+            )
+        }
+
+        pendingCue
+            ?.also {
+                pendingCue = null
+            }
+            ?.let(::speak)
     }
 
     private fun requestAudioFocus(): Boolean {
@@ -227,10 +265,12 @@ internal class VexNavigationSpeech(
                 Build.VERSION.SDK_INT >=
                 Build.VERSION_CODES.O
             ) {
-                audioManager.requestAudioFocus(
-                    requireNotNull(
-                        focusRequest,
-                    ),
+                AudioFocusApi26.request(
+                    manager = audioManager,
+                    request =
+                        requireNotNull(
+                            platformFocusRequest,
+                        ),
                 )
             } else {
                 @Suppress("DEPRECATION")
@@ -252,11 +292,11 @@ internal class VexNavigationSpeech(
             Build.VERSION.SDK_INT >=
             Build.VERSION_CODES.O
         ) {
-            focusRequest?.let {
-                audioManager
-                    .abandonAudioFocusRequest(
-                        it,
-                    )
+            platformFocusRequest?.let {
+                AudioFocusApi26.abandon(
+                    manager = audioManager,
+                    request = it,
+                )
             }
         } else {
             @Suppress("DEPRECATION")
@@ -264,6 +304,45 @@ internal class VexNavigationSpeech(
                 focusListener,
             )
         }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+private object AudioFocusApi26 {
+    fun create(
+        attributes: AudioAttributes,
+        listener:
+            AudioManager.OnAudioFocusChangeListener,
+    ): Any =
+        AudioFocusRequest.Builder(
+            AudioManager
+                .AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
+        )
+            .setAudioAttributes(
+                attributes,
+            )
+            .setOnAudioFocusChangeListener(
+                listener,
+            )
+            .build()
+
+    fun request(
+        manager: AudioManager,
+        request: Any,
+    ): Int =
+        manager.requestAudioFocus(
+            request as
+                AudioFocusRequest,
+        )
+
+    fun abandon(
+        manager: AudioManager,
+        request: Any,
+    ) {
+        manager.abandonAudioFocusRequest(
+            request as
+                AudioFocusRequest,
+        )
     }
 }
 
