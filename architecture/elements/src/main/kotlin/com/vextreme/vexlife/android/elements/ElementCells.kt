@@ -16,15 +16,25 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.PlayPause
+import androidx.compose.material.icons.rounded.PlaylistPlay
+import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -106,11 +116,13 @@ fun VexIconButton(
     element: ButtonElement,
     handler: ElementActionHandler,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val label = stringResource(requireNotNull(element.labelRes))
     IconButton(
         onClick = { handler.activate(element) },
         modifier = modifier.vexElement(element),
+        enabled = enabled,
     ) {
         VexIcon(
             icon = requireNotNull(element.icon) { "${element.elementId} requires an icon" },
@@ -539,4 +551,14 @@ private fun ElementIcon.imageVector(): ImageVector = when (this) {
     ElementIcon.Save -> Icons.Rounded.Save
     ElementIcon.Help -> Icons.Rounded.HelpOutline
     ElementIcon.Person -> Icons.Rounded.Person
+    ElementIcon.Play -> Icons.Rounded.PlayArrow
+    ElementIcon.PlayNext -> Icons.Rounded.PlaylistPlay
+    ElementIcon.Queue -> Icons.Rounded.QueueMusic
+    ElementIcon.Download -> Icons.Rounded.Download
+    ElementIcon.RemoveDownload -> Icons.Rounded.Delete
+    ElementIcon.Previous -> Icons.Rounded.SkipPrevious
+    ElementIcon.PlayPause -> Icons.Rounded.PlayPause
+    ElementIcon.Next -> Icons.Rounded.SkipNext
+    ElementIcon.Shuffle -> Icons.Rounded.Shuffle
+    ElementIcon.Repeat -> Icons.Rounded.Repeat
 }
