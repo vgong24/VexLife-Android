@@ -138,6 +138,13 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         ),
     )
 
+    val CollectionBack = buttonRef(
+        id = "body.collection.back",
+        labelRes = R.string.back,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
     val PlayTrack = buttonRef(
         id = "body.track-actions.play",
         labelRes = R.string.vexstream_music_play,
@@ -282,6 +289,8 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 scrollableColumn(PlaylistsPanel) {}
                 scrollableColumn(DownloadsPanel) {}
             }
+
+            button(CollectionBack)
 
             column("track-actions") {
                 button(PlayTrack)
