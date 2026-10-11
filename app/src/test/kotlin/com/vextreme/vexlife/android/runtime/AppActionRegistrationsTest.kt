@@ -58,6 +58,18 @@ class AppActionRegistrationsTest {
     }
 
     @Test
+    fun coverageRejectsRegisteredInvokeActionsWithoutOwners() {
+        try {
+            AppActionRegistrations.Empty.requireCoverage(
+                listOf(invokeSource, navigationSource),
+            )
+            fail("declared Invoke action without an owner should fail coverage")
+        } catch (error: IllegalStateException) {
+            assertTrue(error.message.orEmpty().contains(first.actionId))
+        }
+    }
+
+    @Test
     fun exactlyOneRegisteredOwnerReceivesTheAction() {
         var calls = 0
         val registrations = AppActionRegistrations.of(
