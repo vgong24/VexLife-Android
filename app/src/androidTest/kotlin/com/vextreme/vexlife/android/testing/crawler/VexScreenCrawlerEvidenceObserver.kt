@@ -46,7 +46,7 @@ class VexScreenCrawlerEvidenceObserver(
                 }
             }
 
-            VexCrawlerCapturePolicy.EVERY_SEMANTIC_STEP ->
+            VexCrawlerCapturePolicy.EVERY_STEP ->
                 capture(observation)
 
             VexCrawlerCapturePolicy.FINAL_ONLY ->
