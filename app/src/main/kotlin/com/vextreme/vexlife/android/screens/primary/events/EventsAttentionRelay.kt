@@ -7,6 +7,9 @@ import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 data class EventsAttentionInputState(
     val currentScreenId: String? = null,
@@ -89,6 +92,18 @@ class EventsAttentionRelay :
         initialInputState = EventsAttentionInputState(),
         initialOutputState = EventsAttentionOutputState(),
     ) {
+    /**
+     * Presentation consumers should observe only the derived output, not every retained input
+     * revision. External provider snapshots may change while the candidate/availability/queue
+     * projection remains semantically identical.
+     */
+    val outputStates: Flow<EventsAttentionOutputState> =
+        states
+            .map { state ->
+                state.outputState
+            }
+            .distinctUntilChanged()
+
     fun screenChanged(screenId: String) {
         require(screenId.isNotBlank())
         send(EventsAttentionInputState(currentScreenId = screenId))

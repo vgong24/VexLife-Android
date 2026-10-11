@@ -38,6 +38,18 @@
     <string name="events_attention_suspend_expectation">Suspend → keep the row active but move it behind unsuspended items in the current queue.</string>
     <string name="events_attention_suppress_expectation">Suppress → keep the row, mark SUPPRESSED for this lab session, and remove it from proactive attention until Reset lab.</string>
     <string name="events_attention_failure_hint">If the stated next state does not happen, treat it as a failing case / bug.</string>
+    <string name="events_attention_compact_queue">Queue: %1$d active · %2$d current · %3$d next</string>
+    <string name="events_attention_lab_compact">Step %1$d · %2$s · target %3$d/%4$d · prefer %5$s</string>
+    <string name="events_attention_lab_compact_no_target">Step %1$d · %2$s · no target</string>
+    <string name="events_attention_lab_seed">Replay seed: %1$d</string>
+    <string name="events_attention_blocking_compact">Blocking: target is auto-scrolled and list scrolling is locked until Acknowledge.</string>
+    <string name="events_attention_press">Press: %1$s</string>
+    <string name="events_attention_choose_compact">Choose an action. The event row should remain; only its attention-queue position changes.</string>
+    <string name="events_attention_expected_ack_short">Expected: row stays and attention advances.</string>
+    <string name="events_attention_expected_later_short">Expected: row stays and moves to the next sequence.</string>
+    <string name="events_attention_expected_suspend_short">Expected: row stays and moves to the current-queue tail.</string>
+    <string name="events_attention_expected_suppress_short">Expected: row stays and leaves proactive attention for this lab.</string>
+    <string name="events_attention_expected_blocking_short">Expected: Acknowledge releases the locked list and reveals provider updates accumulated underneath.</string>
     <string name="settings_preview_title">Settings preview</string>
     <string name="settings_preview_body">Future home for preferences, device posture, and user-controlled configuration. This is placeholder content for the first navigation practicum.</string>
 

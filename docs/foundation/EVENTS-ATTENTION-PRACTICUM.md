@@ -390,52 +390,87 @@ TRANSIENT_SURFACE_MUST_LOOK_TRANSIENT
 PROVIDER_UPDATE != VISIBILITY_OBSERVER_RESTART
 ~~~
 
-The tooltip therefore uses an inverse/outlined surface rather than the ordinary event-card surface,
-and the stable-list visibility observer remains alive across provider ref-set changes so a five-second
-arrival cannot create a false READY -> HELD_TARGET_UNREACHABLE -> READY blink.
+The tooltip therefore uses an inverse/outlined surface rather than the ordinary event-card surface.
 
-The popup renders Relay-owned metadata:
+The second lived review showed that keeping the visibility observer alive was necessary but not
+sufficient: a five-second provider emission still legitimately changes the Compound Relay input and
+the live Events list order. Even when candidate identity is unchanged, collecting the whole Compound
+state and relaying out rows under an anchored Popup can create visible flicker.
+
+Current anti-flicker ownership is therefore:
 
 ~~~text
-Current 1 of N
-N-1 queued
-current eventRef
-availability state
-acknowledged / later / suppressed counts
-why this event is READY
+VexCompoundRelay.states
+  retained input may change every provider emission
+
+EventsAttentionRelay.outputStates
+  map to derived EventsAttentionOutputState
+  distinctUntilChanged()
+  presentation observes this projection, not every compound revision
+
+EventsScreen presentation snapshot
+  while the same candidate is active:
+    provider truth continues advancing
+    queue counts continue advancing
+    displayed row ordering stays stable
+  candidate changes:
+    refresh displayed snapshot from current provider truth
 ~~~
 
-Compose does not recompute those queue counts. If the metadata is wrong, the Relay relationship is
-wrong.
+This means:
+
+~~~text
+CANONICAL_PROVIDER_UPDATE
+!=
+MOVE_THE_ANCHORED_ROW_UNDER_THE_HUMAN
+~~~
+
+A blocking lab scenario adds one stronger condition on top of the common presentation snapshot:
+the target is auto-scrolled into view, user scrolling is disabled, outside dismissal is ignored and
+Acknowledge releases the lock.
+
+The rich tooltip is intentionally compact. The durable/Debug surfaces retain deep metadata; the
+popover shows only the information needed for the current human decision:
+
+~~~text
+event title
+active/current/next queue counts
+scenario step/target/placement when present
+random replay seed when present
+one expected press
+one short expected result
+relevant action button(s)
+~~~
+
+Compose does not recompute queue semantics. If the compact metadata is wrong, the Relay relationship
+is wrong.
 
 ### Button outcomes are executable expectations
 
 ~~~text
 ACKNOWLEDGE
   event row remains
-  disposition becomes ACKNOWLEDGED
-  current tooltip leaves that event
-  next queued unhandled event becomes current
-  if none remain, no attention tooltip remains
+  terminal proactive handling
+  attention advances
 
 LATER
   event row remains
-  disposition becomes DEFERRED for the current lab/session
-  current tooltip leaves that event
-  next queued unhandled event becomes current
-  Reset lab clears the disposition
+  moves to NEXT sequence in human defer order
+  current queue drains first
+
+SUSPEND
+  event row remains
+  stays in CURRENT sequence
+  moves to the current-queue tail in human suspend order
 
 SUPPRESS
   event row remains
-  disposition becomes SUPPRESSED for the current lab/session
-  current tooltip leaves that event
-  next queued unhandled event becomes current
-  Reset lab clears the disposition
+  terminal proactive suppression for this lab/session
 ~~~
 
-At this practicum stage, **Later is not a timed snooze**. It is a distinct deferred disposition that
-removes proactive attention for the current lab/session until Reset lab. A real service may later
-earn a time/re-entry policy; do not infer one before it exists.
+At this practicum stage, Later means the next modeled sequence, not a wall-clock snooze. If repeated
+deferral eventually needs next-next sequence depth or time-based re-entry, a real consumer must earn
+that distinction.
 
 If any stated next state above does not occur, preserve it as a failing lived case / bug rather than
 reinterpreting the button after the fact.

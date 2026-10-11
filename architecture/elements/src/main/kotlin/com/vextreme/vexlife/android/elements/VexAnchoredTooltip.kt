@@ -302,8 +302,11 @@ fun VexAnchoredTooltip(
         Surface(
             modifier =
                 Modifier
-                    .widthIn(max = 336.dp)
-                    .heightIn(max = 520.dp)
+                    .widthIn(
+                        min = 260.dp,
+                        max = 300.dp,
+                    )
+                    .heightIn(max = 340.dp)
                     .testTag(presentationRef),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.inverseSurface,

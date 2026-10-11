@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  *   row shapes;
  * - an optional [requestedVisibleItemRef] lets a scenario or feature bring one stable item into the
  *   viewport without exposing visual list position as product identity;
+ * - [userScrollEnabled] supports an explicit blocking presentation that locks the already-targeted
+ *   list projection until its owning feature releases the condition;
  * - the list itself has one stable semantic ref/test tag;
  * - current visible item refs are projected as a Set for relationships such as anchored attention;
  * - item meaning, actions, row layout, repositories, ordering policy, and presentation eligibility
@@ -49,6 +51,7 @@ fun <Item> VexStableLazyColumn(
     itemRef: (Item) -> String,
     contentType: (Item) -> Any? = { null },
     requestedVisibleItemRef: String? = null,
+    userScrollEnabled: Boolean = true,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     verticalArrangement: Arrangement.Vertical =
@@ -118,6 +121,7 @@ fun <Item> VexStableLazyColumn(
             modifier.testTag(listRef),
         contentPadding = contentPadding,
         verticalArrangement = verticalArrangement,
+        userScrollEnabled = userScrollEnabled,
     ) {
         if (items.isEmpty()) {
             item(

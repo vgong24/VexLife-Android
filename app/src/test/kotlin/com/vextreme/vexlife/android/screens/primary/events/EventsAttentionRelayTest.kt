@@ -12,6 +12,10 @@ import com.vextreme.vexlife.android.data.events.EventsFeedState
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
 import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -49,6 +53,45 @@ class EventsAttentionRelayTest {
                         ),
                 ),
         )
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun outputProjectionSuppressesInputOnlyCompoundRevisions() = runTest {
+        val relay = EventsAttentionRelay()
+
+        relay.feedChanged(feed())
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(),
+        )
+        relay.visibleTargetsChanged(
+            setOf("event.first", "event.second"),
+        )
+        relay.transientBlockedChanged(false)
+        relay.screenChanged("screen.home")
+
+        val observed =
+            mutableListOf<EventsAttentionOutputState>()
+
+        backgroundScope.launch {
+            relay.outputStates.collect { output ->
+                observed += output
+            }
+        }
+        runCurrent()
+
+        assertEquals(1, observed.size)
+        assertEquals(
+            EventsAttentionAvailability.HELD_OTHER_SCREEN,
+            observed.single().availability,
+        )
+
+        // This changes retained compound input/revision, but while another Screen is current
+        // the presentation output is still HELD_OTHER_SCREEN and should not re-emit.
+        relay.transientBlockedChanged(true)
+        runCurrent()
+
+        assertEquals(1, observed.size)
     }
 
     @Test
