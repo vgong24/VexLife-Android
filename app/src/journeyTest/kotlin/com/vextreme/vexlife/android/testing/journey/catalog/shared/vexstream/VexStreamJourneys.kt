@@ -9,13 +9,13 @@ object VexStreamJourneys : VexJourneyShard {
 
     val placeholder = vexJourney(
         id = "placeholder",
-            title = "VexStream Music placeholder",
-        ) {
-            start(HomeScreen)
-            tap(HomeScreen.VexStreamMusic)
-            tap(VexStreamMusicScreen.PlaceholderAction)
-            tap(AppShell.Elements.Back)
-        }
+        title = "VexStream Music placeholder",
+    ) {
+        start(HomeScreen)
+        tap(HomeScreen.VexStreamMusic)
+        tap(VexStreamMusicScreen.PlaceholderAction)
+        tap(AppShell.Elements.Back)
+    }
 
     override val journeys = listOf(
         placeholder,
