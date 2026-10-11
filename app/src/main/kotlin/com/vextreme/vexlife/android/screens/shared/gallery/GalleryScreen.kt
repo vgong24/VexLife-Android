@@ -22,7 +22,6 @@ import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.elements.ColumnElement
 import com.vextreme.vexlife.android.elements.ElementIcon
-import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.ScrollableColumnElement
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
@@ -31,6 +30,8 @@ import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.elements.swapTo
 import com.vextreme.vexlife.android.elements.vexElement
+import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.shared.gallery.elements.ElementsGallery
 import com.vextreme.vexlife.android.screens.shared.gallery.graph.AppGraphView
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -38,7 +39,7 @@ import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
-object GalleryScreen : ScreenBlueprint(
+object GalleryScreen : AppScreenBlueprint(
     screenKey = "gallery",
     titleRes = R.string.gallery_title,
 ) {
@@ -191,6 +192,17 @@ object GalleryScreen : ScreenBlueprint(
         }
     }
 
+    internal override fun appActionRegistrations(
+        context: ScreenActionContext,
+    ): AppActionRegistrations =
+        AppActionRegistrations.of(
+            appAction(
+                action = AppActions.GallerySample,
+                ownerRef = screenId,
+            ) {
+                // Intentionally no product effect: this sample exists to exercise the reusable cell.
+            },
+        )
 }
 
 @Composable
@@ -241,22 +253,6 @@ fun GalleryScreenContent(
         }
     }
 }
-
-/**
- * Scoped owner for Gallery's intentionally inert sample action.
- *
- * Keeping even the no-op sample registered prevents VexLifeApp from accumulating feature cases and
- * lets AppActionRegistrations detect accidental duplicate ownership.
- */
-internal fun galleryActionRegistrations(): AppActionRegistrations =
-    AppActionRegistrations.of(
-        appAction(
-            action = AppActions.GallerySample,
-            ownerRef = GalleryScreen.screenId,
-        ) {
-            // Intentionally no product effect: this sample exists to exercise the reusable cell.
-        },
-    )
 
 @VexScreenPreviews
 @Composable
