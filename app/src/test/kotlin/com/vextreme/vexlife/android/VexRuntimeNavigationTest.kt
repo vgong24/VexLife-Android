@@ -5,6 +5,7 @@ import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.pages.AppPages
 import com.vextreme.vexlife.android.pages.primary.events.EventsPage
 import com.vextreme.vexlife.android.pages.primary.home.HomePage
+import com.vextreme.vexlife.android.pages.primary.settings.SettingsPage
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppShell
@@ -30,8 +31,22 @@ class VexRuntimeNavigationTest {
         runtime.activate(AppShell.Elements.Events)
 
         assertEquals(EventsPage.screenId, runtime.currentScreen.screenId)
-        assertFalse(runtime.canGoBack)
+        assertTrue(runtime.canGoBack)
         assertTrue(runtime.navigation.pageStack.isEmpty())
+    }
+
+    @Test
+    fun backFromPrimaryPeerReturnsHomeBeforeRootBackFallsThrough() {
+        val runtime = runtime()
+
+        runtime.activate(AppShell.Elements.Settings)
+
+        assertEquals(SettingsPage.screenId, runtime.currentScreen.screenId)
+        assertTrue(runtime.goBack())
+        assertEquals(HomePage.screenId, runtime.currentScreen.screenId)
+
+        assertFalse(runtime.canGoBack)
+        assertFalse(runtime.goBack())
     }
 
     @Test
