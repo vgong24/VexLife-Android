@@ -78,26 +78,29 @@ internal fun VexLifeApp(
 private fun VexLifeApp(
     session: VexLifeSession,
 ) {
-    val context = VexLifeCompositionContext(
-        runtime = session.runtime,
-        repositories = session.repositories,
-        darkTheme = session.darkTheme,
-    )
+    val runtime = session.runtime
+    val repositories = session.repositories
+    val darkTheme = session.darkTheme
 
-    LaunchedEffect(context.runtime) {
-        context.runtime.appOpened()
+    LaunchedEffect(runtime) {
+        runtime.appOpened()
     }
 
-    VexLifeTheme(darkTheme = context.darkTheme) {
-        VexLifeScaffold(context)
+    VexLifeTheme(darkTheme = darkTheme) {
+        VexLifeScaffold(
+            runtime = runtime,
+            repositories = repositories,
+            darkTheme = darkTheme,
+        )
     }
 }
 
 @Composable
 private fun VexLifeScaffold(
-    context: VexLifeCompositionContext,
+    runtime: VexRuntime,
+    repositories: AppRepositories,
+    darkTheme: Boolean,
 ) {
-    val runtime = context.runtime
     val primaryScreens = AppScreens.primary
     val pagerState = rememberPagerState(
         initialPage = primaryScreens.indexOfFirst {
@@ -190,15 +193,15 @@ private fun VexLifeScaffold(
                 when (screenId) {
                     DebugMenuScreen.screenId -> DebugMenuScreenContent(
                         runtime = runtime,
-                        logHistoryRepository = context.repositories.logHistory,
-                        darkTheme = context.darkTheme,
+                        logHistoryRepository = repositories.logHistory,
+                        darkTheme = darkTheme,
                     )
 
                     GalleryScreen.screenId -> GalleryScreenContent(runtime)
 
                     UserProfileScreen.screenId -> UserProfileScreenContent(
                         runtime = runtime,
-                        repository = context.repositories.userProfile,
+                        repository = repositories.userProfile,
                     )
 
                     VexStreamMusicScreen.screenId ->
