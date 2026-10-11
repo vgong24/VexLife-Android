@@ -467,3 +467,62 @@ ARTWORK_SLOT != FABRICATED_ARTWORK_SOURCE
 SCREEN_TOOLBAR_ACTION != SHELL_FEATURE_OWNERSHIP
 VISIBLE_SELECTED_STATE != NEW_PLAYBACK_TRUTH
 LIBRARY_DENSITY != SEMANTIC_IDENTITY_LOSS
+
+
+### Off-home route successor
+
+The same-Wi-Fi pairing remains the bootstrap and preferred direct route. The remote successor does not
+replace MediaSession, the VexStream repository, or verified offline storage.
+
+```text
+VexStreamNetworkDataSource / repository request
+  -> remembered paired connection
+
+  try pinned LAN HTTPS first
+
+  if LAN transport is unreachable
+  AND remote pairing material is present
+    -> signed + end-to-end encrypted relay request
+    -> desktop outbound VexStream gateway
+    -> existing desktop mobile HTTPS surface
+
+  if no network route
+    -> verified local media remains independently usable
+```
+
+The long-lived Android device signing private key is generated in Android Keystore. Local pairing
+sends only its P-256 public key. Existing v1 pairings opportunistically call the bearer-authorized
+remote-upgrade endpoint while the desktop is directly reachable, so remote enrollment does not
+require a mandatory Forget/re-pair cycle.
+
+Remote request confidentiality is separate from relay TLS. Android creates an ephemeral P-256 ECDH
+key for each request, derives an AES-GCM request key with the desktop's paired remote-gateway public
+key, and encrypts the existing VexStream bearer plus the bounded catalog/media request. The relay can
+verify the paired device signature but cannot decrypt that inner payload.
+
+Media fallback is Range-based and bounded rather than materializing an entire song in one relay
+response.
+
+The connection store accepts the previous local-pairing schema for compatibility; newly saved
+connections use v2 and may additionally retain:
+
+```text
+remoteHomeRef
+remoteGatewayPublicKey
+remoteRelayBaseUrl
+```
+
+Those fields are reachability inputs, not a claim that Android minted canonical Home/Safety
+membership or authority.
+
+The remote route becomes executable only when a real HTTPS relay URL has been deployed and supplied
+by the desktop during local pairing/upgrade. Source formation alone does not claim off-home lived
+reachability.
+
+```text
+LAN_FIRST
+REMOTE_SECOND
+VERIFIED_LOCAL_COPY_ALWAYS_INDEPENDENT
+PAIRED_DEVICE_SIGNATURE != GENERAL_HOME_AUTHORITY
+REMOTE_VEXSTREAM_READ != GENERAL_PC_REMOTE_CONTROL
+```
