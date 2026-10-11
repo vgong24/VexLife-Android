@@ -32,18 +32,43 @@ class InMemoryVexStreamMusicRepository(
     }
 
     override suspend fun findNearbyVexStream(): VexStreamRepositoryResult {
-        mutableState.value = mutableState.value.copy(
-            connectionState = VexStreamConnectionState.Searching,
-        )
-        return VexStreamRepositoryResult.Rejected(
-            reason = VexStreamRepositoryRejection.DISCOVERY_UNAVAILABLE,
-        )
+        mutableState.value = mutableState.value
+            .withHubUnavailable(
+                VexStreamHubState.PairingRequired,
+            )
+            .copy(
+                connectionState =
+                    VexStreamConnectionState.ConfirmCode(
+                        displayName = "VexStream on Test PC",
+                        pairingCode = "123456",
+                    ),
+            )
+
+        return VexStreamRepositoryResult.Accepted()
     }
 
-    override suspend fun confirmPairingCode(): VexStreamRepositoryResult =
-        VexStreamRepositoryResult.Rejected(
-            reason = VexStreamRepositoryRejection.PAIRING_NOT_READY,
+    override suspend fun confirmPairingCode(): VexStreamRepositoryResult {
+        val current = mutableState.value
+        if (current.connectionState !is VexStreamConnectionState.ConfirmCode) {
+            return VexStreamRepositoryResult.Rejected(
+                reason = VexStreamRepositoryRejection.PAIRING_NOT_READY,
+            )
+        }
+
+        mutableState.value = current.copy(
+            hubState =
+                VexStreamHubState.Ready(
+                    hubRef = "hub.in-memory",
+                    catalogRevision = "catalog.in-memory",
+                ),
+            connectionState =
+                VexStreamConnectionState.Paired(
+                    displayName = "VexStream on Test PC",
+                ),
         )
+
+        return VexStreamRepositoryResult.Accepted()
+    }
 
     override suspend fun forgetPairedVexStream(): VexStreamRepositoryResult {
         mutableState.value = mutableState.value
