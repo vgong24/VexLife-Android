@@ -568,14 +568,23 @@ internal fun VexMapsMapSurface(
         }
     }
 
-    val preciseLocationActive =
-        locationState ==
-            VexMapsLocationState.Ready ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-            ) ==
+    val precisePermissionGranted =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        ) ==
             PackageManager.PERMISSION_GRANTED
+
+    val navigationLocationReady =
+        canStartVexMapsNavigation(
+            precisePermissionGranted =
+                precisePermissionGranted,
+            hasCurrentLocation =
+                currentLocation != null,
+            locationFixReady =
+                locationState ==
+                    VexMapsLocationState.Ready,
+        )
 
     val deviceRouteOrigin =
         currentLocation?.let { location ->
@@ -862,7 +871,7 @@ internal fun VexMapsMapSurface(
             VexMapsNavigationCard(
                 state = navigationState,
                 locationReady =
-                    preciseLocationActive,
+                    navigationLocationReady,
                 canRecenter =
                     navigationVisualLocation !=
                         null,
@@ -1887,6 +1896,15 @@ internal enum class VexMapsPlaceSearchError {
     IMPORT,
     SEARCH,
 }
+
+internal fun canStartVexMapsNavigation(
+    precisePermissionGranted: Boolean,
+    hasCurrentLocation: Boolean,
+    locationFixReady: Boolean,
+): Boolean =
+    precisePermissionGranted &&
+        hasCurrentLocation &&
+        locationFixReady
 
 internal data class VexMapsDurationEstimate(
     val hours: Int,
