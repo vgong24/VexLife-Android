@@ -133,6 +133,65 @@ class VexStreamPlaybackUiStateTest {
     }
 
     @Test
+    fun largeQueueShuffleKeepsPrefixAndFormsOneCompleteFuturePermutation() {
+        val itemCount = 640
+        val currentIndex = 19
+        val natural =
+            (0 until itemCount).toList()
+        val shuffled =
+            vexStreamQueueShuffleTargetOrder(
+                itemCount = itemCount,
+                currentIndex = currentIndex,
+                random = Random(24),
+            )
+
+        assertEquals(
+            natural.take(currentIndex + 1),
+            shuffled.take(currentIndex + 1),
+        )
+        assertEquals(
+            natural.toSet(),
+            shuffled.toSet(),
+        )
+        assertNotEquals(
+            natural.drop(currentIndex + 1),
+            shuffled.drop(currentIndex + 1),
+        )
+    }
+
+    @Test
+    fun seekProjectionClampsToPlayableDuration() {
+        assertEquals(
+            60_000L,
+            vexStreamSeekPositionMs(
+                fraction = 0.5f,
+                durationMs = 120_000L,
+            ),
+        )
+        assertEquals(
+            120_000L,
+            vexStreamSeekPositionMs(
+                fraction = 2f,
+                durationMs = 120_000L,
+            ),
+        )
+        assertEquals(
+            0L,
+            vexStreamSeekPositionMs(
+                fraction = -1f,
+                durationMs = 120_000L,
+            ),
+        )
+        assertEquals(
+            0L,
+            vexStreamSeekPositionMs(
+                fraction = 0.5f,
+                durationMs = 0L,
+            ),
+        )
+    }
+
+    @Test
     fun playbackTimeFormatsCompactPhoneDurations() {
         assertEquals(
             "0:00",
