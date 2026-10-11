@@ -16,6 +16,9 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.text.intl.LocaleList
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
@@ -44,6 +47,9 @@ class VexTestEngine(
         logHistory = logHistory,
         userProfile = InMemoryUserProfileRepository(),
         vexStream = InMemoryVexStreamMusicRepository(),
+        events = RelayEventsRepository(),
+        eventsAttention = RelayEventsAttentionPreferenceRepository(),
+        eventsAttentionLab = RelayEventsAttentionLabRepository(),
     )
     private val expected = VexExpectedWalk()
     private var stepIndex = 0
@@ -90,6 +96,32 @@ class VexTestEngine(
         observe(
             stepKind = "start",
             semanticRef = screen.screenId,
+        )
+    }
+
+    override fun signal(signal: VexJourneySignal) {
+        signal.applyTo(repositories)
+        compose.waitForIdle()
+        observe(
+            stepKind = "signal",
+            semanticRef = signal.signalRef,
+        )
+    }
+
+    override fun tapDynamic(element: VexDynamicElementRef) {
+        expected.tapDynamic(element)
+
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithTag(element.elementId)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        compose.onNodeWithTag(element.elementId)
+            .performClick()
+        compose.waitForIdle()
+        observe(
+            stepKind = "tap-dynamic",
+            semanticRef = element.elementId,
         )
     }
 

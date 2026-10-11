@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.TextFieldElement
@@ -17,8 +18,13 @@ data class VexJourney(
         require(id.matches(Regex("[a-z0-9][a-z0-9-]*"))) {
             "journey id must be lowercase kebab-case: $id"
         }
-        require(environments.isNotEmpty()) { "journey must declare at least one environment" }
-        require(environments.map { it.id }.distinct().size == environments.size) {
+        require(environments.isNotEmpty()) {
+            "journey must declare at least one environment"
+        }
+        require(
+            environments.map { it.id }.distinct().size ==
+                environments.size,
+        ) {
             "journey environments must have unique IDs: $title"
         }
     }
@@ -41,18 +47,58 @@ fun vexJourney(
         walk = walk,
     )
 
+data class VexDynamicElementRef(
+    val elementId: String,
+) {
+    init {
+        require(elementId.isNotBlank()) {
+            "dynamic journey element ID must not be blank"
+        }
+    }
+}
+
+fun dynamicElement(
+    elementId: String,
+): VexDynamicElementRef =
+    VexDynamicElementRef(elementId)
+
+class VexJourneySignal internal constructor(
+    val signalRef: String,
+    internal val applyTo: (AppRepositories) -> Unit,
+) {
+    init {
+        require(signalRef.isNotBlank()) {
+            "journey signal ref must not be blank"
+        }
+    }
+}
+
+fun journeySignal(
+    signalRef: String,
+    applyTo: (AppRepositories) -> Unit,
+): VexJourneySignal =
+    VexJourneySignal(
+        signalRef = signalRef,
+        applyTo = applyTo,
+    )
+
 /**
  * One human-readable semantic walk.
  *
- * Implementations decide HOW each step is realized:
- * - JVM coverage mode records which production semantics the journey references;
- * - Android instrumentation mode performs real Compose input while independently building the
- *   semantic history that should result.
+ * [signal] is a deterministic test-side external cause. It does not pretend the human clicked
+ * something and therefore forms no expected VexLogger interaction by itself.
+ *
+ * [tapDynamic] is for runtime-data identity such as one event row action that cannot be a permanent
+ * static registry element. Its element ID must still be production-formed and stable.
  */
 interface VexJourneyScope {
     fun start(screen: ScreenElement)
 
+    fun signal(signal: VexJourneySignal)
+
     fun tap(element: ActionElement)
+
+    fun tapDynamic(element: VexDynamicElementRef)
 
     fun type(
         field: TextFieldElement,
@@ -65,3 +111,5 @@ interface VexJourneyScope {
 
     fun back()
 }
+
+// [VXG RealForever]
