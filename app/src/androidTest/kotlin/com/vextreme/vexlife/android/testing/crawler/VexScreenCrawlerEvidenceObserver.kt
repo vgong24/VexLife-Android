@@ -18,18 +18,19 @@ class VexScreenCrawlerEvidenceObserver(
     private val case: VexScreenCrawlerCase,
 ) : VexJourneyExecutionObserver {
     private val capturedScreens = linkedSetOf<String>()
-    private val rootDirectory: File by lazy {
+    private val crawlerRootDirectory: File by lazy {
         val targetContext =
             InstrumentationRegistry.getInstrumentation().targetContext
-        val external =
-            requireNotNull(
-                targetContext.getExternalFilesDir("vex-screen-crawler"),
-            ) {
-                "crawler external files directory is unavailable"
-            }
+        requireNotNull(
+            targetContext.getExternalFilesDir("vex-screen-crawler"),
+        ) {
+            "crawler external files directory is unavailable"
+        }
+    }
 
+    private val rootDirectory: File by lazy {
         File(
-            external,
+            crawlerRootDirectory,
             "${case.sourceRef.safePath()}/${case.caseRef.safePath()}",
         ).also(File::mkdirs)
     }
@@ -74,7 +75,17 @@ class VexScreenCrawlerEvidenceObserver(
         }
 
         println(
-            "Vex ScreenCrawler artifacts: ${rootDirectory.absolutePath}",
+            "Vex ScreenCrawler case artifacts: ${rootDirectory.absolutePath}",
+        )
+        println(
+            "Vex ScreenCrawler macOS/Linux pull: " +
+                "adb pull \"${crawlerRootDirectory.absolutePath}\" " +
+                "\"./vex-screen-crawler\"",
+        )
+        println(
+            "Vex ScreenCrawler Windows PowerShell pull: " +
+                "adb pull \"${crawlerRootDirectory.absolutePath}\" " +
+                "\".\\\\vex-screen-crawler\"",
         )
     }
 
