@@ -47,9 +47,13 @@ object VexJourneyEnvironments {
 }
 
 data class VexJourneyCase(
+    val shardId: String,
     val journey: VexJourney,
     val environment: VexJourneyEnvironment,
 ) {
+    val caseRef: String
+        get() = "$shardId/${journey.id}@${environment.id}"
+
     override fun toString(): String =
-        "${journey.title} [${environment.id}]"
+        "$caseRef :: ${journey.title}"
 }
