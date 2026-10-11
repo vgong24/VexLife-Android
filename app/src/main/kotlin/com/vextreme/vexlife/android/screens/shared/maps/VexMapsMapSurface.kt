@@ -584,6 +584,32 @@ internal fun VexMapsMapSurface(
         }
 
     LaunchedEffect(
+        selectedOrigin,
+        mapController,
+    ) {
+        if (selectedOrigin == null) {
+            mapController.clearOrigin()
+        } else {
+            mapController.showOrigin(
+                selectedOrigin,
+            )
+        }
+    }
+
+    LaunchedEffect(
+        destination,
+        mapController,
+    ) {
+        if (destination == null) {
+            mapController.clearDestination()
+        } else {
+            mapController.showDestination(
+                destination,
+            )
+        }
+    }
+
+    LaunchedEffect(
         navigationVisualLocation
             ?.sampleRef,
         mapController,
@@ -2269,6 +2295,30 @@ private class VexMapsMapController {
     ) {
         pendingDestination = destination
         renderDestination(destination)
+    }
+
+    fun clearDestination() {
+        pendingDestination = null
+
+        val style = style ?: return
+        if (
+            style.getLayer(
+                DESTINATION_LAYER_ID,
+            ) != null
+        ) {
+            style.removeLayer(
+                DESTINATION_LAYER_ID,
+            )
+        }
+        if (
+            style.getSource(
+                DESTINATION_SOURCE_ID,
+            ) != null
+        ) {
+            style.removeSource(
+                DESTINATION_SOURCE_ID,
+            )
+        }
     }
 
     fun showRoute(
