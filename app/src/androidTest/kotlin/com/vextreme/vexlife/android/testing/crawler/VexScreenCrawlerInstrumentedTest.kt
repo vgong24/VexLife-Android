@@ -39,7 +39,7 @@ class VexScreenCrawlerInstrumentedTest(
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun cases(): List<Array<Any>> =
-            VexScreenCrawlerArguments
+            VexScreenCrawlerRunConfig
                 .parameters()
                 .map { parameter ->
                     arrayOf<Any>(parameter)
