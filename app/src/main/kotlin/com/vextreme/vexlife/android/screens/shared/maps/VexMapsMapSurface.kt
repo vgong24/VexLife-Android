@@ -148,6 +148,10 @@ internal fun VexMapsMapSurface(
         rememberSaveable {
             mutableStateOf<Double?>(null)
         }
+    var viewportRouteKey by
+        rememberSaveable {
+            mutableStateOf<String?>(null)
+        }
     val viewportSnapshot =
         restoreVexMapsViewportSnapshot(
             latitude = viewportLatitude,
@@ -158,6 +162,7 @@ internal fun VexMapsMapSurface(
         )
     fun setViewportSnapshot(
         snapshot: VexMapsViewportSnapshot,
+        routeKey: String?,
     ) {
         viewportLatitude =
             snapshot.center.latitude
@@ -169,6 +174,8 @@ internal fun VexMapsMapSurface(
             snapshot.bearing
         viewportTilt =
             snapshot.tilt
+        viewportRouteKey =
+            routeKey
     }
 
     var selectedOriginLatitude by
@@ -570,9 +577,16 @@ internal fun VexMapsMapSurface(
                     null
                 },
             )
-        mapController.setOnViewportChanged(
-            ::setViewportSnapshot,
-        )
+        val currentRouteKey =
+            navigationState
+                .routeResult
+                ?.vexMapsRouteKey()
+        mapController.setOnViewportChanged { snapshot ->
+            setViewportSnapshot(
+                snapshot = snapshot,
+                routeKey = currentRouteKey,
+            )
+        }
     }
 
     val fallbackOnlineStyleUri =
@@ -591,14 +605,19 @@ internal fun VexMapsMapSurface(
             ?.styleUri
             ?: fallbackOnlineStyleUri
 
+    val currentRouteKey =
+        navigationState
+            .routeResult
+            ?.vexMapsRouteKey()
     val restoredRouteKey =
-        if (viewportSnapshot == null) {
-            null
-        } else {
-            navigationState
-                .routeResult
-                ?.vexMapsRouteKey()
-        }
+        resolveVexMapsRestoredRouteFitKey(
+            hasRestoredViewport =
+                viewportSnapshot != null,
+            savedViewportRouteKey =
+                viewportRouteKey,
+            currentRouteKey =
+                currentRouteKey,
+        )
 
     val mapView =
         remember(
@@ -2219,6 +2238,18 @@ private fun VexOfflineRouteResult
     route.routeRef +
         ":" +
         route.routeRevision
+
+internal fun resolveVexMapsRestoredRouteFitKey(
+    hasRestoredViewport: Boolean,
+    savedViewportRouteKey: String?,
+    currentRouteKey: String?,
+): String? =
+    currentRouteKey
+        ?.takeIf { routeKey ->
+            hasRestoredViewport &&
+                savedViewportRouteKey ==
+                routeKey
+        }
 
 internal fun restoreVexMapCoordinate(
     latitude: Double?,
