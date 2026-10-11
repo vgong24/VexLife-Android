@@ -28,9 +28,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -53,8 +50,8 @@ import kotlinx.coroutines.launch
 /**
  * Android realization of the VexStream feature.
  *
- * Durable semantic navigation is declared by [VexStreamMusicScreen]. Dynamic library rows and local
- * drill-down state stay feature-local. MediaSessionService remains the playback/queue owner.
+ * Durable semantic navigation is declared by [VexStreamMusicScreen]. Dynamic library rows stay
+ * feature-local; [NavigationTrail] owns collection depth and MediaSessionService owns playback/queue.
  */
 @Composable
 internal fun VexStreamLibrarySurface(
