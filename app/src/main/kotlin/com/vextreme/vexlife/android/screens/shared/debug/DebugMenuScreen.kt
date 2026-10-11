@@ -12,7 +12,6 @@ import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
-import com.vextreme.vexlife.android.elements.close
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
@@ -55,14 +54,6 @@ object DebugMenuScreen : ScreenBlueprint(
         intent = invoke(AppActions.ClearLogHistory),
     )
 
-    val CloseLog = buttonRef(
-        id = "body.log-history.sheet.close",
-        labelRes = R.string.close,
-        style = VexElementStyles.SecondaryAction,
-        icon = ElementIcon.Close,
-        intent = close(LogSheet),
-    )
-
     override val content = layout {
         scrollableColumn("body") {
             toggle(DarkMode)
@@ -84,9 +75,7 @@ object DebugMenuScreen : ScreenBlueprint(
                 )
             }
 
-            modalBottomSheet(LogSheet) {
-                button(CloseLog)
-            }
+            modalBottomSheet(LogSheet) {}
         }
     }
 }
