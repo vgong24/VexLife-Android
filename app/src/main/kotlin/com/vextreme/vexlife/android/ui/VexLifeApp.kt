@@ -119,7 +119,13 @@ private fun VexLifeScaffold(
         }
     }
 
-    AppFrame(runtime = runtime) {
+    AppFrame(
+        runtime = runtime,
+        toolbarActions =
+            AppScreens
+                .require(runtime.currentScreen.screenId)
+                .toolbarActions,
+    ) {
         if (runtime.isPrimary()) {
             /*
              * VISUAL ORIENTATION — primary app body
