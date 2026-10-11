@@ -419,8 +419,6 @@ Current draft candidate: GitHub PR #15.
 Current pure-domain checkpoint:
 
 ~~~text
-candidateHead=f4eab480ff403c7f4b9fafaac35a68b488768d8c
-
 local Kotlin/coroutines compile + semantic smoke = PASS
   - stale source revision rejection
   - bounded normalized synthetic projection
@@ -435,6 +433,9 @@ This is a pure-domain reproduction using the current source contracts with a tin
 `EventsScreen.screenId` stub because the local container does not carry the Android/Compose
 dependency graph. It is evidence for the Relay/data law only; it is not relabeled as repository
 Gradle or Android UI proof.
+
+Exact mutable candidate SHA belongs in the PR/checkpoint surface rather than this architecture
+document, so a documentation-only commit cannot make its own proof reference stale.
 
 Not yet truthfully claimed:
 
