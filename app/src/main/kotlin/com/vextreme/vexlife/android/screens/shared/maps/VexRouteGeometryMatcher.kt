@@ -54,6 +54,13 @@ data class VexRouteMatchingPolicy(
                 1.0,
         )
     }
+
+    fun acceptsAccuracy(
+        accuracyMeters: Float?,
+    ): Boolean =
+        accuracyMeters == null ||
+            accuracyMeters <=
+            maximumAccuracyMeters
 }
 
 sealed interface VexRouteMatchResult {
@@ -151,8 +158,9 @@ class VexRouteGeometryMatcher(
 
         if (
             accuracy != null &&
-            accuracy >
-            policy.maximumAccuracyMeters
+            !policy.acceptsAccuracy(
+                accuracy,
+            )
         ) {
             return VexRouteMatchResult
                 .Inaccurate(
