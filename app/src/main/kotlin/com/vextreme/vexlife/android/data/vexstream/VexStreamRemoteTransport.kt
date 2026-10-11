@@ -567,6 +567,86 @@ internal class VexStreamRemoteTransport(
 
     }
 
+    private fun seal(
+        key: ByteArray,
+        plaintext: ByteArray,
+        aad: ByteArray,
+    ): Pair<String, String> {
+        val nonce =
+            ByteArray(
+                GCM_NONCE_BYTES,
+            ).also {
+                SecureRandom().nextBytes(
+                    it,
+                )
+            }
+        val cipher =
+            Cipher.getInstance(
+                "AES/GCM/NoPadding",
+            )
+        cipher.init(
+            Cipher.ENCRYPT_MODE,
+            SecretKeySpec(
+                key,
+                "AES",
+            ),
+            GCMParameterSpec(
+                GCM_TAG_BITS,
+                nonce,
+            ),
+        )
+        cipher.updateAAD(aad)
+
+        return encodeBase64(
+            nonce,
+        ) to encodeBase64(
+            cipher.doFinal(
+                plaintext,
+            ),
+        )
+    }
+
+    private fun open(
+        key: ByteArray,
+        nonce: String,
+        ciphertext: String,
+        aad: ByteArray,
+    ): ByteArray {
+        val nonceBytes =
+            decodeBase64(
+                nonce,
+            )
+        require(
+            nonceBytes.size ==
+                GCM_NONCE_BYTES,
+        ) {
+            "invalid remote nonce"
+        }
+
+        val cipher =
+            Cipher.getInstance(
+                "AES/GCM/NoPadding",
+            )
+        cipher.init(
+            Cipher.DECRYPT_MODE,
+            SecretKeySpec(
+                key,
+                "AES",
+            ),
+            GCMParameterSpec(
+                GCM_TAG_BITS,
+                nonceBytes,
+            ),
+        )
+        cipher.updateAAD(aad)
+
+        return cipher.doFinal(
+            decodeBase64(
+                ciphertext,
+            ),
+        )
+    }
+
     private fun rfc3339Now(): String =
         SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss'Z'",
