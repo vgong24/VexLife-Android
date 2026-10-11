@@ -2,9 +2,7 @@ package com.vextreme.vexlife.android.testing.crawler
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
-import com.vextreme.vexlife.android.testing.journey.DebugJourneys
-import com.vextreme.vexlife.android.testing.journey.GalleryJourneys
-import com.vextreme.vexlife.android.testing.journey.UserProfileJourneys
+import com.vextreme.vexlife.android.testing.journey.Journeys
 import com.vextreme.vexlife.android.testing.journey.VexTestEngine
 import org.junit.Rule
 import org.junit.Test
@@ -40,11 +38,11 @@ import org.junit.runners.Parameterized
  *
  *    EXACTLY ONE PATH:
  *
- *      journey(UserProfileJourneys.formSubmit)
+ *      journey(Journeys.userProfile.formSubmit)
  *
  *    Another exact path:
  *
- *      journey(DebugJourneys.logHistoryDismiss)
+ *      journey(Journeys.debug.logHistoryDismiss)
  *
  *    One Screen (runs every declared journey that touches that Screen):
  *
@@ -52,7 +50,7 @@ import org.junit.runners.Parameterized
  *
  *    A whole feature/shard subset:
  *
- *      shards(DebugJourneys, GalleryJourneys)
+ *      shards(Journeys.debug, Journeys.gallery)
  *
  *    English only:
  *
@@ -189,19 +187,19 @@ class VexScreenCrawlerInstrumentedTest(
                  */
 
                 // EXACT ONE PATH:
-                // journey(UserProfileJourneys.formSubmit)
-                // journey(DebugJourneys.logHistoryDismiss)
-                // journey(DebugJourneys.resetFreshHistory)
+                // journey(Journeys.userProfile.formSubmit)
+                // journey(Journeys.debug.logHistoryDismiss)
+                // journey(Journeys.debug.resetFreshHistory)
 
                 // ALL PATHS THAT TOUCH ONE SCREEN:
                 // screens(UserProfileScreen)
 
                 // WHOLE FEATURE/SHARD PARTITIONS:
-                // shards(DebugJourneys)
-                // shards(DebugJourneys, GalleryJourneys)
+                // shards(Journeys.debug)
+                // shards(Journeys.debug, Journeys.gallery)
 
                 // EVERYTHING EXCEPT:
-                // allShardsExcept(DebugJourneys)
+                // allShardsExcept(Journeys.debug)
 
                 /*
                  * LANGUAGE / LOCALE — enable/disable rows.
