@@ -26,7 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Slider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -1685,6 +1685,30 @@ private fun VexStreamMiniPlayer(
                     "/" +
                     playback.queueMediaIds.size
             }
+    var scrubFraction by remember(
+        playback.currentMediaId,
+    ) {
+        mutableStateOf<Float?>(null)
+    }
+    val displayedProgress =
+        scrubFraction
+            ?: playback.progressFraction
+    val displayedPositionMs =
+        scrubFraction
+            ?.let { fraction ->
+                vexStreamSeekPositionMs(
+                    fraction = fraction,
+                    durationMs = playback.durationMs,
+                )
+            }
+            ?: playback.currentPositionMs
+    val canSeek =
+        controller != null &&
+            playback.durationMs > 0L &&
+            controller.isCommandAvailable(
+                androidx.media3.common.Player
+                    .COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+            )
 
     VexContainer(
         element = VexStreamMusicScreen.PlayerSection,
@@ -1731,11 +1755,41 @@ private fun VexStreamMiniPlayer(
             }
         }
 
-        LinearProgressIndicator(
-            progress = {
-                playback.progressFraction
+        Slider(
+            value = displayedProgress,
+            onValueChange = { value ->
+                scrubFraction = value
             },
-            modifier = Modifier.fillMaxWidth(),
+            onValueChangeFinished = {
+                val targetFraction =
+                    scrubFraction
+                if (
+                    targetFraction != null &&
+                    canSeek
+                ) {
+                    val targetPositionMs =
+                        vexStreamSeekPositionMs(
+                            fraction = targetFraction,
+                            durationMs = playback.durationMs,
+                        )
+                    scrubFraction = null
+                    runtime.activate(
+                        VexStreamMusicScreen.SeekPlayback,
+                    )
+                    controller?.seekTo(
+                        targetPositionMs,
+                    )
+                } else {
+                    scrubFraction = null
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .vexElement(
+                    VexStreamMusicScreen.SeekPlayback,
+                ),
+            enabled = canSeek,
+            valueRange = 0f..1f,
         )
 
         Row(
@@ -1745,7 +1799,7 @@ private fun VexStreamMiniPlayer(
             Text(
                 text =
                     formatVexStreamPlaybackTime(
-                        playback.currentPositionMs,
+                        displayedPositionMs,
                     ),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
