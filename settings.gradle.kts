@@ -20,3 +20,4 @@ rootProject.name = "VexLife-Android"
 include(":app")
 include(":architecture:elements")
 include(":architecture:logging")
+include(":architecture:relay")
