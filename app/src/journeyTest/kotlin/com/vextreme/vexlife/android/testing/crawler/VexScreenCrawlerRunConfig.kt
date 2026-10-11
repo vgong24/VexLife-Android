@@ -117,7 +117,7 @@ object VexScreenCrawlerRunConfig {
     }
 }
 
-internal data class VexScreenCrawlerParameter(
+data class VexScreenCrawlerParameter(
     val enabled: Boolean,
     val case: VexScreenCrawlerCase?,
     val disabledReason: String? = null,
