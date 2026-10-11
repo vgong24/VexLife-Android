@@ -918,8 +918,8 @@ private fun VexStreamDownloadsPane(
                             )
                         }
                     },
-                onVisitArtist = onVisitArtist,
-            )
+                    onVisitArtist = onVisitArtist,
+                )
             }
         }
     }
