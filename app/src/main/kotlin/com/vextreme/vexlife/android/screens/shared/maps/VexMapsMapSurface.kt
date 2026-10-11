@@ -126,6 +126,50 @@ internal fun VexMapsMapSurface(
                 VexDeviceLocationResult.Located?
             >(null)
         }
+
+    var viewportLatitude by
+        rememberSaveable {
+            mutableStateOf<Double?>(null)
+        }
+    var viewportLongitude by
+        rememberSaveable {
+            mutableStateOf<Double?>(null)
+        }
+    var viewportZoom by
+        rememberSaveable {
+            mutableStateOf<Double?>(null)
+        }
+    var viewportBearing by
+        rememberSaveable {
+            mutableStateOf<Double?>(null)
+        }
+    var viewportTilt by
+        rememberSaveable {
+            mutableStateOf<Double?>(null)
+        }
+    val viewportSnapshot =
+        restoreVexMapsViewportSnapshot(
+            latitude = viewportLatitude,
+            longitude = viewportLongitude,
+            zoom = viewportZoom,
+            bearing = viewportBearing,
+            tilt = viewportTilt,
+        )
+    fun setViewportSnapshot(
+        snapshot: VexMapsViewportSnapshot,
+    ) {
+        viewportLatitude =
+            snapshot.center.latitude
+        viewportLongitude =
+            snapshot.center.longitude
+        viewportZoom =
+            snapshot.zoom
+        viewportBearing =
+            snapshot.bearing
+        viewportTilt =
+            snapshot.tilt
+    }
+
     var selectedOriginLatitude by
         rememberSaveable {
             mutableStateOf<Double?>(
@@ -529,6 +573,9 @@ internal fun VexMapsMapSurface(
                     null
                 },
             )
+        mapController.setOnViewportChanged(
+            ::setViewportSnapshot,
+        )
     }
 
     val fallbackOnlineStyleUri =
@@ -547,6 +594,15 @@ internal fun VexMapsMapSurface(
             ?.styleUri
             ?: fallbackOnlineStyleUri
 
+    val restoredRouteKey =
+        if (viewportSnapshot == null) {
+            null
+        } else {
+            navigationState
+                .routeResult
+                ?.vexMapsRouteKey()
+        }
+
     val mapView =
         remember(
             context,
@@ -561,15 +617,17 @@ internal fun VexMapsMapSurface(
                 onCreate(null)
                 getMapAsync { map ->
                     map.cameraPosition =
-                        CameraPosition.Builder()
-                            .target(
-                                LatLng(
-                                    0.0,
-                                    0.0,
-                                ),
-                            )
-                            .zoom(1.25)
-                            .build()
+                        viewportSnapshot
+                            ?.toCameraPosition()
+                            ?: CameraPosition.Builder()
+                                .target(
+                                    LatLng(
+                                        0.0,
+                                        0.0,
+                                    ),
+                                )
+                                .zoom(1.25)
+                                .build()
 
                     map.setStyle(
                         mapStyleUri,
@@ -577,6 +635,8 @@ internal fun VexMapsMapSurface(
                         mapController.attach(
                             map = map,
                             style = style,
+                            restoredRouteKey =
+                                restoredRouteKey,
                         )
                     }
                 }
@@ -2030,6 +2090,79 @@ internal enum class VexMapsPlaceSearchError {
     SEARCH,
 }
 
+internal data class VexMapsViewportSnapshot(
+    val center: VexMapCoordinate,
+    val zoom: Double,
+    val bearing: Double,
+    val tilt: Double,
+) {
+    init {
+        require(zoom.isFinite() && zoom >= 0.0) {
+            "zoom must be finite and non-negative"
+        }
+        require(bearing.isFinite()) {
+            "bearing must be finite"
+        }
+        require(
+            tilt.isFinite() &&
+                tilt in 0.0..60.0,
+        ) {
+            "tilt must be finite and in [0, 60]"
+        }
+    }
+}
+
+internal fun restoreVexMapsViewportSnapshot(
+    latitude: Double?,
+    longitude: Double?,
+    zoom: Double?,
+    bearing: Double?,
+    tilt: Double?,
+): VexMapsViewportSnapshot? {
+    if (
+        latitude == null ||
+        longitude == null ||
+        zoom == null ||
+        bearing == null ||
+        tilt == null
+    ) {
+        return null
+    }
+
+    return runCatching {
+        VexMapsViewportSnapshot(
+            center =
+                VexMapCoordinate(
+                    latitude = latitude,
+                    longitude = longitude,
+                ),
+            zoom = zoom,
+            bearing = bearing,
+            tilt = tilt,
+        )
+    }.getOrNull()
+}
+
+private fun VexMapsViewportSnapshot
+    .toCameraPosition(): CameraPosition =
+    CameraPosition.Builder()
+        .target(
+            LatLng(
+                center.latitude,
+                center.longitude,
+            ),
+        )
+        .zoom(zoom)
+        .bearing(bearing)
+        .tilt(tilt)
+        .build()
+
+private fun VexOfflineRouteResult
+    .vexMapsRouteKey(): String =
+    route.routeRef +
+        ":" +
+        route.routeRevision
+
 internal fun restoreVexMapCoordinate(
     latitude: Double?,
     longitude: Double?,
@@ -2181,6 +2314,9 @@ private class VexMapsMapController {
         String? = null
     private var onMapLongPress:
         ((VexMapCoordinate) -> Unit)? = null
+    private var onViewportChanged:
+        ((VexMapsViewportSnapshot) -> Unit)? =
+        null
 
     private val longClickListener =
         MapLibreMap.OnMapLongClickListener {
@@ -2200,6 +2336,28 @@ private class VexMapsMapController {
             true
         }
 
+    private val cameraIdleListener =
+        MapLibreMap.OnCameraIdleListener {
+            val position =
+                map?.cameraPosition
+                    ?: return@OnCameraIdleListener
+            val target =
+                position.target
+                    ?: return@OnCameraIdleListener
+            val snapshot =
+                restoreVexMapsViewportSnapshot(
+                    latitude = target.latitude,
+                    longitude = target.longitude,
+                    zoom = position.zoom,
+                    bearing = position.bearing,
+                    tilt = position.tilt,
+                )
+                    ?: return@OnCameraIdleListener
+
+            onViewportChanged
+                ?.invoke(snapshot)
+        }
+
     fun setOnMapLongPress(
         callback:
             ((VexMapCoordinate) -> Unit)?,
@@ -2208,14 +2366,28 @@ private class VexMapsMapController {
             callback
     }
 
+    fun setOnViewportChanged(
+        callback:
+            ((VexMapsViewportSnapshot) -> Unit)?,
+    ) {
+        onViewportChanged =
+            callback
+    }
+
     fun attach(
         map: MapLibreMap,
         style: Style,
+        restoredRouteKey: String?,
     ) {
         this.map = map
         this.style = style
+        lastFittedRouteKey =
+            restoredRouteKey
         map.addOnMapLongClickListener(
             longClickListener,
+        )
+        map.addOnCameraIdleListener(
+            cameraIdleListener,
         )
 
         pendingRoute?.let { route ->
@@ -2238,6 +2410,9 @@ private class VexMapsMapController {
     fun detach() {
         map?.removeOnMapLongClickListener(
             longClickListener,
+        )
+        map?.removeOnCameraIdleListener(
+            cameraIdleListener,
         )
         map = null
         style = null
@@ -2507,9 +2682,7 @@ private class VexMapsMapController {
         }
 
         val routeKey =
-            route.route.routeRef +
-                ":" +
-                route.route.routeRevision
+            route.vexMapsRouteKey()
 
         if (
             fitCamera &&
