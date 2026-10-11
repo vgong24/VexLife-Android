@@ -386,3 +386,55 @@ creating one semantic log event per keystroke.
 
 Long/duplicated title/artist/album presentation is compacted for the phone, while stable playback
 controls remain registered Vex actions and dynamic catalog rows remain repository data.
+
+
+### Playback lifetime + perceivable mobile player refinement
+
+A006 proved the prior exact head through the Mac Android toolchain and the complete requested
+assemble/source-alignment/architecture/app-unit suite. The next lived phone run then exposed a
+different product concern: leaving the VexStream Screen and returning could interrupt playback, while
+the text-button mini-player did not make timeline state easy to perceive.
+
+Source inspection showed that the player itself already had the right Android owner:
+
+```text
+VexStreamPlaybackService
+  -> MediaSession
+  -> ExoPlayer
+  -> queue / playback lifetime
+```
+
+The UI-side `MediaController`, however, was created and released with VexStream Screen composition.
+The current correction removes that coupling without moving playback ownership into Compose:
+
+```text
+VexStreamPlaybackService
+  owns Player + MediaSession + queue
+
+VexStreamPlaybackViewModel
+  retains only the MediaController client across ordinary VexLife Screen navigation
+
+VexStream Screen
+  observes playback state
+  -> registered Vex controls
+  -> VexRuntime / logging
+  -> renderer-local MediaController effect
+```
+
+The correction is still owed lived-device verification; static source shape is not a substitute for
+proving the reported navigation behavior on the phone.
+
+The mobile player also now takes layout cues from the desktop VexStream experience without copying
+desktop UI architecture: selected tracks have a perceivable selected surface, high-frequency
+track/player actions use registered semantic icon controls, and the mini-player projects
+title/artist, queue position, elapsed/duration timeline, and compact transport/shuffle/queue controls.
+The semantic element identities remain unchanged, so custom Compose realization still enters
+VexRuntime before each local playback effect.
+
+```text
+DESKTOP_PLACEMENT_CUE != DESKTOP_UI_PORT
+MEDIASESSION_SERVICE = PLAYBACK_OWNER
+VIEWMODEL_MEDIA_CONTROLLER = RETAINED_UI_CLIENT
+ICON_REALIZATION != BYPASS_SEMANTIC_RUNTIME
+LIVED_NAVIGATION_PROOF = STILL_REQUIRED
+```
