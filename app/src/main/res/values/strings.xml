@@ -17,6 +17,12 @@
     <string name="home_preview_body">Sample preview only. This body is intentionally light while the reusable Android element, placement, navigation, and logging foundations are being learned.</string>
     <string name="home_systems_title">Vex systems</string>
     <string name="home_vexstream_music">VexStream Music</string>
+    <string name="home_vexstream_connect">Connect VexStream Music</string>
+    <string name="home_vexstream_open">Open VexStream Music</string>
+    <string name="home_vexstream_disconnected_body">Your music from your VexStream computer, ready to stream or keep offline on this phone.</string>
+    <string name="home_vexstream_connected">Connected to %1$s</string>
+    <string name="home_vexstream_connected_body">Browse your library, continue playback, manage the queue, or download music for offline listening.</string>
+    <string name="home_vexstream_offline">VexStream offline · downloaded music is still available</string>
     <string name="home_talk_to_vex">Talk to Vex</string>
     <string name="events_preview_title">Events preview</string>
     <string name="events_preview_body">Future home for chronological activity, receipts, and meaningful VexLife events. This is placeholder content for the first navigation practicum.</string>
@@ -43,6 +49,13 @@
     <string name="vexstream_music_find">Find VexStream</string>
     <string name="vexstream_music_confirm_code">Codes match · Request access</string>
     <string name="vexstream_music_forget">Forget this VexStream</string>
+    <string name="vexstream_music_manage_connection">Manage VexStream connection</string>
+    <string name="vexstream_music_connection_title">VexStream connection</string>
+    <string name="vexstream_music_reconnect">Reconnect</string>
+    <string name="vexstream_music_forget_confirm_title">Forget this VexStream?</string>
+    <string name="vexstream_music_forget_confirm_body">This removes the remembered connection from this phone. Downloaded music stays on the phone until you remove it separately.</string>
+    <string name="vexstream_music_forget_confirm">Forget VexStream</string>
+    <string name="vexstream_music_cancel">Cancel</string>
     <string name="vexstream_music_refresh">Refresh library</string>
     <string name="vexstream_music_status_not_configured">Connect to your VexStream computer</string>
     <string name="vexstream_music_status_searching">Choose your VexStream computer</string>
