@@ -94,49 +94,51 @@ class VexValhallaRouteTranslatorTest {
 
     @Test
     fun providerTripTimeBecomesRoutePreviewDuration() {
-        val encoded =
-            encodePolyline6ForTest(
-                listOf(
-                    VexRouteGeometryPoint(
-                        34.0,
-                        -118.0,
-                    ),
-                    VexRouteGeometryPoint(
-                        34.001,
-                        -118.0,
-                    ),
+        val duration =
+            projectValhallaDurationSeconds(
+                605.234,
+            )
+
+        assertEquals(
+            606,
+            duration,
+        )
+
+        val geometry =
+            listOf(
+                VexRouteGeometryPoint(
+                    34.0,
+                    -118.0,
+                ),
+                VexRouteGeometryPoint(
+                    34.001,
+                    -118.0,
                 ),
             )
 
-        val raw =
-            """
-            {
-              "trip": {
-                "summary": {
-                  "time": 605.234
-                },
-                "legs": [
-                  {
-                    "shape": "$encoded",
-                    "maneuvers": [
-                      {
-                        "instruction": "Start north",
-                        "begin_shape_index": 0
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-            """.trimIndent()
-
-        val projection =
-            VexValhallaRouteTranslator
-                .fromJson(raw)
+        val providerRoute =
+            VexValhallaRouteProjection(
+                legs =
+                    listOf(
+                        VexValhallaLegProjection(
+                            geometry = geometry,
+                            maneuvers =
+                                listOf(
+                                    VexValhallaManeuverProjection(
+                                        instruction =
+                                            "Start north",
+                                        beginShapeIndex = 0,
+                                    ),
+                                ),
+                        ),
+                    ),
+                estimatedDurationSeconds =
+                    duration,
+            )
 
         val result =
             with(VexValhallaRouteTranslator) {
-                projection
+                providerRoute
                     .toOfflineRouteResult(
                         routeRef = "route.time",
                         routeRevision = 1L,

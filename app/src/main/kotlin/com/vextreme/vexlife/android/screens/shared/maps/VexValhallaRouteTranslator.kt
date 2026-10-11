@@ -75,20 +75,14 @@ internal object VexValhallaRouteTranslator {
         val legsJson =
             trip.getJSONArray("legs")
         val estimatedDurationSeconds =
-            trip
-                .optJSONObject("summary")
-                ?.optDouble(
-                    "time",
-                    Double.NaN,
-                )
-                ?.takeIf { seconds ->
-                    seconds.isFinite() &&
-                        seconds > 0.0
-                }
-                ?.let { seconds ->
-                    ceil(seconds)
-                        .toInt()
-                }
+            projectValhallaDurationSeconds(
+                trip
+                    .optJSONObject("summary")
+                    ?.optDouble(
+                        "time",
+                        Double.NaN,
+                    ),
+            )
 
         val legs =
             buildList {
@@ -412,6 +406,19 @@ private fun decodePolylineValue(
         nextIndex = index,
     )
 }
+
+internal fun projectValhallaDurationSeconds(
+    rawSeconds: Double?,
+): Int? =
+    rawSeconds
+        ?.takeIf { seconds ->
+            seconds.isFinite() &&
+                seconds > 0.0
+        }
+        ?.let { seconds ->
+            ceil(seconds)
+                .toInt()
+        }
 
 internal fun cumulativeGeometryMeters(
     geometry: List<VexRouteGeometryPoint>,
