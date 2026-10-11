@@ -452,9 +452,18 @@ internal fun VexMapsMapSurface(
                             .UsePreciseLocation,
                     onPermissionResult = { granted ->
                         if (!granted) {
-                            locationState =
-                                VexMapsLocationState.Denied
                             currentLocation = null
+                            locationState =
+                                if (
+                                    ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    VexMapsLocationState.Approximate
+                                } else {
+                                    VexMapsLocationState.Denied
+                                }
                             return@LocationButton
                         }
 
@@ -481,6 +490,11 @@ internal fun VexMapsMapSurface(
                                     VexDeviceLocationResult.PermissionMissing -> {
                                         currentLocation = null
                                         VexMapsLocationState.Denied
+                                    }
+
+                                    VexDeviceLocationResult.ApproximateOnly -> {
+                                        currentLocation = null
+                                        VexMapsLocationState.Approximate
                                     }
 
                                     VexDeviceLocationResult.LocationDisabled -> {
@@ -1301,6 +1315,12 @@ private sealed interface VexMapsLocationState {
         VexMapsLocationState {
         override val stringResOrNull =
             R.string.vexmaps_location_denied
+    }
+
+    data object Approximate :
+        VexMapsLocationState {
+        override val stringResOrNull =
+            R.string.vexmaps_location_approximate
     }
 
     data object Disabled :

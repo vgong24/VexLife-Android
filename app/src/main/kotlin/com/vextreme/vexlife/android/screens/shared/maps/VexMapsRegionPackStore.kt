@@ -123,13 +123,15 @@ internal class VexMapsRegionPackStore(
                     )
                 }
 
-                backup.delete()
+                val installed =
+                    requireNotNull(
+                        currentPack(),
+                    ) {
+                        "installed region is not readable"
+                    }
 
-                requireNotNull(
-                    currentPack(),
-                ) {
-                    "installed region is not readable"
-                }
+                backup.delete()
+                installed
             } finally {
                 staging.delete()
                 if (

@@ -142,6 +142,7 @@
     <string name="vexmaps_location_finding">Finding your current location…</string>
     <string name="vexmaps_location_ready">Current location centered for this Maps session.</string>
     <string name="vexmaps_location_denied">Location was not shared. You can keep browsing VexMaps normally.</string>
+    <string name="vexmaps_location_approximate">Approximate location is available, but precise location is required to start turn-by-turn navigation.</string>
     <string name="vexmaps_location_disabled">Device location is turned off. VexMaps still works for browsing.</string>
     <string name="vexmaps_location_unavailable">A current location fix is not available yet.</string>
     <string name="vexmaps_location_error">VexMaps could not read the current location.</string>

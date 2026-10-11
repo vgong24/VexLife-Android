@@ -40,7 +40,11 @@ internal class VexMapsOfflineRoutePlanner {
                             )
                         }
 
-                    provider?.close()
+                    withContext(
+                        Dispatchers.IO,
+                    ) {
+                        provider?.close()
+                    }
                     provider =
                         replacement
                     providerIdentity =

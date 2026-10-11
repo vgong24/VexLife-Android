@@ -44,7 +44,16 @@ internal class VexDeviceLocationSource(
                 Manifest.permission.ACCESS_FINE_LOCATION,
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            return VexDeviceLocationResult.PermissionMissing
+            return if (
+                ContextCompat.checkSelfPermission(
+                    appContext,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                VexDeviceLocationResult.ApproximateOnly
+            } else {
+                VexDeviceLocationResult.PermissionMissing
+            }
         }
 
         if (
@@ -220,6 +229,9 @@ internal sealed interface VexDeviceLocationResult {
     ) : VexDeviceLocationResult
 
     data object PermissionMissing :
+        VexDeviceLocationResult
+
+    data object ApproximateOnly :
         VexDeviceLocationResult
 
     data object LocationDisabled :
