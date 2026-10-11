@@ -28,6 +28,7 @@ interface EventsAttentionPreferenceRepository {
     fun defer(eventRef: String)
     fun suppress(eventRef: String)
     fun reset(eventRef: String)
+    fun resetAll()
 }
 
 class RelayEventsAttentionPreferenceRepository :
@@ -65,6 +66,10 @@ class RelayEventsAttentionPreferenceRepository :
     override fun reset(eventRef: String) {
         relay.reset(eventRef)
     }
+
+    override fun resetAll() {
+        relay.resetAll()
+    }
 }
 
 private class EventsAttentionPreferenceRelay :
@@ -95,6 +100,12 @@ private class EventsAttentionPreferenceRelay :
                 dispositionByEventRef =
                     current.dispositionByEventRef - eventRef,
             )
+        }
+    }
+
+    fun resetAll() {
+        update {
+            EventsAttentionPreferenceState()
         }
     }
 }

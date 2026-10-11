@@ -12,7 +12,8 @@ import kotlinx.coroutines.delay
  * - [emitNext] -> one ordinary new provider event;
  * - [emitBurst] -> enough rows to exercise scrolling/visibility;
  * - [insertHistorical] -> insert an older event without changing existing event identity;
- * - [removeOldest] -> provider-removal condition for candidate advancement.
+ * - [removeOldest] -> provider-removal condition for candidate advancement;
+ * - [resetCurrent] -> clear the provider projection while preserving monotonic source/event identity.
  *
  * All mutations share one source revision and one lock, so timed and manual play cannot fork the
  * provider into contradictory histories.
@@ -148,6 +149,21 @@ class SyntheticExternalEventSource(
 
         return snapshot?.let(::publish)
     }
+
+    /**
+     * Clears only this provider's current projection.
+     *
+     * Revision/event ordinals remain monotonic so Reset Lab is repeatable without teaching a real
+     * adapter that reconnect/reset means "pretend the provider went back to revision 1".
+     */
+    fun resetCurrent(): VexExternalEventSourceSnapshot =
+        publish(
+            synchronized(lock) {
+                sourceRevision += 1L
+                emitted.clear()
+                snapshotLocked()
+            },
+        )
 
     private fun trimToBoundLocked() {
         while (emitted.size > maxEvents) {

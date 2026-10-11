@@ -84,6 +84,14 @@ class EventsAttentionRelayTest {
             EventsAttentionAvailability.READY,
             relay.current.outputState.availability,
         )
+        assertEquals(
+            2,
+            relay.current.outputState.unhandledCount,
+        )
+        assertEquals(
+            1,
+            relay.current.outputState.queuedAfterCurrentCount,
+        )
 
         relay.visibleTargetsChanged(
             setOf("event.second"),
@@ -134,6 +142,26 @@ class EventsAttentionRelayTest {
         assertEquals(
             EventsAttentionAvailability.READY,
             relay.current.outputState.availability,
+        )
+        assertEquals(
+            1,
+            relay.current.outputState.unhandledCount,
+        )
+        assertEquals(
+            0,
+            relay.current.outputState.queuedAfterCurrentCount,
+        )
+        assertEquals(
+            1,
+            relay.current.outputState.acknowledgedCount,
+        )
+        assertEquals(
+            0,
+            relay.current.outputState.deferredCount,
+        )
+        assertEquals(
+            0,
+            relay.current.outputState.suppressedCount,
         )
     }
 
@@ -269,6 +297,11 @@ class EventsAttentionRelayTest {
             EventsAttentionAvailability.NONE,
             relay.current.outputState.availability,
         )
+        assertEquals(0, relay.current.outputState.unhandledCount)
+        assertEquals(0, relay.current.outputState.queuedAfterCurrentCount)
+        assertEquals(1, relay.current.outputState.acknowledgedCount)
+        assertEquals(0, relay.current.outputState.deferredCount)
+        assertEquals(1, relay.current.outputState.suppressedCount)
     }
 }
 

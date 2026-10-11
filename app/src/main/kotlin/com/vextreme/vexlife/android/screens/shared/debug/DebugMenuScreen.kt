@@ -97,6 +97,14 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.RemoveOldestSyntheticEvent),
     )
 
+    val ResetSyntheticEventLab = buttonRef(
+        id = "body.events-simulator.actions.reset-lab",
+        labelRes = R.string.events_simulator_reset_lab,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Reset,
+        intent = invoke(AppActions.ResetSyntheticEventLab),
+    )
+
     override val content = layout {
         scrollableColumn("body") {
             toggle(DarkMode)
@@ -136,9 +144,25 @@ object DebugMenuScreen : AppScreenBlueprint(
                     button(InsertHistoricalSyntheticEvent)
                     button(RemoveOldestSyntheticEvent)
                 }
+                row("reset-actions") {
+                    button(ResetSyntheticEventLab)
+                }
                 text(
                     id = "helper",
                     textRes = R.string.events_simulator_helper,
+                    role = TextRole.Supporting,
+                )
+            }
+
+            card("events-simulator-guide") {
+                text(
+                    id = "title",
+                    textRes = R.string.events_simulator_guide_title,
+                    role = TextRole.Title,
+                )
+                text(
+                    id = "body",
+                    textRes = R.string.events_simulator_guide_body,
                     role = TextRole.Supporting,
                 )
             }
@@ -160,6 +184,8 @@ object DebugMenuScreen : AppScreenBlueprint(
                 repository = context.repositories.events,
                 scope = context.scope,
             )
+        val eventsAttention =
+            context.repositories.eventsAttention
 
         return AppActionRegistrations.of(
             appAction(
@@ -210,6 +236,14 @@ object DebugMenuScreen : AppScreenBlueprint(
                 ownerRef = screenId,
             ) {
                 syntheticEvents.removeOldest()
+            },
+            appAction(
+                action = AppActions.ResetSyntheticEventLab,
+                ownerRef = screenId,
+            ) {
+                syntheticEvents.stop()
+                syntheticEvents.resetCurrent()
+                eventsAttention.resetAll()
             },
         )
     }

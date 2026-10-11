@@ -24,6 +24,7 @@ object DebugJourneys : VexJourneyShard {
         tap(DebugMenuScreen.EmitSyntheticEventBurst)
         tap(DebugMenuScreen.InsertHistoricalSyntheticEvent)
         tap(DebugMenuScreen.RemoveOldestSyntheticEvent)
+        tap(DebugMenuScreen.ResetSyntheticEventLab)
         tap(DebugMenuScreen.DarkMode)
         tap(DebugMenuScreen.ShowLog)
         dismiss(DebugMenuScreen.LogSheet)

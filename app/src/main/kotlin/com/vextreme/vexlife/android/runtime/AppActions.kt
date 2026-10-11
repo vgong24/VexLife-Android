@@ -18,6 +18,7 @@ object AppActions {
     val EmitSyntheticEventBurst = ActionKey("action.events.synthetic.emit-burst")
     val InsertHistoricalSyntheticEvent = ActionKey("action.events.synthetic.insert-historical")
     val RemoveOldestSyntheticEvent = ActionKey("action.events.synthetic.remove-oldest")
+    val ResetSyntheticEventLab = ActionKey("action.events.synthetic.reset-lab")
     val GallerySample = ActionKey("action.gallery.sample")
     val SaveUserProfile = ActionKey("action.user-profile.save")
     val VexStreamMusicPlaceholder = ActionKey("action.vexstream-music.placeholder")

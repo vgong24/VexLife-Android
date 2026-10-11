@@ -118,6 +118,27 @@ class SyntheticExternalEventSourceTest {
                 )
                 .sourceRevision,
         )
+
+        source.resetCurrent()
+
+        val resetSnapshot =
+            repository.current.sourceSnapshots
+                .getValue(
+                    SyntheticExternalEventSource.SOURCE_REF,
+                )
+
+        assertEquals(7L, resetSnapshot.sourceRevision)
+        assertTrue(resetSnapshot.events.isEmpty())
+
+        source.emitNext()
+
+        val afterResetEvent =
+            repository.current.events.single()
+
+        assertEquals(
+            "event.synthetic.external.0006",
+            afterResetEvent.eventRef,
+        )
     }
 
     @Test

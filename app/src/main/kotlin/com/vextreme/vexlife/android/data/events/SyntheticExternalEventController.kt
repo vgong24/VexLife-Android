@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
  * - [emitBurst] -> rapidly fill enough rows to exercise Lazy list reachability;
  * - [insertHistorical] -> list insertion/reorder while an attention candidate is retained;
  * - [removeOldest] -> provider-removal candidate advancement;
+ * - [resetCurrent] -> clear current provider rows while preserving provider revision continuity;
  * - [start]/[stop] -> asynchronous outside-world arrival while another Screen is current.
  */
 class SyntheticExternalEventController(
@@ -74,6 +75,9 @@ class SyntheticExternalEventController(
 
     fun removeOldest(): VexExternalEventSourceSnapshot? =
         source.removeOldest()
+
+    fun resetCurrent(): VexExternalEventSourceSnapshot =
+        source.resetCurrent()
 }
 
 // [VXG RealForever]

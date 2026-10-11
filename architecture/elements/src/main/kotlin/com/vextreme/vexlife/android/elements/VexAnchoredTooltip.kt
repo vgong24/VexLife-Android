@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.elements
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -273,14 +274,26 @@ fun VexAnchoredTooltip(
                 focusable = true,
             ),
     ) {
+        /*
+         * Lived-device review showed that a same-surface dark popup read as another list card.
+         * Use an inverse outlined surface so the human can immediately perceive "anchored transient"
+         * without changing any eligibility or geometry semantics.
+         */
         Surface(
             modifier =
                 Modifier
-                    .widthIn(max = 320.dp)
+                    .widthIn(max = 336.dp)
                     .testTag(presentationRef),
             shape = MaterialTheme.shapes.medium,
-            tonalElevation = 8.dp,
-            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.inverseSurface,
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            border =
+                BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                ),
+            tonalElevation = 0.dp,
+            shadowElevation = 12.dp,
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),

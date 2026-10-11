@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.data.events
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EventsAttentionPreferenceRepositoryTest {
@@ -39,6 +40,14 @@ class EventsAttentionPreferenceRepositoryTest {
             preferences.current
                 .dispositionByEventRef
                 .containsKey("event.b"),
+        )
+
+        preferences.resetAll()
+
+        assertTrue(
+            preferences.current
+                .dispositionByEventRef
+                .isEmpty(),
         )
     }
 }

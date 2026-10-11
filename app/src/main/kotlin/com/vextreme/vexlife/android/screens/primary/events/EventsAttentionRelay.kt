@@ -53,6 +53,18 @@ data class EventsAttentionOutputState(
     val candidate: EventsAttentionCandidate? = null,
     val availability: EventsAttentionAvailability =
         EventsAttentionAvailability.UNOBSERVED,
+
+    /**
+     * Human/debug-facing queue metadata derived from the same Relay decision.
+     *
+     * These counts are intentionally not recomputed by Compose. The popup can therefore explain
+     * exactly what the Relay believes is current/queued without creating a second queue model.
+     */
+    val unhandledCount: Int = 0,
+    val queuedAfterCurrentCount: Int = 0,
+    val acknowledgedCount: Int = 0,
+    val deferredCount: Int = 0,
+    val suppressedCount: Int = 0,
 ) : VexOutputState<EventsAttentionOutputState> {
     override fun deepCopy(): EventsAttentionOutputState =
         copy(candidate = candidate?.copy())
@@ -144,14 +156,22 @@ class EventsAttentionRelay :
                 transientBlocked = transientBlocked,
             )
 
+        val dispositions =
+            preferences
+                ?.dispositionByEventRef
+                .orEmpty()
+
+        val unhandled =
+            if (feed != null && preferences != null) {
+                feed.events.filter { event ->
+                    event.eventRef !in dispositions
+                }
+            } else {
+                emptyList()
+            }
+
         val candidateEvent =
             if (feed != null && preferences != null) {
-                val unhandled =
-                    feed.events.filter { event ->
-                        event.eventRef !in
-                            preferences.dispositionByEventRef
-                    }
-
                 val retainedCandidateRef =
                     currentState.outputState
                         .candidate
@@ -202,12 +222,38 @@ class EventsAttentionRelay :
                     EventsAttentionAvailability.READY
             }
 
+        val unhandledCount =
+            unhandled.size
+
         return currentState.copy(
             inputState = coherentInput,
             outputState =
                 EventsAttentionOutputState(
                     candidate = candidate,
                     availability = availability,
+                    unhandledCount = unhandledCount,
+                    queuedAfterCurrentCount =
+                        if (candidate == null) {
+                            0
+                        } else {
+                            (unhandledCount - 1)
+                                .coerceAtLeast(0)
+                        },
+                    acknowledgedCount =
+                        dispositions.values.count { disposition ->
+                            disposition ==
+                                com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.ACKNOWLEDGED
+                        },
+                    deferredCount =
+                        dispositions.values.count { disposition ->
+                            disposition ==
+                                com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.DEFERRED
+                        },
+                    suppressedCount =
+                        dispositions.values.count { disposition ->
+                            disposition ==
+                                com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.SUPPRESSED
+                        },
                 ),
         )
     }

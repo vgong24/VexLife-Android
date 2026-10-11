@@ -20,10 +20,21 @@
     <string name="home_talk_to_vex">Talk to Vex</string>
     <string name="events_preview_title">Events preview</string>
     <string name="events_preview_body">External information will appear here as stable chronological event rows.</string>
-    <string name="events_attention_candidate">Attention candidate</string>
+    <string name="events_attention_candidate">Current attention</string>
+    <string name="events_attention_anchor_hint">Anchored to this event row</string>
+    <string name="events_attention_queue_summary">Current 1 of %1$d · %2$d queued</string>
+    <string name="events_attention_current_ref">Current: %1$s</string>
+    <string name="events_attention_state">State: %1$s</string>
+    <string name="events_attention_handled_summary">Handled this lab: %1$d acknowledged · %2$d later · %3$d suppressed</string>
+    <string name="events_attention_reason_ready">Why: retained oldest unhandled event; its row is visible and no other transient is blocking it.</string>
+    <string name="events_attention_expected_next">Expected next state</string>
     <string name="events_attention_acknowledge">Acknowledge</string>
     <string name="events_attention_later">Later</string>
     <string name="events_attention_suppress">Suppress</string>
+    <string name="events_attention_acknowledge_expectation">Acknowledge → keep the row, mark ACKNOWLEDGED, then advance to the next queued candidate (or close if none).</string>
+    <string name="events_attention_later_expectation">Later → keep the row, mark DEFERRED for this lab session, then advance to the next queued candidate. Reset lab clears the disposition.</string>
+    <string name="events_attention_suppress_expectation">Suppress → keep the row, mark SUPPRESSED for this lab session, then advance to the next queued candidate. Reset lab clears the disposition.</string>
+    <string name="events_attention_failure_hint">If the stated next state does not happen, treat it as a failing case / bug.</string>
     <string name="settings_preview_title">Settings preview</string>
     <string name="settings_preview_body">Future home for preferences, device posture, and user-controlled configuration. This is placeholder content for the first navigation practicum.</string>
 
@@ -63,7 +74,10 @@
     <string name="events_simulator_emit_burst">Emit 12-event burst</string>
     <string name="events_simulator_insert_historical">Insert older event</string>
     <string name="events_simulator_remove_oldest">Remove oldest</string>
+    <string name="events_simulator_reset_lab">Reset lab</string>
     <string name="events_simulator_helper">Debug fixture only. Timer tests outside-screen arrival. Emit next is immediate. Burst fills enough rows to scroll. Insert older changes list order without changing existing IDs. Remove oldest tests provider-removal candidate advancement.</string>
+    <string name="events_simulator_guide_title">Attention test guide</string>
+    <string name="events_simulator_guide_body">Reset lab → Emit 12-event burst → open Events. Tooltip should say Current 1 of N. Scroll its row off-screen/on-screen: the same candidate should disappear/reappear. Acknowledge, Later, and Suppress must keep the event row, add the matching disposition, and advance to the next queued candidate. If the stated next state does not happen, that is a bug.</string>
     <string name="close">Close</string>
 
     <string name="gallery_elements">Elements</string>

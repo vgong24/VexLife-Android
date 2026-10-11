@@ -12,6 +12,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -147,6 +148,7 @@ fun EventsScreenContent(
                 preferences.dispositionByEventRef[
                     event.eventRef
                 ],
+            attention = attention.outputState,
             onAcknowledge = {
                 runtime.recordDynamicInteraction(
                     EventsPresentationRefs.attentionAction(
@@ -207,6 +209,7 @@ private fun EventRow(
     event: VexExternalEvent,
     isAttentionCandidate: Boolean,
     disposition: EventsAttentionDisposition?,
+    attention: EventsAttentionOutputState,
     onAcknowledge: () -> Unit,
     onDefer: () -> Unit,
     onSuppress: () -> Unit,
@@ -278,7 +281,14 @@ private fun EventRow(
                             R.string.events_attention_candidate,
                         ),
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.inversePrimary,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_anchor_hint,
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
                 )
                 Text(
                     text = event.title,
@@ -288,12 +298,104 @@ private fun EventRow(
                     text = event.detail,
                     style = MaterialTheme.typography.bodyMedium,
                 )
+
+                /*
+                 * This is intentionally Relay-owned metadata rendered verbatim enough for lived
+                 * testing. Compose does not recalculate the queue; if these numbers look wrong,
+                 * the defect is in the attention relationship rather than a second UI model.
+                 */
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_queue_summary,
+                            attention.unhandledCount,
+                            attention.queuedAfterCurrentCount,
+                        ),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_current_ref,
+                            event.eventRef,
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_state,
+                            attention.availability.name,
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_handled_summary,
+                            attention.acknowledgedCount,
+                            attention.deferredCount,
+                            attention.suppressedCount,
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_reason_ready,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_expected_next,
+                        ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.inversePrimary,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_acknowledge_expectation,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_later_expectation,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_suppress_expectation,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.events_attention_failure_hint,
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.inversePrimary,
+                )
+
                 Row(
                     horizontalArrangement =
                         Arrangement.spacedBy(8.dp),
                 ) {
                     TextButton(
                         onClick = onAcknowledge,
+                        colors =
+                            TextButtonDefaults.textButtonColors(
+                                contentColor =
+                                    MaterialTheme.colorScheme.inversePrimary,
+                            ),
                         modifier =
                             Modifier.testTag(
                                 EventsPresentationRefs.attentionAction(
@@ -310,6 +412,11 @@ private fun EventRow(
                     }
                     TextButton(
                         onClick = onDefer,
+                        colors =
+                            TextButtonDefaults.textButtonColors(
+                                contentColor =
+                                    MaterialTheme.colorScheme.inversePrimary,
+                            ),
                         modifier =
                             Modifier.testTag(
                                 EventsPresentationRefs.attentionAction(
@@ -326,6 +433,11 @@ private fun EventRow(
                     }
                     TextButton(
                         onClick = onSuppress,
+                        colors =
+                            TextButtonDefaults.textButtonColors(
+                                contentColor =
+                                    MaterialTheme.colorScheme.inversePrimary,
+                            ),
                         modifier =
                             Modifier.testTag(
                                 EventsPresentationRefs.attentionAction(

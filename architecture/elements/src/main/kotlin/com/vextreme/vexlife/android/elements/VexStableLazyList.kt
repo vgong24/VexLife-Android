@@ -67,18 +67,22 @@ fun <Item> VexStableLazyColumn(
         rememberLazyListState()
     val currentVisibleCallback by
         rememberUpdatedState(onVisibleItemRefsChanged)
+    val currentRefs by
+        rememberUpdatedState(refs)
 
-    LaunchedEffect(
-        listState,
-        refs,
-    ) {
+    /*
+     * Keep one observer alive for the lifetime of this LazyListState. Provider snapshots may add
+     * rows every few seconds; restarting this collector for every ref-set change can expose a brief
+     * pre/post-layout visibility gap and blink an otherwise-stable anchored candidate.
+     */
+    LaunchedEffect(listState) {
         snapshotFlow {
             listState.layoutInfo.visibleItemsInfo
                 .mapNotNull { item ->
                     item.key as? String
                 }
                 .toSet()
-                .intersect(refs)
+                .intersect(currentRefs)
         }
             .distinctUntilChanged()
             .collect { visibleRefs ->
