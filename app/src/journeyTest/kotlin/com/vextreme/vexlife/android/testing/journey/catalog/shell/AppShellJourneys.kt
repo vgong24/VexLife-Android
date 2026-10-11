@@ -8,6 +8,7 @@ object AppShellJourneys : VexJourneyShard {
 
     override val journeys = listOf(
         vexJourney(
+            id = "primary-peers-native-back",
             title = "Primary peers and native root Back",
             environments = listOf(
                 VexJourneyEnvironments.Baseline,
