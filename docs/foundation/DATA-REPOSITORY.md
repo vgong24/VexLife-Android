@@ -242,10 +242,10 @@ A form screen may know how to assemble its draft values into FormSubmission. It 
 repository mutation secretly after calling runtime.activate.
 
 The declared Save action is delivered through AppActionRegistrations to one feature-local
-AppActionRegistration kept beside UserProfileScreen. VexLifeApp only assembles registrations and
-supplies broader-lifetime dependencies; it does not own a giant feature-action when statement.
-AppActionRegistrations rejects duplicate ActionKey ownership so two screens cannot accidentally respond to
-the same submission.
+AppActionRegistration kept beside UserProfileScreen. AppScreens discovers each registered
+AppScreenBlueprint's local registrations; VexLifeSession supplies broader-lifetime construction
+dependencies without owning a feature-action list. AppActionRegistrations rejects duplicate ActionKey
+ownership and missing declared Invoke coverage so screens cannot silently collide or remain unwired.
 
 ## User Profile proof domain
 
