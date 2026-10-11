@@ -356,3 +356,33 @@ CUSTOM_COMPOSE_RENDERER != BYPASS_SEMANTIC_RUNTIME
 DYNAMIC_CATALOG_DATA != STATIC_BLUEPRINT_TOPOLOGY
 LOCAL_EFFECT != GENERIC_SERVICE_LOCATOR
 ```
+
+### Lived same-Wi-Fi checkpoint
+
+Observed on physical Samsung SM-S908U with the VexStream 3.0 Windows producer:
+
+```text
+Find VexStream
+-> same-Wi-Fi connection succeeds
+-> real desktop catalog appears
+-> selected desktop-backed track plays
+-> MediaSession mini-player projects current playback
+```
+
+This is product-path evidence, not the earlier ADB-reverse developer bridge.
+
+Still owed as separate lived predicates:
+- verified Download completion;
+- desktop unavailable -> LOCAL_ONLY playback;
+- Android restart -> offline restoration;
+- real desktop playlist projection visible/playable on the phone.
+
+### Current mobile browse refinement
+
+The real library size showed that phone browsing needs a compact first-class search surface. One
+registered `SearchQuery` field now filters Songs / Albums / Artists / Playlists / Downloads while
+typing remains local presentation state, matching the User Profile draft-input pattern rather than
+creating one semantic log event per keystroke.
+
+Long/duplicated title/artist/album presentation is compacted for the phone, while stable playback
+controls remain registered Vex actions and dynamic catalog rows remain repository data.
