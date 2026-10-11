@@ -139,6 +139,7 @@
     <string name="vexmaps_foundation_title">Maps and navigation</string>
     <string name="vexmaps_foundation_body">VexMaps is ready for map, place, route, and navigation experiences. Opening this screen does not require location permission; device location will be requested only when a location-dependent action needs it.</string>
     <string name="vexmaps_attribution">© OpenStreetMap contributors · OpenFreeMap</string>
+    <string name="vexmaps_use_precise_location">Use precise location</string>
     <string name="vexmaps_location_finding">Finding your current location…</string>
     <string name="vexmaps_location_ready">Current location centered for this Maps session.</string>
     <string name="vexmaps_location_denied">Location was not shared. You can keep browsing VexMaps normally.</string>

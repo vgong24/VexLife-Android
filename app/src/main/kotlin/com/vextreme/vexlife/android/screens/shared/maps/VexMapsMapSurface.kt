@@ -34,8 +34,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.core.locationbutton.compose.LocationButton
-import androidx.core.locationbutton.compose.LocationButtonTextType
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -130,6 +128,97 @@ internal fun VexMapsMapSurface(
                 VexMapsPlanningState.Idle,
             )
         }
+
+    val readCurrentPreciseLocation: () -> Unit = {
+        locationState =
+            VexMapsLocationState.Finding
+
+        scope.launch {
+            locationState =
+                when (
+                    val result =
+                        locationSource
+                            .currentPreciseLocation()
+                ) {
+                    is VexDeviceLocationResult.Located -> {
+                        currentLocation =
+                            result
+                        mapController
+                            .showDeviceLocation(
+                                result,
+                            )
+                        VexMapsLocationState.Ready
+                    }
+
+                    VexDeviceLocationResult.PermissionMissing -> {
+                        currentLocation = null
+                        VexMapsLocationState.Denied
+                    }
+
+                    VexDeviceLocationResult.ApproximateOnly -> {
+                        currentLocation = null
+                        VexMapsLocationState.Approximate
+                    }
+
+                    VexDeviceLocationResult.LocationDisabled -> {
+                        currentLocation = null
+                        VexMapsLocationState.Disabled
+                    }
+
+                    VexDeviceLocationResult.Unavailable -> {
+                        currentLocation = null
+                        VexMapsLocationState.Unavailable
+                    }
+                }
+        }
+    }
+
+    val preciseLocationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .RequestMultiplePermissions(),
+        ) { grants ->
+            val fineGranted =
+                grants[
+                    Manifest.permission
+                        .ACCESS_FINE_LOCATION
+                ] == true ||
+                    ContextCompat
+                        .checkSelfPermission(
+                            context,
+                            Manifest.permission
+                                .ACCESS_FINE_LOCATION,
+                        ) ==
+                    PackageManager
+                        .PERMISSION_GRANTED
+
+            if (fineGranted) {
+                readCurrentPreciseLocation()
+            } else {
+                currentLocation = null
+                val coarseGranted =
+                    grants[
+                        Manifest.permission
+                            .ACCESS_COARSE_LOCATION
+                    ] == true ||
+                        ContextCompat
+                            .checkSelfPermission(
+                                context,
+                                Manifest.permission
+                                    .ACCESS_COARSE_LOCATION,
+                            ) ==
+                        PackageManager
+                            .PERMISSION_GRANTED
+
+                locationState =
+                    if (coarseGranted) {
+                        VexMapsLocationState.Approximate
+                    } else {
+                        VexMapsLocationState.Denied
+                    }
+            }
+        }
+
     var offlineMapState by
         remember {
             mutableStateOf<VexMapsOfflineMapState>(
@@ -521,75 +610,45 @@ internal fun VexMapsMapSurface(
                 horizontalAlignment =
                     Alignment.End,
             ) {
-                LocationButton(
-                    textType =
-                        LocationButtonTextType
-                            .UsePreciseLocation,
-                    onPermissionResult = { granted ->
-                        if (!granted) {
-                            currentLocation = null
-                            locationState =
-                                if (
-                                    ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION,
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                ) {
-                                    VexMapsLocationState.Approximate
-                                } else {
-                                    VexMapsLocationState.Denied
-                                }
-                            return@LocationButton
-                        }
+                OutlinedButton(
+                    onClick = {
+                        runtime.recordDynamicInteraction(
+                            subjectRef =
+                                "presentation.vexmaps.location.use-precise",
+                            action = "Clicked",
+                        )
 
-                        locationState =
-                            VexMapsLocationState.Finding
-
-                        scope.launch {
-                            locationState =
-                                when (
-                                    val result =
-                                        locationSource
-                                            .currentPreciseLocation()
-                                ) {
-                                    is VexDeviceLocationResult.Located -> {
-                                        currentLocation =
-                                            result
-                                        mapController
-                                            .showDeviceLocation(
-                                                result,
-                                            )
-                                        VexMapsLocationState.Ready
-                                    }
-
-                                    VexDeviceLocationResult.PermissionMissing -> {
-                                        currentLocation = null
-                                        VexMapsLocationState.Denied
-                                    }
-
-                                    VexDeviceLocationResult.ApproximateOnly -> {
-                                        currentLocation = null
-                                        VexMapsLocationState.Approximate
-                                    }
-
-                                    VexDeviceLocationResult.LocationDisabled -> {
-                                        currentLocation = null
-                                        VexMapsLocationState.Disabled
-                                    }
-
-                                    VexDeviceLocationResult.Unavailable -> {
-                                        currentLocation = null
-                                        VexMapsLocationState.Unavailable
-                                    }
-                                }
+                        if (
+                            ContextCompat
+                                .checkSelfPermission(
+                                    context,
+                                    Manifest.permission
+                                        .ACCESS_FINE_LOCATION,
+                                ) ==
+                            PackageManager
+                                .PERMISSION_GRANTED
+                        ) {
+                            readCurrentPreciseLocation()
+                        } else {
+                            preciseLocationPermissionLauncher
+                                .launch(
+                                    arrayOf(
+                                        Manifest.permission
+                                            .ACCESS_COARSE_LOCATION,
+                                        Manifest.permission
+                                            .ACCESS_FINE_LOCATION,
+                                    ),
+                                )
                         }
                     },
-                    onError = {
-                        currentLocation = null
-                        locationState =
-                            VexMapsLocationState.Error
-                    },
-                )
+                ) {
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_use_precise_location,
+                        ),
+                    )
+                }
 
                 locationState.stringResOrNull
                     ?.let { stringRes ->
