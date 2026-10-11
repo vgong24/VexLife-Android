@@ -78,14 +78,13 @@ class VexScreenCrawlerEvidenceObserver(
             "Vex ScreenCrawler case artifacts: ${rootDirectory.absolutePath}",
         )
         println(
-            "Vex ScreenCrawler macOS/Linux pull: " +
-                "adb pull \"${crawlerRootDirectory.absolutePath}\" " +
-                "\"./vex-screen-crawler\"",
+            "Vex ScreenCrawler pull from repo root (macOS/Linux): " +
+                "bash tools/pull-vex-screen-crawler.sh",
         )
         println(
-            "Vex ScreenCrawler Windows PowerShell pull: " +
-                "adb pull \"${crawlerRootDirectory.absolutePath}\" " +
-                "\".\\\\vex-screen-crawler\"",
+            "Vex ScreenCrawler pull from repo root (Windows PowerShell): " +
+                "powershell -ExecutionPolicy Bypass -File " +
+                ".\\\\tools\\\\pull-vex-screen-crawler.ps1",
         )
     }
 
