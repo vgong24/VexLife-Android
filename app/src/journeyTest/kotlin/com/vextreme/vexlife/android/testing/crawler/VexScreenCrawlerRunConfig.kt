@@ -94,10 +94,8 @@ object VexScreenCrawlerRunConfig {
     internal fun parameters(): List<VexScreenCrawlerParameter> {
         if (!enabled) {
             return listOf(
-                VexScreenCrawlerParameter(
-                    enabled = false,
-                    case = null,
-                    disabledReason =
+                VexScreenCrawlerParameter.Disabled(
+                    reason =
                         "set VexScreenCrawlerRunConfig.enabled = true",
                 ),
             )
@@ -109,19 +107,23 @@ object VexScreenCrawlerRunConfig {
         }
 
         return cases.map { case ->
-            VexScreenCrawlerParameter(
-                enabled = true,
-                case = case,
-            )
+            VexScreenCrawlerParameter.Case(case)
         }
     }
 }
 
-data class VexScreenCrawlerParameter(
-    val enabled: Boolean,
-    val case: VexScreenCrawlerCase?,
-    val disabledReason: String? = null,
-) {
-    override fun toString(): String =
-        case?.caseRef ?: "screen-crawler-disabled"
+sealed interface VexScreenCrawlerParameter {
+    data class Disabled(
+        val reason: String,
+    ) : VexScreenCrawlerParameter {
+        override fun toString(): String =
+            "screen-crawler-disabled"
+    }
+
+    data class Case(
+        val value: VexScreenCrawlerCase,
+    ) : VexScreenCrawlerParameter {
+        override fun toString(): String =
+            value.caseRef
+    }
 }
