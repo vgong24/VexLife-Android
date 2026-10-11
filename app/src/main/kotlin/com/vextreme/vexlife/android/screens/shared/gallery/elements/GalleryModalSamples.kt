@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.gallery.elements
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -36,7 +37,7 @@ internal fun GalleryModalSamples(
     if (runtime.presentation.isOpen(GalleryScreen.DialogModalSample)) {
         AlertDialog(
             onDismissRequest = {
-                runtime.presentation.close(GalleryScreen.DialogModalSample)
+                runtime.dismissPresentation(GalleryScreen.DialogModalSample)
             },
             title = {
                 Text(stringResource(R.string.gallery_dialog_sample_title))
@@ -55,11 +56,12 @@ internal fun GalleryModalSamples(
 
     if (runtime.presentation.isOpen(GalleryScreen.BottomSheetModalSample)) {
         ModalBottomSheet(
+            modifier = Modifier.fillMaxHeight(),
             onDismissRequest = {
-                runtime.presentation.close(GalleryScreen.BottomSheetModalSample)
+                runtime.dismissPresentation(GalleryScreen.BottomSheetModalSample)
             },
             sheetState = rememberModalBottomSheetState(
-                skipPartiallyExpanded = true,
+                skipPartiallyExpanded = false,
             ),
             dragHandle = {
                 BottomSheetDefaults.DragHandle()
