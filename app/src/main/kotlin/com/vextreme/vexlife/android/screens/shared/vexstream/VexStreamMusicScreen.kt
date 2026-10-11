@@ -23,6 +23,7 @@ import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.localEffect
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.elements.swapTo
+import com.vextreme.vexlife.android.elements.then
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -68,6 +69,14 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.queue.sheet",
     )
 
+    val ConnectionMenuSheet = modalBottomSheetRef(
+        id = "body.connection.menu",
+    )
+
+    val ForgetConfirmationDialog = dialogRef(
+        id = "body.connection.forget-confirmation",
+    )
+
     val FindNearby = buttonRef(
         id = "body.connection.find",
         labelRes = R.string.vexstream_music_find,
@@ -89,11 +98,51 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = invoke(AppActions.RefreshVexStreamCatalog),
     )
 
+    val ManageConnection = buttonRef(
+        id = "body.connection.manage",
+        labelRes = R.string.vexstream_music_manage_connection,
+        style = VexElementStyles.ToolbarIcon,
+        icon = ElementIcon.Settings,
+        intent = open(ConnectionMenuSheet),
+    )
+
+    val Reconnect = buttonRef(
+        id = "body.connection.reconnect",
+        labelRes = R.string.vexstream_music_reconnect,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.FindNearbyVexStream),
+    )
+
+    val RequestForgetPaired = buttonRef(
+        id = "body.connection.forget.request",
+        labelRes = R.string.vexstream_music_forget,
+        style = VexElementStyles.DangerAction,
+        intent = open(ForgetConfirmationDialog),
+    )
+
     val ForgetPaired = buttonRef(
         id = "body.connection.forget",
-        labelRes = R.string.vexstream_music_forget,
+        labelRes = R.string.vexstream_music_forget_confirm,
+        style = VexElementStyles.DangerAction,
+        intent =
+            invoke(AppActions.ForgetPairedVexStream)
+                .then(close(ForgetConfirmationDialog))
+                .then(close(ConnectionMenuSheet)),
+    )
+
+    val CancelForgetPaired = buttonRef(
+        id = "body.connection.forget.cancel",
+        labelRes = R.string.vexstream_music_cancel,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.ForgetPairedVexStream),
+        intent = close(ForgetConfirmationDialog),
+    )
+
+    val CloseConnectionMenu = buttonRef(
+        id = "body.connection.menu.close",
+        labelRes = R.string.close,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Close,
+        intent = close(ConnectionMenuSheet),
     )
 
     val SongsTab = buttonRef(
@@ -294,8 +343,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 )
                 button(FindNearby)
                 button(ConfirmPairingCode)
-                button(RefreshCatalog)
-                button(ForgetPaired)
+                button(ManageConnection)
             }
 
             textField(SearchQuery)
@@ -349,6 +397,18 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 button(ToggleRepeat)
                 button(ClearQueue)
                 button(CloseQueue)
+            }
+
+            modalBottomSheet(ConnectionMenuSheet) {
+                button(RefreshCatalog)
+                button(Reconnect)
+                button(RequestForgetPaired)
+                button(CloseConnectionMenu)
+            }
+
+            dialog(ForgetConfirmationDialog) {
+                button(ForgetPaired)
+                button(CancelForgetPaired)
             }
         }
     }
