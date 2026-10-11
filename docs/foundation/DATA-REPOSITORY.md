@@ -238,10 +238,10 @@ in which they typed it.
 A form screen may know how to assemble its draft values into FormSubmission. It must not perform the
 repository mutation secretly after calling runtime.activate.
 
-The declared Save action is delivered through AppActionRouter to one feature-local
+The declared Save action is delivered through AppActionRegistrations to one feature-local
 AppActionRegistration kept beside UserProfileScreen. VexLifeApp only assembles registrations and
 supplies broader-lifetime dependencies; it does not own a giant feature-action when statement.
-AppActionRouter rejects duplicate ActionKey ownership so two screens cannot accidentally respond to
+AppActionRegistrations rejects duplicate ActionKey ownership so two screens cannot accidentally respond to
 the same submission.
 
 ## User Profile proof domain
@@ -287,9 +287,9 @@ Use narrow purpose bridges:
 AppRepositories
   composition-only bundle
 
-AppActionRouter
-  one dispatcher
-  duplicate-safe feature-local action ownership
+AppActionRegistrations
+  one immutable queryable registration set
+  duplicate-safe feature-local action ownership + ActionKey/Element lookup
 
 VexLogger
   receives one record endpoint (logPersistence::record)

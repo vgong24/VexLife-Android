@@ -10,9 +10,14 @@
     <string name="settings_title">Settings</string>
     <string name="debug_menu_title">Debug Menu</string>
     <string name="gallery_title">Gallery</string>
+    <string name="vexstream_music_title">VexStream Music</string>
+    <string name="talk_to_vex_title">Talk to Vex</string>
 
     <string name="home_preview_title">Home preview</string>
     <string name="home_preview_body">Sample preview only. This body is intentionally light while the reusable Android element, placement, navigation, and logging foundations are being learned.</string>
+    <string name="home_systems_title">Vex systems</string>
+    <string name="home_vexstream_music">VexStream Music</string>
+    <string name="home_talk_to_vex">Talk to Vex</string>
     <string name="events_preview_title">Events preview</string>
     <string name="events_preview_body">Future home for chronological activity, receipts, and meaningful VexLife events. This is placeholder content for the first navigation practicum.</string>
     <string name="settings_preview_title">Settings preview</string>
@@ -33,6 +38,14 @@
     <string name="user_profile_persisted_name_label">Persisted name</string>
     <string name="user_profile_name_label">Edit display name</string>
     <string name="user_profile_save">Save name</string>
+
+    <string name="vexstream_music_placeholder_title">VexStream Music placeholder</string>
+    <string name="vexstream_music_placeholder_body">A future VexStream Music connection can live behind this screen without changing Home navigation. For now this screen proves scoped feature actions and a stable destination.</string>
+    <string name="vexstream_music_placeholder_action">Run VexStream placeholder action</string>
+
+    <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
+    <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>
+    <string name="talk_to_vex_placeholder_action">Run Talk to Vex placeholder action</string>
 
     <string name="dark_mode">Dark mode</string>
     <string name="log_history">Log History</string>

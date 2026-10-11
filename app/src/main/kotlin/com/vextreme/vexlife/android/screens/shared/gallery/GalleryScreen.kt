@@ -32,7 +32,7 @@ import com.vextreme.vexlife.android.elements.swapTo
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.screens.shared.gallery.elements.ElementsGallery
 import com.vextreme.vexlife.android.screens.shared.gallery.graph.AppGraphView
-import com.vextreme.vexlife.android.runtime.AppActionRegistration
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -178,10 +178,10 @@ fun GalleryScreenContent(
  * Scoped owner for Gallery's intentionally inert sample action.
  *
  * Keeping even the no-op sample registered prevents VexLifeApp from accumulating feature cases and
- * lets AppActionRouter detect accidental duplicate ownership.
+ * lets AppActionRegistrations detect accidental duplicate ownership.
  */
-internal fun galleryActionRegistrations(): List<AppActionRegistration> =
-    listOf(
+internal fun galleryActionRegistrations(): AppActionRegistrations =
+    AppActionRegistrations.of(
         appAction(
             action = AppActions.GallerySample,
             ownerRef = GalleryScreen.screenId,

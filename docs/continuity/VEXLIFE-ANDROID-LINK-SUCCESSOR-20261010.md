@@ -59,7 +59,9 @@ Lived-device feedback corrected:
 - one Screen destination vocabulary (`*Screen.kt`, `ScreenBlueprint`, `AppScreens`);
 - colocated `@VexScreenPreviews` plus reusable preview fixtures;
 - source-alignment Gradle checks that warn/fail on convention drift without pretending to prove behavior;
-- feature-local AppActionRegistration ownership behind one duplicate-safe AppActionRouter;
+- feature-local AppActionRegistration ownership inside one immutable duplicate-safe AppActionRegistrations set;
+- AppActionRegistrations lookup by ActionKey or ActionElement for wiring inspection;
+- Home placeholder navigation to VexStreamMusicScreen / TalkToVexScreen, each with its own local Invoke registration;
 - Vex launcher mark reused as the Android app icon;
 - themed system-bar background/icon appearance that follows current dark/light mode.
 
@@ -107,9 +109,14 @@ unit/integration/build/device proof
   actual behavior
 ~~~
 
-VexRuntime delivers semantic app actions to one AppActionRouter. Feature effects are registered beside
-their owning Screen and duplicate ActionKey ownership fails closed. VexLifeApp assembles registrations
-and broad-lifetime dependencies; it should not become a giant feature-action switchboard.
+VexRuntime resolves semantic Invoke actions through the current AppActionRegistrations snapshot.
+Feature effects are registered beside their owning Screen and duplicate ActionKey ownership fails
+closed. VexLifeApp combines registration groups and broad-lifetime dependencies; it should not become
+a giant feature-action switchboard.
+
+The registration set can be inspected by ActionKey or ActionElement, but that only proves wiring:
+REGISTRATION_EXISTS != ACTION_IS_AVAILABLE_OR_AUTHORIZED. The latter belongs to future Relay/service/
+capability state.
 
 ## Current state/memory model
 

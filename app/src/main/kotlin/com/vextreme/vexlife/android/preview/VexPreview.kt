@@ -20,6 +20,7 @@ import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppFrame
 import com.vextreme.vexlife.android.shell.AppShell
@@ -165,7 +166,9 @@ internal fun VexPreviewHost(
             logger = VexLogger(),
             initialScreen = HomeScreen,
             primaryScreens = AppScreens.primary,
-            onAppAction = {},
+            currentAppActions = {
+                AppActionRegistrations.Empty
+            },
         )
 
         runtime.navigation.push(scenario.startScreen)

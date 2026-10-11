@@ -40,7 +40,13 @@ import com.vextreme.vexlife.android.screens.shared.gallery.galleryActionRegistra
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreenContent
 import com.vextreme.vexlife.android.screens.shared.profile.userProfileActionRegistrations
-import com.vextreme.vexlife.android.runtime.AppActionRouter
+import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
+import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreenContent
+import com.vextreme.vexlife.android.screens.shared.vex.talkToVexActionRegistrations
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreenContent
+import com.vextreme.vexlife.android.screens.shared.vexstream.vexStreamMusicActionRegistrations
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -94,23 +100,25 @@ internal fun VexLifeApp(
     val registry = remember { AppScreens.registry }
 
     /*
-     * Feature effects stay beside the Screens that declare them. This root only composes the
-     * registrations. AppActionRouter rejects duplicate ActionKey ownership before dispatch.
+     * Feature effects stay beside the Screens that declare them. This root only composes immutable
+     * registration groups. AppActionRegistrations owns indexing/duplicate validation once and is
+     * inspectable by ActionKey or ActionElement.
      */
-    val actionRouter = AppActionRouter(
-        registrations =
-            debugMenuActionRegistrations(
-                toggleDarkMode = { darkTheme = !darkTheme },
-                logger = logger,
-                logPersistence = logPersistence,
-            ) +
-                galleryActionRegistrations() +
-                userProfileActionRegistrations(
-                    repository = repositories.userProfile,
-                    scope = appScope,
-                ),
+    val actionRegistrations = AppActionRegistrations.combine(
+        debugMenuActionRegistrations(
+            toggleDarkMode = { darkTheme = !darkTheme },
+            logger = logger,
+            logPersistence = logPersistence,
+        ),
+        galleryActionRegistrations(),
+        userProfileActionRegistrations(
+            repository = repositories.userProfile,
+            scope = appScope,
+        ),
+        vexStreamMusicActionRegistrations(),
+        talkToVexActionRegistrations(),
     )
-    val currentActionRouter by rememberUpdatedState(actionRouter)
+    val currentActionRegistrations by rememberUpdatedState(actionRegistrations)
 
     // One runtime instance owns the current navigation/presentation state for this app composition.
     // In a debugger, inspect this variable first; runtime.currentScreen is the active semantic screen.
@@ -120,8 +128,8 @@ internal fun VexLifeApp(
             logger = logger,
             initialScreen = HomeScreen,
             primaryScreens = AppScreens.primary,
-            onAppAction = { request ->
-                currentActionRouter.dispatch(request)
+            currentAppActions = {
+                currentActionRegistrations
             },
         )
     }
@@ -220,7 +228,9 @@ private fun VexLifeScaffold(
              *
              * DebugMenuScreen -> screens/shared/debug/DebugMenuScreen.kt
              * GalleryScreen     -> screens/shared/gallery/GalleryScreen.kt
-             * UserProfileScreen -> screens/shared/profile/UserProfileScreen.kt
+             * UserProfileScreen   -> screens/shared/profile/UserProfileScreen.kt
+             * VexStreamMusicScreen -> screens/shared/vexstream/VexStreamMusicScreen.kt
+             * TalkToVexScreen      -> screens/shared/vex/TalkToVexScreen.kt
              *
              * If this list grows enough to become hard to scan, earn a renderer/registry abstraction
              * then. For the current small set, this explicit switch is easier to debug than hidden magic.
@@ -247,6 +257,12 @@ private fun VexLifeScaffold(
                         runtime = runtime,
                         repository = userProfileRepository,
                     )
+
+                    VexStreamMusicScreen.screenId ->
+                        VexStreamMusicScreenContent(runtime)
+
+                    TalkToVexScreen.screenId ->
+                        TalkToVexScreenContent(runtime)
                 }
             }
         }

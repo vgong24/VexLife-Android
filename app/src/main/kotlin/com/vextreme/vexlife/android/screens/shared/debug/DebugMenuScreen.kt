@@ -19,7 +19,7 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistoryDialog
 import com.vextreme.vexlife.android.logging.VexLogger
-import com.vextreme.vexlife.android.runtime.AppActionRegistration
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -121,8 +121,8 @@ internal fun debugMenuActionRegistrations(
     toggleDarkMode: () -> Unit,
     logger: VexLogger,
     logPersistence: LogHistoryPersistenceQueue,
-): List<AppActionRegistration> =
-    listOf(
+): AppActionRegistrations =
+    AppActionRegistrations.of(
         appAction(
             action = AppActions.ToggleDarkMode,
             ownerRef = DebugMenuScreen.screenId,

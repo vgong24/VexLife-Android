@@ -33,6 +33,10 @@ screens/
       graph/
     profile/
       UserProfileScreen.kt
+    vexstream/
+      VexStreamMusicScreen.kt
+    vex/
+      TalkToVexScreen.kt
 ~~~
 
 AppFrame owns the safe drawing boundary relative to Android status/navigation/cutout space. Screens
@@ -149,6 +153,21 @@ A submit control such as User Profile Save creates one immutable `FormSubmission
 TextFieldElement identities. VexRuntime logs the Save interaction once, forwards the submission to
 the app-action owner, and does not include raw submitted field values in the readable diagnostic log.
 
+## Home navigation vs feature effects
+
+Home now contains two placeholder destination buttons:
+
+~~~text
+HomeScreen
+  VexStream Music -> NavigateTo(VexStreamMusicScreen)
+  Talk to Vex     -> NavigateTo(TalkToVexScreen)
+~~~
+
+Those Home buttons do not require AppActionRegistrations because navigation is owned by VexRuntime.
+
+Each destination then contains one placeholder Invoke action whose registration stays beside that
+feature Screen. This is the intended contrast between runtime navigation and feature effect ownership.
+
 ## Scoped app-action ownership
 
 A Screen may declare an Invoke action, but its feature effect should remain perceptible beside the
@@ -157,14 +176,20 @@ Screen/domain that owns it.
 ~~~text
 Screen element
 -> VexRuntime semantic logging
--> AppActionRouter
+-> AppActionRegistrations
 -> exactly one feature-local AppActionRegistration
 -> effect
 ~~~
 
 VexLifeApp assembles registrations and broad-lifetime dependencies only. It should not accumulate a
 global feature `when` statement, and Screens should not subscribe as broadcast listeners.
-AppActionRouter rejects duplicate ActionKey ownership; unit tests protect that delivery behavior.
+AppActionRegistrations rejects duplicate ActionKey ownership; unit tests protect that delivery behavior.
+
+The immutable registration set is queryable by ActionKey or ActionElement. Element lookup follows
+the element's declared Invoke/Sequence intent, so no second element-to-action map is maintained.
+
+REGISTRATION_EXISTS != ACTION_IS_AVAILABLE_OR_AUTHORIZED. Registration proves wiring only; future
+Relay/capability/service state must decide whether an action is currently usable.
 
 ## Android system surface
 

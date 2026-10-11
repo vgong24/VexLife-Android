@@ -201,8 +201,8 @@ data class AppActionRequest(
  * -> snapshot [currentScreen] BEFORE changing navigation
  * -> record the action + before/after screen meaning
  * -> [applyIntent]
- * -> navigation/presentation state changes OR Invoke is handed to the app action dispatcher
- * -> feature-local AppActionRegistration owns the effect
+ * -> navigation/presentation state changes OR Invoke is handed to [appActions]
+ * -> exactly one feature-local AppActionRegistration owns the effect
  * -> Compose observes resulting state and renders the new result
  *
  * Debugging map:
@@ -218,13 +218,24 @@ class VexRuntime(
     val logger: VexLogger,
     initialScreen: ScreenElement,
     primaryScreens: List<ScreenElement>,
-    private val onAppAction: (AppActionRequest) -> Unit,
+    private val currentAppActions: () -> AppActionRegistrations = {
+        AppActionRegistrations.Empty
+    },
 ) : ElementActionHandler {
     private var appOpenedRecorded = false
     private var activeBackLayer: BackLayer? by mutableStateOf(null)
 
     val presentation = PresentationState(registry)
     val navigation = AppNavigationState(initialScreen, primaryScreens)
+
+    /**
+     * Current immutable app-action wiring snapshot.
+     *
+     * Screens/tools may inspect this by ActionKey or ActionElement. Registration means "handler is
+     * wired", not "this action is currently available/authorized".
+     */
+    val appActions: AppActionRegistrations
+        get() = currentAppActions()
 
     /**
      * The single runtime answer to "which semantic screen is active right now?".
@@ -415,7 +426,7 @@ class VexRuntime(
      *
      * If an element's visible behavior is wrong but [activate] received the correct element, step
      * through this method next. It is the point where NavigateTo/Open/Close/Toggle/SwapTo become
-     * runtime changes and Invoke leaves the runtime for the single app-action dispatcher.
+     * runtime changes and Invoke is resolved through the current [AppActionRegistrations] snapshot.
      */
     private fun applyIntent(
         intent: ElementIntent,
@@ -429,7 +440,7 @@ class VexRuntime(
             is ElementIntent.Close -> presentation.close(intent.element)
             is ElementIntent.Toggle -> presentation.toggle(intent.element)
             is ElementIntent.SwapTo -> presentation.swapTo(intent.element)
-            is ElementIntent.Invoke -> onAppAction(
+            is ElementIntent.Invoke -> appActions.dispatch(
                 AppActionRequest(
                     action = intent.action,
                     source = source,

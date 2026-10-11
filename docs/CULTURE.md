@@ -205,24 +205,31 @@ Use:
 
 ## Action ownership stays scoped
 
-VexRuntime may deliver an app action through one dispatcher, but feature effects should remain beside
-the Screen/domain that owns them.
+VexRuntime resolves Invoke actions through one current immutable AppActionRegistrations snapshot,
+but feature effects should remain beside the Screen/domain that owns them.
 
 ```text
 Screen declares action
 -> VexRuntime logs semantic interaction
--> AppActionRouter
+-> current AppActionRegistrations
 -> exactly one feature-local AppActionRegistration
 -> effect owner
 ```
 
 Do not grow a giant action `when` in VexLifeApp, and do not create broadcast listeners on multiple
-Screens. `AppActionRouter` rejects duplicate ActionKey ownership so two features cannot silently
+Screens. `AppActionRegistrations` rejects duplicate ActionKey ownership so two features cannot silently
 respond to one Save/Reset action.
 
-Registrations are not accumulating subscriptions. App composition builds a fresh immutable router
-view; recomposition replaces that view rather than adding another listener. A duplicate owner fails
-at router construction, and an invoked action with no owner fails at dispatch.
+Registrations are not accumulating subscriptions. App composition combines fresh immutable
+registration groups; recomposition replaces the current snapshot rather than adding another listener.
+A duplicate owner fails when groups combine, and an invoked action with no owner fails at dispatch.
+
+The registration set is intentionally queryable by either ActionKey or ActionElement. Element lookup
+follows the element's declared Invoke/Sequence intent instead of maintaining a second relationship
+map.
+
+REGISTRATION_EXISTS != ACTION_IS_AVAILABLE_OR_AUTHORIZED. Registration proves wiring/ownership only;
+future Relay/capability/connection state must own whether an action is currently usable.
 
 The app composition may assemble registrations and supply broader-lifetime dependencies; it should
 not re-describe the feature's business effect.

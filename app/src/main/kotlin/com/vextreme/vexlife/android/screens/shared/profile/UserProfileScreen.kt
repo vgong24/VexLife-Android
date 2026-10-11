@@ -23,7 +23,7 @@ import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
-import com.vextreme.vexlife.android.runtime.AppActionRegistration
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -151,15 +151,15 @@ fun UserProfileScreenContent(
  * Persistence effect for UserProfileScreen's Save action.
  *
  * The Screen owns how its submitted fields become a profile mutation. The app root supplies the
- * longer-lived repository/scope, while AppActionRouter guarantees this ActionKey has only one owner.
+ * longer-lived repository/scope, while AppActionRegistrations guarantees this ActionKey has only one owner.
  * Draft typing never reaches this registration; only the immutable Save submission does.
  */
 internal fun userProfileActionRegistrations(
     repository: UserProfileRepository,
     scope: CoroutineScope,
     now: () -> Instant = { Instant.now() },
-): List<AppActionRegistration> =
-    listOf(
+): AppActionRegistrations =
+    AppActionRegistrations.of(
         appAction(
             action = AppActions.SaveUserProfile,
             ownerRef = UserProfileScreen.screenId,

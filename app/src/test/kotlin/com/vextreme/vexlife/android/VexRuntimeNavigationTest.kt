@@ -9,7 +9,8 @@ import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
-import com.vextreme.vexlife.android.runtime.AppActionRequest
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
+import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.AppNavigationBack
 import com.vextreme.vexlife.android.runtime.BackResolution
@@ -23,14 +24,14 @@ import org.junit.Test
 class VexRuntimeNavigationTest {
     private fun runtime(
         logger: VexLogger = VexLogger(),
-        onAppAction: (AppActionRequest) -> Unit = {},
+        appActions: AppActionRegistrations = AppActionRegistrations.Empty,
     ): VexRuntime =
         VexRuntime(
             registry = AppScreens.registry,
             logger = logger,
             initialScreen = HomeScreen,
             primaryScreens = AppScreens.primary,
-            onAppAction = onAppAction,
+            currentAppActions = { appActions },
         )
 
     @Test
@@ -104,10 +105,18 @@ class VexRuntimeNavigationTest {
     @Test
     fun formSubmissionLogsOnlyTheSaveBoundaryAndForwardsTheSnapshot() {
         val logger = VexLogger()
-        var request: AppActionRequest? = null
+        var request: com.vextreme.vexlife.android.runtime.AppActionRequest? = null
+        val actions = AppActionRegistrations.of(
+            appAction(
+                action = AppActions.SaveUserProfile,
+                ownerRef = UserProfileScreen.screenId,
+            ) {
+                request = it
+            },
+        )
         val runtime = runtime(
             logger = logger,
-            onAppAction = { request = it },
+            appActions = actions,
         )
 
         runtime.activate(AppShell.Elements.UserProfile)

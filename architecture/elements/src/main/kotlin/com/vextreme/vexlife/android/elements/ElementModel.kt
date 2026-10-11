@@ -150,7 +150,7 @@ open class FabElement(
 
 /**
  * Toggle-row identity. The element declares the requested intent; current checked state is supplied
- * by the page/runtime projection rather than stored in the static blueprint.
+ * by the screen/runtime projection rather than stored in the static blueprint.
  */
 open class ToggleElement(
     elementId: String,
@@ -185,8 +185,8 @@ open class TextFieldElement(
 /**
  * Immutable semantic snapshot of text-field values at a form submission boundary.
  *
- * Draft typing remains page/presentation state and is intentionally not an interaction stream.
- * A page creates this only when the user chooses a semantic action such as Save. Values are keyed by
+ * Draft typing remains screen/presentation state and is intentionally not an interaction stream.
+ * A screen creates this only when the user chooses a semantic action such as Save. Values are keyed by
  * stable element IDs so the receiving action can address fields without depending on Compose state.
  *
  * Do not log [valuesByElementId] by default; form contents may be personal/sensitive and are not

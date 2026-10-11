@@ -7,6 +7,8 @@ import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.shell.AppShell
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -33,6 +35,8 @@ class AppBlueprintTest {
                 DebugMenuScreen.screenId,
                 GalleryScreen.screenId,
                 UserProfileScreen.screenId,
+                VexStreamMusicScreen.screenId,
+                TalkToVexScreen.screenId,
             ),
             AppScreens.shared.map { it.screenId },
         )
@@ -49,17 +53,8 @@ class AppBlueprintTest {
     }
 
     @Test
-    fun shellNavigationReferencesRegisteredScreenObjects() {
-        val targets = registry.navigationTargetsFrom(
-            listOf(
-                AppShell.Elements.Home,
-                AppShell.Elements.Events,
-                AppShell.Elements.Settings,
-                AppShell.Elements.DebugMenu,
-                AppShell.Elements.Gallery,
-                AppShell.Elements.UserProfile,
-            ),
-        )
+    fun allDeclaredNavigationTargetsAreRegisteredScreenObjects() {
+        val targets = registry.navigationTargetsFrom(registry.allElements)
 
         assertEquals(
             AppScreens.all.map { it.screenId }.toSet(),
@@ -70,17 +65,29 @@ class AppBlueprintTest {
     @Test
     fun ordinaryScreenLayoutProducesNestedInspectableIdentity() {
         val root = registry.screenRoot(HomeScreen).element
-        val preview = registry.childrenOf(root).single()
-        val previewChildren = registry.childrenOf(preview)
+        val children = registry.childrenOf(root)
+        val preview = children.single {
+            it.elementId == "element.home.body.preview"
+        }
+        val systems = children.single {
+            it.elementId == "element.home.body.systems"
+        }
 
         assertEquals("element.home.body", root.elementId)
-        assertEquals("element.home.body.preview", preview.elementId)
         assertEquals(
             setOf(
                 "element.home.body.preview.title",
                 "element.home.body.preview.message",
             ),
-            previewChildren.map { it.elementId }.toSet(),
+            registry.childrenOf(preview).map { it.elementId }.toSet(),
+        )
+        assertEquals(
+            setOf(
+                "element.home.body.systems.title",
+                HomeScreen.VexStreamMusic.elementId,
+                HomeScreen.TalkToVex.elementId,
+            ),
+            registry.childrenOf(systems).map { it.elementId }.toSet(),
         )
     }
 
