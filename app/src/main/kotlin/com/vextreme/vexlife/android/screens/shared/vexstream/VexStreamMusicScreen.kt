@@ -11,7 +11,6 @@ import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.preview.VexPreviewHost
-import com.vextreme.vexlife.android.preview.VexPreviewScenario
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -87,10 +86,8 @@ internal fun vexStreamMusicActionRegistrations(): AppActionRegistrations =
 @Composable
 private fun VexStreamMusicScreenPreview() {
     VexPreviewHost(
-        scenario = VexPreviewScenario(
-            id = "vexstream-music",
-            startScreen = VexStreamMusicScreen,
-        ),
+        id = "vexstream-music",
+        startScreen = VexStreamMusicScreen,
     ) { context ->
         VexStreamMusicScreenContent(context.runtime)
     }

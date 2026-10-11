@@ -94,6 +94,11 @@ second handwritten Compose reconstruction
 Each `*Screen.kt` file also carries its ordinary `@VexScreenPreviews` entry so the visual form is
 visible beside the source that owns it.
 
+Feature-specific preview states stay in that same Screen file. `VexPreview.kt` provides only the
+generic host/environment. For example, Gallery's AppGraph preview locally calls
+`runtime.presentation.swapTo(GalleryScreen.AppGraphPanel)`; the shared preview layer does not know
+that Gallery has an AppGraph panel.
+
 ## Source alignment
 
 The Gradle source-alignment gate intentionally checks convention drift, not runtime behavior:
@@ -109,6 +114,22 @@ The Gradle source-alignment gate intentionally checks convention drift, not runt
 It watches narrow contracts such as `*Screen.kt`/ScreenBlueprint/colocated Preview naming and
 explicit Room physical schema names. Navigation behavior, migrations, transactions, persistence, and
 device behavior remain unit/integration/lived proof responsibilities.
+
+## Navigate vs swap
+
+```text
+navigateTo(Screen)
+  changes the semantic current Screen
+  participates in app Back
+
+swapTo(child)
+  changes the selected child of one SwappableContainer inside the current Screen
+  does NOT create app Back depth
+```
+
+Gallery Elements/AppGraph are peer tabs inside GalleryScreen, so they use `swapTo`. Deeper AppGraph
+exploration uses `NavigationTrail`, which supplies local Back depth. If a future panel is a true app
+destination rather than a peer mode, use `navigateTo` instead.
 
 ## AppGraph
 

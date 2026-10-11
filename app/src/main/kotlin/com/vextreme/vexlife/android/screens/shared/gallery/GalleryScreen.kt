@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.preview.VexPreviewHost
-import com.vextreme.vexlife.android.preview.VexPreviewScenario
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.elements.ColumnElement
 import com.vextreme.vexlife.android.elements.ElementIcon
@@ -194,10 +193,8 @@ internal fun galleryActionRegistrations(): AppActionRegistrations =
 @Composable
 private fun GalleryScreenPreview() {
     VexPreviewHost(
-        scenario = VexPreviewScenario(
-            id = "gallery-elements",
-            startScreen = GalleryScreen,
-        ),
+        id = "gallery-elements",
+        startScreen = GalleryScreen,
     ) { context ->
         GalleryScreenContent(context.runtime)
     }
@@ -207,7 +204,16 @@ private fun GalleryScreenPreview() {
 @Composable
 private fun GalleryAppGraphPreview() {
     VexPreviewHost(
-        scenario = VexPreviewScenario.galleryAppGraph(),
+        id = "gallery-app-graph",
+        startScreen = GalleryScreen,
+        prepareRuntime = {
+            /*
+             * Elements/AppGraph are peer panels INSIDE GalleryScreen. swapTo changes local selection
+             * and intentionally does not add app Back depth; deeper AppGraph traversal uses
+             * NavigationTrail when Back semantics are required.
+             */
+            runtime.presentation.swapTo(GalleryScreen.AppGraphPanel)
+        },
     ) { context ->
         GalleryScreenContent(context.runtime)
     }

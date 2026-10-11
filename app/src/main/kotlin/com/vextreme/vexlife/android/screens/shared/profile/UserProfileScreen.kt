@@ -11,9 +11,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.preview.VexPreviewHost
-import com.vextreme.vexlife.android.preview.VexPreviewScenario
+import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.data.userprofile.UserProfile
+import com.vextreme.vexlife.android.data.userprofile.UserProfileFixture
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.elements.ElementActionHandler
@@ -187,9 +188,15 @@ internal fun userProfileActionRegistrations(
 @Composable
 private fun UserProfileScreenPreview() {
     VexPreviewHost(
-        scenario = VexPreviewScenario.userProfile(
-            displayName = "Victor",
-        ),
+        id = "user-profile-existing",
+        startScreen = UserProfileScreen,
+        repositoriesFactory = {
+            VexPreviewRepositories.withUserProfile(
+                UserProfileFixture.build {
+                    displayName("Victor")
+                },
+            )
+        },
     ) { context ->
         UserProfileScreenContent(
             runtime = context.runtime,
@@ -202,10 +209,8 @@ private fun UserProfileScreenPreview() {
 @Composable
 private fun UserProfileFirstSavePreview() {
     VexPreviewHost(
-        scenario = VexPreviewScenario(
-            id = "user-profile-empty",
-            startScreen = UserProfileScreen,
-        ),
+        id = "user-profile-empty",
+        startScreen = UserProfileScreen,
     ) { context ->
         UserProfileScreenContent(
             runtime = context.runtime,

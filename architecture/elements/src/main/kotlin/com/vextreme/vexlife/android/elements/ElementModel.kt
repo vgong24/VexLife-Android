@@ -289,12 +289,26 @@ open class SwappableContainerElement(
     style: ElementStyleKey = VexElementStyles.Default,
 ) : ContainerElement(elementId, "SwappableContainer", style)
 
+/**
+ * App-level semantic navigation. The destination becomes [VexRuntime.currentScreen] and therefore
+ * participates in the app Back chain.
+ */
 fun navigateTo(screen: ScreenElement): ElementIntent = ElementIntent.NavigateTo(screen)
+
 fun navigateBack(): ElementIntent = ElementIntent.NavigateBack
 fun open(element: UIElement): ElementIntent = ElementIntent.Open(element)
 fun close(element: UIElement): ElementIntent = ElementIntent.Close(element)
 fun toggle(element: UIElement): ElementIntent = ElementIntent.Toggle(element)
+
+/**
+ * Local peer selection inside a SwappableContainerElement.
+ *
+ * This deliberately does NOT create Screen navigation or Back depth. Use it for tabs/modes such as
+ * Gallery Elements <-> AppGraph. If a local interaction needs Back depth, give that feature its own
+ * NavigationTrail; if it is a true app destination, use [navigateTo].
+ */
 fun swapTo(element: UIElement): ElementIntent = ElementIntent.SwapTo(element)
+
 fun invoke(action: ActionKey): ElementIntent = ElementIntent.Invoke(action)
 
 infix fun ElementIntent.then(next: ElementIntent): ElementIntent {

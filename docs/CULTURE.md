@@ -174,8 +174,26 @@ still use their own terms (for example HorizontalPager's page index); do not ren
 vocabulary merely to mimic the domain.
 
 Every authored `*Screen.kt` keeps its ordinary `@VexScreenPreviews` entry in the same source file.
-Shared preview fixtures/hosts may be centralized, but the visible preview entry point stays beside
-the Screen a worker is editing.
+
+The shared preview layer owns environment mechanics only: device/theme forms, in-memory repository
+factories, and the real runtime/AppFrame host. It must not own feature-specific preview scenarios.
+
+~~~text
+GalleryScreen.kt
+  owns "Elements selected" / "AppGraph selected" preview setup
+
+DebugMenuScreen.kt
+  owns "Log dialog open" preview setup
+
+UserProfileScreen.kt
+  owns seeded/empty profile preview setup
+
+preview/VexPreview.kt
+  owns HOW to host those states, not WHAT those states mean
+~~~
+
+A preview's `prepare` step is therefore a local example of that Screen's runtime state, not a hidden
+central scenario registry.
 
 ## Static alignment is not behavioral proof
 

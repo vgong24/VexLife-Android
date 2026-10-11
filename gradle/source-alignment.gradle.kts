@@ -83,6 +83,21 @@ val collectSourceAlignmentViolations: () -> List<String> = {
         }
     }
 
+    val previewSupport = project.file(
+        "src/main/kotlin/com/vextreme/vexlife/android/preview/VexPreview.kt",
+    )
+    if (previewSupport.isFile) {
+        val source = previewSupport.readText()
+        if (
+            source.contains("com.vextreme.vexlife.android.screens.primary.") ||
+            source.contains("com.vextreme.vexlife.android.screens.shared.")
+        ) {
+            violations +=
+                "preview/VexPreview.kt should own generic preview environment only; " +
+                    "feature Screen scenarios belong in their *Screen.kt files"
+        }
+    }
+
     val dataRoot = project.file(
         "src/main/kotlin/com/vextreme/vexlife/android/data",
     )

@@ -11,7 +11,6 @@ import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.preview.VexPreviewHost
-import com.vextreme.vexlife.android.preview.VexPreviewScenario
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -80,10 +79,8 @@ internal fun talkToVexActionRegistrations(): AppActionRegistrations =
 @Composable
 private fun TalkToVexScreenPreview() {
     VexPreviewHost(
-        scenario = VexPreviewScenario(
-            id = "talk-to-vex",
-            startScreen = TalkToVexScreen,
-        ),
+        id = "talk-to-vex",
+        startScreen = TalkToVexScreen,
     ) { context ->
         TalkToVexScreenContent(context.runtime)
     }

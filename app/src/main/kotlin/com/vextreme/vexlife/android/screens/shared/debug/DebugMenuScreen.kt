@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.preview.VexPreviewHost
-import com.vextreme.vexlife.android.preview.VexPreviewScenario
+import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.ScreenBlueprint
@@ -15,9 +15,12 @@ import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.close
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.open
+import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistoryDialog
+import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
@@ -145,10 +148,8 @@ internal fun debugMenuActionRegistrations(
 @Composable
 private fun DebugMenuScreenPreview() {
     VexPreviewHost(
-        scenario = VexPreviewScenario(
-            id = "debug-menu",
-            startScreen = DebugMenuScreen,
-        ),
+        id = "debug-menu",
+        startScreen = DebugMenuScreen,
     ) { context ->
         DebugMenuScreenContent(
             runtime = context.runtime,
@@ -162,7 +163,16 @@ private fun DebugMenuScreenPreview() {
 @Composable
 private fun DebugMenuHistoryPreview() {
     VexPreviewHost(
-        scenario = VexPreviewScenario.debugHistoryOpen(),
+        id = "debug-history-open",
+        startScreen = DebugMenuScreen,
+        repositoriesFactory = {
+            VexPreviewRepositories.withLogHistory(
+                debugHistoryPreviewFixture(),
+            )
+        },
+        prepareRuntime = {
+            runtime.presentation.open(DebugMenuScreen.LogDialog)
+        },
     ) { context ->
         DebugMenuScreenContent(
             runtime = context.runtime,
@@ -171,3 +181,26 @@ private fun DebugMenuHistoryPreview() {
         )
     }
 }
+
+
+/**
+ * Preview data belongs beside DebugMenuScreen because it describes a meaningful state of THIS screen.
+ * The shared preview layer only knows how to host repositories/runtime; it does not know Debug's
+ * dialog or history scenario.
+ */
+private fun debugHistoryPreviewFixture(): LogHistoryFixture =
+    LogHistoryFixture.build {
+        appOpened(HomeScreen)
+        afterSeconds(120)
+        click(
+            element = AppShell.Elements.DebugMenu,
+            from = HomeScreen,
+            to = DebugMenuScreen,
+        )
+    }.append {
+        afterSeconds(30)
+        click(
+            element = DebugMenuScreen.ResetLog,
+            from = DebugMenuScreen,
+        )
+    }

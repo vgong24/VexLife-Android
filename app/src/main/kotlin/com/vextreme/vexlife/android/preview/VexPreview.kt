@@ -15,22 +15,24 @@ import com.vextreme.vexlife.android.data.userprofile.UserProfileFixture
 import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
-import com.vextreme.vexlife.android.screens.AppScreens
-import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
-import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
-import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
-import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.shell.AppFrame
-import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.ui.VexLifeTheme
 
 /**
- * Shared Android Studio forms for screen work.
+ * Shared Android Studio preview ENVIRONMENT for Screen work.
  *
- * Screen preview functions intentionally stay in the SAME *Screen.kt file as the blueprint they
- * visualize. This helper only centralizes device/theme pressure and reusable fake data.
+ * This file deliberately does not know feature Screens or their interesting states. A Screen's own
+ * *Screen.kt file owns its previews and any local prepare step (selected Gallery panel, open Debug
+ * dialog, seeded profile, etc.).
+ *
+ * Shared responsibilities here are only:
+ * - device/theme pressure;
+ * - in-memory repository factories;
+ * - the real AppFrame / VexRuntime host;
+ * - the fast path for ordinary blueprint-only Screens.
  */
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
 @Retention(AnnotationRetention.BINARY)
@@ -58,80 +60,15 @@ import com.vextreme.vexlife.android.ui.VexLifeTheme
 )
 internal annotation class VexScreenPreviews
 
-/**
- * Preview-only initial conditions around the real runtime/screen code.
- *
- * Mocking stops at repository facts. Navigation/rendering still use the production runtime,
- * registry and cells. As Relay/service state arrives, seed fixtures from those rightful owners
- * instead of cloning their state machines here.
- */
-internal data class VexPreviewScenario(
-    val id: String,
-    val startScreen: ScreenBlueprint,
-    val repositoriesFactory: () -> AppRepositories = VexPreviewRepositories::empty,
-    val prepare: VexPreviewContext.() -> Unit = {},
-) {
-    companion object {
-        fun debugHistoryOpen(): VexPreviewScenario {
-            val fixture = LogHistoryFixture.build {
-                appOpened(HomeScreen)
-                afterSeconds(120)
-                click(
-                    element = AppShell.Elements.DebugMenu,
-                    from = HomeScreen,
-                    to = DebugMenuScreen,
-                )
-            }.append {
-                afterSeconds(30)
-                click(
-                    element = DebugMenuScreen.ResetLog,
-                    from = DebugMenuScreen,
-                )
-            }
-
-            return VexPreviewScenario(
-                id = "debug-history-open",
-                startScreen = DebugMenuScreen,
-                repositoriesFactory = {
-                    VexPreviewRepositories.withLogHistory(fixture)
-                },
-                prepare = {
-                    runtime.presentation.open(DebugMenuScreen.LogDialog)
-                },
-            )
-        }
-
-        fun galleryAppGraph(): VexPreviewScenario =
-            VexPreviewScenario(
-                id = "gallery-app-graph",
-                startScreen = GalleryScreen,
-                prepare = {
-                    runtime.presentation.swapTo(GalleryScreen.AppGraphPanel)
-                },
-            )
-
-        fun userProfile(displayName: String): VexPreviewScenario {
-            val fixture = UserProfileFixture.build {
-                displayName(displayName)
-            }
-
-            return VexPreviewScenario(
-                id = "user-profile-$displayName",
-                startScreen = UserProfileScreen,
-                repositoriesFactory = {
-                    VexPreviewRepositories.withUserProfile(fixture)
-                },
-            )
-        }
-    }
-}
-
 internal data class VexPreviewContext(
     val runtime: VexRuntime,
     val repositories: AppRepositories,
     val darkTheme: Boolean,
 )
 
+/**
+ * Reusable fake DATA configurations. These know repository/domain fixtures, not Screen scenarios.
+ */
 internal object VexPreviewRepositories {
     fun empty(): AppRepositories =
         AppRepositories(
@@ -151,33 +88,43 @@ internal object VexPreviewRepositories {
 }
 
 /**
- * Reusable screen host: real AppFrame + VexRuntime, fake only at repository inputs.
+ * Reusable Screen preview host.
+ *
+ * [startScreen], [repositoriesFactory], and [prepareRuntime] are supplied by the Screen file using
+ * this host. [prepareRuntime] seeds the initial preview state directly; it is not a user interaction
+ * and therefore should not be routed through logging/navigation actions merely to construct a preview.
+ *
+ * That keeps the reusable mechanism here while keeping the meaning of each preview beside the feature
+ * it visualizes.
  */
 @Composable
 internal fun VexPreviewHost(
-    scenario: VexPreviewScenario,
+    id: String,
+    startScreen: ScreenBlueprint,
+    repositoriesFactory: () -> AppRepositories = VexPreviewRepositories::empty,
+    prepareRuntime: VexPreviewContext.() -> Unit = {},
     content: @Composable (VexPreviewContext) -> Unit,
 ) {
     val darkTheme = isSystemInDarkTheme()
-    val context = remember(scenario.id, darkTheme) {
-        val repositories = scenario.repositoriesFactory()
+    val context = remember(id, darkTheme) {
+        val repositories = repositoriesFactory()
         val runtime = VexRuntime(
             registry = AppScreens.registry,
             logger = VexLogger(),
-            initialScreen = HomeScreen,
+            initialScreen = AppScreens.primary.first(),
             primaryScreens = AppScreens.primary,
             currentAppActions = {
                 AppActionRegistrations.Empty
             },
         )
 
-        runtime.navigation.push(scenario.startScreen)
+        runtime.navigation.push(startScreen)
 
         VexPreviewContext(
             runtime = runtime,
             repositories = repositories,
             darkTheme = darkTheme,
-        ).also { scenario.prepare(it) }
+        ).also { prepareRuntime(it) }
     }
 
     VexLifeTheme(darkTheme = context.darkTheme) {
@@ -188,15 +135,15 @@ internal fun VexPreviewHost(
 }
 
 /**
- * Fast path for screens that are only a ScreenBlueprint + generic element tree.
+ * Fast path for an ordinary Screen whose visible body is exactly its ScreenBlueprint tree.
+ *
+ * Stateful Screens remain free to use [VexPreviewHost] directly in their own source file.
  */
 @Composable
 internal fun VexBlueprintScreenPreview(screen: ScreenBlueprint) {
     VexPreviewHost(
-        scenario = VexPreviewScenario(
-            id = "screen-" + screen.screenId,
-            startScreen = screen,
-        ),
+        id = "screen-" + screen.screenId,
+        startScreen = screen,
     ) { context ->
         VexElementTree(
             placement = screen.content,
