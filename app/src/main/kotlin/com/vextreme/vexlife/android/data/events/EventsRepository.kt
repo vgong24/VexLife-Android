@@ -10,9 +10,10 @@ interface EventsRepository {
     fun accept(snapshot: VexExternalEventSourceSnapshot): EventsFeedState
 }
 
-class RelayEventsRepository(
-    private val relay: EventsFeedRelay = EventsFeedRelay(),
-) : EventsRepository {
+class RelayEventsRepository : EventsRepository {
+    private val relay =
+        EventsFeedRelay()
+
     override val states: Flow<EventsFeedState>
         get() = relay.states
 
