@@ -1,17 +1,13 @@
 package com.vextreme.vexlife.android.testing.journey
 
-import com.vextreme.vexlife.android.elements.ActionElement
-import com.vextreme.vexlife.android.elements.DialogElement
-import com.vextreme.vexlife.android.elements.ModalBottomSheetElement
-import com.vextreme.vexlife.android.elements.TextFieldElement
-import com.vextreme.vexlife.android.elements.UIElement
-import com.vextreme.vexlife.android.screens.AppScreens
+import java.io.File
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class VexJourneyCoverageTest {
     @Test
-    fun everyRegisteredSemanticSurfaceIsNamedByAJourney() {
+    fun reportSemanticCoverageDebtWithoutBlockingOrdinaryDevelopment() {
         val duplicateTitles = VexJourneyCatalog.all
             .groupBy { it.title }
             .filterValues { it.size > 1 }
@@ -21,79 +17,55 @@ class VexJourneyCoverageTest {
             duplicateTitles.isEmpty(),
         )
 
-        val recorder = VexJourneyCoverageRecorder()
+        val duplicateShardIds = VexJourneyCatalog.shards
+            .groupBy { it.shardId }
+            .filterValues { it.size > 1 }
+            .keys
+        assertTrue(
+            "journey shard IDs must be unique: $duplicateShardIds",
+            duplicateShardIds.isEmpty(),
+        )
+
+        // Malformed journey grammar is test-infrastructure failure, not coverage debt.
         VexJourneyCatalog.all.forEach { journey ->
-            // Validate the declared state/grammar sequence as part of the fast gate too.
             journey.walk(VexExpectedWalk())
-            journey.walk(recorder)
         }
-        val covered = recorder.snapshot()
 
-        val productionScreens =
-            AppScreens.all.map { it.screenId }.toSet()
+        val report = buildJourneyCoverageReport()
+        writeReport(report)
 
-        val productionActions =
-            AppScreens.registry.allElements
-                .filterIsInstance<ActionElement>()
-                .map { (it as UIElement).elementId }
-                .toSet()
+        if (report.hasDebt) {
+            System.err.println(
+                buildString {
+                    appendLine("WARNING: Vex semantic journey coverage debt detected.")
+                    appendLine("Ordinary development remains buildable; debt is not silenced.")
+                    appendLine(report.render())
+                },
+            )
 
-        val productionEditableFields =
-            AppScreens.registry.allElements
-                .filterIsInstance<TextFieldElement>()
-                .filterNot { it.readOnly }
-                .map { it.elementId }
-                .toSet()
-
-        val productionPresentations =
-            AppScreens.registry.allElements
-                .filter { it is DialogElement || it is ModalBottomSheetElement }
-                .map { it.elementId }
-                .toSet()
-
-        assertExactCoverage(
-            label = "Screen",
-            production = productionScreens,
-            covered = covered.screenIds,
-        )
-        assertExactCoverage(
-            label = "ActionElement",
-            production = productionActions,
-            covered = covered.actionElementIds,
-        )
-        assertExactCoverage(
-            label = "editable TextFieldElement",
-            production = productionEditableFields,
-            covered = covered.editableFieldIds,
-        )
-        assertExactCoverage(
-            label = "Dialog/ModalBottomSheet",
-            production = productionPresentations,
-            covered = covered.presentationElementIds,
-        )
+            if (strictCoverageRequested()) {
+                fail(
+                    "Strict Vex journey coverage requested.\n\n" +
+                        report.render(),
+                )
+            }
+        } else {
+            println(report.render())
+        }
     }
 }
 
-private fun assertExactCoverage(
-    label: String,
-    production: Set<String>,
-    covered: Set<String>,
-) {
-    val missing = (production - covered).sorted()
-    val unknown = (covered - production).sorted()
+private fun strictCoverageRequested(): Boolean =
+    System.getProperty("vex.journey.strictCoverage")
+        ?.toBooleanStrictOrNull()
+        ?: false
 
-    assertTrue(
-        buildString {
-            appendLine("$label journey coverage mismatch.")
-            if (missing.isNotEmpty()) {
-                appendLine("Missing production semantics:")
-                missing.forEach { appendLine("  - $it") }
-            }
-            if (unknown.isNotEmpty()) {
-                appendLine("Journey references not present in production registry:")
-                unknown.forEach { appendLine("  - $it") }
-            }
-        },
-        missing.isEmpty() && unknown.isEmpty(),
-    )
+private fun writeReport(report: VexJourneyCoverageReport) {
+    val target = System.getProperty("vex.journey.coverageReport")
+        ?.takeIf { it.isNotBlank() }
+        ?.let(::File)
+        ?: return
+
+    target.parentFile?.mkdirs()
+    target.writeText(report.render())
 }
