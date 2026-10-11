@@ -7,9 +7,8 @@ import com.vextreme.vexlife.android.shell.AppShell
 object GalleryJourneys : VexJourneyShard {
     override val shardId = "shared.gallery"
 
-    override val journeys = listOf(
-        vexJourney(
-            id = "elements-modals-swap",
+    val elementsModalsSwap = vexJourney(
+        id = "elements-modals-swap",
             title = "Gallery elements, modals and local panel swap",
             environments = listOf(
                 VexJourneyEnvironments.Baseline,
@@ -33,6 +32,9 @@ object GalleryJourneys : VexJourneyShard {
             tap(GalleryScreen.AppGraphTab)
             tap(GalleryScreen.ElementsTab)
             tap(AppShell.Elements.Back)
-        },
+        }
+
+    override val journeys = listOf(
+        elementsModalsSwap,
     )
 }
