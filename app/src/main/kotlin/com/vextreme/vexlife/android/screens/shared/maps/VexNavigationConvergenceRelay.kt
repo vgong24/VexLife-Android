@@ -260,6 +260,22 @@ class VexNavigationConvergenceRelay(
             )
         }
 
+        /*
+         * Arrival is terminal for one route revision. A later noisy/backward fix must not reopen
+         * guidance; a newly selected/rerouted trip earns a new routeRevision and resets this state.
+         */
+        if (
+            sameRouteIdentity &&
+            currentState.outputState.availability ==
+            VexNavigationConvergenceAvailability.ARRIVED
+        ) {
+            return currentState.copy(
+                inputState = coherentInput,
+                outputState =
+                    currentState.outputState.deepCopy(),
+            )
+        }
+
         if (
             fix.routeRef != route.routeRef ||
             fix.routeRevision != route.routeRevision

@@ -316,6 +316,40 @@ class VexNavigationConvergenceRelayTest {
     }
 
     @Test
+    fun arrivalDoesNotReopenFromLaterLocationJitter() {
+        val relay =
+            VexNavigationConvergenceRelay(
+                guidancePolicy,
+            )
+
+        relay.routeChanged(route())
+        relay.fixChanged(
+            fix(1_000),
+        )
+
+        assertEquals(
+            VexNavigationConvergenceAvailability.ARRIVED,
+            relay.currentOutput.availability,
+        )
+
+        relay.fixChanged(
+            fix(
+                distanceAlongRouteMeters = 950,
+                fixRef = "fix.jitter.after-arrival",
+            ),
+        )
+
+        assertEquals(
+            VexNavigationConvergenceAvailability.ARRIVED,
+            relay.currentOutput.availability,
+        )
+        assertEquals(
+            0,
+            relay.currentOutput.progress?.distanceRemainingMeters,
+        )
+    }
+
+    @Test
     fun sameRouteIdentityCannotSilentlyChangeMeaning() {
         val relay =
             VexNavigationConvergenceRelay(
