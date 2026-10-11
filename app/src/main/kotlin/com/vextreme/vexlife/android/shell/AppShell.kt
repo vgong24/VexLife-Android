@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -147,8 +146,6 @@ object AppShell {
     val blueprint = column(Elements.Root) {
         row(Elements.Toolbar) {
             image(Elements.BrandMark)
-            text(Elements.BrandName)
-            text(Elements.BrandTagline)
             button(Elements.Back)
         }
         row(Elements.PrimaryNavigation) {
@@ -172,6 +169,7 @@ fun AppToolbar(
     currentScreen: ScreenElement,
     runtime: VexRuntime,
     showBack: Boolean,
+    actions: List<ButtonElement> = emptyList(),
 ) {
     Surface(
         modifier = Modifier.height(VexLayoutTokens.ToolbarHeight),
@@ -183,7 +181,7 @@ fun AppToolbar(
                 .fillMaxSize()
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (showBack) {
                 VexIconButton(
@@ -194,10 +192,10 @@ fun AppToolbar(
 
             Surface(
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(42.dp)
                     .vexElement(AppShell.Elements.BrandMark),
                 color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(13.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -205,33 +203,24 @@ fun AppToolbar(
                         painter = painterResource(R.drawable.ic_vex_mark),
                         contentDescription = stringResource(R.string.brand_content_description),
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(26.dp),
                     )
                 }
             }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(AppShell.Elements.BrandName.textRes),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.vexElement(AppShell.Elements.BrandName),
-                )
-                Text(
-                    text = stringResource(AppShell.Elements.BrandTagline.textRes),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    modifier = Modifier.vexElement(AppShell.Elements.BrandTagline),
-                )
-            }
-
             Text(
                 text = stringResource(currentScreen.titleRes),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.widthIn(max = 88.dp),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
             )
 
+            actions.forEach { action ->
+                VexIconButton(
+                    element = action,
+                    handler = runtime,
+                )
+            }
         }
     }
 }
