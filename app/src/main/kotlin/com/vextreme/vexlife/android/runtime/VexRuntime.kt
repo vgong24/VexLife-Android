@@ -12,6 +12,7 @@ import com.vextreme.vexlife.android.elements.SwappableContainerElement
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.logging.VexLogger
+import com.vextreme.vexlife.android.elements.navigation.BackLayer
 
 /**
  * Owns transient presentation that sits above the current page.
@@ -170,6 +171,7 @@ class VexRuntime(
     private val onAppAction: (ActionKey, UIElement) -> Unit,
 ) : ElementActionHandler {
     private var appOpenedRecorded = false
+    private var activeBackLayer: BackLayer? by mutableStateOf(null)
 
     val presentation = PresentationState(registry)
     val navigation = AppNavigationState(initialScreen, primaryScreens)
@@ -184,10 +186,32 @@ class VexRuntime(
         get() = navigation.current
 
     val canGoBack: Boolean
-        get() = presentation.hasOpenPresentation || navigation.canPopPage
+        get() =
+            presentation.hasOpenPresentation ||
+                activeBackLayer?.canGoBack == true ||
+                navigation.canPopPage
+
+    val showToolbarBack: Boolean
+        get() = activeBackLayer?.canGoBack == true || navigation.canPopPage
 
     fun isPrimary(screen: ScreenElement = currentScreen): Boolean =
         navigation.isPrimary(screen)
+
+    /**
+     * Makes one page-local navigation trail participate in the same Back chain as the app.
+     *
+     * A local layer is active only while its UI is mounted. Call [detachBackLayer] when that UI
+     * leaves composition so Back can fall through to the pushed page underneath.
+     */
+    fun attachBackLayer(layer: BackLayer) {
+        activeBackLayer = layer
+    }
+
+    fun detachBackLayer(layer: BackLayer) {
+        if (activeBackLayer === layer) {
+            activeBackLayer = null
+        }
+    }
 
     fun appOpened() {
         if (!appOpenedRecorded) {
@@ -238,8 +262,9 @@ class VexRuntime(
      * Resolves Back from the shallowest visible layer inward:
      *
      * 1. dismiss a transient presentation (dialog/FAB layer);
-     * 2. otherwise pop a pushed page;
-     * 3. return false when the app is already at its primary root so Android may own root Back.
+     * 2. otherwise pop the active page-local navigation layer;
+     * 3. otherwise pop a pushed app page;
+     * 4. return false when the app is already at its primary root so Android may own root Back.
      *
      * Toolbar Back and Android system Back both end up here.
      */
@@ -252,6 +277,14 @@ class VexRuntime(
             }
             presentation.closeTop()
             return true
+        }
+
+        val localLayer = activeBackLayer
+        if (localLayer?.canGoBack == true) {
+            if (logEvent) {
+                logger.recordBack(screenBefore = before)
+            }
+            return localLayer.goBack()
         }
 
         val target = navigation.peekBackTarget() ?: return false

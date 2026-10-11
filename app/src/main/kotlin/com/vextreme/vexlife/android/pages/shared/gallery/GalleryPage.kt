@@ -156,7 +156,7 @@ fun GalleryPageContent(
             label = "gallery-panel",
         ) { elementId ->
             if (elementId == GalleryPage.AppGraphPanel.elementId) {
-                AppGraphView(runtime.registry)
+                AppGraphView(runtime)
             } else {
                 ElementsGallery(runtime)
             }

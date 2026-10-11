@@ -1,11 +1,5 @@
 package com.vextreme.vexlife.android.pages.shared.gallery.graph
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,10 +12,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -29,8 +21,11 @@ import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.elements.UIElement
+import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
+import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.pages.primary.home.HomePage
+import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppShell
 
 private sealed interface GraphNode {
@@ -38,15 +33,39 @@ private sealed interface GraphNode {
     data class Element(val element: UIElement) : GraphNode
 }
 
+/**
+ * Explores registered UI relationships without becoming a second app-navigation system.
+ *
+ * [NavigationTrail] is page-local navigation. While this view is mounted, that trail is attached to
+ * [VexRuntime], so all three Back surfaces resolve the same local depth first:
+ *
+ * toolbar Back == Android Back == "Up one graph layer"
+ *
+ * Only after the graph trail reaches its root does Back fall through and leave Gallery.
+ */
 @Composable
 fun AppGraphView(
-    registry: UIBlueprintRegistry,
+    runtime: VexRuntime,
 ) {
-    var path by remember {
-        mutableStateOf<List<GraphNode>>(listOf(GraphNode.Screen(HomePage)))
+    val registry = runtime.registry
+    val trail = remember {
+        NavigationTrail<GraphNode>(
+            root = GraphNode.Screen(HomePage),
+        )
     }
-    val current = path.last()
-    val depth = path.lastIndex
+
+    DisposableEffect(runtime, trail) {
+        runtime.attachBackLayer(trail)
+        onDispose {
+            runtime.detachBackLayer(trail)
+        }
+    }
+
+    val depth = trail.depth
+    val visitedScreenIds = trail.path
+        .filterIsInstance<GraphNode.Screen>()
+        .map { it.screen.screenId }
+        .toSet()
 
     Column(
         modifier = Modifier
@@ -54,21 +73,17 @@ fun AppGraphView(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (depth > 0) {
+        if (trail.canGoBack) {
             GraphRow(
                 label = "← Up one graph layer",
                 detail = "depth $depth",
                 depth = depth,
-                onClick = { path = path.dropLast(1) },
+                onClick = { trail.goBack() },
             )
         }
 
-        AnimatedContent(
-            targetState = current,
-            transitionSpec = {
-                (slideInHorizontally { it } + fadeIn())
-                    .togetherWith(slideOutHorizontally { -it / 3 } + fadeOut())
-            },
+        NavigationTrailContent(
+            trail = trail,
             label = "app-graph-depth",
         ) { node ->
             when (node) {
@@ -76,20 +91,16 @@ fun AppGraphView(
                     screen = node.screen,
                     registry = registry,
                     depth = depth,
-                    visitedScreenIds = path.filterIsInstance<GraphNode.Screen>()
-                        .map { it.screen.screenId }
-                        .toSet(),
-                    onOpen = { path = path + it },
+                    visitedScreenIds = visitedScreenIds,
+                    onOpen = trail::push,
                 )
 
                 is GraphNode.Element -> ElementNode(
                     element = node.element,
                     registry = registry,
                     depth = depth,
-                    visitedScreenIds = path.filterIsInstance<GraphNode.Screen>()
-                        .map { it.screen.screenId }
-                        .toSet(),
-                    onOpen = { path = path + it },
+                    visitedScreenIds = visitedScreenIds,
+                    onOpen = trail::push,
                 )
             }
         }

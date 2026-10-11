@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android
 
 import com.vextreme.vexlife.android.logging.VexLogger
+import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.pages.AppPages
 import com.vextreme.vexlife.android.pages.primary.events.EventsPage
 import com.vextreme.vexlife.android.pages.primary.home.HomePage
@@ -47,6 +48,26 @@ class VexRuntimeNavigationTest {
 
         assertEquals(EventsPage.screenId, runtime.currentScreen.screenId)
         assertFalse(runtime.navigation.canPopPage)
+    }
+
+    @Test
+    fun pageLocalBackLayerPopsBeforeLeavingThePushedPage() {
+        val runtime = runtime()
+        val trail = NavigationTrail("root")
+
+        runtime.activate(AppShell.Elements.Gallery)
+        trail.push("child")
+        runtime.attachBackLayer(trail)
+
+        runtime.goBack()
+
+        assertEquals("root", trail.current)
+        assertEquals("screen.gallery", runtime.currentScreen.screenId)
+        assertFalse(trail.canGoBack)
+
+        runtime.goBack()
+
+        assertEquals(HomePage.screenId, runtime.currentScreen.screenId)
     }
 
     @Test

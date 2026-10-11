@@ -47,7 +47,7 @@ fun AppFrame(
                 AppToolbar(
                     currentScreen = runtime.currentScreen,
                     runtime = runtime,
-                    showBack = runtime.navigation.canPopPage,
+                    showBack = runtime.showToolbarBack,
                 )
             },
             bottomBar = {
