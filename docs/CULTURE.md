@@ -111,6 +111,46 @@ CAPABILITY != AUTHORITY
 CODE_SYMBOL != SERIAL_NAME != SEMANTIC_FIELD_REF != HUMAN_LABEL
 ```
 
+## Naming follows the boundary
+
+Naming style is part of the contract. Do not rename between styles merely because a worker/model
+prefers a different aesthetic.
+
+```text
+Kotlin type / object / enum names
+  PascalCase
+  UserProfileRepository, DebugMenuPage
+
+Kotlin functions / properties / locals / parameters
+  camelCase
+  displayName, updateDisplayName, profileRef
+
+Android resources
+  snake_case
+  user_profile_name_label
+
+Room / SQLite physical schema
+  snake_case, declared explicitly
+  user_profile, profile_ref, updated_at_epoch_millis
+
+semantic identity strings
+  lowercase dot-separated paths
+  element.user-profile.body.profile.display-name
+
+network/file serialized names
+  explicit external-protocol names at DTO boundary
+  never inferred from Room names merely for convenience
+```
+
+A Kotlin property such as `displayName` mapping to SQL `display_name` is intentional, not an
+inconsistency. Keep the mapping visible with annotations/mappers.
+
+When introducing a new boundary, follow its existing convention. Do not globally "normalize" names
+across Kotlin, SQL, Android resources, semantic refs, and wire protocols.
+
+If a rename changes persisted SQL or an external serialized name, it is a compatibility/migration
+change, not a cosmetic refactor.
+
 ## Platform-native responsibility
 
 Portable meaning should remain portable. Android should own what Android can uniquely implement and

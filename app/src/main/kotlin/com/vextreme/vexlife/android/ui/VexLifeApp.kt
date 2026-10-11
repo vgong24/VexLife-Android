@@ -26,8 +26,9 @@ import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
-import com.vextreme.vexlife.android.elements.ActionKey
-import com.vextreme.vexlife.android.elements.UIElement
+import com.vextreme.vexlife.android.data.userprofile.UserProfile
+import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
+import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.pages.AppPages
@@ -36,9 +37,14 @@ import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPageContent
 import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPage
 import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPageContent
+import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePage
+import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePageContent
+import com.vextreme.vexlife.android.runtime.AppActionRequest
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppFrame
+import java.time.Instant
+import kotlinx.coroutines.launch
 
 /**
  * Application composition root.
@@ -75,11 +81,11 @@ internal fun VexLifeApp(
 ) {
     var darkTheme by rememberSaveable { mutableStateOf(true) }
 
-    val persistenceScope = rememberCoroutineScope()
-    val logPersistence = remember(repositories.logHistory, persistenceScope) {
+    val appScope = rememberCoroutineScope()
+    val logPersistence = remember(repositories.logHistory, appScope) {
         LogHistoryPersistenceQueue(
             repository = repositories.logHistory,
-            scope = persistenceScope,
+            scope = appScope,
         )
     }
     val logger = remember(logPersistence) {
@@ -87,14 +93,40 @@ internal fun VexLifeApp(
     }
     val registry = remember { AppPages.registry }
 
-    val currentActionHandler by rememberUpdatedState<(ActionKey, UIElement) -> Unit> { action, _ ->
-        when (action.actionId) {
+    val currentActionHandler by rememberUpdatedState<(AppActionRequest) -> Unit> { request ->
+        when (request.action.actionId) {
             AppActions.ToggleDarkMode.actionId -> darkTheme = !darkTheme
 
             AppActions.ClearLogHistory.actionId -> {
                 // Reset is one user intention projected to both current-memory and persisted history.
                 logger.clearHistory()
                 logPersistence.clear()
+            }
+
+            AppActions.SaveUserProfile.actionId -> {
+                val requestedName = request.submission
+                    ?.value(UserProfilePage.DisplayName)
+                    ?.trim()
+                    .orEmpty()
+
+                if (requestedName.isNotEmpty()) {
+                    /*
+                     * The form submitted one immutable snapshot. Persist that snapshot; do not read
+                     * mutable Compose draft state from here.
+                     *
+                     * This composition scope is the temporary async owner. VexAppScope can replace
+                     * it later without changing the action/repository/page contracts.
+                     */
+                    appScope.launch {
+                        repositories.userProfile.upsert(
+                            UserProfile(
+                                profileRef = UserProfileRefs.local,
+                                displayName = requestedName,
+                                updatedAt = Instant.now(),
+                            ),
+                        )
+                    }
+                }
             }
 
             else -> Unit
@@ -109,7 +141,9 @@ internal fun VexLifeApp(
             logger = logger,
             initialScreen = HomePage,
             primaryScreens = AppPages.primary,
-            onAppAction = { action, source -> currentActionHandler(action, source) },
+            onAppAction = { request ->
+                currentActionHandler(request)
+            },
         )
     }
 
@@ -121,6 +155,7 @@ internal fun VexLifeApp(
         VexLifeScaffold(
             runtime = runtime,
             logHistoryRepository = repositories.logHistory,
+            userProfileRepository = repositories.userProfile,
             darkTheme = darkTheme,
         )
     }
@@ -130,6 +165,7 @@ internal fun VexLifeApp(
 private fun VexLifeScaffold(
     runtime: VexRuntime,
     logHistoryRepository: LogHistoryRepository,
+    userProfileRepository: UserProfileRepository,
     darkTheme: Boolean,
 ) {
     val primaryPages = AppPages.primary
@@ -204,10 +240,11 @@ private fun VexLifeScaffold(
              * WHAT it looks like:
              *
              * DebugMenuPage -> pages/shared/debug/DebugMenuPage.kt
-             * GalleryPage   -> pages/shared/gallery/GalleryPage.kt
+             * GalleryPage     -> pages/shared/gallery/GalleryPage.kt
+             * UserProfilePage -> pages/shared/profile/UserProfilePage.kt
              *
              * If this list grows enough to become hard to scan, earn a renderer/registry abstraction
-             * then. For two special pages, this explicit switch is easier to debug than hidden magic.
+             * then. For the current small set, this explicit switch is easier to debug than hidden magic.
              */
             AnimatedContent(
                 targetState = runtime.currentScreen.screenId,
@@ -226,6 +263,11 @@ private fun VexLifeScaffold(
                     )
 
                     GalleryPage.screenId -> GalleryPageContent(runtime)
+
+                    UserProfilePage.screenId -> UserProfilePageContent(
+                        runtime = runtime,
+                        repository = userProfileRepository,
+                    )
                 }
             }
         }

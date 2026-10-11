@@ -8,6 +8,7 @@ import com.vextreme.vexlife.android.pages.primary.home.HomePage
 import com.vextreme.vexlife.android.pages.primary.settings.SettingsPage
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
 import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPage
+import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePage
 import com.vextreme.vexlife.android.shell.AppShell
 
 /**
@@ -31,6 +32,7 @@ object AppPages {
     val shared: List<PageBlueprint> = listOf(
         DebugMenuPage,
         GalleryPage,
+        UserProfilePage,
     )
 
     val all: List<PageBlueprint> = primary + shared

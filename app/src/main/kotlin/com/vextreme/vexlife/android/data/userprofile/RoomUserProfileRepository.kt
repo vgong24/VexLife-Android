@@ -4,6 +4,12 @@ import java.time.Instant
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * Room-backed [UserProfileRepository].
+ *
+ * The repository maps database rows to the domain model and keeps SQL details out of callers.
+ * VexHome/VexStream connection relationships are intentionally outside this repository.
+ */
 class RoomUserProfileRepository(
     private val dao: UserProfileDao,
 ) : UserProfileRepository {

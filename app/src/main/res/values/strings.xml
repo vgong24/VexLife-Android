@@ -26,6 +26,13 @@
     <string name="fab_more">More</string>
     <string name="fab_debug">Debug menu</string>
     <string name="fab_gallery">Gallery</string>
+    <string name="fab_profile">User profile</string>
+
+    <string name="user_profile_title">User Profile</string>
+    <string name="user_profile_intro">Small persisted profile proof. Edit the draft name and save; the persisted field below updates from the repository database flow.</string>
+    <string name="user_profile_persisted_name_label">Persisted name</string>
+    <string name="user_profile_name_label">Edit display name</string>
+    <string name="user_profile_save">Save name</string>
 
     <string name="dark_mode">Dark mode</string>
     <string name="log_history">Log History</string>

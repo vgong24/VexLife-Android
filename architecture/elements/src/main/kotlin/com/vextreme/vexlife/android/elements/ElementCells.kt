@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Settings
@@ -32,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -171,6 +173,27 @@ fun VexToggleRow(
 }
 
 @Composable
+fun VexTextField(
+    element: TextFieldElement,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .vexElement(element),
+        label = {
+            Text(stringResource(requireNotNull(element.labelRes)))
+        },
+        singleLine = true,
+        readOnly = element.readOnly,
+    )
+}
+
+@Composable
 fun VexContainer(
     element: UIElement,
     modifier: Modifier = Modifier,
@@ -288,6 +311,8 @@ fun VexElementTree(
     handler: ElementActionHandler,
     modifier: Modifier = Modifier,
     toggleChecked: (ToggleElement) -> Boolean = { false },
+    textFieldValue: (TextFieldElement) -> String = { "" },
+    onTextFieldValueChange: (TextFieldElement, String) -> Unit = { _, _ -> },
     selectedChild: (SwappableContainerElement) -> UIElement = { it.defaultChild },
 ) {
     val element = placement.element
@@ -308,6 +333,8 @@ fun VexElementTree(
                     handler = handler,
                     modifier = modifier,
                     toggleChecked = toggleChecked,
+                    textFieldValue = textFieldValue,
+                    onTextFieldValueChange = onTextFieldValueChange,
                     selectedChild = selectedChild,
                 )
             }
@@ -317,7 +344,15 @@ fun VexElementTree(
             element = element,
             modifier = modifier,
         ) {
-            RenderChildren(placement, registry, handler, toggleChecked, selectedChild)
+            RenderChildren(
+                placement,
+                registry,
+                handler,
+                toggleChecked,
+                textFieldValue,
+                onTextFieldValueChange,
+                selectedChild,
+            )
         }
 
         is CardElement -> VexContainer(
@@ -325,14 +360,30 @@ fun VexElementTree(
             modifier = modifier,
             style = style,
         ) {
-            RenderChildren(placement, registry, handler, toggleChecked, selectedChild)
+            RenderChildren(
+                placement,
+                registry,
+                handler,
+                toggleChecked,
+                textFieldValue,
+                onTextFieldValueChange,
+                selectedChild,
+            )
         }
 
         is ColumnElement -> VexColumn(
             element = element,
             modifier = modifier,
         ) {
-            RenderChildren(placement, registry, handler, toggleChecked, selectedChild)
+            RenderChildren(
+                placement,
+                registry,
+                handler,
+                toggleChecked,
+                textFieldValue,
+                onTextFieldValueChange,
+                selectedChild,
+            )
         }
 
         is RowElement -> VexRow(
@@ -340,7 +391,15 @@ fun VexElementTree(
             modifier = modifier,
         ) {
             placement.children.forEach { child ->
-                VexElementTree(child, registry, handler, toggleChecked = toggleChecked, selectedChild = selectedChild)
+                VexElementTree(
+                    child,
+                    registry,
+                    handler,
+                    toggleChecked = toggleChecked,
+                    textFieldValue = textFieldValue,
+                    onTextFieldValueChange = onTextFieldValueChange,
+                    selectedChild = selectedChild,
+                )
             }
         }
 
@@ -348,7 +407,15 @@ fun VexElementTree(
             modifier = modifier.vexElement(element),
         ) {
             placement.children.forEach { child ->
-                VexElementTree(child, registry, handler, toggleChecked = toggleChecked, selectedChild = selectedChild)
+                VexElementTree(
+                    child,
+                    registry,
+                    handler,
+                    toggleChecked = toggleChecked,
+                    textFieldValue = textFieldValue,
+                    onTextFieldValueChange = onTextFieldValueChange,
+                    selectedChild = selectedChild,
+                )
             }
         }
 
@@ -370,6 +437,15 @@ fun VexElementTree(
             element = element,
             checked = toggleChecked(element),
             handler = handler,
+            modifier = modifier,
+        )
+
+        is TextFieldElement -> VexTextField(
+            element = element,
+            value = textFieldValue(element),
+            onValueChange = { value ->
+                onTextFieldValueChange(element, value)
+            },
             modifier = modifier,
         )
 
@@ -397,7 +473,15 @@ fun VexElementTree(
             modifier = modifier,
             style = style,
         ) {
-            RenderChildren(placement, registry, handler, toggleChecked, selectedChild)
+            RenderChildren(
+                placement,
+                registry,
+                handler,
+                toggleChecked,
+                textFieldValue,
+                onTextFieldValueChange,
+                selectedChild,
+            )
         }
     }
 }
@@ -408,6 +492,8 @@ private fun ColumnScope.RenderChildren(
     registry: UIBlueprintRegistry,
     handler: ElementActionHandler,
     toggleChecked: (ToggleElement) -> Boolean,
+    textFieldValue: (TextFieldElement) -> String,
+    onTextFieldValueChange: (TextFieldElement, String) -> Unit,
     selectedChild: (SwappableContainerElement) -> UIElement,
 ) {
     placement.children.forEach { child ->
@@ -416,6 +502,8 @@ private fun ColumnScope.RenderChildren(
             registry = registry,
             handler = handler,
             toggleChecked = toggleChecked,
+            textFieldValue = textFieldValue,
+            onTextFieldValueChange = onTextFieldValueChange,
             selectedChild = selectedChild,
         )
     }
@@ -445,4 +533,5 @@ private fun ElementIcon.imageVector(): ImageVector = when (this) {
     ElementIcon.Close -> Icons.Rounded.Close
     ElementIcon.Save -> Icons.Rounded.Save
     ElementIcon.Help -> Icons.Rounded.HelpOutline
+    ElementIcon.Person -> Icons.Rounded.Person
 }

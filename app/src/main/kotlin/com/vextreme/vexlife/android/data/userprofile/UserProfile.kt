@@ -13,3 +13,13 @@ data class UserProfile(
     val displayName: String,
     val updatedAt: Instant,
 )
+
+/**
+ * Stable refs used by the current single-profile Android proof.
+ *
+ * This is not a final account identity model. It gives the first UI/database slice one explicit
+ * coordinate that can later be replaced or mapped when authenticated/multi-profile identity exists.
+ */
+object UserProfileRefs {
+    val local = "profile.local"
+}

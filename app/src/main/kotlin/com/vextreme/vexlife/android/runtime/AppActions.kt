@@ -6,4 +6,5 @@ object AppActions {
     val ToggleDarkMode = ActionKey("action.theme.dark-mode.toggle")
     val ClearLogHistory = ActionKey("action.log-history.clear")
     val GallerySample = ActionKey("action.gallery.sample")
+    val SaveUserProfile = ActionKey("action.user-profile.save")
 }

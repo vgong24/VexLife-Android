@@ -1,12 +1,16 @@
 package com.vextreme.vexlife.android
 
 import com.vextreme.vexlife.android.logging.VexLogger
+import com.vextreme.vexlife.android.elements.FormSubmission
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.pages.AppPages
 import com.vextreme.vexlife.android.pages.primary.events.EventsPage
 import com.vextreme.vexlife.android.pages.primary.home.HomePage
 import com.vextreme.vexlife.android.pages.primary.settings.SettingsPage
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
+import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePage
+import com.vextreme.vexlife.android.runtime.AppActionRequest
+import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.AppNavigationBack
 import com.vextreme.vexlife.android.runtime.BackResolution
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -17,13 +21,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexRuntimeNavigationTest {
-    private fun runtime(): VexRuntime =
+    private fun runtime(
+        logger: VexLogger = VexLogger(),
+        onAppAction: (AppActionRequest) -> Unit = {},
+    ): VexRuntime =
         VexRuntime(
             registry = AppPages.registry,
-            logger = VexLogger(),
+            logger = logger,
             initialScreen = HomePage,
             primaryScreens = AppPages.primary,
-            onAppAction = { _, _ -> },
+            onAppAction = onAppAction,
         )
 
     @Test
@@ -92,6 +99,34 @@ class VexRuntimeNavigationTest {
         runtime.goBack()
 
         assertEquals(HomePage.screenId, runtime.currentScreen.screenId)
+    }
+
+    @Test
+    fun formSubmissionLogsOnlyTheSaveBoundaryAndForwardsTheSnapshot() {
+        val logger = VexLogger()
+        var request: AppActionRequest? = null
+        val runtime = runtime(
+            logger = logger,
+            onAppAction = { request = it },
+        )
+
+        runtime.activate(AppShell.Elements.UserProfile)
+
+        val typedName = "Victor Private Draft"
+        runtime.submit(
+            element = UserProfilePage.Save,
+            submission = FormSubmission.of(
+                UserProfilePage.DisplayName to typedName,
+            ),
+        )
+
+        assertEquals(typedName, request?.submission?.value(UserProfilePage.DisplayName))
+        assertEquals(AppActions.SaveUserProfile, request?.action)
+        assertEquals(UserProfilePage.Save.elementId, request?.source?.elementId)
+
+        val text = logger.renderHistory()
+        assertTrue(text.contains("UserProfile.Body.Profile.Actions.Save"))
+        assertFalse(text.contains(typedName))
     }
 
     @Test

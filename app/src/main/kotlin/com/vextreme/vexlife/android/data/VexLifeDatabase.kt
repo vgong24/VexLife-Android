@@ -32,13 +32,82 @@ abstract class VexLifeDatabase : RoomDatabase() {
 
     companion object {
         /**
-         * v1 contained only log_history. v2 adds the independent user_profile domain.
+         * v1 contained only log_history and used Kotlin-derived camelCase SQL column names.
          *
-         * New installs create v2 directly; this migration protects anyone who already ran the v1
-         * database candidate on-device while the foundation was evolving.
+         * v2 does two compatibility changes:
+         * 1. moves Log History to explicit snake_case SQL names without losing existing rows;
+         * 2. adds the independent user_profile domain.
+         *
+         * New installs create v2 directly. Existing v1 candidate installs upgrade through this
+         * migration, so naming cleanup is treated as real schema evolution rather than cosmetics.
          */
-        val Migration1To2 = object : Migration(1, 2) {
+        val migration1To2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE log_history_v2 (
+                        database_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        session_ref TEXT NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        timestamp_epoch_millis INTEGER NOT NULL,
+                        duration_since_previous_seconds INTEGER,
+                        kind TEXT NOT NULL,
+                        subject_ref TEXT NOT NULL,
+                        action TEXT NOT NULL,
+                        screen_before_id TEXT,
+                        screen_after_id TEXT,
+                        section INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO log_history_v2 (
+                        database_id,
+                        session_ref,
+                        sequence,
+                        timestamp_epoch_millis,
+                        duration_since_previous_seconds,
+                        kind,
+                        subject_ref,
+                        action,
+                        screen_before_id,
+                        screen_after_id,
+                        section
+                    )
+                    SELECT
+                        databaseId,
+                        sessionRef,
+                        sequence,
+                        timestampEpochMillis,
+                        durationSincePreviousSeconds,
+                        kind,
+                        subjectRef,
+                        action,
+                        screenBeforeId,
+                        screenAfterId,
+                        section
+                    FROM log_history
+                    """.trimIndent(),
+                )
+
+                db.execSQL("DROP TABLE log_history")
+                db.execSQL("ALTER TABLE log_history_v2 RENAME TO log_history")
+
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_log_history_session_ref_sequence
+                    ON log_history(session_ref, sequence)
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_log_history_timestamp_epoch_millis
+                    ON log_history(timestamp_epoch_millis)
+                    """.trimIndent(),
+                )
+
                 db.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS user_profile (
@@ -54,8 +123,14 @@ abstract class VexLifeDatabase : RoomDatabase() {
     }
 }
 
+/**
+ * Process-local singleton factory for the Room database.
+ *
+ * The singleton prevents accidental multiple database instances in the current app process. It does
+ * not define repository policy; callers should normally enter through [AppRepositoryFactory].
+ */
 object VexLifeDatabaseFactory {
-    private const val DatabaseName = "vexlife.db"
+    private const val databaseName = "vexlife.db"
 
     @Volatile
     private var instance: VexLifeDatabase? = null
@@ -65,9 +140,9 @@ object VexLifeDatabaseFactory {
             instance ?: Room.databaseBuilder(
                 context.applicationContext,
                 VexLifeDatabase::class.java,
-                DatabaseName,
+                databaseName,
             )
-                .addMigrations(VexLifeDatabase.Migration1To2)
+                .addMigrations(VexLifeDatabase.migration1To2)
                 .build()
                 .also { instance = it }
         }

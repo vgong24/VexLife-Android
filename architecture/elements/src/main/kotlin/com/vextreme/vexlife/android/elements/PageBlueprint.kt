@@ -69,6 +69,16 @@ abstract class PageBlueprint(
         intent = intent,
     )
 
+    protected fun textFieldRef(
+        id: String,
+        @StringRes labelRes: Int,
+        readOnly: Boolean = false,
+    ): TextFieldElement = TextFieldElement(
+        elementId = elementId(id),
+        labelRes = labelRes,
+        readOnly = readOnly,
+    )
+
     protected fun columnRef(id: String): ColumnElement =
         ColumnElement(elementId(id))
 
@@ -148,6 +158,11 @@ class PageLayoutScope internal constructor(
         style: ElementStyleKey? = null,
     ) = place(element, style)
 
+    fun textField(
+        element: TextFieldElement,
+        style: ElementStyleKey? = null,
+    ) = place(element, style)
+
     fun text(
         id: String,
         @StringRes textRes: Int,
@@ -189,6 +204,20 @@ class PageLayoutScope internal constructor(
             elementId = page.elementId(childPath(id)),
             labelRes = labelRes,
             intent = intent,
+        )
+        place(element)
+        return element
+    }
+
+    fun textField(
+        id: String,
+        @StringRes labelRes: Int,
+        readOnly: Boolean = false,
+    ): TextFieldElement {
+        val element = TextFieldElement(
+            elementId = page.elementId(childPath(id)),
+            labelRes = labelRes,
+            readOnly = readOnly,
         )
         place(element)
         return element

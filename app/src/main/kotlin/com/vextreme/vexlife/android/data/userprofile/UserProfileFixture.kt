@@ -40,6 +40,11 @@ data class UserProfileFixture(
     }
 }
 
+/**
+ * Mutable builder used only to derive an immutable [UserProfileFixture].
+ *
+ * It exists for readable preview/test scenarios, not as a production profile editor or state owner.
+ */
 class UserProfileFixtureBuilder internal constructor(
     seed: UserProfile,
 ) {

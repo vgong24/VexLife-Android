@@ -14,6 +14,11 @@ interface UserProfileRepository {
 
     suspend fun upsert(profile: UserProfile)
 
+    /**
+     * Updates an existing profile and fails if [profileRef] does not exist.
+     *
+     * Use [upsert] when "create if missing" is the intended operation.
+     */
     suspend fun updateDisplayName(
         profileRef: String,
         displayName: String,

@@ -5,6 +5,12 @@ import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * SQLite operations for the User Profile table.
+ *
+ * This DAO is storage plumbing. Feature/UI code should depend on [UserProfileRepository] instead so
+ * a future remote/cache strategy does not leak SQL details into the page layer.
+ */
 @Dao
 interface UserProfileDao {
     @Query(

@@ -5,6 +5,13 @@ import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * Production local-storage implementation of [LogHistoryRepository].
+ *
+ * It maps persisted rows back to VexLogRecord, exposes only the recent UI window, and delegates the
+ * append+retention invariant to one DAO transaction. It does not decide whether Log History is
+ * canonical product truth; diagnostics remain downstream evidence.
+ */
 class RoomLogHistoryRepository(
     private val dao: LogHistoryDao,
     private val recentLimit: Int = 256,

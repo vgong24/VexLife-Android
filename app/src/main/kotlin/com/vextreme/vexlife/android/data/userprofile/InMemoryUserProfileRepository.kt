@@ -27,7 +27,9 @@ class InMemoryUserProfileRepository(
         displayName: String,
         updatedAt: Instant,
     ) {
-        val existing = profiles.value[profileRef] ?: return
+        val existing = checkNotNull(profiles.value[profileRef]) {
+            "cannot update missing user profile: $profileRef"
+        }
         profiles.value = profiles.value + (
             profileRef to existing.copy(
                 displayName = displayName,

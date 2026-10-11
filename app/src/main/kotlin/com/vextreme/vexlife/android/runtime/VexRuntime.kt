@@ -7,6 +7,7 @@ import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ActionKey
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ElementIntent
+import com.vextreme.vexlife.android.elements.FormSubmission
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.SwappableContainerElement
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
@@ -174,6 +175,18 @@ class AppNavigationState(
 }
 
 /**
+ * One semantic application action after VexRuntime has accepted/logged the source interaction.
+ *
+ * [submission] exists only for explicit submit-style actions. Draft field changes never create
+ * requests, so the action boundary sees one immutable snapshot instead of a keystroke stream.
+ */
+data class AppActionRequest(
+    val action: ActionKey,
+    val source: UIElement,
+    val submission: FormSubmission? = null,
+)
+
+/**
  * Front-door coordinator between declared UI intentions and the current running app.
  *
  * This is the most useful first breakpoint when an interaction or navigation result is surprising.
@@ -204,7 +217,7 @@ class VexRuntime(
     val logger: VexLogger,
     initialScreen: ScreenElement,
     primaryScreens: List<ScreenElement>,
-    private val onAppAction: (ActionKey, UIElement) -> Unit,
+    private val onAppAction: (AppActionRequest) -> Unit,
 ) : ElementActionHandler {
     private var appOpenedRecorded = false
     private var activeBackLayer: BackLayer? by mutableStateOf(null)
@@ -276,6 +289,33 @@ class VexRuntime(
      * attribute a click to the destination page after navigation has already changed.
      */
     override fun activate(element: ActionElement) {
+        activate(
+            element = element,
+            submission = null,
+        )
+    }
+
+    /**
+     * Submit-style activation for forms.
+     *
+     * The interaction is logged exactly once at the semantic action boundary (for example Save).
+     * [submission] is forwarded to the invoked app action but its field values are not written to
+     * VexLogger.
+     */
+    fun submit(
+        element: ActionElement,
+        submission: FormSubmission,
+    ) {
+        activate(
+            element = element,
+            submission = submission,
+        )
+    }
+
+    private fun activate(
+        element: ActionElement,
+        submission: FormSubmission?,
+    ) {
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
 
@@ -289,7 +329,11 @@ class VexRuntime(
             screenAfter = target,
         )
 
-        applyIntent(element.intent, uiElement)
+        applyIntent(
+            intent = element.intent,
+            source = uiElement,
+            submission = submission,
+        )
     }
 
     /**
@@ -375,6 +419,7 @@ class VexRuntime(
     private fun applyIntent(
         intent: ElementIntent,
         source: UIElement,
+        submission: FormSubmission? = null,
     ) {
         when (intent) {
             is ElementIntent.NavigateTo -> navigation.push(intent.screen)
@@ -383,8 +428,21 @@ class VexRuntime(
             is ElementIntent.Close -> presentation.close(intent.element)
             is ElementIntent.Toggle -> presentation.toggle(intent.element)
             is ElementIntent.SwapTo -> presentation.swapTo(intent.element)
-            is ElementIntent.Invoke -> onAppAction(intent.action, source)
-            is ElementIntent.Sequence -> intent.intents.forEach { applyIntent(it, source) }
+            is ElementIntent.Invoke -> onAppAction(
+                AppActionRequest(
+                    action = intent.action,
+                    source = source,
+                    submission = submission,
+                ),
+            )
+
+            is ElementIntent.Sequence -> intent.intents.forEach {
+                applyIntent(
+                    intent = it,
+                    source = source,
+                    submission = submission,
+                )
+            }
         }
     }
 }

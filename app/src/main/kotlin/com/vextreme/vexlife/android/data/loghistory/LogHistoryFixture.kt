@@ -46,6 +46,12 @@ data class LogHistoryFixture(
     }
 }
 
+/**
+ * Mutable builder used only while constructing an immutable [LogHistoryFixture].
+ *
+ * The builder owns synthetic time/sequence progression so tests/previews can describe intentions
+ * ("after 30 seconds, click Reset") instead of hand-authoring every VexLogRecord field.
+ */
 class LogHistoryFixtureBuilder internal constructor(
     initialRecords: List<VexLogRecord>,
     initialTime: Instant = initialRecords.lastOrNull()?.timestamp

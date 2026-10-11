@@ -6,6 +6,7 @@ import com.vextreme.vexlife.android.pages.primary.home.HomePage
 import com.vextreme.vexlife.android.pages.primary.settings.SettingsPage
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
 import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPage
+import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePage
 import com.vextreme.vexlife.android.shell.AppShell
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -31,6 +32,7 @@ class AppBlueprintTest {
             listOf(
                 DebugMenuPage.screenId,
                 GalleryPage.screenId,
+                UserProfilePage.screenId,
             ),
             AppPages.shared.map { it.screenId },
         )
@@ -40,8 +42,10 @@ class AppBlueprintTest {
     fun sharedShellRemainsOutsideStaticScreenOwnership() {
         assertNull(registry.ownerScreenOf(AppShell.Elements.DebugMenu))
         assertNull(registry.ownerScreenOf(AppShell.Elements.Gallery))
+        assertNull(registry.ownerScreenOf(AppShell.Elements.UserProfile))
         assertSame(DebugMenuPage, registry.ownerScreenOf(DebugMenuPage.ResetLog))
         assertSame(GalleryPage, registry.ownerScreenOf(GalleryPage.ElementsTab))
+        assertSame(UserProfilePage, registry.ownerScreenOf(UserProfilePage.DisplayName))
     }
 
     @Test
@@ -53,6 +57,7 @@ class AppBlueprintTest {
                 AppShell.Elements.Settings,
                 AppShell.Elements.DebugMenu,
                 AppShell.Elements.Gallery,
+                AppShell.Elements.UserProfile,
             ),
         )
 
@@ -77,6 +82,17 @@ class AppBlueprintTest {
             ),
             previewChildren.map { it.elementId }.toSet(),
         )
+    }
+
+    @Test
+    fun userProfileFieldsRemainNestedUnderTheProfileCard() {
+        val persistedParent = registry.parentOf(UserProfilePage.PersistedName)
+        val editParent = registry.parentOf(UserProfilePage.DisplayName)
+        val saveParent = registry.parentOf(UserProfilePage.Save)
+
+        assertSame(persistedParent, editParent)
+        assertSame(editParent, saveParent)
+        assertTrue(editParent?.elementId?.endsWith("body.profile") == true)
     }
 
     @Test

@@ -29,6 +29,8 @@ pages/
     gallery/
       elements/
       graph/
+    profile/
+      UserProfilePage.kt
 ~~~
 
 AppFrame owns the safe drawing boundary relative to Android status/navigation/cutout space. Pages own their internal structural tree. The shell owns app-wide chrome.
@@ -112,6 +114,15 @@ VexLogger.history
 
 These are in-memory runtime/Compose state unless a source explicitly says otherwise. Do not treat
 them as durable DataStore/database preference or process-restoration contracts.
+
+## Form interactions
+
+Editable fields keep draft values as presentation state. Keystrokes are not semantic runtime actions
+and are not logged individually.
+
+A submit control such as User Profile Save creates one immutable `FormSubmission` keyed by stable
+TextFieldElement identities. VexRuntime logs the Save interaction once, forwards the submission to
+the app-action owner, and does not include raw submitted field values in the readable diagnostic log.
 
 ## Logging
 

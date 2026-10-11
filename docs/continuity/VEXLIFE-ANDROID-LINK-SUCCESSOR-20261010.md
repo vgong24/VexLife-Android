@@ -132,6 +132,8 @@ The current candidate for this work should preserve:
 - explicit Room table/column names plus migration ownership;
 - @Transaction only where multiple statements form one invariant;
 - UserProfile kept separate from future linked-system/QR/VexHome connection ownership;
+- User Profile UI reachable from the shared FAB, proving repository -> Room -> Flow -> UI update;
+- form draft edits remain local/unlogged; Save alone creates the semantic FormSubmission boundary;
 - Room entity/DAO types behind the repository;
 - bounded local retention;
 - storage failure unable to change product-action semantics;
@@ -248,6 +250,8 @@ Finish/prove the data-repository candidate first:
 Room/KSP Sync + compile
 -> LogHistory transaction + UserProfile update fixture/in-memory/unit tests
 -> Room v1 -> v2 migration + repository integration proof
+-> physical-device User Profile: edit name -> Save -> persisted name visibly updates
+-> relaunch -> persisted name remains
 -> physical-device Log History persistence
 -> Reset clears persistence
 -> clean source state

@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.fail
 import org.junit.Test
 
 class InMemoryUserProfileRepositoryTest {
@@ -31,5 +32,21 @@ class InMemoryUserProfileRepositoryTest {
             "Victor · VexLife",
             repository.observe(profile.profileRef).first()?.displayName,
         )
+    }
+
+    @Test
+    fun updateMissingProfileFailsInsteadOfSilentlyDivergingFromRoom() = runTest {
+        val repository = InMemoryUserProfileRepository()
+
+        try {
+            repository.updateDisplayName(
+                profileRef = "profile.missing",
+                displayName = "Should fail",
+                updatedAt = Instant.parse("2026-10-11T03:00:00Z"),
+            )
+            fail("missing profile update should fail")
+        } catch (_: IllegalStateException) {
+            // Same contract as RoomUserProfileRepository.
+        }
     }
 }

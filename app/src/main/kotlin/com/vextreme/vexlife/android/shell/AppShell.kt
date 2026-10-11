@@ -56,9 +56,17 @@ import com.vextreme.vexlife.android.pages.primary.home.HomePage
 import com.vextreme.vexlife.android.pages.primary.settings.SettingsPage
 import com.vextreme.vexlife.android.pages.shared.debug.DebugMenuPage
 import com.vextreme.vexlife.android.pages.shared.gallery.GalleryPage
+import com.vextreme.vexlife.android.pages.shared.profile.UserProfilePage
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.ui.VexLayoutTokens
 
+/**
+ * App-wide chrome and its stable element identities.
+ *
+ * This owns toolbar, primary navigation, and FAB destinations that exist outside any one page.
+ * Feature pages should be registered in AppPages and referenced here rather than rebuilding shell
+ * controls inside the page.
+ */
 object AppShell {
     object Elements {
         object Root : ColumnElement("element.shell.root")
@@ -126,6 +134,14 @@ object AppShell {
             style = VexElementStyles.FabOption,
             intent = close(FabOptions) then navigateTo(GalleryPage),
         )
+
+        object UserProfile : FabElement(
+            elementId = "element.user-profile",
+            labelRes = R.string.fab_profile,
+            icon = ElementIcon.Person,
+            style = VexElementStyles.FabOption,
+            intent = close(FabOptions) then navigateTo(UserProfilePage),
+        )
     }
 
     val blueprint = column(Elements.Root) {
@@ -142,6 +158,7 @@ object AppShell {
         }
         stack(Elements.FabCluster) {
             column(Elements.FabOptions) {
+                fab(Elements.UserProfile)
                 fab(Elements.DebugMenu)
                 fab(Elements.Gallery)
             }
@@ -277,6 +294,7 @@ fun AppFabMenu(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                VexFab(AppShell.Elements.UserProfile, runtime)
                 VexFab(AppShell.Elements.DebugMenu, runtime)
                 VexFab(AppShell.Elements.Gallery, runtime)
             }

@@ -209,6 +209,36 @@ repository or database schema.
 
 Future domains should copy the principle, not necessarily this exact builder API.
 
+## Form submission boundary
+
+User Profile is also the first form proof.
+
+~~~text
+TextFieldElement
+  stable blueprint/registry identity
+
+draft text
+  local presentation state
+  no runtime action per keystroke
+  no VexLogger record per keystroke
+
+Save
+  one semantic interaction
+  one immutable FormSubmission snapshot
+  one AppActionRequest
+
+repository
+  persists the submitted snapshot
+~~~
+
+The submitted field values are intentionally not included in VexLogger output by default. The useful
+diagnostic fact is that Save occurred on UserProfilePage, not the user's raw profile text or the order
+in which they typed it.
+
+A form page may know how to assemble its draft values into FormSubmission. It must not perform the
+repository mutation secretly after calling runtime.activate; persistence remains with the app/operation
+owner reached through the declared Save action.
+
 ## User Profile proof domain
 
 The second repository intentionally stays small:
@@ -229,8 +259,17 @@ UserProfileRepository:
 A single upsert/update is already transactional at the Room write boundary. This domain proves
 insert/update behavior and reusable fixtures without inventing VexHome pairing storage prematurely.
 
-Schema version 2 adds user_profile with an explicit v1 -> v2 migration so schema evolution is part of
-the foundation rather than a future surprise.
+The current test UI is reachable from the shared FAB menu and shows:
+- the persisted display name observed from UserProfileRepository;
+- an editable draft field;
+- Save, which submits once through VexRuntime and then upserts through the repository.
+
+That visible round trip is the first lived proof target for User Profile.
+
+Schema version 2 has an explicit v1 -> v2 migration. It both preserves existing Log History rows
+while moving their physical SQL columns from the original Kotlin-derived camelCase names to explicit
+snake_case names, and adds user_profile. Schema naming changes are therefore treated as migrations,
+not formatting.
 
 ## Simplicity bridges without repository sprawl
 

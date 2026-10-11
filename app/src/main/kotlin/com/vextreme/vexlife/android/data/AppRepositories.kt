@@ -17,6 +17,12 @@ data class AppRepositories(
     val userProfile: UserProfileRepository,
 )
 
+/**
+ * Creates the production repository graph from Android-local infrastructure.
+ *
+ * Keep construction here; keep repository use at narrower feature boundaries. Preview/tests may
+ * construct [AppRepositories] with in-memory implementations instead.
+ */
 object AppRepositoryFactory {
     fun production(context: Context): AppRepositories {
         val database = VexLifeDatabaseFactory.get(context)
