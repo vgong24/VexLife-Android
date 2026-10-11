@@ -34,7 +34,7 @@ class VexJourneyHistoryVerifierTest {
         assertFalse(result.matches)
         assertEquals(1, result.mismatch?.index)
         assertEquals(
-            VexJourneyHistoryMismatchKind.DIFFERENT_RECORD,
+            VexJourneyHistoryMismatchKind.MISSING_ACTUAL_RECORD,
             result.mismatch?.kind,
         )
         assertEquals(b, result.mismatch?.expected)
@@ -50,6 +50,10 @@ class VexJourneyHistoryVerifierTest {
 
         assertFalse(result.matches)
         assertEquals(1, result.mismatch?.index)
+        assertEquals(
+            VexJourneyHistoryMismatchKind.REORDERED_RECORD,
+            result.mismatch?.kind,
+        )
         assertEquals(b, result.mismatch?.expected)
         assertEquals(c, result.mismatch?.actual)
         assertTrue(
