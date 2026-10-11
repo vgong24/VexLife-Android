@@ -129,6 +129,20 @@ ordinary Android test runs red or block development.
 The lower-level planner/config/evidence classes are framework internals. A developer only needs them
 when changing how ScreenCrawler itself works, not when choosing what to crawl.
 
+Screenshot retrieval is also repo-owned:
+
+~~~text
+macOS/Linux:
+  bash tools/pull-vex-screen-crawler.sh
+
+Windows PowerShell:
+  powershell -ExecutionPolicy Bypass -File .\tools\pull-vex-screen-crawler.ps1
+~~~
+
+The scripts derive the applicationId, use the sole connected adb target when unambiguous, verify the
+artifact root, and pull evidence to `./vex-screen-crawler`. Multiple-device ambiguity is surfaced
+instead of guessed.
+
 ## Kotlin identity / source-of-truth rules
 
 ### Shards
@@ -140,7 +154,7 @@ when changing how ScreenCrawler itself works, not when choosing what to crawl.
 ScreenCrawler selection stores actual `VexJourneyShard` objects:
 
 ~~~kotlin
-shards(DebugJourneys, GalleryJourneys)
+shards(Journeys.debug, Journeys.gallery)
 ~~~
 
 not copied IDs:
@@ -152,7 +166,7 @@ not copied IDs:
 Default selection includes all canonical shards automatically. A new shard therefore becomes
 crawlable as soon as it is added to `VexJourneyCatalog`; no crawler registry edit is required.
 
-`allShardsExcept(DebugJourneys)` is the convenient form when the desired policy is "everything,
+`allShardsExcept(Journeys.debug)` is the convenient form when the desired policy is "everything,
 including future shards, except these temporary exclusions."
 
 ### Screens
