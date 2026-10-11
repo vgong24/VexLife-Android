@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -568,7 +568,7 @@ private fun EventRow(
                     TextButton(
                         onClick = onAcknowledge,
                         colors =
-                            TextButtonDefaults.textButtonColors(
+                            ButtonDefaults.textButtonColors(
                                 contentColor =
                                     MaterialTheme.colorScheme.inversePrimary,
                             ),
@@ -591,7 +591,7 @@ private fun EventRow(
                         TextButton(
                             onClick = onDefer,
                             colors =
-                                TextButtonDefaults.textButtonColors(
+                                ButtonDefaults.textButtonColors(
                                     contentColor =
                                         MaterialTheme.colorScheme.inversePrimary,
                                 ),
@@ -620,7 +620,7 @@ private fun EventRow(
                         TextButton(
                             onClick = onSuspend,
                             colors =
-                                TextButtonDefaults.textButtonColors(
+                                ButtonDefaults.textButtonColors(
                                     contentColor =
                                         MaterialTheme.colorScheme.inversePrimary,
                                 ),
@@ -641,7 +641,7 @@ private fun EventRow(
                         TextButton(
                             onClick = onSuppress,
                             colors =
-                                TextButtonDefaults.textButtonColors(
+                                ButtonDefaults.textButtonColors(
                                     contentColor =
                                         MaterialTheme.colorScheme.inversePrimary,
                                 ),
