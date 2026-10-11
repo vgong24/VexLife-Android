@@ -64,6 +64,31 @@ object GalleryScreen : AppScreenBlueprint(
         id = "page.content.elements.modal-samples.bottom-sheet",
     )
 
+    /*
+     * These sample actions are named because semantic journeys now address production actions by
+     * their real element objects. Their IDs intentionally match the former inline DSL-generated IDs.
+     */
+    val SampleButton = buttonRef(
+        id = "page.content.elements.samples.button-row.button",
+        labelRes = R.string.gallery_sample_button,
+        style = VexElementStyles.SecondaryAction,
+        intent = invoke(AppActions.GallerySample),
+    )
+
+    val SampleToggle = toggleRef(
+        id = "page.content.elements.samples.toggle",
+        labelRes = R.string.gallery_sample_toggle,
+        intent = invoke(AppActions.GallerySample),
+    )
+
+    val SampleFab = fabRef(
+        id = "page.content.elements.samples.fab",
+        labelRes = R.string.gallery_sample_fab,
+        icon = ElementIcon.Add,
+        style = VexElementStyles.FabOption,
+        intent = invoke(AppActions.GallerySample),
+    )
+
     val ShowDialogModalSample = buttonRef(
         id = "page.content.elements.modal-samples.actions.show-dialog",
         labelRes = R.string.gallery_show_dialog_sample,
@@ -130,25 +155,10 @@ object GalleryScreen : AppScreenBlueprint(
                             role = TextRole.Supporting,
                         )
                         row("button-row") {
-                            button(
-                                id = "button",
-                                labelRes = R.string.gallery_sample_button,
-                                style = VexElementStyles.SecondaryAction,
-                                intent = invoke(AppActions.GallerySample),
-                            )
+                            button(SampleButton)
                         }
-                        toggle(
-                            id = "toggle",
-                            labelRes = R.string.gallery_sample_toggle,
-                            intent = invoke(AppActions.GallerySample),
-                        )
-                        fab(
-                            id = "fab",
-                            labelRes = R.string.gallery_sample_fab,
-                            icon = ElementIcon.Add,
-                            style = VexElementStyles.FabOption,
-                            intent = invoke(AppActions.GallerySample),
-                        )
+                        toggle(SampleToggle)
+                        fab(SampleFab)
                     }
 
                     card("modal-samples") {
