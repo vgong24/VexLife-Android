@@ -5,7 +5,6 @@ import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.FontScale
 import androidx.compose.ui.test.Locales
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -23,10 +22,9 @@ import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.TextFieldElement
 import com.vextreme.vexlife.android.elements.UIElement
-import com.vextreme.vexlife.android.logging.VexLogRecord
 import com.vextreme.vexlife.android.ui.VexLifeApp
 import androidx.test.espresso.Espresso
-import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 
 /**
  * Android realization of the shared journey grammar.
@@ -62,8 +60,11 @@ class VexTestEngine(
         val root = com.vextreme.vexlife.android.screens.AppScreens.registry
             .screenRoot(screen)
             .element
-        compose.onNodeWithTag(root.elementId)
-            .assertExists()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithTag(root.elementId)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
     }
 
     override fun tap(element: ActionElement) {
@@ -119,19 +120,48 @@ class VexTestEngine(
     private fun verifyWalkHistory(title: String) {
         val wanted = expected.records
 
-        compose.waitUntil(timeoutMillis = 5_000) {
-            actualHistory() == wanted
+        /*
+         * Persistence is asynchronous. Wait for the exact semantic sequence when it arrives, but do
+         * not let the synchronization timeout hide the actual mismatch. The pure verifier below
+         * becomes the authoritative failure report.
+         */
+        val waitFailure = runCatching {
+            compose.waitUntil(timeoutMillis = 5_000) {
+                actualHistory() == wanted
+            }
+        }.exceptionOrNull()
+
+        val comparison = VexJourneyHistoryVerifier.compare(
+            expected = wanted,
+            actual = actualHistory(),
+        )
+
+        if (!comparison.matches) {
+            fail(
+                buildString {
+                    append(comparison.render(title))
+                    waitFailure?.let { failure ->
+                        appendLine()
+                        appendLine()
+                        appendLine(
+                            "wait/synchronization failure: " +
+                                "${failure::class.simpleName}: ${failure.message}",
+                        )
+                    }
+                },
+            )
         }
 
-        assertEquals(
-            "semantic walk history mismatch for journey: $title",
-            wanted,
-            actualHistory(),
-        )
+        // If histories match but the wait primitive failed for another reason, preserve that failure.
+        if (waitFailure != null) {
+            throw waitFailure
+        }
     }
 
     private fun actualHistory(): List<VexExpectedRecord> =
-        logHistory.records.value.map(VexLogRecord::semanticProjection)
+        logHistory.records.value.map { record ->
+            record.toJourneyRecord()
+        }
 
     private fun node(element: ActionElement): SemanticsNodeInteraction {
         val uiElement = element as? UIElement
@@ -147,15 +177,6 @@ private fun SemanticsNodeInteraction.scrollIntoViewIfPossible(): SemanticsNodeIn
     return this
 }
 
-private fun VexLogRecord.semanticProjection(): VexExpectedRecord =
-    VexExpectedRecord(
-        kind = kind,
-        subjectRef = subjectRef,
-        action = action,
-        screenBeforeId = screenBeforeId,
-        screenAfterId = screenAfterId,
-        detailsJson = detailsJson,
-    )
 
 
 @Composable
