@@ -352,6 +352,41 @@ internal fun MediaController.queueVexStream(
     return true
 }
 
+/**
+ * Returns the adjacent queue index crossed by one drag gesture sample.
+ *
+ * The queue itself remains MediaSession-owned. Compose uses this only to decide when the dragged
+ * row has crossed half of its current visual height and should request one Media3 move.
+ */
+internal fun vexStreamQueueAdjacentMoveTarget(
+    currentIndex: Int,
+    dragOffsetPx: Float,
+    itemHeightPx: Int,
+    lastIndex: Int,
+): Int? {
+    if (
+        currentIndex !in 0..lastIndex ||
+        itemHeightPx <= 0
+    ) {
+        return null
+    }
+
+    val threshold =
+        itemHeightPx.toFloat() / 2f
+
+    return when {
+        dragOffsetPx > threshold &&
+            currentIndex < lastIndex ->
+            currentIndex + 1
+
+        dragOffsetPx < -threshold &&
+            currentIndex > 0 ->
+            currentIndex - 1
+
+        else -> null
+    }
+}
+
 internal fun MediaController.toggleVexStreamPlayback() {
     if (isPlaying) {
         pause()

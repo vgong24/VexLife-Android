@@ -334,6 +334,13 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val QueueReorder = buttonRef(
+        id = "body.queue.sheet.reorder",
+        labelRes = R.string.vexstream_music_queue_reorder,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
     val ShowQueue = buttonRef(
         id = "body.player.queue.show",
         labelRes = R.string.vexstream_music_queue,
@@ -418,6 +425,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 button(QueueToggleShuffle)
                 button(ToggleRepeat)
                 button(ClearQueue)
+                button(QueueReorder)
                 button(CloseQueue)
             }
 

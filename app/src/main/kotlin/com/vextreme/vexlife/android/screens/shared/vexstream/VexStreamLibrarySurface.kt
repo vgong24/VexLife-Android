@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
@@ -14,12 +15,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -32,18 +38,24 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
@@ -1770,6 +1782,28 @@ private fun VexStreamMiniPlayer(
     }
 }
 
+private data class VexStreamQueueEntry(
+    val stableKey: String,
+    val mediaId: String,
+)
+
+private fun vexStreamQueueEntries(
+    mediaIds: List<String>,
+): List<VexStreamQueueEntry> {
+    val occurrences =
+        mutableMapOf<String, Int>()
+
+    return mediaIds.map { mediaId ->
+        val occurrence =
+            (occurrences[mediaId] ?: 0) + 1
+        occurrences[mediaId] = occurrence
+        VexStreamQueueEntry(
+            stableKey = "$mediaId#$occurrence",
+            mediaId = mediaId,
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VexStreamQueueSheet(
@@ -1784,6 +1818,41 @@ private fun VexStreamQueueSheet(
                 it.track.trackRef.value
             }
         }
+    val queueEntries =
+        remember(
+            playback.queueMediaIds,
+        ) {
+            vexStreamQueueEntries(
+                playback.queueMediaIds,
+            )
+        }
+    val listState =
+        rememberLazyListState()
+    var draggedKey by remember {
+        mutableStateOf<String?>(null)
+    }
+    var draggedIndex by remember {
+        mutableIntStateOf(-1)
+    }
+    var dragOffsetPx by remember {
+        mutableFloatStateOf(0f)
+    }
+    var dragMoved by remember {
+        mutableStateOf(false)
+    }
+
+    fun finishQueueDrag() {
+        if (dragMoved) {
+            runtime.activate(
+                VexStreamMusicScreen.QueueReorder,
+            )
+        }
+        draggedKey = null
+        draggedIndex = -1
+        dragOffsetPx = 0f
+        dragMoved = false
+    }
+
     val sheetState =
         rememberModalBottomSheetState(
             skipPartiallyExpanded = false,
@@ -1877,6 +1946,19 @@ private fun VexStreamQueueSheet(
 
             HorizontalDivider()
 
+            Text(
+                text =
+                    stringResource(
+                        if (playback.shuffleEnabled) {
+                            R.string.vexstream_music_queue_reorder_shuffle_hint
+                        } else {
+                            R.string.vexstream_music_queue_reorder_hint
+                        },
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             if (playback.queueMediaIds.isEmpty()) {
                 Text(
                     text =
@@ -1889,24 +1971,48 @@ private fun VexStreamQueueSheet(
                 )
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(
-                        items =
-                            playback.queueMediaIds
-                                .mapIndexed { index, mediaId ->
-                                    index to mediaId
-                                },
-                        key = { (index, mediaId) ->
-                            "$index:$mediaId"
+                    itemsIndexed(
+                        items = queueEntries,
+                        key = { _, entry ->
+                            entry.stableKey
                         },
-                    ) { (index, mediaId) ->
+                    ) { index, entry ->
+                        val latestIndex by rememberUpdatedState(index)
                         val track =
-                            tracksByRef[mediaId]
+                            tracksByRef[entry.mediaId]
+                        val isDragging =
+                            draggedKey ==
+                                entry.stableKey
+                        val reorderEnabled =
+                            controller != null &&
+                                !playback.shuffleEnabled &&
+                                controller.isCommandAvailable(
+                                    androidx.media3.common.Player
+                                        .COMMAND_CHANGE_MEDIA_ITEMS,
+                                )
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .graphicsLayer {
+                                    translationY =
+                                        if (isDragging) {
+                                            dragOffsetPx
+                                        } else {
+                                            0f
+                                        }
+                                }
+                                .zIndex(
+                                    if (isDragging) {
+                                        1f
+                                    } else {
+                                        0f
+                                    },
+                                )
                                 .padding(
                                     vertical = 9.dp,
                                 ),
@@ -1914,6 +2020,8 @@ private fun VexStreamQueueSheet(
                                 Arrangement.spacedBy(
                                     10.dp,
                                 ),
+                            verticalAlignment =
+                                Alignment.CenterVertically,
                         ) {
                             Text(
                                 text =
@@ -1931,7 +2039,9 @@ private fun VexStreamQueueSheet(
                                         track
                                             ?.track
                                             ?.title
-                                            ?: mediaId,
+                                            ?: entry.mediaId,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                                 track
                                     ?.track
@@ -1950,8 +2060,122 @@ private fun VexStreamQueueSheet(
                                                 MaterialTheme
                                                     .colorScheme
                                                     .onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow =
+                                                TextOverflow.Ellipsis,
                                         )
                                     }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .vexElement(
+                                        VexStreamMusicScreen.QueueReorder,
+                                    )
+                                    .pointerInput(
+                                        entry.stableKey,
+                                        reorderEnabled,
+                                    ) {
+                                        if (!reorderEnabled) {
+                                            return@pointerInput
+                                        }
+
+                                        detectVerticalDragGestures(
+                                            onDragStart = {
+                                                draggedKey =
+                                                    entry.stableKey
+                                                draggedIndex =
+                                                    latestIndex
+                                                dragOffsetPx = 0f
+                                                dragMoved = false
+                                            },
+                                            onDragCancel = {
+                                                finishQueueDrag()
+                                            },
+                                            onDragEnd = {
+                                                finishQueueDrag()
+                                            },
+                                        ) { change, dragAmount ->
+                                            change.consume()
+                                            if (
+                                                draggedKey !=
+                                                    entry.stableKey
+                                            ) {
+                                                return@detectVerticalDragGestures
+                                            }
+
+                                            dragOffsetPx +=
+                                                dragAmount
+
+                                            val itemInfo =
+                                                listState
+                                                    .layoutInfo
+                                                    .visibleItemsInfo
+                                                    .firstOrNull {
+                                                        it.key ==
+                                                            entry.stableKey
+                                                    }
+                                                    ?: return@detectVerticalDragGestures
+                                            val target =
+                                                vexStreamQueueAdjacentMoveTarget(
+                                                    currentIndex =
+                                                        draggedIndex,
+                                                    dragOffsetPx =
+                                                        dragOffsetPx,
+                                                    itemHeightPx =
+                                                        itemInfo.size,
+                                                    lastIndex =
+                                                        queueEntries.lastIndex,
+                                                )
+                                                    ?: return@detectVerticalDragGestures
+
+                                            controller?.moveMediaItem(
+                                                draggedIndex,
+                                                target,
+                                            )
+                                            dragMoved = true
+
+                                            val height =
+                                                itemInfo.size
+                                                    .toFloat()
+                                            dragOffsetPx +=
+                                                if (
+                                                    target >
+                                                    draggedIndex
+                                                ) {
+                                                    -height
+                                                } else {
+                                                    height
+                                                }
+                                            draggedIndex =
+                                                target
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector =
+                                        Icons.Rounded.DragHandle,
+                                    contentDescription =
+                                        stringResource(
+                                            R.string
+                                                .vexstream_music_queue_reorder,
+                                        ),
+                                    tint =
+                                        if (reorderEnabled) {
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                        } else {
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .copy(
+                                                    alpha = 0.38f,
+                                                )
+                                        },
+                                )
                             }
                         }
                     }
