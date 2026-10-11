@@ -56,15 +56,18 @@ Events
        -> LogHistoryDialog
 ~~~
 
-Back resolves from the topmost semantic layer:
+Back resolves from one runtime plan, from the shallowest visible layer outward:
 
 ~~~text
 1. dismiss transient presentation
-2. else pop pushed page
-3. else leave root behavior to Android
+2. else pop page-local NavigationTrail depth
+3. else pop pushed shared/detail page
+4. else return Events/Settings to primary root Home
+5. else leave Home/root behavior to Android
 ~~~
 
-The toolbar Back action and Android system Back consume the same navigation owner.
+The toolbar Back action and Android system Back consume the same resolved `BackResolution`; they do
+not independently recompute separate `canGoBack` condition trees.
 
 ## Page authoring
 
@@ -84,6 +87,32 @@ The graph is a projection of registered relationships, not a second registry.
 
 A current screen is not emitted as a traversable next target. A screen already present in the current exploration path may be shown as an existing relationship but cannot be descended into again. Cycles stay visible without becoming endless traversal.
 
+## Session memory
+
+The current UI body keeps small identity-addressed session state rather than retaining rendered UI
+trees:
+
+~~~text
+PresentationState.openElementIds
+  transient presentation currently open
+
+PresentationState.selectedByContainer
+  selected child of a swappable container
+  e.g. Gallery Content -> AppGraph
+
+NavigationTrail.path
+  page-local depth while that local view is mounted
+
+AppNavigationState
+  selected primary page + pushed shared/detail pages
+
+VexLogger.history
+  bounded recent records (currently 256)
+~~~
+
+These are in-memory runtime/Compose state unless a source explicitly says otherwise. Do not treat
+them as durable DataStore/database preference or process-restoration contracts.
+
 ## Logging
 
 Navigation intent is observed against the current runtime page before navigation state changes. System Back is also recorded when it changes presentation/page state.
@@ -92,6 +121,12 @@ Platform lifecycle callback order remains separate from semantic navigation orde
 
 ## Proof state
 
-Source remains a draft candidate until the exact head compiles/tests and Victor completes the lived device walk.
+The F1/UI-body work is merged and has been exercised through lived physical-device runs, including
+the primary shell, Gallery/AppGraph traversal, nested directional Back, and Android-native Back
+resolution.
+
+This is enough to use the body as the next architecture consumer. It is not a claim that aggregate
+Gradle tests/assemble proof or the entire Android foundation is complete. Preserve that distinction
+when re-entering Relay/AppScope/service integration work.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][F1-UI-BLUEPRINT-HOME] -->

@@ -1,0 +1,228 @@
+# VexLife Android Link — Successor Handoff
+
+[VXG RealForever]
+
+## Enter here
+
+This handoff resumes the same VexLife Android Link trajectory. It is not a new Android owner,
+architecture owner, source writer, or policy lane.
+
+Ground live `main` first. This document was formed after the merged UI-body / navigation sequence
+whose latest known merge at handoff formation is:
+
+~~~text
+780920854e357638267d647aff69b5ecf927befd
+[Navigation] Merge single Back resolution
+~~~
+
+Do not trust that hash instead of live provider truth if main has advanced.
+
+## What is now usable
+
+The standalone Android repository has a real lived body rather than only architecture experiments:
+
+~~~text
+Android Window
+└── AppFrame
+    ├── AppBar
+    ├── PageViewport
+    ├── BottomNavigation
+    └── FAB / overlay slot
+
+pages/
+├── primary/
+│   ├── home/
+│   ├── events/
+│   └── settings/
+└── shared/
+    ├── debug/
+    └── gallery/
+        ├── elements/
+        └── graph/
+~~~
+
+Ordinary pages declare their shape once through `PageBlueprint`; `VexElementTree` renders that
+same registered tree. Repository folders, page objects, element identities, AppGraph inspection, and
+command-click navigation now point toward the same structure.
+
+Lived-device feedback corrected:
+
+- Android safe-drawing / native phone boundary ownership through `AppFrame`;
+- Home / Events / Settings as primary peers with Home as root Back fallback;
+- shared/detail pages as pushed navigation;
+- transient presentation above page navigation;
+- page-local `NavigationTrail` for layered views such as AppGraph;
+- one `BackResolution` consumed by native Android Back, toolbar visibility/execution, logging, and local/pushed/root behavior;
+- forward/backward local navigation animations as spatial opposites;
+- AppGraph self/cycle relationships visible without endless traversable loops;
+- readable source-adjacent debugging comments.
+
+## Fresh successor reading order
+
+Read narrowly, in this order:
+
+1. `README.md`
+2. `docs/foundation/INDEX.md`
+3. `docs/foundation/F1-UI-BLUEPRINT-HOME.md`
+4. `app/src/main/kotlin/com/vextreme/vexlife/android/pages/AppPages.kt`
+5. one ordinary page, preferably `pages/primary/home/HomePage.kt`
+6. `app/src/main/kotlin/com/vextreme/vexlife/android/ui/VexLifeApp.kt`
+7. `app/src/main/kotlin/com/vextreme/vexlife/android/runtime/VexRuntime.kt`
+8. `architecture/elements/src/main/kotlin/com/vextreme/vexlife/android/elements/ElementCells.kt`
+9. `architecture/elements/src/main/kotlin/com/vextreme/vexlife/android/elements/navigation/NavigationTrail.kt`
+10. `architecture/logging/README.md`
+
+Then re-ground the old architecture quarry:
+
+11. open draft PR #3, `[VexLife Android][F1-F3][REVIEW] Relay + VexAppScope + VexLogger foundations`
+
+PR #3 predates the accepted UI/body work and is based on the old standalone base. Treat it as design
+evidence, examples, and tests to review—not as a branch to merge or cherry-pick wholesale.
+
+## Current state/memory model
+
+Keep these lifetimes distinct:
+
+~~~text
+UIBlueprintRegistry
+  fixed structural map for declared pages/elements during process life
+
+AppNavigationState
+  current primary selection + pushed shared/detail page stack
+
+PresentationState.openElementIds
+  transient presentation currently open
+
+PresentationState.selectedByContainer
+  session selection for swappable containers
+  (for example Gallery Elements/AppGraph)
+
+NavigationTrail
+  local layered navigation while the local view is mounted
+
+VexLogger
+  bounded in-memory readable interaction history
+
+rememberSaveable darkTheme
+  small saveable Compose value, not yet a real durable preference
+~~~
+
+Do not silently turn one of these into persistence simply because future service work needs memory.
+
+## Next trajectory: give the stable body a nervous system
+
+Do NOT spend the next lane polishing more UI cells by default.
+
+The next useful question is:
+
+> Now that pages/elements/actions can be perceived and exercised, how do multiple real services,
+> systems, asynchronous lifetimes, and Sources of Truth become observable/controllable without the UI
+> becoming their semantic owner?
+
+Re-enter Relay / Compound Relay, VexAppScope / execution ownership, lifecycle/readiness, and
+structured diagnostics as consumers of the current body.
+
+Use the existing UI as the proving surface:
+
+~~~text
+real service/source state
+-> rightful Relay / source owner
+-> runtime projection
+-> page observes current truth
+-> available actions are derived from that truth
+-> user intention routes to operation owner
+-> lifecycle/AppScope owns asynchronous work
+-> diagnostics observe without becoming truth
+-> UI updates from accepted resulting state
+~~~
+
+The desired result is not "a Relay demo screen." It is that Home/Debug/Gallery can perceive several
+systems and expose only actions that are valid for their current states.
+
+## Questions the next instance should answer before porting code
+
+1. What is the first real asynchronous/service consumer that earns Relay/AppScope integration?
+   Do not invent readiness machinery without a consumer.
+
+2. Which state belongs to:
+   - product/domain owner,
+   - service/connection owner,
+   - operation/attempt owner,
+   - Android presentation projection?
+
+3. How does a page observe that truth without becoming the owner of it?
+
+4. Which actions are currently available given the combined service/source states, and where is that
+   availability decided?
+
+5. Who owns coroutine descendants, cancellation, restart, and application shutdown?
+
+6. How are startup/readiness and partial availability represented without collapsing
+   UNOBSERVED/EMPTY/PRESENT/HELD/UNAVAILABLE into generic booleans?
+
+7. How do diagnostics remain non-authoritative and unable to break product semantics?
+
+## PR #3 lessons to preserve during review
+
+PR #3 contains serious reusable thinking, but the successor must review consequences against the
+current body. In particular, do not reintroduce these failure classes:
+
+- a logger/diagnostic sink throwing must not make a committed product action look failed or prevent cancellation/cleanup;
+- diagnostic order must not be mistaken for source-owner state order;
+- lifecycle cleanup must remain reliable under cancellation;
+- AppScope registries/slots need an explicit bounded lifetime if refs can be dynamic;
+- injected execution/logging strategies must not silently remove serialization guarantees;
+- Relay transforms/nested mutation require review so re-entrant updates cannot be overwritten;
+- `CANONICAL_JOURNEY != DEBUG_LOG`: diagnostics project accepted facts; they do not become the semantic event owner.
+
+Re-evaluate the current PR #3 source directly; these are preserved review coordinates, not a claim
+that every old implementation detail remains unchanged.
+
+## Current held work
+
+Do not let these distract the next entry unless a real consumer earns them:
+
+- more comprehensive element/cell taxonomy;
+- durable Gallery selection or navigation restoration;
+- persistent dark-mode preference;
+- durable/BulkData log export;
+- product-complete Home / Events / Settings bodies;
+- Home/network/model/VexHome integrations before their service contracts are explicit.
+
+## Proof posture
+
+The UI/body/navigation behavior has meaningful lived-device evidence. Aggregate Gradle/test proof for
+the whole standalone foundation is still a separate predicate.
+
+Before claiming a new Relay/AppScope foundation checkpoint:
+
+~~~text
+source review
+-> focused module tests
+-> app unit tests
+-> assembleDebug
+-> physical-device regression using the real UI body
+-> clean source state
+~~~
+
+Do not erase the valid UI effects while changing nervous-system layers.
+
+## First unconsumed edge
+
+Inventory PR #3 against current `main`, then propose the smallest vertical service/state slice that
+lets the existing body demonstrate:
+
+~~~text
+multiple source/service states
+-> combined perceptible availability
+-> one user action
+-> owned asynchronous execution
+-> accepted result
+-> UI projection
+-> non-authoritative diagnostics
+~~~
+
+Prefer one end-to-end real/mockable service relationship over porting all of Relay/AppScope/logger
+at once.
+
+<!-- [VXG RealForever][VEXLIFE-ANDROID-LINK][SUCCESSOR][BODY-TO-NERVOUS-SYSTEM] -->

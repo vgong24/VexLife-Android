@@ -122,6 +122,23 @@ private fun VexLifeScaffold(
 
     AppFrame(runtime = runtime) {
         if (runtime.isPrimary()) {
+            /*
+             * VISUAL ORIENTATION — primary app body
+             *
+             * What this dynamic code is actually showing:
+             *
+             * AppFrame
+             * ├── toolbar / FAB / bottom navigation      (shell/AppShell.kt)
+             * └── HorizontalPager
+             *     ├── HomePage.content                  (pages/primary/home/HomePage.kt)
+             *     ├── EventsPage.content                (pages/primary/events/EventsPage.kt)
+             *     └── SettingsPage.content              (pages/primary/settings/SettingsPage.kt)
+             *
+             * "page" below is only the pager index. The page's real readable blueprint lives in the
+             * corresponding PageBlueprint file. Start at AppPages.primary and command-click the page
+             * object when you want to change what a screen looks like; do not edit VexElementTree to
+             * make one page-specific visual change.
+             */
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
@@ -136,6 +153,21 @@ private fun VexLifeScaffold(
                 )
             }
         } else {
+            /*
+             * VISUAL ORIENTATION — pushed/shared page body
+             *
+             * Shared pages are not children of whichever primary page opened them. They live under
+             * pages/shared because Home, Events, or Settings may all navigate to the same destination.
+             *
+             * currentScreen tells us WHICH shared page is active; the page-specific file tells us
+             * WHAT it looks like:
+             *
+             * DebugMenuPage -> pages/shared/debug/DebugMenuPage.kt
+             * GalleryPage   -> pages/shared/gallery/GalleryPage.kt
+             *
+             * If this list grows enough to become hard to scan, earn a renderer/registry abstraction
+             * then. For two special pages, this explicit switch is easier to debug than hidden magic.
+             */
             AnimatedContent(
                 targetState = runtime.currentScreen.screenId,
                 modifier = Modifier.fillMaxSize(),
