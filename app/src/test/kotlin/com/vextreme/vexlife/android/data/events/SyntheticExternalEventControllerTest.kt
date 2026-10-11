@@ -44,6 +44,9 @@ class SyntheticExternalEventControllerTest {
         )
 
         controller.stop()
+
+        // A restart attempted before cancellation completes must not create a second producer loop.
+        controller.start()
         runCurrent()
         advanceTimeBy(10_000L)
         runCurrent()
@@ -57,6 +60,7 @@ class SyntheticExternalEventControllerTest {
                 .sourceRevision,
         )
 
+        // Completion releases the single producer slot; the next Start resumes the same source.
         controller.start()
         advanceTimeBy(5_000L)
         runCurrent()

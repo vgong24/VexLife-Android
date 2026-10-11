@@ -28,19 +28,28 @@ class SyntheticExternalEventController(
 
     fun start() {
         synchronized(lock) {
-            if (job?.isActive == true) return
+            if (job != null) return
 
-            job =
+            val launched =
                 scope.launch {
                     source.runForever()
                 }
+
+            job = launched
+
+            launched.invokeOnCompletion {
+                synchronized(lock) {
+                    if (job === launched) {
+                        job = null
+                    }
+                }
+            }
         }
     }
 
     fun stop() {
         synchronized(lock) {
             job?.cancel()
-            job = null
         }
     }
 }
