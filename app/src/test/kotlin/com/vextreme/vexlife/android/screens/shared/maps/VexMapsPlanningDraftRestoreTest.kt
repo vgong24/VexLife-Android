@@ -79,6 +79,42 @@ class VexMapsPlanningDraftRestoreTest {
     }
 
     @Test
+    fun restoredViewportSuppressesRefitOnlyForSameRouteRevision() {
+        assertEquals(
+            "route.current:7",
+            resolveVexMapsRestoredRouteFitKey(
+                hasRestoredViewport = true,
+                savedViewportRouteKey =
+                    "route.current:7",
+                currentRouteKey =
+                    "route.current:7",
+            ),
+        )
+        assertNull(
+            resolveVexMapsRestoredRouteFitKey(
+                hasRestoredViewport = true,
+                savedViewportRouteKey =
+                    "route.current:6",
+                currentRouteKey =
+                    "route.current:7",
+            ),
+        )
+    }
+
+    @Test
+    fun missingViewportNeverSuppressesRouteFit() {
+        assertNull(
+            resolveVexMapsRestoredRouteFitKey(
+                hasRestoredViewport = false,
+                savedViewportRouteKey =
+                    "route.current:7",
+                currentRouteKey =
+                    "route.current:7",
+            ),
+        )
+    }
+
+    @Test
     fun savedSelectionRoleRestoresOrFallsBackToDestination() {
         assertEquals(
             VexMapsMapSelectionTarget.ORIGIN,
