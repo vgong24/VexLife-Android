@@ -20,7 +20,7 @@ if [[ -z "$PACKAGE_ID" ]]; then
   exit 1
 fi
 
-REMOTE="/sdcard/Android/data/$PACKAGE_ID/files/vex-screen-crawler"
+REMOTE="/storage/emulated/0/Android/media/$PACKAGE_ID/vex-screen-crawler"
 SERIAL="${ANDROID_SERIAL:-}"
 
 if [[ -z "$SERIAL" ]]; then
