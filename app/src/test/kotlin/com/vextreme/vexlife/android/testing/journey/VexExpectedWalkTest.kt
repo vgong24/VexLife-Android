@@ -89,4 +89,36 @@ class VexExpectedWalkTest {
             submitted.detailsJson,
         )
     }
+    @Test
+    fun externalSignalIsNotAUserInteractionButDynamicTapIs() {
+        val walk = VexExpectedWalk()
+        val signal =
+            journeySignal(
+                signalRef = "signal.test.external",
+            ) {
+                error("expected-walk model must not execute external effects")
+            }
+        val dynamic =
+            dynamicElement(
+                "element.events.dynamic.event.test.attention.acknowledge",
+            )
+
+        walk.start(HomeScreen)
+        walk.signal(signal)
+        walk.tapDynamic(dynamic)
+
+        assertEquals(2, walk.records.size)
+        assertEquals(VexLogKind.AppOpened, walk.records.first().kind)
+        assertEquals(
+            VexExpectedRecord(
+                kind = VexLogKind.Interaction,
+                subjectRef = dynamic.elementId,
+                action = "Clicked",
+                screenBeforeId = HomeScreen.screenId,
+                screenAfterId = null,
+            ),
+            walk.records.last(),
+        )
+    }
+
 }

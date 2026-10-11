@@ -203,4 +203,28 @@ class VexScreenCrawlerPlannerTest {
                 .contains("journey domain is not registered"),
         )
     }
+    @Test
+    fun eventsExternalAttentionUsesTheCanonicalTypedJourneyMap() {
+        val config =
+            vexScreenCrawlerConfig {
+                journey(Journeys.events.externalAttention)
+            }
+
+        val plan = VexScreenCrawlerPlanner.plan(config)
+
+        assertEquals(1, plan.size)
+        assertEquals(
+            journeyFor(Journeys.events.externalAttention),
+            plan.single().journey,
+        )
+        assertEquals(
+            "primary.events/external-attention",
+            plan.single().scenarioRef,
+        )
+        assertEquals(
+            shardFor(Journeys.events).shardId,
+            plan.single().shardId,
+        )
+    }
+
 }
