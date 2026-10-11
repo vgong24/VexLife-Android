@@ -42,6 +42,8 @@ object VexStreamMusicScreen : AppScreenBlueprint(
     screenKey = "vexstream-music",
     titleRes = R.string.vexstream_music_title,
 ) {
+    val ConnectionSection = columnRef("body.connection")
+
     val SongsPanel = scrollableColumnRef("body.library.songs")
     val AlbumsPanel = scrollableColumnRef("body.library.albums")
     val ArtistsPanel = scrollableColumnRef("body.library.artists")
@@ -151,7 +153,10 @@ object VexStreamMusicScreen : AppScreenBlueprint(
 
     override val content = layout {
         column("body") {
-            card("connection") {
+            column(
+                element = ConnectionSection,
+                style = VexElementStyles.RaisedSurface,
+            ) {
                 text(
                     id = "intro",
                     textRes = R.string.vexstream_music_intro,
