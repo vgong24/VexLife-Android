@@ -18,10 +18,12 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
         tap(HomeScreen.VexStreamMusic)
         tap(VexStreamMusicScreen.RefreshCatalog)
+        tap(VexStreamMusicScreen.SearchLibrary)
         type(
             VexStreamMusicScreen.SearchQuery,
             "Vex",
         )
+        tap(VexStreamMusicScreen.CloseSearch)
         tap(VexStreamMusicScreen.AlbumsTab)
         tap(VexStreamMusicScreen.ArtistsTab)
         tap(VexStreamMusicScreen.PlaylistsTab)
