@@ -50,6 +50,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
+import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexContainer
 import com.vextreme.vexlife.android.elements.VexElementStyles
@@ -73,7 +74,6 @@ internal fun VexStreamLibrarySurface(
     repository: VexStreamMusicRepository,
 ) {
     val state by repository.state.collectAsState()
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val inspectionMode = LocalInspectionMode.current
 
@@ -94,7 +94,11 @@ internal fun VexStreamLibrarySurface(
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
-    val visibleTracks =
+    val libraryTracks =
+        remember(state.tracks) {
+            state.playableTracks()
+        }
+    val searchResults =
         remember(
             state.tracks,
             searchQuery,
@@ -127,33 +131,28 @@ internal fun VexStreamLibrarySurface(
                 )
             }
         },
+        floatingActionButton = {
+            if (libraryTracks.isNotEmpty()) {
+                VexStreamLibraryFabActions(
+                    runtime = runtime,
+                    tracks = libraryTracks,
+                    controller = controller,
+                    resolver = resolver,
+                )
+            }
+        },
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            VexStreamConnectionHeader(
-                state = state,
-                runtime = runtime,
-            )
-
-            VexTextField(
-                element = VexStreamMusicScreen.SearchQuery,
-                value = searchQuery,
-                onValueChange = {
-                    searchQuery = it
-                },
-                modifier = Modifier.padding(
-                    horizontal = 12.dp,
-                    vertical = 4.dp,
-                ),
-            )
-
-            VexStreamLibraryTabs(
-                selectedElementId = selected.elementId,
-                runtime = runtime,
-            )
+            if (state.connectionState !is VexStreamConnectionState.Paired) {
+                VexStreamConnectionHeader(
+                    state = state,
+                    runtime = runtime,
+                )
+            }
 
             Box(
                 modifier = Modifier
@@ -164,7 +163,7 @@ internal fun VexStreamLibrarySurface(
                     VexStreamMusicScreen.AlbumsPanel.elementId ->
                         VexStreamAlbumsPane(
                             runtime = runtime,
-                            tracks = visibleTracks,
+                            tracks = libraryTracks,
                             controller = controller,
                             resolver = resolver,
                         )
@@ -172,7 +171,7 @@ internal fun VexStreamLibrarySurface(
                     VexStreamMusicScreen.ArtistsPanel.elementId ->
                         VexStreamArtistsPane(
                             runtime = runtime,
-                            tracks = visibleTracks,
+                            tracks = libraryTracks,
                             controller = controller,
                             resolver = resolver,
                         )
@@ -181,8 +180,6 @@ internal fun VexStreamLibrarySurface(
                         VexStreamPlaylistsPane(
                             runtime = runtime,
                             state = state,
-                            visibleTracks = visibleTracks,
-                            searchQuery = searchQuery,
                             controller = controller,
                             resolver = resolver,
                         )
@@ -190,7 +187,7 @@ internal fun VexStreamLibrarySurface(
                     VexStreamMusicScreen.DownloadsPanel.elementId ->
                         VexStreamDownloadsPane(
                             runtime = runtime,
-                            tracks = visibleTracks,
+                            tracks = libraryTracks,
                             repository = repository,
                             controller = controller,
                             resolver = resolver,
@@ -199,7 +196,7 @@ internal fun VexStreamLibrarySurface(
                     else ->
                         VexStreamSongsPane(
                             runtime = runtime,
-                            tracks = visibleTracks,
+                            tracks = libraryTracks,
                             repository = repository,
                             controller = controller,
                             resolver = resolver,
@@ -215,6 +212,20 @@ internal fun VexStreamLibrarySurface(
             playback = playback,
             controller = controller,
             runtime = runtime,
+        )
+    }
+
+    if (runtime.presentation.isOpen(VexStreamMusicScreen.SearchSheet)) {
+        VexStreamSearchSheet(
+            runtime = runtime,
+            tracks = searchResults,
+            repository = repository,
+            controller = controller,
+            resolver = resolver,
+            query = searchQuery,
+            onQueryChange = {
+                searchQuery = it
+            },
         )
     }
 
@@ -234,9 +245,12 @@ internal fun VexStreamLibrarySurface(
 
 @Composable
 private fun VexStreamLibraryTabs(
-    selectedElementId: String,
     runtime: VexRuntime,
 ) {
+    val selectedElementId =
+        runtime.presentation
+            .selected(VexStreamMusicScreen.LibraryContent)
+            .elementId
     val tabs =
         listOf(
             VexStreamMusicScreen.SongsTab to
