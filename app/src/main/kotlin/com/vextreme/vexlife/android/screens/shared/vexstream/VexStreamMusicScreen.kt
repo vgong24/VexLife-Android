@@ -223,6 +223,14 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val TrackMenu = buttonRef(
+        id = "body.track-actions.menu",
+        labelRes = R.string.vexstream_music_track_menu,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Menu,
+        intent = localEffect(),
+    )
+
     val PlayTrack = buttonRef(
         id = "body.track-actions.play",
         labelRes = R.string.vexstream_music_play,
@@ -260,6 +268,14 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         labelRes = R.string.vexstream_music_remove_download,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.RemoveDownload,
+        intent = localEffect(),
+    )
+
+    val VisitTrackArtist = buttonRef(
+        id = "body.track-actions.visit-artist",
+        labelRes = R.string.vexstream_music_visit_artist,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Person,
         intent = localEffect(),
     )
 
@@ -410,11 +426,13 @@ object VexStreamMusicScreen : AppScreenBlueprint(
             button(CollectionBack)
 
             column("track-actions") {
+                button(TrackMenu)
                 button(PlayTrack)
                 button(PlayTrackNext)
                 button(AddTrackToQueue)
                 button(DownloadTrack)
                 button(RemoveTrackDownload)
+                button(VisitTrackArtist)
             }
 
             row("library-actions") {
