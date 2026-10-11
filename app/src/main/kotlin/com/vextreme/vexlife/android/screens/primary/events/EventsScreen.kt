@@ -370,7 +370,7 @@ private fun EventRow(
                         event.eventRef,
                     ),
                 onDismissRequest = {
-                    if (!blocking) {
+                    if (scenario == null) {
                         onDismiss()
                     }
                 },
