@@ -125,6 +125,7 @@
     <string name="vexstream_music_play_pause">Play / Pause</string>
     <string name="vexstream_music_previous">Previous</string>
     <string name="vexstream_music_next">Next</string>
+    <string name="vexstream_music_seek">Seek playback</string>
     <string name="vexstream_music_shuffle">Shuffle</string>
     <string name="vexstream_music_repeat">Repeat</string>
     <string name="vexstream_music_clear_queue">Clear queue</string>
