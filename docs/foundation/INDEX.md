@@ -62,6 +62,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
+| DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | SOURCE CANDIDATE / PROOF PENDING | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | Sync/compile + unit tests + Room integration + lived persistence/reset proof |
 | F2_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
 | F3_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
 | F4_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
@@ -81,10 +82,23 @@ what screen was actually active when it was used?" from one small blueprint path
 repeating those facts across Compose, navigation, tests, and logs.
 
 The first source candidate grew from reusable cells into one real Home shell and has now been merged.
-Lived-device runs exercised the phone-safe AppFrame, primary pager, shared Gallery/AppGraph path,
+Lived-device runs exercised the phone-safe AppFrame, primary screen pager, shared Gallery/AppGraph path,
 nested directional Back, and native Android Back resolution. That is meaningful lived evidence, but
 the repository still owes the aggregate Gradle proof/clean rerun before this row should become a
 formal `[Foundation: ...]` checkpoint.
+
+## Data / Repository candidate
+
+Canonical detail: [`DATA-REPOSITORY.md`](DATA-REPOSITORY.md)
+
+### Intention
+
+The UI should depend on domain-specific repository contracts, not Room DAOs/entities. The first
+consumer persists readable Log History while keeping database failure non-authoritative. The same
+domain fixture shape should seed previews, unit tests, and in-memory repository tests without
+creating a second mock data model.
+
+No generic `BaseRepository<T>` is admitted by this candidate.
 
 ## F0 — Standalone Build Foundation
 

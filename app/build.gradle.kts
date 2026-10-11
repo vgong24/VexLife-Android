@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -42,5 +43,23 @@ dependencies {
     implementation(libs.composeUiToolingPreview)
     debugImplementation(libs.composeUiTooling)
 
+    implementation(libs.roomRuntime)
+    implementation(libs.roomKtx)
+    implementation(libs.coroutinesAndroid)
+    implementation(libs.coreKtx)
+    implementation(libs.lifecycleViewModelKtx)
+    implementation(libs.lifecycleViewModelCompose)
+    ksp(libs.roomCompiler)
+
     testImplementation(libs.junit)
+    testImplementation(libs.coroutinesTest)
+    testImplementation(libs.roomTesting)
 }
+
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+
+apply(from = rootProject.file("gradle/source-alignment.gradle.kts"))

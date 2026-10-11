@@ -1,11 +1,23 @@
 package com.vextreme.vexlife.android.elements
 
+/**
+ * One element at one declared structural position, plus its placed children/style override.
+ *
+ * UIElement owns semantic identity; ElementPlacement owns where that identity sits in a Screen/shell
+ * tree. Keeping those concerns separate lets one registry answer parent/child/owner questions.
+ */
 data class ElementPlacement(
     val element: UIElement,
     val styleOverride: ElementStyleKey? = null,
     val children: List<ElementPlacement> = emptyList(),
 )
 
+/**
+ * Small shell/legacy placement DSL used when elements already have explicit identities.
+ *
+ * Screen authors normally use ScreenLayoutScope; AppShell uses this scope because its identities are
+ * app-wide rather than generated from one Screen key.
+ */
 class PlacementScope internal constructor() {
     private val placements = mutableListOf<ElementPlacement>()
 
@@ -126,16 +138,33 @@ fun scrollableColumn(
     block: PlacementScope.() -> Unit,
 ): ElementPlacement = rootPlacement(item, style, block)
 
-data class ScreenBlueprint(
+/**
+ * Registry projection of one screen and its root placement.
+ *
+ * Screen authors normally work in ScreenBlueprint; this compact pair is what AppBlueprint indexes.
+ */
+data class ScreenRegistration(
     val screen: ScreenElement,
     val root: ElementPlacement,
 )
 
+/**
+ * Complete static UI registration input: one app-wide shell tree plus all Screen registrations.
+ *
+ * This is construction data for UIBlueprintRegistry, not mutable runtime navigation state.
+ */
 data class AppBlueprint(
     val shell: ElementPlacement,
-    val screens: List<ScreenBlueprint>,
+    val screens: List<ScreenRegistration>,
 )
 
+/**
+ * Indexed read model of the declared shell/Screen element graph.
+ *
+ * It answers stable structural questions (owner Screen, parent, children, style, navigation targets)
+ * without becoming runtime navigation/presentation truth. Build-time validation also fails closed on
+ * duplicate identities and intents that point at unregistered targets.
+ */
 class UIBlueprintRegistry(
     app: AppBlueprint,
 ) {
@@ -182,8 +211,12 @@ class UIBlueprintRegistry(
         }
 
         placementByElementId.values.forEach { placement ->
-            val action = placement.element as? ActionElement ?: return@forEach
-            validateIntent(action.intent)
+            val source = placement.element
+            val action = source as? ActionElement ?: return@forEach
+            validateIntent(
+                source = source,
+                intent = action.intent,
+            )
         }
 
         placementByElementId.values.forEach { placement ->
@@ -219,7 +252,10 @@ class UIBlueprintRegistry(
         }
     }
 
-    private fun validateIntent(intent: ElementIntent) {
+    private fun validateIntent(
+        source: UIElement,
+        intent: ElementIntent,
+    ) {
         intent.referencedScreens().forEach { screen ->
             check(screen.screenId in screenById) {
                 "intent references unregistered screen ${screen.screenId}"
@@ -227,18 +263,63 @@ class UIBlueprintRegistry(
         }
 
         when (intent) {
-            is ElementIntent.Open -> requireRegistered(intent.element)
-            is ElementIntent.Close -> requireRegistered(intent.element)
-            is ElementIntent.Toggle -> requireRegistered(intent.element)
-            is ElementIntent.SwapTo -> {
+            is ElementIntent.Open -> {
                 requireRegistered(intent.element)
-                val parent = parentByElementId[intent.element.elementId]
-                check(parent is SwappableContainerElement) {
-                    "swap target ${intent.element.elementId} must be inside a SwappableContainerElement"
-                }
+                requireSameScope(source, intent.element)
             }
-            is ElementIntent.Sequence -> intent.intents.forEach(::validateIntent)
+
+            is ElementIntent.Close -> {
+                requireRegistered(intent.element)
+                requireSameScope(source, intent.element)
+            }
+
+            is ElementIntent.Toggle -> {
+                requireRegistered(intent.element)
+                requireSameScope(source, intent.element)
+            }
+
+            is ElementIntent.SwapTo -> {
+                requireRegistered(intent.container)
+                requireRegistered(intent.child)
+
+                val parent = parentByElementId[intent.child.elementId]
+                check(parent?.elementId == intent.container.elementId) {
+                    "swap child ${intent.child.elementId} must be a direct child of " +
+                        intent.container.elementId
+                }
+
+                requireSameScope(source, intent.container)
+                requireSameScope(intent.container, intent.child)
+            }
+
+            is ElementIntent.Sequence ->
+                intent.intents.forEach { nested ->
+                    validateIntent(
+                        source = source,
+                        intent = nested,
+                    )
+                }
+
             else -> Unit
+        }
+    }
+
+    /**
+     * Local presentation mutations may not cross Screen/shell ownership boundaries.
+     *
+     * NavigateTo is the explicit cross-Screen operation; Open/Close/Toggle/SwapTo remain local to the
+     * source feature (or local to the app-wide shell when both owners are null).
+     */
+    private fun requireSameScope(
+        source: UIElement,
+        target: UIElement,
+    ) {
+        val sourceOwner = ownerScreenByElementId[source.elementId]
+        val targetOwner = ownerScreenByElementId[target.elementId]
+
+        check(sourceOwner?.screenId == targetOwner?.screenId) {
+            "local intent from ${source.elementId} (${sourceOwner?.screenId ?: "shell"}) " +
+                "cannot mutate ${target.elementId} (${targetOwner?.screenId ?: "shell"})"
         }
     }
 

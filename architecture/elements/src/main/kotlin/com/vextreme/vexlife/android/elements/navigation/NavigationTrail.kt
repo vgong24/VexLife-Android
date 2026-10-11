@@ -13,18 +13,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
 /**
- * A small reusable trail for navigation that happens *inside* one app page.
+ * A small reusable trail for navigation that happens *inside* one app screen.
  *
  * Mental model:
  *
- * App page navigation:
+ * App screen navigation:
  *   Events -> Gallery                     owned by VexRuntime/AppNavigationState
  *
  * Local layered navigation inside Gallery:
  *   HomeScreen node -> Toolbar node
  *                  -> BackButton node     owned by NavigationTrail
  *
- * Those are deliberately different depths. Primary tabs and pushed app pages must NOT be stuffed
+ * Those are deliberately different depths. Primary tabs and pushed app screens must NOT be stuffed
  * into this trail merely because they also have a Back behavior.
  *
  * Why this exists:
@@ -48,7 +48,7 @@ import androidx.compose.ui.Modifier
  * recomposition while the view remains mounted, but leaving/recreating that view may reset the trail.
  * Promote its state to a longer-lived owner only when a real product requirement needs that memory.
  *
- * Example consumer: AppGraph descends Home -> Toolbar -> BackButton without creating three app pages.
+ * Example consumer: AppGraph descends Home -> Toolbar -> BackButton without creating three app screens.
  */
 interface BackLayer {
     val canGoBack: Boolean

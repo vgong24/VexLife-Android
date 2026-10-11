@@ -1,16 +1,26 @@
 package com.vextreme.vexlife.android.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.os.Build
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 
 object VexMotionTokens {
     const val TactileMs = 90
@@ -84,6 +94,13 @@ private val VexTypography = Typography(
     ),
 )
 
+/**
+ * App theme owns both Compose colors and the matching Android system-bar appearance.
+ *
+ * The root Surface deliberately fills the raw window so transparent status/navigation areas show
+ * VexLife background rather than the Activity's default white window. AppFrame then applies
+ * safeDrawing to the actual app shell inside that background.
+ */
 @Composable
 fun VexLifeTheme(
     darkTheme: Boolean,
@@ -92,6 +109,39 @@ fun VexLifeTheme(
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = VexTypography,
-        content = content,
-    )
+    ) {
+        val view = LocalView.current
+
+        if (!view.isInEditMode) {
+            SideEffect {
+                val activity = view.context.findActivity() ?: return@SideEffect
+                val controller = WindowCompat.getInsetsController(
+                    activity.window,
+                    view,
+                )
+
+                // Dark app -> light system icons. Light app -> dark system icons.
+                controller.isAppearanceLightStatusBars = !darkTheme
+                controller.isAppearanceLightNavigationBars = !darkTheme
+
+                // We draw our own themed background behind the navigation area.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    activity.window.isNavigationBarContrastEnforced = false
+                }
+            }
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+            content = content,
+        )
+    }
 }
+
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }

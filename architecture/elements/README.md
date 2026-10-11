@@ -2,15 +2,15 @@
 
 [VXG RealForever]
 
-This module exists so a page can be understood from one source file.
+This module exists so a screen can be understood from one source file.
 
-## Ordinary page
+## Ordinary screen
 
-A normal page owns its identity and layout together:
+A normal screen owns its identity and layout together:
 
 ~~~kotlin
-object HomePage : PageBlueprint(
-    pageId = "home",
+object HomeScreen : ScreenBlueprint(
+    screenKey = "home",
     titleRes = R.string.home_title,
 ) {
     override val content = layout {
@@ -21,6 +21,12 @@ object HomePage : PageBlueprint(
             }
         }
     }
+}
+
+@VexScreenPreviews
+@Composable
+private fun HomeScreenPreview() {
+    VexBlueprintScreenPreview(HomeScreen)
 }
 ~~~
 
@@ -34,11 +40,16 @@ element.home.body.preview.title
 element.home.body.preview.message
 ~~~
 
-Ordinary page rendering consumes this tree directly. Do not rebuild the same layout in a second Compose file.
+Ordinary screen rendering consumes this tree directly. Do not rebuild the same layout in a second
+Compose file.
+
+The Preview entry stays in the SAME *Screen.kt file so a worker can edit structure and inspect the
+visual result without hunting a parallel preview tree.
 
 ## Named elements
 
-Name an element only when another relationship needs to address it. Place that exact object in the layout.
+Name an element only when another relationship needs to address it. Place that exact object in the
+layout.
 
 ~~~kotlin
 val ShowLog = buttonRef(
@@ -52,12 +63,13 @@ row("actions") {
 }
 ~~~
 
-Reusable identity and placed identity are therefore the same object, not two objects reconciled by a matching string.
+Reusable identity and placed identity are therefore the same object, not two objects reconciled by a
+matching string.
 
 ## Repository shape
 
 ~~~text
-pages/
+screens/
   primary/
     home/
     events/
@@ -65,19 +77,22 @@ pages/
   shared/
     debug/
     gallery/
+    profile/
 ~~~
 
-A primary page is a peer destination. A shared page may be reached from more than one primary page and therefore does not belong under whichever caller happened to use it first.
+A primary screen is a peer destination. A shared screen may be reached from more than one primary
+screen and therefore does not belong under whichever caller happened to use it first.
 
 ## Boundaries
 
 ~~~text
-PAGE BLUEPRINT = declared identity + structural placement
-APP FRAME      = usable phone-safe coordinate space
-RUNTIME        = current navigation + transient presentation
-RENDERER       = Android realization of the blueprint
+SCREEN BLUEPRINT = declared identity + structural placement
+SCREEN REGISTRATION = screen + root placement consumed by registry
+APP FRAME        = usable phone-safe coordinate space
+RUNTIME          = current navigation + transient presentation
+RENDERER         = Android realization of the blueprint
 
-DECLARED PAGE != RUNTIME CURRENT PAGE
+DECLARED SCREEN != RUNTIME CURRENT SCREEN
 SYSTEM WINDOW != APP FRAME
 RELATIONSHIP EXISTS != VALID NEXT GRAPH TRAVERSAL
 ~~~

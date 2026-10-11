@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInspectionMode
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
 /**
@@ -18,12 +19,12 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
  *
  * Android owns status bars, cutouts, gesture/navigation areas, and other system insets. AppFrame
  * first reduces the raw window to [WindowInsets.safeDrawing], then gives Scaffold ownership of the
- * app bar, page viewport, bottom navigation, and FAB slot inside that safe rectangle.
+ * app bar, screen viewport, bottom navigation, and FAB slot inside that safe rectangle.
  *
  * Debugging layout:
  * - if the whole app collides with phone/system chrome, start here;
- * - if only one page lays itself out incorrectly, follow [content] into that page's PageBlueprint;
- * - [runtime.currentScreen] tells you which page should currently occupy the viewport.
+ * - if only one screen lays itself out incorrectly, follow [content] into that screen's ScreenBlueprint;
+ * - [runtime.currentScreen] tells you which screen should currently occupy the viewport.
  */
 @Composable
 fun AppFrame(
@@ -34,8 +35,11 @@ fun AppFrame(
     // Do not re-derive "can go back" independently here.
     val nextBack = runtime.nextBack
 
-    BackHandler(enabled = nextBack != null) {
-        nextBack?.let { runtime.goBack(it) }
+    // Android Studio Preview reuses the real frame visuals but has no meaningful native Back host.
+    if (!LocalInspectionMode.current) {
+        BackHandler(enabled = nextBack != null) {
+            nextBack?.let { runtime.goBack(it) }
+        }
     }
 
     Box(
