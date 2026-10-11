@@ -627,13 +627,6 @@ private fun VexStreamSearchSheet(
                             runtime = runtime,
                             state = track,
                             contextTracks = tracks,
-                            selected =
-                                selectedTrackRef ==
-                                    track.track.trackRef.value,
-                            onSelect = {
-                                selectedTrackRef =
-                                    track.track.trackRef.value
-                            },
                             controller = controller,
                             resolver = resolver,
                             onDownload = {
@@ -650,7 +643,8 @@ private fun VexStreamSearchSheet(
                                     )
                                 }
                             },
-                        )
+                        onVisitArtist = onVisitArtist,
+            )
                     }
                 }
             }
@@ -858,13 +852,6 @@ private fun VexStreamSongsPane(
                     runtime = runtime,
                     state = track,
                     contextTracks = sorted,
-                    selected =
-                        selectedTrackRef ==
-                            track.track.trackRef.value,
-                    onSelect = {
-                        selectedTrackRef =
-                            track.track.trackRef.value
-                    },
                     controller = controller,
                     resolver = resolver,
                     onDownload = {
@@ -881,7 +868,8 @@ private fun VexStreamSongsPane(
                             )
                         }
                     },
-                )
+                onVisitArtist = onVisitArtist,
+            )
             }
         }
     }
@@ -955,13 +943,6 @@ private fun VexStreamDownloadsPane(
                     runtime = runtime,
                     state = track,
                     contextTracks = downloaded,
-                    selected =
-                        selectedTrackRef ==
-                            track.track.trackRef.value,
-                    onSelect = {
-                        selectedTrackRef =
-                            track.track.trackRef.value
-                    },
                     controller = controller,
                     resolver = resolver,
                     onDownload = {},
@@ -972,7 +953,8 @@ private fun VexStreamDownloadsPane(
                             )
                         }
                     },
-                )
+                onVisitArtist = onVisitArtist,
+            )
             }
         }
     }
@@ -1377,17 +1359,11 @@ private fun VexStreamCollectionDetail(
                 runtime = runtime,
                 state = track,
                 contextTracks = tracks,
-                selected =
-                    selectedTrackRef ==
-                        track.track.trackRef.value,
-                onSelect = {
-                    selectedTrackRef =
-                        track.track.trackRef.value
-                },
                 controller = controller,
                 resolver = resolver,
                 onDownload = {},
                 onRemoveDownload = {},
+                onVisitArtist = onVisitArtist,
                 showDownloadAction = false,
             )
         }
