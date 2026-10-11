@@ -7,9 +7,8 @@ import com.vextreme.vexlife.android.shell.AppShell
 object UserProfileJourneys : VexJourneyShard {
     override val shardId = "shared.user-profile"
 
-    override val journeys = listOf(
-        vexJourney(
-            id = "form-submit",
+    val formSubmit = vexJourney(
+        id = "form-submit",
             title = "User Profile form submission",
             environments = listOf(
                 VexJourneyEnvironments.Baseline,
@@ -26,6 +25,9 @@ object UserProfileJourneys : VexJourneyShard {
             )
             submit(UserProfileScreen.Save)
             tap(AppShell.Elements.Back)
-        },
+        }
+
+    override val journeys = listOf(
+        formSubmit,
     )
 }
