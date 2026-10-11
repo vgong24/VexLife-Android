@@ -9,6 +9,7 @@ object UserProfileJourneys : VexJourneyShard {
 
     override val journeys = listOf(
         vexJourney(
+            id = "form-submit",
             title = "User Profile form submission",
             environments = listOf(
                 VexJourneyEnvironments.Baseline,
