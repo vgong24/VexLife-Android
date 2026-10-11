@@ -108,8 +108,8 @@ LOCAL_PRESENTATION_MUTATION != CROSS_SCREEN_NAVIGATION
 ~~~
 
 VexRuntime rejects direct activation of an off-screen Screen-owned element, and PresentationState
-rejects direct mutation of inactive Screen-owned presentation state. Preview setup may seed only the
-current Screen's local state.
+rejects direct mutation of inactive Screen-owned presentation state. Preview setup may seed only the current Screen's local state. Use the preview-only
+`VexPreviewSetup` DSL for that seeding; do not grow Preview-specific methods on VexRuntime.
 
 
 

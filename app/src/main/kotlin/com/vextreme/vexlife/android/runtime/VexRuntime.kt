@@ -396,26 +396,6 @@ class VexRuntime(
     }
 
     /**
-     * Preview/test setup seam for one local swappable container on the current Screen.
-     *
-     * This seeds initial visual state directly and intentionally does not log a user interaction.
-     * Production interaction should use an element whose intent is SwapTo.
-     */
-    internal fun prepareSelectedChild(
-        container: SwappableContainerElement,
-        child: UIElement,
-    ) {
-        val owner = registry.ownerScreenOf(container)
-        check(owner?.screenId == currentScreen.screenId) {
-            "cannot prepare ${container.elementId} while current screen is ${currentScreen.screenId}"
-        }
-        presentation.select(
-            container = container,
-            child = child,
-        )
-    }
-
-    /**
      * Executes [nextBack], the single resolved Back plan for the current state.
      *
      * Resolution priority remains:

@@ -95,9 +95,21 @@ Each `*Screen.kt` file also carries its ordinary `@VexScreenPreviews` entry so t
 visible beside the source that owns it.
 
 Feature-specific preview states stay in that same Screen file. `VexPreview.kt` provides only the
-generic host/environment. For example, Gallery's AppGraph preview locally calls
-`runtime.prepareSelectedChild(GalleryScreen.Content, GalleryScreen.AppGraphPanel)`; the shared
-preview layer does not know that Gallery has an AppGraph panel.
+generic host/environment plus the preview-only `VexPreviewSetup` DSL.
+
+For example, Gallery's AppGraph preview locally declares:
+
+~~~kotlin
+previewSetup = {
+    selectChild(
+        container = GalleryScreen.Content,
+        child = GalleryScreen.AppGraphPanel,
+    )
+}
+~~~
+
+The shared preview layer knows how to seed a valid local selection; it does not know that Gallery has
+an AppGraph panel, and VexRuntime does not expose Preview-specific setup methods.
 
 ## Source alignment
 

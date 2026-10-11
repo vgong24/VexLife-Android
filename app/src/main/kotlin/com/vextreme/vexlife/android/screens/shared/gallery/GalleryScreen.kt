@@ -212,13 +212,12 @@ private fun GalleryAppGraphPreview() {
     VexPreviewHost(
         id = "gallery-app-graph",
         startScreen = GalleryScreen,
-        prepareRuntime = {
+        previewSetup = {
             /*
-             * Elements/AppGraph are peer panels INSIDE GalleryScreen. swapTo changes local selection
-             * and intentionally does not add app Back depth; deeper AppGraph traversal uses
-             * NavigationTrail when Back semantics are required.
+             * Elements/AppGraph are peer panels INSIDE GalleryScreen. Production tabs use swapTo;
+             * this preview only seeds which child should be visible initially.
              */
-            runtime.prepareSelectedChild(
+            selectChild(
                 container = GalleryScreen.Content,
                 child = GalleryScreen.AppGraphPanel,
             )

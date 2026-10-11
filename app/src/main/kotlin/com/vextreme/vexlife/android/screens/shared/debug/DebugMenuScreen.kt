@@ -170,8 +170,8 @@ private fun DebugMenuHistoryPreview() {
                 debugHistoryPreviewFixture(),
             )
         },
-        prepareRuntime = {
-            runtime.presentation.open(DebugMenuScreen.LogDialog)
+        previewSetup = {
+            open(DebugMenuScreen.LogDialog)
         },
     ) { context ->
         DebugMenuScreenContent(

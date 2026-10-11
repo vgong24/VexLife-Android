@@ -13,6 +13,8 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.userprofile.UserProfileFixture
 import com.vextreme.vexlife.android.elements.ScreenBlueprint
+import com.vextreme.vexlife.android.elements.SwappableContainerElement
+import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -25,8 +27,8 @@ import com.vextreme.vexlife.android.ui.VexLifeTheme
  * Shared Android Studio preview ENVIRONMENT for Screen work.
  *
  * This file deliberately does not know feature Screens or their interesting states. A Screen's own
- * *Screen.kt file owns its previews and any local prepare step (selected Gallery panel, open Debug
- * dialog, seeded profile, etc.).
+ * *Screen.kt file owns its previews and its local previewSetup block (selected Gallery panel, open
+ * Debug dialog, seeded profile, etc.).
  *
  * Shared responsibilities here are only:
  * - device/theme pressure;
@@ -67,6 +69,34 @@ internal data class VexPreviewContext(
 )
 
 /**
+ * Preview-only initial-state DSL.
+ *
+ * This is intentionally separate from VexRuntime. Production behavior uses normal intents such as
+ * navigateTo/swapTo/open; Preview uses this setup object only to choose the state Android Studio
+ * should render initially without pretending the user performed those interactions.
+ *
+ * Add another method here only when multiple Screen previews need the same kind of initial-state
+ * operation. Keep feature meaning in the owning *Screen.kt file.
+ */
+internal class VexPreviewSetup(
+    private val runtime: VexRuntime,
+) {
+    fun selectChild(
+        container: SwappableContainerElement,
+        child: UIElement,
+    ) {
+        runtime.presentation.select(
+            container = container,
+            child = child,
+        )
+    }
+
+    fun open(element: UIElement) {
+        runtime.presentation.open(element)
+    }
+}
+
+/**
  * Reusable fake DATA configurations. These know repository/domain fixtures, not Screen scenarios.
  */
 internal object VexPreviewRepositories {
@@ -90,9 +120,9 @@ internal object VexPreviewRepositories {
 /**
  * Reusable Screen preview host.
  *
- * [startScreen], [repositoriesFactory], and [prepareRuntime] are supplied by the Screen file using
- * this host. [prepareRuntime] seeds the initial preview state directly; it is not a user interaction
- * and therefore should not be routed through logging/navigation actions merely to construct a preview.
+ * [startScreen], [repositoriesFactory], and [previewSetup] are supplied by the Screen file using
+ * this host. [previewSetup] receives a [VexPreviewSetup] DSL: it seeds initial visual state directly,
+ * but it cannot accidentally become normal runtime/navigation API.
  *
  * That keeps the reusable mechanism here while keeping the meaning of each preview beside the feature
  * it visualizes.
@@ -102,7 +132,7 @@ internal fun VexPreviewHost(
     id: String,
     startScreen: ScreenBlueprint,
     repositoriesFactory: () -> AppRepositories = VexPreviewRepositories::empty,
-    prepareRuntime: VexPreviewContext.() -> Unit = {},
+    previewSetup: VexPreviewSetup.() -> Unit = {},
     content: @Composable (VexPreviewContext) -> Unit,
 ) {
     val darkTheme = isSystemInDarkTheme()
@@ -120,11 +150,14 @@ internal fun VexPreviewHost(
 
         runtime.navigation.push(startScreen)
 
+        VexPreviewSetup(runtime)
+            .apply(previewSetup)
+
         VexPreviewContext(
             runtime = runtime,
             repositories = repositories,
             darkTheme = darkTheme,
-        ).also { prepareRuntime(it) }
+        )
     }
 
     VexLifeTheme(darkTheme = context.darkTheme) {

@@ -192,8 +192,12 @@ preview/VexPreview.kt
   owns HOW to host those states, not WHAT those states mean
 ~~~
 
-A preview's `prepareRuntime` step is therefore a local example of that Screen's initial runtime
+A preview's `previewSetup` block is therefore a local example of that Screen's initial visual
 state, not a hidden central scenario registry or simulated user interaction.
+
+`VexPreviewSetup` owns reusable preview-only state seeding such as `open(...)` and
+`selectChild(container, child)`. Do not add Preview-only methods to VexRuntime merely because
+Android Studio needs a convenient initial state.
 
 ## Local presentation mutations stay local
 

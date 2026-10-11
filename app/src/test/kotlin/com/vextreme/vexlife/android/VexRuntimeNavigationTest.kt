@@ -136,22 +136,6 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
-    fun previewStateSeedingCannotMutateAnotherScreensContainer() {
-        val runtime = runtime()
-
-        try {
-            runtime.prepareSelectedChild(
-                container = GalleryScreen.Content,
-                child = GalleryScreen.AppGraphPanel,
-            )
-            fail("off-screen preview state mutation should fail")
-        } catch (error: IllegalStateException) {
-            assertTrue(error.message.orEmpty().contains(GalleryScreen.Content.elementId))
-            assertTrue(error.message.orEmpty().contains(HomeScreen.screenId))
-        }
-    }
-
-    @Test
     fun formSubmissionLogsOnlyTheSaveBoundaryAndForwardsTheSnapshot() {
         val logger = VexLogger()
         var request: com.vextreme.vexlife.android.runtime.AppActionRequest? = null
