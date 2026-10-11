@@ -22,6 +22,39 @@ value class VexStreamTrackRef(
     override fun toString(): String = value
 }
 
+@JvmInline
+value class VexStreamPlaylistRef(
+    val value: String,
+) {
+    init {
+        require(value.isNotBlank()) {
+            "VexStreamPlaylistRef must be non-blank"
+        }
+    }
+
+    override fun toString(): String = value
+}
+
+/**
+ * Read-only projection of one desktop-owned VexStream playlist.
+ *
+ * Playlist mutation/synchronization is intentionally not implied by this projection.
+ */
+data class VexStreamPlaylist(
+    val playlistRef: VexStreamPlaylistRef,
+    val name: String,
+    val trackRefs: List<VexStreamTrackRef>,
+) {
+    init {
+        require(name.isNotBlank()) {
+            "VexStream playlist name must be non-blank"
+        }
+        require(trackRefs.distinct().size == trackRefs.size) {
+            "VexStream playlist track refs must be unique"
+        }
+    }
+}
+
 /**
  * Portable identity of the exact media bytes admitted for stream/download.
  */
@@ -238,6 +271,7 @@ data class VexStreamMusicState(
     val hubState: VexStreamHubState = VexStreamHubState.NotConfigured,
     val connectionState: VexStreamConnectionState = VexStreamConnectionState.NotPaired,
     val tracks: List<VexStreamTrackState> = emptyList(),
+    val playlists: List<VexStreamPlaylist> = emptyList(),
 ) {
     init {
         val duplicateTrackRefs = tracks
@@ -248,6 +282,16 @@ data class VexStreamMusicState(
         require(duplicateTrackRefs.isEmpty()) {
             "duplicate VexStream track refs: " +
                 duplicateTrackRefs.joinToString { it.value }
+        }
+
+        val duplicatePlaylistRefs = playlists
+            .groupBy { it.playlistRef }
+            .filterValues { it.size > 1 }
+            .keys
+
+        require(duplicatePlaylistRefs.isEmpty()) {
+            "duplicate VexStream playlist refs: " +
+                duplicatePlaylistRefs.joinToString { it.value }
         }
     }
 
