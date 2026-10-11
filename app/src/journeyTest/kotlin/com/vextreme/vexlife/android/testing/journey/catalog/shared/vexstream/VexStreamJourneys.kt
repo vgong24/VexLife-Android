@@ -34,7 +34,9 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.ConfirmPairingCode)
         tap(AppShell.Elements.Back)
         tap(HomeScreen.VexStreamMusic)
+        tap(VexStreamMusicScreen.ManageConnection)
         tap(VexStreamMusicScreen.RefreshCatalog)
+        tap(VexStreamMusicScreen.CloseConnectionMenu)
 
         // Direct song-cell grammar: body is Play; the trailing menu owns secondary actions.
         tap(VexStreamMusicScreen.PlayTrack)
@@ -81,10 +83,6 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.PlaylistsTab)
         tap(VexStreamMusicScreen.DownloadsTab)
         tap(VexStreamMusicScreen.SongsTab)
-
-        tap(VexStreamMusicScreen.ManageConnection)
-        tap(VexStreamMusicScreen.RefreshCatalog)
-        tap(VexStreamMusicScreen.CloseConnectionMenu)
 
         signal(pairedHubUnavailable)
         tap(VexStreamMusicScreen.ManageConnection)
