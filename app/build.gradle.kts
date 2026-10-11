@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
@@ -76,6 +78,25 @@ dependencies {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+tasks.named<Test>("testDebugUnitTest").configure {
+    val journeyCoverageReport =
+        layout.buildDirectory.file("reports/vex/journey-coverage.txt")
+
+    systemProperty(
+        "vex.journey.coverageReport",
+        journeyCoverageReport.get().asFile.absolutePath,
+    )
+    systemProperty(
+        "vex.journey.strictCoverage",
+        providers.gradleProperty("vexStrictJourneyCoverage")
+            .orElse("false")
+            .get(),
+    )
+
+    // Journey debt is intentionally visible during a green ordinary test run.
+    testLogging.showStandardStreams = true
 }
 
 
