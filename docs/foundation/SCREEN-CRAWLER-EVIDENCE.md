@@ -140,8 +140,9 @@ To run:
 3. enable/disable language/font rows;
 4. run `VexScreenCrawlerInstrumentedTest`.
 
-The dedicated crawler test remains skipped while `enabled = false`, so ordinary Android test runs do
-not accidentally expand screenshot batches.
+While `enabled = false`, the dedicated crawler test emits one explicit green no-op status and returns
+without creating crawler cases or screenshot work. Disabled optional evidence therefore cannot make
+ordinary Android test runs red or block development.
 
 ## Kotlin identity / source-of-truth rules
 
