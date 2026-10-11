@@ -142,6 +142,13 @@ internal fun VexStreamLibrarySurface(
                             resolver = resolver,
                         )
 
+                    VexStreamMusicScreen.PlaylistsPanel.elementId ->
+                        VexStreamPlaylistsPane(
+                            state = state,
+                            controller = controller,
+                            resolver = resolver,
+                        )
+
                     VexStreamMusicScreen.DownloadsPanel.elementId ->
                         VexStreamDownloadsPane(
                             tracks = state.playableTracks(),
@@ -185,6 +192,8 @@ private fun VexStreamLibraryTabs(
                 VexStreamMusicScreen.AlbumsPanel.elementId,
             VexStreamMusicScreen.ArtistsTab to
                 VexStreamMusicScreen.ArtistsPanel.elementId,
+            VexStreamMusicScreen.PlaylistsTab to
+                VexStreamMusicScreen.PlaylistsPanel.elementId,
             VexStreamMusicScreen.DownloadsTab to
                 VexStreamMusicScreen.DownloadsPanel.elementId,
         )
@@ -719,6 +728,92 @@ private fun VexStreamArtistsPane(
                     selectedArtist = artist
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun VexStreamPlaylistsPane(
+    state: VexStreamMusicState,
+    controller: androidx.media3.session.MediaController?,
+    resolver: VexStreamPlaybackSourceResolver,
+) {
+    var selectedPlaylistRef by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    val tracksByRef =
+        remember(state.tracks) {
+            state.tracks.associateBy {
+                it.track.trackRef
+            }
+        }
+    val selectedPlaylist =
+        state.playlists.firstOrNull {
+            it.playlistRef.value == selectedPlaylistRef
+        }
+    val selectedTracks =
+        selectedPlaylist
+            ?.trackRefs
+            ?.mapNotNull(tracksByRef::get)
+            .orEmpty()
+
+    if (selectedPlaylist != null) {
+        VexStreamCollectionDetail(
+            title = selectedPlaylist.name,
+            tracks = selectedTracks,
+            controller = controller,
+            resolver = resolver,
+            onBack = {
+                selectedPlaylistRef = null
+            },
+        )
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (state.playlists.isEmpty()) {
+            item(
+                key = "playlists-empty",
+            ) {
+                VexStreamEmptyMessage(
+                    text =
+                        stringResource(
+                            R.string.vexstream_music_no_playlists,
+                        ),
+                )
+            }
+        } else {
+            items(
+                items =
+                    state.playlists.sortedBy {
+                        it.name.lowercase()
+                    },
+                key = {
+                    it.playlistRef.value
+                },
+            ) { playlist ->
+                val tracks =
+                    playlist.trackRefs
+                        .mapNotNull(tracksByRef::get)
+
+                VexStreamCollectionCard(
+                    title = playlist.name,
+                    subtitle =
+                        stringResource(
+                            R.string.vexstream_music_playlist_synced,
+                        ),
+                    tracks = tracks,
+                    controller = controller,
+                    resolver = resolver,
+                    onOpen = {
+                        selectedPlaylistRef =
+                            playlist.playlistRef.value
+                    },
+                )
+            }
         }
     }
 }
