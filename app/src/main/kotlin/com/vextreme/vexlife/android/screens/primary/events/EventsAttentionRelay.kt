@@ -146,12 +146,22 @@ class EventsAttentionRelay :
 
         val candidateEvent =
             if (feed != null && preferences != null) {
-                feed.events
-                    .asReversed()
-                    .firstOrNull { event ->
+                val unhandled =
+                    feed.events.filter { event ->
                         event.eventRef !in
                             preferences.dispositionByEventRef
                     }
+
+                val retainedCandidateRef =
+                    currentState.outputState
+                        .candidate
+                        ?.eventRef
+
+                unhandled.firstOrNull { event ->
+                    event.eventRef == retainedCandidateRef
+                } ?: unhandled
+                    .asReversed()
+                    .firstOrNull()
             } else {
                 null
             }

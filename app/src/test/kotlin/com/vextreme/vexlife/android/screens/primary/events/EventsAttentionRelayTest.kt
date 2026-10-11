@@ -138,6 +138,112 @@ class EventsAttentionRelayTest {
     }
 
     @Test
+    fun candidateIdentitySurvivesProviderInsertReorderAndRemoval() {
+        val source = "source.reorder"
+        val first =
+            VexExternalEvent(
+                "event.first",
+                source,
+                VexExternalEventKind.MESSAGE,
+                "First",
+                "First",
+                10L,
+            )
+        val second =
+            VexExternalEvent(
+                "event.second",
+                source,
+                VexExternalEventKind.CALL,
+                "Second",
+                "Second",
+                20L,
+            )
+        val insertedOlder =
+            VexExternalEvent(
+                "event.inserted-older",
+                source,
+                VexExternalEventKind.MAP,
+                "Inserted older",
+                "Inserted older",
+                5L,
+            )
+
+        fun feed(
+            revision: Long,
+            events: List<VexExternalEvent>,
+        ) =
+            EventsFeedState(
+                sourceSnapshots =
+                    mapOf(
+                        source to
+                            VexExternalEventSourceSnapshot(
+                                source,
+                                revision,
+                                events,
+                            ),
+                    ),
+            )
+
+        val relay = EventsAttentionRelay()
+
+        relay.feedChanged(feed(1L, listOf(first, second)))
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(),
+        )
+        relay.visibleTargetsChanged(
+            setOf(
+                first.eventRef,
+                second.eventRef,
+                insertedOlder.eventRef,
+            ),
+        )
+        relay.transientBlockedChanged(false)
+        relay.screenChanged(EventsScreen.screenId)
+
+        assertEquals(
+            first.eventRef,
+            relay.current.outputState.candidate?.eventRef,
+        )
+
+        // A later provider revision inserts an even older item and reorders the list.
+        // Existing candidate identity must remain stable while it is still present/unhandled.
+        relay.feedChanged(
+            feed(
+                2L,
+                listOf(
+                    second.copy(
+                        occurredAtEpochMillis = 30L,
+                    ),
+                    insertedOlder,
+                    first,
+                ),
+            ),
+        )
+
+        assertEquals(
+            first.eventRef,
+            relay.current.outputState.candidate?.eventRef,
+        )
+
+        // If the provider removes the retained candidate from its current projection,
+        // the Relay may advance to the next unhandled event.
+        relay.feedChanged(
+            feed(
+                3L,
+                listOf(
+                    second,
+                    insertedOlder,
+                ),
+            ),
+        )
+
+        assertEquals(
+            insertedOlder.eventRef,
+            relay.current.outputState.candidate?.eventRef,
+        )
+    }
+
+    @Test
     fun handledFeedExposesNoneInsteadOfUnobserved() {
         val relay = EventsAttentionRelay()
 
