@@ -164,6 +164,8 @@ class PairedVexStreamMusicRepository(
                         remoteHomeRef = approval.remoteHomeRef,
                         remoteGatewayPublicKey =
                             approval.remoteGatewayPublicKey,
+                        remoteDirectBaseUrls =
+                            approval.remoteDirectBaseUrls,
                         remoteRelayBaseUrl =
                             approval.remoteRelayBaseUrl,
                     )
@@ -363,12 +365,8 @@ class PairedVexStreamMusicRepository(
 
     private fun upgradeRemotePairingIfAvailable(
         connection: VexStreamPairedConnection,
-    ): VexStreamPairedConnection {
-        if (connection.remoteReady) {
-            return connection
-        }
-
-        return runCatching {
+    ): VexStreamPairedConnection =
+        runCatching {
             val request =
                 authorizedConnection(
                     connection = connection,
@@ -424,6 +422,8 @@ class PairedVexStreamMusicRepository(
                         ).takeIf {
                             it.isNotBlank()
                         },
+                    remoteDirectBaseUrls =
+                        response.remoteDirectBaseUrls(),
                     remoteRelayBaseUrl =
                         response.optString(
                             "remoteRelayBaseUrl",
@@ -438,11 +438,10 @@ class PairedVexStreamMusicRepository(
             )
             upgraded
         }.getOrElse {
-            // Remote enrollment is opportunistic while the already-paired desktop is directly
+            // Remote route refresh is opportunistic while the already-paired desktop is directly
             // reachable. Failure must not make the proven same-LAN product path unusable.
             connection
         }
-    }
 
     private fun refreshCatalogBlocking(
         connection: VexStreamPairedConnection,
@@ -662,10 +661,41 @@ class PairedVexStreamMusicRepository(
         )
     }
 
+    private fun JSONObject.remoteDirectBaseUrls(): List<String> {
+        val routes =
+            optJSONArray(
+                "remoteDirectBaseUrls",
+            ) ?: return emptyList()
+
+        return buildList {
+            for (
+                index in
+                    0 until
+                        minOf(
+                            routes.length(),
+                            MAX_REMOTE_DIRECT_ROUTES,
+                        )
+            ) {
+                routes.optString(
+                    index,
+                ).takeIf {
+                    it.startsWith(
+                        "https://",
+                    ) &&
+                        it.length <=
+                        MAX_REMOTE_DIRECT_ROUTE_LENGTH
+                }?.let(
+                    ::add,
+                )
+            }
+        }.distinct()
+    }
+
     private data class PairingApproval(
         val token: String,
         val remoteHomeRef: String?,
         val remoteGatewayPublicKey: String?,
+        val remoteDirectBaseUrls: List<String>,
         val remoteRelayBaseUrl: String?,
     )
 
@@ -708,6 +738,8 @@ class PairedVexStreamMusicRepository(
                                 ).takeIf {
                                     it.isNotBlank()
                                 },
+                            remoteDirectBaseUrls =
+                                response.remoteDirectBaseUrls(),
                             remoteRelayBaseUrl =
                                 response.optString(
                                     "remoteRelayBaseUrl",
@@ -1256,6 +1288,8 @@ class PairedVexStreamMusicRepository(
     }
 
     companion object {
+        private const val MAX_REMOTE_DIRECT_ROUTES = 8
+        private const val MAX_REMOTE_DIRECT_ROUTE_LENGTH = 512
         private const val PAIRING_POLL_MS = 750L
         private const val PAIRING_APPROVAL_TIMEOUT_MS = 5 * 60 * 1000L
 
