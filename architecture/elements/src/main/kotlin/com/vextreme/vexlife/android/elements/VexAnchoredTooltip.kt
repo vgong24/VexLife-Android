@@ -204,8 +204,10 @@ fun resolveVexAnchoredTooltip(
 
     val rect =
         IntRect(
-            offset = offset,
-            size = popupSize,
+            left = offset.x,
+            top = offset.y,
+            right = offset.x + popupSize.width,
+            bottom = offset.y + popupSize.height,
         )
 
     val clipped =
