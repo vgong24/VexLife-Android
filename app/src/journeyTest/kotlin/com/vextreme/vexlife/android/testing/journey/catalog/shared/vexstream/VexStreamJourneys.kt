@@ -8,7 +8,10 @@ object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
 
     override val journeys = listOf(
-        vexJourney("VexStream Music placeholder") {
+        vexJourney(
+            id = "placeholder",
+            title = "VexStream Music placeholder",
+        ) {
             start(HomeScreen)
             tap(HomeScreen.VexStreamMusic)
             tap(VexStreamMusicScreen.PlaceholderAction)
