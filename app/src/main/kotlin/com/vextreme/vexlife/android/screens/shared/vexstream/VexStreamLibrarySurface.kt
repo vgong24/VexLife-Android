@@ -1489,14 +1489,19 @@ private fun VexStreamTrackCard(
     runtime: VexRuntime,
     state: VexStreamTrackState,
     contextTracks: List<VexStreamTrackState>,
-    selected: Boolean,
-    onSelect: () -> Unit,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onDownload: () -> Unit,
     onRemoveDownload: () -> Unit,
+    onVisitArtist: (String) -> Unit,
     showDownloadAction: Boolean = true,
 ) {
+    var menuExpanded by remember(
+        state.track.trackRef.value,
+    ) {
+        mutableStateOf(false)
+    }
+
     val handler =
         ElementActionHandler { element ->
             runtime.activate(
@@ -1528,8 +1533,23 @@ private fun VexStreamTrackCard(
                 VexStreamMusicScreen.RemoveTrackDownload ->
                     onRemoveDownload()
 
+                VexStreamMusicScreen.VisitTrackArtist ->
+                    onVisitArtist(
+                        state.track.artist,
+                    )
+
                 else -> Unit
             }
+        }
+    val menuHandler =
+        ElementActionHandler { element ->
+            menuExpanded = false
+            handler.activate(element)
+        }
+    val menuOpenHandler =
+        ElementActionHandler { element ->
+            runtime.activate(element)
+            menuExpanded = true
         }
 
     val durationText =
@@ -1588,123 +1608,120 @@ private fun VexStreamTrackCard(
                 vertical = 2.dp,
             )
             .clickable(
-                onClick = onSelect,
-            ),
-        colors =
-            if (selected) {
-                CardDefaults.cardColors(
-                    containerColor =
-                        MaterialTheme
-                            .colorScheme
-                            .secondaryContainer,
-                )
-            } else {
-                CardDefaults.cardColors(
-                    containerColor =
-                        MaterialTheme
-                            .colorScheme
-                            .surface,
+                enabled = controller != null,
+            ) {
+                handler.activate(
+                    VexStreamMusicScreen.PlayTrack,
                 )
             },
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surface,
+            ),
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(
                 horizontal = 10.dp,
                 vertical = 8.dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            Surface(
+                modifier = Modifier.size(54.dp),
+                shape = MaterialTheme.shapes.medium,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .surfaceContainerHigh,
             ) {
-                Surface(
-                    modifier = Modifier.size(54.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .surfaceContainerHigh,
+                Box(
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        VexIcon(
-                            icon = ElementIcon.Music,
-                            contentDescription = null,
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = state.track.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    VexIcon(
+                        icon = ElementIcon.Music,
+                        contentDescription = null,
                     )
-
-                    if (secondaryText.isNotBlank()) {
-                        Text(
-                            text = secondaryText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-
-                    compactStatus?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
                 }
             }
 
-            if (selected) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = state.track.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                if (secondaryText.isNotBlank()) {
+                    Text(
+                        text = secondaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                compactStatus?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            Box {
+                VexIconButton(
+                    element = VexStreamMusicScreen.TrackMenu,
+                    handler = menuOpenHandler,
+                )
+
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = {
+                        menuExpanded = false
+                    },
                 ) {
-                    VexIconButton(
+                    VexStreamTrackMenuItem(
                         element = VexStreamMusicScreen.PlayTrack,
-                        handler = handler,
+                        handler = menuHandler,
                         enabled = controller != null,
                     )
-                    VexIconButton(
+                    VexStreamTrackMenuItem(
                         element = VexStreamMusicScreen.PlayTrackNext,
-                        handler = handler,
+                        handler = menuHandler,
                         enabled = controller != null,
                     )
-                    VexIconButton(
+                    VexStreamTrackMenuItem(
                         element = VexStreamMusicScreen.AddTrackToQueue,
-                        handler = handler,
+                        handler = menuHandler,
                         enabled = controller != null,
                     )
 
                     if (showDownloadAction) {
                         when (state.localCopy) {
                             is VexStreamLocalCopyState.Downloaded ->
-                                VexIconButton(
+                                VexStreamTrackMenuItem(
                                     element =
                                         VexStreamMusicScreen
                                             .RemoveTrackDownload,
-                                    handler = handler,
+                                    handler = menuHandler,
                                 )
 
                             is VexStreamLocalCopyState.Downloading ->
@@ -1712,20 +1729,58 @@ private fun VexStreamTrackCard(
 
                             else -> {
                                 if (state.hubAvailable) {
-                                    VexIconButton(
+                                    VexStreamTrackMenuItem(
                                         element =
                                             VexStreamMusicScreen
                                                 .DownloadTrack,
-                                        handler = handler,
+                                        handler = menuHandler,
                                     )
                                 }
                             }
                         }
                     }
+
+                    if (state.track.artist.isNotBlank()) {
+                        VexStreamTrackMenuItem(
+                            element =
+                                VexStreamMusicScreen
+                                    .VisitTrackArtist,
+                            handler = menuHandler,
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun VexStreamTrackMenuItem(
+    element: ButtonElement,
+    handler: ElementActionHandler,
+    enabled: Boolean = true,
+) {
+    DropdownMenuItem(
+        text = {
+            Text(
+                stringResource(
+                    requireNotNull(element.labelRes),
+                ),
+            )
+        },
+        onClick = {
+            handler.activate(element)
+        },
+        leadingIcon = {
+            element.icon?.let {
+                VexIcon(
+                    icon = it,
+                    contentDescription = null,
+                )
+            }
+        },
+        enabled = enabled,
+    )
 }
 
 @Composable
