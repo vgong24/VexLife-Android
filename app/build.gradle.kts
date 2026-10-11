@@ -31,9 +31,14 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":architecture:elements"))
+    implementation(project(":architecture:logging"))
+
     implementation(libs.activityCompose)
     implementation(platform(libs.composeBom))
+    implementation(libs.composeFoundation)
     implementation(libs.composeMaterial3)
+    implementation(libs.composeMaterialIconsExtended)
     implementation(libs.composeUiToolingPreview)
     debugImplementation(libs.composeUiTooling)
 

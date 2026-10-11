@@ -61,13 +61,28 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
-| F1_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
-| F2_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
-| F3_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
-| F4_LOCALIZATION_PRESENTATION | localization IDs + native presentation primitives | PORT_CANDIDATE | Keep visible language and component identity source-addressable | resource/localization + Compose tests |
-| F5_DESIGN_LAB | debug/developer component gallery | REFERENCE_PROVEN | Provide a native place to exercise building blocks and inspect bounded local results | port only after F0-F4 provide its dependencies |
+| F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | SOURCE CANDIDATE / PROOF PENDING | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | focused unit tests + app unit tests + assembleDebug + physical-device walk |
+| F2_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
+| F3_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
+| F4_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
+| F5_LOCALIZATION_PRESENTATION | portable localization mapping beyond Android @StringRes + native presentation | PORT_CANDIDATE | Keep visible language and cross-platform string identity source-addressable | resource/localization + Compose tests |
+| F6_DESIGN_LAB | debug/developer component gallery | FIRST PRACTICUM INCLUDED IN F1 | Exercise building blocks and inspect their registered topology without creating another truth map | prove F1 Gallery + AppGraph on device |
 | F6_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F7_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+
+## F1 — UI Blueprint / Home Practicum
+
+Canonical detail: [`F1-UI-BLUEPRINT-HOME.md`](F1-UI-BLUEPRINT-HOME.md)
+
+### Intention
+
+A developer should be able to answer "what is this element, where is it placed, what can it do, and
+what screen was actually active when it was used?" from one small blueprint path instead of
+repeating those facts across Compose, navigation, tests, and logs.
+
+The first source candidate deliberately grows from reusable cells into one real Home shell. Source
+formation is not execution proof; the candidate still owes tests, debug APK assembly, and
+physical-device review.
 
 ## F0 — Standalone Build Foundation
 
