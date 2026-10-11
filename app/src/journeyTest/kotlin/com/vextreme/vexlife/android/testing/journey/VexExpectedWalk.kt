@@ -224,10 +224,10 @@ class VexExpectedWalk : VexJourneyScope {
     private fun applyBack() {
         when {
             openPresentation.isNotEmpty() ->
-                openPresentation.removeLast()
+                openPresentation.removeAt(openPresentation.lastIndex)
 
             screenStack.isNotEmpty() ->
-                screenStack.removeLast()
+                screenStack.removeAt(screenStack.lastIndex)
 
             primarySelection.screenId != HomeScreen.screenId -> {
                 primarySelection = HomeScreen

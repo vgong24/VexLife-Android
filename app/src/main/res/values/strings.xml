@@ -39,9 +39,29 @@
     <string name="user_profile_name_label">Edit display name</string>
     <string name="user_profile_save">Save name</string>
 
-    <string name="vexstream_music_placeholder_title">VexStream Music placeholder</string>
-    <string name="vexstream_music_placeholder_body">A future VexStream Music connection can live behind this screen without changing Home navigation. For now this screen proves scoped feature actions and a stable destination.</string>
-    <string name="vexstream_music_placeholder_action">Run VexStream placeholder action</string>
+    <string name="vexstream_music_intro">Your music from VexStream, on this phone. Stream while your computer is nearby or keep songs downloaded for offline playback.</string>
+    <string name="vexstream_music_find">Find VexStream</string>
+    <string name="vexstream_music_confirm_code">Codes match · Request access</string>
+    <string name="vexstream_music_forget">Forget this VexStream</string>
+    <string name="vexstream_music_refresh">Refresh library</string>
+    <string name="vexstream_music_status_not_configured">Connect to your VexStream computer</string>
+    <string name="vexstream_music_status_searching">Choose your VexStream computer</string>
+    <string name="vexstream_music_status_unreachable">Your VexStream computer is offline</string>
+    <string name="vexstream_music_status_ready">Connected</string>
+    <string name="vexstream_music_status_permission">Connection needs attention</string>
+    <string name="vexstream_music_pairing_code_title">Confirm this code</string>
+    <string name="vexstream_music_pairing_code_help">Make sure the same code appears in VexStream on your computer.</string>
+    <string name="vexstream_music_waiting_approval">Waiting for approval on your computer…</string>
+    <string name="vexstream_music_pairing_failed">Couldn’t connect. Make VexStream discoverable on your computer and try again.</string>
+    <string name="vexstream_music_empty">No songs are available yet.</string>
+    <string name="vexstream_music_play">Play</string>
+    <string name="vexstream_music_download">Download</string>
+    <string name="vexstream_music_remove_download">Remove download</string>
+    <string name="vexstream_music_downloaded">Downloaded · available offline</string>
+    <string name="vexstream_music_downloading">Downloading…</string>
+    <string name="vexstream_music_hub_only">Available from desktop</string>
+    <string name="vexstream_music_local_only">Offline copy · desktop unavailable</string>
+    <string name="vexstream_music_unavailable">Unavailable</string>
 
     <string name="talk_to_vex_placeholder_title">Talk to Vex placeholder</string>
     <string name="talk_to_vex_placeholder_body">A future conversational Vex runtime can attach here. For now this screen proves that its semantic action stays owned beside the feature instead of moving into the app root.</string>

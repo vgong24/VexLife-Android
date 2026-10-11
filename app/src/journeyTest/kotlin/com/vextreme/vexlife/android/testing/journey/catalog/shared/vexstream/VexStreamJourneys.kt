@@ -7,17 +7,20 @@ import com.vextreme.vexlife.android.shell.AppShell
 object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
 
-    val placeholder = vexJourney(
-        id = "placeholder",
-        title = "VexStream Music placeholder",
+    val connectRefreshForget = vexJourney(
+        id = "connect-refresh-forget",
+        title = "VexStream connect, refresh, and forget",
     ) {
         start(HomeScreen)
         tap(HomeScreen.VexStreamMusic)
-        tap(VexStreamMusicScreen.PlaceholderAction)
+        tap(VexStreamMusicScreen.FindNearby)
+        tap(VexStreamMusicScreen.ConfirmPairingCode)
+        tap(VexStreamMusicScreen.RefreshCatalog)
+        tap(VexStreamMusicScreen.ForgetPaired)
         tap(AppShell.Elements.Back)
     }
 
     override val journeys = listOf(
-        placeholder,
+        connectRefreshForget,
     )
 }

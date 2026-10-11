@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.ui
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
+import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.logging.VexLogKind
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.shell.AppShell
@@ -21,6 +22,7 @@ class VexLifeSessionTest {
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
                 userProfile = InMemoryUserProfileRepository(),
+                vexStream = InMemoryVexStreamMusicRepository(),
             ),
             scope = backgroundScope,
         )
@@ -44,6 +46,7 @@ class VexLifeSessionTest {
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
                 userProfile = InMemoryUserProfileRepository(),
+                vexStream = InMemoryVexStreamMusicRepository(),
             ),
             scope = backgroundScope,
         )

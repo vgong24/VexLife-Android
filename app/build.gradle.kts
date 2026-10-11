@@ -63,6 +63,10 @@ dependencies {
     implementation(libs.coreKtx)
     implementation(libs.lifecycleViewModelKtx)
     implementation(libs.lifecycleViewModelCompose)
+
+    implementation(libs.media3Common)
+    implementation(libs.media3Exoplayer)
+    implementation(libs.media3Session)
     ksp(libs.roomCompiler)
 
     testImplementation(libs.junit)

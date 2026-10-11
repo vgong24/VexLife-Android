@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
+import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -21,6 +22,7 @@ class FeatureActionRegistrationsTest {
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
                 userProfile = InMemoryUserProfileRepository(),
+                vexStream = InMemoryVexStreamMusicRepository(),
             ),
             scope = backgroundScope,
         ).appActions
@@ -30,7 +32,7 @@ class FeatureActionRegistrationsTest {
 
         assertEquals(
             VexStreamMusicScreen.screenId,
-            registrations[VexStreamMusicScreen.PlaceholderAction]
+            registrations[VexStreamMusicScreen.RefreshCatalog]
                 .single()
                 .ownerRef,
         )

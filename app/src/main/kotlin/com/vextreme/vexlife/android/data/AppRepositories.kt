@@ -5,6 +5,8 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.data.loghistory.RoomLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.RoomUserProfileRepository
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
+import com.vextreme.vexlife.android.data.vexstream.PairedVexStreamMusicRepository
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 
 /**
  * Small composition surface for data repositories used by the app.
@@ -15,6 +17,7 @@ import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 data class AppRepositories(
     val logHistory: LogHistoryRepository,
     val userProfile: UserProfileRepository,
+    val vexStream: VexStreamMusicRepository,
 )
 
 /**
@@ -33,6 +36,9 @@ object AppRepositoryFactory {
             ),
             userProfile = RoomUserProfileRepository(
                 dao = database.userProfileDao(),
+            ),
+            vexStream = PairedVexStreamMusicRepository.production(
+                context = context,
             ),
         )
     }
