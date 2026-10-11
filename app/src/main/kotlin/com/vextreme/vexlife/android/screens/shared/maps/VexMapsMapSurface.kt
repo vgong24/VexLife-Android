@@ -315,15 +315,6 @@ internal fun VexMapsMapSurface(
 
             currentLocation =
                 projectedLocation
-            if (projectedLocation == null) {
-                mapController
-                    .clearDeviceLocation()
-            } else {
-                mapController
-                    .showDeviceLocation(
-                        projectedLocation,
-                    )
-            }
 
             locationState =
                 when (result) {
@@ -376,8 +367,6 @@ internal fun VexMapsMapSurface(
                 readCurrentPreciseLocation()
             } else {
                 currentLocation = null
-                mapController
-                    .clearDeviceLocation()
                 val coarseGranted =
                     grants[
                         Manifest.permission
@@ -669,24 +658,24 @@ internal fun VexMapsMapSurface(
         }
     }
 
+    val mapDeviceLocation =
+        projectVexMapsMapDeviceLocation(
+            plannerLocation = currentLocation,
+            navigationVisualLocation =
+                navigationVisualLocation,
+        )
+
     LaunchedEffect(
-        navigationVisualLocation
-            ?.sampleRef,
+        mapDeviceLocation,
         mapController,
     ) {
-        navigationVisualLocation
-            ?.let { visual ->
-                mapController.showDeviceLocation(
-                    VexDeviceLocationResult.Located(
-                        latitude =
-                            visual.coordinate.latitude,
-                        longitude =
-                            visual.coordinate.longitude,
-                        accuracyMeters =
-                            visual.accuracyMeters,
-                    ),
-                )
-            }
+        if (mapDeviceLocation == null) {
+            mapController.clearDeviceLocation()
+        } else {
+            mapController.showDeviceLocation(
+                mapDeviceLocation,
+            )
+        }
     }
 
     LaunchedEffect(
@@ -1088,6 +1077,9 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.StopNavigation,
                     )
+                    currentLocation = null
+                    locationState =
+                        VexMapsLocationState.Idle
                     VexMapsNavigationService
                         .stop(context)
                 },
@@ -1095,6 +1087,9 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.DoneNavigation,
                     )
+                    currentLocation = null
+                    locationState =
+                        VexMapsLocationState.Idle
                     VexMapsNavigationProcess
                         .stop()
                 },
@@ -2260,6 +2255,25 @@ internal fun projectVexMapsDeviceLocation(
     result: VexDeviceLocationResult,
 ): VexDeviceLocationResult.Located? =
     result as? VexDeviceLocationResult.Located
+
+internal fun projectVexMapsMapDeviceLocation(
+    plannerLocation:
+        VexDeviceLocationResult.Located?,
+    navigationVisualLocation:
+        VexMapsNavigationVisualLocation?,
+): VexDeviceLocationResult.Located? =
+    navigationVisualLocation
+        ?.let { visual ->
+            VexDeviceLocationResult.Located(
+                latitude =
+                    visual.coordinate.latitude,
+                longitude =
+                    visual.coordinate.longitude,
+                accuracyMeters =
+                    visual.accuracyMeters,
+            )
+        }
+        ?: plannerLocation
 
 internal fun isVexMapsNavigationStartPreflightSatisfied(
     result: VexDeviceLocationResult,
