@@ -87,6 +87,18 @@ object UserProfileScreen : AppScreenBlueprint(
             repository = context.repositories.userProfile,
             scope = context.scope,
         )
+
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: com.vextreme.vexlife.android.data.AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        UserProfileScreenContent(
+            runtime = runtime,
+            repository = repositories.userProfile,
+        )
+    }
 }
 
 /**
