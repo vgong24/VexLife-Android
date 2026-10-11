@@ -108,6 +108,19 @@ internal fun VexStreamLibrarySurface(
             )
         }
 
+    var queueShuffleSelected by rememberSaveable {
+        mutableStateOf(false)
+    }
+    fun toggleQueueShuffleSelection() {
+        if (queueShuffleSelected) {
+            queueShuffleSelected = false
+        } else if (
+            controller?.shuffleVexStreamQueue() == true
+        ) {
+            queueShuffleSelected = true
+        }
+    }
+
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
@@ -145,6 +158,10 @@ internal fun VexStreamLibrarySurface(
                     playback = playback,
                     controller = controller,
                     runtime = runtime,
+                    shuffleSelected = queueShuffleSelected,
+                    onShuffle = {
+                        toggleQueueShuffleSelection()
+                    },
                 )
             }
         },
@@ -232,6 +249,10 @@ internal fun VexStreamLibrarySurface(
             playback = playback,
             controller = controller,
             runtime = runtime,
+            shuffleSelected = queueShuffleSelected,
+            onShuffle = {
+                toggleQueueShuffleSelection()
+            },
         )
     }
 
@@ -1632,6 +1653,8 @@ private fun VexStreamMiniPlayer(
     playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
     runtime: VexRuntime,
+    shuffleSelected: Boolean,
+    onShuffle: () -> Unit,
 ) {
     val handler =
         ElementActionHandler { element ->
@@ -1648,8 +1671,8 @@ private fun VexStreamMiniPlayer(
                 VexStreamMusicScreen.NextTrack ->
                     controller?.seekToNextMediaItem()
 
-                VexStreamMusicScreen.ToggleShuffle ->
-                    controller?.toggleVexStreamShuffle()
+                VexStreamMusicScreen.ShuffleQueue ->
+                    onShuffle()
 
                 else -> Unit
             }
@@ -1769,10 +1792,10 @@ private fun VexStreamMiniPlayer(
                     controller?.hasNextMediaItem() == true,
             )
             VexIconButton(
-                element = VexStreamMusicScreen.ToggleShuffle,
+                element = VexStreamMusicScreen.ShuffleQueue,
                 handler = handler,
                 enabled = controller != null,
-                selected = playback.shuffleEnabled,
+                selected = shuffleSelected,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
@@ -1811,6 +1834,8 @@ private fun VexStreamQueueSheet(
     playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
     runtime: VexRuntime,
+    shuffleSelected: Boolean,
+    onShuffle: () -> Unit,
 ) {
     val tracksByRef =
         remember(state.tracks) {
@@ -1860,11 +1885,11 @@ private fun VexStreamQueueSheet(
     val handler =
         ElementActionHandler { element ->
             when (element) {
-                VexStreamMusicScreen.QueueToggleShuffle -> {
+                VexStreamMusicScreen.QueueShuffle -> {
                     runtime.activate(
                         element,
                     )
-                    controller?.toggleVexStreamShuffle()
+                    onShuffle()
                 }
 
                 VexStreamMusicScreen.ToggleRepeat -> {
@@ -1924,10 +1949,10 @@ private fun VexStreamQueueSheet(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 VexIconButton(
-                    element = VexStreamMusicScreen.QueueToggleShuffle,
+                    element = VexStreamMusicScreen.QueueShuffle,
                     handler = handler,
                     enabled = controller != null,
-                    selected = playback.shuffleEnabled,
+                    selected = shuffleSelected,
                 )
                 VexIconButton(
                     element = VexStreamMusicScreen.ToggleRepeat,
@@ -1949,11 +1974,7 @@ private fun VexStreamQueueSheet(
             Text(
                 text =
                     stringResource(
-                        if (playback.shuffleEnabled) {
-                            R.string.vexstream_music_queue_reorder_shuffle_hint
-                        } else {
-                            R.string.vexstream_music_queue_reorder_hint
-                        },
+                        R.string.vexstream_music_queue_reorder_hint,
                     ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1984,9 +2005,21 @@ private fun VexStreamQueueSheet(
                         val latestIndex by rememberUpdatedState(index)
                         val track =
                             tracksByRef[entry.mediaId]
+                        val isCurrent =
+                            index == playback.currentIndex
                         val isDragging =
                             draggedKey ==
                                 entry.stableKey
+                        val queuePlayEnabled =
+                            controller != null &&
+                                controller.isCommandAvailable(
+                                    androidx.media3.common.Player
+                                        .COMMAND_SEEK_TO_MEDIA_ITEM,
+                                ) &&
+                                controller.isCommandAvailable(
+                                    androidx.media3.common.Player
+                                        .COMMAND_PLAY_PAUSE,
+                                )
                         val reorderEnabled =
                             controller != null &&
                                 controller.isCommandAvailable(
@@ -1997,6 +2030,26 @@ private fun VexStreamQueueSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .vexElement(
+                                    VexStreamMusicScreen.QueuePlay,
+                                )
+                                .clickable(
+                                    enabled = queuePlayEnabled,
+                                ) {
+                                    runtime.activate(
+                                        VexStreamMusicScreen.QueuePlay,
+                                    )
+                                    if (
+                                        latestIndex !=
+                                        playback.currentIndex
+                                    ) {
+                                        controller
+                                            ?.seekToDefaultPosition(
+                                                latestIndex,
+                                            )
+                                    }
+                                    controller?.play()
+                                }
                                 .graphicsLayer {
                                     translationY =
                                         if (isDragging) {
@@ -2042,6 +2095,23 @@ private fun VexStreamQueueSheet(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
+                                if (isCurrent) {
+                                    Text(
+                                        text =
+                                            stringResource(
+                                                R.string
+                                                    .vexstream_music_queue_current,
+                                            ),
+                                        style =
+                                            MaterialTheme
+                                                .typography
+                                                .labelSmall,
+                                        color =
+                                            MaterialTheme
+                                                .colorScheme
+                                                .primary,
+                                    )
+                                }
                                 track
                                     ?.track
                                     ?.artist
@@ -2129,14 +2199,6 @@ private fun VexStreamQueueSheet(
                                                 )
                                                     ?: return@detectVerticalDragGestures
 
-                                            if (
-                                                controller
-                                                    ?.shuffleModeEnabled ==
-                                                true
-                                            ) {
-                                                controller.shuffleModeEnabled =
-                                                    false
-                                            }
                                             controller?.moveMediaItem(
                                                 draggedIndex,
                                                 target,
