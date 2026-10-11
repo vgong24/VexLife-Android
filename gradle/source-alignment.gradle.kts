@@ -83,6 +83,21 @@ val collectSourceAlignmentViolations: () -> List<String> = {
         }
     }
 
+    val appComposition = project.file(
+        "src/main/kotlin/com/vextreme/vexlife/android/ui/VexLifeApp.kt",
+    )
+    if (appComposition.isFile) {
+        val source = appComposition.readText()
+        if (
+            source.contains("com.vextreme.vexlife.android.screens.primary.") ||
+            source.contains("com.vextreme.vexlife.android.screens.shared.")
+        ) {
+            violations +=
+                "ui/VexLifeApp.kt should render registered Screens through AppScreenBlueprint; " +
+                    "feature Screen imports belong in AppScreens/owning Screen files"
+        }
+    }
+
     val previewSupport = project.file(
         "src/main/kotlin/com/vextreme/vexlife/android/preview/VexPreview.kt",
     )
