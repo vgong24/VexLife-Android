@@ -18,6 +18,40 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
         tap(HomeScreen.VexStreamMusic)
         tap(VexStreamMusicScreen.RefreshCatalog)
+
+        // Direct song-cell grammar: body is Play; the trailing menu owns secondary actions.
+        tap(VexStreamMusicScreen.PlayTrack)
+        tap(VexStreamMusicScreen.ShowQueue)
+        tap(VexStreamMusicScreen.QueuePlay)
+        tap(VexStreamMusicScreen.CloseQueue)
+
+        tap(VexStreamMusicScreen.TrackMenu)
+        tap(VexStreamMusicScreen.PlayTrackNext)
+        tap(VexStreamMusicScreen.TrackMenu)
+        tap(VexStreamMusicScreen.AddTrackToQueue)
+
+        // The one-song fixture now has multiple queue entries, so transport controls are meaningful.
+        tap(VexStreamMusicScreen.NextTrack)
+        tap(VexStreamMusicScreen.PreviousTrack)
+        tap(VexStreamMusicScreen.TogglePlayback)
+
+        tap(VexStreamMusicScreen.TrackMenu)
+        tap(VexStreamMusicScreen.DownloadTrack)
+        tap(VexStreamMusicScreen.TrackMenu)
+        tap(VexStreamMusicScreen.RemoveTrackDownload)
+        tap(VexStreamMusicScreen.TrackMenu)
+        tap(VexStreamMusicScreen.VisitTrackArtist)
+        tap(VexStreamMusicScreen.CollectionBack)
+        tap(VexStreamMusicScreen.SongsTab)
+
+        tap(VexStreamMusicScreen.PlayAll)
+        tap(VexStreamMusicScreen.ShuffleAll)
+        tap(VexStreamMusicScreen.ShowQueue)
+        tap(VexStreamMusicScreen.QueueShuffle)
+        tap(VexStreamMusicScreen.ToggleRepeat)
+        tap(VexStreamMusicScreen.ClearQueue)
+        tap(VexStreamMusicScreen.CloseQueue)
+
         tap(VexStreamMusicScreen.SearchLibrary)
         type(
             VexStreamMusicScreen.SearchQuery,
@@ -33,6 +67,7 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.CloseQueue)
         tap(VexStreamMusicScreen.ManageConnection)
         tap(VexStreamMusicScreen.RefreshCatalog)
+        tap(VexStreamMusicScreen.Reconnect)
         tap(VexStreamMusicScreen.CloseConnectionMenu)
         tap(VexStreamMusicScreen.ManageConnection)
         tap(VexStreamMusicScreen.RequestForgetPaired)
