@@ -1,4 +1,4 @@
-# Vex Relay — EAP-00 processing kernel
+# Vex Relay — processing kernel
 
 [VXG RealForever]
 
@@ -11,8 +11,14 @@
 This module is the **current-main extraction** of the smallest Relay processing contracts earned by
 the Events Attention Practicum.
 
-Historical draft PR #3 remains architecture quarry. EAP-00 does not merge/cherry-pick that branch
-wholesale and does not import its experimental AppScope/observability stack.
+Historical draft PR #3 remains architecture quarry. EAP-00 did not merge/cherry-pick that branch
+wholesale and did not import its experimental AppScope/observability stack.
+
+The current concrete consumer is the Events Attention Practicum under
+`docs/foundation/EVENTS-ATTENTION-PRACTICUM.md`. That feature now exercises this kernel with a
+normalized external feed, stable dynamic list identity, acknowledgement/defer/suppress state,
+attention availability, anchored tooltip rendering, deterministic Journey signals, and ScreenCrawler
+selection. Those feature concerns remain outside this module rather than accreting into Relay itself.
 
 ## Developer shape
 
@@ -61,7 +67,8 @@ The concrete Relay should be boring to inspect:
 - Journey/ScreenCrawler integration;
 - VexLogger/BulkDataLogging.
 
-Those are not omissions to paper over. They are the next consumers that must earn deeper machinery.
+Those are not omissions to paper over. They belong to narrower app/presentation/proof owners. The
+Events practicum has now earned several of them without moving their behavior into this module.
 
 ## Events practicum proof
 
@@ -95,18 +102,23 @@ STATEFLOW_CURRENT_PROJECTION != EVENT_LEDGER
 ARRIVAL_ORDER != SEMANTIC_SOURCE_ORDER
 ~~~
 
-## Next edge — EAP-01
+## Current consumer boundary
 
-Use this kernel from the actual Events feature:
+The current Events consumer composes the kernel like this:
 
 ~~~text
-deterministic scheduled synthetic provider
--> feature-owned external feed Relay
--> stable dynamic Events list
--> information continues arriving while another Screen is current
+provider-specific source truth
+-> normalized EventsRepository feed
+-> EventsAttentionRelay.processStates(...)
+-> candidate identity + availability
+-> anchored presentation
 ~~~
 
-Only that real producer lifetime should decide whether a reusable async dependency-binding /
-activation owner is needed.
+The module still does **not** own provider lifecycle, repository history, Compose, tooltip geometry,
+or Journey execution.
+
+A reusable async dependency-binding/activation layer remains unearned. The current Events feature
+binds its concrete dependencies explicitly. Add a generic activation abstraction only after another
+real consumer demonstrates recurring duplicated lifecycle mechanics that cannot be kept local.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][EVENTS-ATTENTION-PRACTICUM][EAP-00][RELAY] -->
