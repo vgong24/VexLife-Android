@@ -16,7 +16,7 @@ androidxTestServices = "1.6.0"
 media3 = "1.11.1"
 maplibre = "13.5.3"
 locationButton = "1.0.0-alpha01"
-valhallaMobile = "0.6.1"
+valhallaMobile = "0.6.4"
 valhallaModels = "0.5.2"
 
 [libraries]
