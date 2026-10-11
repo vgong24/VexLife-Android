@@ -8,37 +8,41 @@ import com.vextreme.vexlife.android.testing.journey.VexJourneyEnvironment
 import com.vextreme.vexlife.android.testing.journey.VexJourneyShard
 
 /**
- * Test/evidence locale profile. This is NOT the product's supported-language authority.
+ * Test/evidence locale condition addressed directly by a BCP-47 language/locale code.
  *
- * A future localization foundation may supply the real supported language registry; the crawler
- * consumes locale profiles rather than owning product language support.
+ * Examples:
+ *   en
+ *   zh
+ *   bg
+ *   lt
+ *   zh-Hans
+ *   pt-BR
+ *
+ * This is NOT the product's supported-language authority. A future localization foundation may own
+ * that registry; ScreenCrawler should consume its codes rather than invent another enum/constant per
+ * language.
  */
 data class VexCrawlerLocale(
-    val id: String,
-    val localeTag: String,
+    val code: String,
 ) {
+    val localeTag: String =
+        code.trim().replace('_', '-')
+
+    val id: String =
+        localeTag.lowercase()
+
     init {
-        require(id.matches(Regex("[a-z0-9][a-z0-9-]*"))) {
-            "crawler locale id must be lowercase kebab-case: $id"
+        require(localeTag.isNotBlank()) {
+            "crawler locale code must not be blank"
         }
-        require(localeTag.isNotBlank()) { "crawler localeTag must not be blank" }
+        require(
+            localeTag.matches(
+                Regex("[A-Za-z0-9]{1,8}(?:-[A-Za-z0-9]{1,8})*"),
+            ),
+        ) {
+            "crawler locale must be a BCP-47-style code: $code"
+        }
     }
-}
-
-object VexCrawlerLocales {
-    val EnglishUs = VexCrawlerLocale(
-        id = "en-us",
-        localeTag = "en-US",
-    )
-
-    /**
-     * Preparation/evidence profile only until Simplified Chinese resources are admitted.
-     * Android resource fallback is expected when no zh resources exist.
-     */
-    val ChineseSimplified = VexCrawlerLocale(
-        id = "zh-cn",
-        localeTag = "zh-CN",
-    )
 }
 
 /**
@@ -77,6 +81,16 @@ enum class VexCrawlerCapturePolicy {
 sealed interface VexCrawlerSelection {
     data object AllShards : VexCrawlerSelection
 
+    /**
+     * Canonical all-shards selection with optional exclusions.
+     *
+     * New shards are automatically included because the planner reads VexJourneyCatalog.shards.
+     */
+    data class AllShardsExcept(
+        val excludedShardIds: Set<String> = emptySet(),
+    ) : VexCrawlerSelection
+
+    /** Explicit "only these shards" partition. */
     data class Shards(
         val shardIds: Set<String>,
     ) : VexCrawlerSelection
@@ -94,7 +108,7 @@ sealed interface VexCrawlerSelection {
 
 data class VexScreenCrawlerConfig(
     val selection: VexCrawlerSelection = VexCrawlerSelection.AllShards,
-    val locales: List<VexCrawlerLocale> = listOf(VexCrawlerLocales.EnglishUs),
+    val locales: List<VexCrawlerLocale> = listOf(VexCrawlerLocale("en")),
     val fonts: List<VexCrawlerFontProfile> = listOf(VexCrawlerFonts.Normal),
     val capturePolicy: VexCrawlerCapturePolicy = VexCrawlerCapturePolicy.SCREEN_ONCE,
     val sourceRef: String = "unknown",
@@ -122,6 +136,12 @@ class VexScreenCrawlerConfigBuilder {
         selection = VexCrawlerSelection.AllShards
     }
 
+    fun allShardsExcept(vararg shards: VexJourneyShard) {
+        selection = VexCrawlerSelection.AllShardsExcept(
+            excludedShardIds = shards.map { it.shardId }.toSet(),
+        )
+    }
+
     fun shards(vararg shards: VexJourneyShard) {
         selection = VexCrawlerSelection.Shards(
             shards.map { it.shardId }.toSet(),
@@ -140,8 +160,8 @@ class VexScreenCrawlerConfigBuilder {
         )
     }
 
-    fun languages(vararg values: VexCrawlerLocale) {
-        locales += values
+    fun languages(vararg codes: String) {
+        locales += codes.map(::VexCrawlerLocale)
     }
 
     fun fontProfiles(vararg values: VexCrawlerFontProfile) {
@@ -160,7 +180,7 @@ class VexScreenCrawlerConfigBuilder {
         VexScreenCrawlerConfig(
             selection = selection,
             locales = locales.ifEmpty {
-                listOf(VexCrawlerLocales.EnglishUs)
+                listOf(VexCrawlerLocale("en"))
             },
             fonts = fonts.ifEmpty {
                 listOf(VexCrawlerFonts.Normal)
@@ -237,10 +257,20 @@ object VexScreenCrawlerPlanner {
             VexCrawlerSelection.AllShards ->
                 all
 
+            is VexCrawlerSelection.AllShardsExcept -> {
+                val known = VexJourneyCatalog.shardsById.keys
+                val unknown = selection.excludedShardIds - known
+                require(unknown.isEmpty()) {
+                    "unknown crawler shard IDs: ${unknown.sorted()}"
+                }
+
+                all.filterNot { (shard, _) ->
+                    shard.shardId in selection.excludedShardIds
+                }
+            }
+
             is VexCrawlerSelection.Shards -> {
-                val known = VexJourneyCatalog.shards
-                    .map { it.shardId }
-                    .toSet()
+                val known = VexJourneyCatalog.shardsById.keys
                 val unknown = selection.shardIds - known
                 require(unknown.isEmpty()) {
                     "unknown crawler shard IDs: ${unknown.sorted()}"
