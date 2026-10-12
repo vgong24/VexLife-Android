@@ -182,6 +182,50 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
+    fun externalScreenEntryClearsOutgoingTransientBackLayers() {
+        val runtime =
+            runtime()
+        val trail =
+            NavigationTrail("root")
+
+        runtime.activate(
+            AppShell.Elements.DebugMenu,
+        )
+        runtime.activate(
+            DebugMenuScreen.ShowLog,
+        )
+        trail.push("child")
+        runtime.attachBackLayer(trail)
+
+        runtime.openExternalScreen(
+            subjectRef =
+                MainActivity
+                    .VEXMAPS_NAVIGATION_NOTIFICATION_REF,
+            screen = VexMapsScreen,
+        )
+
+        assertFalse(
+            runtime.presentation.isOpen(
+                DebugMenuScreen.LogSheet,
+            ),
+        )
+        assertSame(
+            VexMapsScreen,
+            runtime.currentScreen,
+        )
+        val back =
+            runtime.nextBack as
+                BackResolution.AppNavigation
+        val pop =
+            back.step as
+                AppNavigationBack.PopScreen
+        assertSame(
+            DebugMenuScreen,
+            pop.target,
+        )
+    }
+
+    @Test
     fun notificationActionResolvesOnlyToVexMaps() {
         assertSame(
             VexMapsScreen,
