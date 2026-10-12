@@ -14,8 +14,10 @@ import org.maplibre.android.offline.OfflineRegion
 import org.maplibre.android.offline.OfflineRegionStatus
 
 internal sealed interface VexMapsOfflineMapState {
-    data object Loading :
-        VexMapsOfflineMapState
+    data class Loading(
+        val retainedReady:
+            Ready? = null,
+    ) : VexMapsOfflineMapState
 
     data object None :
         VexMapsOfflineMapState
@@ -26,9 +28,27 @@ internal sealed interface VexMapsOfflineMapState {
         val completeRegionCount: Int,
     ) : VexMapsOfflineMapState
 
-    data object Error :
-        VexMapsOfflineMapState
+    data class Error(
+        val retainedReady:
+            Ready? = null,
+    ) : VexMapsOfflineMapState
 }
+
+internal fun VexMapsOfflineMapState.effectiveReady():
+    VexMapsOfflineMapState.Ready? =
+    when (this) {
+        is VexMapsOfflineMapState.Ready ->
+            this
+
+        is VexMapsOfflineMapState.Loading ->
+            retainedReady
+
+        is VexMapsOfflineMapState.Error ->
+            retainedReady
+
+        VexMapsOfflineMapState.None ->
+            null
+    }
 
 internal data class VexMapsOfflineMapRegion(
     val regionId: Long,
