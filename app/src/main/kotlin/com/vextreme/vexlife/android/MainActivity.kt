@@ -30,7 +30,9 @@ class MainActivity : ComponentActivity() {
         savedInstanceState: Bundle?,
     ) {
         super.onCreate(savedInstanceState)
-        handleExternalIntent(intent)
+        if (savedInstanceState == null) {
+            handleExternalIntent(intent)
+        }
         enableEdgeToEdge()
         setContent {
             VexLifeApp()
