@@ -35,6 +35,45 @@ class VexMapsPlaceSearchQueryTest {
     }
 
     @Test
+    fun placeSearchRequestGateAcceptsOnlyLatestGeneration() {
+        val gate =
+            VexMapsPlaceSearchRequestGate()
+
+        val first =
+            gate.begin()
+        assertEquals(
+            true,
+            gate.accepts(first),
+        )
+
+        val second =
+            gate.begin()
+        assertEquals(
+            false,
+            gate.accepts(first),
+        )
+        assertEquals(
+            true,
+            gate.accepts(second),
+        )
+    }
+
+    @Test
+    fun queryEditOrImportInvalidationRejectsInFlightSearch() {
+        val gate =
+            VexMapsPlaceSearchRequestGate()
+        val request =
+            gate.begin()
+
+        gate.invalidate()
+
+        assertEquals(
+            false,
+            gate.accepts(request),
+        )
+    }
+
+    @Test
     fun queryTokenCountIsBounded() {
         assertEquals(
             "one* AND two* AND three* AND four* AND five* AND six* AND seven* AND eight*",
