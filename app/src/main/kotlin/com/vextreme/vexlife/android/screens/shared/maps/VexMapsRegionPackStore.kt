@@ -76,6 +76,9 @@ internal class VexMapsRegionPackStore(
             staging.delete()
             backup.delete()
 
+            val previousPack =
+                currentPack()
+
             try {
                 val copied =
                     appContext
@@ -96,6 +99,19 @@ internal class VexMapsRegionPackStore(
 
                 require(copied > 0L) {
                     "selected region is empty"
+                }
+
+                if (
+                    previousPack != null &&
+                    previousPack.byteLength ==
+                    copied
+                ) {
+                    ensureVexMapsRegionPackReplacementTimestamp(
+                        staging = staging,
+                        previousLastModifiedMillis =
+                            previousPack
+                                .lastModifiedMillis,
+                    )
                 }
 
                 if (tileExtract.exists()) {
@@ -152,6 +168,74 @@ internal class VexMapsRegionPackStore(
             lastModifiedMillis =
                 lastModified(),
         )
+}
+
+internal fun ensureVexMapsRegionPackReplacementTimestamp(
+    staging: File,
+    previousLastModifiedMillis: Long,
+    nowMillis: Long =
+        System.currentTimeMillis(),
+): Long {
+    val observed =
+        staging.lastModified()
+
+    if (
+        observed >
+        previousLastModifiedMillis
+    ) {
+        return observed
+    }
+
+    check(
+        previousLastModifiedMillis <
+            Long.MAX_VALUE,
+    ) {
+        "previous region timestamp cannot advance"
+    }
+
+    var target =
+        maxOf(
+            nowMillis,
+            previousLastModifiedMillis + 1L,
+        )
+
+    repeat(4) {
+        check(
+            staging.setLastModified(
+                target,
+            ),
+        ) {
+            "new region identity timestamp could not be written"
+        }
+
+        val advanced =
+            staging.lastModified()
+
+        if (
+            advanced >
+            previousLastModifiedMillis
+        ) {
+            return advanced
+        }
+
+        target =
+            if (
+                target <=
+                Long.MAX_VALUE - 1_000L
+            ) {
+                maxOf(
+                    target + 1_000L,
+                    previousLastModifiedMillis +
+                        1_000L,
+                )
+            } else {
+                Long.MAX_VALUE
+            }
+    }
+
+    error(
+        "new region identity timestamp did not advance",
+    )
 }
 
 // [VXG RealForever]
