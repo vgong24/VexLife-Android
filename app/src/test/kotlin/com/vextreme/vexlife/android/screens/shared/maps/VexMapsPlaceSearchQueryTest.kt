@@ -37,7 +37,7 @@ class VexMapsPlaceSearchQueryTest {
     @Test
     fun placeSearchRequestGateAcceptsOnlyLatestGeneration() {
         val gate =
-            VexMapsPlaceSearchRequestGate()
+            VexMapsLatestRequestGate()
 
         val first =
             gate.begin()
@@ -59,9 +59,30 @@ class VexMapsPlaceSearchQueryTest {
     }
 
     @Test
+    fun latestRequestGateCanOwnIndependentRouteRequests() {
+        val gate =
+            VexMapsLatestRequestGate()
+        val originalRoute =
+            gate.begin()
+
+        gate.invalidate()
+        val replacementRoute =
+            gate.begin()
+
+        assertEquals(
+            false,
+            gate.accepts(originalRoute),
+        )
+        assertEquals(
+            true,
+            gate.accepts(replacementRoute),
+        )
+    }
+
+    @Test
     fun queryEditOrImportInvalidationRejectsInFlightSearch() {
         val gate =
-            VexMapsPlaceSearchRequestGate()
+            VexMapsLatestRequestGate()
         val request =
             gate.begin()
 
