@@ -127,6 +127,10 @@ internal fun VexMapsMapSurface(
                 VexDeviceLocationResult.Located?
             >(null)
         }
+    val routeRequestGate =
+        remember {
+            VexMapsLatestRequestGate()
+        }
 
     var viewportLatitude by
         rememberSaveable {
@@ -200,6 +204,7 @@ internal fun VexMapsMapSurface(
     fun setSelectedOrigin(
         coordinate: VexMapCoordinate?,
     ) {
+        routeRequestGate.invalidate()
         selectedOriginLatitude =
             coordinate?.latitude
         selectedOriginLongitude =
@@ -228,6 +233,7 @@ internal fun VexMapsMapSurface(
     fun setDestination(
         coordinate: VexMapCoordinate?,
     ) {
+        routeRequestGate.invalidate()
         destinationLatitude =
             coordinate?.latitude
         destinationLongitude =
@@ -258,7 +264,7 @@ internal fun VexMapsMapSurface(
         }
     val placeSearchRequestGate =
         remember {
-            VexMapsPlaceSearchRequestGate()
+            VexMapsLatestRequestGate()
         }
     var mapSelectionTargetName by
         rememberSaveable {
@@ -305,8 +311,24 @@ internal fun VexMapsMapSurface(
     fun setTravelMode(
         mode: VexMapsTravelMode,
     ) {
+        routeRequestGate.invalidate()
         travelModeName =
             mode.name
+    }
+
+    fun invalidateDeviceRouteOriginIfUnpinned() {
+        if (selectedOrigin != null) {
+            return
+        }
+
+        routeRequestGate.invalidate()
+        if (
+            planningState is
+                VexMapsPlanningState.Routing
+        ) {
+            planningState =
+                VexMapsPlanningState.Idle
+        }
     }
 
     fun readCurrentPreciseLocation(
@@ -324,6 +346,7 @@ internal fun VexMapsMapSurface(
                     result,
                 )
 
+            invalidateDeviceRouteOriginIfUnpinned()
             currentLocation =
                 projectedLocation
 
@@ -385,6 +408,7 @@ internal fun VexMapsMapSurface(
             if (fineGranted) {
                 readCurrentPreciseLocation()
             } else {
+                invalidateDeviceRouteOriginIfUnpinned()
                 currentLocation = null
                 val coarseGranted =
                     grants[
@@ -972,6 +996,7 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.ChooseOriginOnMap,
                     )
+                    routeRequestGate.invalidate()
                     setMapSelectionTarget(
                         VexMapsMapSelectionTarget.ORIGIN,
                     )
@@ -1022,38 +1047,52 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.PlanRoute,
                     )
+                    val requestGeneration =
+                        routeRequestGate.begin()
                     planningState =
                         VexMapsPlanningState.Routing
 
                     scope.launch {
-                        runCatching {
-                            VexMapsOfflineRoutingProcess
-                                .planner
-                                .route(
-                                    context = context,
-                                    pack = pack,
-                                    request =
-                                        VexOfflineRouteRequest(
-                                            routeRef =
-                                                "route.vexmaps.current",
-                                            routeRevision =
-                                                VexMapsRouteIdentity
-                                                    .nextRevision(),
-                                            origin =
-                                                origin,
-                                            destination =
-                                                target,
-                                            destinationLabel =
-                                                destinationLabel
-                                                    ?: context.getString(
-                                                        R.string
-                                                            .vexmaps_route_destination_label,
-                                                    ),
-                                            travelMode =
-                                                travelMode,
-                                        ),
+                        val result =
+                            runCatching {
+                                VexMapsOfflineRoutingProcess
+                                    .planner
+                                    .route(
+                                        context = context,
+                                        pack = pack,
+                                        request =
+                                            VexOfflineRouteRequest(
+                                                routeRef =
+                                                    "route.vexmaps.current",
+                                                routeRevision =
+                                                    VexMapsRouteIdentity
+                                                        .nextRevision(),
+                                                origin =
+                                                    origin,
+                                                destination =
+                                                    target,
+                                                destinationLabel =
+                                                    destinationLabel
+                                                        ?: context.getString(
+                                                            R.string
+                                                                .vexmaps_route_destination_label,
+                                                        ),
+                                                travelMode =
+                                                    travelMode,
+                                            ),
+                                    )
+                            }
+
+                        if (
+                            !routeRequestGate
+                                .accepts(
+                                    requestGeneration,
                                 )
-                        }.onSuccess { route ->
+                        ) {
+                            return@launch
+                        }
+
+                        result.onSuccess { route ->
                             VexMapsNavigationProcess
                                 .prepare(
                                     routeResult = route,
@@ -2162,7 +2201,7 @@ private fun NavigationStopButton(
     }
 }
 
-internal class VexMapsPlaceSearchRequestGate {
+internal class VexMapsLatestRequestGate {
     private var generation = 0L
 
     fun begin(): Long {
