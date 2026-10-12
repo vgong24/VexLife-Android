@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.maps
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class VexMapsOfflineMapSelectionTest {
@@ -50,6 +51,55 @@ class VexMapsOfflineMapSelectionTest {
         assertEquals(
             8L,
             chosen?.regionId,
+        )
+    }
+
+    @Test
+    fun loadingAndErrorRetainTheLastUsableOfflineMap() {
+        val ready =
+            VexMapsOfflineMapState.Ready(
+                preferred =
+                    VexMapsOfflineMapRegion(
+                        regionId = 7L,
+                        styleUri =
+                            "https://maps.example/styles/offline",
+                        completedResourceCount =
+                            100L,
+                        requiredResourceCount =
+                            100L,
+                    ),
+                completeRegionCount = 1,
+            )
+
+        assertSame(
+            ready,
+            VexMapsOfflineMapState
+                .Loading(
+                    retainedReady = ready,
+                )
+                .effectiveReady(),
+        )
+        assertSame(
+            ready,
+            VexMapsOfflineMapState
+                .Error(
+                    retainedReady = ready,
+                )
+                .effectiveReady(),
+        )
+    }
+
+    @Test
+    fun initialLoadingAndErrorDoNotInventAnOfflineMap() {
+        assertNull(
+            VexMapsOfflineMapState
+                .Loading()
+                .effectiveReady(),
+        )
+        assertNull(
+            VexMapsOfflineMapState
+                .Error()
+                .effectiveReady(),
         )
     }
 
