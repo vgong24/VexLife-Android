@@ -70,6 +70,10 @@ class PresentationState(
         return registry.element(topId)
     }
 
+    internal fun clearAll() {
+        openElementIds = emptyList()
+    }
+
     fun toggle(element: UIElement) {
         requireActiveScope(element)
         if (isOpen(element)) {
@@ -364,7 +368,11 @@ class VexRuntime(
             action = "Opened",
         )
 
-        navigation.push(screen)
+        if (target != null) {
+            presentation.clearAll()
+            activeBackLayer = null
+            navigation.push(screen)
+        }
     }
 
     /**
