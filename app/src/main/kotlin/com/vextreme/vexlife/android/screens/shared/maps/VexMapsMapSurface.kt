@@ -436,7 +436,7 @@ internal fun VexMapsMapSurface(
     var offlineMapState by
         remember {
             mutableStateOf<VexMapsOfflineMapState>(
-                VexMapsOfflineMapState.Loading,
+                VexMapsOfflineMapState.Loading(),
             )
         }
 
@@ -447,7 +447,7 @@ internal fun VexMapsMapSurface(
             runCatching {
                 offlineMapStore.load()
             }.getOrElse {
-                VexMapsOfflineMapState.Error
+                VexMapsOfflineMapState.Error()
             }
     }
 
@@ -466,8 +466,14 @@ internal fun VexMapsMapSurface(
                 action = "Selected",
             )
 
+            val retainedReady =
+                offlineMapState
+                    .effectiveReady()
             offlineMapState =
-                VexMapsOfflineMapState.Loading
+                VexMapsOfflineMapState.Loading(
+                    retainedReady =
+                        retainedReady,
+                )
 
             scope.launch {
                 offlineMapState =
@@ -476,7 +482,10 @@ internal fun VexMapsMapSurface(
                             uri,
                         )
                     }.getOrElse {
-                        VexMapsOfflineMapState.Error
+                        VexMapsOfflineMapState.Error(
+                            retainedReady =
+                                retainedReady,
+                        )
                     }
             }
         }
@@ -625,10 +634,8 @@ internal fun VexMapsMapSurface(
         }
 
     val mapStyleUri =
-        (
-            offlineMapState as?
-                VexMapsOfflineMapState.Ready
-        )
+        offlineMapState
+            .effectiveReady()
             ?.preferred
             ?.styleUri
             ?: fallbackOnlineStyleUri
@@ -1593,7 +1600,7 @@ private fun VexMapsRoutePlannerCard(
             Text(
                 text =
                     when (offlineMapState) {
-                        VexMapsOfflineMapState.Loading ->
+                        is VexMapsOfflineMapState.Loading ->
                             stringResource(
                                 R.string
                                     .vexmaps_offline_map_loading,
@@ -1613,7 +1620,7 @@ private fun VexMapsRoutePlannerCard(
                                     .completeRegionCount,
                             )
 
-                        VexMapsOfflineMapState.Error ->
+                        is VexMapsOfflineMapState.Error ->
                             stringResource(
                                 R.string
                                     .vexmaps_offline_map_error,
