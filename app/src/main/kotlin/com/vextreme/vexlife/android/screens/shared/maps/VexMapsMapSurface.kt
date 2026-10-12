@@ -322,13 +322,9 @@ internal fun VexMapsMapSurface(
         }
 
         routeRequestGate.invalidate()
-        if (
-            planningState is
-                VexMapsPlanningState.Routing
-        ) {
-            planningState =
-                VexMapsPlanningState.Idle
-        }
+        planningState =
+            planningState
+                .afterVexMapsRouteInputChanged()
     }
 
     fun readCurrentPreciseLocation(
@@ -580,7 +576,8 @@ internal fun VexMapsMapSurface(
                                     VexMapsMapSelectionTarget.DESTINATION,
                                 )
                                 planningState =
-                                    VexMapsPlanningState.Idle
+                                    planningState
+                                        .afterVexMapsRouteInputChanged()
                                 mapController
                                     .showOrigin(
                                         selected,
@@ -602,7 +599,8 @@ internal fun VexMapsMapSurface(
                                             .vexmaps_route_destination_label,
                                     )
                                 planningState =
-                                    VexMapsPlanningState.Idle
+                                    planningState
+                                        .afterVexMapsRouteInputChanged()
                                 mapController
                                     .showDestination(
                                         selected,
@@ -869,7 +867,8 @@ internal fun VexMapsMapSurface(
                         selected,
                     )
                     planningState =
-                        VexMapsPlanningState.Idle
+                        planningState
+                            .afterVexMapsRouteInputChanged()
                 },
                 onPlaceSearchQueryChange = { query ->
                     placeSearchRequestGate.invalidate()
@@ -959,7 +958,8 @@ internal fun VexMapsMapSurface(
                                 ),
                             )
                             planningState =
-                                VexMapsPlanningState.Idle
+                                planningState
+                                    .afterVexMapsRouteInputChanged()
                             placeSearchState =
                                 VexMapsPlaceSearchState.Idle
                             mapController
@@ -985,7 +985,8 @@ internal fun VexMapsMapSurface(
                             destinationLabel =
                                 place.name
                             planningState =
-                                VexMapsPlanningState.Idle
+                                planningState
+                                    .afterVexMapsRouteInputChanged()
                             placeSearchState =
                                 VexMapsPlaceSearchState.Idle
                             mapController
@@ -1008,7 +1009,8 @@ internal fun VexMapsMapSurface(
                         VexMapsMapSelectionTarget.ORIGIN,
                     )
                     planningState =
-                        VexMapsPlanningState.Idle
+                        planningState
+                            .afterVexMapsRouteInputChanged()
                 },
                 onUseDeviceOrigin = {
                     runtime.activate(
@@ -1021,7 +1023,8 @@ internal fun VexMapsMapSurface(
                         VexMapsMapSelectionTarget.DESTINATION,
                     )
                     planningState =
-                        VexMapsPlanningState.Idle
+                        planningState
+                            .afterVexMapsRouteInputChanged()
                     mapController.clearOrigin()
                 },
                 onImportOfflineMap = {
@@ -2482,7 +2485,7 @@ internal fun nextVexMapsSelectionTarget(
             VexMapsMapSelectionTarget.DESTINATION
     }
 
-private sealed interface VexMapsPlanningState {
+internal sealed interface VexMapsPlanningState {
     data object Idle :
         VexMapsPlanningState
 
@@ -2497,10 +2500,32 @@ private sealed interface VexMapsPlanningState {
     ) : VexMapsPlanningState
 }
 
-private enum class VexMapsPlanningError {
+internal enum class VexMapsPlanningError {
     REGION_IMPORT,
     ROUTE,
 }
+
+internal fun VexMapsPlanningState
+    .afterVexMapsRouteInputChanged():
+    VexMapsPlanningState =
+    when (this) {
+        VexMapsPlanningState.Routing ->
+            VexMapsPlanningState.Idle
+
+        is VexMapsPlanningState.Error ->
+            if (
+                error ==
+                VexMapsPlanningError.ROUTE
+            ) {
+                VexMapsPlanningState.Idle
+            } else {
+                this
+            }
+
+        VexMapsPlanningState.Idle,
+        VexMapsPlanningState.Importing ->
+            this
+    }
 
 private class VexMapsMapController {
     private var map: MapLibreMap? = null
