@@ -256,6 +256,10 @@ internal fun VexMapsMapSurface(
                 VexMapsPlaceSearchState.Idle,
             )
         }
+    val placeSearchRequestGate =
+        remember {
+            VexMapsPlaceSearchRequestGate()
+        }
     var mapSelectionTargetName by
         rememberSaveable {
             mutableStateOf(
@@ -837,6 +841,7 @@ internal fun VexMapsMapSurface(
                         VexMapsPlanningState.Idle
                 },
                 onPlaceSearchQueryChange = { query ->
+                    placeSearchRequestGate.invalidate()
                     placeSearchQuery = query
                     if (
                         placeSearchState !is
@@ -850,6 +855,7 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.ImportPlaceSearch,
                     )
+                    placeSearchRequestGate.invalidate()
                     placeSearchImportLauncher.launch(
                         arrayOf("*/*"),
                     )
@@ -868,16 +874,30 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.SearchPlaces,
                     )
+                    val requestGeneration =
+                        placeSearchRequestGate.begin()
                     placeSearchState =
                         VexMapsPlaceSearchState.Searching
 
                     scope.launch {
-                        runCatching {
-                            placeSearchStore.search(
-                                pack = pack,
-                                query = query,
-                            )
-                        }.onSuccess { places ->
+                        val result =
+                            runCatching {
+                                placeSearchStore.search(
+                                    pack = pack,
+                                    query = query,
+                                )
+                            }
+
+                        if (
+                            !placeSearchRequestGate
+                                .accepts(
+                                    requestGeneration,
+                                )
+                        ) {
+                            return@launch
+                        }
+
+                        result.onSuccess { places ->
                             placeSearchState =
                                 VexMapsPlaceSearchState.Results(
                                     places,
@@ -2140,6 +2160,25 @@ private fun NavigationStopButton(
             ),
         )
     }
+}
+
+internal class VexMapsPlaceSearchRequestGate {
+    private var generation = 0L
+
+    fun begin(): Long {
+        generation += 1L
+        return generation
+    }
+
+    fun invalidate() {
+        generation += 1L
+    }
+
+    fun accepts(
+        requestGeneration: Long,
+    ): Boolean =
+        requestGeneration ==
+            generation
 }
 
 internal sealed interface VexMapsPlaceSearchState {
