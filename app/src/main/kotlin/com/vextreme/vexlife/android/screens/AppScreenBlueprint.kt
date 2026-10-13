@@ -12,6 +12,7 @@ import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.ui.VexLifeRelays
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -68,6 +69,26 @@ abstract class AppScreenBlueprint(
      * generic VexElementTree path; a Screen overrides this only when it owns custom realization,
      * local state projection, or a repository/theme dependency.
      */
+    /**
+     * Broad app-composition bridge.
+     *
+     * Existing Screens keep their narrow three-argument renderer. A Screen that consumes a shared
+     * session Relay can override this overload and immediately narrow [relays] into its own content.
+     */
+    @Composable
+    internal open fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        relays: VexLifeRelays,
+        darkTheme: Boolean,
+    ) {
+        renderContent(
+            runtime = runtime,
+            repositories = repositories,
+            darkTheme = darkTheme,
+        )
+    }
+
     @Composable
     internal open fun renderContent(
         runtime: VexRuntime,
