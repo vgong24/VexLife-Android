@@ -113,6 +113,25 @@ creates no Event. A later display-name transition forms one bounded SYSTEM notic
 already-domain-owned `updatedAt` as occurrence/change identity. No artificial click counter,
 sequence integer, or timestamp is created merely to defeat StateFlow equality.
 
+The Relay output also owns the smallest list-availability distinction current source truth can
+actually prove:
+
+~~~text
+Unobserved
+  canonical Events feed has not entered this convergence yet
+
+Empty
+  canonical feed has been observed and the converged current list is empty
+
+Content(events)
+  at least one current event exists in the converged projection
+~~~
+
+An empty Kotlin `List` is therefore no longer asked to mean both "not observed yet" and "observed
+empty". The current repository does not expose provider loading/failure state, so `Loading` and
+`Unavailable` are intentionally **not invented here**. Partner-SDK stress work may earn those states
+when an actual source contract can truthfully supply them.
+
 ## Current source map
 
 ~~~text
