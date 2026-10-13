@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.relay
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 
 /**
  * One continuously observed dependency of a Compound Relay.
