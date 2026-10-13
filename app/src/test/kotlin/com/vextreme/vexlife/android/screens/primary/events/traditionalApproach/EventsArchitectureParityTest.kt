@@ -138,6 +138,208 @@ class EventsArchitectureParityTest {
             current.currentOutput.comparable(),
             traditional.current.comparable(),
         )
+
+    }
+
+    @Test
+    fun currentRelayAndTraditionalControllerAgreeAcrossSurfaceAndProviderPressure() = runTest {
+        val events = RelayEventsRepository()
+        val preferences = RelayEventsAttentionPreferenceRepository()
+        val lab = RelayEventsAttentionLabRepository()
+        val profiles = InMemoryUserProfileRepository()
+
+        val current =
+            EventsConvergenceRelay(
+                eventsRepository = events,
+                attentionPreferences = preferences,
+                attentionLab = lab,
+                userProfile = profiles,
+            )
+        val traditional =
+            TraditionalEventsController(
+                eventsRepository = events,
+                attentionPreferences = preferences,
+                attentionLab = lab,
+                userProfile = profiles,
+            )
+
+        current.activate(backgroundScope)
+        traditional.start(backgroundScope)
+        runCurrent()
+
+        current.surfaceChanged(
+            screenId = "screen.home",
+            transientBlocked = false,
+        )
+        traditional.surfaceChanged(
+            screenId = "screen.home",
+            blockedByTransient = false,
+        )
+
+        val sourceRef = "source.architecture-surface-pressure"
+        val first =
+            VexExternalEvent(
+                eventRef = "event.compare.surface.first",
+                sourceRef = sourceRef,
+                kind = VexExternalEventKind.MESSAGE,
+                title = "First",
+                detail = "First",
+                occurredAtEpochMillis = 10L,
+            )
+        val second =
+            VexExternalEvent(
+                eventRef = "event.compare.surface.second",
+                sourceRef = sourceRef,
+                kind = VexExternalEventKind.CALL,
+                title = "Second",
+                detail = "Second",
+                occurredAtEpochMillis = 20L,
+            )
+        val historical =
+            VexExternalEvent(
+                eventRef = "event.compare.surface.historical",
+                sourceRef = sourceRef,
+                kind = VexExternalEventKind.SYSTEM,
+                title = "Historical",
+                detail = "Historical",
+                occurredAtEpochMillis = 5L,
+            )
+
+        events.accept(
+            VexExternalEventSourceSnapshot(
+                sourceRef = sourceRef,
+                sourceRevision = 1L,
+                events = listOf(first, second),
+            ),
+        )
+
+        val allVisible =
+            setOf(
+                first.eventRef,
+                second.eventRef,
+                historical.eventRef,
+            )
+        current.visibleTargetsChanged(allVisible)
+        traditional.visibleTargetsChanged(allVisible)
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            "HELD_OTHER_SCREEN",
+            current.currentOutput.comparable().availability,
+        )
+        assertEquals(
+            first.eventRef,
+            current.currentOutput.candidate?.eventRef,
+        )
+
+        current.surfaceChanged(
+            screenId = EventsScreen.screenId,
+            transientBlocked = false,
+        )
+        traditional.surfaceChanged(
+            screenId = EventsScreen.screenId,
+            blockedByTransient = false,
+        )
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            "READY",
+            current.currentOutput.comparable().availability,
+        )
+
+        current.visibleTargetsChanged(setOf(second.eventRef))
+        traditional.visibleTargetsChanged(setOf(second.eventRef))
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            "HELD_TARGET_UNREACHABLE",
+            current.currentOutput.comparable().availability,
+        )
+
+        current.visibleTargetsChanged(allVisible)
+        traditional.visibleTargetsChanged(allVisible)
+        current.surfaceChanged(
+            screenId = EventsScreen.screenId,
+            transientBlocked = true,
+        )
+        traditional.surfaceChanged(
+            screenId = EventsScreen.screenId,
+            blockedByTransient = true,
+        )
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            "HELD_TRANSIENT_OCCUPIED",
+            current.currentOutput.comparable().availability,
+        )
+
+        current.surfaceChanged(
+            screenId = EventsScreen.screenId,
+            transientBlocked = false,
+        )
+        traditional.surfaceChanged(
+            screenId = EventsScreen.screenId,
+            blockedByTransient = false,
+        )
+
+        events.accept(
+            VexExternalEventSourceSnapshot(
+                sourceRef = sourceRef,
+                sourceRevision = 2L,
+                events =
+                    listOf(
+                        second.copy(
+                            occurredAtEpochMillis = 30L,
+                        ),
+                        historical,
+                        first,
+                    ),
+            ),
+        )
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            first.eventRef,
+            current.currentOutput.candidate?.eventRef,
+        )
+
+        events.accept(
+            VexExternalEventSourceSnapshot(
+                sourceRef = sourceRef,
+                sourceRevision = 3L,
+                events = listOf(second, historical),
+            ),
+        )
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            historical.eventRef,
+            current.currentOutput.candidate?.eventRef,
+        )
     }
 }
 
