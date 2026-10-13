@@ -90,7 +90,7 @@ sealed interface EventsConvergenceListState {
     /** Canonical feed truth is observed and the converged current list has no events. */
     data object Empty : EventsConvergenceListState
 
-    /** Canonical feed truth is observed and the current converged list contains events. */
+    /** At least one current event exists in the converged projection. */
     data class Content(
         val events: List<VexExternalEvent>,
     ) : EventsConvergenceListState
@@ -100,7 +100,8 @@ data class EventsConvergenceOutputState(
     /**
      * Current list meaning.
      *
-     * Do not infer "loaded empty" from an empty List: [Unobserved] and [Empty] are intentionally
+     * Do not infer "loaded empty" from an empty List:
+     * [EventsConvergenceListState.Unobserved] and [EventsConvergenceListState.Empty] are intentionally
      * different states. Future partner sources may earn additional Loading/Unavailable distinctions.
      */
     val list: EventsConvergenceListState =
