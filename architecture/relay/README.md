@@ -40,9 +40,45 @@ ack/preference -----/
 
 The concrete Relay should be boring to inspect:
 
-1. read its input state to see the dependencies;
-2. read processState / processStates to see the reconciliation law;
-3. read its output state to see what consumers are allowed to depend on.
+1. read `dependencies()` to see what continuously changes around it;
+2. read its public intention/surface methods to see what callers may explicitly ask;
+3. read `processState / processStates` to see the reconciliation law;
+4. read its output state to see what consumers are allowed to depend on.
+
+### Declarative Compound dependencies
+
+A Compound Relay may declare continuously observed Flows:
+
+~~~kotlin
+override fun dependencies() =
+    vexDependencies<ExampleInputState> {
+        observe(
+            dependencyRef = "feed",
+            flow = repository.states,
+        ) { feed ->
+            ExampleInputState(feed = feed)
+        }
+    }
+~~~
+
+`activate(scope)` starts exactly one named child coroutine per declared dependency. Feature authors
+therefore do not write launch/collect/send plumbing and cannot accidentally place two never-ending
+`collect` calls sequentially in one coroutine.
+
+The boundary is intentional:
+
+~~~text
+dependency observation
+  may suspend while waiting for outside truth
+
+processStates()
+  non-suspending atomic in-memory reducer
+  one admitted patch at a time
+~~~
+
+`suspend` is not used as an ordering substitute. Concurrent dependency arrivals are serialized by
+the Relay; semantic freshness/order still belongs to each rightful source (for example a provider
+revision). Blocking IO or SDK waits do not belong inside `processStates()`.
 
 ### Compound observation surfaces
 
@@ -146,7 +182,8 @@ inputs are available.
 
 - external SDK/service adapters;
 - scheduled synthetic source lifecycle;
-- coroutine/job supervision or startup/readiness;
+- generic application-wide coroutine/job supervision or startup/readiness beyond the bounded
+  dependency-observation owner described above;
 - persistent event history;
 - overlay/snackbar/dialog rendering;
 - transient priority/arbitration policy beyond the pure Events practicum fixture;
@@ -204,8 +241,9 @@ provider-specific source truth
 The module still does **not** own provider lifecycle, repository history, Compose, overlay geometry,
 or Journey execution.
 
-A reusable async dependency-binding/activation layer remains unearned. The current Events feature
-binds its concrete dependencies explicitly. Add a generic activation abstraction only after another
-real consumer demonstrates recurring duplicated lifecycle mechanics that cannot be kept local.
+Events now earns the smallest reusable dependency-binding layer: named Flow dependencies are
+declared by the Compound Relay and activated under a supplied owner scope. This does not turn Relay
+into a scheduler, operation system, service host, or readiness framework. More execution machinery
+still requires a real consumer.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][EVENTS-CONVERGENCE-PRACTICUM][EAP-00][RELAY] -->
