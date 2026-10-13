@@ -1,10 +1,19 @@
 plugins {
+    alias(libs.plugins.kover)
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.androidLibrary) apply false
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.ksp) apply false
 }
 
+
+
+dependencies {
+    kover(project(":app"))
+    kover(project(":architecture:elements"))
+    kover(project(":architecture:logging"))
+    kover(project(":architecture:relay"))
+}
 
 /**
  * Canonical repository-owned JVM/source verification.
@@ -37,5 +46,21 @@ tasks.register("vexVerifyLocal") {
     dependsOn(
         "vexVerifyJvm",
         ":app:assembleDebug",
+    )
+}
+
+/**
+ * Local JVM coverage report across the current app + architecture modules.
+ *
+ * Coverage is diagnostic evidence only at this stage: no percentage gate is admitted.
+ */
+tasks.register("vexCoverage") {
+    group = "verification"
+    description =
+        "Run JVM tests and generate aggregate Kover HTML/XML coverage reports."
+
+    dependsOn(
+        "koverHtmlReport",
+        "koverXmlReport",
     )
 }

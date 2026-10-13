@@ -1,6 +1,7 @@
 import org.gradle.api.tasks.testing.Test
 
 plugins {
+    alias(libs.plugins.kover)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.ksp)

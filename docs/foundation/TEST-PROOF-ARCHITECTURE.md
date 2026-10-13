@@ -202,11 +202,21 @@ Whole-system proof composes those same owners.
 
 ## Coverage direction
 
-No JVM coverage plugin is accepted yet.
+The first source candidate uses Kover 0.9.8 because it understands Kotlin Android build variants,
+supports multi-module report merging, emits HTML plus JaCoCo-compatible XML, and remains explicitly
+JVM/local-test coverage. Android on-device instrumentation coverage is a separate proof surface.
 
-The next spike should compare a Kotlin/Android-friendly local report path with direct JaCoCo against
-the repository's actual toolchain. The first accepted outcome should be a useful local report, not an
-arbitrary global percentage gate.
+The repository-level entry point is:
+
+~~~bash
+./gradlew vexCoverage
+~~~
+
+It produces aggregate Kover HTML/XML reports from the app plus architecture modules and runs the JVM
+tests required to form them.
+
+This is intentionally **report-only**. No global percentage gate is admitted until the report teaches
+us which coverage omissions are useful signals rather than incentives to test trivial code.
 
 Coverage should help answer:
 
