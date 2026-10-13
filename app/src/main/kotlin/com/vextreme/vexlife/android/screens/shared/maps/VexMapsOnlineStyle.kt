@@ -57,6 +57,13 @@ internal enum class VexMapsOnlineStyle(
                 it.name == name
             } ?: default(darkTheme)
 
+        fun fromStyleRef(
+            styleRef: String?,
+        ): VexMapsOnlineStyle? =
+            entries.firstOrNull {
+                it.styleRef == styleRef
+            }
+
         fun fromDockPageRef(
             pageRef: VexContextDockPageRef,
         ): VexMapsOnlineStyle? =

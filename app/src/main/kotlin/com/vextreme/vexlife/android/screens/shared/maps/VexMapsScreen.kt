@@ -297,6 +297,7 @@ object VexMapsScreen : AppScreenBlueprint(
     ) {
         VexMapsMapSurface(
             runtime = runtime,
+            repository = repositories.vexMaps,
             darkTheme = darkTheme,
         )
     }

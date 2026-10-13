@@ -8,6 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryDao
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryEntity
+import com.vextreme.vexlife.android.data.maps.VexMapsDao
+import com.vextreme.vexlife.android.data.maps.VexMapsStateEntity
 import com.vextreme.vexlife.android.data.userprofile.UserProfileDao
 import com.vextreme.vexlife.android.data.userprofile.UserProfileEntity
 
@@ -22,13 +24,15 @@ import com.vextreme.vexlife.android.data.userprofile.UserProfileEntity
     entities = [
         LogHistoryEntity::class,
         UserProfileEntity::class,
+        VexMapsStateEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class VexLifeDatabase : RoomDatabase() {
     abstract fun logHistoryDao(): LogHistoryDao
     abstract fun userProfileDao(): UserProfileDao
+    abstract fun vexMapsDao(): VexMapsDao
 
     companion object {
         /**
@@ -132,6 +136,29 @@ abstract class VexLifeDatabase : RoomDatabase() {
                 )
             }
         }
+
+        /**
+         * v4 adds one bounded Maps-local state row. It stores no location history: only the latest
+         * accepted fix plus the selected online map style.
+         */
+        val migration3To4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS vex_maps_state (
+                        state_ref TEXT NOT NULL,
+                        last_location_latitude REAL,
+                        last_location_longitude REAL,
+                        last_location_accuracy_meters REAL,
+                        last_location_captured_at_epoch_millis INTEGER,
+                        online_style_ref TEXT,
+                        updated_at_epoch_millis INTEGER NOT NULL,
+                        PRIMARY KEY(state_ref)
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
     }
 }
 
@@ -157,6 +184,7 @@ object VexLifeDatabaseFactory {
                 .addMigrations(
                     VexLifeDatabase.migration1To2,
                     VexLifeDatabase.migration2To3,
+                    VexLifeDatabase.migration3To4,
                 )
                 .build()
                 .also { instance = it }

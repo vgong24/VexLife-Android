@@ -50,6 +50,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.maps.VexMapsRepository
+import com.vextreme.vexlife.android.data.maps.VexMapsStoredLocation
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
@@ -57,6 +59,7 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.vexstream.rememberVexStreamContextDockPage
+import java.time.Instant
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -83,6 +86,7 @@ import org.maplibre.geojson.Point
 @Composable
 internal fun VexMapsMapSurface(
     runtime: VexRuntime,
+    repository: VexMapsRepository,
     darkTheme: Boolean,
 ) {
     val context = LocalContext.current
@@ -406,6 +410,28 @@ internal fun VexMapsMapSurface(
             currentLocation =
                 projectedLocation
 
+            if (
+                result is
+                    VexDeviceLocationResult.Located
+            ) {
+                scope.launch {
+                    runCatching {
+                        repository.saveLastLocation(
+                            VexMapsStoredLocation(
+                                latitude =
+                                    result.latitude,
+                                longitude =
+                                    result.longitude,
+                                accuracyMeters =
+                                    result.accuracyMeters,
+                                capturedAt =
+                                    Instant.now(),
+                            ),
+                        )
+                    }
+                }
+            }
+
             locationState =
                 when (result) {
                     is VexDeviceLocationResult.Located ->
@@ -488,6 +514,57 @@ internal fun VexMapsMapSurface(
                     }
             }
         }
+
+    LaunchedEffect(repository) {
+        val storedState =
+            runCatching {
+                repository.load()
+            }.getOrNull()
+
+        storedState
+            ?.onlineStyleRef
+            ?.let { styleRef ->
+                VexMapsOnlineStyle
+                    .fromStyleRef(
+                        styleRef,
+                    )
+            }
+            ?.let { storedStyle ->
+                onlineStyleName =
+                    storedStyle.name
+                preferredDockPageRef =
+                    storedStyle
+                        .dockPageRef
+                        .value
+            }
+
+        val precisePermissionGranted =
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            ) ==
+                PackageManager.PERMISSION_GRANTED
+
+        if (precisePermissionGranted) {
+            storedState
+                ?.lastLocation
+                ?.let { storedLocation ->
+                    currentLocation =
+                        VexDeviceLocationResult.Located(
+                            latitude =
+                                storedLocation.latitude,
+                            longitude =
+                                storedLocation.longitude,
+                            accuracyMeters =
+                                storedLocation.accuracyMeters,
+                        )
+                    locationState =
+                        VexMapsLocationState.Finding
+                }
+
+            readCurrentPreciseLocation()
+        }
+    }
 
     var offlineMapState by
         remember {
@@ -1499,6 +1576,13 @@ internal fun VexMapsMapSurface(
                             )
                             onlineStyleName =
                                 selectedStyle.name
+                            scope.launch {
+                                runCatching {
+                                    repository.saveOnlineStyle(
+                                        selectedStyle.styleRef,
+                                    )
+                                }
+                            }
                         }
                     }
             },
