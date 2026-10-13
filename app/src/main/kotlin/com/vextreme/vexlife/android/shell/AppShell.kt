@@ -1,6 +1,8 @@
 package com.vextreme.vexlife.android.shell
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -60,6 +62,7 @@ import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.ui.VexLayoutTokens
+import com.vextreme.vexlife.android.ui.VexMotionTokens
 
 /**
  * App-wide chrome and its stable element identities.
@@ -173,6 +176,21 @@ fun VexAppToolBar(
     showBack: Boolean,
     actions: List<ButtonElement> = emptyList(),
 ) {
+    val markRotation =
+        animateFloatAsState(
+            targetValue =
+                if (showBack) {
+                    90f
+                } else {
+                    0f
+                },
+            animationSpec =
+                tween(
+                    durationMillis =
+                        VexMotionTokens.SpatialMs,
+                ),
+        ).value
+
     Surface(
         modifier = Modifier.height(VexLayoutTokens.ToolbarHeight),
         color = MaterialTheme.colorScheme.surface,
@@ -232,12 +250,8 @@ fun VexAppToolBar(
                         modifier =
                             Modifier
                                 .size(26.dp)
-                                .then(
-                                    if (showBack) {
-                                        Modifier.rotate(90f)
-                                    } else {
-                                        Modifier
-                                    },
+                                .rotate(
+                                    markRotation,
                                 ),
                     )
                 }

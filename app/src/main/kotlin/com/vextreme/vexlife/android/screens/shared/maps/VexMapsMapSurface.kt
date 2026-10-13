@@ -1682,10 +1682,10 @@ internal fun VexMapsMapSurface(
             color = MaterialTheme.colorScheme.onSurface,
             modifier =
                 Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.BottomEnd)
                     .padding(
-                        start = 8.dp,
-                        bottom = 144.dp,
+                        end = 8.dp,
+                        bottom = 8.dp,
                     )
                     .background(
                         MaterialTheme.colorScheme
