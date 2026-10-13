@@ -20,7 +20,7 @@ class VexMapsRegionPackIdentityTest {
         val observed =
             staging.lastModified()
         val result =
-            ensureVexMapsRegionPackReplacementTimestamp(
+            ensureVexMapsPackReplacementTimestamp(
                 staging = staging,
                 previousLastModifiedMillis =
                     observed - 1L,
@@ -47,7 +47,7 @@ class VexMapsRegionPackIdentityTest {
         val previous =
             staging.lastModified()
         val advanced =
-            ensureVexMapsRegionPackReplacementTimestamp(
+            ensureVexMapsPackReplacementTimestamp(
                 staging = staging,
                 previousLastModifiedMillis =
                     previous,

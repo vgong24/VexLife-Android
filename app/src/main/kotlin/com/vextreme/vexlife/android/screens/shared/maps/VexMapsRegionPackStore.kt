@@ -106,7 +106,7 @@ internal class VexMapsRegionPackStore(
                     previousPack.byteLength ==
                     copied
                 ) {
-                    ensureVexMapsRegionPackReplacementTimestamp(
+                    ensureVexMapsPackReplacementTimestamp(
                         staging = staging,
                         previousLastModifiedMillis =
                             previousPack
@@ -170,7 +170,7 @@ internal class VexMapsRegionPackStore(
         )
 }
 
-internal fun ensureVexMapsRegionPackReplacementTimestamp(
+internal fun ensureVexMapsPackReplacementTimestamp(
     staging: File,
     previousLastModifiedMillis: Long,
     nowMillis: Long =

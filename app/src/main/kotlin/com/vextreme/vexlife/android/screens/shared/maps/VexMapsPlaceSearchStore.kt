@@ -97,6 +97,9 @@ internal class VexMapsPlaceSearchStore(
             staging.delete()
             backup.delete()
 
+            val previousPack =
+                currentPack()
+
             try {
                 val copied =
                     appContext
@@ -120,6 +123,19 @@ internal class VexMapsPlaceSearchStore(
                 }
 
                 validatePack(staging)
+
+                if (
+                    previousPack != null &&
+                    previousPack.byteLength ==
+                    copied
+                ) {
+                    ensureVexMapsPackReplacementTimestamp(
+                        staging = staging,
+                        previousLastModifiedMillis =
+                            previousPack
+                                .lastModifiedMillis,
+                    )
+                }
 
                 if (placeDatabase.exists()) {
                     check(
