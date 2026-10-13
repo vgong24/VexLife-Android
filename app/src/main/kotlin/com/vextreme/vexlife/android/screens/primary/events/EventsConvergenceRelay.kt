@@ -137,10 +137,10 @@ data class EventsConvergenceOutputState(
  * serialized reducer over already-observed facts.
  */
 class EventsConvergenceRelay internal constructor(
-    private val eventsRepository: EventsRepository? = null,
-    private val attentionPreferences: EventsAttentionPreferenceRepository? = null,
-    private val attentionLab: EventsAttentionLabRepository? = null,
-    private val userProfile: UserProfileRepository? = null,
+    private val eventsRepository: EventsRepository?,
+    private val attentionPreferences: EventsAttentionPreferenceRepository?,
+    private val attentionLab: EventsAttentionLabRepository?,
+    private val userProfile: UserProfileRepository?,
 ) : VexCompoundRelay<EventsConvergenceInputState, EventsConvergenceOutputState>(
     relayRef = "relay.events.convergence",
     initialInputState = EventsConvergenceInputState(),
