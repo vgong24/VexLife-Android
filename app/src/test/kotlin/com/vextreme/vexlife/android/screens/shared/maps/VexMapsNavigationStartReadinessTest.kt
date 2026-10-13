@@ -133,6 +133,40 @@ class VexMapsNavigationStartReadinessTest {
     }
 
     @Test
+    fun startContinuationRequiresTheSameReadyRouteRevision() {
+        assertTrue(
+            canContinueVexMapsNavigationStart(
+                expectedRouteKey =
+                    "route.current:7",
+                currentPhase =
+                    VexNavigationSessionPhase.READY,
+                currentRouteKey =
+                    "route.current:7",
+            ),
+        )
+        assertFalse(
+            canContinueVexMapsNavigationStart(
+                expectedRouteKey =
+                    "route.current:7",
+                currentPhase =
+                    VexNavigationSessionPhase.READY,
+                currentRouteKey =
+                    "route.current:8",
+            ),
+        )
+        assertFalse(
+            canContinueVexMapsNavigationStart(
+                expectedRouteKey =
+                    "route.current:7",
+                currentPhase =
+                    VexNavigationSessionPhase.IDLE,
+                currentRouteKey =
+                    "route.current:7",
+            ),
+        )
+    }
+
+    @Test
     fun revokedPermissionHoldsStartEvenWithRetainedFix() {
         assertFalse(
             canStartVexMapsNavigation(

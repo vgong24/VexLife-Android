@@ -1177,13 +1177,31 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.StartNavigation,
                     )
+                    val expectedRouteKey =
+                        navigationState
+                            .routeResult
+                            ?.vexMapsRouteKey()
+                            ?: return@VexMapsNavigationCard
+
                     readCurrentPreciseLocation {
-                        if (
+                        val currentState =
                             VexMapsNavigationProcess
                                 .session
                                 .current
-                                .phase ==
-                            VexNavigationSessionPhase.READY
+                        val currentRouteKey =
+                            currentState
+                                .routeResult
+                                ?.vexMapsRouteKey()
+
+                        if (
+                            canContinueVexMapsNavigationStart(
+                                expectedRouteKey =
+                                    expectedRouteKey,
+                                currentPhase =
+                                    currentState.phase,
+                                currentRouteKey =
+                                    currentRouteKey,
+                            )
                         ) {
                             VexMapsNavigationService
                                 .startPrepared(
@@ -2458,6 +2476,16 @@ internal fun canStartVexMapsNavigation(
     precisePermissionGranted &&
         hasCurrentLocation &&
         locationFixReady
+
+internal fun canContinueVexMapsNavigationStart(
+    expectedRouteKey: String,
+    currentPhase: VexNavigationSessionPhase,
+    currentRouteKey: String?,
+): Boolean =
+    currentPhase ==
+        VexNavigationSessionPhase.READY &&
+        currentRouteKey ==
+        expectedRouteKey
 
 internal data class VexMapsDurationEstimate(
     val hours: Int,
