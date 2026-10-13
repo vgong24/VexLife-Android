@@ -231,29 +231,46 @@ filesystem pulls.
 
 ScreenCrawler remains opt-in; see `SCREEN-CRAWLER-EVIDENCE.md`.
 
-## First host-proof return
+## Host-proof return
 
 The Test Foundation candidate can be exercised entirely from a terminal. Android Studio does not
 need to be open.
 
-The OS-neutral repository-root command is:
+### First reference formation only
+
+No approved screenshot references exist yet, so the **first** exact host pass must render candidate
+references before validation:
 
 ~~~text
 java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --continue vexVerifyLocal vexCoverage :app:updateDebugScreenshotTest vexVisualValidate vexTestFoundationProofBundle
 ~~~
 
-It uses the checked-in Gradle wrapper JAR directly, so the human/host route does not need to choose
-between `./gradlew` and `.\\gradlew.bat`.
+The generated PNGs are still unaccepted candidates. The proof bundle returns them together with Git
+status so their source mutations are visible and reviewable.
 
-The invocation executes:
+### Ordinary proof after references are accepted
+
+Once reviewed reference PNGs are committed, ordinary proof must **not** run the update task first:
 
 ~~~text
-vexVerifyLocal
-vexCoverage
-:app:updateDebugScreenshotTest
-vexVisualValidate
-vexTestFoundationProofBundle
+java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --continue vexVerifyLocal vexCoverage vexVisualValidate vexTestFoundationProofBundle
 ~~~
+
+That distinction is essential:
+
+~~~text
+UPDATE_REFERENCE
+  = form a candidate/accept an explicitly reviewed visual change
+
+VALIDATE_REFERENCE
+  = detect whether current rendering drifted from accepted pixels
+~~~
+
+Running update before every validation would erase the regression signal and is forbidden by this
+foundation.
+
+Both commands use the checked-in Gradle wrapper JAR directly, so the human/host route does not need
+to choose between `./gradlew` and `.\\gradlew.bat`.
 
 `vexTestFoundationProofBundle` is collection-only. It does not make failed tasks pass and it does
 not accept generated reference images. It forms:
