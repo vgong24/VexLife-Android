@@ -67,6 +67,52 @@ transient occupied --+
 The purpose is not to make every service look like Events internally. It is to establish one narrow
 boundary where independently owned service meaning can become chronological human-awareness input.
 
+## Current observation shape
+
+The current refinement keeps `processStates()` as the perceivable center of the feature while moving
+continuous repository observation out of Compose:
+
+~~~text
+EventsRepository.states ------------------\
+AttentionPreferenceRepository.states ------+
+AttentionLabRepository.states -------------+-> EventsConvergenceRelay.dependencies()
+UserProfileRepository.observe(local) -------/        |
+                                                     | one named coroutine per dependency
+                                                     v
+                                              processStates()
+                                              atomic / non-suspending
+                                                     |
+                                                     v
+                                               outputStates
+                                                     |
+                                      Home / Events / future consumers
+~~~
+
+One `EventsConvergenceRelay` is retained by `VexLifeSession -> VexLifeRelays`; entering/leaving the
+Events Screen does not reconstruct repository observation. The app/preview composition root supplies
+global current-Screen/transient context. The Events list supplies only its own visible-item refs.
+Ordinary feature UI observes the Relay outcome.
+
+This intentionally prevents a common coroutine mistake:
+
+~~~text
+one coroutine:
+  flowA.collect { ... }   # does not normally return
+  flowB.collect { ... }   # never reached
+~~~
+
+Each declared dependency receives its own child coroutine. Concurrent arrivals still enter the same
+serialized Relay state boundary. Semantic source ordering is not inferred from coroutine scheduling.
+
+`processStates()` stays non-suspending on purpose: SDK/network/database waits belong upstream in
+their repository/Flow owner. The reducer receives already-observed facts and cannot suspend halfway
+through a state transition.
+
+The local User Profile is included as one real cross-domain dependency. Initial profile observation
+creates no Event. A later display-name transition forms one bounded SYSTEM notice using the profile's
+already-domain-owned `updatedAt` as occurrence/change identity. No artificial click counter,
+sequence integer, or timestamp is created merely to defeat StateFlow equality.
+
 ## Current source map
 
 ~~~text
@@ -84,10 +130,17 @@ app/.../data/events/
   SyntheticExternalEventSource
   SyntheticExternalEventController
 
+app/.../data/userprofile/
+  UserProfileRepository
+
 app/.../screens/primary/events/
   EventsScreen
   EventsPresentationRefs
   EventsConvergenceRelay
+
+app/.../ui/
+  VexLifeSession
+  VexLifeRelays
 
 architecture/elements/
   VexStableLazyColumn
