@@ -95,101 +95,101 @@ internal class VexMapsPlaceSearchStore(
     ): VexMapsPlaceSearchPack =
         withContext(Dispatchers.IO) {
             replacementGate.withExclusiveReplacement {
-            check(
-                placeDirectory.isDirectory ||
-                    placeDirectory.mkdirs(),
-            ) {
-                "VexMaps place-search directory could not be created"
-            }
+                check(
+                    placeDirectory.isDirectory ||
+                        placeDirectory.mkdirs(),
+                ) {
+                    "VexMaps place-search directory could not be created"
+                }
 
-            staging.delete()
-            backup.delete()
+                staging.delete()
+                backup.delete()
 
-            val previousPack =
-                currentPack()
+                val previousPack =
+                    currentPack()
 
-            try {
-                val copied =
-                    appContext
-                        .contentResolver
-                        .openInputStream(source)
-                        ?.use { input ->
-                            FileOutputStream(
-                                staging,
-                            ).use { output ->
-                                input.copyTo(output)
-                                output.fd.sync()
+                try {
+                    val copied =
+                        appContext
+                            .contentResolver
+                            .openInputStream(source)
+                            ?.use { input ->
+                                FileOutputStream(
+                                    staging,
+                                ).use { output ->
+                                    input.copyTo(output)
+                                    output.fd.sync()
+                                }
+                                staging.length()
                             }
-                            staging.length()
-                        }
-                        ?: error(
-                            "selected place index could not be opened",
-                        )
+                            ?: error(
+                                "selected place index could not be opened",
+                            )
 
-                require(copied > 0L) {
-                    "selected place index is empty"
-                }
-
-                validatePack(staging)
-
-                if (
-                    previousPack != null &&
-                    previousPack.byteLength ==
-                    copied
-                ) {
-                    ensureVexMapsPackReplacementTimestamp(
-                        staging = staging,
-                        previousLastModifiedMillis =
-                            previousPack
-                                .lastModifiedMillis,
-                    )
-                }
-
-                if (placeDatabase.exists()) {
-                    check(
-                        placeDatabase.renameTo(
-                            backup,
-                        ),
-                    ) {
-                        "existing place index could not be staged for replacement"
+                    require(copied > 0L) {
+                        "selected place index is empty"
                     }
-                }
 
-                if (
-                    !staging.renameTo(
-                        placeDatabase,
-                    )
-                ) {
-                    if (backup.exists()) {
+                    validatePack(staging)
+
+                    if (
+                        previousPack != null &&
+                        previousPack.byteLength ==
+                        copied
+                    ) {
+                        ensureVexMapsPackReplacementTimestamp(
+                            staging = staging,
+                            previousLastModifiedMillis =
+                                previousPack
+                                    .lastModifiedMillis,
+                        )
+                    }
+
+                    if (placeDatabase.exists()) {
+                        check(
+                            placeDatabase.renameTo(
+                                backup,
+                            ),
+                        ) {
+                            "existing place index could not be staged for replacement"
+                        }
+                    }
+
+                    if (
+                        !staging.renameTo(
+                            placeDatabase,
+                        )
+                    ) {
+                        if (backup.exists()) {
+                            backup.renameTo(
+                                placeDatabase,
+                            )
+                        }
+                        error(
+                            "new place index could not be installed",
+                        )
+                    }
+
+                    val installed =
+                        requireNotNull(
+                            currentPack(),
+                        ) {
+                            "installed place index is not readable"
+                        }
+
+                    backup.delete()
+                    installed
+                } finally {
+                    staging.delete()
+                    if (
+                        backup.exists() &&
+                        !placeDatabase.exists()
+                    ) {
                         backup.renameTo(
                             placeDatabase,
                         )
                     }
-                    error(
-                        "new place index could not be installed",
-                    )
                 }
-
-                val installed =
-                    requireNotNull(
-                        currentPack(),
-                    ) {
-                        "installed place index is not readable"
-                    }
-
-                backup.delete()
-                installed
-            } finally {
-                staging.delete()
-                if (
-                    backup.exists() &&
-                    !placeDatabase.exists()
-                ) {
-                    backup.renameTo(
-                        placeDatabase,
-                    )
-                }
-            }
             }
         }
 

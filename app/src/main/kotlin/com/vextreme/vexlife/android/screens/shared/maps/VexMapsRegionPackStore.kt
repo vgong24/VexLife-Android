@@ -74,99 +74,99 @@ internal class VexMapsRegionPackStore(
     ): VexMapsRegionPack =
         withContext(Dispatchers.IO) {
             replacementGate.withExclusiveReplacement {
-            check(
-                regionDirectory.isDirectory ||
-                    regionDirectory.mkdirs(),
-            ) {
-                "VexMaps region directory could not be created"
-            }
+                check(
+                    regionDirectory.isDirectory ||
+                        regionDirectory.mkdirs(),
+                ) {
+                    "VexMaps region directory could not be created"
+                }
 
-            staging.delete()
-            backup.delete()
+                staging.delete()
+                backup.delete()
 
-            val previousPack =
-                currentPack()
+                val previousPack =
+                    currentPack()
 
-            try {
-                val copied =
-                    appContext
-                        .contentResolver
-                        .openInputStream(source)
-                        ?.use { input ->
-                            FileOutputStream(
-                                staging,
-                            ).use { output ->
-                                input.copyTo(output)
-                                output.fd.sync()
+                try {
+                    val copied =
+                        appContext
+                            .contentResolver
+                            .openInputStream(source)
+                            ?.use { input ->
+                                FileOutputStream(
+                                    staging,
+                                ).use { output ->
+                                    input.copyTo(output)
+                                    output.fd.sync()
+                                }
+                                staging.length()
                             }
-                            staging.length()
-                        }
-                        ?: error(
-                            "selected region could not be opened",
-                        )
+                            ?: error(
+                                "selected region could not be opened",
+                            )
 
-                require(copied > 0L) {
-                    "selected region is empty"
-                }
-
-                if (
-                    previousPack != null &&
-                    previousPack.byteLength ==
-                    copied
-                ) {
-                    ensureVexMapsPackReplacementTimestamp(
-                        staging = staging,
-                        previousLastModifiedMillis =
-                            previousPack
-                                .lastModifiedMillis,
-                    )
-                }
-
-                if (tileExtract.exists()) {
-                    check(
-                        tileExtract.renameTo(
-                            backup,
-                        ),
-                    ) {
-                        "existing region could not be staged for replacement"
+                    require(copied > 0L) {
+                        "selected region is empty"
                     }
-                }
 
-                if (
-                    !staging.renameTo(
-                        tileExtract,
-                    )
-                ) {
-                    if (backup.exists()) {
+                    if (
+                        previousPack != null &&
+                        previousPack.byteLength ==
+                        copied
+                    ) {
+                        ensureVexMapsPackReplacementTimestamp(
+                            staging = staging,
+                            previousLastModifiedMillis =
+                                previousPack
+                                    .lastModifiedMillis,
+                        )
+                    }
+
+                    if (tileExtract.exists()) {
+                        check(
+                            tileExtract.renameTo(
+                                backup,
+                            ),
+                        ) {
+                            "existing region could not be staged for replacement"
+                        }
+                    }
+
+                    if (
+                        !staging.renameTo(
+                            tileExtract,
+                        )
+                    ) {
+                        if (backup.exists()) {
+                            backup.renameTo(
+                                tileExtract,
+                            )
+                        }
+                        error(
+                            "new region could not be installed",
+                        )
+                    }
+
+                    val installed =
+                        requireNotNull(
+                            currentPack(),
+                        ) {
+                            "installed region is not readable"
+                        }
+
+                    backup.delete()
+                    installed
+                } finally {
+                    staging.delete()
+                    if (
+                        backup.exists() &&
+                        !tileExtract.exists()
+                    ) {
                         backup.renameTo(
                             tileExtract,
                         )
                     }
-                    error(
-                        "new region could not be installed",
-                    )
                 }
-
-                val installed =
-                    requireNotNull(
-                        currentPack(),
-                    ) {
-                        "installed region is not readable"
-                    }
-
-                backup.delete()
-                installed
-            } finally {
-                staging.delete()
-                if (
-                    backup.exists() &&
-                    !tileExtract.exists()
-                ) {
-                    backup.renameTo(
-                        tileExtract,
-                    )
-                }
-            }
             }
         }
 
