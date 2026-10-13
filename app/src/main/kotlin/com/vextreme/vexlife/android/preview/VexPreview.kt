@@ -198,8 +198,6 @@ internal fun VexPreviewHost(
             runtime = context.runtime,
             toolbarActions =
                 currentScreenBlueprint.toolbarActions,
-            toolbarLeadingMode =
-                currentScreenBlueprint.toolbarLeadingMode,
         ) {
             content(context)
         }

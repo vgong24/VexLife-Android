@@ -139,8 +139,6 @@ private fun VexLifeScaffold(
         runtime = runtime,
         toolbarActions =
             currentScreenBlueprint.toolbarActions,
-        toolbarLeadingMode =
-            currentScreenBlueprint.toolbarLeadingMode,
     ) {
         if (runtime.isPrimary()) {
             /*

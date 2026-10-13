@@ -21,11 +21,6 @@ import kotlinx.coroutines.CoroutineScope
  * This is not a runtime service locator. A Screen should capture only the narrow dependency its
  * registrations need, then discard this construction context.
  */
-internal enum class AppToolbarLeadingMode {
-    Standard,
-    BrandBack,
-}
-
 internal class ScreenActionContext(
     val repositories: AppRepositories,
     val scope: CoroutineScope,
@@ -65,15 +60,6 @@ abstract class AppScreenBlueprint(
      */
     internal open val toolbarActions: List<ButtonElement>
         get() = emptyList()
-
-    /**
-     * Visual realization of the shared leading toolbar slot.
-     *
-     * Navigation meaning remains AppShell/VexRuntime-owned. A Screen may request the Vex brand mark
-     * as the Back affordance without creating a second Back action or feature-specific shell branch.
-     */
-    internal open val toolbarLeadingMode: AppToolbarLeadingMode
-        get() = AppToolbarLeadingMode.Standard
 
     /**
      * Android realization bridge for this registered Screen.

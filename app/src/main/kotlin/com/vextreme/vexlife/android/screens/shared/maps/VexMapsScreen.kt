@@ -16,7 +16,6 @@ import com.vextreme.vexlife.android.preview.VexBlueprintScreenPreview
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
-import com.vextreme.vexlife.android.screens.AppToolbarLeadingMode
 
 /**
  * Home-level VexMaps destination.
@@ -270,10 +269,6 @@ object VexMapsScreen : AppScreenBlueprint(
             listOf(
                 OpenMapMenu,
             )
-
-    internal override val toolbarLeadingMode
-        get() =
-            AppToolbarLeadingMode.BrandBack
 
     internal fun travelModeElement(
         mode: VexMapsTravelMode,

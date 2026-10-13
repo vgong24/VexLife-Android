@@ -59,7 +59,6 @@ import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.screens.AppToolbarLeadingMode
 import com.vextreme.vexlife.android.ui.VexLayoutTokens
 
 /**
@@ -168,12 +167,10 @@ object AppShell {
 }
 
 @Composable
-fun AppToolbar(
+fun VexAppToolBar(
     currentScreen: ScreenElement,
     runtime: VexRuntime,
     showBack: Boolean,
-    leadingMode: AppToolbarLeadingMode =
-        AppToolbarLeadingMode.Standard,
     actions: List<ButtonElement> = emptyList(),
 ) {
     Surface(
@@ -188,21 +185,6 @@ fun AppToolbar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            val brandOwnsBack =
-                showBack &&
-                    leadingMode ==
-                    AppToolbarLeadingMode.BrandBack
-
-            if (
-                showBack &&
-                !brandOwnsBack
-            ) {
-                VexIconButton(
-                    element = AppShell.Elements.Back,
-                    handler = runtime,
-                )
-            }
-
             Surface(
                 modifier =
                     Modifier
@@ -219,7 +201,7 @@ fun AppToolbar(
                         Modifier
                             .fillMaxSize()
                             .then(
-                                if (brandOwnsBack) {
+                                if (showBack) {
                                     Modifier
                                         .vexElement(
                                             AppShell.Elements.Back,
@@ -240,7 +222,7 @@ fun AppToolbar(
                         painter = painterResource(R.drawable.ic_vex_mark),
                         contentDescription =
                             stringResource(
-                                if (brandOwnsBack) {
+                                if (showBack) {
                                     R.string.back
                                 } else {
                                     R.string.brand_content_description
@@ -251,7 +233,7 @@ fun AppToolbar(
                             Modifier
                                 .size(26.dp)
                                 .then(
-                                    if (brandOwnsBack) {
+                                    if (showBack) {
                                         Modifier.rotate(90f)
                                     } else {
                                         Modifier
