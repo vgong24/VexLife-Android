@@ -146,6 +146,12 @@ fun scrollableColumn(
 data class ScreenRegistration(
     val screen: ScreenElement,
     val root: ElementPlacement,
+
+    /**
+     * Screen-owned semantic elements rendered outside the body tree, such as shared app-toolbar
+     * actions. They retain Screen ownership without pretending they are body children.
+     */
+    val additionalPlacements: List<ElementPlacement> = emptyList(),
 )
 
 /**
@@ -208,6 +214,15 @@ class UIBlueprintRegistry(
                 ownerScreen = blueprint.screen,
                 shell = false,
             )
+
+            blueprint.additionalPlacements.forEach { placement ->
+                indexPlacement(
+                    placement = placement,
+                    parent = null,
+                    ownerScreen = blueprint.screen,
+                    shell = false,
+                )
+            }
         }
 
         placementByElementId.values.forEach { placement ->

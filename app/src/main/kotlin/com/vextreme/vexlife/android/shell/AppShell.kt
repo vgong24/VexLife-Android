@@ -1,11 +1,14 @@
 package com.vextreme.vexlife.android.shell
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +28,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -58,6 +62,7 @@ import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.ui.VexLayoutTokens
+import com.vextreme.vexlife.android.ui.VexMotionTokens
 
 /**
  * App-wide chrome and its stable element identities.
@@ -165,12 +170,27 @@ object AppShell {
 }
 
 @Composable
-fun AppToolbar(
+fun VexAppToolBar(
     currentScreen: ScreenElement,
     runtime: VexRuntime,
     showBack: Boolean,
     actions: List<ButtonElement> = emptyList(),
 ) {
+    val markRotation =
+        animateFloatAsState(
+            targetValue =
+                if (showBack) {
+                    90f
+                } else {
+                    0f
+                },
+            animationSpec =
+                tween(
+                    durationMillis =
+                        VexMotionTokens.SpatialMs,
+                ),
+        ).value
+
     Surface(
         modifier = Modifier.height(VexLayoutTokens.ToolbarHeight),
         color = MaterialTheme.colorScheme.surface,
@@ -183,27 +203,56 @@ fun AppToolbar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (showBack) {
-                VexIconButton(
-                    element = AppShell.Elements.Back,
-                    handler = runtime,
-                )
-            }
-
             Surface(
-                modifier = Modifier
-                    .size(42.dp)
-                    .vexElement(AppShell.Elements.BrandMark),
+                modifier =
+                    Modifier
+                        .size(42.dp)
+                        .vexElement(
+                            AppShell.Elements.BrandMark,
+                        ),
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(13.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (showBack) {
+                                    Modifier
+                                        .vexElement(
+                                            AppShell.Elements.Back,
+                                        )
+                                        .clickable {
+                                            runtime.activate(
+                                                AppShell.Elements.Back,
+                                            )
+                                        }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    contentAlignment =
+                        Alignment.Center,
+                ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_vex_mark),
-                        contentDescription = stringResource(R.string.brand_content_description),
+                        contentDescription =
+                            stringResource(
+                                if (showBack) {
+                                    R.string.back
+                                } else {
+                                    R.string.brand_content_description
+                                },
+                            ),
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(26.dp),
+                        modifier =
+                            Modifier
+                                .size(26.dp)
+                                .rotate(
+                                    markRotation,
+                                ),
                     )
                 }
             }

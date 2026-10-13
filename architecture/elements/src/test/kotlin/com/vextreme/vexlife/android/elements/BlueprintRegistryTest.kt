@@ -18,6 +18,11 @@ class BlueprintRegistryTest {
     private object HomeRoot : ColumnElement("element.home.root")
     private object HomeBody : ScrollableColumnElement("element.home.body")
     private object HomeText : TextElement("element.home.preview", 4)
+    private object HomeToolbarAction : ButtonElement(
+        elementId = "element.home.toolbar-action",
+        labelRes = 6,
+        intent = localEffect(),
+    )
 
     private object HomePanelA : ColumnElement("element.home.panel-a")
     private object HomePanelB : ColumnElement("element.home.panel-b")
@@ -62,6 +67,49 @@ class BlueprintRegistryTest {
         assertEquals(Home, registry.ownerScreenOf(HomeText))
         assertEquals(HomeBody, registry.parentOf(HomeText))
         assertEquals(listOf(Help), registry.navigationTargetsFrom(listOf(ShellButton)))
+    }
+
+    @Test
+    fun additionalScreenPlacementKeepsScreenOwnershipWithoutBecomingBodyContent() {
+        val registry = UIBlueprintRegistry(
+            AppBlueprint(
+                shell = column(ShellRoot) {},
+                screens = listOf(
+                    ScreenRegistration(
+                        screen = Home,
+                        root = column(HomeRoot) {},
+                        additionalPlacements =
+                            listOf(
+                                ElementPlacement(
+                                    HomeToolbarAction,
+                                ),
+                            ),
+                    ),
+                    ScreenRegistration(
+                        Help,
+                        column(HelpRoot) {},
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(
+            Home,
+            registry.ownerScreenOf(
+                HomeToolbarAction,
+            ),
+        )
+        assertNull(
+            registry.parentOf(
+                HomeToolbarAction,
+            ),
+        )
+        assertEquals(
+            emptyList<UIElement>(),
+            registry.childrenOf(
+                HomeRoot,
+            ),
+        )
     }
 
     @Test

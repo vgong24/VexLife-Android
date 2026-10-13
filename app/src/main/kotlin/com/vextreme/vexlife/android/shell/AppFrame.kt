@@ -54,7 +54,7 @@ fun AppFrame(
             containerColor = MaterialTheme.colorScheme.background,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
-                AppToolbar(
+                VexAppToolBar(
                     currentScreen = runtime.currentScreen,
                     runtime = runtime,
                     showBack = nextBack?.showToolbarBack == true,

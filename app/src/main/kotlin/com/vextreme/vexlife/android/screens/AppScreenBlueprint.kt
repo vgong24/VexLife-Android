@@ -7,6 +7,8 @@ import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.elements.ButtonElement
+import com.vextreme.vexlife.android.elements.ElementPlacement
+import com.vextreme.vexlife.android.elements.ScreenRegistration
 import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
@@ -60,6 +62,22 @@ abstract class AppScreenBlueprint(
      */
     internal open val toolbarActions: List<ButtonElement>
         get() = emptyList()
+
+    /**
+     * One app-level registration for this Screen.
+     *
+     * The body remains the Screen's visual/content tree. Shared toolbar actions are registered as
+     * Screen-owned semantic elements without being duplicated into that body.
+     */
+    internal fun appRegistration(): ScreenRegistration =
+        ScreenRegistration(
+            screen = this,
+            root = content,
+            additionalPlacements =
+                toolbarActions.map { action ->
+                    ElementPlacement(action)
+                },
+        )
 
     /**
      * Android realization bridge for this registered Screen.

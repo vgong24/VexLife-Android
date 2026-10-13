@@ -329,6 +329,28 @@ future UserHub over making every caller know the underlying repository set.
 
 A bridge is successful when it hides plumbing while preserving dependency meaning.
 
+## VexMaps local state
+
+Maps is another concrete repository consumer, but it does not introduce a generic preferences layer.
+
+~~~text
+VexMaps screen
+  -> VexMapsRepository
+       -> last accepted precise fix
+       -> selected online style
+  -> RoomVexMapsRepository
+  -> one vex_maps_state row
+~~~
+
+The row is a convenience checkpoint, not a location ledger. Fresh location fixes replace the prior
+coordinate; movement samples and navigation updates are not appended to Room. Reopening Maps may use
+the last accepted fix immediately, then refresh the real current fix asynchronously when precise
+location permission is already granted.
+
+Map rendering, navigation-session state, pack custody, VexStream playback, and future Personal World
+memory remain separate owners. A second consumer should reuse a rightful owner rather than moving
+unrelated meaning into VexMapsRepository.
+
 ## Backend evolution
 
 A future backend does not automatically mean "replace Room."

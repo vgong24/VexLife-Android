@@ -70,6 +70,10 @@ class PresentationState(
         return registry.element(topId)
     }
 
+    internal fun clearAll() {
+        openElementIds = emptyList()
+    }
+
     fun toggle(element: UIElement) {
         requireActiveScope(element)
         if (isOpen(element)) {
@@ -321,6 +325,53 @@ class VexRuntime(
         if (!appOpenedRecorded) {
             logger.appOpened(currentScreen)
             appOpenedRecorded = true
+        }
+    }
+
+    /**
+     * Bounded Android/external-presentation entry into the existing app navigation owner.
+     *
+     * The caller supplies an already registered Screen identity and a stable presentation/system
+     * subject. This does not create a second deep-link stack or bypass VexRuntime navigation truth.
+     */
+    fun openExternalScreen(
+        subjectRef: String,
+        screen: ScreenElement,
+    ) {
+        require(
+            subjectRef.startsWith("presentation.") ||
+                subjectRef.startsWith("system."),
+        ) {
+            "external screen subject must be presentation.* or system.*: $subjectRef"
+        }
+
+        val registered =
+            registry.screen(
+                screen.screenId,
+            )
+        check(registered === screen) {
+            "cannot externally open unregistered screen instance: ${screen.screenId}"
+        }
+
+        val before =
+            currentScreen
+        val target =
+            screen.takeIf {
+                it.screenId !=
+                    before.screenId
+            }
+
+        logger.recordInteractionRef(
+            subjectRef = subjectRef,
+            screenBefore = before,
+            screenAfter = target,
+            action = "Opened",
+        )
+
+        if (target != null) {
+            presentation.clearAll()
+            activeBackLayer = null
+            navigation.push(screen)
         }
     }
 
