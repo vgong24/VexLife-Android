@@ -69,6 +69,7 @@ private fun VexLifeApp(
 ) {
     val runtime = session.runtime
     val repositories = session.repositories
+    val relays = session.relays
     val darkTheme = session.darkTheme
 
     LaunchedEffect(runtime) {
@@ -79,6 +80,7 @@ private fun VexLifeApp(
         VexLifeScaffold(
             runtime = runtime,
             repositories = repositories,
+            relays = relays,
             darkTheme = darkTheme,
         )
     }
@@ -88,6 +90,7 @@ private fun VexLifeApp(
 private fun VexLifeScaffold(
     runtime: VexRuntime,
     repositories: AppRepositories,
+    relays: VexLifeRelays,
     darkTheme: Boolean,
 ) {
     val primaryScreens = AppScreens.primary
@@ -152,6 +155,7 @@ private fun VexLifeScaffold(
                 primaryScreens[screenIndex].renderContent(
                     runtime = runtime,
                     repositories = repositories,
+                    relays = relays,
                     darkTheme = darkTheme,
                 )
             }
@@ -177,6 +181,7 @@ private fun VexLifeScaffold(
                 AppScreens.require(screenId).renderContent(
                     runtime = runtime,
                     repositories = repositories,
+                    relays = relays,
                     darkTheme = darkTheme,
                 )
             }
