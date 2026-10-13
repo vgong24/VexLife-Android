@@ -8,6 +8,7 @@ import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.shell.AppShell
@@ -36,6 +37,7 @@ class AppBlueprintTest {
                 DebugMenuScreen.screenId,
                 GalleryScreen.screenId,
                 UserProfileScreen.screenId,
+                VexMapsScreen.screenId,
                 VexStreamMusicScreen.screenId,
                 TalkToVexScreen.screenId,
             ),
@@ -86,6 +88,7 @@ class AppBlueprintTest {
         )
         assertEquals(
             setOf(
+                HomeScreen.VexMaps.elementId,
                 HomeScreen.TalkToVex.elementId,
             ),
             registry.childrenOf(systems).map { it.elementId }.toSet(),

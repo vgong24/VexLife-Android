@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.appAction
@@ -20,6 +21,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.shell.AppShell
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -134,6 +136,109 @@ class VexRuntimeNavigationTest {
             assertTrue(error.message.orEmpty().contains(UserProfileScreen.screenId))
             assertTrue(error.message.orEmpty().contains(HomeScreen.screenId))
         }
+    }
+
+    @Test
+    fun externalRegisteredScreenEntryUsesRuntimeNavigationAndLogging() {
+        val logger =
+            VexLogger()
+        val runtime =
+            runtime(
+                logger = logger,
+            )
+
+        runtime.appOpened()
+        runtime.openExternalScreen(
+            subjectRef =
+                MainActivity
+                    .VEXMAPS_NAVIGATION_NOTIFICATION_REF,
+            screen = VexMapsScreen,
+        )
+
+        assertSame(
+            VexMapsScreen,
+            runtime.currentScreen,
+        )
+
+        val record =
+            logger.history.value.last()
+        assertEquals(
+            MainActivity
+                .VEXMAPS_NAVIGATION_NOTIFICATION_REF,
+            record.subjectRef,
+        )
+        assertEquals(
+            "Opened",
+            record.action,
+        )
+        assertEquals(
+            HomeScreen.screenId,
+            record.screenBeforeId,
+        )
+        assertEquals(
+            VexMapsScreen.screenId,
+            record.screenAfterId,
+        )
+    }
+
+    @Test
+    fun externalScreenEntryClearsOutgoingTransientBackLayers() {
+        val runtime =
+            runtime()
+        val trail =
+            NavigationTrail("root")
+
+        runtime.activate(
+            AppShell.Elements.DebugMenu,
+        )
+        runtime.activate(
+            DebugMenuScreen.ShowLog,
+        )
+        trail.push("child")
+        runtime.attachBackLayer(trail)
+
+        runtime.openExternalScreen(
+            subjectRef =
+                MainActivity
+                    .VEXMAPS_NAVIGATION_NOTIFICATION_REF,
+            screen = VexMapsScreen,
+        )
+
+        assertFalse(
+            runtime.presentation.isOpen(
+                DebugMenuScreen.LogSheet,
+            ),
+        )
+        assertSame(
+            VexMapsScreen,
+            runtime.currentScreen,
+        )
+        val back =
+            runtime.nextBack as
+                BackResolution.AppNavigation
+        val pop =
+            back.step as
+                AppNavigationBack.PopScreen
+        assertSame(
+            DebugMenuScreen,
+            pop.target,
+        )
+    }
+
+    @Test
+    fun notificationActionResolvesOnlyToVexMaps() {
+        assertSame(
+            VexMapsScreen,
+            resolveVexLifeExternalScreen(
+                MainActivity
+                    .ACTION_OPEN_ACTIVE_VEXMAPS,
+            ),
+        )
+        assertNull(
+            resolveVexLifeExternalScreen(
+                "unknown.external.action",
+            ),
+        )
     }
 
     @Test

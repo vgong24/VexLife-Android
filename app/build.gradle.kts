@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.vextreme.vexlife.android"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 37
         versionCode = 1
         versionName = "0.0.1-foundation"
@@ -64,6 +64,11 @@ dependencies {
     implementation(libs.coreKtx)
     implementation(libs.lifecycleViewModelKtx)
     implementation(libs.lifecycleViewModelCompose)
+    implementation(libs.lifecycleRuntimeCompose)
+    implementation(libs.maplibreAndroid)
+    implementation(libs.valhallaMobile)
+    implementation(libs.valhallaModels)
+    implementation(libs.valhallaModelsConfig)
 
     implementation(libs.media3Common)
     implementation(libs.media3Exoplayer)

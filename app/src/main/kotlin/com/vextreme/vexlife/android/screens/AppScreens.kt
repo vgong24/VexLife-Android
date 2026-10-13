@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.shell.AppShell
@@ -36,6 +37,7 @@ object AppScreens {
         DebugMenuScreen,
         GalleryScreen,
         UserProfileScreen,
+        VexMapsScreen,
         VexStreamMusicScreen,
         TalkToVexScreen,
     )
