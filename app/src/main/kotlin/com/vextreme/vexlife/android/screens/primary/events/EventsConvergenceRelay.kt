@@ -82,9 +82,29 @@ enum class EventsConvergenceAvailability {
     READY,
 }
 
+
+sealed interface EventsConvergenceListState {
+    /** The Relay has not yet observed canonical feed truth. */
+    data object Unobserved : EventsConvergenceListState
+
+    /** Canonical feed truth is observed and the converged current list has no events. */
+    data object Empty : EventsConvergenceListState
+
+    /** Canonical feed truth is observed and the current converged list contains events. */
+    data class Content(
+        val events: List<VexExternalEvent>,
+    ) : EventsConvergenceListState
+}
+
 data class EventsConvergenceOutputState(
-    /** Current bounded Events projection shared by presentation consumers. */
-    val events: List<VexExternalEvent> = emptyList(),
+    /**
+     * Current list meaning.
+     *
+     * Do not infer "loaded empty" from an empty List: [Unobserved] and [Empty] are intentionally
+     * different states. Future partner sources may earn additional Loading/Unavailable distinctions.
+     */
+    val list: EventsConvergenceListState =
+        EventsConvergenceListState.Unobserved,
 
     val candidate: EventsConvergenceCandidate? = null,
     val availability: EventsConvergenceAvailability =
@@ -113,9 +133,36 @@ data class EventsConvergenceOutputState(
     val currentQueueCount: Int = 0,
     val nextSequenceCount: Int = 0,
 ) : VexOutputState<EventsConvergenceOutputState> {
+    val events: List<VexExternalEvent>
+        get() =
+            when (val currentList = list) {
+                EventsConvergenceListState.Unobserved,
+                EventsConvergenceListState.Empty,
+                ->
+                    emptyList()
+
+                is EventsConvergenceListState.Content ->
+                    currentList.events.map(VexExternalEvent::deepCopy)
+            }
+
     override fun deepCopy(): EventsConvergenceOutputState =
         copy(
-            events = events.map(VexExternalEvent::deepCopy),
+            list =
+                when (val currentList = list) {
+                    EventsConvergenceListState.Unobserved ->
+                        EventsConvergenceListState.Unobserved
+
+                    EventsConvergenceListState.Empty ->
+                        EventsConvergenceListState.Empty
+
+                    is EventsConvergenceListState.Content ->
+                        EventsConvergenceListState.Content(
+                            events =
+                                currentList.events.map(
+                                    VexExternalEvent::deepCopy,
+                                ),
+                        )
+                },
             candidate = candidate?.copy(),
             dispositionByEventRef = dispositionByEventRef.toMap(),
             scenario = scenario?.copy(),
@@ -392,6 +439,23 @@ class EventsConvergenceRelay internal constructor(
                 },
             )
 
+        val listState =
+            when {
+                events.isNotEmpty() ->
+                    EventsConvergenceListState.Content(
+                        events =
+                            events.map(
+                                VexExternalEvent::deepCopy,
+                            ),
+                    )
+
+                feed == null ->
+                    EventsConvergenceListState.Unobserved
+
+                else ->
+                    EventsConvergenceListState.Empty
+            }
+
         val coherentInput =
             EventsConvergenceInputState(
                 currentScreenId = screenId,
@@ -552,7 +616,7 @@ class EventsConvergenceRelay internal constructor(
             inputState = coherentInput,
             outputState =
                 EventsConvergenceOutputState(
-                    events = events,
+                    list = listState,
                     candidate = candidate,
                     availability = availability,
                     dispositionByEventRef = dispositions.toMap(),
