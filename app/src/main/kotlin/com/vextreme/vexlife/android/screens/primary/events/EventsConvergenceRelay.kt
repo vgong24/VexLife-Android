@@ -1,19 +1,47 @@
 package com.vextreme.vexlife.android.screens.primary.events
 
+import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenario
 import com.vextreme.vexlife.android.data.events.EventsAttentionLabState
+import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceState
 import com.vextreme.vexlife.android.data.events.EventsFeedState
+import com.vextreme.vexlife.android.data.events.EventsRepository
+import com.vextreme.vexlife.android.data.events.VexExternalEvent
+import com.vextreme.vexlife.android.data.events.VexExternalEventKind
+import com.vextreme.vexlife.android.data.userprofile.UserProfile
+import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
+import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
+import com.vextreme.vexlife.android.relay.VexDeepCopyable
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
+import com.vextreme.vexlife.android.relay.vexDependencies
+
+/**
+ * Observed profile value.
+ *
+ * The wrapper matters because the Compound patch itself uses null for "this dependency supplied no
+ * new value". An observed null profile instead means "the profile source was observed and is empty".
+ */
+data class EventsProfileObservation(
+    val profile: UserProfile?,
+) : VexDeepCopyable<EventsProfileObservation> {
+    override fun deepCopy(): EventsProfileObservation =
+        copy(
+            profile = profile?.copy(),
+        )
+}
 
 data class EventsConvergenceInputState(
     val currentScreenId: String? = null,
     val feed: EventsFeedState? = null,
     val preferences: EventsAttentionPreferenceState? = null,
     val lab: EventsAttentionLabState? = null,
-    val visibleEventRefs: Set<String>? = null,
+    val profile: EventsProfileObservation? = null,
+    val visibleEventRefsBySurface: Map<String, Set<String>>? = null,
     val transientBlocked: Boolean? = null,
 ) : VexInputState<EventsConvergenceInputState> {
     override fun deepCopy(): EventsConvergenceInputState =
@@ -21,7 +49,11 @@ data class EventsConvergenceInputState(
             feed = feed?.deepCopy(),
             preferences = preferences?.deepCopy(),
             lab = lab?.deepCopy(),
-            visibleEventRefs = visibleEventRefs?.toSet(),
+            profile = profile?.deepCopy(),
+            visibleEventRefsBySurface =
+                visibleEventRefsBySurface?.mapValues { (_, refs) ->
+                    refs.toSet()
+                },
         )
 }
 
@@ -31,15 +63,13 @@ data class EventsConvergenceCandidate(
 )
 
 enum class EventsConvergenceAvailability {
-    /**
-     * One or more dependencies have not yet been observed by this presentation relationship.
-     */
+    /** One or more dependencies required by the current presentation have not been observed yet. */
     UNOBSERVED,
 
-    /** Current feed contains no unhandled event candidate. */
+    /** Current context contains no unhandled event candidate. */
     NONE,
 
-    /** Candidate exists, but Events is not the current semantic Screen. */
+    /** Candidate exists but Events is not the current semantic Screen. */
     HELD_OTHER_SCREEN,
 
     /** Candidate exists and Events is current, but its exact row is not presently reachable. */
@@ -52,17 +82,49 @@ enum class EventsConvergenceAvailability {
     READY,
 }
 
+
+sealed interface EventsConvergenceListState {
+    /** The Relay has not yet observed canonical feed truth. */
+    data object Unobserved : EventsConvergenceListState
+
+    /** Canonical feed truth is observed and the converged current list has no events. */
+    data object Empty : EventsConvergenceListState
+
+    /** At least one current event exists in the converged projection. */
+    data class Content(
+        val events: List<VexExternalEvent>,
+    ) : EventsConvergenceListState
+}
+
 data class EventsConvergenceOutputState(
+    /**
+     * Current list meaning.
+     *
+     * Do not infer "loaded empty" from an empty List:
+     * [EventsConvergenceListState.Unobserved] and [EventsConvergenceListState.Empty] are intentionally
+     * different states. Future partner sources may earn additional Loading/Unavailable distinctions.
+     */
+    val list: EventsConvergenceListState =
+        EventsConvergenceListState.Unobserved,
+
     val candidate: EventsConvergenceCandidate? = null,
     val availability: EventsConvergenceAvailability =
         EventsConvergenceAvailability.UNOBSERVED,
 
+    /** Current presentation facts already resolved by the Relay, not recomputed in Compose. */
+    val dispositionByEventRef: Map<String, EventsAttentionDisposition> = emptyMap(),
+    val scenario: EventsAttentionLabScenario? = null,
+
     /**
-     * Human/debug-facing queue metadata derived from the same Relay decision.
+     * The latest observed local-profile display-name transition.
      *
-     * These counts are intentionally not recomputed by Compose. The popup can therefore explain
-     * exactly what the Relay believes is current/queued without creating a second queue model.
+     * This is intentionally a current bounded notice rather than an event ledger. The profile's
+     * domain-owned updatedAt identifies the change; no artificial click/revision counter is created
+     * merely to force StateFlow inequality.
      */
+    val latestProfileNameChange: VexExternalEvent? = null,
+
+    /** Human/debug-facing queue metadata derived from the same Relay decision. */
     val unhandledCount: Int = 0,
     val queuedAfterCurrentCount: Int = 0,
     val acknowledgedCount: Int = 0,
@@ -72,33 +134,214 @@ data class EventsConvergenceOutputState(
     val currentQueueCount: Int = 0,
     val nextSequenceCount: Int = 0,
 ) : VexOutputState<EventsConvergenceOutputState> {
+    val events: List<VexExternalEvent>
+        get() =
+            when (val currentList = list) {
+                EventsConvergenceListState.Unobserved,
+                EventsConvergenceListState.Empty,
+                ->
+                    emptyList()
+
+                is EventsConvergenceListState.Content ->
+                    currentList.events.map(VexExternalEvent::deepCopy)
+            }
+
     override fun deepCopy(): EventsConvergenceOutputState =
-        copy(candidate = candidate?.copy())
+        copy(
+            list =
+                when (val currentList = list) {
+                    EventsConvergenceListState.Unobserved ->
+                        EventsConvergenceListState.Unobserved
+
+                    EventsConvergenceListState.Empty ->
+                        EventsConvergenceListState.Empty
+
+                    is EventsConvergenceListState.Content ->
+                        EventsConvergenceListState.Content(
+                            events =
+                                currentList.events.map(
+                                    VexExternalEvent::deepCopy,
+                                ),
+                        )
+                },
+            candidate = candidate?.copy(),
+            dispositionByEventRef = dispositionByEventRef.toMap(),
+            scenario = scenario?.copy(),
+            latestProfileNameChange = latestProfileNameChange?.deepCopy(),
+        )
 }
 
 /**
- * One current convergence relationship over canonical Events truth.
+ * One reusable convergence relationship over current Events truth.
  *
- * Candidate identity is resolved from event truth + acknowledgement state first. Current Screen,
- * target reachability and transient occupancy then classify presentation availability without
- * silently switching to a different event merely because the candidate scrolled off-screen.
+ * Read this class in four places:
+ *
+ * dependencies()   -> what continuously changes around Events?
+ * public methods   -> what intentions/surface facts may enter?
+ * processStates()  -> what does the latest combination mean?
+ * outputStates     -> what may Home/Events/other consumers observe?
+ *
+ * Dependency collectors are framework-owned and asynchronous. processStates remains a synchronous,
+ * serialized reducer over already-observed facts.
  */
-class EventsConvergenceRelay :
-    VexCompoundRelay<EventsConvergenceInputState, EventsConvergenceOutputState>(
-        relayRef = "relay.events.convergence",
-        initialInputState = EventsConvergenceInputState(),
-        initialOutputState = EventsConvergenceOutputState(),
+class EventsConvergenceRelay internal constructor(
+    private val eventsRepository: EventsRepository?,
+    private val attentionPreferences: EventsAttentionPreferenceRepository?,
+    private val attentionLab: EventsAttentionLabRepository?,
+    private val userProfile: UserProfileRepository?,
+) : VexCompoundRelay<EventsConvergenceInputState, EventsConvergenceOutputState>(
+    relayRef = "relay.events.convergence",
+    initialInputState = EventsConvergenceInputState(),
+    initialOutputState = EventsConvergenceOutputState(),
+) {
+    /** Pure reducer tests may drive partial inputs directly without starting dependency observers. */
+    internal constructor() : this(
+        eventsRepository = null,
+        attentionPreferences = null,
+        attentionLab = null,
+        userProfile = null,
+    )
+
+    override fun dependencies() =
+        vexDependencies<EventsConvergenceInputState> {
+            eventsRepository?.let { repository ->
+                observe(
+                    dependencyRef = FEED_DEPENDENCY,
+                    flow = repository.states,
+                ) { feed ->
+                    EventsConvergenceInputState(
+                        feed = feed.deepCopy(),
+                    )
+                }
+            }
+
+            attentionPreferences?.let { repository ->
+                observe(
+                    dependencyRef = PREFERENCES_DEPENDENCY,
+                    flow = repository.states,
+                ) { preferences ->
+                    EventsConvergenceInputState(
+                        preferences = preferences.deepCopy(),
+                    )
+                }
+            }
+
+            attentionLab?.let { repository ->
+                observe(
+                    dependencyRef = LAB_DEPENDENCY,
+                    flow = repository.states,
+                ) { lab ->
+                    EventsConvergenceInputState(
+                        lab = lab.deepCopy(),
+                    )
+                }
+            }
+
+            userProfile?.let { repository ->
+                observe(
+                    dependencyRef = PROFILE_DEPENDENCY,
+                    flow = repository.observe(UserProfileRefs.local),
+                ) { profile ->
+                    EventsConvergenceInputState(
+                        profile =
+                            EventsProfileObservation(
+                                profile = profile?.copy(),
+                            ),
+                    )
+                }
+            }
+        }
+
+    /**
+     * Current semantic Screen + global transient occupancy arrive from the UI/runtime boundary.
+     *
+     * This is one synchronous state admission, not a coroutine launch.
+     */
+    fun surfaceChanged(
+        screenId: String,
+        transientBlocked: Boolean,
     ) {
-    fun screenChanged(screenId: String) {
         require(screenId.isNotBlank())
-        send(EventsConvergenceInputState(currentScreenId = screenId))
+
+        send(
+            EventsConvergenceInputState(
+                currentScreenId = screenId,
+                transientBlocked = transientBlocked,
+            ),
+        )
     }
 
-    fun feedChanged(feed: EventsFeedState) {
-        send(EventsConvergenceInputState(feed = feed.deepCopy()))
+    fun visibleTargetsChanged(
+        surfaceRef: String,
+        eventRefs: Set<String>,
+    ) {
+        require(surfaceRef.isNotBlank())
+
+        send(
+            EventsConvergenceInputState(
+                visibleEventRefsBySurface =
+                    mapOf(
+                        surfaceRef to eventRefs.toSet(),
+                    ),
+            ),
+        )
     }
 
-    fun preferencesChanged(
+    /** Convenience for the current Events list surface. */
+    fun visibleTargetsChanged(eventRefs: Set<String>) {
+        visibleTargetsChanged(
+            surfaceRef = EventsScreen.screenId,
+            eventRefs = eventRefs,
+        )
+    }
+
+    fun acknowledge(eventRef: String) {
+        requireAttentionPreferences()
+            .acknowledge(eventRef)
+    }
+
+    fun later(eventRef: String) {
+        requireAttentionPreferences()
+            .defer(eventRef)
+    }
+
+    fun suspend(eventRef: String) {
+        requireAttentionPreferences()
+            .suspend(eventRef)
+    }
+
+    fun suppress(eventRef: String) {
+        requireAttentionPreferences()
+            .suppress(eventRef)
+    }
+
+    fun completeCurrentScenario() {
+        requireAttentionLab()
+            .completeCurrent()
+    }
+
+    /*
+     * Direct reducer seams remain internal for focused processStates tests. Production repository
+     * observation enters through dependencies() instead of Compose forwarding.
+     */
+    internal fun screenChanged(screenId: String) {
+        require(screenId.isNotBlank())
+        send(
+            EventsConvergenceInputState(
+                currentScreenId = screenId,
+            ),
+        )
+    }
+
+    internal fun feedChanged(feed: EventsFeedState) {
+        send(
+            EventsConvergenceInputState(
+                feed = feed.deepCopy(),
+            ),
+        )
+    }
+
+    internal fun preferencesChanged(
         preferences: EventsAttentionPreferenceState,
     ) {
         send(
@@ -108,7 +351,7 @@ class EventsConvergenceRelay :
         )
     }
 
-    fun labChanged(lab: EventsAttentionLabState) {
+    internal fun labChanged(lab: EventsAttentionLabState) {
         send(
             EventsConvergenceInputState(
                 lab = lab.deepCopy(),
@@ -116,15 +359,7 @@ class EventsConvergenceRelay :
         )
     }
 
-    fun visibleTargetsChanged(eventRefs: Set<String>) {
-        send(
-            EventsConvergenceInputState(
-                visibleEventRefs = eventRefs.toSet(),
-            ),
-        )
-    }
-
-    fun transientBlockedChanged(blocked: Boolean) {
+    internal fun transientBlockedChanged(blocked: Boolean) {
         send(
             EventsConvergenceInputState(
                 transientBlocked = blocked,
@@ -157,12 +392,70 @@ class EventsConvergenceRelay :
         val lab =
             inputState.lab
                 ?: previous.lab
-        val visibleEventRefs =
-            inputState.visibleEventRefs
-                ?: previous.visibleEventRefs
+        val profile =
+            inputState.profile
+                ?: previous.profile
+        val visibleEventRefsBySurface =
+            mergeVisibleSurfacePatches(
+                previous =
+                    previous.visibleEventRefsBySurface,
+                patch =
+                    inputState.visibleEventRefsBySurface,
+            )
         val transientBlocked =
             inputState.transientBlocked
                 ?: previous.transientBlocked
+
+        val latestProfileNameChange =
+            profileNameChangeFromPatch(
+                previousProfile = previous.profile,
+                incomingProfile = inputState.profile,
+            )
+                ?: currentState.outputState
+                    .latestProfileNameChange
+                    ?.deepCopy()
+
+        val events =
+            (
+                feed
+                    ?.events
+                    .orEmpty()
+                    .map(VexExternalEvent::deepCopy) +
+                    listOfNotNull(
+                        latestProfileNameChange?.deepCopy(),
+                    )
+            ).also { combined ->
+                check(
+                    combined.map(VexExternalEvent::eventRef)
+                        .distinct()
+                        .size == combined.size,
+                ) {
+                    "converged Events context contains duplicate eventRef values"
+                }
+            }.sortedWith(
+                compareByDescending<VexExternalEvent> {
+                    it.occurredAtEpochMillis
+                }.thenByDescending {
+                    it.eventRef
+                },
+            )
+
+        val listState =
+            when {
+                events.isNotEmpty() ->
+                    EventsConvergenceListState.Content(
+                        events =
+                            events.map(
+                                VexExternalEvent::deepCopy,
+                            ),
+                    )
+
+                feed == null ->
+                    EventsConvergenceListState.Unobserved
+
+                else ->
+                    EventsConvergenceListState.Empty
+            }
 
         val coherentInput =
             EventsConvergenceInputState(
@@ -170,7 +463,11 @@ class EventsConvergenceRelay :
                 feed = feed?.deepCopy(),
                 preferences = preferences?.deepCopy(),
                 lab = lab?.deepCopy(),
-                visibleEventRefs = visibleEventRefs?.toSet(),
+                profile = profile?.deepCopy(),
+                visibleEventRefsBySurface =
+                    visibleEventRefsBySurface?.mapValues { (_, refs) ->
+                        refs.toSet()
+                    },
                 transientBlocked = transientBlocked,
             )
 
@@ -186,25 +483,19 @@ class EventsConvergenceRelay :
          * SUSPENDED   -> back of current queue
          * DEFERRED    -> next sequence, only after current queue drains
          * ACK/SUPPRESS-> terminal for proactive attention this lab/session
-         *
-         * feed.events is newest-first; reversing each pool makes the attention queue oldest-first.
          */
         val normalQueue =
-            feed
-                ?.events
-                .orEmpty()
+            events
                 .filter { event ->
                     event.eventRef !in dispositions
                 }
                 .asReversed()
 
         val suspendedQueue =
-            feed
-                ?.events
-                .orEmpty()
+            events
                 .filter { event ->
                     dispositions[event.eventRef] ==
-                        com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.SUSPENDED
+                        EventsAttentionDisposition.SUSPENDED
                 }
                 .sortedBy { event ->
                     preferences
@@ -214,12 +505,10 @@ class EventsConvergenceRelay :
                 }
 
         val deferredQueue =
-            feed
-                ?.events
-                .orEmpty()
+            events
                 .filter { event ->
                     dispositions[event.eventRef] ==
-                        com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.DEFERRED
+                        EventsAttentionDisposition.DEFERRED
                 }
                 .sortedBy { event ->
                     preferences
@@ -252,11 +541,6 @@ class EventsConvergenceRelay :
                         .candidate
                         ?.eventRef
 
-                /*
-                 * A live lab scenario may intentionally target a specific stable eventRef to prove
-                 * list-position/geometry conditions. Outside the lab, retain the current candidate
-                 * while it remains in the active queue, then advance normally.
-                 */
                 activePool.firstOrNull { event ->
                     event.eventRef == labTargetRef
                 } ?: activePool.firstOrNull { event ->
@@ -277,12 +561,15 @@ class EventsConvergenceRelay :
                 )
             }
 
+        val eventsSurfaceVisibility =
+            visibleEventRefsBySurface
+                ?.get(EventsScreen.screenId)
+
         val availability =
             when {
                 feed == null ||
                     preferences == null ||
                     screenId == null ||
-                    visibleEventRefs == null ||
                     transientBlocked == null ->
                     EventsConvergenceAvailability.UNOBSERVED
 
@@ -295,7 +582,10 @@ class EventsConvergenceRelay :
                 transientBlocked ->
                     EventsConvergenceAvailability.HELD_TRANSIENT_OCCUPIED
 
-                candidate.eventRef !in visibleEventRefs ->
+                eventsSurfaceVisibility == null ->
+                    EventsConvergenceAvailability.UNOBSERVED
+
+                candidate.eventRef !in eventsSurfaceVisibility ->
                     EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
 
                 else ->
@@ -327,8 +617,17 @@ class EventsConvergenceRelay :
             inputState = coherentInput,
             outputState =
                 EventsConvergenceOutputState(
+                    list = listState,
                     candidate = candidate,
                     availability = availability,
+                    dispositionByEventRef = dispositions.toMap(),
+                    scenario =
+                        lab
+                            ?.currentScenario
+                            ?.copy(),
+                    latestProfileNameChange =
+                        latestProfileNameChange
+                            ?.deepCopy(),
                     unhandledCount = unhandledCount,
                     queuedAfterCurrentCount =
                         if (candidate == null) {
@@ -340,7 +639,7 @@ class EventsConvergenceRelay :
                     acknowledgedCount =
                         dispositions.values.count { disposition ->
                             disposition ==
-                                com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.ACKNOWLEDGED
+                                EventsAttentionDisposition.ACKNOWLEDGED
                         },
                     deferredCount =
                         deferredQueue.size,
@@ -349,7 +648,7 @@ class EventsConvergenceRelay :
                     suppressedCount =
                         dispositions.values.count { disposition ->
                             disposition ==
-                                com.vextreme.vexlife.android.data.events.EventsAttentionDisposition.SUPPRESSED
+                                EventsAttentionDisposition.SUPPRESSED
                         },
                     currentQueueCount =
                         currentQueueCount,
@@ -357,6 +656,90 @@ class EventsConvergenceRelay :
                         nextSequenceCount,
                 ),
         )
+    }
+
+    private fun requireAttentionPreferences(): EventsAttentionPreferenceRepository =
+        checkNotNull(attentionPreferences) {
+            "EventsConvergenceRelay action methods require an attention repository"
+        }
+
+    private fun requireAttentionLab(): EventsAttentionLabRepository =
+        checkNotNull(attentionLab) {
+            "EventsConvergenceRelay lab methods require a lab repository"
+        }
+
+    private fun mergeVisibleSurfacePatches(
+        previous: Map<String, Set<String>>?,
+        patch: Map<String, Set<String>>?,
+    ): Map<String, Set<String>>? =
+        when {
+            patch == null ->
+                previous?.mapValues { (_, refs) ->
+                    refs.toSet()
+                }
+
+            previous == null ->
+                patch.mapValues { (_, refs) ->
+                    refs.toSet()
+                }
+
+            else ->
+                previous
+                    .mapValues { (_, refs) ->
+                        refs.toSet()
+                    } +
+                    patch.mapValues { (_, refs) ->
+                        refs.toSet()
+                    }
+        }
+
+    private fun profileNameChangeFromPatch(
+        previousProfile: EventsProfileObservation?,
+        incomingProfile: EventsProfileObservation?,
+    ): VexExternalEvent? {
+        val before =
+            previousProfile
+                ?.profile
+                ?: return null
+        val after =
+            incomingProfile
+                ?.profile
+                ?: return null
+
+        if (
+            before.profileRef != after.profileRef ||
+            before.displayName == after.displayName
+        ) {
+            return null
+        }
+
+        return VexExternalEvent(
+            eventRef =
+                "event.user-profile.display-name-change@" +
+                    after.updatedAt.toString(),
+            sourceRef =
+                "source.user-profile." +
+                    after.profileRef,
+            kind = VexExternalEventKind.SYSTEM,
+            title = "Profile name changed",
+            detail =
+                before.displayName +
+                    " → " +
+                    after.displayName,
+            occurredAtEpochMillis =
+                after.updatedAt.toEpochMilli(),
+        )
+    }
+
+    private companion object {
+        const val FEED_DEPENDENCY =
+            "events.feed"
+        const val PREFERENCES_DEPENDENCY =
+            "events.preferences"
+        const val LAB_DEPENDENCY =
+            "events.lab"
+        const val PROFILE_DEPENDENCY =
+            "user-profile.local"
     }
 }
 

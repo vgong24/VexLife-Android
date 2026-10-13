@@ -30,10 +30,7 @@ import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
 import com.vextreme.vexlife.android.data.events.EventsAttentionLabExpectedAction
 import com.vextreme.vexlife.android.data.events.EventsAttentionLabPlacement
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
 import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenario
-import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
-import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
@@ -46,6 +43,7 @@ import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import com.vextreme.vexlife.android.ui.VexLifeRelays
 
 object EventsScreen : AppScreenBlueprint(
     screenKey = "events",
@@ -64,15 +62,12 @@ object EventsScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
+        relays: VexLifeRelays,
         darkTheme: Boolean,
     ) {
         EventsScreenContent(
             runtime = runtime,
-            repository = repositories.events,
-            attentionPreferences =
-                repositories.eventsAttention,
-            attentionLab =
-                repositories.eventsAttentionLab,
+            relay = relays.events,
         )
     }
 }
@@ -87,53 +82,14 @@ object EventsScreen : AppScreenBlueprint(
 @Composable
 fun EventsScreenContent(
     runtime: VexRuntime,
-    repository: EventsRepository,
-    attentionPreferences: EventsAttentionPreferenceRepository,
-    attentionLab: EventsAttentionLabRepository,
+    relay: EventsConvergenceRelay,
 ) {
-    val feed by repository.states.collectAsState(
-        initial = repository.current,
-    )
-    val preferences by attentionPreferences.states.collectAsState(
-        initial = attentionPreferences.current,
-    )
-    val labState by attentionLab.states.collectAsState(
-        initial = attentionLab.current,
+    val attention by relay.outputStates.collectAsState(
+        initial = relay.currentOutput,
     )
     val scenario =
-        labState.currentScenario
+        attention.scenario
 
-    val attentionRelay =
-        remember {
-            EventsConvergenceRelay()
-        }
-
-    val currentScreenId =
-        runtime.currentScreen.screenId
-    val transientBlocked =
-        runtime.presentation.hasOpenPresentation
-
-    LaunchedEffect(feed) {
-        attentionRelay.feedChanged(feed)
-    }
-    LaunchedEffect(preferences) {
-        attentionRelay.preferencesChanged(preferences)
-    }
-    LaunchedEffect(labState) {
-        attentionRelay.labChanged(labState)
-    }
-    LaunchedEffect(currentScreenId) {
-        attentionRelay.screenChanged(currentScreenId)
-    }
-    LaunchedEffect(transientBlocked) {
-        attentionRelay.transientBlockedChanged(
-            transientBlocked,
-        )
-    }
-
-    val attention by attentionRelay.outputStates.collectAsState(
-        initial = attentionRelay.currentOutput,
-    )
     val activeCandidateRef =
         attention.candidate?.eventRef
     val visibleCandidateRef =
@@ -167,12 +123,12 @@ fun EventsScreenContent(
             if (activeCandidateRef == null) {
                 null
             } else {
-                feed.events
+                attention.events
             }
     }
 
     val displayedEvents =
-        presentationEvents ?: feed.events
+        presentationEvents ?: attention.events
 
     VexStableLazyColumn(
         listRef = EventsScreen.content.element.elementId,
@@ -186,12 +142,21 @@ fun EventsScreenContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         onVisibleItemRefsChanged =
-            attentionRelay::visibleTargetsChanged,
+            relay::visibleTargetsChanged,
         emptyContent = {
-            Text(
-                text = stringResource(R.string.events_preview_body),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            when (attention.list) {
+                EventsConvergenceListState.Unobserved ->
+                    Unit
+
+                EventsConvergenceListState.Empty ->
+                    Text(
+                        text = stringResource(R.string.events_preview_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+
+                is EventsConvergenceListState.Content ->
+                    Unit
+            }
         },
     ) { event ->
         EventRow(
@@ -199,7 +164,7 @@ fun EventsScreenContent(
             isAttentionCandidate =
                 visibleCandidateRef == event.eventRef,
             disposition =
-                preferences.dispositionByEventRef[
+                attention.dispositionByEventRef[
                     event.eventRef
                 ],
             attention = attention,
@@ -211,11 +176,11 @@ fun EventsScreenContent(
                         "acknowledge",
                     ),
                 )
-                attentionPreferences.acknowledge(
+                relay.acknowledge(
                     event.eventRef,
                 )
                 if (scenario?.targetEventRef == event.eventRef) {
-                    attentionLab.completeCurrent()
+                    relay.completeCurrentScenario()
                 }
             },
             onDefer = {
@@ -225,11 +190,11 @@ fun EventsScreenContent(
                         "later",
                     ),
                 )
-                attentionPreferences.defer(
+                relay.later(
                     event.eventRef,
                 )
                 if (scenario?.targetEventRef == event.eventRef) {
-                    attentionLab.completeCurrent()
+                    relay.completeCurrentScenario()
                 }
             },
             onSuspend = {
@@ -239,11 +204,11 @@ fun EventsScreenContent(
                         "suspend",
                     ),
                 )
-                attentionPreferences.suspend(
+                relay.suspend(
                     event.eventRef,
                 )
                 if (scenario?.targetEventRef == event.eventRef) {
-                    attentionLab.completeCurrent()
+                    relay.completeCurrentScenario()
                 }
             },
             onSuppress = {
@@ -253,11 +218,11 @@ fun EventsScreenContent(
                         "suppress",
                     ),
                 )
-                attentionPreferences.suppress(
+                relay.suppress(
                     event.eventRef,
                 )
                 if (scenario?.targetEventRef == event.eventRef) {
-                    attentionLab.completeCurrent()
+                    relay.completeCurrentScenario()
                 }
             },
             onDismiss = {
@@ -267,11 +232,11 @@ fun EventsScreenContent(
                     ),
                     action = "Dismissed",
                 )
-                attentionPreferences.defer(
+                relay.later(
                     event.eventRef,
                 )
                 if (scenario?.targetEventRef == event.eventRef) {
-                    attentionLab.completeCurrent()
+                    relay.completeCurrentScenario()
                 }
             },
         )
@@ -668,11 +633,7 @@ private fun EventsScreenPreview() {
     ) { context ->
         EventsScreenContent(
             runtime = context.runtime,
-            repository = context.repositories.events,
-            attentionPreferences =
-                context.repositories.eventsAttention,
-            attentionLab =
-                context.repositories.eventsAttentionLab,
+            relay = context.relays.events,
         )
     }
 }
@@ -695,11 +656,7 @@ private fun EventsAttentionPreview() {
     ) { context ->
         EventsScreenContent(
             runtime = context.runtime,
-            repository = context.repositories.events,
-            attentionPreferences =
-                context.repositories.eventsAttention,
-            attentionLab =
-                context.repositories.eventsAttentionLab,
+            relay = context.relays.events,
         )
     }
 }

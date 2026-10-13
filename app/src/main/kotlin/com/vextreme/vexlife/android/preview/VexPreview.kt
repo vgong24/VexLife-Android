@@ -4,7 +4,9 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.vextreme.vexlife.android.data.AppRepositories
@@ -25,6 +27,7 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.shell.AppFrame
+import com.vextreme.vexlife.android.ui.VexLifeRelays
 import com.vextreme.vexlife.android.ui.VexLifeTheme
 
 /**
@@ -69,6 +72,7 @@ internal annotation class VexScreenPreviews
 internal data class VexPreviewContext(
     val runtime: VexRuntime,
     val repositories: AppRepositories,
+    val relays: VexLifeRelays,
     val darkTheme: Boolean,
 )
 
@@ -144,8 +148,14 @@ internal fun VexPreviewHost(
     content: @Composable (VexPreviewContext) -> Unit,
 ) {
     val darkTheme = isSystemInDarkTheme()
-    val context = remember(id, darkTheme) {
+    val scope = rememberCoroutineScope()
+    val context = remember(id, scope) {
         val repositories = repositoriesFactory()
+        val relays =
+            VexLifeRelays.create(
+                repositories = repositories,
+                scope = scope,
+            )
         val runtime = VexRuntime(
             registry = AppScreens.registry,
             logger = VexLogger(),
@@ -164,7 +174,15 @@ internal fun VexPreviewHost(
         VexPreviewContext(
             runtime = runtime,
             repositories = repositories,
+            relays = relays,
             darkTheme = darkTheme,
+        )
+    }
+
+    SideEffect {
+        context.relays.events.surfaceChanged(
+            screenId = context.runtime.currentScreen.screenId,
+            transientBlocked = context.runtime.presentation.hasOpenPresentation,
         )
     }
 

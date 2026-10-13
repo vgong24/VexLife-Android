@@ -13,6 +13,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -69,16 +70,25 @@ private fun VexLifeApp(
 ) {
     val runtime = session.runtime
     val repositories = session.repositories
+    val relays = session.relays
     val darkTheme = session.darkTheme
 
     LaunchedEffect(runtime) {
         runtime.appOpened()
     }
 
+    SideEffect {
+        relays.events.surfaceChanged(
+            screenId = runtime.currentScreen.screenId,
+            transientBlocked = runtime.presentation.hasOpenPresentation,
+        )
+    }
+
     VexLifeTheme(darkTheme = darkTheme) {
         VexLifeScaffold(
             runtime = runtime,
             repositories = repositories,
+            relays = relays,
             darkTheme = darkTheme,
         )
     }
@@ -88,6 +98,7 @@ private fun VexLifeApp(
 private fun VexLifeScaffold(
     runtime: VexRuntime,
     repositories: AppRepositories,
+    relays: VexLifeRelays,
     darkTheme: Boolean,
 ) {
     val primaryScreens = AppScreens.primary
@@ -152,6 +163,7 @@ private fun VexLifeScaffold(
                 primaryScreens[screenIndex].renderContent(
                     runtime = runtime,
                     repositories = repositories,
+                    relays = relays,
                     darkTheme = darkTheme,
                 )
             }
@@ -177,6 +189,7 @@ private fun VexLifeScaffold(
                 AppScreens.require(screenId).renderContent(
                     runtime = runtime,
                     repositories = repositories,
+                    relays = relays,
                     darkTheme = darkTheme,
                 )
             }

@@ -1,9 +1,15 @@
 package com.vextreme.vexlife.android.relay
 
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 abstract class VexCompoundRelay<
     InputState : VexInputState<InputState>,
@@ -15,6 +21,9 @@ abstract class VexCompoundRelay<
 ) : VexObservableRelay<VexCompoundState<InputState, OutputState>> {
     private val lock = Any()
     private var processing = false
+
+    private val dependencyLock = Any()
+    private var dependencyOwnerJob: Job? = null
 
     init {
         require(relayRef.isNotBlank()) { "relayRef must not be blank" }
@@ -28,28 +37,11 @@ abstract class VexCompoundRelay<
             ),
         )
 
-    /**
-     * Full retained coordination truth.
-     *
-     * This stream may change when only Compound inputs/currentness change. Consumers that care only
-     * about the derived semantic result should use [outputStates] rather than collecting this stream
-     * and remembering to add map/distinctUntilChanged themselves.
-     */
     override val states: Flow<VexCompoundState<InputState, OutputState>> =
         mutableCurrentState.map { state ->
             state.deepCopy()
         }
 
-    /**
-     * Canonical retained dependency projection.
-     *
-     * This is the coherent InputState after the concrete Compound Relay has merged partial patches.
-     * It is distinct-by-input and defensively copied. Use it when a downstream coordinator or
-     * diagnostic/presentation surface genuinely needs the dependency/currentness context itself.
-     *
-     * Do not use this merely to redo [processStates] outside the Relay; ordinary consumers should
-     * prefer [outputStates].
-     */
     val inputStates: Flow<InputState> =
         mutableCurrentState
             .map { state ->
@@ -68,18 +60,6 @@ abstract class VexCompoundRelay<
                     .deepCopy()
             }
 
-    /**
-     * Canonical downstream projection of this Compound Relay.
-     *
-     * Distinct-by-output is an architectural guarantee, not a consumer habit:
-     *
-     * retained input/revision change + equal output
-     * -> [states] may emit
-     * -> [outputStates] does not emit
-     *
-     * Equality is evaluated against Relay-owned output state before a defensive copy is emitted, so
-     * a consumer cannot mutate the value retained by distinctUntilChanged.
-     */
     val outputStates: Flow<OutputState> =
         mutableCurrentState
             .map { state ->
@@ -104,6 +84,94 @@ abstract class VexCompoundRelay<
                 mutableCurrentState.value.deepCopy()
             }
 
+    /**
+     * Continuously observed truths used by this Compound relationship.
+     *
+     * The concrete Relay declares WHAT it observes. [activate] owns HOW those observations are
+     * launched: exactly one named child coroutine per dependency.
+     */
+    protected open fun dependencies(): List<VexRelayDependency<InputState>> =
+        emptyList()
+
+    /**
+     * Begins dependency observation under the supplied lifetime owner.
+     *
+     * Dependency observation is asynchronous; [processStates] deliberately is not. Every observed
+     * value becomes one small partial InputState and enters the same serialized [send] boundary.
+     */
+    fun activate(scope: CoroutineScope) {
+        val bindings =
+            dependencies()
+
+        require(
+            bindings.map { dependency ->
+                dependency.dependencyRef
+            }.distinct().size == bindings.size,
+        ) {
+            "VexCompoundRelay dependencies must use unique dependencyRef values"
+        }
+
+        synchronized(dependencyLock) {
+            check(dependencyOwnerJob == null) {
+                "VexCompoundRelay dependencies are already active: $relayRef"
+            }
+
+            val parentJob =
+                checkNotNull(scope.coroutineContext[Job]) {
+                    "VexCompoundRelay activation requires a CoroutineScope with a Job"
+                }
+            check(parentJob.isActive) {
+                "VexCompoundRelay cannot activate in an inactive CoroutineScope"
+            }
+
+            val ownerJob =
+                SupervisorJob(parentJob)
+            val dependencyScope =
+                CoroutineScope(
+                    scope.coroutineContext +
+                        ownerJob,
+                )
+
+            dependencyOwnerJob =
+                ownerJob
+
+            bindings.forEach { dependency ->
+                dependencyScope.launch(
+                    CoroutineName(
+                        "$relayRef/${dependency.dependencyRef}",
+                    ),
+                ) {
+                    dependency.collectInto { inputState ->
+                        send(inputState)
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun deactivate() {
+        val ownerJob =
+            synchronized(dependencyLock) {
+                dependencyOwnerJob
+            }
+                ?: return
+
+        ownerJob.cancelAndJoin()
+
+        synchronized(dependencyLock) {
+            if (dependencyOwnerJob === ownerJob) {
+                dependencyOwnerJob = null
+            }
+        }
+    }
+
+    /**
+     * Atomic in-memory reducer over facts that have already been observed.
+     *
+     * Keep blocking IO, SDK waits and other suspending work in dependency owners. This method cannot
+     * suspend halfway through a transition, so each admitted patch reconciles against one exact
+     * retained current state before the next patch may enter.
+     */
     protected abstract fun processStates(
         inputState: InputState,
         currentState: VexCompoundState<InputState, OutputState>,

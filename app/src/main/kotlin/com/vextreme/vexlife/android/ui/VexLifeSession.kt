@@ -47,6 +47,16 @@ internal class VexLifeSession(
         onRecord = logPersistence::record,
     )
 
+    /**
+     * Reusable semantic Relays live with the app session rather than any one Compose destination.
+     * Their dependency collectors are children of the same supplied session scope.
+     */
+    val relays =
+        VexLifeRelays.create(
+            repositories = repositories,
+            scope = scope,
+        )
+
     val appActions: AppActionRegistrations =
         AppScreens.appActionRegistrations(
             ScreenActionContext(
