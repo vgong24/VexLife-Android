@@ -149,7 +149,7 @@ internal fun VexPreviewHost(
 ) {
     val darkTheme = isSystemInDarkTheme()
     val scope = rememberCoroutineScope()
-    val context = remember(id, darkTheme, scope) {
+    val context = remember(id, scope) {
         val repositories = repositoriesFactory()
         val relays =
             VexLifeRelays.create(
