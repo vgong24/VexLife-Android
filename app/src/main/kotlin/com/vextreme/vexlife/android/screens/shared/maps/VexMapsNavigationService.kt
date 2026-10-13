@@ -203,13 +203,19 @@ class VexMapsNavigationService :
                             )
                         }
 
-                    if (
+                    when {
                         state.phase ==
-                            VexNavigationSessionPhase.IDLE ||
-                        state.phase ==
-                            VexNavigationSessionPhase.ARRIVED
-                    ) {
-                        finishForegroundService()
+                            VexNavigationSessionPhase.IDLE ->
+                            finishForegroundService(
+                                retainNotification = false,
+                            )
+
+                        shouldRetainVexMapsNavigationNotification(
+                            state.phase,
+                        ) ->
+                            finishForegroundService(
+                                retainNotification = true,
+                            )
                     }
                 }
             }
@@ -219,15 +225,23 @@ class VexMapsNavigationService :
         stopping = true
         VexMapsNavigationProcess
             .stop()
-        finishForegroundService()
+        finishForegroundService(
+            retainNotification = false,
+        )
     }
 
-    private fun finishForegroundService() {
+    private fun finishForegroundService(
+        retainNotification: Boolean,
+    ) {
         locationJob?.cancel()
         locationJob = null
         ServiceCompat.stopForeground(
             this,
-            ServiceCompat.STOP_FOREGROUND_REMOVE,
+            if (retainNotification) {
+                ServiceCompat.STOP_FOREGROUND_DETACH
+            } else {
+                ServiceCompat.STOP_FOREGROUND_REMOVE
+            },
         )
         stopSelf()
     }
@@ -308,10 +322,16 @@ class VexMapsNavigationService :
                     PendingIntent.FLAG_IMMUTABLE,
             )
 
-        return NotificationCompat.Builder(
-            this,
-            CHANNEL_ID,
-        )
+        val retainAfterService =
+            shouldRetainVexMapsNavigationNotification(
+                state.phase,
+            )
+
+        val builder =
+            NotificationCompat.Builder(
+                this,
+                CHANNEL_ID,
+            )
             .setSmallIcon(
                 R.mipmap.ic_launcher,
             )
@@ -329,8 +349,10 @@ class VexMapsNavigationService :
                 openIntent,
             )
             .setOngoing(
-                state.phase !=
-                    VexNavigationSessionPhase.ARRIVED,
+                !retainAfterService,
+            )
+            .setAutoCancel(
+                retainAfterService,
             )
             .setOnlyAlertOnce(true)
             .setCategory(
@@ -339,7 +361,9 @@ class VexMapsNavigationService :
             .setPriority(
                 NotificationCompat.PRIORITY_LOW,
             )
-            .addAction(
+
+        if (!retainAfterService) {
+            builder.addAction(
                 0,
                 getString(
                     R.string
@@ -347,7 +371,9 @@ class VexMapsNavigationService :
                 ),
                 stopIntent,
             )
-            .build()
+        }
+
+        return builder.build()
     }
 
     private fun notificationText(
@@ -475,6 +501,18 @@ class VexMapsNavigationService :
             )
         }
 
+        fun dismissArrivalNotification(
+            context: Context,
+        ) {
+            context
+                .getSystemService(
+                    NotificationManager::class.java,
+                )
+                .cancel(
+                    NOTIFICATION_ID,
+                )
+        }
+
         fun stop(
             context: Context,
         ) {
@@ -489,5 +527,11 @@ class VexMapsNavigationService :
         }
     }
 }
+
+internal fun shouldRetainVexMapsNavigationNotification(
+    phase: VexNavigationSessionPhase,
+): Boolean =
+    phase ==
+        VexNavigationSessionPhase.ARRIVED
 
 // [VXG RealForever]

@@ -1227,6 +1227,10 @@ internal fun VexMapsMapSurface(
                     currentLocation = null
                     locationState =
                         VexMapsLocationState.Idle
+                    VexMapsNavigationService
+                        .dismissArrivalNotification(
+                            context,
+                        )
                     VexMapsNavigationProcess
                         .stop()
                 },
