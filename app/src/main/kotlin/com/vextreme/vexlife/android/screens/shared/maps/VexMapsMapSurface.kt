@@ -104,6 +104,9 @@ internal fun VexMapsMapSurface(
         }
     val offlineMapStore =
         remember(context) {
+            MapLibre.getInstance(
+                context.applicationContext,
+            )
             VexMapsOfflineMapStore(
                 context,
             )
@@ -681,10 +684,6 @@ internal fun VexMapsMapSurface(
             mapStyleUri,
             mapController,
         ) {
-            MapLibre.getInstance(
-                context.applicationContext,
-            )
-
             MapView(context).apply {
                 onCreate(null)
                 getMapAsync { map ->
