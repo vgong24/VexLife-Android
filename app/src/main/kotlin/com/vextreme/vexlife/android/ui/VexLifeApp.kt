@@ -82,6 +82,12 @@ private fun VexLifeApp(
             screenId = runtime.currentScreen.screenId,
             transientBlocked = runtime.presentation.hasOpenPresentation,
         )
+        relays.eventsComparison
+            .traditionalController
+            .surfaceChanged(
+                screenId = runtime.currentScreen.screenId,
+                blockedByTransient = runtime.presentation.hasOpenPresentation,
+            )
     }
 
     VexLifeTheme(darkTheme = darkTheme) {
