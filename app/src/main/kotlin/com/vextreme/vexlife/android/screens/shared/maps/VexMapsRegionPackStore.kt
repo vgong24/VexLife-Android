@@ -41,6 +41,24 @@ internal class VexMapsRegionPackStore(
             regionDirectory,
             "valhalla_tiles.tar",
         )
+    private val staging =
+        File(
+            regionDirectory,
+            "valhalla_tiles.tar.importing",
+        )
+    private val backup =
+        File(
+            regionDirectory,
+            "valhalla_tiles.tar.previous",
+        )
+
+    init {
+        recoverVexMapsInterruptedPackReplacement(
+            current = tileExtract,
+            staging = staging,
+            backup = backup,
+        )
+    }
 
     fun currentPack(): VexMapsRegionPack? =
         tileExtract
@@ -61,17 +79,6 @@ internal class VexMapsRegionPackStore(
             ) {
                 "VexMaps region directory could not be created"
             }
-
-            val staging =
-                File(
-                    regionDirectory,
-                    "valhalla_tiles.tar.importing",
-                )
-            val backup =
-                File(
-                    regionDirectory,
-                    "valhalla_tiles.tar.previous",
-                )
 
             staging.delete()
             backup.delete()

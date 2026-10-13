@@ -62,6 +62,24 @@ internal class VexMapsPlaceSearchStore(
             placeDirectory,
             "places.sqlite",
         )
+    private val staging =
+        File(
+            placeDirectory,
+            "places.sqlite.importing",
+        )
+    private val backup =
+        File(
+            placeDirectory,
+            "places.sqlite.previous",
+        )
+
+    init {
+        recoverVexMapsInterruptedPackReplacement(
+            current = placeDatabase,
+            staging = staging,
+            backup = backup,
+        )
+    }
 
     fun currentPack(): VexMapsPlaceSearchPack? =
         placeDatabase
@@ -82,17 +100,6 @@ internal class VexMapsPlaceSearchStore(
             ) {
                 "VexMaps place-search directory could not be created"
             }
-
-            val staging =
-                File(
-                    placeDirectory,
-                    "places.sqlite.importing",
-                )
-            val backup =
-                File(
-                    placeDirectory,
-                    "places.sqlite.previous",
-                )
 
             staging.delete()
             backup.delete()
