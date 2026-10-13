@@ -138,8 +138,32 @@ Its question is:
 Reference replacement is a judgment operation. A mismatch must not automatically rewrite the
 reference.
 
-The initial implementation/tool choice remains a candidate until it proves compatible with the
-repository's current Android/Kotlin toolchain and local workflow.
+The first source candidate uses the official Compose Preview Screenshot Testing plugin at
+`0.0.1-alpha16`, because the repository's current AGP 9.4 / Kotlin 2.4 / JDK 17 toolchain satisfies
+its host-side Gradle requirements without moving the whole build to AGP 9.5 alpha test suites.
+
+This is explicitly a compatibility bridge, not a forever plugin choice. The official AGP-native test
+suite path becomes the migration target when the repository can adopt it without taking an unrelated
+alpha build-toolchain dependency.
+
+Routine validation:
+
+~~~bash
+./gradlew vexVisualValidate
+~~~
+
+Reference formation/update is intentionally explicit:
+
+~~~bash
+./gradlew :app:updateDebugScreenshotTest
+~~~
+
+A changed reference must be reviewed as a product-appearance decision before its PNG is committed.
+The first source case is `vexstream.library.paired`: fixed 412x915 dark rendering, no system UI, and
+feature-owned repository fixture input. Playing/paused goldens are held until VexStream earns a
+narrow injectable presentation seam instead of faking Media3.
+
+No reference PNG is accepted until the host actually renders it and the returned image is reviewed.
 
 ### ScreenCrawler
 

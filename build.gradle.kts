@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kover)
+    alias(libs.plugins.screenshot) apply false
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.androidLibrary) apply false
     alias(libs.plugins.composeCompiler) apply false
@@ -63,4 +64,18 @@ tasks.register("vexCoverage") {
         "koverHtmlReport",
         "koverXmlReport",
     )
+}
+
+/**
+ * Validate committed deterministic Compose screenshot references.
+ *
+ * Reference generation/update intentionally has no convenience aggregate: accepting new pixels is a
+ * judgment operation and uses the explicit app task documented by the Test Foundation.
+ */
+tasks.register("vexVisualValidate") {
+    group = "verification"
+    description =
+        "Validate deterministic Compose preview screenshot references."
+
+    dependsOn(":app:validateDebugScreenshotTest")
 }

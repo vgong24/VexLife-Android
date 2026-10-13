@@ -576,7 +576,7 @@ private fun VexStreamMusicScreenPreview() {
                 .copy(
                     vexStream =
                         InMemoryVexStreamMusicRepository(
-                            initialState = previewState(),
+                            initialState = vexStreamPreviewState(),
                         ),
                 )
         },
@@ -588,7 +588,7 @@ private fun VexStreamMusicScreenPreview() {
     }
 }
 
-private fun previewState(): VexStreamMusicState {
+internal fun vexStreamPreviewState(): VexStreamMusicState {
     val streamed =
         VexStreamTrack(
             trackRef = VexStreamTrackRef("preview.streamed"),
