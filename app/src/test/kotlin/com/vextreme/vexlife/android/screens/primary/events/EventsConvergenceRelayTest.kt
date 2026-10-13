@@ -64,6 +64,44 @@ class EventsConvergenceRelayTest {
         )
     }
 
+    @Test
+    fun listProjectionDistinguishesUnobservedEmptyAndContent() {
+        val relay =
+            EventsConvergenceRelay()
+
+        assertEquals(
+            EventsConvergenceListState.Unobserved,
+            relay.currentOutput.list,
+        )
+
+        relay.feedChanged(
+            EventsFeedState(),
+        )
+
+        assertEquals(
+            EventsConvergenceListState.Empty,
+            relay.currentOutput.list,
+        )
+
+        relay.feedChanged(
+            feed(),
+        )
+
+        val content =
+            relay.currentOutput.list as
+                EventsConvergenceListState.Content
+
+        assertEquals(
+            listOf(
+                "event.second",
+                "event.first",
+            ),
+            content.events.map(
+                VexExternalEvent::eventRef,
+            ),
+        )
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun outputProjectionSuppressesInputOnlyCompoundRevisions() = runTest {
