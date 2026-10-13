@@ -182,7 +182,20 @@ storage and physical GPS/navigation behavior.
 
 Do not build a JVM imitation merely to avoid the rightful substrate.
 
+## Gradle implementation boundary
+
+The root `build.gradle.kts` stays a small plugin/dependency front door. Test Foundation task
+orchestration and evidence collection live in:
+
+~~~text
+gradle/test-foundation.gradle.kts
+~~~
+
+That script may compose existing proof tasks and collect their outputs. It must not accumulate
+feature-specific test meaning.
+
 ## Canonical local commands
+
 
 Repository-owned Gradle tasks are the source of the ordinary proof bundle. Hosted CI may call these
 tasks later; CI YAML must not become a second definition.
