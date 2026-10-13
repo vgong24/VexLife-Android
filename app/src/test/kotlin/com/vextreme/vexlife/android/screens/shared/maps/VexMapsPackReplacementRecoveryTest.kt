@@ -82,20 +82,27 @@ class VexMapsPackReplacementRecoveryTest {
                     deleteOnExit()
                 }
 
+        fun file(
+            name: String,
+        ): File =
+            File(
+                directory,
+                name,
+            ).apply {
+                deleteOnExit()
+            }
+
         return PackFiles(
             current =
-                File(
-                    directory,
+                file(
                     "current.pack",
                 ),
             staging =
-                File(
-                    directory,
+                file(
                     "current.pack.importing",
                 ),
             backup =
-                File(
-                    directory,
+                file(
                     "current.pack.previous",
                 ),
         )
