@@ -104,8 +104,9 @@ import org.junit.runners.Parameterized
  *
  *      tag:VexScreenCrawler
  *
- *    Each screenshot is accompanied by JSONL evidence metadata including source/case/shard/journey,
- *    locale/font, Screen/step, device model/SDK, filename and screenshot SHA-256.
+ *    Each screenshot has live `tag:VexScreenCrawler` CAPTURE diagnostics containing its stable
+ *    semantic/configuration identity, returned path, byte count and screenshot SHA-256. The
+ *    delivery tree intentionally remains screenshot-only; there is no per-case JSONL manifest.
  *
  * IMPORTANT:
  *
@@ -115,6 +116,9 @@ import org.junit.runners.Parameterized
  * - ScreenCrawler locale/font matrices are explicit evidence work, not automatic functional-test
  *   multiplication.
  * - crawler locale conditions do not claim that translations already exist or are accepted.
+ * - adding a normal Screen or journey should NOT require edits to VexScreenCrawlerPlanner or
+ *   VexScreenCrawlerEvidenceObserver; change those only when crawler selection/evidence mechanics
+ *   themselves change.
  */
 @RunWith(Parameterized::class)
 class VexScreenCrawlerInstrumentedTest(
