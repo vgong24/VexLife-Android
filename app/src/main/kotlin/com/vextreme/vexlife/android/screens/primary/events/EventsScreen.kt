@@ -144,10 +144,19 @@ fun EventsScreenContent(
         onVisibleItemRefsChanged =
             relay::visibleTargetsChanged,
         emptyContent = {
-            Text(
-                text = stringResource(R.string.events_preview_body),
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            when (attention.list) {
+                EventsConvergenceListState.Unobserved ->
+                    Unit
+
+                EventsConvergenceListState.Empty ->
+                    Text(
+                        text = stringResource(R.string.events_preview_body),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+
+                is EventsConvergenceListState.Content ->
+                    Unit
+            }
         },
     ) { event ->
         EventRow(
