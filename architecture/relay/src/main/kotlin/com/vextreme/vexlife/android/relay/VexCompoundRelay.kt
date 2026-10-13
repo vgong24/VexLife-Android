@@ -104,9 +104,9 @@ abstract class VexCompoundRelay<
             dependencies()
 
         require(
-            bindings.map(VexRelayDependency<InputState>::dependencyRef)
-                .distinct()
-                .size == bindings.size,
+            bindings.map { dependency ->
+                dependency.dependencyRef
+            }.distinct().size == bindings.size,
         ) {
             "VexCompoundRelay dependencies must use unique dependencyRef values"
         }
