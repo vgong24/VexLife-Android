@@ -64,6 +64,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
+| ANDROID_HOST_PROOF | current-contract-bound Gradle/ADB host proof via VexRelay/VexLocalBridge | **FIRST ANDROID CONSUMER CANDIDATE / HOST EXECUTION PENDING** | Let a fresh worker bridge a real Android toolchain/device capability gap without undocumented terminal ritual or making Victor interpret routine proof | first canonical RETURN for Events PR #74; then reuse the same repository-owned entry for later Android proof |
 | EVENTS_CONVERGENCE_PRACTICUM | external-information ingress + Relay composition + stable dynamic list + anchored attention | **DRAFT CANDIDATE / PURE KOTLIN SMOKE PASS / ANDROID PROOF PENDING** | Master one convergence node before reverse-building real Messaging/Calls/Maps/Health/VexStream adapters toward it | exact Gradle/Journey/ScreenCrawler + physical-device attention walk |
 | F2_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
 | F3_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
@@ -127,6 +128,22 @@ known journey.
 
 This is semantic app-map coverage. It remains separate from ordinary line/branch code coverage.
 
+
+## Android host-proof candidate
+
+Canonical detail: [`ANDROID-HOST-PROOF.md`](ANDROID-HOST-PROOF.md)
+
+### Intention
+
+A fresh worker that lacks the Android SDK, Gradle execution environment, ADB access, or the qualified
+physical device should still be able to continue the repository proof trajectory without asking Victor
+to choose commands, branches, logs, or failure interpretations. VexLife-Android owns the Android proof
+request and evidence meaning; the live Vextreme-SDK VexRelay/VexLocalBridge contract continues to own
+package formation, carriage, replay protection and canonical RETURN mechanics.
+
+The first worked consumer is the Events architecture comparison on draft PR #74. Its repository entry
+preserves the reusable Gradle/APK/ADB proof shape while requiring each fresh attempt to bind the live SDK
+current contract and the candidate's current exact head rather than copying a historical launcher or ZIP.
 
 ## Events Convergence Practicum candidate
 
