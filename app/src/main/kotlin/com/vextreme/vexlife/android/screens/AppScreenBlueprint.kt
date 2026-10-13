@@ -68,8 +68,7 @@ abstract class AppScreenBlueprint(
      * them to whatever its actual renderer needs. Ordinary blueprint-only Screens inherit the
      * generic VexElementTree path; a Screen overrides this only when it owns custom realization,
      * local state projection, or a repository/theme dependency.
-     */
-    /**
+     *
      * Broad app-composition bridge.
      *
      * Existing Screens keep their narrow three-argument renderer. A Screen that consumes a shared
