@@ -217,12 +217,13 @@ class VexNavigationConvergenceRelay(
                     route.routeRevision
             } == true
 
-        if (
-            sameRouteIdentity &&
-            previousInput.route != null
-        ) {
+        if (sameRouteIdentity) {
+            val previousRoute =
+                requireNotNull(
+                    previousInput.route,
+                )
             require(
-                previousInput.route == route,
+                previousRoute == route,
             ) {
                 "route meaning changed without a new routeRevision"
             }

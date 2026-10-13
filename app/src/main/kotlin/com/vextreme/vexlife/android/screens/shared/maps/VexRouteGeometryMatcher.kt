@@ -269,11 +269,14 @@ private fun nearestRouteProjection(
                         segment.distanceMeters,
                 )
 
+            val currentBest =
+                best
+
             if (
-                best == null ||
+                currentBest == null ||
                 candidate
                     .distanceFromRouteMeters <
-                best!!
+                currentBest
                     .distanceFromRouteMeters
             ) {
                 best = candidate
