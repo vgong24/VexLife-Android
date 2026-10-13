@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.AppToolbarLeadingMode
 
 /**
  * The app's coordinate-space boundary inside the Android window.
@@ -31,6 +32,8 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 fun AppFrame(
     runtime: VexRuntime,
     toolbarActions: List<ButtonElement> = emptyList(),
+    toolbarLeadingMode: AppToolbarLeadingMode =
+        AppToolbarLeadingMode.Standard,
     content: @Composable () -> Unit,
 ) {
     // One resolved Back plan drives both Android native Back and the toolbar affordance below.
@@ -58,6 +61,7 @@ fun AppFrame(
                     currentScreen = runtime.currentScreen,
                     runtime = runtime,
                     showBack = nextBack?.showToolbarBack == true,
+                    leadingMode = toolbarLeadingMode,
                     actions = toolbarActions,
                 )
             },

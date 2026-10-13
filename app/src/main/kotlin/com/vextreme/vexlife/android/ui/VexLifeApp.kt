@@ -130,12 +130,17 @@ private fun VexLifeScaffold(
         }
     }
 
+    val currentScreenBlueprint =
+        AppScreens.require(
+            runtime.currentScreen.screenId,
+        )
+
     AppFrame(
         runtime = runtime,
         toolbarActions =
-            AppScreens
-                .require(runtime.currentScreen.screenId)
-                .toolbarActions,
+            currentScreenBlueprint.toolbarActions,
+        toolbarLeadingMode =
+            currentScreenBlueprint.toolbarLeadingMode,
     ) {
         if (runtime.isPrimary()) {
             /*

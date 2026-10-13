@@ -11,6 +11,8 @@ class VexMapsSemanticRegistrationTest {
         val elements =
             listOf(
                 VexMapsScreen.UsePreciseLocation,
+                VexMapsScreen.OpenMapMenu,
+                VexMapsScreen.OpenOfflineMaps,
                 VexMapsScreen.ToggleOfflinePreparation,
                 VexMapsScreen.PrepareOfflineAroundMe,
                 VexMapsScreen.PrepareOfflineTrip,

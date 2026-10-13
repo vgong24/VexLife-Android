@@ -187,7 +187,18 @@ internal fun VexPreviewHost(
     }
 
     VexLifeTheme(darkTheme = context.darkTheme) {
-        AppFrame(runtime = context.runtime) {
+        val currentScreenBlueprint =
+            AppScreens.require(
+                context.runtime.currentScreen.screenId,
+            )
+
+        AppFrame(
+            runtime = context.runtime,
+            toolbarActions =
+                currentScreenBlueprint.toolbarActions,
+            toolbarLeadingMode =
+                currentScreenBlueprint.toolbarLeadingMode,
+        ) {
             content(context)
         }
     }

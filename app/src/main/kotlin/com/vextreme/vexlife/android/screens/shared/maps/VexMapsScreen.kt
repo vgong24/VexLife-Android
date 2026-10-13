@@ -4,13 +4,19 @@ import androidx.compose.runtime.Composable
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.elements.ButtonElement
+import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.close
 import com.vextreme.vexlife.android.elements.localEffect
+import com.vextreme.vexlife.android.elements.open
+import com.vextreme.vexlife.android.elements.then
+import com.vextreme.vexlife.android.elements.toggle
 import com.vextreme.vexlife.android.preview.VexBlueprintScreenPreview
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import com.vextreme.vexlife.android.screens.AppToolbarLeadingMode
 
 /**
  * Home-level VexMaps destination.
@@ -28,7 +34,33 @@ object VexMapsScreen : AppScreenBlueprint(
         id = "body.location.use-precise",
         labelRes = R.string.vexmaps_use_precise_location,
         style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Location,
         intent = localEffect(),
+    )
+
+    val MapMenu = columnRef(
+        "body.map-menu",
+    )
+
+    val OfflinePanel = modalBottomSheetRef(
+        "body.offline.panel",
+    )
+
+    val OpenMapMenu = buttonRef(
+        id = "body.map-menu.open",
+        labelRes = R.string.vexmaps_map_options,
+        style = VexElementStyles.ToolbarIcon,
+        icon = ElementIcon.Menu,
+        intent = toggle(MapMenu),
+    )
+
+    val OpenOfflineMaps = buttonRef(
+        id = "body.map-menu.offline",
+        labelRes = R.string.vexmaps_offline_maps,
+        style = VexElementStyles.SecondaryAction,
+        intent =
+            close(MapMenu)
+                .then(open(OfflinePanel)),
     )
 
     val ToggleOfflinePreparation = buttonRef(
@@ -190,6 +222,16 @@ object VexMapsScreen : AppScreenBlueprint(
                 button(UsePreciseLocation)
             }
 
+            column(
+                element = MapMenu,
+            ) {
+                button(OpenOfflineMaps)
+            }
+
+            modalBottomSheet(
+                OfflinePanel,
+            ) {}
+
             column("planner") {
                 button(ToggleOfflinePreparation)
                 button(PrepareOfflineAroundMe)
@@ -222,6 +264,16 @@ object VexMapsScreen : AppScreenBlueprint(
             }
         }
     }
+
+    internal override val toolbarActions
+        get() =
+            listOf(
+                OpenMapMenu,
+            )
+
+    internal override val toolbarLeadingMode
+        get() =
+            AppToolbarLeadingMode.BrandBack
 
     internal fun travelModeElement(
         mode: VexMapsTravelMode,

@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -57,6 +59,7 @@ import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.AppToolbarLeadingMode
 import com.vextreme.vexlife.android.ui.VexLayoutTokens
 
 /**
@@ -169,6 +172,8 @@ fun AppToolbar(
     currentScreen: ScreenElement,
     runtime: VexRuntime,
     showBack: Boolean,
+    leadingMode: AppToolbarLeadingMode =
+        AppToolbarLeadingMode.Standard,
     actions: List<ButtonElement> = emptyList(),
 ) {
     Surface(
@@ -183,7 +188,15 @@ fun AppToolbar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (showBack) {
+            val brandOwnsBack =
+                showBack &&
+                    leadingMode ==
+                    AppToolbarLeadingMode.BrandBack
+
+            if (
+                showBack &&
+                !brandOwnsBack
+            ) {
                 VexIconButton(
                     element = AppShell.Elements.Back,
                     handler = runtime,
@@ -191,19 +204,59 @@ fun AppToolbar(
             }
 
             Surface(
-                modifier = Modifier
-                    .size(42.dp)
-                    .vexElement(AppShell.Elements.BrandMark),
+                modifier =
+                    Modifier
+                        .size(42.dp)
+                        .vexElement(
+                            AppShell.Elements.BrandMark,
+                        ),
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(13.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (brandOwnsBack) {
+                                    Modifier
+                                        .vexElement(
+                                            AppShell.Elements.Back,
+                                        )
+                                        .clickable {
+                                            runtime.activate(
+                                                AppShell.Elements.Back,
+                                            )
+                                        }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    contentAlignment =
+                        Alignment.Center,
+                ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_vex_mark),
-                        contentDescription = stringResource(R.string.brand_content_description),
+                        contentDescription =
+                            stringResource(
+                                if (brandOwnsBack) {
+                                    R.string.back
+                                } else {
+                                    R.string.brand_content_description
+                                },
+                            ),
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(26.dp),
+                        modifier =
+                            Modifier
+                                .size(26.dp)
+                                .then(
+                                    if (brandOwnsBack) {
+                                        Modifier.rotate(90f)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                     )
                 }
             }

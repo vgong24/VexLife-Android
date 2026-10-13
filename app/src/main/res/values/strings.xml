@@ -179,6 +179,12 @@
     <string name="vexmaps_navigation_waiting_location_body">The route is preserved while VexMaps waits for a current accurate fix.</string>
     <string name="vexmaps_navigation_arrived">Arrived at %1$s</string>
     <string name="vexmaps_navigation_done">Done</string>
+    <string name="vexmaps_map_options">Map options</string>
+    <string name="vexmaps_style_dark">Dark</string>
+    <string name="vexmaps_style_liberty">Liberty</string>
+    <string name="vexmaps_style_online_hint">Swipe to preview this style on the live map.</string>
+    <string name="vexstream_context_open">Open VexStream</string>
+    <string name="vexstream_context_up_next">Up next</string>
     <string name="vexmaps_online_title">Online map</string>
     <string name="vexmaps_online_body">You are using VexMaps online now. Save areas before a trip when you want the map to keep working without service.</string>
     <string name="vexmaps_offline_maps">Offline maps</string>

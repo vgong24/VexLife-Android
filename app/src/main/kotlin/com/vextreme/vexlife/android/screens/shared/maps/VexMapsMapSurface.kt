@@ -13,15 +13,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -44,8 +50,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.elements.ElementActionHandler
+import com.vextreme.vexlife.android.elements.VexActionFab
+import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
+import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.shared.vexstream.rememberVexStreamContextDockPage
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -68,6 +79,7 @@ import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VexMapsMapSurface(
     runtime: VexRuntime,
@@ -129,6 +141,28 @@ internal fun VexMapsMapSurface(
             mutableStateOf<
                 VexDeviceLocationResult.Located?
             >(null)
+        }
+
+    var onlineStyleName by
+        rememberSaveable {
+            mutableStateOf(
+                VexMapsOnlineStyle
+                    .default(darkTheme)
+                    .name,
+            )
+        }
+    val onlineStyle =
+        VexMapsOnlineStyle.restore(
+            name = onlineStyleName,
+            darkTheme = darkTheme,
+        )
+    var preferredDockPageRef by
+        rememberSaveable {
+            mutableStateOf(
+                onlineStyle
+                    .dockPageRef
+                    .value,
+            )
         }
     val routeRequestGate =
         remember {
@@ -651,11 +685,7 @@ internal fun VexMapsMapSurface(
     }
 
     val fallbackOnlineStyleUri =
-        if (darkTheme) {
-            OPEN_FREE_MAP_DARK_STYLE
-        } else {
-            OPEN_FREE_MAP_LIBERTY_STYLE
-        }
+        onlineStyle.styleUri
 
     val mapStyleUri =
         offlineMapState
@@ -681,7 +711,6 @@ internal fun VexMapsMapSurface(
     val mapView =
         remember(
             context,
-            mapStyleUri,
             mapController,
         ) {
             MapView(context).apply {
@@ -699,20 +728,27 @@ internal fun VexMapsMapSurface(
                                 )
                                 .zoom(1.25)
                                 .build()
-
-                    map.setStyle(
-                        mapStyleUri,
-                    ) { style ->
-                        mapController.attach(
-                            map = map,
-                            style = style,
-                            restoredRouteKey =
-                                restoredRouteKey,
-                        )
-                    }
                 }
             }
         }
+
+    LaunchedEffect(
+        mapView,
+        mapStyleUri,
+    ) {
+        mapView.getMapAsync { map ->
+            map.setStyle(
+                mapStyleUri,
+            ) { style ->
+                mapController.attach(
+                    map = map,
+                    style = style,
+                    restoredRouteKey =
+                        restoredRouteKey,
+                )
+            }
+        }
+    }
 
     LaunchedEffect(
         selectedOrigin,
@@ -842,6 +878,49 @@ internal fun VexMapsMapSurface(
             deviceOrigin = deviceRouteOrigin,
         )
 
+    val vexStreamDockPage =
+        rememberVexStreamContextDockPage(
+            runtime = runtime,
+        )
+    val contextDockPages =
+        buildList {
+            vexStreamDockPage?.let(::add)
+            VexMapsOnlineStyle
+                .entries
+                .map {
+                    it.contextDockPage()
+                }
+                .forEach(::add)
+        }
+    val preferredContextDockPage =
+        remember(preferredDockPageRef) {
+            VexContextDockPageRef(
+                preferredDockPageRef,
+            )
+        }
+    val offlineSheetState =
+        rememberModalBottomSheetState(
+            skipPartiallyExpanded = false,
+        )
+    val locationActionHandler =
+        ElementActionHandler { element ->
+            runtime.activate(element)
+
+            if (precisePermissionGranted) {
+                readCurrentPreciseLocation()
+            } else {
+                preciseLocationPermissionLauncher
+                    .launch(
+                        arrayOf(
+                            Manifest.permission
+                                .ACCESS_COARSE_LOCATION,
+                            Manifest.permission
+                                .ACCESS_FINE_LOCATION,
+                        ),
+                    )
+            }
+        }
+
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -850,11 +929,58 @@ internal fun VexMapsMapSurface(
             modifier = Modifier.fillMaxSize(),
         )
 
-        if (
-            navigationState.phase ==
-            VexNavigationSessionPhase.IDLE
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(
+                        end = 8.dp,
+                    ),
         ) {
-            VexMapsRoutePlannerCard(
+            DropdownMenu(
+                expanded =
+                    runtime.presentation.isOpen(
+                        VexMapsScreen.MapMenu,
+                    ),
+                onDismissRequest = {
+                    runtime.dismissPresentation(
+                        VexMapsScreen.MapMenu,
+                    )
+                },
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_offline_maps,
+                            ),
+                        )
+                    },
+                    onClick = {
+                        runtime.activate(
+                            VexMapsScreen
+                                .OpenOfflineMaps,
+                        )
+                    },
+                )
+            }
+        }
+
+        if (
+            runtime.presentation.isOpen(
+                VexMapsScreen.OfflinePanel,
+            )
+        ) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    runtime.dismissPresentation(
+                        VexMapsScreen.OfflinePanel,
+                    )
+                },
+                sheetState = offlineSheetState,
+            ) {
+                VexMapsRoutePlannerCard(
                 regionPack = regionPack,
                 offlineMapState =
                     offlineMapState,
@@ -882,6 +1008,9 @@ internal fun VexMapsMapSurface(
                 onToggleOfflinePreparation = {
                     runtime.activate(
                         VexMapsScreen.ToggleOfflinePreparation,
+                    )
+                    runtime.presentation.close(
+                        VexMapsScreen.OfflinePanel,
                     )
                 },
                 onPrepareOfflineAroundMe = {
@@ -1167,11 +1296,19 @@ internal fun VexMapsMapSurface(
                 },
                 modifier =
                     Modifier
-                        .align(Alignment.TopStart)
-                        .padding(12.dp)
-                        .widthIn(max = 320.dp),
-            )
-        } else {
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = 8.dp,
+                        ),
+                )
+            }
+        }
+
+        if (
+            navigationState.phase !=
+            VexNavigationSessionPhase.IDLE
+        ) {
             VexMapsNavigationCard(
                 state = navigationState,
                 locationReady =
@@ -1272,96 +1409,111 @@ internal fun VexMapsMapSurface(
             navigationState.phase ==
                 VexNavigationSessionPhase.READY
         ) {
-            Column(
+            VexActionFab(
+                element =
+                    VexMapsScreen
+                        .UsePreciseLocation,
+                handler =
+                    locationActionHandler,
+                enabled =
+                    locationState !=
+                        VexMapsLocationState.Finding,
                 modifier =
                     Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(
-                            end = 12.dp,
-                            bottom = 52.dp,
-                        ),
-                horizontalAlignment =
-                    Alignment.End,
-            ) {
-                OutlinedButton(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.UsePreciseLocation,
-                        ),
-                    enabled =
-                        locationState !=
-                            VexMapsLocationState.Finding,
-                    onClick = {
-                        runtime.activate(
-                            VexMapsScreen.UsePreciseLocation,
+                        .align(
+                            Alignment.BottomEnd,
                         )
-
-                        if (
-                            ContextCompat
-                                .checkSelfPermission(
-                                    context,
-                                    Manifest.permission
-                                        .ACCESS_FINE_LOCATION,
-                                ) ==
-                            PackageManager
-                                .PERMISSION_GRANTED
-                        ) {
-                            readCurrentPreciseLocation()
-                        } else {
-                            preciseLocationPermissionLauncher
-                                .launch(
-                                    arrayOf(
-                                        Manifest.permission
-                                            .ACCESS_COARSE_LOCATION,
-                                        Manifest.permission
-                                            .ACCESS_FINE_LOCATION,
-                                    ),
-                                )
-                        }
-                    },
-                ) {
-                    Text(
-                        stringResource(
-                            R.string
-                                .vexmaps_use_precise_location,
+                        .padding(
+                            end = 14.dp,
+                            bottom = 156.dp,
                         ),
+            )
+
+            locationState
+                .stringResOrNull
+                ?.takeIf {
+                    locationState !=
+                        VexMapsLocationState.Ready
+                }
+                ?.let { stringRes ->
+                    Text(
+                        text =
+                            stringResource(
+                                stringRes,
+                            ),
+                        style =
+                            MaterialTheme
+                                .typography
+                                .labelMedium,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurface,
+                        modifier =
+                            Modifier
+                                .align(
+                                    Alignment.BottomEnd,
+                                )
+                                .padding(
+                                    end = 12.dp,
+                                    bottom = 214.dp,
+                                )
+                                .background(
+                                    MaterialTheme
+                                        .colorScheme
+                                        .surface
+                                        .copy(
+                                            alpha = 0.88f,
+                                        ),
+                                )
+                                .padding(
+                                    horizontal = 8.dp,
+                                    vertical = 5.dp,
+                                ),
                     )
                 }
-
-                locationState.stringResOrNull
-                    ?.let { stringRes ->
-                        Text(
-                            text =
-                                stringResource(
-                                    stringRes,
-                                ),
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .labelMedium,
-                            color =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurface,
-                            modifier =
-                                Modifier
-                                    .padding(top = 8.dp)
-                                    .background(
-                                        MaterialTheme
-                                            .colorScheme
-                                            .surface
-                                            .copy(
-                                                alpha = 0.88f,
-                                            ),
-                                    )
-                                    .padding(
-                                        horizontal = 8.dp,
-                                        vertical = 5.dp,
-                                    ),
-                        )
-                    }
-            }
         }
+
+        VexContextDock(
+            pages = contextDockPages,
+            preferredPageRef =
+                preferredContextDockPage,
+            onSelectedPageChanged = {
+                    selectedPageRef ->
+                preferredDockPageRef =
+                    selectedPageRef.value
+
+                VexMapsOnlineStyle
+                    .fromDockPageRef(
+                        selectedPageRef,
+                    )
+                    ?.let { selectedStyle ->
+                        if (
+                            selectedStyle !=
+                            onlineStyle
+                        ) {
+                            runtime.recordDynamicInteraction(
+                                subjectRef =
+                                    "presentation.context-dock.vexmaps.style",
+                                action = "Selected",
+                            )
+                            onlineStyleName =
+                                selectedStyle.name
+                        }
+                    }
+            },
+            modifier =
+                Modifier
+                    .align(
+                        Alignment.BottomCenter,
+                    )
+                    .padding(
+                        horizontal = 10.dp,
+                    )
+                    .padding(
+                        bottom = 34.dp,
+                    ),
+        )
 
         Text(
             text = stringResource(
@@ -1372,7 +1524,10 @@ internal fun VexMapsMapSurface(
             modifier =
                 Modifier
                     .align(Alignment.BottomStart)
-                    .padding(8.dp)
+                    .padding(
+                        start = 8.dp,
+                        bottom = 144.dp,
+                    )
                     .background(
                         MaterialTheme.colorScheme
                             .surface
@@ -1420,7 +1575,7 @@ private fun VexMapsRoutePlannerCard(
 ) {
     var offlinePreparationVisible by
         rememberSaveable {
-            mutableStateOf(false)
+            mutableStateOf(true)
         }
     var preparationModeName by
         rememberSaveable {
@@ -2863,6 +3018,15 @@ private class VexMapsMapController {
         style: Style,
         restoredRouteKey: String?,
     ) {
+        this.map
+            ?.removeOnMapLongClickListener(
+                longClickListener,
+            )
+        this.map
+            ?.removeOnCameraIdleListener(
+                cameraIdleListener,
+            )
+
         this.map = map
         this.style = style
         lastFittedRouteKey =
@@ -3490,11 +3654,5 @@ private const val DEVICE_LOCATION_SOURCE_ID =
 
 private const val DEVICE_LOCATION_LAYER_ID =
     "vexmaps-device-location-layer"
-
-private const val OPEN_FREE_MAP_LIBERTY_STYLE =
-    "https://tiles.openfreemap.org/styles/liberty"
-
-private const val OPEN_FREE_MAP_DARK_STYLE =
-    "https://tiles.openfreemap.org/styles/dark"
 
 // [VXG RealForever]
