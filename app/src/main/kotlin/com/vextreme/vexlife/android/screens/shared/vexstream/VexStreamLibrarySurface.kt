@@ -1710,6 +1710,14 @@ private fun VexStreamTrackMenuItem(
     )
 }
 
+internal data class VexStreamPlaybackControlAvailability(
+    val canSeek: Boolean,
+    val canPrevious: Boolean,
+    val canTogglePlayback: Boolean,
+    val canNext: Boolean,
+    val canShuffle: Boolean,
+)
+
 @Composable
 private fun VexStreamMiniPlayer(
     playback: VexStreamPlaybackUiState,
@@ -1739,6 +1747,57 @@ private fun VexStreamMiniPlayer(
                 else -> Unit
             }
         }
+    val controls =
+        VexStreamPlaybackControlAvailability(
+            canSeek =
+                controller != null &&
+                    playback.durationMs > 0L &&
+                    controller.isCommandAvailable(
+                        androidx.media3.common.Player
+                            .COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                    ),
+            canPrevious =
+                controller?.hasPreviousMediaItem() == true,
+            canTogglePlayback =
+                controller != null,
+            canNext =
+                controller?.hasNextMediaItem() == true,
+            canShuffle =
+                controller != null,
+        )
+
+    VexStreamMiniPlayerContent(
+        playback = playback,
+        controls = controls,
+        handler = handler,
+        shuffleSelected = shuffleSelected,
+        onSeek = { targetPositionMs ->
+            runtime.activate(
+                VexStreamMusicScreen.SeekPlayback,
+            )
+            controller?.seekTo(
+                targetPositionMs,
+            )
+        },
+    )
+}
+
+/**
+ * Pure presentation seam for the service-owned playback truth.
+ *
+ * Domain/player behavior stays with Media3 + [VexStreamPlaybackUiState]. This renderer receives only
+ * the already-projected visible state, current control availability, semantic action handler and one
+ * seek effect. Deterministic screenshot/render tests can therefore prove the player presentation
+ * without faking a MediaController or re-implementing playback semantics.
+ */
+@Composable
+internal fun VexStreamMiniPlayerContent(
+    playback: VexStreamPlaybackUiState,
+    controls: VexStreamPlaybackControlAvailability,
+    handler: ElementActionHandler,
+    shuffleSelected: Boolean,
+    onSeek: (Long) -> Unit,
+) {
     val queuePosition =
         playback.currentIndex
             .takeIf { it >= 0 }
@@ -1764,13 +1823,6 @@ private fun VexStreamMiniPlayer(
                 )
             }
             ?: playback.currentPositionMs
-    val canSeek =
-        controller != null &&
-            playback.durationMs > 0L &&
-            controller.isCommandAvailable(
-                androidx.media3.common.Player
-                    .COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-            )
 
     VexContainer(
         element = VexStreamMusicScreen.PlayerSection,
@@ -1827,7 +1879,7 @@ private fun VexStreamMiniPlayer(
                     scrubFraction
                 if (
                     targetFraction != null &&
-                    canSeek
+                    controls.canSeek
                 ) {
                     val targetPositionMs =
                         vexStreamSeekPositionMs(
@@ -1835,10 +1887,7 @@ private fun VexStreamMiniPlayer(
                             durationMs = playback.durationMs,
                         )
                     scrubFraction = null
-                    runtime.activate(
-                        VexStreamMusicScreen.SeekPlayback,
-                    )
-                    controller?.seekTo(
+                    onSeek(
                         targetPositionMs,
                     )
                 } else {
@@ -1850,7 +1899,7 @@ private fun VexStreamMiniPlayer(
                 .vexElement(
                     VexStreamMusicScreen.SeekPlayback,
                 ),
-            enabled = canSeek,
+            enabled = controls.canSeek,
             valueRange = 0f..1f,
         )
 
@@ -1887,13 +1936,12 @@ private fun VexStreamMiniPlayer(
             VexIconButton(
                 element = VexStreamMusicScreen.PreviousTrack,
                 handler = handler,
-                enabled =
-                    controller?.hasPreviousMediaItem() == true,
+                enabled = controls.canPrevious,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
                 handler = handler,
-                enabled = controller != null,
+                enabled = controls.canTogglePlayback,
                 iconOverride =
                     if (playback.isPlaying) {
                         ElementIcon.Pause
@@ -1904,18 +1952,17 @@ private fun VexStreamMiniPlayer(
             VexIconButton(
                 element = VexStreamMusicScreen.NextTrack,
                 handler = handler,
-                enabled =
-                    controller?.hasNextMediaItem() == true,
+                enabled = controls.canNext,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShuffleQueue,
                 handler = handler,
-                enabled = controller != null,
+                enabled = controls.canShuffle,
                 selected = shuffleSelected,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
-                handler = runtime,
+                handler = handler,
             )
         }
     }
