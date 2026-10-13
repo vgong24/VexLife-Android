@@ -153,13 +153,16 @@ abstract class VexCompoundRelay<
         val ownerJob =
             synchronized(dependencyLock) {
                 dependencyOwnerJob
-                    .also {
-                        dependencyOwnerJob = null
-                    }
             }
                 ?: return
 
         ownerJob.cancelAndJoin()
+
+        synchronized(dependencyLock) {
+            if (dependencyOwnerJob === ownerJob) {
+                dependencyOwnerJob = null
+            }
+        }
     }
 
     /**
