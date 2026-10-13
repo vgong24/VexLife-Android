@@ -233,8 +233,19 @@ ScreenCrawler remains opt-in; see `SCREEN-CRAWLER-EVIDENCE.md`.
 
 ## First host-proof return
 
-The Test Foundation candidate can be exercised entirely from a terminal. The current source candidate
-expects these tasks in one Gradle invocation with `--continue`:
+The Test Foundation candidate can be exercised entirely from a terminal. Android Studio does not
+need to be open.
+
+The OS-neutral repository-root command is:
+
+~~~text
+java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --continue vexVerifyLocal vexCoverage :app:updateDebugScreenshotTest vexVisualValidate vexTestFoundationProofBundle
+~~~
+
+It uses the checked-in Gradle wrapper JAR directly, so the human/host route does not need to choose
+between `./gradlew` and `.\\gradlew.bat`.
+
+The invocation executes:
 
 ~~~text
 vexVerifyLocal
