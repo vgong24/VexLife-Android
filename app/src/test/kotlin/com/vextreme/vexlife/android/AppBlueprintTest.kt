@@ -96,28 +96,28 @@ class AppBlueprintTest {
     }
 
     @Test
-    fun vexStreamToolbarActionsRemainOwnedByTheRegisteredScreen() {
-        assertEquals(
-            listOf(
-                VexStreamMusicScreen.SearchLibrary.elementId,
-                VexStreamMusicScreen.ManageConnection.elementId,
-            ),
-            VexStreamMusicScreen.toolbarActions.map {
-                it.elementId
-            },
-        )
-        assertSame(
-            VexStreamMusicScreen,
-            registry.ownerScreenOf(
-                VexStreamMusicScreen.SearchLibrary,
-            ),
-        )
-        assertSame(
-            VexStreamMusicScreen,
-            registry.ownerScreenOf(
-                VexStreamMusicScreen.ManageConnection,
-            ),
-        )
+    fun everyToolbarActionIsRegisteredToItsOwningScreen() {
+        AppScreens.all.forEach { screen ->
+            screen.toolbarActions.forEach { action ->
+                assertSame(
+                    action,
+                    registry.element(
+                        action.elementId,
+                    ),
+                )
+                assertSame(
+                    screen,
+                    registry.ownerScreenOf(
+                        action,
+                    ),
+                )
+                assertNull(
+                    registry.parentOf(
+                        action,
+                    ),
+                )
+            }
+        }
     }
 
     @Test

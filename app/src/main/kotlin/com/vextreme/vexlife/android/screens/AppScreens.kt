@@ -50,7 +50,7 @@ object AppScreens {
     val registry = UIBlueprintRegistry(
         AppBlueprint(
             shell = AppShell.blueprint,
-            screens = all.map { it.asRegistration() },
+            screens = all.map { it.appRegistration() },
         ),
     )
 

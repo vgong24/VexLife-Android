@@ -389,11 +389,6 @@ object VexStreamMusicScreen : AppScreenBlueprint(
 
     override val content = layout {
         column("body") {
-            row("toolbar-actions") {
-                button(SearchLibrary)
-                button(ManageConnection)
-            }
-
             column(
                 element = ConnectionSection,
                 style = VexElementStyles.RaisedSurface,
