@@ -152,7 +152,7 @@ internal class VexMapsStyleConvergenceRelay :
                 ?: return
 
         if (
-            output.availability !=
+            output.status !=
             VexMapsStyleConvergenceStatus
                 .APPLYING
         ) {
