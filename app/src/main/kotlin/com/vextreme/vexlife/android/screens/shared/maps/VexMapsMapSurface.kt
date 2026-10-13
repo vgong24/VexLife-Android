@@ -45,7 +45,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
@@ -85,7 +84,7 @@ internal fun VexMapsMapSurface(
             .visualLocations
             .collectAsState()
 
-    val mapController =
+    val mapAdapter =
         remember {
             VexMapLibreAdapter()
         }
@@ -684,7 +683,7 @@ internal fun VexMapsMapSurface(
         }
 
     SideEffect {
-        mapController
+        mapAdapter
             .setOnMapLongPress(
                 if (
                     navigationState.phase ==
@@ -707,7 +706,7 @@ internal fun VexMapsMapSurface(
                                 planningState =
                                     planningState
                                         .afterVexMapsRouteInputChanged()
-                                mapController
+                                mapAdapter
                                     .showOrigin(
                                         selected,
                                     )
@@ -730,7 +729,7 @@ internal fun VexMapsMapSurface(
                                 planningState =
                                     planningState
                                         .afterVexMapsRouteInputChanged()
-                                mapController
+                                mapAdapter
                                     .showDestination(
                                         selected,
                                     )
@@ -745,7 +744,7 @@ internal fun VexMapsMapSurface(
             navigationState
                 .routeResult
                 ?.vexMapsRouteKey()
-        mapController.setOnViewportChanged { snapshot ->
+        mapAdapter.setOnViewportChanged { snapshot ->
             setViewportSnapshot(
                 snapshot = snapshot,
                 routeKey = currentRouteKey,
@@ -778,7 +777,7 @@ internal fun VexMapsMapSurface(
     val mapView =
         remember(
             context,
-            mapController,
+            mapAdapter,
         ) {
             MapView(context).apply {
                 onCreate(null)
@@ -825,7 +824,7 @@ internal fun VexMapsMapSurface(
             map.setStyle(
                 selection.styleUri,
             ) { style ->
-                mapController.attach(
+                mapAdapter.attach(
                     map = map,
                     style = style,
                     restoredRouteKey =
@@ -862,12 +861,12 @@ internal fun VexMapsMapSurface(
 
     LaunchedEffect(
         selectedOrigin,
-        mapController,
+        mapAdapter,
     ) {
         if (selectedOrigin == null) {
-            mapController.clearOrigin()
+            mapAdapter.clearOrigin()
         } else {
-            mapController.showOrigin(
+            mapAdapter.showOrigin(
                 selectedOrigin,
             )
         }
@@ -875,12 +874,12 @@ internal fun VexMapsMapSurface(
 
     LaunchedEffect(
         destination,
-        mapController,
+        mapAdapter,
     ) {
         if (destination == null) {
-            mapController.clearDestination()
+            mapAdapter.clearDestination()
         } else {
-            mapController.showDestination(
+            mapAdapter.showDestination(
                 destination,
             )
         }
@@ -895,12 +894,12 @@ internal fun VexMapsMapSurface(
 
     LaunchedEffect(
         mapDeviceLocation,
-        mapController,
+        mapAdapter,
     ) {
         if (mapDeviceLocation == null) {
-            mapController.clearDeviceLocation()
+            mapAdapter.clearDeviceLocation()
         } else {
-            mapController.showDeviceLocation(
+            mapAdapter.showDeviceLocation(
                 mapDeviceLocation,
             )
         }
@@ -915,15 +914,15 @@ internal fun VexMapsMapSurface(
             .routeResult
             ?.route
             ?.routeRevision,
-        mapController,
+        mapAdapter,
     ) {
         val routeResult =
             navigationState.routeResult
 
         if (routeResult == null) {
-            mapController.clearRoute()
+            mapAdapter.clearRoute()
         } else {
-            mapController.showRoute(
+            mapAdapter.showRoute(
                 routeResult,
             )
         }
@@ -932,7 +931,7 @@ internal fun VexMapsMapSurface(
     DisposableEffect(
         lifecycle,
         mapView,
-        mapController,
+        mapAdapter,
         styleConvergenceRelay,
     ) {
         val lifecycleBridge =
@@ -967,7 +966,7 @@ internal fun VexMapsMapSurface(
             mapView.removeOnDidFailLoadingMapListener(
                 styleFailureListener,
             )
-            mapController.detach()
+            mapAdapter.detach()
             lifecycleBridge.dispose()
         }
     }
@@ -1273,11 +1272,11 @@ internal fun VexMapsMapSurface(
                                     .afterVexMapsRouteInputChanged()
                             placeSearchState =
                                 VexMapsPlaceSearchState.Idle
-                            mapController
+                            mapAdapter
                                 .showOrigin(
                                     place.coordinate,
                                 )
-                            mapController
+                            mapAdapter
                                 .focusOn(
                                     place.coordinate,
                                 )
@@ -1300,11 +1299,11 @@ internal fun VexMapsMapSurface(
                                     .afterVexMapsRouteInputChanged()
                             placeSearchState =
                                 VexMapsPlaceSearchState.Idle
-                            mapController
+                            mapAdapter
                                 .showDestination(
                                     place.coordinate,
                                 )
-                            mapController
+                            mapAdapter
                                 .focusOn(
                                     place.coordinate,
                                 )
@@ -1336,7 +1335,7 @@ internal fun VexMapsMapSurface(
                     planningState =
                         planningState
                             .afterVexMapsRouteInputChanged()
-                    mapController.clearOrigin()
+                    mapAdapter.clearOrigin()
                 },
                 onImportOfflineMap = {
                     runtime.activate(
@@ -1457,7 +1456,7 @@ internal fun VexMapsMapSurface(
                     )
                     navigationVisualLocation
                         ?.let { visual ->
-                            mapController.focusOn(
+                            mapAdapter.focusOn(
                                 visual.coordinate,
                             )
                         }
