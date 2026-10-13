@@ -73,6 +73,7 @@ internal class VexMapsRegionPackStore(
         source: Uri,
     ): VexMapsRegionPack =
         withContext(Dispatchers.IO) {
+            replacementGate.withExclusiveReplacement {
             check(
                 regionDirectory.isDirectory ||
                     regionDirectory.mkdirs(),
@@ -166,6 +167,7 @@ internal class VexMapsRegionPackStore(
                     )
                 }
             }
+            }
         }
 
     private fun File.toPack() =
@@ -175,6 +177,11 @@ internal class VexMapsRegionPackStore(
             lastModifiedMillis =
                 lastModified(),
         )
+
+    private companion object {
+        val replacementGate =
+            VexMapsPackReplacementGate()
+    }
 }
 
 internal fun ensureVexMapsPackReplacementTimestamp(

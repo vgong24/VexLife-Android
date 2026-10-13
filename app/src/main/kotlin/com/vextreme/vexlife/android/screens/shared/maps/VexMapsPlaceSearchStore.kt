@@ -94,6 +94,7 @@ internal class VexMapsPlaceSearchStore(
         source: Uri,
     ): VexMapsPlaceSearchPack =
         withContext(Dispatchers.IO) {
+            replacementGate.withExclusiveReplacement {
             check(
                 placeDirectory.isDirectory ||
                     placeDirectory.mkdirs(),
@@ -188,6 +189,7 @@ internal class VexMapsPlaceSearchStore(
                         placeDatabase,
                     )
                 }
+            }
             }
         }
 
@@ -368,6 +370,11 @@ internal class VexMapsPlaceSearchStore(
             lastModifiedMillis =
                 lastModified(),
         )
+
+    private companion object {
+        val replacementGate =
+            VexMapsPackReplacementGate()
+    }
 }
 
 internal fun vexMapsPlaceMatchQuery(
