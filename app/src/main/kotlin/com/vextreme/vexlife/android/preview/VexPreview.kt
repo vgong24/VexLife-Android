@@ -26,6 +26,7 @@ import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.shell.AppFrame
 import com.vextreme.vexlife.android.ui.VexLifeRelays
@@ -205,9 +206,39 @@ internal fun VexPreviewHost(
 }
 
 /**
+ * Preview path for an app Screen whose real renderer may differ from its static semantic tree.
+ *
+ * This calls the same [AppScreenBlueprint.renderContent] bridge used by the running app. The Screen
+ * still owns any feature-specific fixture through [repositoriesFactory] / [previewSetup]; this helper
+ * owns only the shared environment and "render the actual Screen" behavior.
+ */
+@Composable
+internal fun VexRenderedScreenPreview(
+    screen: AppScreenBlueprint,
+    repositoriesFactory: () -> AppRepositories =
+        VexPreviewRepositories::empty,
+    previewSetup: VexPreviewSetup.() -> Unit = {},
+) {
+    VexPreviewHost(
+        id = "rendered-screen-" + screen.screenId,
+        startScreen = screen,
+        repositoriesFactory = repositoriesFactory,
+        previewSetup = previewSetup,
+    ) { context ->
+        screen.renderContent(
+            runtime = context.runtime,
+            repositories = context.repositories,
+            relays = context.relays,
+            darkTheme = context.darkTheme,
+        )
+    }
+}
+
+/**
  * Fast path for an ordinary Screen whose visible body is exactly its ScreenBlueprint tree.
  *
- * Stateful Screens remain free to use [VexPreviewHost] directly in their own source file.
+ * Use [VexRenderedScreenPreview] when the Screen overrides the app render bridge; a blueprint preview
+ * intentionally visualizes only the static semantic tree.
  */
 @Composable
 internal fun VexBlueprintScreenPreview(screen: ScreenBlueprint) {

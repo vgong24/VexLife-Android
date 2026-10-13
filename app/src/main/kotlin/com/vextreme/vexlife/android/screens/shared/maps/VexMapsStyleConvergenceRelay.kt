@@ -28,7 +28,7 @@ internal data class VexMapsStyleFailure(
     val message: String,
 )
 
-internal enum class VexMapsStyleConvergenceAvailability {
+internal enum class VexMapsStyleConvergenceStatus {
     UNOBSERVED,
     NEEDS_APPLY,
     APPLYING,
@@ -57,9 +57,9 @@ internal data class VexMapsStyleConvergenceInputState(
 }
 
 internal data class VexMapsStyleConvergenceOutputState(
-    val availability:
-        VexMapsStyleConvergenceAvailability =
-        VexMapsStyleConvergenceAvailability.UNOBSERVED,
+    val status:
+        VexMapsStyleConvergenceStatus =
+        VexMapsStyleConvergenceStatus.UNOBSERVED,
     val selection: VexMapsStyleSelection? = null,
     val failureMessage: String? = null,
 ) : VexOutputState<VexMapsStyleConvergenceOutputState> {
@@ -100,8 +100,8 @@ internal class VexMapsStyleConvergenceRelay :
 
         if (
             sameMeaning &&
-            currentOutput.availability !=
-            VexMapsStyleConvergenceAvailability.FAILED
+            currentOutput.status !=
+            VexMapsStyleConvergenceStatus.FAILED
         ) {
             return
         }
@@ -153,7 +153,7 @@ internal class VexMapsStyleConvergenceRelay :
 
         if (
             output.availability !=
-            VexMapsStyleConvergenceAvailability
+            VexMapsStyleConvergenceStatus
                 .APPLYING
         ) {
             return
@@ -258,22 +258,22 @@ internal class VexMapsStyleConvergenceRelay :
                     it.selection.matchesCurrent()
                 }
 
-        val availability =
+        val status =
             when {
                 loaded?.matchesCurrent() == true ->
-                    VexMapsStyleConvergenceAvailability
+                    VexMapsStyleConvergenceStatus
                         .APPLIED
 
                 currentFailure != null ->
-                    VexMapsStyleConvergenceAvailability
+                    VexMapsStyleConvergenceStatus
                         .FAILED
 
                 requested?.matchesCurrent() == true ->
-                    VexMapsStyleConvergenceAvailability
+                    VexMapsStyleConvergenceStatus
                         .APPLYING
 
                 else ->
-                    VexMapsStyleConvergenceAvailability
+                    VexMapsStyleConvergenceStatus
                         .NEEDS_APPLY
             }
 
@@ -281,7 +281,7 @@ internal class VexMapsStyleConvergenceRelay :
             inputState = coherentInput,
             outputState =
                 VexMapsStyleConvergenceOutputState(
-                    availability = availability,
+                    status = status,
                     selection =
                         selection.copy(),
                     failureMessage =

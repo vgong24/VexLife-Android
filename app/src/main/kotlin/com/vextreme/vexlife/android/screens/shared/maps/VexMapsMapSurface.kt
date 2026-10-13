@@ -790,7 +790,7 @@ internal fun VexMapsMapSurface(
 
     LaunchedEffect(
         mapView,
-        styleConvergence.availability,
+        styleConvergence.status,
         styleSelection?.revision,
     ) {
         val selection =
@@ -798,8 +798,8 @@ internal fun VexMapsMapSurface(
                 ?: return@LaunchedEffect
 
         if (
-            styleConvergence.availability !=
-            VexMapsStyleConvergenceAvailability
+            styleConvergence.status !=
+            VexMapsStyleConvergenceStatus
                 .NEEDS_APPLY
         ) {
             return@LaunchedEffect
@@ -829,7 +829,7 @@ internal fun VexMapsMapSurface(
     }
 
     LaunchedEffect(
-        styleConvergence.availability,
+        styleConvergence.status,
         styleSelection?.revision,
     ) {
         val selection =
@@ -837,8 +837,8 @@ internal fun VexMapsMapSurface(
                 ?: return@LaunchedEffect
 
         if (
-            styleConvergence.availability ==
-            VexMapsStyleConvergenceAvailability
+            styleConvergence.status ==
+            VexMapsStyleConvergenceStatus
                 .APPLIED
         ) {
             runCatching {
@@ -1003,9 +1003,9 @@ internal fun VexMapsMapSurface(
                 .entries
                 .map { style ->
                     style.contextDockPage(
-                        availability =
+                        status =
                             styleConvergence
-                                .availability
+                                .status
                                 .takeIf {
                                     styleConvergence
                                         .selection

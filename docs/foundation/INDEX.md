@@ -65,6 +65,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
 | EVENTS_CONVERGENCE_PRACTICUM | external-information ingress + Relay composition + stable dynamic list + anchored attention | **DRAFT CANDIDATE / PURE KOTLIN SMOKE PASS / ANDROID PROOF PENDING** | Master one convergence node before reverse-building real Messaging/Calls/Maps/Health/VexStream adapters toward it | exact Gradle/Journey/ScreenCrawler + physical-device attention walk |
+| VEXMAPS_FEATURE_TOPOLOGY | native map composition + provider / Relay / session boundaries | **DRAFT CANDIDATE / STRUCTURAL TOPOLOGY EXPOSED / ANDROID PROOF PENDING** | Make Maps teach where semantic identity, durable context, convergence, provider mechanics and presentation belong without turning MapLibre into app architecture | real-render Preview + exact Gradle/device structural-equivalence proof; then settle persisted map-context semantics |
 | F2_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
 | F3_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
 | F4_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
@@ -144,6 +145,20 @@ about repository/Flow dependencies, while keeping `processStates()` as the synch
 semantic reducer and keeping Compose as an output/presentation observer. It also exercises a real
 cross-domain UserProfile name-change input. It remains a draft/refinement candidate until exact
 Gradle/Android proof closes.
+
+## VexMaps feature topology candidate
+
+Canonical detail: [`VEXMAPS-FEATURE-TOPOLOGY.md`](VEXMAPS-FEATURE-TOPOLOGY.md)
+
+### Intention
+
+A fresh developer should be able to descend from VexMaps as a human destination into semantic
+registration, durable Maps state, cross-truth Relay relationships, navigation-session lifetime,
+provider adapters and visible composition without first reconstructing a giant Compose file.
+
+The current structural candidate keeps MapLibre provider mechanics feature-local, keeps Relay for
+semantic reconciliation rather than turning it into an event bus, and makes custom-Screen Preview
+exercise the same renderer the running app uses.
 
 ## F0 — Standalone Build Foundation
 
