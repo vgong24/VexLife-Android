@@ -13,6 +13,23 @@ import kotlinx.coroutines.sync.withLock
 internal class VexMapsPackReplacementGate {
     private val mutex =
         Mutex()
+    private val recoveryLock =
+        Any()
+    private var recoveryCompleted =
+        false
+
+    fun recoverOnce(
+        action: () -> Unit,
+    ) {
+        synchronized(recoveryLock) {
+            if (recoveryCompleted) {
+                return
+            }
+
+            action()
+            recoveryCompleted = true
+        }
+    }
 
     suspend fun <T> withExclusiveReplacement(
         action: () -> T,

@@ -74,11 +74,13 @@ internal class VexMapsPlaceSearchStore(
         )
 
     init {
-        recoverVexMapsInterruptedPackReplacement(
-            current = placeDatabase,
-            staging = staging,
-            backup = backup,
-        )
+        replacementGate.recoverOnce {
+            recoverVexMapsInterruptedPackReplacement(
+                current = placeDatabase,
+                staging = staging,
+                backup = backup,
+            )
+        }
     }
 
     fun currentPack(): VexMapsPlaceSearchPack? =

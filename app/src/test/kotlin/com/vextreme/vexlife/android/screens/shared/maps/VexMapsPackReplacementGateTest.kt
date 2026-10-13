@@ -14,6 +14,48 @@ import org.junit.Test
 
 class VexMapsPackReplacementGateTest {
     @Test
+    fun recoveryRunsOncePerProcessGate() {
+        val gate =
+            VexMapsPackReplacementGate()
+        var runs = 0
+
+        gate.recoverOnce {
+            runs += 1
+        }
+        gate.recoverOnce {
+            runs += 1
+        }
+
+        assertEquals(
+            1,
+            runs,
+        )
+    }
+
+    @Test
+    fun failedRecoveryCanBeRetried() {
+        val gate =
+            VexMapsPackReplacementGate()
+        var runs = 0
+
+        runCatching {
+            gate.recoverOnce {
+                runs += 1
+                error("recovery failed")
+            }
+        }
+
+        gate.recoverOnce {
+            runs += 1
+        }
+
+        assertEquals(
+            2,
+            runs,
+        )
+    }
+
+    @Test
     fun replacementTransactionsAreSerializedAcrossCallers() =
         runBlocking {
             val gate =

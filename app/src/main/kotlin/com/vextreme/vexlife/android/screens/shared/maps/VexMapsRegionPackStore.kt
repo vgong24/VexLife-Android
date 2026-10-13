@@ -53,11 +53,13 @@ internal class VexMapsRegionPackStore(
         )
 
     init {
-        recoverVexMapsInterruptedPackReplacement(
-            current = tileExtract,
-            staging = staging,
-            backup = backup,
-        )
+        replacementGate.recoverOnce {
+            recoverVexMapsInterruptedPackReplacement(
+                current = tileExtract,
+                staging = staging,
+                backup = backup,
+            )
+        }
     }
 
     fun currentPack(): VexMapsRegionPack? =
