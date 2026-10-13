@@ -207,10 +207,47 @@ Runs the JVM/source bundle and assembles the debug APK. It requires no connected
 Connected Journey/device proof remains separate because it owns a different execution substrate:
 
 ~~~bash
-./gradlew :app:connectedDebugAndroidTest
+./gradlew vexVerifyDevice
 ~~~
 
+That task delegates to `:app:connectedDebugAndroidTest`. Android Studio is not required: Android
+Gradle Plugin discovers the connected emulator/physical device and drives the instrumentation/adb
+path. ADB remains useful for device discovery, install/launch, Logcat and native/device diagnostics,
+but ScreenCrawler screenshot retrieval stays on AndroidX PlatformTestStorage rather than raw
+filesystem pulls.
+
 ScreenCrawler remains opt-in; see `SCREEN-CRAWLER-EVIDENCE.md`.
+
+## First host-proof return
+
+The Test Foundation candidate can be exercised entirely from a terminal. The current source candidate
+expects these tasks in one Gradle invocation with `--continue`:
+
+~~~text
+vexVerifyLocal
+vexCoverage
+:app:updateDebugScreenshotTest
+vexVisualValidate
+vexTestFoundationProofBundle
+~~~
+
+`vexTestFoundationProofBundle` is collection-only. It does not make failed tasks pass and it does
+not accept generated reference images. It forms:
+
+~~~text
+build/vex/test-foundation/VexLife-Test-Foundation-Proof.zip
+~~~
+
+with whatever evidence the run produced:
+- aggregate Kover reports;
+- app + architecture JVM test result XML;
+- Journey coverage diagnostics;
+- screenshot validation report;
+- generated screenshot reference candidates;
+- exact Git/JDK/OS metadata.
+
+This gives a host or Relay one returnable file without making CI or Android Studio the proof owner.
+A generated golden remains unaccepted until its pixels are explicitly reviewed.
 
 ## Feature-scoped proof
 

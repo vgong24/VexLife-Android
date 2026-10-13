@@ -53,6 +53,20 @@ tasks.register("vexVerifyLocal") {
 }
 
 /**
+ * Canonical connected-Android Journey/instrumentation proof.
+ *
+ * Android Gradle Plugin owns target discovery and adb/instrumentation mechanics; Android Studio is
+ * only an optional human UI over this same execution path.
+ */
+tasks.register("vexVerifyDevice") {
+    group = "verification"
+    description =
+        "Run the baseline connected Android instrumentation/Journey suite."
+
+    dependsOn(":app:connectedDebugAndroidTest")
+}
+
+/**
  * Local JVM coverage report across the current app + architecture modules.
  *
  * Coverage is diagnostic evidence only at this stage: no percentage gate is admitted.
