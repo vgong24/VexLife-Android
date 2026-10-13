@@ -73,8 +73,10 @@ internal enum class VexMapsOnlineStyle(
     }
 }
 
-internal fun VexMapsOnlineStyle.contextDockPage():
-    VexContextDockPage =
+internal fun VexMapsOnlineStyle.contextDockPage(
+    availability:
+        VexMapsStyleConvergenceAvailability?,
+): VexContextDockPage =
     VexContextDockPage(
         pageRef = dockPageRef,
     ) { expanded ->
@@ -94,11 +96,38 @@ internal fun VexMapsOnlineStyle.contextDockPage():
                         .titleMedium,
             )
             if (expanded) {
+                val statusRes =
+                    when (availability) {
+                        VexMapsStyleConvergenceAvailability
+                            .NEEDS_APPLY,
+                        VexMapsStyleConvergenceAvailability
+                            .APPLYING,
+                        ->
+                            R.string
+                                .vexmaps_style_applying
+
+                        VexMapsStyleConvergenceAvailability
+                            .APPLIED ->
+                            R.string
+                                .vexmaps_style_loaded
+
+                        VexMapsStyleConvergenceAvailability
+                            .FAILED ->
+                            R.string
+                                .vexmaps_style_failed
+
+                        VexMapsStyleConvergenceAvailability
+                            .UNOBSERVED,
+                        null,
+                        ->
+                            R.string
+                                .vexmaps_style_online_hint
+                    }
+
                 Text(
                     text =
                         stringResource(
-                            R.string
-                                .vexmaps_style_online_hint,
+                            statusRes,
                         ),
                     style =
                         MaterialTheme

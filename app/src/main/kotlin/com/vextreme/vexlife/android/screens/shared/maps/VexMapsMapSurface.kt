@@ -147,23 +147,26 @@ internal fun VexMapsMapSurface(
             >(null)
         }
 
-    var onlineStyleName by
-        rememberSaveable {
-            mutableStateOf(
-                VexMapsOnlineStyle
-                    .default(darkTheme)
-                    .name,
-            )
-        }
-    val onlineStyle =
-        VexMapsOnlineStyle.restore(
-            name = onlineStyleName,
-            darkTheme = darkTheme,
+    val defaultOnlineStyle =
+        VexMapsOnlineStyle.default(
+            darkTheme,
         )
+    val styleConvergenceRelay =
+        remember {
+            VexMapsStyleConvergenceRelay()
+        }
+    val styleConvergence by
+        styleConvergenceRelay
+            .outputStates
+            .collectAsState(
+                initial =
+                    styleConvergenceRelay
+                        .currentOutput,
+            )
     var preferredDockPageRef by
         rememberSaveable {
             mutableStateOf(
-                onlineStyle
+                defaultOnlineStyle
                     .dockPageRef
                     .value,
             )
@@ -521,22 +524,28 @@ internal fun VexMapsMapSurface(
                 repository.load()
             }.getOrNull()
 
-        storedState
-            ?.onlineStyleRef
-            ?.let { styleRef ->
-                VexMapsOnlineStyle
-                    .fromStyleRef(
-                        styleRef,
-                    )
-            }
-            ?.let { storedStyle ->
-                onlineStyleName =
-                    storedStyle.name
-                preferredDockPageRef =
-                    storedStyle
-                        .dockPageRef
-                        .value
-            }
+        val restoredStyle =
+            storedState
+                ?.onlineStyleRef
+                ?.let { styleRef ->
+                    VexMapsOnlineStyle
+                        .fromStyleRef(
+                            styleRef,
+                        )
+                }
+                ?: defaultOnlineStyle
+
+        styleConvergenceRelay
+            .styleSelected(
+                styleRef =
+                    restoredStyle.styleRef,
+                styleUri =
+                    restoredStyle.styleUri,
+            )
+        preferredDockPageRef =
+            restoredStyle
+                .dockPageRef
+                .value
 
         val precisePermissionGranted =
             ContextCompat.checkSelfPermission(
@@ -762,15 +771,12 @@ internal fun VexMapsMapSurface(
     }
 
     /*
-     * The human's selected online style owns the live map presentation.
-     *
-     * Imported offline regions are cached resources, not a hidden visual-preference override. When
-     * an offline region was built for the same style URI, MapLibre may satisfy that style from its
-     * local database. A future explicit offline-readiness/source decision may constrain available
-     * styles, but merely having an offline pack installed must not make the Dark/Liberty pager lie.
+     * The Style Convergence Relay owns the relationship between the human's selected style and the
+     * style MapLibre has actually confirmed loaded. Imported offline regions remain cached capability,
+     * not a hidden visual-preference override.
      */
-    val mapStyleUri =
-        onlineStyle.styleUri
+    val styleSelection =
+        styleConvergence.selection
 
     val currentRouteKey =
         navigationState
@@ -812,17 +818,60 @@ internal fun VexMapsMapSurface(
 
     LaunchedEffect(
         mapView,
-        mapStyleUri,
+        styleConvergence.availability,
+        styleSelection?.revision,
     ) {
+        val selection =
+            styleSelection
+                ?: return@LaunchedEffect
+
+        if (
+            styleConvergence.availability !=
+            VexMapsStyleConvergenceAvailability
+                .NEEDS_APPLY
+        ) {
+            return@LaunchedEffect
+        }
+
+        styleConvergenceRelay
+            .applyStarted(
+                selection,
+            )
+
         mapView.getMapAsync { map ->
             map.setStyle(
-                mapStyleUri,
+                selection.styleUri,
             ) { style ->
                 mapController.attach(
                     map = map,
                     style = style,
                     restoredRouteKey =
                         restoredRouteKey,
+                )
+                styleConvergenceRelay
+                    .styleLoaded(
+                        selection,
+                    )
+            }
+        }
+    }
+
+    LaunchedEffect(
+        styleConvergence.availability,
+        styleSelection?.revision,
+    ) {
+        val selection =
+            styleSelection
+                ?: return@LaunchedEffect
+
+        if (
+            styleConvergence.availability ==
+            VexMapsStyleConvergenceAvailability
+                .APPLIED
+        ) {
+            runCatching {
+                repository.saveOnlineStyle(
+                    selection.styleRef,
                 )
             }
         }
@@ -901,14 +950,26 @@ internal fun VexMapsMapSurface(
         lifecycle,
         mapView,
         mapController,
+        styleConvergenceRelay,
     ) {
         val lifecycleBridge =
             VexMapsMapViewLifecycle(
                 mapView = mapView,
             )
+        val styleFailureListener =
+            MapView.OnDidFailLoadingMapListener {
+                    errorMessage ->
+                styleConvergenceRelay
+                    .currentApplyFailed(
+                        errorMessage,
+                    )
+            }
 
         lifecycleBridge.synchronize(
             lifecycle.currentState,
+        )
+        mapView.addOnDidFailLoadingMapListener(
+            styleFailureListener,
         )
 
         val observer =
@@ -920,6 +981,9 @@ internal fun VexMapsMapSurface(
 
         onDispose {
             lifecycle.removeObserver(observer)
+            mapView.removeOnDidFailLoadingMapListener(
+                styleFailureListener,
+            )
             mapController.detach()
             lifecycleBridge.dispose()
         }
@@ -965,8 +1029,18 @@ internal fun VexMapsMapSurface(
             vexStreamDockPage?.let(::add)
             VexMapsOnlineStyle
                 .entries
-                .map {
-                    it.contextDockPage()
+                .map { style ->
+                    style.contextDockPage(
+                        availability =
+                            styleConvergence
+                                .availability
+                                .takeIf {
+                                    styleConvergence
+                                        .selection
+                                        ?.styleRef ==
+                                        style.styleRef
+                                },
+                    )
                 }
                 .forEach(::add)
         }
@@ -1567,23 +1641,23 @@ internal fun VexMapsMapSurface(
                     )
                     ?.let { selectedStyle ->
                         if (
-                            selectedStyle !=
-                            onlineStyle
+                            styleConvergence
+                                .selection
+                                ?.styleRef !=
+                            selectedStyle.styleRef
                         ) {
                             runtime.recordDynamicInteraction(
                                 subjectRef =
                                     "presentation.context-dock.vexmaps.style",
                                 action = "Selected",
                             )
-                            onlineStyleName =
-                                selectedStyle.name
-                            scope.launch {
-                                runCatching {
-                                    repository.saveOnlineStyle(
+                            styleConvergenceRelay
+                                .styleSelected(
+                                    styleRef =
                                         selectedStyle.styleRef,
-                                    )
-                                }
-                            }
+                                    styleUri =
+                                        selectedStyle.styleUri,
+                                )
                         }
                     }
             },

@@ -183,6 +183,9 @@
     <string name="vexmaps_style_dark">Dark</string>
     <string name="vexmaps_style_liberty">Liberty</string>
     <string name="vexmaps_style_online_hint">Swipe to preview this style on the live map.</string>
+    <string name="vexmaps_style_applying">Applying this style…</string>
+    <string name="vexmaps_style_loaded">Loaded on the live map.</string>
+    <string name="vexmaps_style_failed">This style could not be loaded.</string>
     <string name="vexstream_context_open">Open VexStream</string>
     <string name="vexstream_context_up_next">Up next</string>
     <string name="vexmaps_online_title">Online map</string>
