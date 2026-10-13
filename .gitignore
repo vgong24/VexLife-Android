@@ -12,7 +12,11 @@
 local.properties
 
 # Android Studio / IntelliJ local project state
-.idea/
+#
+# Keep machine-local IDE state ignored, but admit the one repository-owned file that teaches
+# Android Studio which optional developer-productivity plugin this project expects.
+.idea/*
+!.idea/externalDependencies.xml
 *.iml
 
 # Native/build intermediates

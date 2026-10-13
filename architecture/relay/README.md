@@ -80,6 +80,58 @@ processStates()
 the Relay; semantic freshness/order still belongs to each rightful source (for example a provider
 revision). Blocking IO or SDK waits do not belong inside `processStates()`.
 
+### IDE authoring perk — reveal optional InputState fields
+
+Compound InputState fields intentionally default to `null` when `null` means "this partial patch
+does not supply a new value". That keeps ordinary patches small, but a fresh developer may want to
+see every available named field while authoring one.
+
+This repository carries one shared Android Studio / IntelliJ required-plugin hint:
+
+~~~text
+.idea/externalDependencies.xml
+-> Kotlin Named Argument Stubs
+-> plugin id ru.alezhu.idea.plugins.named_argument_stubs
+~~~
+
+On a fresh clone, JetBrains IDEs read that file and notify the developer when the plugin is missing
+or disabled. The plugin can generate named-argument stubs for Kotlin function and constructor calls,
+so a call such as:
+
+~~~kotlin
+EventsConvergenceInputState()
+~~~
+
+can be expanded into an editable discovery scaffold resembling:
+
+~~~kotlin
+EventsConvergenceInputState(
+    currentScreenId = null,
+    feed = null,
+    preferences = null,
+    lab = null,
+    profile = null,
+    visibleEventRefsBySurface = null,
+    transientBlocked = null,
+)
+~~~
+
+The scaffold is an IDE authoring aid, not the intended final patch shape. Delete the fields this
+particular patch does not supply:
+
+~~~kotlin
+EventsConvergenceInputState(
+    feed = feed.deepCopy(),
+)
+~~~
+
+Android Studio's built-in intention to specify remaining arguments by name may also be available via
+`Alt+Enter`. The repository plugin hint exists because that built-in intention is not consistently
+offered for every optional-argument/K2 editing case.
+
+Only `.idea/externalDependencies.xml` is admitted to Git. Other `.idea` workspace state remains
+ignored.
+
 ### Compound observation surfaces
 
 A Compound Relay has three intentionally different observation surfaces:
