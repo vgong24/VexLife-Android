@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.bundling.Zip
+
 plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.screenshot) apply false
@@ -78,4 +80,202 @@ tasks.register("vexVisualValidate") {
         "Validate deterministic Compose preview screenshot references."
 
     dependsOn(":app:validateDebugScreenshotTest")
+    mustRunAfter(":app:updateDebugScreenshotTest")
+}
+
+
+/**
+ * Collects the evidence produced by a Test Foundation host run into one returnable ZIP.
+ *
+ * This task owns transport convenience only. It does not run or accept proof by itself, and the
+ * reference PNGs inside remain candidates until explicitly reviewed.
+ *
+ * Run it in the same Gradle invocation as the proof tasks with --continue. The mustRunAfter
+ * constraints keep this collection step last even when an earlier independent proof task fails.
+ */
+val vexTestFoundationProofBundle =
+    tasks.register<Zip>("vexTestFoundationProofBundle") {
+        group = "verification"
+        description =
+            "Collect Test Foundation reports and generated visual references into one ZIP."
+
+        archiveFileName.set(
+            "VexLife-Test-Foundation-Proof.zip",
+        )
+        destinationDirectory.set(
+            layout.buildDirectory.dir(
+                "vex/test-foundation",
+            ),
+        )
+
+        val metadata =
+            layout.buildDirectory.file(
+                "vex/test-foundation/proof-metadata.txt",
+            )
+
+        doFirst {
+            fun commandOutput(
+                vararg command: String,
+            ): String =
+                runCatching {
+                    val process =
+                        ProcessBuilder(
+                            *command,
+                        )
+                            .directory(rootDir)
+                            .redirectErrorStream(true)
+                            .start()
+                    val output =
+                        process.inputStream
+                            .bufferedReader()
+                            .use {
+                                it.readText()
+                            }
+                            .trim()
+                    val exit =
+                        process.waitFor()
+                    if (exit == 0) {
+                        output
+                    } else {
+                        "UNAVAILABLE(exit=$exit): $output"
+                    }
+                }.getOrElse { failure ->
+                    "UNAVAILABLE: " +
+                        failure::class.java.simpleName +
+                        ": " +
+                        failure.message.orEmpty()
+                }
+
+            val target =
+                metadata.get().asFile
+            target.parentFile.mkdirs()
+            target.writeText(
+                buildString {
+                    appendLine(
+                        "[VXG RealForever]",
+                    )
+                    appendLine(
+                        "proofRef=vexlife.test-foundation.host-proof/v1",
+                    )
+                    appendLine(
+                        "gitHead=" +
+                            commandOutput(
+                                "git",
+                                "rev-parse",
+                                "HEAD",
+                            ),
+                    )
+                    appendLine(
+                        "gitStatus<<EOF",
+                    )
+                    appendLine(
+                        commandOutput(
+                            "git",
+                            "status",
+                            "--porcelain=v1",
+                        ),
+                    )
+                    appendLine("EOF")
+                    appendLine(
+                        "javaVersion=" +
+                            System.getProperty(
+                                "java.version",
+                            ),
+                    )
+                    appendLine(
+                        "javaVendor=" +
+                            System.getProperty(
+                                "java.vendor",
+                            ),
+                    )
+                    appendLine(
+                        "osName=" +
+                            System.getProperty(
+                                "os.name",
+                            ),
+                    )
+                    appendLine(
+                        "osVersion=" +
+                            System.getProperty(
+                                "os.version",
+                            ),
+                    )
+                    appendLine(
+                        "osArch=" +
+                            System.getProperty(
+                                "os.arch",
+                            ),
+                    )
+                },
+            )
+        }
+
+        from(metadata) {
+            into("meta")
+        }
+        from(
+            layout.buildDirectory.dir(
+                "reports/kover",
+            ),
+        ) {
+            into("coverage/kover")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "app/build/reports/vex",
+            ),
+        ) {
+            into("journey/coverage")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "app/build/test-results/testDebugUnitTest",
+            ),
+        ) {
+            into("tests/app-jvm")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "architecture/elements/build/test-results",
+            ),
+        ) {
+            into("tests/architecture-elements")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "architecture/logging/build/test-results",
+            ),
+        ) {
+            into("tests/architecture-logging")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "architecture/relay/build/test-results",
+            ),
+        ) {
+            into("tests/architecture-relay")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "app/build/reports/screenshotTest/debug",
+            ),
+        ) {
+            into("visual/validation-report")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "app/src/screenshotTestDebug/reference",
+            ),
+        ) {
+            into("visual/reference")
+        }
+    }
+
+vexTestFoundationProofBundle.configure {
+    mustRunAfter(
+        "vexVerifyLocal",
+        "vexCoverage",
+        ":app:updateDebugScreenshotTest",
+        "vexVisualValidate",
+    )
 }
