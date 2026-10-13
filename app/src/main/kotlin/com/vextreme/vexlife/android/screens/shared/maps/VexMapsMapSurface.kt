@@ -761,15 +761,16 @@ internal fun VexMapsMapSurface(
         }
     }
 
-    val fallbackOnlineStyleUri =
-        onlineStyle.styleUri
-
+    /*
+     * The human's selected online style owns the live map presentation.
+     *
+     * Imported offline regions are cached resources, not a hidden visual-preference override. When
+     * an offline region was built for the same style URI, MapLibre may satisfy that style from its
+     * local database. A future explicit offline-readiness/source decision may constrain available
+     * styles, but merely having an offline pack installed must not make the Dark/Liberty pager lie.
+     */
     val mapStyleUri =
-        offlineMapState
-            .effectiveReady()
-            ?.preferred
-            ?.styleUri
-            ?: fallbackOnlineStyleUri
+        onlineStyle.styleUri
 
     val currentRouteKey =
         navigationState
