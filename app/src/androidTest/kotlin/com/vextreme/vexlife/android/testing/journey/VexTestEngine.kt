@@ -22,6 +22,13 @@ import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylist
+import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylistRef
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.TextFieldElement
@@ -46,7 +53,7 @@ class VexTestEngine(
     private val repositories = AppRepositories(
         logHistory = logHistory,
         userProfile = InMemoryUserProfileRepository(),
-        vexStream = InMemoryVexStreamMusicRepository(),
+        vexStream = vexStreamJourneyRepository(),
         events = RelayEventsRepository(),
         eventsAttention = RelayEventsAttentionPreferenceRepository(),
         eventsAttentionLab = RelayEventsAttentionLabRepository(),
@@ -260,6 +267,53 @@ class VexTestEngine(
             ?: error("ActionElement must also be a UIElement")
         return compose.onNodeWithTag(uiElement.elementId)
     }
+}
+
+private fun vexStreamJourneyRepository(): InMemoryVexStreamMusicRepository {
+    val track =
+        VexStreamTrack(
+            trackRef =
+                VexStreamTrackRef(
+                    "journey.track.one",
+                ),
+            mediaSha256 =
+                VexStreamMediaSha256(
+                    "1111111111111111111111111111111111111111111111111111111111111111",
+                ),
+            mediaByteLength = 4_096L,
+            title = "Journey Song",
+            artist = "Journey Artist",
+            album = "Journey Album",
+            genre = "Journey",
+            durationSeconds = 180.0,
+        )
+
+    return InMemoryVexStreamMusicRepository(
+        initialState =
+            VexStreamMusicState(
+                tracks =
+                    listOf(
+                        VexStreamTrackState(
+                            track = track,
+                            hubAvailable = true,
+                        ),
+                    ),
+                playlists =
+                    listOf(
+                        VexStreamPlaylist(
+                            playlistRef =
+                                VexStreamPlaylistRef(
+                                    "journey.playlist.one",
+                                ),
+                            name = "Journey Playlist",
+                            trackRefs =
+                                listOf(
+                                    track.trackRef,
+                                ),
+                        ),
+                    ),
+            ),
+    )
 }
 
 private fun SemanticsNodeInteraction.scrollIntoViewIfPossible(): SemanticsNodeInteraction {

@@ -336,11 +336,12 @@ Compose remains the Android renderer. The important boundary is that durable pro
 bypass the registered element/runtime path merely because the Screen has a custom renderer.
 
 VexStream therefore keeps:
-- connection controls, library lenses, collection actions, selected-track actions, mini-player
+- connection controls, library lenses, collection actions, song-row/menu actions, mini-player
   actions, Queue actions, and modal identity as registered Screen elements;
 - dynamic songs/albums/artists/playlists as repository data rather than synthesizing one static
   blueprint node per media row;
-- track-row selection and collection drill-down as local presentation state;
+- song-row tap as direct Play, with secondary actions in one explicit labeled menu; collection
+  drill-down remains local presentation/navigation state;
 - MediaSessionService as playback lifetime/queue owner;
 - blocking transport/media/file work on `Dispatchers.IO`.
 
@@ -425,10 +426,10 @@ The correction is still owed lived-device verification; static source shape is n
 proving the reported navigation behavior on the phone.
 
 The mobile player also now takes layout cues from the desktop VexStream experience without copying
-desktop UI architecture: selected tracks have a perceivable selected surface, high-frequency
-track/player actions use registered semantic icon controls, and the mini-player projects
+desktop UI architecture: tapping a song plays it immediately, one trailing menu exposes labeled
+Play / Play next / Add to queue / download / Visit artist choices, and the mini-player projects
 title/artist, queue position, elapsed/duration timeline, and compact transport/shuffle/queue controls.
-The semantic element identities remain unchanged, so custom Compose realization still enters
+The semantic element identities remain explicit, so custom Compose realization still enters
 VexRuntime before each local playback effect.
 
 ```text
@@ -465,5 +466,106 @@ Android uses a music placeholder until that producer/consumer contract is delibe
 YOUTUBE_MUSIC_LAYOUT_CUE != YOUTUBE_MUSIC_PRODUCT_COPY
 ARTWORK_SLOT != FABRICATED_ARTWORK_SOURCE
 SCREEN_TOOLBAR_ACTION != SHELL_FEATURE_OWNERSHIP
-VISIBLE_SELECTED_STATE != NEW_PLAYBACK_TRUTH
+SONG_ROW_TAP = PLAY_INTENT
+SECONDARY_SONG_ACTIONS -> LABELED_MENU
 LIBRARY_DENSITY != SEMANTIC_IDENTITY_LOSS
+
+
+### Off-home route successor
+
+The same-Wi-Fi pairing remains the bootstrap and preferred local route. The Home PC is also the real
+remote VexStream host: when that already-paired PC is directly reachable from the Internet, Android
+should connect to it rather than sending music through a hosted relay.
+
+```text
+VexStreamNetworkDataSource / repository request
+  -> remembered paired connection
+
+  1. try pinned LAN HTTPS first
+
+  2. if LAN is unreachable
+     AND paired remote identity exists
+     -> try direct public routes advertised by the same paired PC
+     -> pin the exact paired desktop TLS certificate
+     -> send the existing signed + AES-GCM remote envelope
+     -> dedicated desktop /v1/direct/request ingress
+
+  3. if direct routes are unreachable
+     AND a VexRelay URL is present
+     -> content-blind relay fallback
+     -> desktop outbound VexStream gateway
+
+  4. if no network route
+     -> verified local media remains independently usable
+```
+
+The long-lived Android device signing private key is generated in Android Keystore. Local pairing
+sends only its P-256 public key. The desktop also provides its stable remote-gateway public key. Both
+direct and relay transports reuse that one cryptographic relationship rather than creating separate
+authorization systems.
+
+For every off-LAN request Android:
+
+```text
+forms a fresh requestRef
+forms an ephemeral P-256 ECDH key
+derives an AES-GCM request key with the paired desktop gateway public key
+encrypts:
+  VexStream bearer
+  method/path
+  bounded headers
+signs the outer routing envelope with the Android Keystore device key
+```
+
+A direct public route therefore does **not** send the bearer in plaintext merely because the TLS
+endpoint is on the Home PC. The direct TLS connection also pins the exact desktop certificate learned
+during local approval; public IP/port is reachability, not identity.
+
+The public desktop ingress is intentionally narrower than the LAN pairing surface. It admits only the
+encrypted remote request envelope and the desktop later permits only:
+
+```text
+GET /v1/catalog
+GET/HEAD /v1/media/<trackRef>
+```
+
+It does not expose pairing, desktop UI/admin APIs, filesystem paths, uploads, arbitrary URLs, shell
+execution, or general Vex computer control.
+
+Existing pairings opportunistically call the bearer-authorized remote-upgrade endpoint while the
+desktop is directly reachable. That refreshes changing direct routes without forcing a Forget/re-pair
+cycle. A route refresh failure never invalidates the proven same-LAN relationship.
+
+The connection store accepts v1 and v2 pairing records for compatibility; newly saved connections use
+v3 and may additionally retain:
+
+```text
+remoteHomeRef
+remoteGatewayPublicKey
+remoteDirectBaseUrls[]
+remoteRelayBaseUrl
+```
+
+`remoteDirectBaseUrls[]` are bounded HTTPS reachability candidates learned from the paired desktop,
+not independently trusted hosts. Android still requires the paired certificate pin and the signed /
+encrypted remote protocol on every direct route.
+
+Media off-LAN remains Range-based and bounded rather than materializing an entire song in one remote
+response.
+
+```text
+LAN_FIRST
+DIRECT_HOME_PC_SECOND
+VEXRELAY_FALLBACK_THIRD
+VERIFIED_LOCAL_COPY_ALWAYS_INDEPENDENT
+
+PUBLIC_ROUTE != DEVICE_IDENTITY
+PAIRED_DEVICE_SIGNATURE != GENERAL_HOME_AUTHORITY
+REMOTE_VEXSTREAM_READ != GENERAL_PC_REMOTE_CONTROL
+VEXRELAY != REQUIRED_MEDIA_HOST
+```
+
+This remains an app-scoped VexStream remote-access candidate. It does not claim to replace accepted
+future Home/Safety membership, capability leases, revocation generations, or shared VexHome gateway
+semantics.
+

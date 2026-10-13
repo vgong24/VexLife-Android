@@ -130,7 +130,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.connection.reconnect",
         labelRes = R.string.vexstream_music_reconnect,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.FindNearbyVexStream),
+        intent = invoke(AppActions.ReconnectVexStream),
     )
 
     val RequestForgetPaired = buttonRef(
@@ -223,6 +223,14 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val TrackMenu = buttonRef(
+        id = "body.track-actions.menu",
+        labelRes = R.string.vexstream_music_track_menu,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Menu,
+        intent = localEffect(),
+    )
+
     val PlayTrack = buttonRef(
         id = "body.track-actions.play",
         labelRes = R.string.vexstream_music_play,
@@ -260,6 +268,14 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         labelRes = R.string.vexstream_music_remove_download,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.RemoveDownload,
+        intent = localEffect(),
+    )
+
+    val VisitTrackArtist = buttonRef(
+        id = "body.track-actions.visit-artist",
+        labelRes = R.string.vexstream_music_visit_artist,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Person,
         intent = localEffect(),
     )
 
@@ -303,7 +319,14 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val ToggleShuffle = buttonRef(
+    val SeekPlayback = buttonRef(
+        id = "body.player.seek",
+        labelRes = R.string.vexstream_music_seek,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val ShuffleQueue = buttonRef(
         id = "body.player.shuffle",
         labelRes = R.string.vexstream_music_shuffle,
         style = VexElementStyles.SecondaryAction,
@@ -311,7 +334,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val QueueToggleShuffle = buttonRef(
+    val QueueShuffle = buttonRef(
         id = "body.queue.sheet.shuffle",
         labelRes = R.string.vexstream_music_shuffle,
         style = VexElementStyles.SecondaryAction,
@@ -330,6 +353,20 @@ object VexStreamMusicScreen : AppScreenBlueprint(
     val ClearQueue = buttonRef(
         id = "body.queue.sheet.clear",
         labelRes = R.string.vexstream_music_clear_queue,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val QueuePlay = buttonRef(
+        id = "body.queue.sheet.play",
+        labelRes = R.string.vexstream_music_queue_play,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val QueueReorder = buttonRef(
+        id = "body.queue.sheet.reorder",
+        labelRes = R.string.vexstream_music_queue_reorder,
         style = VexElementStyles.SecondaryAction,
         intent = localEffect(),
     )
@@ -389,11 +426,13 @@ object VexStreamMusicScreen : AppScreenBlueprint(
             button(CollectionBack)
 
             column("track-actions") {
+                button(TrackMenu)
                 button(PlayTrack)
                 button(PlayTrackNext)
                 button(AddTrackToQueue)
                 button(DownloadTrack)
                 button(RemoveTrackDownload)
+                button(VisitTrackArtist)
             }
 
             row("library-actions") {
@@ -406,18 +445,22 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 element = PlayerSection,
                 style = VexElementStyles.RaisedSurface,
             ) {
+                button(SeekPlayback)
+
                 row("controls") {
                     button(PreviousTrack)
                     button(TogglePlayback)
                     button(NextTrack)
-                    button(ToggleShuffle)
+                    button(ShuffleQueue)
                 }
             }
 
             modalBottomSheet(QueueSheet) {
-                button(QueueToggleShuffle)
+                button(QueueShuffle)
                 button(ToggleRepeat)
                 button(ClearQueue)
+                button(QueuePlay)
+                button(QueueReorder)
                 button(CloseQueue)
             }
 
@@ -479,6 +522,14 @@ internal fun vexStreamActionRegistrations(
         ) {
             scope.launch {
                 repository.findNearbyVexStream()
+            }
+        },
+        appAction(
+            action = AppActions.ReconnectVexStream,
+            ownerRef = VexStreamMusicScreen.screenId,
+        ) {
+            scope.launch {
+                repository.reconnectPairedVexStream()
             }
         },
         appAction(

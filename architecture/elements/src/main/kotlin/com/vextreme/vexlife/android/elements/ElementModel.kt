@@ -155,6 +155,7 @@ enum class ElementIcon {
     Repeat,
     Search,
     Music,
+    Menu,
 }
 
 /**

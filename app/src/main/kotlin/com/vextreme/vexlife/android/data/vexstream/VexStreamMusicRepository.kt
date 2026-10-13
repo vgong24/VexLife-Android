@@ -13,6 +13,14 @@ interface VexStreamMusicRepository {
 
     suspend fun findNearbyVexStream(): VexStreamRepositoryResult
 
+    /**
+     * Reach the already-paired VexStream computer through the best currently usable route.
+     *
+     * This is deliberately different from nearby discovery: reconnecting preserves paired identity
+     * while transport selection remains repository-owned.
+     */
+    suspend fun reconnectPairedVexStream(): VexStreamRepositoryResult
+
     suspend fun confirmPairingCode(): VexStreamRepositoryResult
 
     suspend fun forgetPairedVexStream(): VexStreamRepositoryResult

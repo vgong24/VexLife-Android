@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
@@ -14,13 +15,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -32,18 +40,24 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
@@ -52,6 +66,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.VexActionFab
@@ -96,9 +111,46 @@ internal fun VexStreamLibrarySurface(
             )
         }
 
+    var queueShuffleSelected by rememberSaveable {
+        mutableStateOf(false)
+    }
+    fun toggleQueueShuffleSelection() {
+        if (queueShuffleSelected) {
+            queueShuffleSelected = false
+        } else if (
+            controller?.shuffleVexStreamQueue() == true
+        ) {
+            queueShuffleSelected = true
+        }
+    }
+
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
+    var artistVisitRequest by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+    fun visitArtist(artist: String) {
+        if (artist.isBlank()) {
+            return
+        }
+
+        artistVisitRequest = artist
+        if (
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.SearchSheet,
+            )
+        ) {
+            runtime.presentation.close(
+                VexStreamMusicScreen.SearchSheet,
+            )
+        }
+        runtime.presentation.select(
+            container = VexStreamMusicScreen.LibraryContent,
+            child = VexStreamMusicScreen.ArtistsPanel,
+        )
+    }
+
     val libraryTracks =
         remember(state.tracks) {
             state.playableTracks()
@@ -133,6 +185,10 @@ internal fun VexStreamLibrarySurface(
                     playback = playback,
                     controller = controller,
                     runtime = runtime,
+                    shuffleSelected = queueShuffleSelected,
+                    onShuffle = {
+                        toggleQueueShuffleSelection()
+                    },
                 )
             }
         },
@@ -174,6 +230,7 @@ internal fun VexStreamLibrarySurface(
                             tracks = libraryTracks,
                             controller = controller,
                             resolver = resolver,
+                            onVisitArtist = ::visitArtist,
                         )
 
                     VexStreamMusicScreen.ArtistsPanel.elementId ->
@@ -182,6 +239,11 @@ internal fun VexStreamLibrarySurface(
                             tracks = libraryTracks,
                             controller = controller,
                             resolver = resolver,
+                            requestedArtist = artistVisitRequest,
+                            onRequestedArtistConsumed = {
+                                artistVisitRequest = null
+                            },
+                            onVisitArtist = ::visitArtist,
                         )
 
                     VexStreamMusicScreen.PlaylistsPanel.elementId ->
@@ -190,6 +252,7 @@ internal fun VexStreamLibrarySurface(
                             state = state,
                             controller = controller,
                             resolver = resolver,
+                            onVisitArtist = ::visitArtist,
                         )
 
                     VexStreamMusicScreen.DownloadsPanel.elementId ->
@@ -199,6 +262,7 @@ internal fun VexStreamLibrarySurface(
                             repository = repository,
                             controller = controller,
                             resolver = resolver,
+                            onVisitArtist = ::visitArtist,
                         )
 
                     else ->
@@ -208,6 +272,7 @@ internal fun VexStreamLibrarySurface(
                             repository = repository,
                             controller = controller,
                             resolver = resolver,
+                            onVisitArtist = ::visitArtist,
                         )
                 }
             }
@@ -220,6 +285,10 @@ internal fun VexStreamLibrarySurface(
             playback = playback,
             controller = controller,
             runtime = runtime,
+            shuffleSelected = queueShuffleSelected,
+            onShuffle = {
+                toggleQueueShuffleSelection()
+            },
         )
     }
 
@@ -239,6 +308,7 @@ internal fun VexStreamLibrarySurface(
             onQueryChange = {
                 searchQuery = it
             },
+            onVisitArtist = ::visitArtist,
         )
     }
 
@@ -485,11 +555,9 @@ private fun VexStreamSearchSheet(
     resolver: VexStreamPlaybackSourceResolver,
     query: String,
     onQueryChange: (String) -> Unit,
+    onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var selectedTrackRef by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
 
     ModalBottomSheet(
         modifier = Modifier
@@ -556,13 +624,6 @@ private fun VexStreamSearchSheet(
                             runtime = runtime,
                             state = track,
                             contextTracks = tracks,
-                            selected =
-                                selectedTrackRef ==
-                                    track.track.trackRef.value,
-                            onSelect = {
-                                selectedTrackRef =
-                                    track.track.trackRef.value
-                            },
                             controller = controller,
                             resolver = resolver,
                             onDownload = {
@@ -579,6 +640,7 @@ private fun VexStreamSearchSheet(
                                     )
                                 }
                             },
+                            onVisitArtist = onVisitArtist,
                         )
                     }
                 }
@@ -730,6 +792,7 @@ private fun VexStreamSongsPane(
     repository: VexStreamMusicRepository,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val sorted =
@@ -738,22 +801,6 @@ private fun VexStreamSongsPane(
                 it.track.title.lowercase()
             }
         }
-    var selectedTrackRef by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    val sortedRefs =
-        remember(sorted) {
-            sorted.map {
-                it.track.trackRef.value
-            }
-        }
-    LaunchedEffect(sortedRefs) {
-        if (selectedTrackRef !in sortedRefs) {
-            selectedTrackRef =
-                sortedRefs.firstOrNull()
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -786,13 +833,6 @@ private fun VexStreamSongsPane(
                     runtime = runtime,
                     state = track,
                     contextTracks = sorted,
-                    selected =
-                        selectedTrackRef ==
-                            track.track.trackRef.value,
-                    onSelect = {
-                        selectedTrackRef =
-                            track.track.trackRef.value
-                    },
                     controller = controller,
                     resolver = resolver,
                     onDownload = {
@@ -809,6 +849,7 @@ private fun VexStreamSongsPane(
                             )
                         }
                     },
+                    onVisitArtist = onVisitArtist,
                 )
             }
         }
@@ -822,6 +863,7 @@ private fun VexStreamDownloadsPane(
     repository: VexStreamMusicRepository,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val downloaded =
@@ -834,22 +876,6 @@ private fun VexStreamDownloadsPane(
                     it.track.title.lowercase()
                 }
         }
-    var selectedTrackRef by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    val downloadedRefs =
-        remember(downloaded) {
-            downloaded.map {
-                it.track.trackRef.value
-            }
-        }
-    LaunchedEffect(downloadedRefs) {
-        if (selectedTrackRef !in downloadedRefs) {
-            selectedTrackRef =
-                downloadedRefs.firstOrNull()
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -882,13 +908,6 @@ private fun VexStreamDownloadsPane(
                     runtime = runtime,
                     state = track,
                     contextTracks = downloaded,
-                    selected =
-                        selectedTrackRef ==
-                            track.track.trackRef.value,
-                    onSelect = {
-                        selectedTrackRef =
-                            track.track.trackRef.value
-                    },
                     controller = controller,
                     resolver = resolver,
                     onDownload = {},
@@ -899,6 +918,7 @@ private fun VexStreamDownloadsPane(
                             )
                         }
                     },
+                    onVisitArtist = onVisitArtist,
                 )
             }
         }
@@ -926,6 +946,7 @@ private fun VexStreamAlbumsPane(
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
 ) {
     val unknownAlbum =
         stringResource(
@@ -975,6 +996,7 @@ private fun VexStreamAlbumsPane(
         navigationLabel = "vexstream-album-depth",
         controller = controller,
         resolver = resolver,
+        onVisitArtist = onVisitArtist,
     )
 }
 
@@ -984,6 +1006,9 @@ private fun VexStreamArtistsPane(
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    requestedArtist: String?,
+    onRequestedArtistConsumed: () -> Unit,
+    onVisitArtist: (String) -> Unit,
 ) {
     val unknownArtist =
         stringResource(
@@ -1027,6 +1052,13 @@ private fun VexStreamArtistsPane(
         navigationLabel = "vexstream-artist-depth",
         controller = controller,
         resolver = resolver,
+        onVisitArtist = onVisitArtist,
+        requestedDetailKey =
+            requestedArtist?.let {
+                "artist:$it"
+            },
+        onRequestedDetailConsumed =
+            onRequestedArtistConsumed,
     )
 }
 
@@ -1036,6 +1068,7 @@ private fun VexStreamPlaylistsPane(
     state: VexStreamMusicState,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
 ) {
     val tracksByRef =
         remember(state.tracks) {
@@ -1077,6 +1110,7 @@ private fun VexStreamPlaylistsPane(
         navigationLabel = "vexstream-playlist-depth",
         controller = controller,
         resolver = resolver,
+        onVisitArtist = onVisitArtist,
     )
 }
 
@@ -1088,6 +1122,9 @@ private fun VexStreamCollectionBrowserPane(
     navigationLabel: String,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
+    onVisitArtist: (String) -> Unit,
+    requestedDetailKey: String? = null,
+    onRequestedDetailConsumed: () -> Unit = {},
 ) {
     val trail =
         remember {
@@ -1095,6 +1132,27 @@ private fun VexStreamCollectionBrowserPane(
                 root = VexStreamCollectionRoute.Index,
             )
         }
+
+    val rowKeys =
+        remember(rows) {
+            rows.map(VexStreamCollectionRow::key)
+        }
+    LaunchedEffect(
+        requestedDetailKey,
+        rowKeys,
+    ) {
+        val key =
+            requestedDetailKey
+                ?: return@LaunchedEffect
+        if (key in rowKeys) {
+            trail.push(
+                VexStreamCollectionRoute.Detail(
+                    key = key,
+                ),
+            )
+            onRequestedDetailConsumed()
+        }
+    }
 
     DisposableEffect(
         runtime,
@@ -1178,6 +1236,7 @@ private fun VexStreamCollectionBrowserPane(
                         controller = controller,
                         resolver = resolver,
                         onBack = trail::goBack,
+                        onVisitArtist = onVisitArtist,
                     )
                 }
             }
@@ -1193,25 +1252,8 @@ private fun VexStreamCollectionDetail(
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onBack: () -> Unit,
+    onVisitArtist: (String) -> Unit,
 ) {
-    var selectedTrackRef by rememberSaveable(
-        title,
-    ) {
-        mutableStateOf<String?>(null)
-    }
-    val trackRefs =
-        remember(tracks) {
-            tracks.map {
-                it.track.trackRef.value
-            }
-        }
-    LaunchedEffect(trackRefs) {
-        if (selectedTrackRef !in trackRefs) {
-            selectedTrackRef =
-                trackRefs.firstOrNull()
-        }
-    }
-
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1264,17 +1306,11 @@ private fun VexStreamCollectionDetail(
                 runtime = runtime,
                 state = track,
                 contextTracks = tracks,
-                selected =
-                    selectedTrackRef ==
-                        track.track.trackRef.value,
-                onSelect = {
-                    selectedTrackRef =
-                        track.track.trackRef.value
-                },
                 controller = controller,
                 resolver = resolver,
                 onDownload = {},
                 onRemoveDownload = {},
+                onVisitArtist = onVisitArtist,
                 showDownloadAction = false,
             )
         }
@@ -1376,14 +1412,19 @@ private fun VexStreamTrackCard(
     runtime: VexRuntime,
     state: VexStreamTrackState,
     contextTracks: List<VexStreamTrackState>,
-    selected: Boolean,
-    onSelect: () -> Unit,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onDownload: () -> Unit,
     onRemoveDownload: () -> Unit,
+    onVisitArtist: (String) -> Unit,
     showDownloadAction: Boolean = true,
 ) {
+    var menuExpanded by remember(
+        state.track.trackRef.value,
+    ) {
+        mutableStateOf(false)
+    }
+
     val handler =
         ElementActionHandler { element ->
             runtime.activate(
@@ -1415,8 +1456,23 @@ private fun VexStreamTrackCard(
                 VexStreamMusicScreen.RemoveTrackDownload ->
                     onRemoveDownload()
 
+                VexStreamMusicScreen.VisitTrackArtist ->
+                    onVisitArtist(
+                        state.track.artist,
+                    )
+
                 else -> Unit
             }
+        }
+    val menuHandler =
+        ElementActionHandler { element ->
+            menuExpanded = false
+            handler.activate(element)
+        }
+    val menuOpenHandler =
+        ElementActionHandler { element ->
+            runtime.activate(element)
+            menuExpanded = true
         }
 
     val durationText =
@@ -1474,124 +1530,124 @@ private fun VexStreamTrackCard(
                 horizontal = 8.dp,
                 vertical = 2.dp,
             )
+            .vexElement(
+                VexStreamMusicScreen.PlayTrack,
+            )
             .clickable(
-                onClick = onSelect,
-            ),
-        colors =
-            if (selected) {
-                CardDefaults.cardColors(
-                    containerColor =
-                        MaterialTheme
-                            .colorScheme
-                            .secondaryContainer,
-                )
-            } else {
-                CardDefaults.cardColors(
-                    containerColor =
-                        MaterialTheme
-                            .colorScheme
-                            .surface,
+                enabled = controller != null,
+            ) {
+                handler.activate(
+                    VexStreamMusicScreen.PlayTrack,
                 )
             },
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surface,
+            ),
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(
                 horizontal = 10.dp,
                 vertical = 8.dp,
             ),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            Surface(
+                modifier = Modifier.size(54.dp),
+                shape = MaterialTheme.shapes.medium,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .surfaceContainerHigh,
             ) {
-                Surface(
-                    modifier = Modifier.size(54.dp),
-                    shape = MaterialTheme.shapes.medium,
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .surfaceContainerHigh,
+                Box(
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        VexIcon(
-                            icon = ElementIcon.Music,
-                            contentDescription = null,
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = state.track.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    VexIcon(
+                        icon = ElementIcon.Music,
+                        contentDescription = null,
                     )
-
-                    if (secondaryText.isNotBlank()) {
-                        Text(
-                            text = secondaryText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-
-                    compactStatus?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
                 }
             }
 
-            if (selected) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = state.track.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                if (secondaryText.isNotBlank()) {
+                    Text(
+                        text = secondaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                compactStatus?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            Box {
+                VexIconButton(
+                    element = VexStreamMusicScreen.TrackMenu,
+                    handler = menuOpenHandler,
+                )
+
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = {
+                        menuExpanded = false
+                    },
                 ) {
-                    VexIconButton(
+                    VexStreamTrackMenuItem(
                         element = VexStreamMusicScreen.PlayTrack,
-                        handler = handler,
+                        handler = menuHandler,
                         enabled = controller != null,
                     )
-                    VexIconButton(
+                    VexStreamTrackMenuItem(
                         element = VexStreamMusicScreen.PlayTrackNext,
-                        handler = handler,
+                        handler = menuHandler,
                         enabled = controller != null,
                     )
-                    VexIconButton(
+                    VexStreamTrackMenuItem(
                         element = VexStreamMusicScreen.AddTrackToQueue,
-                        handler = handler,
+                        handler = menuHandler,
                         enabled = controller != null,
                     )
 
                     if (showDownloadAction) {
                         when (state.localCopy) {
                             is VexStreamLocalCopyState.Downloaded ->
-                                VexIconButton(
+                                VexStreamTrackMenuItem(
                                     element =
                                         VexStreamMusicScreen
                                             .RemoveTrackDownload,
-                                    handler = handler,
+                                    handler = menuHandler,
                                 )
 
                             is VexStreamLocalCopyState.Downloading ->
@@ -1599,15 +1655,24 @@ private fun VexStreamTrackCard(
 
                             else -> {
                                 if (state.hubAvailable) {
-                                    VexIconButton(
+                                    VexStreamTrackMenuItem(
                                         element =
                                             VexStreamMusicScreen
                                                 .DownloadTrack,
-                                        handler = handler,
+                                        handler = menuHandler,
                                     )
                                 }
                             }
                         }
+                    }
+
+                    if (state.track.artist.isNotBlank()) {
+                        VexStreamTrackMenuItem(
+                            element =
+                                VexStreamMusicScreen
+                                    .VisitTrackArtist,
+                            handler = menuHandler,
+                        )
                     }
                 }
             }
@@ -1616,10 +1681,42 @@ private fun VexStreamTrackCard(
 }
 
 @Composable
+private fun VexStreamTrackMenuItem(
+    element: ButtonElement,
+    handler: ElementActionHandler,
+    enabled: Boolean = true,
+) {
+    DropdownMenuItem(
+        modifier = Modifier.vexElement(element),
+        text = {
+            Text(
+                stringResource(
+                    requireNotNull(element.labelRes),
+                ),
+            )
+        },
+        onClick = {
+            handler.activate(element)
+        },
+        leadingIcon = {
+            element.icon?.let {
+                VexIcon(
+                    icon = it,
+                    contentDescription = null,
+                )
+            }
+        },
+        enabled = enabled,
+    )
+}
+
+@Composable
 private fun VexStreamMiniPlayer(
     playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
     runtime: VexRuntime,
+    shuffleSelected: Boolean,
+    onShuffle: () -> Unit,
 ) {
     val handler =
         ElementActionHandler { element ->
@@ -1636,8 +1733,8 @@ private fun VexStreamMiniPlayer(
                 VexStreamMusicScreen.NextTrack ->
                     controller?.seekToNextMediaItem()
 
-                VexStreamMusicScreen.ToggleShuffle ->
-                    controller?.toggleVexStreamShuffle()
+                VexStreamMusicScreen.ShuffleQueue ->
+                    onShuffle()
 
                 else -> Unit
             }
@@ -1650,6 +1747,30 @@ private fun VexStreamMiniPlayer(
                     "/" +
                     playback.queueMediaIds.size
             }
+    var scrubFraction by remember(
+        playback.currentMediaId,
+    ) {
+        mutableStateOf<Float?>(null)
+    }
+    val displayedProgress =
+        scrubFraction
+            ?: playback.progressFraction
+    val displayedPositionMs =
+        scrubFraction
+            ?.let { fraction ->
+                vexStreamSeekPositionMs(
+                    fraction = fraction,
+                    durationMs = playback.durationMs,
+                )
+            }
+            ?: playback.currentPositionMs
+    val canSeek =
+        controller != null &&
+            playback.durationMs > 0L &&
+            controller.isCommandAvailable(
+                androidx.media3.common.Player
+                    .COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+            )
 
     VexContainer(
         element = VexStreamMusicScreen.PlayerSection,
@@ -1696,11 +1817,41 @@ private fun VexStreamMiniPlayer(
             }
         }
 
-        LinearProgressIndicator(
-            progress = {
-                playback.progressFraction
+        Slider(
+            value = displayedProgress,
+            onValueChange = { value ->
+                scrubFraction = value
             },
-            modifier = Modifier.fillMaxWidth(),
+            onValueChangeFinished = {
+                val targetFraction =
+                    scrubFraction
+                if (
+                    targetFraction != null &&
+                    canSeek
+                ) {
+                    val targetPositionMs =
+                        vexStreamSeekPositionMs(
+                            fraction = targetFraction,
+                            durationMs = playback.durationMs,
+                        )
+                    scrubFraction = null
+                    runtime.activate(
+                        VexStreamMusicScreen.SeekPlayback,
+                    )
+                    controller?.seekTo(
+                        targetPositionMs,
+                    )
+                } else {
+                    scrubFraction = null
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .vexElement(
+                    VexStreamMusicScreen.SeekPlayback,
+                ),
+            enabled = canSeek,
+            valueRange = 0f..1f,
         )
 
         Row(
@@ -1710,7 +1861,7 @@ private fun VexStreamMiniPlayer(
             Text(
                 text =
                     formatVexStreamPlaybackTime(
-                        playback.currentPositionMs,
+                        displayedPositionMs,
                     ),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1757,16 +1908,38 @@ private fun VexStreamMiniPlayer(
                     controller?.hasNextMediaItem() == true,
             )
             VexIconButton(
-                element = VexStreamMusicScreen.ToggleShuffle,
+                element = VexStreamMusicScreen.ShuffleQueue,
                 handler = handler,
                 enabled = controller != null,
-                selected = playback.shuffleEnabled,
+                selected = shuffleSelected,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
                 handler = runtime,
             )
         }
+    }
+}
+
+private data class VexStreamQueueEntry(
+    val stableKey: String,
+    val mediaId: String,
+)
+
+private fun vexStreamQueueEntries(
+    mediaIds: List<String>,
+): List<VexStreamQueueEntry> {
+    val occurrences =
+        mutableMapOf<String, Int>()
+
+    return mediaIds.map { mediaId ->
+        val occurrence =
+            (occurrences[mediaId] ?: 0) + 1
+        occurrences[mediaId] = occurrence
+        VexStreamQueueEntry(
+            stableKey = "$mediaId#$occurrence",
+            mediaId = mediaId,
+        )
     }
 }
 
@@ -1777,6 +1950,8 @@ private fun VexStreamQueueSheet(
     playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
     runtime: VexRuntime,
+    shuffleSelected: Boolean,
+    onShuffle: () -> Unit,
 ) {
     val tracksByRef =
         remember(state.tracks) {
@@ -1784,6 +1959,41 @@ private fun VexStreamQueueSheet(
                 it.track.trackRef.value
             }
         }
+    val queueEntries =
+        remember(
+            playback.queueMediaIds,
+        ) {
+            vexStreamQueueEntries(
+                playback.queueMediaIds,
+            )
+        }
+    val listState =
+        rememberLazyListState()
+    var draggedKey by remember {
+        mutableStateOf<String?>(null)
+    }
+    var draggedIndex by remember {
+        mutableIntStateOf(-1)
+    }
+    var dragOffsetPx by remember {
+        mutableFloatStateOf(0f)
+    }
+    var dragMoved by remember {
+        mutableStateOf(false)
+    }
+
+    fun finishQueueDrag() {
+        if (dragMoved) {
+            runtime.activate(
+                VexStreamMusicScreen.QueueReorder,
+            )
+        }
+        draggedKey = null
+        draggedIndex = -1
+        dragOffsetPx = 0f
+        dragMoved = false
+    }
+
     val sheetState =
         rememberModalBottomSheetState(
             skipPartiallyExpanded = false,
@@ -1791,11 +2001,11 @@ private fun VexStreamQueueSheet(
     val handler =
         ElementActionHandler { element ->
             when (element) {
-                VexStreamMusicScreen.QueueToggleShuffle -> {
+                VexStreamMusicScreen.QueueShuffle -> {
                     runtime.activate(
                         element,
                     )
-                    controller?.toggleVexStreamShuffle()
+                    onShuffle()
                 }
 
                 VexStreamMusicScreen.ToggleRepeat -> {
@@ -1855,10 +2065,10 @@ private fun VexStreamQueueSheet(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 VexIconButton(
-                    element = VexStreamMusicScreen.QueueToggleShuffle,
+                    element = VexStreamMusicScreen.QueueShuffle,
                     handler = handler,
                     enabled = controller != null,
-                    selected = playback.shuffleEnabled,
+                    selected = shuffleSelected,
                 )
                 VexIconButton(
                     element = VexStreamMusicScreen.ToggleRepeat,
@@ -1877,6 +2087,15 @@ private fun VexStreamQueueSheet(
 
             HorizontalDivider()
 
+            Text(
+                text =
+                    stringResource(
+                        R.string.vexstream_music_queue_reorder_hint,
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             if (playback.queueMediaIds.isEmpty()) {
                 Text(
                     text =
@@ -1889,24 +2108,59 @@ private fun VexStreamQueueSheet(
                 )
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(
-                        items =
-                            playback.queueMediaIds
-                                .mapIndexed { index, mediaId ->
-                                    index to mediaId
-                                },
-                        key = { (index, mediaId) ->
-                            "$index:$mediaId"
+                    itemsIndexed(
+                        items = queueEntries,
+                        key = { _, entry ->
+                            entry.stableKey
                         },
-                    ) { (index, mediaId) ->
+                    ) { index, entry ->
+                        val latestIndex by rememberUpdatedState(index)
                         val track =
-                            tracksByRef[mediaId]
+                            tracksByRef[entry.mediaId]
+                        val isCurrent =
+                            index == playback.currentIndex
+                        val isDragging =
+                            draggedKey ==
+                                entry.stableKey
+                        val queuePlayEnabled =
+                            controller != null &&
+                                controller.isCommandAvailable(
+                                    androidx.media3.common.Player
+                                        .COMMAND_SEEK_TO_MEDIA_ITEM,
+                                ) &&
+                                controller.isCommandAvailable(
+                                    androidx.media3.common.Player
+                                        .COMMAND_PLAY_PAUSE,
+                                )
+                        val reorderEnabled =
+                            controller != null &&
+                                controller.isCommandAvailable(
+                                    androidx.media3.common.Player
+                                        .COMMAND_CHANGE_MEDIA_ITEMS,
+                                )
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .graphicsLayer {
+                                    translationY =
+                                        if (isDragging) {
+                                            dragOffsetPx
+                                        } else {
+                                            0f
+                                        }
+                                }
+                                .zIndex(
+                                    if (isDragging) {
+                                        1f
+                                    } else {
+                                        0f
+                                    },
+                                )
                                 .padding(
                                     vertical = 9.dp,
                                 ),
@@ -1914,44 +2168,210 @@ private fun VexStreamQueueSheet(
                                 Arrangement.spacedBy(
                                     10.dp,
                                 ),
+                            verticalAlignment =
+                                Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text =
-                                    if (index == playback.currentIndex) {
-                                        "▶"
-                                    } else {
-                                        (index + 1).toString()
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .vexElement(
+                                        VexStreamMusicScreen.QueuePlay,
+                                    )
+                                    .clickable(
+                                        enabled = queuePlayEnabled,
+                                    ) {
+                                        runtime.activate(
+                                            VexStreamMusicScreen.QueuePlay,
+                                        )
+                                        if (
+                                            latestIndex !=
+                                            playback.currentIndex
+                                        ) {
+                                            controller
+                                                ?.seekToDefaultPosition(
+                                                    latestIndex,
+                                                )
+                                        }
+                                        controller?.play()
                                     },
-                            )
-                            Column(
-                                modifier = Modifier.weight(1f),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(
+                                        10.dp,
+                                    ),
+                                verticalAlignment =
+                                    Alignment.CenterVertically,
                             ) {
                                 Text(
                                     text =
-                                        track
-                                            ?.track
-                                            ?.title
-                                            ?: mediaId,
+                                        if (isCurrent) {
+                                            "▶"
+                                        } else {
+                                            (index + 1).toString()
+                                        },
                                 )
-                                track
-                                    ?.track
-                                    ?.artist
-                                    ?.takeIf {
-                                        it.isNotBlank()
-                                    }
-                                    ?.let { artist ->
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(
+                                        text =
+                                            track
+                                                ?.track
+                                                ?.title
+                                                ?: entry.mediaId,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    if (isCurrent) {
                                         Text(
-                                            text = artist,
+                                            text =
+                                                stringResource(
+                                                    R.string
+                                                        .vexstream_music_queue_current,
+                                                ),
                                             style =
                                                 MaterialTheme
                                                     .typography
-                                                    .bodySmall,
+                                                    .labelSmall,
                                             color =
                                                 MaterialTheme
                                                     .colorScheme
-                                                    .onSurfaceVariant,
+                                                    .primary,
                                         )
                                     }
+                                    track
+                                        ?.track
+                                        ?.artist
+                                        ?.takeIf {
+                                            it.isNotBlank()
+                                        }
+                                        ?.let { artist ->
+                                            Text(
+                                                text = artist,
+                                                style =
+                                                    MaterialTheme
+                                                        .typography
+                                                        .bodySmall,
+                                                color =
+                                                    MaterialTheme
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow =
+                                                    TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .vexElement(
+                                        VexStreamMusicScreen.QueueReorder,
+                                    )
+                                    .pointerInput(
+                                        entry.stableKey,
+                                        reorderEnabled,
+                                    ) {
+                                        if (!reorderEnabled) {
+                                            return@pointerInput
+                                        }
+
+                                        detectVerticalDragGestures(
+                                            onDragStart = {
+                                                draggedKey =
+                                                    entry.stableKey
+                                                draggedIndex =
+                                                    latestIndex
+                                                dragOffsetPx = 0f
+                                                dragMoved = false
+                                            },
+                                            onDragCancel = {
+                                                finishQueueDrag()
+                                            },
+                                            onDragEnd = {
+                                                finishQueueDrag()
+                                            },
+                                        ) { change, dragAmount ->
+                                            change.consume()
+                                            if (
+                                                draggedKey !=
+                                                    entry.stableKey
+                                            ) {
+                                                return@detectVerticalDragGestures
+                                            }
+
+                                            dragOffsetPx +=
+                                                dragAmount
+
+                                            val itemInfo =
+                                                listState
+                                                    .layoutInfo
+                                                    .visibleItemsInfo
+                                                    .firstOrNull {
+                                                        it.key ==
+                                                            entry.stableKey
+                                                    }
+                                                    ?: return@detectVerticalDragGestures
+                                            val target =
+                                                vexStreamQueueAdjacentMoveTarget(
+                                                    currentIndex =
+                                                        draggedIndex,
+                                                    dragOffsetPx =
+                                                        dragOffsetPx,
+                                                    itemHeightPx =
+                                                        itemInfo.size,
+                                                    lastIndex =
+                                                        queueEntries.lastIndex,
+                                                )
+                                                    ?: return@detectVerticalDragGestures
+
+                                            controller?.moveMediaItem(
+                                                draggedIndex,
+                                                target,
+                                            )
+                                            dragMoved = true
+
+                                            val height =
+                                                itemInfo.size
+                                                    .toFloat()
+                                            dragOffsetPx +=
+                                                if (
+                                                    target >
+                                                    draggedIndex
+                                                ) {
+                                                    -height
+                                                } else {
+                                                    height
+                                                }
+                                            draggedIndex =
+                                                target
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector =
+                                        Icons.Rounded.DragHandle,
+                                    contentDescription =
+                                        stringResource(
+                                            R.string
+                                                .vexstream_music_queue_reorder,
+                                        ),
+                                    tint =
+                                        if (reorderEnabled) {
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                        } else {
+                                            MaterialTheme
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .copy(
+                                                    alpha = 0.38f,
+                                                )
+                                        },
+                                )
                             }
                         }
                     }
