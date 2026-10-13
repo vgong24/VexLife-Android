@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,22 +89,6 @@ fun EventsScreenContent(
     )
     val scenario =
         attention.scenario
-
-    val currentScreenId =
-        runtime.currentScreen.screenId
-    val transientBlocked =
-        runtime.presentation.hasOpenPresentation
-
-    /*
-     * Repository observation belongs to the session-owned Relay. Compose supplies only current
-     * presentation facts that genuinely exist at the UI/runtime boundary.
-     */
-    SideEffect {
-        relay.surfaceChanged(
-            screenId = currentScreenId,
-            transientBlocked = transientBlocked,
-        )
-    }
 
     val activeCandidateRef =
         attention.candidate?.eventRef
