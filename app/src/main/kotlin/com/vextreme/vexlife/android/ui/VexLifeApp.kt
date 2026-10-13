@@ -13,6 +13,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -74,6 +75,13 @@ private fun VexLifeApp(
 
     LaunchedEffect(runtime) {
         runtime.appOpened()
+    }
+
+    SideEffect {
+        relays.events.surfaceChanged(
+            screenId = runtime.currentScreen.screenId,
+            transientBlocked = runtime.presentation.hasOpenPresentation,
+        )
     }
 
     VexLifeTheme(darkTheme = darkTheme) {
