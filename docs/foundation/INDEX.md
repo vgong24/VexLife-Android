@@ -139,7 +139,11 @@ normalized current truth, Relay processing, stable repeated-item identity, curre
 eligibility and anchored evidence without making Events the owner of the originating service.
 
 This is the first current-main Relay consumer and a reverse-protocol reference for future real
-service adapters. It is still a draft candidate until exact Gradle/Android proof closes.
+service adapters. The current refinement makes its Compound Relay session-owned and declarative
+about repository/Flow dependencies, while keeping `processStates()` as the synchronous serialized
+semantic reducer and keeping Compose as an output/presentation observer. It also exercises a real
+cross-domain UserProfile name-change input. It remains a draft/refinement candidate until exact
+Gradle/Android proof closes.
 
 ## F0 — Standalone Build Foundation
 
