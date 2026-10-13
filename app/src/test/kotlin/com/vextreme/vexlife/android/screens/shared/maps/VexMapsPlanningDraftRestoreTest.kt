@@ -30,6 +30,31 @@ class VexMapsPlanningDraftRestoreTest {
     }
 
     @Test
+    fun currentLocationAffectsRouteOnlyWithoutPinnedOrigin() {
+        assertEquals(
+            true,
+            shouldVexMapsCurrentLocationAffectRoute(
+                selectedOriginLatitude = null,
+                selectedOriginLongitude = null,
+            ),
+        )
+        assertEquals(
+            false,
+            shouldVexMapsCurrentLocationAffectRoute(
+                selectedOriginLatitude = 10.0,
+                selectedOriginLongitude = 20.0,
+            ),
+        )
+        assertEquals(
+            true,
+            shouldVexMapsCurrentLocationAffectRoute(
+                selectedOriginLatitude = 10.0,
+                selectedOriginLongitude = null,
+            ),
+        )
+    }
+
+    @Test
     fun completeViewportRestoresTypedSnapshot() {
         assertEquals(
             VexMapsViewportSnapshot(

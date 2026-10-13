@@ -131,6 +131,10 @@ internal fun VexMapsMapSurface(
         remember {
             VexMapsLatestRequestGate()
         }
+    val currentLocationRequestGate =
+        remember {
+            VexMapsLatestRequestGate()
+        }
 
     var viewportLatitude by
         rememberSaveable {
@@ -317,7 +321,14 @@ internal fun VexMapsMapSurface(
     }
 
     fun invalidateDeviceRouteOriginIfUnpinned() {
-        if (selectedOrigin != null) {
+        if (
+            !shouldVexMapsCurrentLocationAffectRoute(
+                selectedOriginLatitude =
+                    selectedOriginLatitude,
+                selectedOriginLongitude =
+                    selectedOriginLongitude,
+            )
+        ) {
             return
         }
 
@@ -330,6 +341,8 @@ internal fun VexMapsMapSurface(
     fun readCurrentPreciseLocation(
         onLocated: (() -> Unit)? = null,
     ) {
+        val requestGeneration =
+            currentLocationRequestGate.begin()
         locationState =
             VexMapsLocationState.Finding
 
@@ -337,6 +350,16 @@ internal fun VexMapsMapSurface(
             val result =
                 locationSource
                     .currentPreciseLocation()
+
+            if (
+                !currentLocationRequestGate
+                    .accepts(
+                        requestGeneration,
+                    )
+            ) {
+                return@launch
+            }
+
             val projectedLocation =
                 projectVexMapsDeviceLocation(
                     result,
@@ -1219,6 +1242,9 @@ internal fun VexMapsMapSurface(
                         Modifier.vexElement(
                             VexMapsScreen.UsePreciseLocation,
                         ),
+                    enabled =
+                        locationState !=
+                            VexMapsLocationState.Finding,
                     onClick = {
                         runtime.activate(
                             VexMapsScreen.UsePreciseLocation,
@@ -2338,6 +2364,17 @@ internal fun resolveVexMapsRestoredRouteFitKey(
                 savedViewportRouteKey ==
                 routeKey
         }
+
+internal fun shouldVexMapsCurrentLocationAffectRoute(
+    selectedOriginLatitude: Double?,
+    selectedOriginLongitude: Double?,
+): Boolean =
+    restoreVexMapCoordinate(
+        latitude =
+            selectedOriginLatitude,
+        longitude =
+            selectedOriginLongitude,
+    ) == null
 
 internal fun restoreVexMapCoordinate(
     latitude: Double?,
