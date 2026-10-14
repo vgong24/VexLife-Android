@@ -204,65 +204,88 @@ private data class EventsAttentionLabTemplate(
     val expectedAction: EventsAttentionLabExpectedAction,
 )
 
+/**
+ * Stable scenario vocabulary.
+ *
+ * Keep the declarative choices together so the planner below reads as "select -> derive -> project"
+ * rather than rebuilding configuration while also reasoning about one scenario.
+ */
+private val eventsAttentionLabTemplates =
+    listOf(
+        EventsAttentionLabTemplate(
+            kind = EventsAttentionLabScenarioKind.ANCHORED_TOP,
+            placement = EventsAttentionLabPlacement.BELOW,
+            expectedAction = EventsAttentionLabExpectedAction.ACKNOWLEDGE,
+        ),
+        EventsAttentionLabTemplate(
+            kind = EventsAttentionLabScenarioKind.ANCHORED_MIDDLE,
+            placement = EventsAttentionLabPlacement.ABOVE,
+            expectedAction = EventsAttentionLabExpectedAction.LATER,
+        ),
+        EventsAttentionLabTemplate(
+            kind = EventsAttentionLabScenarioKind.ANCHORED_BOTTOM,
+            placement = EventsAttentionLabPlacement.ABOVE,
+            expectedAction = EventsAttentionLabExpectedAction.SUSPEND,
+        ),
+        EventsAttentionLabTemplate(
+            kind = EventsAttentionLabScenarioKind.ANCHORED_MIDDLE,
+            placement = EventsAttentionLabPlacement.BELOW,
+            expectedAction = EventsAttentionLabExpectedAction.SUPPRESS,
+        ),
+        EventsAttentionLabTemplate(
+            kind = EventsAttentionLabScenarioKind.BLOCKING_FREEZE_TOP,
+            placement = EventsAttentionLabPlacement.BELOW,
+            expectedAction = EventsAttentionLabExpectedAction.ACKNOWLEDGE,
+        ),
+    )
+
+/**
+ * Pure scenario planner.
+ *
+ * This function owns scenario calculation only. It does not read Relay current state and does not
+ * mutate Relay state. EventsAttentionLabRelay.planNext() supplies one exact current mode/seed/ordinal
+ * from inside updateCurrent(), then atomically stores the returned scenario.
+ *
+ * Read in order:
+ *
+ * 1. VALIDATE -> reject impossible planning inputs;
+ * 2. SELECT   -> choose one stable scenario template;
+ * 3. DERIVE   -> resolve target position/target from current events;
+ * 4. PROJECT  -> construct one complete immutable scenario;
+ * 5. RETURN   -> hand the value back to the atomic Relay transition.
+ */
 internal fun planEventsAttentionLabScenario(
     mode: EventsAttentionLabMode,
     seed: Long,
     ordinal: Long,
     events: List<VexExternalEvent>,
 ): EventsAttentionLabScenario {
+    // 1. VALIDATE
     require(ordinal > 0L)
 
-    val templates =
-        listOf(
-            EventsAttentionLabTemplate(
-                kind = EventsAttentionLabScenarioKind.ANCHORED_TOP,
-                placement = EventsAttentionLabPlacement.BELOW,
-                expectedAction = EventsAttentionLabExpectedAction.ACKNOWLEDGE,
-            ),
-            EventsAttentionLabTemplate(
-                kind = EventsAttentionLabScenarioKind.ANCHORED_MIDDLE,
-                placement = EventsAttentionLabPlacement.ABOVE,
-                expectedAction = EventsAttentionLabExpectedAction.LATER,
-            ),
-            EventsAttentionLabTemplate(
-                kind = EventsAttentionLabScenarioKind.ANCHORED_BOTTOM,
-                placement = EventsAttentionLabPlacement.ABOVE,
-                expectedAction = EventsAttentionLabExpectedAction.SUSPEND,
-            ),
-            EventsAttentionLabTemplate(
-                kind = EventsAttentionLabScenarioKind.ANCHORED_MIDDLE,
-                placement = EventsAttentionLabPlacement.BELOW,
-                expectedAction = EventsAttentionLabExpectedAction.SUPPRESS,
-            ),
-            EventsAttentionLabTemplate(
-                kind = EventsAttentionLabScenarioKind.BLOCKING_FREEZE_TOP,
-                placement = EventsAttentionLabPlacement.BELOW,
-                expectedAction = EventsAttentionLabExpectedAction.ACKNOWLEDGE,
-            ),
-        )
-
+    // 2. SELECT
     val template =
         when (mode) {
             EventsAttentionLabMode.ROTATION ->
-                templates[
-                    ((ordinal - 1L) % templates.size)
+                eventsAttentionLabTemplates[
+                    ((ordinal - 1L) % eventsAttentionLabTemplates.size)
                         .toInt()
                 ]
 
             EventsAttentionLabMode.SEEDED_RANDOM ->
-                templates[
+                eventsAttentionLabTemplates[
                     Random(
                         foldedRandomSeed(
                             seed = seed,
                             ordinal = ordinal,
                         ),
-                    ).nextInt(templates.size)
+                    ).nextInt(eventsAttentionLabTemplates.size)
                 ]
         }
 
+    // 3. DERIVE
     val kind =
         template.kind
-
     val targetPosition =
         if (events.isEmpty()) {
             null
@@ -273,49 +296,50 @@ internal fun planEventsAttentionLabScenario(
                 -> 0
 
                 EventsAttentionLabScenarioKind.ANCHORED_MIDDLE ->
-                    (events.lastIndex / 2)
+                    events.lastIndex / 2
 
                 EventsAttentionLabScenarioKind.ANCHORED_BOTTOM ->
                     events.lastIndex
             }
         }
-
-    val placement =
-        template.placement
-
     val target =
         targetPosition?.let(events::get)
 
-    return EventsAttentionLabScenario(
-        scenarioRef =
-            buildString {
-                append("scenario.events.attention.")
-                append(mode.name.lowercase())
-                if (mode == EventsAttentionLabMode.SEEDED_RANDOM) {
-                    append(".seed-")
-                    append(seed)
-                }
-                append(".")
-                append(ordinal.toString().padStart(3, '0'))
-                append(".")
-                append(kind.name.lowercase())
-            },
-        ordinal = ordinal,
-        mode = mode,
-        seed = seed,
-        kind = kind,
-        targetEventRef = target?.eventRef,
-        targetPositionFromTop = targetPosition,
-        listCountAtPlan = events.size,
-        preferredPlacement = placement,
-        expectedAction = template.expectedAction,
-        freezeProjection =
-            kind ==
-                EventsAttentionLabScenarioKind.BLOCKING_FREEZE_TOP,
-        blockingAcknowledgeOnly =
-            kind ==
-                EventsAttentionLabScenarioKind.BLOCKING_FREEZE_TOP,
-    )
+    // 4. PROJECT
+    val scenario =
+        EventsAttentionLabScenario(
+            scenarioRef =
+                buildString {
+                    append("scenario.events.attention.")
+                    append(mode.name.lowercase())
+                    if (mode == EventsAttentionLabMode.SEEDED_RANDOM) {
+                        append(".seed-")
+                        append(seed)
+                    }
+                    append(".")
+                    append(ordinal.toString().padStart(3, '0'))
+                    append(".")
+                    append(kind.name.lowercase())
+                },
+            ordinal = ordinal,
+            mode = mode,
+            seed = seed,
+            kind = kind,
+            targetEventRef = target?.eventRef,
+            targetPositionFromTop = targetPosition,
+            listCountAtPlan = events.size,
+            preferredPlacement = template.placement,
+            expectedAction = template.expectedAction,
+            freezeProjection =
+                kind ==
+                    EventsAttentionLabScenarioKind.BLOCKING_FREEZE_TOP,
+            blockingAcknowledgeOnly =
+                kind ==
+                    EventsAttentionLabScenarioKind.BLOCKING_FREEZE_TOP,
+        )
+
+    // 5. RETURN
+    return scenario
 }
 
 // [VXG RealForever]
