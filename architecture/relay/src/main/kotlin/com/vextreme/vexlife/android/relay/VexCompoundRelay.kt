@@ -216,18 +216,34 @@ abstract class VexCompoundRelay<
                 val ownedProcessed =
                     processed.deepCopy()
 
-                val meaningChanged =
-                    ownedProcessed.inputState != current.inputState ||
-                        ownedProcessed.outputState != current.outputState
+                val inputChanged =
+                    ownedProcessed.inputState != current.inputState
+                val outputChanged =
+                    ownedProcessed.outputState != current.outputState
 
-                if (!meaningChanged) {
+                if (!inputChanged && !outputChanged) {
                     return@synchronized current.deepCopy()
                 }
 
+                /*
+                 * Preserve the exact already-owned branch when its semantic meaning did not change.
+                 * This gives nested Compound graphs stable structural sharing: an input-only child
+                 * revision does not manufacture a replacement output object for downstream parents.
+                 */
                 val next =
                     VexCompoundState(
-                        inputState = ownedProcessed.inputState,
-                        outputState = ownedProcessed.outputState,
+                        inputState =
+                            if (inputChanged) {
+                                ownedProcessed.inputState
+                            } else {
+                                current.inputState
+                            },
+                        outputState =
+                            if (outputChanged) {
+                                ownedProcessed.outputState
+                            } else {
+                                current.outputState
+                            },
                         revision = current.revision + 1L,
                     )
 
