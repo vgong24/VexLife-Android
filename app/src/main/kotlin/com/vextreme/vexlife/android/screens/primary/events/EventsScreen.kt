@@ -256,7 +256,7 @@ private fun EventRow(
     isAlertCandidate: Boolean,
     disposition: EventsAlertDisposition?,
     convergence: EventsConvergenceOutputState,
-    alertCase: EventsDebugMenuAlertCase?,
+    debugMenuAlertCase: EventsDebugMenuAlertCase?,
     onAcknowledge: () -> Unit,
     onDefer: () -> Unit,
     onSuspend: () -> Unit,
@@ -330,7 +330,7 @@ private fun EventRow(
 
         if (isAlertCandidate) {
             val preferredPlacements =
-                alertCase
+                debugMenuAlertCase
                     ?.preferredOverlayPlacements()
                     ?: listOf(
                         VexOverlayPlacement.BELOW,
@@ -644,7 +644,7 @@ private fun EventsScreenPreview() {
  *
  * This preview is intentionally beside Events rather than in the shared preview host. It lets a
  * human inspect row composition + anchored convergence under every @VexScreenPreviews device/font/theme
- * form without turning Preview infrastructure into another alertCase registry.
+ * form without turning Preview infrastructure into another Debug-menu alert-case registry.
  */
 @VexScreenPreviews
 @Composable
