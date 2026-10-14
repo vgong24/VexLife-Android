@@ -233,7 +233,7 @@ abstract class VexCompoundRelay<
     /**
      * Admit one partial input patch and atomically converge it with retained Compound truth.
      *
-     * Every deepCopy() below marks a different ownership boundary. For a VexImmutable* state each
+     * Every deepCopy() below marks a different ownership boundary. For an ordinary immutable VexState each
      * call returns the same instance, so these boundaries allocate nothing. For mutable-backed
      * states they remain real copies because the owners are genuinely different.
      *
