@@ -389,6 +389,84 @@ Long/duplicated title/artist/album presentation is compacted for the phone, whil
 controls remain registered Vex actions and dynamic catalog rows remain repository data.
 
 
+### VexArchitecture V2 comparison
+
+VexStream is the first lived VexArchitecture V2 practicum, formed on a fresh branch from accepted
+main rather than inheriting PR #80's evolving source history.
+
+The human directory is:
+
+```text
+VexStream
+-> Music
+   -> Library
+   -> Player
+      -> Playback
+      -> Queue
+   -> Availability
+   -> Connection
+```
+
+Only the concerns that currently earn relational machinery use Case / Control / Placement. Music and
+Player are orientation/composition nodes, so V2 does not invent MusicCase or PlayerCase merely for
+symmetry.
+
+Playback owns only:
+
+```text
+NoMedia
+PlaybackNotRequested
+PlaybackRequested
+
+Play
+Pause
+PlayPause
+```
+
+Queue independently owns:
+
+```text
+Empty
+Positioned(itemCount, currentIndex, hasPrevious, hasNext)
+
+Previous
+Next
+PlaySelected
+```
+
+This removes the need for names such as NextWhilePlaybackRequested: Next changes Queue truth while
+Playback truth can remain unchanged.
+
+Cross-concern human intentions are preserved one level above both realms:
+
+```text
+PlaySong
+PlayAll
+ShuffleAll
+-> Queue + Playback
+```
+
+V2 calls these feature-local Paths for now. Path is not promoted into the reusable architecture
+module until another consumer proves the same abstraction is useful.
+
+The actual platform walk deliberately stops at:
+
+```text
+semantic Control
+-> VexStream Playback/Queue Android bridge
+-> VexStreamPlayer
+-> Media3VexStreamPlayer
+-> existing MediaController
+-> existing MediaSessionService / ExoPlayer
+```
+
+Debug Menu exposes one process-local "Use VexArchitecture V2" switch. Off preserves the current
+Legacy direct Media3 behavior. On routes Play/Pause, Previous, Next and queue selection through V2.
+The selector resets to Legacy on app restart and is not product/user preference state.
+
+Both experiences keep the same player, session, repository and UI. That boundary is intentional: a
+lived difference should teach us about the architecture path, not about two different audio engines.
+
 ### Playback lifetime + perceivable mobile player refinement
 
 A006 proved the prior exact head through the Mac Android toolchain and the complete requested
