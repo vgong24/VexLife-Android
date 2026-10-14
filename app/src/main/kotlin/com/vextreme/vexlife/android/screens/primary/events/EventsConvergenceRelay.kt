@@ -217,7 +217,7 @@ class EventsConvergenceRelay internal constructor(
 
             alertPreferences?.let { repository ->
                 observe(
-                    dependencyRef = PREFERENCES_DEPENDENCY,
+                    dependencyRef = ALERT_PREFERENCES_DEPENDENCY,
                     flow = repository.states,
                 ) { alertPreferences ->
                     EventsConvergenceInputState(
@@ -228,11 +228,11 @@ class EventsConvergenceRelay internal constructor(
 
             debugMenuAlerts?.let { repository ->
                 observe(
-                    dependencyRef = LAB_DEPENDENCY,
+                    dependencyRef = DEBUG_MENU_ALERT_DEPENDENCY,
                     flow = repository.states,
-                ) { lab ->
+               ) { debugMenuAlert ->
                     EventsConvergenceInputState(
-                        debugMenuAlert = lab.deepCopy(),
+                        debugMenuAlert = debugMenuAlert.deepCopy(),
                     )
                 }
             }
@@ -317,7 +317,7 @@ class EventsConvergenceRelay internal constructor(
 
     fun completeCurrentAlertCase() {
         requireDebugMenuAlerts()
-            .completeCurrent()
+            .completeCurrentAlertCase()
     }
 
     /*
@@ -342,7 +342,7 @@ class EventsConvergenceRelay internal constructor(
     }
 
     internal fun alertPreferencesChanged(
-        preferences: EventsAlertPreferenceState,
+        alertPreferences: EventsAlertPreferenceState,
     ) {
         send(
             EventsConvergenceInputState(
@@ -351,10 +351,10 @@ class EventsConvergenceRelay internal constructor(
         )
     }
 
-    internal fun debugMenuAlertChanged(lab: EventsDebugMenuAlertState) {
+    internal fun debugMenuAlertChanged(debugMenuAlert: EventsDebugMenuAlertState) {
         send(
             EventsConvergenceInputState(
-                debugMenuAlert = lab.deepCopy(),
+                debugMenuAlert = debugMenuAlert.deepCopy(),
             ),
         )
     }
@@ -472,7 +472,7 @@ class EventsConvergenceRelay internal constructor(
             )
 
         val dispositions =
-            preferences
+            alertPreferences
                 ?.dispositionByEventRef
                 .orEmpty()
 
@@ -482,7 +482,7 @@ class EventsConvergenceRelay internal constructor(
          * NORMAL      -> current queue
          * SUSPENDED   -> back of current queue
          * DEFERRED    -> next sequence, only after current queue drains
-         * ACK/SUPPRESS-> terminal for proactive alert this lab/session
+         * ACK/SUPPRESS-> terminal for proactive alert this Debug-menu alert session
          */
         val normalQueue =
             events
@@ -498,7 +498,7 @@ class EventsConvergenceRelay internal constructor(
                         EventsAlertDisposition.SUSPENDED
                 }
                 .sortedBy { event ->
-                    preferences
+                    alertPreferences
                         ?.suspendedOrderByEventRef
                         ?.get(event.eventRef)
                         ?: Long.MAX_VALUE
@@ -511,7 +511,7 @@ class EventsConvergenceRelay internal constructor(
                         EventsAlertDisposition.DEFERRED
                 }
                 .sortedBy { event ->
-                    preferences
+                    alertPreferences
                         ?.deferredOrderByEventRef
                         ?.get(event.eventRef)
                         ?: Long.MAX_VALUE
@@ -532,7 +532,7 @@ class EventsConvergenceRelay internal constructor(
         val candidateEvent =
             if (feed != null && alertPreferences != null) {
                 val debugMenuAlertTargetRef =
-                    lab
+                    debugMenuAlert
                         ?.currentAlertCase
                         ?.targetEventRef
 
@@ -622,7 +622,7 @@ class EventsConvergenceRelay internal constructor(
                     availability = availability,
                     dispositionByEventRef = dispositions.toMap(),
                     debugMenuAlertCase =
-                        lab
+                        debugMenuAlert
                             ?.currentAlertCase
                             ?.copy(),
                     latestProfileNameChange =
@@ -734,9 +734,9 @@ class EventsConvergenceRelay internal constructor(
     private companion object {
         const val FEED_DEPENDENCY =
             "events.feed"
-        const val PREFERENCES_DEPENDENCY =
-            "events.preferences"
-        const val LAB_DEPENDENCY =
+        const val ALERT_PREFERENCES_DEPENDENCY =
+            "events.alert-alertPreferences"
+        const val DEBUG_MENU_ALERT_DEPENDENCY =
             "events.debug-menu-alert"
         const val PROFILE_DEPENDENCY =
             "user-profile.local"
