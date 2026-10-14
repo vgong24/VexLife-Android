@@ -167,21 +167,9 @@ private fun VexStreamContextDockContent(
                 controller
                     ?.seekToPreviousMediaItem()
             }
-            val playPauseTransition =
-                playback.availablePlayPauseTransition
-
             VexStreamDockIconButton(
                 icon =
-                    when (playPauseTransition) {
-                        VexStreamPlaybackArchitecture.controls.Pause ->
-                            ElementIcon.Pause
-
-                        VexStreamPlaybackArchitecture.controls.Play ->
-                            ElementIcon.Play
-
-                        else ->
-                            ElementIcon.PlayPause
-                    },
+                    playback.playPauseIcon,
                 contentDescription =
                     stringResource(
                         R.string
@@ -189,7 +177,7 @@ private fun VexStreamContextDockContent(
                     ),
                 enabled =
                     controller != null &&
-                        playPauseTransition != null,
+                        playback.playPauseEnabled,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =

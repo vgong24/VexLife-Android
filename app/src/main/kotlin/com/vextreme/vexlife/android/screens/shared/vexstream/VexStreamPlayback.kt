@@ -25,6 +25,7 @@ import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackCase
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackObservation
@@ -140,6 +141,28 @@ internal data class VexStreamPlaybackUiState(
                     .controls
                     .PlayPause,
             )
+
+    /**
+     * Shared presentation projection for every Android surface showing this Control.
+     *
+     * Mini Player and Context Dock should not independently reinterpret the same semantic transition.
+     */
+    val playPauseIcon: ElementIcon
+        get() =
+            when (availablePlayPauseTransition) {
+                VexStreamPlaybackArchitecture.controls.Pause ->
+                    ElementIcon.Pause
+
+                VexStreamPlaybackArchitecture.controls.Play ->
+                    ElementIcon.Play
+
+                else ->
+                    ElementIcon.PlayPause
+            }
+
+    val playPauseEnabled: Boolean
+        get() =
+            availablePlayPauseTransition != null
 
     val progressFraction: Float
         get() =

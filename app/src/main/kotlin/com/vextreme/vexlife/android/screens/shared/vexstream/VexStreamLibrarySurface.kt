@@ -1907,20 +1907,9 @@ private fun VexStreamMiniPlayer(
                 handler = handler,
                 enabled =
                     controller != null &&
-                        playback.availablePlayPauseTransition != null,
+                        playback.playPauseEnabled,
                 iconOverride =
-                    when (
-                        playback.availablePlayPauseTransition
-                    ) {
-                        VexStreamPlaybackArchitecture.controls.Pause ->
-                            ElementIcon.Pause
-
-                        VexStreamPlaybackArchitecture.controls.Play ->
-                            ElementIcon.Play
-
-                        else ->
-                            ElementIcon.PlayPause
-                    },
+                    playback.playPauseIcon,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.NextTrack,
