@@ -1,7 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
 /**
- * Port-local shock absorber between synchronous semantic intent and delayed Media3 observation.
+ * Connection-local shock absorber between synchronous semantic intent and delayed Media3 observation.
  *
  * This is implementation state, not a fifth Behavior concept. Public semantic truth is still
  * VexStreamPlaybackState.
@@ -45,7 +45,7 @@ internal fun VexStreamPlaybackPending.after(
 /**
  * Synchronously reflect an admitted Effect in semantic State before provider dispatch.
  *
- * This does not claim provider convergence. The pending flags explicitly say the Port is waiting for
+ * This does not claim provider convergence. The pending flags explicitly say the connection is waiting for
  * Media3 acknowledgement.
  */
 internal fun VexStreamPlaybackState.afterIntent(

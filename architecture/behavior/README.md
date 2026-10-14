@@ -777,8 +777,8 @@ This separates semantic contract from implementation position:
 VexPort
     reusable relationship
 
-VexStreamPlaybackPort
-    one feature/provider implementation of that relationship
+Media3VexStreamPlaybackConnection : VexPortFlow
+    one concrete feature/provider implementation of that reusable contract
 
 ViewModel / Session / Service
     possible lifetime hosts for the concrete connection
@@ -840,7 +840,7 @@ So the two-way Port is safe for delayed UI interaction as well as non-UI callers
 A live Port may sit between immediate human input and a provider whose observable state arrives
 later. The Port must not force UI latency merely to preserve provider authority.
 
-The VexStream Media3 consumer now uses a Port-local shock absorber:
+The VexStream Media3 connection now uses a connection-local shock absorber:
 
 ~~~text
 current semantic State
@@ -872,7 +872,7 @@ provider observed:
 human:
     activate(PlayPause)
 
-Port synchronously publishes:
+connection synchronously publishes:
     Media(
         playRequested=true,
         requestPending=true,
@@ -885,14 +885,14 @@ then:
 stale Media3 callback:
     playWhenReady=false
 
-Port keeps:
+connection keeps:
     playRequested=true
     requestPending=true
 
 later Media3 acknowledgement:
     playWhenReady=true
 
-Port publishes:
+connection publishes:
     playRequested=true
     requestPending=false
 ~~~
@@ -1008,7 +1008,7 @@ A convergence feature may consume another owner's Flow.
 Those are transport/lifetime decisions. The semantic payload remains the same
 `VexBehaviorProjection`.
 
-### Real VexStream Port
+### Real VexStream connection implementing VexPortFlow
 
 The target is now implemented for the first Play/Pause slice:
 
@@ -1032,7 +1032,7 @@ Context Dock
     + activate(Control)
 ~~~
 
-The concrete Port is retained by a ViewModel only because Android configuration lifetime currently
+The concrete connection is retained by a ViewModel only because Android configuration lifetime currently
 needs a host. ViewModel is not part of the VexPort contract or the four-move grammar.
 
 ## First production-shaped consumer — VexStream Play/Pause

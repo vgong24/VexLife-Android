@@ -45,7 +45,7 @@ Media3 Player truth
     -> UI reads Controls / Acts
 
 UI activates Control
-    -> Port re-resolves from latest State
+    -> connection re-resolves from latest State
     -> Act
     -> Effect
     -> MediaController
@@ -104,7 +104,7 @@ request rather than flickering the UI back to Play. The pending flag clears only
 acknowledges the requested value.
 
 This is a latency bridge, not another truth owner: Media3 still owns provider playback facts and the
-Port explicitly exposes when acknowledgement is pending.
+The connection explicitly exposes when acknowledgement is pending.
 
 ## Presentation seam
 
