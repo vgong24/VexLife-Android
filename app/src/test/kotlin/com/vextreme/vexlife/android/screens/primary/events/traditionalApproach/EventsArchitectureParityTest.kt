@@ -4,6 +4,7 @@ import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
 import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsSourceAvailabilityRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
 import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
@@ -35,6 +36,7 @@ class EventsArchitectureParityTest {
         val events = RelayEventsRepository()
         val preferences = RelayEventsAttentionPreferenceRepository()
         val lab = RelayEventsAttentionLabRepository()
+        val sourceAvailability = RelayEventsSourceAvailabilityRepository()
         val profiles =
             InMemoryUserProfileRepository(
                 listOf(
@@ -52,6 +54,7 @@ class EventsArchitectureParityTest {
                 attentionPreferences = preferences,
                 attentionLab = lab,
                 userProfile = profiles,
+                sourceAvailability = sourceAvailability,
             )
         val traditional =
             TraditionalEventsController(
@@ -59,6 +62,7 @@ class EventsArchitectureParityTest {
                 attentionPreferences = preferences,
                 attentionLab = lab,
                 userProfile = profiles,
+                sourceAvailabilityRepository = sourceAvailability,
             )
 
         current.activate(backgroundScope)
@@ -146,6 +150,7 @@ class EventsArchitectureParityTest {
         val events = RelayEventsRepository()
         val preferences = RelayEventsAttentionPreferenceRepository()
         val lab = RelayEventsAttentionLabRepository()
+        val sourceAvailability = RelayEventsSourceAvailabilityRepository()
         val profiles = InMemoryUserProfileRepository()
 
         val current =
@@ -154,6 +159,7 @@ class EventsArchitectureParityTest {
                 attentionPreferences = preferences,
                 attentionLab = lab,
                 userProfile = profiles,
+                sourceAvailability = sourceAvailability,
             )
         val traditional =
             TraditionalEventsController(
@@ -161,6 +167,7 @@ class EventsArchitectureParityTest {
                 attentionPreferences = preferences,
                 attentionLab = lab,
                 userProfile = profiles,
+                sourceAvailabilityRepository = sourceAvailability,
             )
 
         current.activate(backgroundScope)
@@ -341,6 +348,146 @@ class EventsArchitectureParityTest {
             current.currentOutput.candidate?.eventRef,
         )
     }
+    @Test
+    fun currentRelayAndTraditionalControllerAgreeWhenSourceAvailabilityChanges() = runTest {
+        val events = RelayEventsRepository()
+        val preferences = RelayEventsAttentionPreferenceRepository()
+        val lab = RelayEventsAttentionLabRepository()
+        val sourceAvailability = RelayEventsSourceAvailabilityRepository()
+        val profiles = InMemoryUserProfileRepository()
+
+        val current =
+            EventsConvergenceRelay(
+                eventsRepository = events,
+                attentionPreferences = preferences,
+                attentionLab = lab,
+                userProfile = profiles,
+                sourceAvailability = sourceAvailability,
+            )
+        val traditional =
+            TraditionalEventsController(
+                eventsRepository = events,
+                attentionPreferences = preferences,
+                attentionLab = lab,
+                userProfile = profiles,
+                sourceAvailabilityRepository = sourceAvailability,
+            )
+
+        current.activate(backgroundScope)
+        traditional.start(backgroundScope)
+
+        current.surfaceChanged(
+            screenId = EventsScreen.screenId,
+            transientBlocked = false,
+        )
+        traditional.surfaceChanged(
+            screenId = EventsScreen.screenId,
+            blockedByTransient = false,
+        )
+
+        val unavailableSourceRef =
+            "source.architecture-availability.unavailable"
+        val availableSourceRef =
+            "source.architecture-availability.available"
+        val unavailableEvent =
+            VexExternalEvent(
+                eventRef = "event.compare.availability.unavailable",
+                sourceRef = unavailableSourceRef,
+                kind = VexExternalEventKind.MESSAGE,
+                title = "Unavailable source",
+                detail = "Visible in Events, not eligible for attention.",
+                occurredAtEpochMillis = 10L,
+            )
+        val availableEvent =
+            VexExternalEvent(
+                eventRef = "event.compare.availability.available",
+                sourceRef = availableSourceRef,
+                kind = VexExternalEventKind.CALL,
+                title = "Available source",
+                detail = "Eligible for attention.",
+                occurredAtEpochMillis = 20L,
+            )
+
+        events.accept(
+            VexExternalEventSourceSnapshot(
+                sourceRef = unavailableSourceRef,
+                sourceRevision = 1L,
+                events = listOf(unavailableEvent),
+            ),
+        )
+        events.accept(
+            VexExternalEventSourceSnapshot(
+                sourceRef = availableSourceRef,
+                sourceRevision = 1L,
+                events = listOf(availableEvent),
+            ),
+        )
+
+        val visible =
+            setOf(
+                unavailableEvent.eventRef,
+                availableEvent.eventRef,
+            )
+        current.visibleTargetsChanged(visible)
+        traditional.visibleTargetsChanged(visible)
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            unavailableEvent.eventRef,
+            current.currentOutput.candidate?.eventRef,
+        )
+
+        sourceAvailability.setAvailable(
+            sourceRef = unavailableSourceRef,
+            available = false,
+        )
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            listOf(
+                availableEvent.eventRef,
+                unavailableEvent.eventRef,
+            ),
+            current.currentOutput.events
+                .map(VexExternalEvent::eventRef),
+        )
+        assertEquals(
+            availableEvent.eventRef,
+            current.currentOutput.candidate?.eventRef,
+        )
+        assertEquals(
+            "READY",
+            current.currentOutput.comparable().availability,
+        )
+
+        sourceAvailability.setAvailable(
+            sourceRef = availableSourceRef,
+            available = false,
+        )
+        runCurrent()
+
+        assertEquals(
+            current.currentOutput.comparable(),
+            traditional.current.comparable(),
+        )
+        assertEquals(
+            null,
+            current.currentOutput.candidate?.eventRef,
+        )
+        assertEquals(
+            "NONE",
+            current.currentOutput.comparable().availability,
+        )
+    }
+
 }
 
 private data class ComparableEventsProjection(
