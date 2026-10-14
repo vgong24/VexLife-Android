@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.FontScale
@@ -20,6 +21,7 @@ import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepositor
 import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
+import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
@@ -34,7 +36,12 @@ import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.TextFieldElement
 import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.ui.VexLifeApp
+import com.vextreme.vexlife.android.ui.VexLifeSession
 import androidx.test.espresso.Espresso
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import org.junit.Assert.fail
 
 /**
@@ -53,6 +60,7 @@ class VexTestEngine(
     private val repositories = AppRepositories(
         logHistory = logHistory,
         userProfile = InMemoryUserProfileRepository(),
+        vexMaps = InMemoryVexMapsRepository(),
         vexStream = vexStreamJourneyRepository(),
         events = RelayEventsRepository(),
         eventsAttention = RelayEventsAttentionPreferenceRepository(),
@@ -60,6 +68,7 @@ class VexTestEngine(
     )
     private val expected = VexExpectedWalk()
     private var stepIndex = 0
+    private var activeSession: VexLifeSession? = null
 
     fun run(case: VexJourneyCase) {
         run(
@@ -74,28 +83,59 @@ class VexTestEngine(
         environment: VexJourneyEnvironment,
         caseLabel: String,
     ) {
-        compose.setContent {
-            environment.Host {
-                VexLifeApp(repositories = repositories)
-            }
-        }
-
-        journey.walk(this)
-        verifyWalkHistory(caseLabel)
-        observer.afterJourney(
-            caseLabel = caseLabel,
-            finalScreenId = expected.currentScreen.screenId,
+        Log.i(
+            JOURNEY_TRACE_LOG_TAG,
+            "START case=$caseLabel",
         )
+
+        /*
+         * Production owns VexLifeSession from a ViewModel scope, not from the current composition.
+         * Instrumentation mirrors that lifetime explicitly: Relay dependency collectors and logging
+         * continue on Android Main while the Compose test scheduler drives UI work. This prevents a
+         * semantic dependency from being accidentally stalled by the caller's Compose test scope.
+         */
+        val sessionScope =
+            CoroutineScope(
+                SupervisorJob() +
+                    Dispatchers.Main.immediate,
+            )
+        val session =
+            VexLifeSession(
+                repositories = repositories,
+                scope = sessionScope,
+            )
+        activeSession = session
+
+        try {
+            compose.setContent {
+                environment.Host {
+                    VexLifeApp(session = session)
+                }
+            }
+            compose.waitForIdle()
+
+            journey.walk(this)
+            verifyWalkHistory(caseLabel)
+            observer.afterJourney(
+                caseLabel = caseLabel,
+                finalScreenId = expected.currentScreen.screenId,
+            )
+
+            Log.i(
+                JOURNEY_TRACE_LOG_TAG,
+                "COMPLETE case=$caseLabel finalScreen=${expected.currentScreen.screenId}",
+            )
+        } finally {
+            activeSession = null
+            sessionScope.cancel()
+        }
     }
 
     override fun start(screen: ScreenElement) {
         expected.start(screen)
 
-        val root = com.vextreme.vexlife.android.screens.AppScreens.registry
-            .screenRoot(screen)
-            .element
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(root.elementId)
+            compose.onAllNodesWithTag(screen.screenId)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
@@ -118,11 +158,7 @@ class VexTestEngine(
     override fun tapDynamic(element: VexDynamicElementRef) {
         expected.tapDynamic(element)
 
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(element.elementId)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        waitForTaggedNode(element.elementId)
         compose.onNodeWithTag(element.elementId)
             .performClick()
         compose.waitForIdle()
@@ -134,13 +170,25 @@ class VexTestEngine(
 
     override fun tap(element: ActionElement) {
         expected.tap(element)
-        node(element)
+
+        val uiElement =
+            element as? UIElement
+                ?: error("ActionElement must also be a UIElement")
+
+        /*
+         * Registered action identity is static; visual availability is not. A button may appear only
+         * after a repository/Relay/coroutine transition (VexStream pairing/reconnect is the concrete
+         * example). Synchronize on the production element identity instead of assuming Compose
+         * idleness means the preceding semantic operation has already projected its next surface.
+         */
+        waitForTaggedNode(uiElement.elementId)
+        compose.onNodeWithTag(uiElement.elementId)
             .scrollIntoViewIfPossible()
             .performClick()
         compose.waitForIdle()
         observe(
             stepKind = "tap",
-            semanticRef = (element as UIElement).elementId,
+            semanticRef = uiElement.elementId,
         )
     }
 
@@ -206,14 +254,23 @@ class VexTestEngine(
         stepKind: String,
         semanticRef: String?,
     ) {
-        observer.afterStep(
+        val observation =
             VexJourneyStepObservation(
                 stepIndex = stepIndex++,
                 stepKind = stepKind,
                 screenId = expected.currentScreen.screenId,
                 semanticRef = semanticRef,
-            ),
+            )
+
+        Log.i(
+            JOURNEY_TRACE_LOG_TAG,
+            "STEP index=${observation.stepIndex} " +
+                "kind=${observation.stepKind} " +
+                "screen=${observation.screenId} " +
+                "semantic=${observation.semanticRef}",
         )
+
+        observer.afterStep(observation)
     }
 
     private fun verifyWalkHistory(title: String) {
@@ -261,6 +318,91 @@ class VexTestEngine(
         logHistory.records.value.map { record ->
             record.toJourneyRecord()
         }
+
+    private fun waitForTaggedNode(elementId: String) {
+        val waitFailure =
+            runCatching {
+                compose.waitUntil(timeoutMillis = 5_000) {
+                    compose.onAllNodesWithTag(elementId)
+                        .fetchSemanticsNodes()
+                        .isNotEmpty()
+                }
+            }.exceptionOrNull()
+                ?: return
+
+        val eventsState =
+            repositories.events.current
+        val attentionState =
+            repositories.eventsAttention.current
+        val labState =
+            repositories.eventsAttentionLab.current
+        val vexStreamState =
+            repositories.vexStream.state.value
+        val eventsOutput =
+            activeSession
+                ?.relays
+                ?.events
+                ?.currentOutput
+
+        val diagnostic =
+            buildString {
+                appendLine(
+                    "Timed out waiting for rendered journey element: $elementId",
+                )
+                appendLine(
+                    "expectedScreen=${expected.currentScreen.screenId}",
+                )
+                appendLine(
+                    "events.currentRefs=" +
+                        eventsState.events.joinToString(",") { event ->
+                            event.eventRef
+                        },
+                )
+                appendLine(
+                    "events.dispositions=" +
+                        attentionState.dispositionByEventRef,
+                )
+                appendLine(
+                    "events.labScenario=" +
+                        labState.currentScenario?.scenarioRef,
+                )
+                appendLine(
+                    "events.relayCandidate=" +
+                        eventsOutput?.candidate?.eventRef,
+                )
+                appendLine(
+                    "events.relayAvailability=" +
+                        eventsOutput?.availability,
+                )
+                appendLine(
+                    "events.relayListState=" +
+                        eventsOutput?.list,
+                )
+                appendLine(
+                    "vexStream.connection=" +
+                        vexStreamState.connectionState,
+                )
+                appendLine(
+                    "vexStream.hub=" +
+                        vexStreamState.hubState,
+                )
+                appendLine(
+                    "vexStream.playableTracks=" +
+                        vexStreamState.playableTracks().size,
+                )
+            }.trimEnd()
+
+        Log.e(
+            JOURNEY_WAIT_LOG_TAG,
+            diagnostic,
+            waitFailure,
+        )
+
+        throw AssertionError(
+            diagnostic,
+            waitFailure,
+        )
+    }
 
     private fun node(element: ActionElement): SemanticsNodeInteraction {
         val uiElement = element as? UIElement
@@ -354,3 +496,11 @@ private fun VexJourneyEnvironment.LocaleHost(
         content()
     }
 }
+
+
+private const val JOURNEY_WAIT_LOG_TAG =
+    "VexJourneyWait"
+
+
+private const val JOURNEY_TRACE_LOG_TAG =
+    "VexJourneyTrace"

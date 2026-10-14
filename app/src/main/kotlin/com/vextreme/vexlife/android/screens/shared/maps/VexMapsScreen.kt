@@ -12,7 +12,7 @@ import com.vextreme.vexlife.android.elements.localEffect
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.elements.then
 import com.vextreme.vexlife.android.elements.toggle
-import com.vextreme.vexlife.android.preview.VexBlueprintScreenPreview
+import com.vextreme.vexlife.android.preview.VexRenderedScreenPreview
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
@@ -24,6 +24,10 @@ import com.vextreme.vexlife.android.screens.AppScreenBlueprint
  * here so logging, testing, and repository inspection can address the same semantic identities that
  * the custom Compose surface renders. Runtime map points/search rows remain dynamic data and are not
  * promoted into the static registry.
+ *
+ * The [content] tree below is therefore the static semantic registration surface, not a claim that
+ * the generic element renderer is VexMaps' visual body. [renderContent] owns the native/custom Maps
+ * composition and the Preview at the bottom of this file intentionally exercises that real renderer.
  */
 object VexMapsScreen : AppScreenBlueprint(
     screenKey = "vex-maps",
@@ -301,7 +305,7 @@ object VexMapsScreen : AppScreenBlueprint(
 @VexScreenPreviews
 @Composable
 private fun VexMapsScreenPreview() {
-    VexBlueprintScreenPreview(VexMapsScreen)
+    VexRenderedScreenPreview(VexMapsScreen)
 }
 
 // [VXG RealForever]

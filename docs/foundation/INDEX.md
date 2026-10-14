@@ -63,10 +63,11 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
-| TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **EXTRACTION CANDIDATE / A019 INDEPENDENT HOST PROOF OBSERVED** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | exact convergence-branch host proof before merge |
+| TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **ACCEPTED ON MAIN / PR #78 EXACT HOST PROOF PASS** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | extend only when a new proof claim earns another owner/task |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
-| ANDROID_HOST_PROOF | repository-owned Android proof requests carried by current VexRelay/VexLocalBridge | **EXTRACTION CANDIDATE / EVENTS A008 + TEST FOUNDATION A019 EVIDENCE** | Let any feature request exact Android repository/device proof without rebuilding host-carriage mechanics or making Victor interpret routine output | exact convergence-branch host proof before merge |
+| ANDROID_HOST_PROOF | repository-owned Android proof requests carried by current VexRelay/VexLocalBridge | **ACCEPTED ON MAIN / PR #78 EXACT HOST PROOF PASS** | Let any feature request exact Android repository/device proof without rebuilding host-carriage mechanics or making Victor interpret routine output | reuse current repository tasks + live SDK contract; evolve only from repeated real proof needs |
 | EVENTS_CONVERGENCE_PRACTICUM | external-information ingress + Relay composition + stable dynamic list + anchored attention | **DRAFT CANDIDATE / PURE KOTLIN SMOKE PASS / ANDROID PROOF PENDING** | Master one convergence node before reverse-building real Messaging/Calls/Maps/Health/VexStream adapters toward it | exact Gradle/Journey/ScreenCrawler + physical-device attention walk |
+| VEXMAPS_FEATURE_TOPOLOGY | native map composition + provider / Relay / session boundaries | **READY FOR REVIEW / A014 PHYSICAL + A016 EXACT LOCAL PASS** | Make Maps teach where semantic identity, durable context, convergence, provider mechanics and presentation belong without turning MapLibre into app architecture | review/merge current topology; keep age/accuracy, gesture and second-renderer questions as separate future work |
 | F2_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
 | F3_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
 | F4_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
@@ -114,9 +115,11 @@ A feature lane should declare **what Android claim needs proof** while the repos
 canonical Gradle/device proof entry points and the live Vextreme-SDK contract owns task/RETURN
 carriage. Events A008 and Test Foundation A019 independently established the reusable boundary.
 
-The extracted source still requires its own exact host proof before merge. Once accepted on main,
-feature branches such as VexMaps should rebase onto this foundation rather than copying another
-lane's Relay package formation or proof command list.
+PR #78 is accepted on `main` and received its own exact host proof before merge. Feature branches
+such as VexMaps now consume the repository-owned proof surface rather than copying another lane's
+Relay package formation or proof command list. For a fresh agent composing several dependent checks
+into one human round trip, use the **Reusable multi-path host-task template** in
+`ANDROID-HOST-PROOF.md`; it preserves per-path evidence while keeping one canonical RETURN.
 
 ## Test / Proof Architecture candidate
 
@@ -129,9 +132,10 @@ stability and executable-code coverage at the narrowest truthful owner, then inv
 source/JVM/build bundle through one repository-owned local command. CI remains a caller rather than
 another proof definition.
 
-The current candidate converges already-earned Relay, Journey and ScreenCrawler test surfaces. It
-does not yet claim accepted code-coverage tooling, deterministic visual-golden tooling, or native
-device proof.
+The reusable proof topology is accepted on `main` through PR #78. It keeps focused semantic proof,
+repository-local aggregate proof, optional visual evidence, and connected-device proof as distinct
+claims. Feature-specific screenshot/golden semantics remain with their owning features rather than
+becoming another universal test framework.
 
 
 ## ScreenCrawler evidence candidate
@@ -176,6 +180,23 @@ about repository/Flow dependencies, while keeping `processStates()` as the synch
 semantic reducer and keeping Compose as an output/presentation observer. It also exercises a real
 cross-domain UserProfile name-change input. It remains a draft/refinement candidate until exact
 Gradle/Android proof closes.
+
+## VexMaps feature topology candidate
+
+Canonical detail: [`VEXMAPS-FEATURE-TOPOLOGY.md`](VEXMAPS-FEATURE-TOPOLOGY.md)
+
+### Intention
+
+A fresh developer should be able to descend from VexMaps as a human destination into semantic
+registration, durable Maps state, cross-truth Relay relationships, navigation-session lifetime,
+provider adapters and visible composition without first reconstructing a giant Compose file.
+
+The current ready-for-review candidate keeps MapLibre provider mechanics feature-local, keeps Relay
+for semantic reconciliation rather than turning it into an event bus, and makes custom-Screen
+Preview/Journey use renderer-independent Screen identity. The post-feedback candidate is proved by
+A014's full physical Samsung ScreenCrawler closure (9/9, including Events and VexStream) plus A016's
+exact-head `vexVerifyLocal` PASS and clean source state. A007 remains valid evidence for its earlier
+pre-feedback head; unresolved product questions remain explicitly separate.
 
 ## F0 — Standalone Build Foundation
 

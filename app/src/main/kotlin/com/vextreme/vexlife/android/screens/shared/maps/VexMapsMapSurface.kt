@@ -2,30 +2,19 @@ package com.vextreme.vexlife.android.screens.shared.maps
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -46,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
@@ -62,26 +50,27 @@ import com.vextreme.vexlife.android.screens.shared.vexstream.rememberVexStreamCo
 import java.time.Instant
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
-import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.camera.CameraPosition
-import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
-import org.maplibre.android.maps.Style
-import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.LineLayer
-import org.maplibre.android.style.layers.PropertyFactory.circleColor
-import org.maplibre.android.style.layers.PropertyFactory.circleRadius
-import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
-import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
-import org.maplibre.android.style.layers.PropertyFactory.lineColor
-import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
-import org.maplibre.android.style.layers.PropertyFactory.lineWidth
-import org.maplibre.android.style.sources.GeoJsonSource
-import org.maplibre.geojson.LineString
-import org.maplibre.geojson.Point
 
+/**
+ * Native VexMaps composition root.
+ *
+ * Read this file as wiring between already-owned questions, not as one giant Maps controller:
+ *
+ * - VexMapsNavigationProcess / VexMapsStyleConvergenceRelay own changing semantic relationships;
+ * - VexMapsRepository owns durable Maps-local checkpoints/preferences;
+ * - VexDeviceLocationSource / stores own Android or provider observations/effects;
+ * - VexMapLibreAdapter owns translation from Maps rendering intent into MapLibre mechanics;
+ * - planner/navigation/location files own their smaller state or presentation questions;
+ * - this function decides when those owners are created, which current facts are handed between
+ *   them, and how their projections are composed on screen.
+ *
+ * If a future change starts answering "what does this fact mean?" rather than "when/how do these
+ * existing owners meet?", it probably belongs in one of those narrower owners instead of growing
+ * this composition surface again.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VexMapsMapSurface(
@@ -102,9 +91,9 @@ internal fun VexMapsMapSurface(
             .visualLocations
             .collectAsState()
 
-    val mapController =
+    val mapAdapter =
         remember {
-            VexMapsMapController()
+            VexMapLibreAdapter()
         }
     val locationSource =
         remember(context) {
@@ -134,6 +123,15 @@ internal fun VexMapsMapSurface(
             )
         }
 
+    /*
+     * Keep three different notions separate:
+     * - locationState: human-facing readiness/failure projection;
+     * - currentLocation: fresh Android observation allowed to affect routing/navigation;
+     * - restoredMapContext: historical repository checkpoint allowed only to seed browsing context.
+     *
+     * Their coordinate shapes may look similar, but their authority/currentness is intentionally
+     * different. Do not collapse restoredMapContext back into currentLocation.
+     */
     var locationState by
         remember {
             mutableStateOf<VexMapsLocationState>(
@@ -147,6 +145,19 @@ internal fun VexMapsMapSurface(
             >(null)
         }
 
+    var restoredMapContext by
+        remember {
+            mutableStateOf<
+                VexMapsRestoredMapContext?
+            >(null)
+        }
+
+    /*
+     * Style selection is semantic relationship state; MapLibre loading is a provider effect.
+     * The Relay reconciles selected/requested/loaded/failed meaning while VexMapLibreAdapter performs
+     * the actual SDK work below. Keeping those two halves separate prevents provider callbacks from
+     * becoming the source of human intent.
+     */
     val defaultOnlineStyle =
         VexMapsOnlineStyle.default(
             darkTheme,
@@ -171,6 +182,11 @@ internal fun VexMapsMapSurface(
                     .value,
             )
         }
+    /*
+     * These gates are not domain state. They are composition-level admission tokens that stop a
+     * slower async request from overwriting a newer human/location decision after the coroutine
+     * eventually returns.
+     */
     val routeRequestGate =
         remember {
             VexMapsLatestRequestGate()
@@ -180,6 +196,11 @@ internal fun VexMapsMapSurface(
             VexMapsLatestRequestGate()
         }
 
+    /*
+     * Viewport retention belongs to this rendered Screen lifetime, not to durable location truth.
+     * Saving the camera components across recomposition/configuration lets MapLibre be recreated
+     * without pretending a camera center is a fresh device fix or a persisted route origin.
+     */
     var viewportLatitude by
         rememberSaveable {
             mutableStateOf<Double?>(null)
@@ -518,6 +539,15 @@ internal fun VexMapsMapSurface(
             }
         }
 
+    /*
+     * Repository restoration is intentionally one-way into bounded startup context:
+     * - persisted style becomes current human preference;
+     * - persisted location becomes restored browse context only;
+     * - a fresh precise Android observation is requested separately when permission allows.
+     *
+     * This is the currentness boundary that prevents process history from silently satisfying
+     * navigation readiness.
+     */
     LaunchedEffect(repository) {
         val storedState =
             runCatching {
@@ -554,23 +584,15 @@ internal fun VexMapsMapSurface(
             ) ==
                 PackageManager.PERMISSION_GRANTED
 
-        if (precisePermissionGranted) {
-            storedState
-                ?.lastLocation
-                ?.let { storedLocation ->
-                    currentLocation =
-                        VexDeviceLocationResult.Located(
-                            latitude =
-                                storedLocation.latitude,
-                            longitude =
-                                storedLocation.longitude,
-                            accuracyMeters =
-                                storedLocation.accuracyMeters,
-                        )
-                    locationState =
-                        VexMapsLocationState.Finding
-                }
+        restoredMapContext =
+            projectVexMapsStoredMapContext(
+                storedLocation =
+                    storedState?.lastLocation,
+                precisePermissionGranted =
+                    precisePermissionGranted,
+            )
 
+        if (precisePermissionGranted) {
             readCurrentPreciseLocation()
         }
     }
@@ -701,7 +723,7 @@ internal fun VexMapsMapSurface(
         }
 
     SideEffect {
-        mapController
+        mapAdapter
             .setOnMapLongPress(
                 if (
                     navigationState.phase ==
@@ -724,7 +746,7 @@ internal fun VexMapsMapSurface(
                                 planningState =
                                     planningState
                                         .afterVexMapsRouteInputChanged()
-                                mapController
+                                mapAdapter
                                     .showOrigin(
                                         selected,
                                     )
@@ -747,7 +769,7 @@ internal fun VexMapsMapSurface(
                                 planningState =
                                     planningState
                                         .afterVexMapsRouteInputChanged()
-                                mapController
+                                mapAdapter
                                     .showDestination(
                                         selected,
                                     )
@@ -762,7 +784,7 @@ internal fun VexMapsMapSurface(
             navigationState
                 .routeResult
                 ?.vexMapsRouteKey()
-        mapController.setOnViewportChanged { snapshot ->
+        mapAdapter.setOnViewportChanged { snapshot ->
             setViewportSnapshot(
                 snapshot = snapshot,
                 routeKey = currentRouteKey,
@@ -795,7 +817,7 @@ internal fun VexMapsMapSurface(
     val mapView =
         remember(
             context,
-            mapController,
+            mapAdapter,
         ) {
             MapView(context).apply {
                 onCreate(null)
@@ -818,7 +840,7 @@ internal fun VexMapsMapSurface(
 
     LaunchedEffect(
         mapView,
-        styleConvergence.availability,
+        styleConvergence.status,
         styleSelection?.revision,
     ) {
         val selection =
@@ -826,8 +848,8 @@ internal fun VexMapsMapSurface(
                 ?: return@LaunchedEffect
 
         if (
-            styleConvergence.availability !=
-            VexMapsStyleConvergenceAvailability
+            styleConvergence.status !=
+            VexMapsStyleConvergenceStatus
                 .NEEDS_APPLY
         ) {
             return@LaunchedEffect
@@ -842,7 +864,7 @@ internal fun VexMapsMapSurface(
             map.setStyle(
                 selection.styleUri,
             ) { style ->
-                mapController.attach(
+                mapAdapter.attach(
                     map = map,
                     style = style,
                     restoredRouteKey =
@@ -857,7 +879,7 @@ internal fun VexMapsMapSurface(
     }
 
     LaunchedEffect(
-        styleConvergence.availability,
+        styleConvergence.status,
         styleSelection?.revision,
     ) {
         val selection =
@@ -865,8 +887,8 @@ internal fun VexMapsMapSurface(
                 ?: return@LaunchedEffect
 
         if (
-            styleConvergence.availability ==
-            VexMapsStyleConvergenceAvailability
+            styleConvergence.status ==
+            VexMapsStyleConvergenceStatus
                 .APPLIED
         ) {
             runCatching {
@@ -878,13 +900,30 @@ internal fun VexMapsMapSurface(
     }
 
     LaunchedEffect(
+        restoredMapContext,
+        currentLocation,
+        styleConvergence.status,
+        mapAdapter,
+    ) {
+        if (
+            styleConvergence.status ==
+                VexMapsStyleConvergenceStatus.APPLIED &&
+            currentLocation == null
+        ) {
+            restoredMapContext
+                ?.center
+                ?.let(mapAdapter::focusOn)
+        }
+    }
+
+    LaunchedEffect(
         selectedOrigin,
-        mapController,
+        mapAdapter,
     ) {
         if (selectedOrigin == null) {
-            mapController.clearOrigin()
+            mapAdapter.clearOrigin()
         } else {
-            mapController.showOrigin(
+            mapAdapter.showOrigin(
                 selectedOrigin,
             )
         }
@@ -892,12 +931,12 @@ internal fun VexMapsMapSurface(
 
     LaunchedEffect(
         destination,
-        mapController,
+        mapAdapter,
     ) {
         if (destination == null) {
-            mapController.clearDestination()
+            mapAdapter.clearDestination()
         } else {
-            mapController.showDestination(
+            mapAdapter.showDestination(
                 destination,
             )
         }
@@ -912,12 +951,12 @@ internal fun VexMapsMapSurface(
 
     LaunchedEffect(
         mapDeviceLocation,
-        mapController,
+        mapAdapter,
     ) {
         if (mapDeviceLocation == null) {
-            mapController.clearDeviceLocation()
+            mapAdapter.clearDeviceLocation()
         } else {
-            mapController.showDeviceLocation(
+            mapAdapter.showDeviceLocation(
                 mapDeviceLocation,
             )
         }
@@ -932,15 +971,15 @@ internal fun VexMapsMapSurface(
             .routeResult
             ?.route
             ?.routeRevision,
-        mapController,
+        mapAdapter,
     ) {
         val routeResult =
             navigationState.routeResult
 
         if (routeResult == null) {
-            mapController.clearRoute()
+            mapAdapter.clearRoute()
         } else {
-            mapController.showRoute(
+            mapAdapter.showRoute(
                 routeResult,
             )
         }
@@ -949,11 +988,11 @@ internal fun VexMapsMapSurface(
     DisposableEffect(
         lifecycle,
         mapView,
-        mapController,
+        mapAdapter,
         styleConvergenceRelay,
     ) {
         val lifecycleBridge =
-            VexMapsMapViewLifecycle(
+            VexMapLibreLifecycle(
                 mapView = mapView,
             )
         val styleFailureListener =
@@ -984,7 +1023,7 @@ internal fun VexMapsMapSurface(
             mapView.removeOnDidFailLoadingMapListener(
                 styleFailureListener,
             )
-            mapController.detach()
+            mapAdapter.detach()
             lifecycleBridge.dispose()
         }
     }
@@ -1031,9 +1070,9 @@ internal fun VexMapsMapSurface(
                 .entries
                 .map { style ->
                     style.contextDockPage(
-                        availability =
+                        status =
                             styleConvergence
-                                .availability
+                                .status
                                 .takeIf {
                                     styleConvergence
                                         .selection
@@ -1073,6 +1112,11 @@ internal fun VexMapsMapSurface(
             }
         }
 
+    /*
+     * Visual layering starts with the provider view and then composes Vex-owned controls above it.
+     * AndroidView is therefore an effect/rendering boundary, not another Screen registry or source
+     * of Maps semantic truth.
+     */
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -1290,11 +1334,11 @@ internal fun VexMapsMapSurface(
                                     .afterVexMapsRouteInputChanged()
                             placeSearchState =
                                 VexMapsPlaceSearchState.Idle
-                            mapController
+                            mapAdapter
                                 .showOrigin(
                                     place.coordinate,
                                 )
-                            mapController
+                            mapAdapter
                                 .focusOn(
                                     place.coordinate,
                                 )
@@ -1317,11 +1361,11 @@ internal fun VexMapsMapSurface(
                                     .afterVexMapsRouteInputChanged()
                             placeSearchState =
                                 VexMapsPlaceSearchState.Idle
-                            mapController
+                            mapAdapter
                                 .showDestination(
                                     place.coordinate,
                                 )
-                            mapController
+                            mapAdapter
                                 .focusOn(
                                     place.coordinate,
                                 )
@@ -1353,7 +1397,7 @@ internal fun VexMapsMapSurface(
                     planningState =
                         planningState
                             .afterVexMapsRouteInputChanged()
-                    mapController.clearOrigin()
+                    mapAdapter.clearOrigin()
                 },
                 onImportOfflineMap = {
                     runtime.activate(
@@ -1474,7 +1518,7 @@ internal fun VexMapsMapSurface(
                     )
                     navigationVisualLocation
                         ?.let { visual ->
-                            mapController.focusOn(
+                            mapAdapter.focusOn(
                                 visual.coordinate,
                             )
                         }
@@ -1626,12 +1670,21 @@ internal fun VexMapsMapSurface(
                 }
         }
 
+        /*
+         * Context Dock may project a style choice into style convergence, but automatic convergence
+         * is not a human interaction. We record Selected only when the human actually changed the
+         * preferred page; restored/already-preferred synchronization remains non-human evidence.
+         */
         VexContextDock(
             pages = contextDockPages,
             preferredPageRef =
                 preferredContextDockPage,
             onSelectedPageChanged = {
                     selectedPageRef ->
+                val humanSelectionChanged =
+                    selectedPageRef.value !=
+                        preferredDockPageRef
+
                 preferredDockPageRef =
                     selectedPageRef.value
 
@@ -1646,11 +1699,13 @@ internal fun VexMapsMapSurface(
                                 ?.styleRef !=
                             selectedStyle.styleRef
                         ) {
-                            runtime.recordDynamicInteraction(
-                                subjectRef =
-                                    "presentation.context-dock.vexmaps.style",
-                                action = "Selected",
-                            )
+                            if (humanSelectionChanged) {
+                                runtime.recordDynamicInteraction(
+                                    subjectRef =
+                                        "presentation.context-dock.vexmaps.style",
+                                    action = "Selected",
+                                )
+                            }
                             styleConvergenceRelay
                                 .styleSelected(
                                     styleRef =
@@ -1699,2119 +1754,5 @@ internal fun VexMapsMapSurface(
         )
     }
 }
-
-@Composable
-private fun VexMapsRoutePlannerCard(
-    regionPack: VexMapsRegionPack?,
-    offlineMapState:
-        VexMapsOfflineMapState,
-    routeOrigin: VexMapCoordinate?,
-    usingPinnedOrigin: Boolean,
-    selectingOrigin: Boolean,
-    canUseDeviceOrigin: Boolean,
-    destination: VexMapCoordinate?,
-    placeSearchPack: VexMapsPlaceSearchPack?,
-    placeSearchQuery: String,
-    placeSearchState: VexMapsPlaceSearchState,
-    travelMode: VexMapsTravelMode,
-    planningState: VexMapsPlanningState,
-    onToggleOfflinePreparation: () -> Unit,
-    onPrepareOfflineAroundMe: () -> Unit,
-    onPrepareOfflineTrip: () -> Unit,
-    onBrowseOfflineRegions: () -> Unit,
-    onToggleAdvancedOfflineSetup: () -> Unit,
-    onTravelModeSelected: (VexMapsTravelMode) -> Unit,
-    onPlaceSearchQueryChange: (String) -> Unit,
-    onImportPlaceSearch: () -> Unit,
-    onSearchPlaces: () -> Unit,
-    onPlaceSelected: (VexMapsPlaceSearchResult) -> Unit,
-    onChooseOriginOnMap: () -> Unit,
-    onUseDeviceOrigin: () -> Unit,
-    onImportOfflineMap: () -> Unit,
-    onImportRegion: () -> Unit,
-    onRouteHere: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var offlinePreparationVisible by
-        rememberSaveable {
-            mutableStateOf(true)
-        }
-    var preparationModeName by
-        rememberSaveable {
-            mutableStateOf<String?>(null)
-        }
-    var tripDestinationDraft by
-        rememberSaveable {
-            mutableStateOf("")
-        }
-    var regionDraft by
-        rememberSaveable {
-            mutableStateOf("")
-        }
-    var advancedOfflineVisible by
-        rememberSaveable {
-            mutableStateOf(false)
-        }
-
-    Card(
-        modifier = modifier,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .heightIn(max = 500.dp)
-                    .verticalScroll(
-                        rememberScrollState(),
-                    )
-                    .padding(14.dp),
-            verticalArrangement =
-                Arrangement.spacedBy(10.dp),
-        ) {
-            if (!offlinePreparationVisible) {
-                Text(
-                    text =
-                        stringResource(
-                            R.string.vexmaps_online_title,
-                        ),
-                    style =
-                        MaterialTheme
-                            .typography
-                            .titleMedium,
-                )
-                Text(
-                    text =
-                        stringResource(
-                            R.string.vexmaps_online_body,
-                        ),
-                    style =
-                        MaterialTheme
-                            .typography
-                            .bodySmall,
-                )
-                Button(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.ToggleOfflinePreparation,
-                        ),
-                    onClick = {
-                        onToggleOfflinePreparation()
-                        offlinePreparationVisible = true
-                    },
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexmaps_offline_maps,
-                        ),
-                    )
-                }
-            } else {
-                Row(
-                    horizontalArrangement =
-                        Arrangement.spacedBy(8.dp),
-                    verticalAlignment =
-                        Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text =
-                            stringResource(
-                                R.string.vexmaps_offline_prepare_title,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleMedium,
-                        modifier =
-                            Modifier.weight(1f),
-                    )
-                    OutlinedButton(
-                        modifier =
-                            Modifier.vexElement(
-                                VexMapsScreen.ToggleOfflinePreparation,
-                            ),
-                        onClick = {
-                            onToggleOfflinePreparation()
-                            offlinePreparationVisible = false
-                            preparationModeName = null
-                            advancedOfflineVisible = false
-                        },
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string.vexmaps_offline_maps_close,
-                            ),
-                        )
-                    }
-                }
-
-                Text(
-                    text =
-                        stringResource(
-                            R.string.vexmaps_offline_prepare_body,
-                        ),
-                    style =
-                        MaterialTheme
-                            .typography
-                            .bodySmall,
-                )
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.PrepareOfflineAroundMe,
-                        ),
-                    onClick = {
-                        onPrepareOfflineAroundMe()
-                        preparationModeName = "AROUND_ME"
-                    },
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexmaps_offline_prepare_around,
-                        ),
-                    )
-                }
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.PrepareOfflineTrip,
-                        ),
-                    onClick = {
-                        onPrepareOfflineTrip()
-                        preparationModeName = "TRIP"
-                    },
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexmaps_offline_prepare_trip,
-                        ),
-                    )
-                }
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.BrowseOfflineRegions,
-                        ),
-                    onClick = {
-                        onBrowseOfflineRegions()
-                        preparationModeName = "REGION"
-                    },
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexmaps_offline_prepare_regions,
-                        ),
-                    )
-                }
-
-                when (preparationModeName) {
-                    "AROUND_ME" -> {
-                        Text(
-                            text =
-                                stringResource(
-                                    if (routeOrigin != null) {
-                                        R.string.vexmaps_offline_prepare_around_ready
-                                    } else {
-                                        R.string.vexmaps_offline_prepare_around_location_needed
-                                    },
-                                ),
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .bodyMedium,
-                        )
-                    }
-
-                    "TRIP" -> {
-                        Text(
-                            text =
-                                stringResource(
-                                    if (routeOrigin != null) {
-                                        R.string.vexmaps_offline_prepare_trip_start_current
-                                    } else {
-                                        R.string.vexmaps_offline_prepare_trip_start_needed
-                                    },
-                                ),
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .bodySmall,
-                        )
-                        OutlinedTextField(
-                            value = tripDestinationDraft,
-                            onValueChange = {
-                                tripDestinationDraft = it
-                            },
-                            singleLine = true,
-                            label = {
-                                Text(
-                                    stringResource(
-                                        R.string.vexmaps_offline_prepare_trip_destination,
-                                    ),
-                                )
-                            },
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexmaps_offline_prepare_trip_body,
-                                ),
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .bodySmall,
-                        )
-                    }
-
-                    "REGION" -> {
-                        OutlinedTextField(
-                            value = regionDraft,
-                            onValueChange = {
-                                regionDraft = it
-                            },
-                            singleLine = true,
-                            label = {
-                                Text(
-                                    stringResource(
-                                        R.string.vexmaps_offline_prepare_region_name,
-                                    ),
-                                )
-                            },
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexmaps_offline_prepare_region_body,
-                                ),
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .bodySmall,
-                        )
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string.vexmaps_offline_prepare_region_catalog_missing,
-                                ),
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .bodySmall,
-                        )
-                    }
-                }
-
-                if (preparationModeName != null) {
-                    Text(
-                        text =
-                            stringResource(
-                                R.string.vexmaps_offline_prepare_review_title,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleSmall,
-                    )
-                    Text(
-                        text =
-                            stringResource(
-                                R.string.vexmaps_offline_prepare_review_components,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodySmall,
-                    )
-                    Text(
-                        text =
-                            stringResource(
-                                R.string.vexmaps_offline_prepare_review_size,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodySmall,
-                    )
-                    Text(
-                        text =
-                            stringResource(
-                                R.string.vexmaps_offline_prepare_source_missing,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodySmall,
-                    )
-                }
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.ToggleAdvancedOfflineSetup,
-                        ),
-                    onClick = {
-                        onToggleAdvancedOfflineSetup()
-                        advancedOfflineVisible =
-                            !advancedOfflineVisible
-                    },
-                ) {
-                    Text(
-                        stringResource(
-                            if (advancedOfflineVisible) {
-                                R.string.vexmaps_offline_prepare_hide_advanced
-                            } else {
-                                R.string.vexmaps_offline_prepare_advanced
-                            },
-                        ),
-                    )
-                }
-
-                if (advancedOfflineVisible) {
-                    Text(
-                        text =
-                            stringResource(
-                                if (placeSearchPack == null) {
-                                    R.string.vexmaps_place_search_none
-                                } else {
-                                    R.string.vexmaps_place_search_ready
-                                },
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodyMedium,
-                    )
-                    OutlinedButton(
-                        modifier =
-                            Modifier.vexElement(
-                                VexMapsScreen.ImportPlaceSearch,
-                            ),
-                        onClick = onImportPlaceSearch,
-                        enabled =
-                            placeSearchState !is VexMapsPlaceSearchState.Importing &&
-                                placeSearchState !is VexMapsPlaceSearchState.Searching,
-                    ) {
-                        Text(
-                            stringResource(
-                                if (placeSearchPack == null) {
-                                    R.string.vexmaps_place_search_import
-                                } else {
-                                    R.string.vexmaps_place_search_replace
-                                },
-                            ),
-                        )
-                    }
-
-                    Text(
-                        text =
-                            when (offlineMapState) {
-                                is VexMapsOfflineMapState.Loading ->
-                                    stringResource(
-                                        R.string.vexmaps_offline_map_loading,
-                                    )
-
-                                VexMapsOfflineMapState.None ->
-                                    stringResource(
-                                        R.string.vexmaps_offline_map_none,
-                                    )
-
-                                is VexMapsOfflineMapState.Ready ->
-                                    stringResource(
-                                        R.string.vexmaps_offline_map_ready,
-                                        offlineMapState.completeRegionCount,
-                                    )
-
-                                is VexMapsOfflineMapState.Error ->
-                                    stringResource(
-                                        R.string.vexmaps_offline_map_error,
-                                    )
-                            },
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodySmall,
-                    )
-                    OutlinedButton(
-                        modifier =
-                            Modifier.vexElement(
-                                VexMapsScreen.ImportOfflineMap,
-                            ),
-                        onClick = onImportOfflineMap,
-                        enabled =
-                            offlineMapState !is VexMapsOfflineMapState.Loading,
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string.vexmaps_offline_map_import,
-                            ),
-                        )
-                    }
-
-                    Text(
-                        text =
-                            stringResource(
-                                if (regionPack == null) {
-                                    R.string.vexmaps_region_pack_needed
-                                } else {
-                                    R.string.vexmaps_region_pack_ready
-                                },
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodyMedium,
-                    )
-                    OutlinedButton(
-                        modifier =
-                            Modifier.vexElement(
-                                VexMapsScreen.ImportRoutingRegion,
-                            ),
-                        onClick = onImportRegion,
-                        enabled =
-                            planningState !is VexMapsPlanningState.Importing &&
-                                planningState !is VexMapsPlanningState.Routing,
-                    ) {
-                        Text(
-                            stringResource(
-                                if (regionPack == null) {
-                                    R.string.vexmaps_region_pack_import
-                                } else {
-                                    R.string.vexmaps_region_pack_replace
-                                },
-                            ),
-                        )
-                    }
-                }
-            }
-
-            if (placeSearchPack != null) {
-                OutlinedTextField(
-                    value = placeSearchQuery,
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.PlaceSearchQuery,
-                        ),
-                    onValueChange =
-                        onPlaceSearchQueryChange,
-                    singleLine = true,
-                    label = {
-                        Text(
-                            stringResource(
-                                R.string.vexmaps_place_search_query,
-                            ),
-                        )
-                    },
-                )
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.SearchPlaces,
-                        ),
-                    onClick = onSearchPlaces,
-                    enabled =
-                        placeSearchQuery.isNotBlank() &&
-                            placeSearchState !is VexMapsPlaceSearchState.Importing &&
-                            placeSearchState !is VexMapsPlaceSearchState.Searching,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexmaps_place_search_action,
-                        ),
-                    )
-                }
-
-                when (placeSearchState) {
-                    VexMapsPlaceSearchState.Searching ->
-                        Text(
-                            stringResource(
-                                R.string.vexmaps_place_searching,
-                            ),
-                        )
-
-                    is VexMapsPlaceSearchState.Results ->
-                        placeSearchState.places.forEach { place ->
-                            OutlinedButton(
-                                onClick = {
-                                    onPlaceSelected(
-                                        place,
-                                    )
-                                },
-                            ) {
-                                Column {
-                                    Text(
-                                        place.name,
-                                    )
-                                    place.subtitle
-                                        ?.takeIf {
-                                            it.isNotBlank()
-                                        }
-                                        ?.let { subtitle ->
-                                            Text(
-                                                text = subtitle,
-                                                style =
-                                                    MaterialTheme
-                                                        .typography
-                                                        .bodySmall,
-                                            )
-                                        }
-                                }
-                            }
-                        }
-
-                    is VexMapsPlaceSearchState.Error ->
-                        Text(
-                            stringResource(
-                                R.string.vexmaps_place_search_error,
-                            ),
-                        )
-
-                    VexMapsPlaceSearchState.Importing,
-                    VexMapsPlaceSearchState.Idle ->
-                        Unit
-                }
-            }
-
-            if (regionPack != null) {
-                Text(
-                    text =
-                        stringResource(
-                            R.string.vexmaps_route_mode,
-                        ),
-                    style =
-                        MaterialTheme
-                            .typography
-                            .bodyMedium,
-                )
-
-                Row(
-                    horizontalArrangement =
-                        Arrangement.spacedBy(6.dp),
-                ) {
-                    VexMapsTravelMode.entries.forEach { mode ->
-                        if (mode == travelMode) {
-                            Button(
-                                modifier =
-                                    Modifier.vexElement(
-                                        VexMapsScreen.travelModeElement(
-                                            mode,
-                                        ),
-                                    ),
-                                onClick = {
-                                    onTravelModeSelected(
-                                        mode,
-                                    )
-                                },
-                            ) {
-                                Text(
-                                    stringResource(
-                                        mode.labelRes,
-                                    ),
-                                )
-                            }
-                        } else {
-                            OutlinedButton(
-                                modifier =
-                                    Modifier.vexElement(
-                                        VexMapsScreen.travelModeElement(
-                                            mode,
-                                        ),
-                                    ),
-                                onClick = {
-                                    onTravelModeSelected(
-                                        mode,
-                                    )
-                                },
-                            ) {
-                                Text(
-                                    stringResource(
-                                        mode.labelRes,
-                                    ),
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Text(
-                    text =
-                        stringResource(
-                            when {
-                                selectingOrigin ->
-                                    R.string.vexmaps_route_start_selecting
-
-                                usingPinnedOrigin ->
-                                    R.string.vexmaps_route_start_pinned
-
-                                routeOrigin != null ->
-                                    R.string.vexmaps_route_start_current
-
-                                else ->
-                                    R.string.vexmaps_route_start_needed
-                            },
-                        ),
-                    style =
-                        MaterialTheme
-                            .typography
-                            .bodyMedium,
-                )
-
-                OutlinedButton(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.ChooseOriginOnMap,
-                        ),
-                    onClick = onChooseOriginOnMap,
-                    enabled =
-                        planningState !is VexMapsPlanningState.Routing &&
-                            planningState !is VexMapsPlanningState.Importing,
-                ) {
-                    Text(
-                        stringResource(
-                            if (usingPinnedOrigin) {
-                                R.string.vexmaps_route_change_start
-                            } else {
-                                R.string.vexmaps_route_choose_start
-                            },
-                        ),
-                    )
-                }
-
-                if (
-                    usingPinnedOrigin &&
-                    canUseDeviceOrigin
-                ) {
-                    OutlinedButton(
-                        modifier =
-                            Modifier.vexElement(
-                                VexMapsScreen.UseDeviceOrigin,
-                            ),
-                        onClick = onUseDeviceOrigin,
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string.vexmaps_route_use_current_start,
-                            ),
-                        )
-                    }
-                }
-            }
-
-            if (
-                regionPack != null &&
-                routeOrigin != null &&
-                destination != null &&
-                !selectingOrigin
-            ) {
-                Button(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.PlanRoute,
-                        ),
-                    onClick = onRouteHere,
-                    enabled =
-                        planningState !is VexMapsPlanningState.Routing &&
-                            planningState !is VexMapsPlanningState.Importing,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.vexmaps_route_here,
-                        ),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun VexMapsNavigationCard(
-    state: VexNavigationSessionState,
-    locationReady: Boolean,
-    canRecenter: Boolean,
-    onRecenter: () -> Unit,
-    onEditRoute: () -> Unit,
-    onStart: () -> Unit,
-    onStop: () -> Unit,
-    onDone: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (
-        state.phase ==
-        VexNavigationSessionPhase.IDLE
-    ) {
-        return
-    }
-
-    val destination =
-        state
-            .routeResult
-            ?.route
-            ?.destinationLabel
-            .orEmpty()
-
-    Card(
-        modifier = modifier,
-    ) {
-        Column(
-            modifier =
-                Modifier.padding(14.dp),
-            verticalArrangement =
-                Arrangement.spacedBy(8.dp),
-        ) {
-            when (state.phase) {
-                VexNavigationSessionPhase.READY -> {
-                    Text(
-                        text =
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_ready,
-                                destination,
-                                state
-                                    .routeResult
-                                    ?.route
-                                    ?.totalDistanceMeters
-                                    ?: 0,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleMedium,
-                    )
-
-                    state
-                        .routeResult
-                        ?.estimatedDurationSeconds
-                        ?.let { durationSeconds ->
-                            val estimate =
-                                projectVexMapsDurationEstimate(
-                                    durationSeconds,
-                                )
-
-                            Text(
-                                text =
-                                    if (estimate.hours > 0) {
-                                        stringResource(
-                                            R.string
-                                                .vexmaps_navigation_eta_hours,
-                                            estimate.hours,
-                                            estimate.minutes,
-                                        )
-                                    } else {
-                                        stringResource(
-                                            R.string
-                                                .vexmaps_navigation_eta_minutes,
-                                            estimate.minutes,
-                                        )
-                                    },
-                                style =
-                                    MaterialTheme
-                                        .typography
-                                        .bodyMedium,
-                            )
-                        }
-
-                    state
-                        .routeResult
-                        ?.travelMode
-                        ?.let { mode ->
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string
-                                            .vexmaps_navigation_route_mode,
-                                        stringResource(
-                                            mode.labelRes,
-                                        ),
-                                    ),
-                                style =
-                                    MaterialTheme
-                                        .typography
-                                        .bodyMedium,
-                            )
-                        }
-
-                    OutlinedButton(
-                        modifier =
-                            Modifier.vexElement(
-                                VexMapsScreen.EditRoute,
-                            ),
-                        onClick = onEditRoute,
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_edit_route,
-                            ),
-                        )
-                    }
-
-                    if (locationReady) {
-                        Button(
-                            modifier =
-                                Modifier.vexElement(
-                                    VexMapsScreen.StartNavigation,
-                                ),
-                            onClick = onStart,
-                        ) {
-                            Text(
-                                stringResource(
-                                    R.string
-                                        .vexmaps_navigation_start,
-                                ),
-                            )
-                        }
-                    } else {
-                        Text(
-                            text =
-                                stringResource(
-                                    R.string
-                                        .vexmaps_navigation_location_needed,
-                                ),
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .bodySmall,
-                        )
-                    }
-                }
-
-                VexNavigationSessionPhase.ACTIVE -> {
-                    val progress =
-                        state.convergence?.progress
-                    val next =
-                        progress?.nextManeuver
-
-                    Text(
-                        text =
-                            next
-                                ?.maneuver
-                                ?.instructionProjection
-                                ?: stringResource(
-                                    R.string
-                                        .vexmaps_navigation_continue,
-                                ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleLarge,
-                    )
-
-                    next?.let {
-                        Text(
-                            text =
-                                "${it.distanceToManeuverMeters} m",
-                            style =
-                                MaterialTheme
-                                    .typography
-                                    .headlineSmall,
-                        )
-                    }
-
-                    Text(
-                        text =
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_remaining,
-                                progress
-                                    ?.distanceRemainingMeters
-                                    ?: 0,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .bodyMedium,
-                    )
-
-                    NavigationStopButton(
-                        onStop = onStop,
-                    )
-                }
-
-                VexNavigationSessionPhase.OFF_ROUTE -> {
-                    Text(
-                        text =
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_off_route,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleLarge,
-                    )
-                    Text(
-                        text =
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_off_route_body,
-                            ),
-                    )
-                    NavigationStopButton(
-                        onStop = onStop,
-                    )
-                }
-
-                VexNavigationSessionPhase.LOCATION_HELD -> {
-                    Text(
-                        text =
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_waiting_location,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleLarge,
-                    )
-                    Text(
-                        text =
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_waiting_location_body,
-                            ),
-                    )
-                    NavigationStopButton(
-                        onStop = onStop,
-                    )
-                }
-
-                VexNavigationSessionPhase.ARRIVED -> {
-                    Text(
-                        text =
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_arrived,
-                                destination,
-                            ),
-                        style =
-                            MaterialTheme
-                                .typography
-                                .titleLarge,
-                    )
-                    Button(
-                        modifier =
-                            Modifier.vexElement(
-                                VexMapsScreen.DoneNavigation,
-                            ),
-                        onClick = onDone,
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string
-                                    .vexmaps_navigation_done,
-                            ),
-                        )
-                    }
-                }
-
-                VexNavigationSessionPhase.IDLE ->
-                    Unit
-            }
-
-            if (
-                canRecenter &&
-                (
-                    state.phase ==
-                        VexNavigationSessionPhase.ACTIVE ||
-                    state.phase ==
-                        VexNavigationSessionPhase.OFF_ROUTE ||
-                    state.phase ==
-                        VexNavigationSessionPhase.LOCATION_HELD
-                )
-            ) {
-                OutlinedButton(
-                    modifier =
-                        Modifier.vexElement(
-                            VexMapsScreen.RecenterNavigation,
-                        ),
-                    onClick = onRecenter,
-                ) {
-                    Text(
-                        stringResource(
-                            R.string
-                                .vexmaps_navigation_recenter,
-                        ),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun NavigationStopButton(
-    onStop: () -> Unit,
-) {
-    OutlinedButton(
-        modifier =
-            Modifier.vexElement(
-                VexMapsScreen.StopNavigation,
-            ),
-        onClick = onStop,
-    ) {
-        Text(
-            stringResource(
-                R.string
-                    .vexmaps_navigation_stop,
-            ),
-        )
-    }
-}
-
-internal class VexMapsLatestRequestGate {
-    private var generation = 0L
-
-    fun begin(): Long {
-        generation += 1L
-        return generation
-    }
-
-    fun invalidate() {
-        generation += 1L
-    }
-
-    fun accepts(
-        requestGeneration: Long,
-    ): Boolean =
-        requestGeneration ==
-            generation
-}
-
-internal sealed interface VexMapsPlaceSearchState {
-    data object Idle :
-        VexMapsPlaceSearchState
-
-    data object Importing :
-        VexMapsPlaceSearchState
-
-    data object Searching :
-        VexMapsPlaceSearchState
-
-    data class Results(
-        val places: List<VexMapsPlaceSearchResult>,
-    ) : VexMapsPlaceSearchState
-
-    data class Error(
-        val error: VexMapsPlaceSearchError,
-    ) : VexMapsPlaceSearchState
-}
-
-internal enum class VexMapsPlaceSearchError {
-    IMPORT,
-    SEARCH,
-}
-
-internal data class VexMapsViewportSnapshot(
-    val center: VexMapCoordinate,
-    val zoom: Double,
-    val bearing: Double,
-    val tilt: Double,
-) {
-    init {
-        require(zoom.isFinite() && zoom >= 0.0) {
-            "zoom must be finite and non-negative"
-        }
-        require(bearing.isFinite()) {
-            "bearing must be finite"
-        }
-        require(
-            tilt.isFinite() &&
-                tilt in 0.0..60.0,
-        ) {
-            "tilt must be finite and in [0, 60]"
-        }
-    }
-}
-
-internal fun restoreVexMapsViewportSnapshot(
-    latitude: Double?,
-    longitude: Double?,
-    zoom: Double?,
-    bearing: Double?,
-    tilt: Double?,
-): VexMapsViewportSnapshot? {
-    if (
-        latitude == null ||
-        longitude == null ||
-        zoom == null ||
-        bearing == null ||
-        tilt == null
-    ) {
-        return null
-    }
-
-    return runCatching {
-        VexMapsViewportSnapshot(
-            center =
-                VexMapCoordinate(
-                    latitude = latitude,
-                    longitude = longitude,
-                ),
-            zoom = zoom,
-            bearing = bearing,
-            tilt = tilt,
-        )
-    }.getOrNull()
-}
-
-private fun VexMapsViewportSnapshot
-    .toCameraPosition(): CameraPosition =
-    CameraPosition.Builder()
-        .target(
-            LatLng(
-                center.latitude,
-                center.longitude,
-            ),
-        )
-        .zoom(zoom)
-        .bearing(bearing)
-        .tilt(tilt)
-        .build()
-
-private fun VexOfflineRouteResult
-    .vexMapsRouteKey(): String =
-    route.routeRef +
-        ":" +
-        route.routeRevision
-
-internal fun resolveVexMapsRestoredRouteFitKey(
-    hasRestoredViewport: Boolean,
-    savedViewportRouteKey: String?,
-    currentRouteKey: String?,
-): String? =
-    currentRouteKey
-        ?.takeIf { routeKey ->
-            hasRestoredViewport &&
-                savedViewportRouteKey ==
-                routeKey
-        }
-
-internal fun shouldVexMapsCurrentLocationAffectRoute(
-    selectedOriginLatitude: Double?,
-    selectedOriginLongitude: Double?,
-): Boolean =
-    restoreVexMapCoordinate(
-        latitude =
-            selectedOriginLatitude,
-        longitude =
-            selectedOriginLongitude,
-    ) == null
-
-internal fun restoreVexMapCoordinate(
-    latitude: Double?,
-    longitude: Double?,
-): VexMapCoordinate? {
-    if (
-        latitude == null ||
-        longitude == null
-    ) {
-        return null
-    }
-
-    return runCatching {
-        VexMapCoordinate(
-            latitude = latitude,
-            longitude = longitude,
-        )
-    }.getOrNull()
-}
-
-internal fun restoreVexMapsMapSelectionTarget(
-    savedName: String,
-): VexMapsMapSelectionTarget =
-    VexMapsMapSelectionTarget
-        .entries
-        .firstOrNull { target ->
-            target.name == savedName
-        }
-        ?: VexMapsMapSelectionTarget.DESTINATION
-
-internal fun restoreVexMapsTravelMode(
-    savedName: String,
-): VexMapsTravelMode =
-    VexMapsTravelMode
-        .entries
-        .firstOrNull { mode ->
-            mode.name == savedName
-        }
-        ?: VexMapsTravelMode.DRIVE
-
-internal fun projectVexMapsDeviceLocation(
-    result: VexDeviceLocationResult,
-): VexDeviceLocationResult.Located? =
-    result as? VexDeviceLocationResult.Located
-
-internal fun projectVexMapsMapDeviceLocation(
-    plannerLocation:
-        VexDeviceLocationResult.Located?,
-    navigationVisualLocation:
-        VexMapsNavigationVisualLocation?,
-): VexDeviceLocationResult.Located? =
-    navigationVisualLocation
-        ?.let { visual ->
-            VexDeviceLocationResult.Located(
-                latitude =
-                    visual.coordinate.latitude,
-                longitude =
-                    visual.coordinate.longitude,
-                accuracyMeters =
-                    visual.accuracyMeters,
-            )
-        }
-        ?: plannerLocation
-
-internal fun isVexMapsNavigationStartPreflightSatisfied(
-    result: VexDeviceLocationResult,
-    matchingPolicy:
-        VexRouteMatchingPolicy =
-        VexRouteMatchingPolicy(),
-): Boolean =
-    result is VexDeviceLocationResult.Located &&
-        matchingPolicy.acceptsAccuracy(
-            result.accuracyMeters,
-        )
-
-internal fun canStartVexMapsNavigation(
-    precisePermissionGranted: Boolean,
-    hasCurrentLocation: Boolean,
-    locationFixReady: Boolean,
-): Boolean =
-    precisePermissionGranted &&
-        hasCurrentLocation &&
-        locationFixReady
-
-internal fun canContinueVexMapsNavigationStart(
-    expectedRouteKey: String,
-    currentPhase: VexNavigationSessionPhase,
-    currentRouteKey: String?,
-): Boolean =
-    currentPhase ==
-        VexNavigationSessionPhase.READY &&
-        currentRouteKey ==
-        expectedRouteKey
-
-internal data class VexMapsDurationEstimate(
-    val hours: Int,
-    val minutes: Int,
-)
-
-internal fun projectVexMapsDurationEstimate(
-    durationSeconds: Int,
-): VexMapsDurationEstimate {
-    require(durationSeconds > 0)
-
-    val totalMinutes =
-        (
-            durationSeconds +
-                SECONDS_PER_MINUTE -
-                1
-        ) /
-            SECONDS_PER_MINUTE
-
-    return VexMapsDurationEstimate(
-        hours =
-            totalMinutes /
-                MINUTES_PER_HOUR,
-        minutes =
-            totalMinutes %
-                MINUTES_PER_HOUR,
-    )
-}
-
-internal fun resolveVexMapsRouteOrigin(
-    selectedOrigin: VexMapCoordinate?,
-    deviceOrigin: VexMapCoordinate?,
-): VexMapCoordinate? =
-    selectedOrigin ?: deviceOrigin
-
-private val VexMapsTravelMode.labelRes: Int
-    get() =
-        when (this) {
-            VexMapsTravelMode.DRIVE ->
-                R.string.vexmaps_route_mode_drive
-
-            VexMapsTravelMode.WALK ->
-                R.string.vexmaps_route_mode_walk
-
-            VexMapsTravelMode.BICYCLE ->
-                R.string.vexmaps_route_mode_bicycle
-        }
-
-internal enum class VexMapsMapSelectionTarget {
-    ORIGIN,
-    DESTINATION,
-}
-
-internal fun nextVexMapsSelectionTarget(
-    selectedRole: VexMapsMapSelectionTarget,
-): VexMapsMapSelectionTarget =
-    when (selectedRole) {
-        VexMapsMapSelectionTarget.ORIGIN ->
-            VexMapsMapSelectionTarget.DESTINATION
-
-        VexMapsMapSelectionTarget.DESTINATION ->
-            VexMapsMapSelectionTarget.DESTINATION
-    }
-
-internal sealed interface VexMapsPlanningState {
-    data object Idle :
-        VexMapsPlanningState
-
-    data object Importing :
-        VexMapsPlanningState
-
-    data object Routing :
-        VexMapsPlanningState
-
-    data class Error(
-        val error: VexMapsPlanningError,
-    ) : VexMapsPlanningState
-}
-
-internal enum class VexMapsPlanningError {
-    REGION_IMPORT,
-    ROUTE,
-}
-
-internal fun VexMapsPlanningState
-    .afterVexMapsRouteInputChanged():
-    VexMapsPlanningState =
-    when (this) {
-        VexMapsPlanningState.Routing ->
-            VexMapsPlanningState.Idle
-
-        is VexMapsPlanningState.Error ->
-            if (
-                error ==
-                VexMapsPlanningError.ROUTE
-            ) {
-                VexMapsPlanningState.Idle
-            } else {
-                this
-            }
-
-        VexMapsPlanningState.Idle,
-        VexMapsPlanningState.Importing ->
-            this
-    }
-
-private class VexMapsMapController {
-    private var map: MapLibreMap? = null
-    private var style: Style? = null
-    private var pendingLocation:
-        VexDeviceLocationResult.Located? = null
-    private var pendingRoute:
-        VexOfflineRouteResult? = null
-    private var pendingOrigin:
-        VexMapCoordinate? = null
-    private var pendingDestination:
-        VexMapCoordinate? = null
-    private var lastFittedRouteKey:
-        String? = null
-    private var onMapLongPress:
-        ((VexMapCoordinate) -> Unit)? = null
-    private var onViewportChanged:
-        ((VexMapsViewportSnapshot) -> Unit)? =
-        null
-
-    private val longClickListener =
-        MapLibreMap.OnMapLongClickListener {
-            point ->
-            val callback =
-                onMapLongPress
-                    ?: return@OnMapLongClickListener false
-
-            callback(
-                VexMapCoordinate(
-                    latitude =
-                        point.latitude,
-                    longitude =
-                        point.longitude,
-                ),
-            )
-            true
-        }
-
-    private val cameraIdleListener =
-        MapLibreMap.OnCameraIdleListener {
-            val position =
-                map?.cameraPosition
-                    ?: return@OnCameraIdleListener
-            val target =
-                position.target
-                    ?: return@OnCameraIdleListener
-            val snapshot =
-                restoreVexMapsViewportSnapshot(
-                    latitude = target.latitude,
-                    longitude = target.longitude,
-                    zoom = position.zoom,
-                    bearing = position.bearing,
-                    tilt = position.tilt,
-                )
-                    ?: return@OnCameraIdleListener
-
-            onViewportChanged
-                ?.invoke(snapshot)
-        }
-
-    fun setOnMapLongPress(
-        callback:
-            ((VexMapCoordinate) -> Unit)?,
-    ) {
-        onMapLongPress =
-            callback
-    }
-
-    fun setOnViewportChanged(
-        callback:
-            ((VexMapsViewportSnapshot) -> Unit)?,
-    ) {
-        onViewportChanged =
-            callback
-    }
-
-    fun attach(
-        map: MapLibreMap,
-        style: Style,
-        restoredRouteKey: String?,
-    ) {
-        this.map
-            ?.removeOnMapLongClickListener(
-                longClickListener,
-            )
-        this.map
-            ?.removeOnCameraIdleListener(
-                cameraIdleListener,
-            )
-
-        this.map = map
-        this.style = style
-        lastFittedRouteKey =
-            restoredRouteKey
-        map.addOnMapLongClickListener(
-            longClickListener,
-        )
-        map.addOnCameraIdleListener(
-            cameraIdleListener,
-        )
-
-        pendingRoute?.let { route ->
-            renderRoute(
-                route = route,
-                fitCamera = true,
-            )
-        }
-        pendingOrigin?.let(
-            ::renderOrigin,
-        )
-        pendingDestination?.let(
-            ::renderDestination,
-        )
-        pendingLocation?.let(
-            ::renderDeviceLocation,
-        )
-    }
-
-    fun detach() {
-        map?.removeOnMapLongClickListener(
-            longClickListener,
-        )
-        map?.removeOnCameraIdleListener(
-            cameraIdleListener,
-        )
-        map = null
-        style = null
-        lastFittedRouteKey = null
-    }
-
-    fun focusOn(
-        coordinate: VexMapCoordinate,
-    ) {
-        map?.animateCamera(
-            CameraUpdateFactory
-                .newLatLngZoom(
-                    LatLng(
-                        coordinate.latitude,
-                        coordinate.longitude,
-                    ),
-                    15.5,
-                ),
-        )
-    }
-
-    fun showOrigin(
-        origin: VexMapCoordinate,
-    ) {
-        pendingOrigin = origin
-        renderOrigin(origin)
-    }
-
-    fun clearOrigin() {
-        pendingOrigin = null
-
-        val style = style ?: return
-        if (
-            style.getLayer(
-                ORIGIN_LAYER_ID,
-            ) != null
-        ) {
-            style.removeLayer(
-                ORIGIN_LAYER_ID,
-            )
-        }
-        if (
-            style.getSource(
-                ORIGIN_SOURCE_ID,
-            ) != null
-        ) {
-            style.removeSource(
-                ORIGIN_SOURCE_ID,
-            )
-        }
-    }
-
-    fun showDestination(
-        destination: VexMapCoordinate,
-    ) {
-        pendingDestination = destination
-        renderDestination(destination)
-    }
-
-    fun clearDestination() {
-        pendingDestination = null
-
-        val style = style ?: return
-        if (
-            style.getLayer(
-                DESTINATION_LAYER_ID,
-            ) != null
-        ) {
-            style.removeLayer(
-                DESTINATION_LAYER_ID,
-            )
-        }
-        if (
-            style.getSource(
-                DESTINATION_SOURCE_ID,
-            ) != null
-        ) {
-            style.removeSource(
-                DESTINATION_SOURCE_ID,
-            )
-        }
-    }
-
-    fun showRoute(
-        route: VexOfflineRouteResult,
-    ) {
-        pendingRoute = route
-        renderRoute(
-            route = route,
-            fitCamera = true,
-        )
-    }
-
-    fun clearRoute() {
-        pendingRoute = null
-        lastFittedRouteKey = null
-
-        val style = style ?: return
-
-        if (
-            style.getLayer(
-                ROUTE_LAYER_ID,
-            ) != null
-        ) {
-            style.removeLayer(
-                ROUTE_LAYER_ID,
-            )
-        }
-        if (
-            style.getSource(
-                ROUTE_SOURCE_ID,
-            ) != null
-        ) {
-            style.removeSource(
-                ROUTE_SOURCE_ID,
-            )
-        }
-    }
-
-    fun showDeviceLocation(
-        location: VexDeviceLocationResult.Located,
-    ) {
-        pendingLocation = location
-        renderDeviceLocation(location)
-    }
-
-    fun clearDeviceLocation() {
-        pendingLocation = null
-
-        val style = style ?: return
-        if (
-            style.getLayer(
-                DEVICE_LOCATION_LAYER_ID,
-            ) != null
-        ) {
-            style.removeLayer(
-                DEVICE_LOCATION_LAYER_ID,
-            )
-        }
-        if (
-            style.getSource(
-                DEVICE_LOCATION_SOURCE_ID,
-            ) != null
-        ) {
-            style.removeSource(
-                DEVICE_LOCATION_SOURCE_ID,
-            )
-        }
-    }
-
-    private fun renderOrigin(
-        origin: VexMapCoordinate,
-    ) {
-        val style = style ?: return
-        val point =
-            Point.fromLngLat(
-                origin.longitude,
-                origin.latitude,
-            )
-        val existing =
-            style.getSource(
-                ORIGIN_SOURCE_ID,
-            ) as? GeoJsonSource
-
-        if (existing == null) {
-            style.addSource(
-                GeoJsonSource(
-                    ORIGIN_SOURCE_ID,
-                    point,
-                ),
-            )
-            style.addLayer(
-                CircleLayer(
-                    ORIGIN_LAYER_ID,
-                    ORIGIN_SOURCE_ID,
-                ).withProperties(
-                    circleRadius(9f),
-                    circleColor(
-                        Color.parseColor(
-                            "#146C2E",
-                        ),
-                    ),
-                    circleStrokeWidth(3f),
-                    circleStrokeColor(
-                        Color.WHITE,
-                    ),
-                ),
-            )
-        } else {
-            existing.setGeoJson(
-                point,
-            )
-        }
-    }
-
-    private fun renderDestination(
-        destination: VexMapCoordinate,
-    ) {
-        val style = style ?: return
-        val point =
-            Point.fromLngLat(
-                destination.longitude,
-                destination.latitude,
-            )
-        val existing =
-            style.getSource(
-                DESTINATION_SOURCE_ID,
-            ) as? GeoJsonSource
-
-        if (existing == null) {
-            style.addSource(
-                GeoJsonSource(
-                    DESTINATION_SOURCE_ID,
-                    point,
-                ),
-            )
-            style.addLayer(
-                CircleLayer(
-                    DESTINATION_LAYER_ID,
-                    DESTINATION_SOURCE_ID,
-                ).withProperties(
-                    circleRadius(9f),
-                    circleColor(
-                        Color.parseColor(
-                            "#B3261E",
-                        ),
-                    ),
-                    circleStrokeWidth(3f),
-                    circleStrokeColor(
-                        Color.WHITE,
-                    ),
-                ),
-            )
-        } else {
-            existing.setGeoJson(
-                point,
-            )
-        }
-    }
-
-    private fun renderRoute(
-        route: VexOfflineRouteResult,
-        fitCamera: Boolean,
-    ) {
-        val map = map ?: return
-        val style = style ?: return
-
-        val points =
-            route.geometry.map { coordinate ->
-                Point.fromLngLat(
-                    coordinate.longitude,
-                    coordinate.latitude,
-                )
-            }
-
-        val line =
-            LineString.fromLngLats(
-                points,
-            )
-
-        val existingSource =
-            style.getSource(
-                ROUTE_SOURCE_ID,
-            ) as? GeoJsonSource
-
-        if (existingSource == null) {
-            style.addSource(
-                GeoJsonSource(
-                    ROUTE_SOURCE_ID,
-                    line,
-                ),
-            )
-            style.addLayer(
-                LineLayer(
-                    ROUTE_LAYER_ID,
-                    ROUTE_SOURCE_ID,
-                ).withProperties(
-                    lineColor(
-                        Color.parseColor(
-                            "#6750A4",
-                        ),
-                    ),
-                    lineWidth(7f),
-                    lineOpacity(0.92f),
-                ),
-            )
-        } else {
-            existingSource.setGeoJson(
-                line,
-            )
-        }
-
-        val routeKey =
-            route.vexMapsRouteKey()
-
-        if (
-            fitCamera &&
-            lastFittedRouteKey != routeKey
-        ) {
-            val bounds =
-                LatLngBounds.Builder()
-                    .includes(
-                        route.geometry.map { coordinate ->
-                            LatLng(
-                                coordinate.latitude,
-                                coordinate.longitude,
-                            )
-                        },
-                    )
-                    .build()
-
-            map.animateCamera(
-                CameraUpdateFactory
-                    .newLatLngBounds(
-                        bounds,
-                        96,
-                    ),
-            )
-            lastFittedRouteKey = routeKey
-        }
-    }
-
-    private fun renderDeviceLocation(
-        location: VexDeviceLocationResult.Located,
-    ) {
-        val map = map ?: return
-        val style = style ?: return
-
-        val point =
-            Point.fromLngLat(
-                location.longitude,
-                location.latitude,
-            )
-
-        val existingSource =
-            style.getSource(
-                DEVICE_LOCATION_SOURCE_ID,
-            ) as? GeoJsonSource
-
-        if (existingSource == null) {
-            style.addSource(
-                GeoJsonSource(
-                    DEVICE_LOCATION_SOURCE_ID,
-                    point,
-                ),
-            )
-
-            style.addLayer(
-                CircleLayer(
-                    DEVICE_LOCATION_LAYER_ID,
-                    DEVICE_LOCATION_SOURCE_ID,
-                ).withProperties(
-                    circleRadius(8f),
-                    circleColor(
-                        Color.parseColor(
-                            "#6750A4",
-                        ),
-                    ),
-                    circleStrokeWidth(3f),
-                    circleStrokeColor(
-                        Color.WHITE,
-                    ),
-                ),
-            )
-        } else {
-            existingSource.setGeoJson(
-                point,
-            )
-        }
-
-        if (
-            pendingRoute == null
-        ) {
-            map.animateCamera(
-                CameraUpdateFactory
-                    .newLatLngZoom(
-                        LatLng(
-                            location.latitude,
-                            location.longitude,
-                        ),
-                        15.5,
-                    ),
-            )
-        }
-    }
-}
-
-private sealed interface VexMapsLocationState {
-    val stringResOrNull: Int?
-
-    data object Idle :
-        VexMapsLocationState {
-        override val stringResOrNull:
-            Int? = null
-    }
-
-    data object Finding :
-        VexMapsLocationState {
-        override val stringResOrNull =
-            R.string.vexmaps_location_finding
-    }
-
-    data object Ready :
-        VexMapsLocationState {
-        override val stringResOrNull =
-            R.string.vexmaps_location_ready
-    }
-
-    data object Denied :
-        VexMapsLocationState {
-        override val stringResOrNull =
-            R.string.vexmaps_location_denied
-    }
-
-    data object Approximate :
-        VexMapsLocationState {
-        override val stringResOrNull =
-            R.string.vexmaps_location_approximate
-    }
-
-    data object Disabled :
-        VexMapsLocationState {
-        override val stringResOrNull =
-            R.string.vexmaps_location_disabled
-    }
-
-    data object Unavailable :
-        VexMapsLocationState {
-        override val stringResOrNull =
-            R.string.vexmaps_location_unavailable
-    }
-
-    data object Inaccurate :
-        VexMapsLocationState {
-        override val stringResOrNull =
-            R.string.vexmaps_location_inaccurate
-    }
-
-    data object Error :
-        VexMapsLocationState {
-        override val stringResOrNull =
-            R.string.vexmaps_location_error
-    }
-}
-
-private class VexMapsMapViewLifecycle(
-    private val mapView: MapView,
-) {
-    private var started = false
-    private var resumed = false
-    private var disposed = false
-
-    fun synchronize(
-        state: Lifecycle.State,
-    ) {
-        if (
-            state.isAtLeast(
-                Lifecycle.State.STARTED,
-            )
-        ) {
-            start()
-        }
-
-        if (
-            state.isAtLeast(
-                Lifecycle.State.RESUMED,
-            )
-        ) {
-            resume()
-        }
-    }
-
-    fun onEvent(
-        event: Lifecycle.Event,
-    ) {
-        when (event) {
-            Lifecycle.Event.ON_START ->
-                start()
-
-            Lifecycle.Event.ON_RESUME ->
-                resume()
-
-            Lifecycle.Event.ON_PAUSE ->
-                pause()
-
-            Lifecycle.Event.ON_STOP ->
-                stop()
-
-            Lifecycle.Event.ON_DESTROY -> {
-                pause()
-                stop()
-            }
-
-            Lifecycle.Event.ON_CREATE,
-            Lifecycle.Event.ON_ANY ->
-                Unit
-        }
-    }
-
-    fun dispose() {
-        if (disposed) {
-            return
-        }
-
-        pause()
-        stop()
-        mapView.onDestroy()
-        disposed = true
-    }
-
-    private fun start() {
-        if (
-            disposed ||
-            started
-        ) {
-            return
-        }
-
-        mapView.onStart()
-        started = true
-    }
-
-    private fun resume() {
-        if (
-            disposed ||
-            resumed
-        ) {
-            return
-        }
-
-        if (!started) {
-            start()
-        }
-
-        mapView.onResume()
-        resumed = true
-    }
-
-    private fun pause() {
-        if (
-            disposed ||
-            !resumed
-        ) {
-            return
-        }
-
-        mapView.onPause()
-        resumed = false
-    }
-
-    private fun stop() {
-        if (
-            disposed ||
-            !started
-        ) {
-            return
-        }
-
-        pause()
-        mapView.onStop()
-        started = false
-    }
-}
-
-private const val SECONDS_PER_MINUTE =
-    60
-
-private const val MINUTES_PER_HOUR =
-    60
-
-private const val ROUTE_SOURCE_ID =
-    "vexmaps-route"
-
-private const val ROUTE_LAYER_ID =
-    "vexmaps-route-layer"
-
-private const val ORIGIN_SOURCE_ID =
-    "vexmaps-origin"
-
-private const val ORIGIN_LAYER_ID =
-    "vexmaps-origin-layer"
-
-private const val DESTINATION_SOURCE_ID =
-    "vexmaps-destination"
-
-private const val DESTINATION_LAYER_ID =
-    "vexmaps-destination-layer"
-
-private const val DEVICE_LOCATION_SOURCE_ID =
-    "vexmaps-device-location"
-
-private const val DEVICE_LOCATION_LAYER_ID =
-    "vexmaps-device-location-layer"
 
 // [VXG RealForever]

@@ -79,6 +79,19 @@ object EventsScreen : AppScreenBlueprint(
  * list identity/visibility mechanics. This split is deliberate: a future list-based feature can
  * reuse stable repeated-item behavior without inheriting Events repositories or attention rules.
  */
+/**
+ * Whether a candidate row that is already being composed may host its anchored attention surface.
+ *
+ * HELD_TARGET_UNREACHABLE is included intentionally: the Relay visibility projection is asynchronous
+ * and can lag one layout observation behind the actual LazyColumn composition. A non-visible row
+ * cannot call EventRow at all, so row composition itself is stronger immediate evidence of an
+ * anchor than the lagging visibility set. Other held states remain ineligible.
+ */
+internal fun EventsConvergenceAvailability
+    .allowsAnchoredCandidateInComposedRow(): Boolean =
+    this == EventsConvergenceAvailability.READY ||
+        this == EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
+
 @Composable
 fun EventsScreenContent(
     runtime: VexRuntime,
@@ -92,11 +105,20 @@ fun EventsScreenContent(
 
     val activeCandidateRef =
         attention.candidate?.eventRef
+    /*
+     * Lazy-list visibility reaches the Relay asynchronously. A candidate row may already be in
+     * composition while the Relay still reports HELD_TARGET_UNREACHABLE from the previous layout
+     * observation. EventRow itself is the final proof that this exact stable row has an anchor.
+     *
+     * READY remains the settled state. HELD_TARGET_UNREACHABLE is allowed only as this short
+     * presentation bridge; HELD_OTHER_SCREEN / HELD_TRANSIENT_OCCUPIED / UNOBSERVED still cannot
+     * render attention even if HorizontalPager happens to precompose the Events page.
+     */
     val visibleCandidateRef =
         attention
             .takeIf { output ->
-                output.availability ==
-                    EventsConvergenceAvailability.READY
+                output.availability
+                    .allowsAnchoredCandidateInComposedRow()
             }
             ?.candidate
             ?.eventRef
@@ -135,8 +157,17 @@ fun EventsScreenContent(
         items = displayedEvents,
         itemRef = VexExternalEvent::eventRef,
         contentType = { "events-event-row" },
+        /*
+         * A newly selected candidate can be below the fold after queue advancement. Request its
+         * visibility so the anchored overlay has a real row to attach to. VexStableLazyColumn
+         * re-evaluates the request when the requested identity or row set changes; it does not
+         * continuously snap during an otherwise-stable candidate/list state.
+         *
+         * Lab scenarios still win because their explicit target is part of the scenario contract.
+         */
         requestedVisibleItemRef =
-            scenario?.targetEventRef,
+            scenario?.targetEventRef
+                ?: activeCandidateRef,
         userScrollEnabled =
             scenario?.blockingAcknowledgeOnly != true,
         modifier = Modifier.fillMaxSize(),

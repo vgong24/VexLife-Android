@@ -49,14 +49,6 @@ internal enum class VexMapsOnlineStyle(
                 LIBERTY
             }
 
-        fun restore(
-            name: String?,
-            darkTheme: Boolean,
-        ): VexMapsOnlineStyle =
-            entries.firstOrNull {
-                it.name == name
-            } ?: default(darkTheme)
-
         fun fromStyleRef(
             styleRef: String?,
         ): VexMapsOnlineStyle? =
@@ -74,8 +66,8 @@ internal enum class VexMapsOnlineStyle(
 }
 
 internal fun VexMapsOnlineStyle.contextDockPage(
-    availability:
-        VexMapsStyleConvergenceAvailability?,
+    status:
+        VexMapsStyleConvergenceStatus?,
 ): VexContextDockPage =
     VexContextDockPage(
         pageRef = dockPageRef,
@@ -97,26 +89,26 @@ internal fun VexMapsOnlineStyle.contextDockPage(
             )
             if (expanded) {
                 val statusRes =
-                    when (availability) {
-                        VexMapsStyleConvergenceAvailability
+                    when (status) {
+                        VexMapsStyleConvergenceStatus
                             .NEEDS_APPLY,
-                        VexMapsStyleConvergenceAvailability
+                        VexMapsStyleConvergenceStatus
                             .APPLYING,
                         ->
                             R.string
                                 .vexmaps_style_applying
 
-                        VexMapsStyleConvergenceAvailability
+                        VexMapsStyleConvergenceStatus
                             .APPLIED ->
                             R.string
                                 .vexmaps_style_loaded
 
-                        VexMapsStyleConvergenceAvailability
+                        VexMapsStyleConvergenceStatus
                             .FAILED ->
                             R.string
                                 .vexmaps_style_failed
 
-                        VexMapsStyleConvergenceAvailability
+                        VexMapsStyleConvergenceStatus
                             .UNOBSERVED,
                         null,
                         ->

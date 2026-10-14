@@ -5,10 +5,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -387,56 +389,65 @@ private fun VexAnchoredOverlayBubble(
             layoutDirection = layoutDirection,
         )
 
-    when (caretDirection) {
-        VexOverlayCaretDirection.UP ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                VexAnchoredOverlayCaret(caretDirection)
-                VexAnchoredOverlaySurface(
-                    presentationRef = presentationRef,
-                    content = content,
-                )
+    /*
+     * PopupPositionProvider resolves placement from popupContentSize. The resolved caret therefore
+     * must not change that size: doing so feeds geometry back into the next placement calculation
+     * and can oscillate forever near a boundary. Keep one placement-invariant measured footprint and
+     * overlay the directional caret inside reserved edge room.
+     */
+    Box(
+        modifier =
+            Modifier.padding(
+                vexAnchoredOverlayCaretRoom,
+            ),
+    ) {
+        VexAnchoredOverlaySurface(
+            presentationRef = presentationRef,
+            content = content,
+        )
+
+        val caretModifier =
+            when (caretDirection) {
+                VexOverlayCaretDirection.UP ->
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(
+                            y =
+                                -vexAnchoredOverlayCaretOffset,
+                        )
+
+                VexOverlayCaretDirection.DOWN ->
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(
+                            y =
+                                vexAnchoredOverlayCaretOffset,
+                        )
+
+                VexOverlayCaretDirection.LEFT ->
+                    Modifier
+                        .align(Alignment.CenterStart)
+                        .offset(
+                            x =
+                                -vexAnchoredOverlayCaretOffset,
+                        )
+
+                VexOverlayCaretDirection.RIGHT ->
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(
+                            x =
+                                vexAnchoredOverlayCaretOffset,
+                        )
+
+                VexOverlayCaretDirection.NONE ->
+                    Modifier
             }
 
-        VexOverlayCaretDirection.DOWN ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                VexAnchoredOverlaySurface(
-                    presentationRef = presentationRef,
-                    content = content,
-                )
-                VexAnchoredOverlayCaret(caretDirection)
-            }
-
-        VexOverlayCaretDirection.LEFT ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                VexAnchoredOverlayCaret(caretDirection)
-                VexAnchoredOverlaySurface(
-                    presentationRef = presentationRef,
-                    content = content,
-                )
-            }
-
-        VexOverlayCaretDirection.RIGHT ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                VexAnchoredOverlaySurface(
-                    presentationRef = presentationRef,
-                    content = content,
-                )
-                VexAnchoredOverlayCaret(caretDirection)
-            }
-
-        VexOverlayCaretDirection.NONE ->
-            VexAnchoredOverlaySurface(
-                presentationRef = presentationRef,
-                content = content,
-            )
+        VexAnchoredOverlayCaret(
+            direction = caretDirection,
+            modifier = caretModifier,
+        )
     }
 }
 
@@ -480,6 +491,7 @@ private fun VexAnchoredOverlaySurface(
 @Composable
 private fun VexAnchoredOverlayCaret(
     direction: VexOverlayCaretDirection,
+    modifier: Modifier = Modifier,
 ) {
     if (direction == VexOverlayCaretDirection.NONE) {
         return
@@ -494,29 +506,31 @@ private fun VexAnchoredOverlayCaret(
             1.dp.toPx()
         }
 
-    val modifier =
-        when (direction) {
-            VexOverlayCaretDirection.UP,
-            VexOverlayCaretDirection.DOWN,
-            ->
-                Modifier.size(
-                    width = 18.dp,
-                    height = 10.dp,
-                )
+    Canvas(
+        modifier =
+            modifier.then(
+                when (direction) {
+                    VexOverlayCaretDirection.UP,
+                    VexOverlayCaretDirection.DOWN,
+                    ->
+                        Modifier.size(
+                            width = 18.dp,
+                            height = 10.dp,
+                        )
 
-            VexOverlayCaretDirection.LEFT,
-            VexOverlayCaretDirection.RIGHT,
-            ->
-                Modifier.size(
-                    width = 10.dp,
-                    height = 18.dp,
-                )
+                    VexOverlayCaretDirection.LEFT,
+                    VexOverlayCaretDirection.RIGHT,
+                    ->
+                        Modifier.size(
+                            width = 10.dp,
+                            height = 18.dp,
+                        )
 
-            VexOverlayCaretDirection.NONE ->
-                error("NONE caret direction returned after early exit")
-        }
-
-    Canvas(modifier) {
+                    VexOverlayCaretDirection.NONE ->
+                        error("NONE caret direction returned after early exit")
+                },
+            ),
+    ) {
         val path =
             Path().apply {
                 when (direction) {
@@ -601,5 +615,12 @@ private fun VexAnchoredOverlayCaret(
         )
     }
 }
+
+private val vexAnchoredOverlayCaretRoom =
+    10.dp
+
+private val vexAnchoredOverlayCaretOffset =
+    5.dp
+
 
 // [VXG RealForever]

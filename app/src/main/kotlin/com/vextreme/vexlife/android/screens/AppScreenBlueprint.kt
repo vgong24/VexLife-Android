@@ -34,9 +34,11 @@ internal class ScreenActionContext(
 /**
  * VexLife app Screen contract layered over the portable element-module [ScreenBlueprint].
  *
- * A new app Screen is registered once in [AppScreens]. Its static shape still comes from
- * ScreenBlueprint; feature-owned Invoke effects may override [appActionRegistrations]. Screens with
- * no app effects inherit an empty registration set.
+ * A new app Screen is registered once in [AppScreens]. [ScreenBlueprint.content] is its static
+ * semantic registration tree. Ordinary Screens render that tree directly; a custom/native Screen
+ * may override [renderContent] while preserving the registered identities, actions, and ownership
+ * expressed by that tree. Feature-owned Invoke effects may override [appActionRegistrations].
+ * Screens with no app effects inherit an empty registration set.
  *
  * [AppScreens] assembles every registered Screen automatically and fails session construction when a
  * declared Invoke action has no owner. Preview presence remains a source-alignment/build contract
@@ -66,8 +68,10 @@ abstract class AppScreenBlueprint(
     /**
      * One app-level registration for this Screen.
      *
-     * The body remains the Screen's visual/content tree. Shared toolbar actions are registered as
-     * Screen-owned semantic elements without being duplicated into that body.
+     * [content] is the Screen's static semantic registration tree. For blueprint-rendered Screens it
+     * is also the visible body. For custom renderers it remains the registry/action-coverage source
+     * while [renderContent] owns the actual visual composition. Shared toolbar actions are registered
+     * as Screen-owned semantic elements without being duplicated into that tree.
      */
     internal fun appRegistration(): ScreenRegistration =
         ScreenRegistration(
@@ -86,6 +90,9 @@ abstract class AppScreenBlueprint(
      * them to whatever its actual renderer needs. Ordinary blueprint-only Screens inherit the
      * generic VexElementTree path; a Screen overrides this only when it owns custom realization,
      * local state projection, or a repository/theme dependency.
+     *
+     * A custom renderer does not turn [content] into a second hidden layout. [content] continues to
+     * own static semantic registration while this method owns the pixels and native composition.
      *
      * Broad app-composition bridge.
      *

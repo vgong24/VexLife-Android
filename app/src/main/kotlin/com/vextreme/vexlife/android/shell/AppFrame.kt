@@ -12,6 +12,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.testTag
 import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
@@ -78,7 +79,8 @@ fun AppFrame(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
+                    .padding(innerPadding)
+                    .testTag(runtime.currentScreen.screenId),
             ) {
                 content()
             }
