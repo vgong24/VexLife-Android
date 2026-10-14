@@ -7,7 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexArchitectureTest {
-    private data object CaseA
+    private data class CaseA(
+        val allowB: Boolean = true,
+    )
     private data object CaseB
 
     private class TestArchitecture(
@@ -69,13 +71,6 @@ class VexArchitectureTest {
             ),
             architecture.map.cases,
         )
-        assertEquals(
-            listOf(
-                becomeB,
-                returnToA,
-            ),
-            architecture.map.transitions,
-        )
         assertTrue(
             architecture.map
                 .describe()
@@ -86,16 +81,21 @@ class VexArchitectureTest {
     }
 
     @Test
-    fun currentCaseResolvesOneControlWithoutReinterpretingState() {
+    fun namedCurrentConditionControlsAvailabilityWithoutChangingTopology() {
         val architecture =
             TestArchitecture(
-                architectureRef = "example.flow",
+                architectureRef = "example.conditional",
                 enabled = true,
             )
         val becomeB =
             architecture.transition<CaseA, CaseB>(
-                "example.a-to-b",
-            )
+                transitionRef =
+                    "example.a-to-b",
+                conditionRef =
+                    "case-a-allows-b",
+            ) { current ->
+                current.allowB
+            }
         val caseA =
             architecture.placement<CaseA> {
                 can(becomeB)
@@ -109,7 +109,21 @@ class VexArchitectureTest {
         assertSame(
             becomeB,
             vexCurrent(
-                case = CaseA,
+                case =
+                    CaseA(
+                        allowB = true,
+                    ),
+                placement = caseA,
+            ).availableTransition(
+                primary,
+            ),
+        )
+        assertNull(
+            vexCurrent(
+                case =
+                    CaseA(
+                        allowB = false,
+                    ),
                 placement = caseA,
             ).availableTransition(
                 primary,
@@ -132,18 +146,16 @@ class VexArchitectureTest {
             architecture.placement<CaseA> {
                 can(becomeB)
             }
-        val primary =
-            architecture.control(
-                "example.primary",
-                becomeB,
-            )
 
         assertNull(
             vexCurrent(
-                case = CaseA,
+                case = CaseA(),
                 placement = caseA,
             ).availableTransition(
-                primary,
+                architecture.control(
+                    "example.primary",
+                    becomeB,
+                ),
             ),
         )
     }
@@ -164,53 +176,17 @@ class VexArchitectureTest {
             first.transition<CaseA, CaseB>(
                 "example.first.a-to-b",
             )
-        val firstControl =
-            first.control(
-                "example.first.primary",
-                firstTransition,
-            )
         val secondCaseA =
             second.placement<CaseA> {}
 
         vexCurrent(
-            case = CaseA,
+            case = CaseA(),
             placement = secondCaseA,
         ).availableTransition(
-            firstControl,
-        )
-    }
-
-    @Test(expected = IllegalStateException::class)
-    fun derivedMapRejectsAnExitWhoseDestinationDoesNotNameTheSameArrival() {
-        val architecture =
-            TestArchitecture(
-                architectureRef = "example.incomplete",
-                enabled = true,
-            )
-        val becomeB =
-            architecture.transition<CaseA, CaseB>(
-                "example.a-to-b",
-            )
-        val caseA =
-            architecture.placement<CaseA> {
-                can(becomeB)
-            }
-        val caseB =
-            architecture.placement<CaseB> {}
-
-        architecture.architectureMap(
-            placements =
-                listOf(
-                    caseA,
-                    caseB,
-                ),
-            controls =
-                listOf(
-                    architecture.control(
-                        "example.primary",
-                        becomeB,
-                    ),
-                ),
+            first.control(
+                "example.first.primary",
+                firstTransition,
+            ),
         )
     }
 }

@@ -14,31 +14,15 @@ import com.vextreme.vexlife.android.vexarchitecture.placement
 import com.vextreme.vexlife.android.vexarchitecture.transition
 import com.vextreme.vexlife.android.vexarchitecture.vexCurrent
 
-/**
- * ROOT DESIGN for VexStream playback.
- *
- * Start here when the symptom is "something about playback is wrong" and you do not yet know which
- * UI/service file matters.
- *
- * The root intentionally owns orientation, realm gating and the derived map only. It is not a
- * playback manager.
- */
 object VexStreamPlaybackArchitecture :
     VexArchitectureContract {
 
     override val architectureRef: String =
         "vexstream.playback"
 
-    /**
-     * Feature-realm gate.
-     *
-     * Replacing this constant with a real product flag later turns every Control below this root off
-     * through the shared contract; descendants must not scatter their own flag checks.
-     */
     override val enabled: Boolean =
         true
 
-    /** Feature-local child contracts. Only playback-owned layers implement these. */
     interface CaseContract
     interface ControlContract
     interface PlacementContract
@@ -63,30 +47,39 @@ object VexStreamPlaybackArchitecture :
     }
 }
 
-/** Current relational playback truth. These names describe reality, not UI controls. */
+/**
+ * Queue-position facts are carried only in Cases where a queue actually exists.
+ *
+ * The flags are observed from Media3 rather than re-derived from index arithmetic so platform queue
+ * traversal semantics stay at the Android boundary.
+ */
+data class VexStreamPlaybackQueuePosition(
+    val itemCount: Int,
+    val currentIndex: Int,
+    val hasPrevious: Boolean,
+    val hasNext: Boolean,
+) {
+    init {
+        require(itemCount > 0)
+        require(currentIndex in -1 until itemCount)
+    }
+}
+
 sealed interface VexStreamPlaybackCase :
     VexStreamPlaybackArchitecture.CaseContract {
 
     data object QueueEmpty :
         VexStreamPlaybackCase
 
-    data object ReadyToPlay :
-        VexStreamPlaybackCase
+    data class ReadyToPlay(
+        val queue: VexStreamPlaybackQueuePosition,
+    ) : VexStreamPlaybackCase
 
-    /**
-     * Media3 is currently pursuing playback, including prepare/buffer time before audio is audible.
-     */
-    data object PlayRequested :
-        VexStreamPlaybackCase
+    data class PlayRequested(
+        val queue: VexStreamPlaybackQueuePosition,
+    ) : VexStreamPlaybackCase
 }
 
-/**
- * Controls and their typed relationships.
- *
- *     Play  : ReadyToPlay -> PlayRequested
- *     Pause : PlayRequested -> ReadyToPlay
- *     PlayPause : whichever one current Placement offers
- */
 object VexStreamPlaybackControl :
     VexStreamPlaybackArchitecture.ControlContract {
 
@@ -106,23 +99,87 @@ object VexStreamPlaybackControl :
             "vexstream.playback.pause",
         )
 
+    val NextWhileReady =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.ReadyToPlay,
+            VexStreamPlaybackCase.ReadyToPlay
+        >(
+            transitionRef =
+                "vexstream.playback.next.ready",
+            conditionRef =
+                "queue-has-next",
+        ) { current ->
+            current.queue.hasNext
+        }
+
+    val NextWhilePlayRequested =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.PlayRequested,
+            VexStreamPlaybackCase.PlayRequested
+        >(
+            transitionRef =
+                "vexstream.playback.next.play-requested",
+            conditionRef =
+                "queue-has-next",
+        ) { current ->
+            current.queue.hasNext
+        }
+
+    val PreviousWhileReady =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.ReadyToPlay,
+            VexStreamPlaybackCase.ReadyToPlay
+        >(
+            transitionRef =
+                "vexstream.playback.previous.ready",
+            conditionRef =
+                "queue-has-previous",
+        ) { current ->
+            current.queue.hasPrevious
+        }
+
+    val PreviousWhilePlayRequested =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.PlayRequested,
+            VexStreamPlaybackCase.PlayRequested
+        >(
+            transitionRef =
+                "vexstream.playback.previous.play-requested",
+            conditionRef =
+                "queue-has-previous",
+        ) { current ->
+            current.queue.hasPrevious
+        }
+
     val PlayPause =
         VexStreamPlaybackArchitecture.control(
-            controlRef =
-                "vexstream.playback.play-pause",
+            "vexstream.playback.play-pause",
             Play,
             Pause,
+        )
+
+    val Next =
+        VexStreamPlaybackArchitecture.control(
+            "vexstream.playback.next",
+            NextWhileReady,
+            NextWhilePlayRequested,
+        )
+
+    val Previous =
+        VexStreamPlaybackArchitecture.control(
+            "vexstream.playback.previous",
+            PreviousWhileReady,
+            PreviousWhilePlayRequested,
         )
 
     val all: List<VexControl> =
         listOf(
             PlayPause,
+            Previous,
+            Next,
         )
 }
 
-/**
- * Local relational surroundings for each playback Case.
- */
 object VexStreamPlaybackPlacement :
     VexStreamPlaybackArchitecture.PlacementContract {
 
@@ -138,8 +195,20 @@ object VexStreamPlaybackPlacement :
             arrivedBy(
                 VexStreamPlaybackControl.Pause,
             )
+            arrivedBy(
+                VexStreamPlaybackControl.NextWhileReady,
+            )
+            arrivedBy(
+                VexStreamPlaybackControl.PreviousWhileReady,
+            )
             can(
                 VexStreamPlaybackControl.Play,
+            )
+            can(
+                VexStreamPlaybackControl.NextWhileReady,
+            )
+            can(
+                VexStreamPlaybackControl.PreviousWhileReady,
             )
         }
 
@@ -150,8 +219,20 @@ object VexStreamPlaybackPlacement :
             arrivedBy(
                 VexStreamPlaybackControl.Play,
             )
+            arrivedBy(
+                VexStreamPlaybackControl.NextWhilePlayRequested,
+            )
+            arrivedBy(
+                VexStreamPlaybackControl.PreviousWhilePlayRequested,
+            )
             can(
                 VexStreamPlaybackControl.Pause,
+            )
+            can(
+                VexStreamPlaybackControl.NextWhilePlayRequested,
+            )
+            can(
+                VexStreamPlaybackControl.PreviousWhilePlayRequested,
             )
         }
 
@@ -163,27 +244,20 @@ object VexStreamPlaybackPlacement :
         )
 }
 
-/** Platform facts needed to answer exactly: "What playback Case is current?" */
 data class VexStreamPlaybackObservation(
-    val queueHasItems: Boolean,
+    val queue: VexStreamPlaybackQueuePosition?,
     val playRequested: Boolean,
 )
 
-/**
- * Android observation/effect boundary for the playback architecture.
- *
- * UI surfaces consume Cases/Controls. Android effects are performed here after exact Media3 truth is
- * re-read.
- */
 internal object VexStreamPlaybackAndroid :
     VexStreamPlaybackArchitecture.AndroidContract {
 
     fun current(
         observation: VexStreamPlaybackObservation,
-    ): VexCurrent<out VexStreamPlaybackCase> =
-        when {
-            !observation.queueHasItems ->
-                vexCurrent(
+    ): VexCurrent<out VexStreamPlaybackCase> {
+        val queue =
+            observation.queue
+                ?: return vexCurrent(
                     case =
                         VexStreamPlaybackCase
                             .QueueEmpty,
@@ -192,26 +266,30 @@ internal object VexStreamPlaybackAndroid :
                             .QueueEmpty,
                 )
 
-            observation.playRequested ->
-                vexCurrent(
-                    case =
-                        VexStreamPlaybackCase
-                            .PlayRequested,
-                    placement =
-                        VexStreamPlaybackPlacement
-                            .PlayRequested,
-                )
-
-            else ->
-                vexCurrent(
-                    case =
-                        VexStreamPlaybackCase
-                            .ReadyToPlay,
-                    placement =
-                        VexStreamPlaybackPlacement
-                            .ReadyToPlay,
-                )
+        return if (observation.playRequested) {
+            vexCurrent(
+                case =
+                    VexStreamPlaybackCase
+                        .PlayRequested(
+                            queue = queue,
+                        ),
+                placement =
+                    VexStreamPlaybackPlacement
+                        .PlayRequested,
+            )
+        } else {
+            vexCurrent(
+                case =
+                    VexStreamPlaybackCase
+                        .ReadyToPlay(
+                            queue = queue,
+                        ),
+                placement =
+                    VexStreamPlaybackPlacement
+                        .ReadyToPlay,
+            )
         }
+    }
 
     fun current(
         player: Player,
@@ -219,14 +297,27 @@ internal object VexStreamPlaybackAndroid :
         current(
             observation =
                 VexStreamPlaybackObservation(
-                    queueHasItems =
-                        player.mediaItemCount > 0,
+                    queue =
+                        player.mediaItemCount
+                            .takeIf {
+                                it > 0
+                            }
+                            ?.let { count ->
+                                VexStreamPlaybackQueuePosition(
+                                    itemCount = count,
+                                    currentIndex =
+                                        player.currentMediaItemIndex,
+                                    hasPrevious =
+                                        player.hasPreviousMediaItem(),
+                                    hasNext =
+                                        player.hasNextMediaItem(),
+                                )
+                            },
                     playRequested =
                         player.playWhenReady,
                 ),
         )
 
-    /** Perform one Control against exact current platform truth. */
     fun request(
         control: VexControl,
         controller: MediaController,
@@ -257,6 +348,18 @@ internal object VexStreamPlaybackAndroid :
 
             VexStreamPlaybackControl.Pause -> {
                 controller.pause()
+                true
+            }
+
+            VexStreamPlaybackControl.NextWhileReady,
+            VexStreamPlaybackControl.NextWhilePlayRequested -> {
+                controller.seekToNextMediaItem()
+                true
+            }
+
+            VexStreamPlaybackControl.PreviousWhileReady,
+            VexStreamPlaybackControl.PreviousWhilePlayRequested -> {
+                controller.seekToPreviousMediaItem()
                 true
             }
 

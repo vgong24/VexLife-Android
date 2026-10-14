@@ -1726,7 +1726,18 @@ private fun VexStreamMiniPlayer(
             )
             when (element) {
                 VexStreamMusicScreen.PreviousTrack ->
-                    controller?.seekToPreviousMediaItem()
+                    controller?.let { connectedController ->
+                        VexStreamPlaybackArchitecture
+                            .android
+                            .request(
+                                control =
+                                    VexStreamPlaybackArchitecture
+                                        .controls
+                                        .Previous,
+                                controller =
+                                    connectedController,
+                            )
+                    }
 
                 VexStreamMusicScreen.TogglePlayback ->
                     controller?.let { connectedController ->
@@ -1743,7 +1754,18 @@ private fun VexStreamMiniPlayer(
                     }
 
                 VexStreamMusicScreen.NextTrack ->
-                    controller?.seekToNextMediaItem()
+                    controller?.let { connectedController ->
+                        VexStreamPlaybackArchitecture
+                            .android
+                            .request(
+                                control =
+                                    VexStreamPlaybackArchitecture
+                                        .controls
+                                        .Next,
+                                controller =
+                                    connectedController,
+                            )
+                    }
 
                 VexStreamMusicScreen.ShuffleQueue ->
                     onShuffle()
@@ -1900,7 +1922,8 @@ private fun VexStreamMiniPlayer(
                 element = VexStreamMusicScreen.PreviousTrack,
                 handler = handler,
                 enabled =
-                    controller?.hasPreviousMediaItem() == true,
+                    controller != null &&
+                        playback.previousEnabled,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
@@ -1915,7 +1938,8 @@ private fun VexStreamMiniPlayer(
                 element = VexStreamMusicScreen.NextTrack,
                 handler = handler,
                 enabled =
-                    controller?.hasNextMediaItem() == true,
+                    controller != null &&
+                        playback.nextEnabled,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShuffleQueue,

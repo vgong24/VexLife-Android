@@ -296,12 +296,15 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val PreviousTrack = buttonRef(
+    val PreviousTrack = controlButtonRef(
         id = "body.player.previous",
         labelRes = R.string.vexstream_music_previous,
+        control =
+            VexStreamPlaybackArchitecture
+                .controls
+                .Previous,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Previous,
-        intent = localEffect(),
     )
 
     val TogglePlayback = controlButtonRef(
@@ -315,12 +318,15 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         icon = ElementIcon.PlayPause,
     )
 
-    val NextTrack = buttonRef(
+    val NextTrack = controlButtonRef(
         id = "body.player.next",
         labelRes = R.string.vexstream_music_next,
+        control =
+            VexStreamPlaybackArchitecture
+                .controls
+                .Next,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Next,
-        intent = localEffect(),
     )
 
     val SeekPlayback = buttonRef(

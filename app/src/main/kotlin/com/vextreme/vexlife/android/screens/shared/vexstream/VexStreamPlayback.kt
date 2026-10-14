@@ -113,7 +113,7 @@ internal data class VexStreamPlaybackUiState(
             .android
             .current(
                 VexStreamPlaybackObservation(
-                    queueHasItems = false,
+                    queue = null,
                     playRequested = false,
                 ),
             ),
@@ -163,6 +163,22 @@ internal data class VexStreamPlaybackUiState(
     val playPauseEnabled: Boolean
         get() =
             availablePlayPauseTransition != null
+
+    val previousEnabled: Boolean
+        get() =
+            currentPlayback.availableTransition(
+                VexStreamPlaybackArchitecture
+                    .controls
+                    .Previous,
+            ) != null
+
+    val nextEnabled: Boolean
+        get() =
+            currentPlayback.availableTransition(
+                VexStreamPlaybackArchitecture
+                    .controls
+                    .Next,
+            ) != null
 
     val progressFraction: Float
         get() =

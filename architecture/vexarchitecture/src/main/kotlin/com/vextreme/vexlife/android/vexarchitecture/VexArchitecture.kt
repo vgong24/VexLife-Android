@@ -5,53 +5,62 @@ import kotlin.reflect.KClass
 /**
  * Global contract implemented only by architecture roots.
  *
- * "Find implementations" on this contract should answer:
- *
- *     What architecture realms exist?
- *
- * Cases, controls and placements deliberately do NOT implement this global contract. A feature root
- * defines its own bounded child contracts so navigation stays inside that realm.
+ * "Find implementations" here should answer "what architecture realms exist?", not return every
+ * Case/Control/Placement in the application.
  */
 interface VexArchitectureContract {
-    /** Stable semantic path for this architecture realm. */
     val architectureRef: String
-
-    /**
-     * Root-level participation flag.
-     *
-     * A disabled architecture exposes no available Controls. The flag is intentionally separate from
-     * runtime availability/authorization; those are different truths and must not be collapsed here.
-     */
     val enabled: Boolean
-
-    /**
-     * Derived local map for orientation/debugging.
-     *
-     * The map is a projection of typed Placements and Controls, never a second state-machine owner.
-     */
     val map: VexArchitectureMap
 }
 
 /**
  * One visible, typed relationship between two ordinary domain Cases inside one architecture realm.
+ *
+ * A named current-Case condition may further narrow when this relationship is available. Conditions
+ * select a lawful edge; they never perform its platform/domain effect.
  */
 class VexTransition<Before : Any, After : Any> @PublishedApi internal constructor(
     val architecture: VexArchitectureContract,
     val transitionRef: String,
     val before: KClass<Before>,
     val after: KClass<After>,
+    val conditionRef: String?,
+    private val whenCurrent: (Before) -> Boolean,
 ) {
     init {
         require(transitionRef.isNotBlank()) {
             "transitionRef must be non-blank"
         }
+        require(
+            conditionRef == null ||
+                conditionRef.isNotBlank(),
+        ) {
+            "conditionRef must be null or non-blank"
+        }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    internal fun isAvailableFrom(
+        current: Any,
+    ): Boolean =
+        before.isInstance(
+            current,
+        ) &&
+            whenCurrent(
+                current as Before,
+            )
+
     override fun toString(): String =
-        "$transitionRef: ${before.simpleName} -> ${after.simpleName}"
+        "$transitionRef: ${before.simpleName} -> ${after.simpleName}" +
+            (
+                conditionRef?.let {
+                    " when $it"
+                } ?: ""
+            )
 }
 
-/** Create one typed doorway owned by this exact architecture realm. */
+/** Create one unconditional typed doorway owned by this exact architecture realm. */
 inline fun <
     reified Before : Any,
     reified After : Any,
@@ -63,9 +72,32 @@ inline fun <
         transitionRef = transitionRef,
         before = Before::class,
         after = After::class,
+        conditionRef = null,
+        whenCurrent = {
+            true
+        },
     )
 
-/** Read-only runtime projection of one Case's local relational neighborhood. */
+/**
+ * Create one typed doorway whose availability depends on facts carried by the exact current Case.
+ */
+inline fun <
+    reified Before : Any,
+    reified After : Any,
+> VexArchitectureContract.transition(
+    transitionRef: String,
+    conditionRef: String,
+    noinline whenCurrent: (Before) -> Boolean,
+): VexTransition<Before, After> =
+    VexTransition(
+        architecture = this,
+        transitionRef = transitionRef,
+        before = Before::class,
+        after = After::class,
+        conditionRef = conditionRef,
+        whenCurrent = whenCurrent,
+    )
+
 interface VexPlacementView {
     val architecture: VexArchitectureContract
     val caseType: KClass<*>
@@ -86,9 +118,6 @@ class VexPlacement<Current : Any> @PublishedApi internal constructor(
         get() = typedTransitions
 }
 
-/**
- * Current is implicit in the builder. Every listed relationship must fit both this Case and realm.
- */
 class VexPlacementBuilder<Current : Any> @PublishedApi internal constructor(
     private val architecture: VexArchitectureContract,
     private val caseType: KClass<Current>,
@@ -160,8 +189,8 @@ inline fun <reified Current : Any> VexArchitectureContract.placement(
 /**
  * One semantic Control owned by one architecture realm.
  *
- * A Control may offer one or several candidate transitions. The exact current Placement resolves at
- * most one. Example: one Play/Pause Control contains Play and Pause relationships.
+ * The exact current Case + Placement resolves at most one candidate after evaluating each candidate's
+ * named current-Case condition.
  */
 class VexControl @PublishedApi internal constructor(
     val architecture: VexArchitectureContract,
@@ -193,20 +222,20 @@ class VexControl @PublishedApi internal constructor(
     }
 
     internal fun resolveFrom(
-        current: VexPlacementView,
+        currentCase: Any,
+        currentPlacement: VexPlacementView,
     ): VexTransition<*, *>? {
-        check(current.architecture === architecture) {
+        check(currentPlacement.architecture === architecture) {
             "control $controlRef belongs to ${architecture.architectureRef}, " +
-                "not ${current.architecture.architectureRef}"
+                "not ${currentPlacement.architecture.architectureRef}"
         }
 
-        // Root feature gating happens once here. Descendants do not repeat the flag.
         if (!architecture.enabled) {
             return null
         }
 
         val availableByRef =
-            current.transitions.associateBy {
+            currentPlacement.transitions.associateBy {
                 it.transitionRef
             }
 
@@ -218,10 +247,15 @@ class VexControl @PublishedApi internal constructor(
                             "transitionRef ${candidate.transitionRef} was rebound to another relationship"
                         }
                     }
+                    ?.takeIf {
+                        candidate.isAvailableFrom(
+                            currentCase,
+                        )
+                    }
             }
 
         check(matches.size <= 1) {
-            "control $controlRef is ambiguous for ${current.caseType.simpleName}: " +
+            "control $controlRef is ambiguous for ${currentPlacement.caseType.simpleName}: " +
                 matches.joinToString {
                     it.transitionRef
                 }
@@ -241,17 +275,16 @@ fun VexArchitectureContract.control(
         candidates = candidates.toList(),
     )
 
-/** One ordinary domain Case bound to the exact Placement that describes its relationships. */
 class VexCurrent<Current : Any> @PublishedApi internal constructor(
     val case: Current,
     val placement: VexPlacement<Current>,
 ) {
-    /** Descriptive only; a rightful domain/platform owner still performs the effect. */
     fun availableTransition(
         control: VexControl,
     ): VexTransition<*, *>? =
         control.resolveFrom(
-            placement,
+            currentCase = case,
+            currentPlacement = placement,
         )
 }
 
@@ -265,10 +298,7 @@ fun <Current : Any> vexCurrent(
     )
 
 /**
- * Derived orientation surface for one architecture root.
- *
- * It validates that every outgoing edge is the SAME transition object named as an arrival by the
- * destination Case, and vice versa.
+ * Derived orientation surface. The same Transition object must be named from both ends.
  */
 class VexArchitectureMap @PublishedApi internal constructor(
     val architecture: VexArchitectureContract,
@@ -281,7 +311,6 @@ class VexArchitectureMap @PublishedApi internal constructor(
             it.caseType
         }
 
-    /** Human-readable root orientation, not another execution model. */
     fun describe(): String =
         buildString {
             appendLine(
@@ -296,23 +325,13 @@ class VexArchitectureMap @PublishedApi internal constructor(
                 placement.arrivals.forEach { transition ->
                     appendLine(
                         "  arrivedBy " +
-                            transition.transitionRef +
-                            " (" +
-                            transition.before.simpleName +
-                            " -> " +
-                            transition.after.simpleName +
-                            ")",
+                            transition,
                     )
                 }
                 placement.transitions.forEach { transition ->
                     appendLine(
                         "  can " +
-                            transition.transitionRef +
-                            " (" +
-                            transition.before.simpleName +
-                            " -> " +
-                            transition.after.simpleName +
-                            ")",
+                            transition,
                     )
                 }
             }
@@ -332,7 +351,6 @@ class VexArchitectureMap @PublishedApi internal constructor(
         }.trimEnd()
 }
 
-/** Derive and validate one root architecture map from local Placements + Controls. */
 fun VexArchitectureContract.architectureMap(
     placements: List<VexPlacementView>,
     controls: List<VexControl>,

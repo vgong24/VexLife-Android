@@ -8,6 +8,17 @@ import org.junit.Test
 
 class VexStreamPlaybackArchitectureTest {
 
+    private fun queue(
+        hasPrevious: Boolean,
+        hasNext: Boolean,
+    ) =
+        VexStreamPlaybackQueuePosition(
+            itemCount = 3,
+            currentIndex = 1,
+            hasPrevious = hasPrevious,
+            hasNext = hasNext,
+        )
+
     @Test
     fun architectureRootIsTheReadablePlaybackEntryPoint() {
         assertEquals(
@@ -18,41 +29,32 @@ class VexStreamPlaybackArchitectureTest {
         assertTrue(
             VexStreamPlaybackArchitecture.enabled,
         )
-        assertSame(
-            VexStreamPlaybackControl,
-            VexStreamPlaybackArchitecture.controls,
-        )
-        assertSame(
-            VexStreamPlaybackPlacement,
-            VexStreamPlaybackArchitecture.placements,
-        )
 
-        val map =
-            VexStreamPlaybackArchitecture.map
-        assertEquals(
-            listOf(
-                VexStreamPlaybackCase.QueueEmpty::class,
-                VexStreamPlaybackCase.ReadyToPlay::class,
-                VexStreamPlaybackCase.PlayRequested::class,
+        val description =
+            VexStreamPlaybackArchitecture
+                .map
+                .describe()
+
+        assertTrue(
+            description.contains(
+                "ReadyToPlay",
             ),
-            map.cases,
         )
         assertTrue(
-            map.describe()
-                .contains(
-                    "ReadyToPlay",
-                ),
+            description.contains(
+                "queue-has-next",
+            ),
         )
     }
 
     @Test
-    fun emptyQueueExposesNoPlayPauseTransition() {
+    fun emptyQueueExposesNoPlaybackNavigationControl() {
         val current =
             VexStreamPlaybackArchitecture
                 .android
                 .current(
                     VexStreamPlaybackObservation(
-                        queueHasItems = false,
+                        queue = null,
                         playRequested = false,
                     ),
                 )
@@ -63,78 +65,83 @@ class VexStreamPlaybackArchitectureTest {
         )
         assertNull(
             current.availableTransition(
-                VexStreamPlaybackArchitecture
-                    .controls
-                    .PlayPause,
+                VexStreamPlaybackControl.PlayPause,
+            ),
+        )
+        assertNull(
+            current.availableTransition(
+                VexStreamPlaybackControl.Next,
             ),
         )
     }
 
     @Test
-    fun readyToPlayExposesPlay() {
+    fun readyToPlayExposesPlayAndOnlyAvailableQueueDirections() {
         val current =
             VexStreamPlaybackArchitecture
                 .android
                 .current(
                     VexStreamPlaybackObservation(
-                        queueHasItems = true,
+                        queue =
+                            queue(
+                                hasPrevious = false,
+                                hasNext = true,
+                            ),
                         playRequested = false,
                     ),
                 )
 
-        assertEquals(
-            VexStreamPlaybackCase.ReadyToPlay,
-            current.case,
-        )
         assertSame(
             VexStreamPlaybackControl.Play,
             current.availableTransition(
                 VexStreamPlaybackControl.PlayPause,
             ),
         )
+        assertSame(
+            VexStreamPlaybackControl.NextWhileReady,
+            current.availableTransition(
+                VexStreamPlaybackControl.Next,
+            ),
+        )
+        assertNull(
+            current.availableTransition(
+                VexStreamPlaybackControl.Previous,
+            ),
+        )
     }
 
     @Test
-    fun playRequestedExposesPauseEvenBeforeAudibility() {
+    fun playRequestedKeepsQueueNavigationWithinTheSameCaseType() {
         val current =
             VexStreamPlaybackArchitecture
                 .android
                 .current(
                     VexStreamPlaybackObservation(
-                        queueHasItems = true,
+                        queue =
+                            queue(
+                                hasPrevious = true,
+                                hasNext = false,
+                            ),
                         playRequested = true,
                     ),
                 )
 
-        assertEquals(
-            VexStreamPlaybackCase.PlayRequested,
-            current.case,
-        )
         assertSame(
             VexStreamPlaybackControl.Pause,
             current.availableTransition(
                 VexStreamPlaybackControl.PlayPause,
             ),
         )
-    }
-
-    @Test
-    fun controlDeclarationsTellTheStoryWithoutASecondStateMap() {
-        assertEquals(
-            VexStreamPlaybackCase.ReadyToPlay::class,
-            VexStreamPlaybackControl.Play.before,
+        assertSame(
+            VexStreamPlaybackControl.PreviousWhilePlayRequested,
+            current.availableTransition(
+                VexStreamPlaybackControl.Previous,
+            ),
         )
-        assertEquals(
-            VexStreamPlaybackCase.PlayRequested::class,
-            VexStreamPlaybackControl.Play.after,
-        )
-        assertEquals(
-            VexStreamPlaybackCase.PlayRequested::class,
-            VexStreamPlaybackControl.Pause.before,
-        )
-        assertEquals(
-            VexStreamPlaybackCase.ReadyToPlay::class,
-            VexStreamPlaybackControl.Pause.after,
+        assertNull(
+            current.availableTransition(
+                VexStreamPlaybackControl.Next,
+            ),
         )
     }
 }

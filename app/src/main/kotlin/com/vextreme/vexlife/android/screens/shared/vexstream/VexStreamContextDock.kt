@@ -156,16 +156,25 @@ private fun VexStreamContextDockContent(
                             .vexstream_music_previous,
                     ),
                 enabled =
-                    controller
-                        ?.hasPreviousMediaItem() ==
-                        true,
+                    controller != null &&
+                        playback.previousEnabled,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =
                         "presentation.context-dock.vexstream.previous",
                 )
-                controller
-                    ?.seekToPreviousMediaItem()
+                controller?.let { connectedController ->
+                    VexStreamPlaybackArchitecture
+                        .android
+                        .request(
+                            control =
+                                VexStreamPlaybackArchitecture
+                                    .controls
+                                    .Previous,
+                            controller =
+                                connectedController,
+                        )
+                }
             }
             VexStreamDockIconButton(
                 icon =
@@ -204,16 +213,25 @@ private fun VexStreamContextDockContent(
                             .vexstream_music_next,
                     ),
                 enabled =
-                    controller
-                        ?.hasNextMediaItem() ==
-                        true,
+                    controller != null &&
+                        playback.nextEnabled,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =
                         "presentation.context-dock.vexstream.next",
                 )
-                controller
-                    ?.seekToNextMediaItem()
+                controller?.let { connectedController ->
+                    VexStreamPlaybackArchitecture
+                        .android
+                        .request(
+                            control =
+                                VexStreamPlaybackArchitecture
+                                    .controls
+                                    .Next,
+                            controller =
+                                connectedController,
+                        )
+                }
             }
         }
 
