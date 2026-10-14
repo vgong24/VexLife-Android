@@ -19,6 +19,7 @@ tasks.register("vexVerifyJvm") {
 
     dependsOn(
         ":app:verifySourceAlignment",
+        ":architecture:behavior:test",
         ":architecture:elements:test",
         ":architecture:logging:test",
         ":architecture:relay:test",
@@ -238,6 +239,13 @@ val vexTestFoundationProofBundle =
             ),
         ) {
             into("tests/app-jvm")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "architecture/behavior/build/test-results",
+            ),
+        ) {
+            into("tests/architecture-behavior")
         }
         from(
             layout.projectDirectory.dir(
