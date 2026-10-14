@@ -1,49 +1,48 @@
 package com.vextreme.vexlife.android.behavior
 
 /**
- * One finite Control vocabulary bound to one exact Behavior blueprint instance.
- *
- * Control is an enum deliberately: these are identity-only human affordances whose complete range
- * should be visible to the compiler/IDE. State/Act/Effect may remain sealed families because those
- * families can later carry data.
- *
- * The Control blueprint owns only:
- *
- * Control -> prioritized Acts it can represent
- *
- * The Behavior graph still owns:
- *
- * State -> available Acts -> Effects -> expected next State
- *
- * Binding both through the same [Act] type prevents cross-domain Controls from silently accepting a
- * different feature's Act family.
+ * Complete finite Control vocabulary bound to one exact Behavior family and blueprint.
  */
 class VexBehaviorControlBlueprint<
-    State : Any,
-    Act : Any,
-    Effect : Any,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
+    Effect : VexBehaviorFamily.Effect<Family>,
     Control,
 > internal constructor(
-    val behavior: VexBehaviorBlueprint<State, Act, Effect>,
-    private val actPriorityByControl: Map<Control, List<Act>>,
-) where Control : Enum<Control> {
-    /**
-     * Resolve what one finite Control means from current State.
-     *
-     * Null means none of that Control's candidate Acts are currently available. Presentation owns
-     * whether null appears hidden, disabled, replaced, or otherwise rendered.
-     */
+    val behavior:
+        VexBehaviorBlueprint<
+            Family,
+            State,
+            Act,
+            Effect
+        >,
+    private val actPriorityByControl:
+        Map<
+            Control,
+            List<Act>
+        >,
+)
+    where Control : Enum<Control>,
+          Control : VexBehaviorFamily.Control<Family> {
     fun resolve(
         current: State,
         control: Control,
-    ): VexBehaviorControlResolution<Control, Act>? {
+    ): VexBehaviorControlResolution<
+        Family,
+        Control,
+        Act
+    >? {
         val available =
-            behavior.availableActs(current)
-                .toSet()
+            behavior.availableActs(
+                current,
+            ).toSet()
 
         val resolved =
             actPriorityByControl
-                .getValue(control)
+                .getValue(
+                    control,
+                )
                 .firstOrNull { candidate ->
                     candidate in available
                 }
@@ -55,15 +54,14 @@ class VexBehaviorControlBlueprint<
         )
     }
 
-    /**
-     * Complete immutable semantic projection for one observed State.
-     *
-     * This is the common value boundary for UI, tests, previews, or later convergence. Effects stay
-     * behind invocation/runtime ownership and are intentionally absent here.
-     */
     fun projection(
         current: State,
-    ): VexBehaviorProjection<State, Control, Act> =
+    ): VexBehaviorProjection<
+        Family,
+        State,
+        Control,
+        Act
+    > =
         VexBehaviorProjection(
             state = current,
             controls =
@@ -81,52 +79,53 @@ class VexBehaviorControlBlueprint<
         )
 }
 
-/** Current semantic meaning of one finite Control. */
 data class VexBehaviorControlResolution<
-    Control : Any,
-    Act : Any,
+    Family : VexBehaviorFamily<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
 >(
     val control: Control,
     val act: Act,
 )
 
-/**
- * Builder for one finite Control vocabulary.
- *
- * The builder rejects:
- * - undeclared enum members;
- * - duplicate Control declarations;
- * - empty Act ranges;
- * - duplicate Act priority entries;
- * - Acts that do not occur anywhere in the bound Behavior graph.
- */
 class VexBehaviorControlBlueprintBuilder<
-    Act : Any,
+    Family : VexBehaviorFamily<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
     Control,
 > @PublishedApi internal constructor(
-    private val expectedControls: Set<Control>,
-) where Control : Enum<Control> {
+    private val expectedControls:
+        Set<Control>,
+)
+    where Control : Enum<Control>,
+          Control : VexBehaviorFamily.Control<Family> {
     private val actPriorityByControl =
-        linkedMapOf<Control, List<Act>>()
+        linkedMapOf<
+            Control,
+            List<Act>
+        >()
 
-    /**
-     * Bind one Control to the Acts it can represent.
-     *
-     * Argument order is explicit conflict priority when several candidate Acts are simultaneously
-     * available from current State.
-     */
     fun control(
         control: Control,
         vararg actPriority: Act,
     ) {
-        require(control in expectedControls) {
-            "control is not part of the admitted finite Control vocabulary: " + control
+        require(
+            control in expectedControls,
+        ) {
+            "control is not part of the admitted finite Control vocabulary: " +
+                control
         }
-        require(actPriority.isNotEmpty()) {
-            "behavior control requires at least one Act: " + control
+        require(
+            actPriority.isNotEmpty(),
+        ) {
+            "behavior control requires at least one Act: " +
+                control
         }
-        require(actPriority.distinct().size == actPriority.size) {
-            "behavior control Act priority must not contain duplicates: " + control
+        require(
+            actPriority.distinct().size ==
+                actPriority.size,
+        ) {
+            "behavior control Act priority must not contain duplicates: " +
+                control
         }
         require(
             actPriorityByControl.put(
@@ -134,21 +133,37 @@ class VexBehaviorControlBlueprintBuilder<
                 actPriority.toList(),
             ) == null,
         ) {
-            "behavior control was declared more than once: " + control
+            "behavior control was declared more than once: " +
+                control
         }
     }
 
     @PublishedApi
     internal fun <
-        State : Any,
-        Effect : Any,
+        State : VexBehaviorFamily.State<Family>,
+        Effect : VexBehaviorFamily.Effect<Family>,
     > build(
-        behavior: VexBehaviorBlueprint<State, Act, Effect>,
-    ): VexBehaviorControlBlueprint<State, Act, Effect, Control> {
+        behavior:
+            VexBehaviorBlueprint<
+                Family,
+                State,
+                Act,
+                Effect
+            >,
+    ): VexBehaviorControlBlueprint<
+        Family,
+        State,
+        Act,
+        Effect,
+        Control
+    > {
         val missingControls =
-            expectedControls - actPriorityByControl.keys
+            expectedControls -
+                actPriorityByControl.keys
 
-        require(missingControls.isEmpty()) {
+        require(
+            missingControls.isEmpty(),
+        ) {
             "behavior Control vocabulary is incomplete; missing: " +
                 missingControls.joinToString()
         }
@@ -160,7 +175,11 @@ class VexBehaviorControlBlueprintBuilder<
                 }
                 .toSet()
 
-        actPriorityByControl.forEach { (control, acts) ->
+        actPriorityByControl.forEach {
+            (
+                control,
+                acts,
+            ) ->
             require(
                 acts.all {
                     it in admittedActs
@@ -176,9 +195,14 @@ class VexBehaviorControlBlueprintBuilder<
         return VexBehaviorControlBlueprint(
             behavior = behavior,
             actPriorityByControl =
-                actPriorityByControl.mapValues { (_, acts) ->
-                    acts.toList()
-                },
+                actPriorityByControl
+                    .mapValues {
+                        (
+                            _,
+                            acts,
+                        ) ->
+                        acts.toList()
+                    },
         )
     }
 }

@@ -81,6 +81,7 @@ import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackConnection
@@ -1739,12 +1740,14 @@ private fun VexStreamMiniPlayer(
     controller: androidx.media3.session.MediaController?,
     playbackConnection:
         VexPort<
+            VexStreamPlaybackFamily,
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
             VexStreamPlaybackAct
         >?,
     playbackProjection:
         VexBehaviorProjection<
+            VexStreamPlaybackFamily,
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
             VexStreamPlaybackAct

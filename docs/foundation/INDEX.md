@@ -93,7 +93,7 @@ VexBehaviorBlueprint
     source relationships ~= behavior relationships
 ~~~
 
-Feature-owned State / Act / Effect families plus a finite Control vocabulary provide the compiler coordinates. State carries observed truth (including data/flavor); Effect carries the attempted transformation and never claims the resulting truth. Each State
+Feature-owned State / Control / Act / Effect vocabularies now share one F-bounded VexBehaviorFamily coordinate, making both role swaps and cross-family combinations compiler-invalid. State carries observed truth (including data/flavor); Effect carries the attempted transformation and never claims the resulting truth. Each State
 block declares what Acts have meaning from that current truth, their provider-facing Effects, and
 the expected next State. The blueprint is a constructed immutable graph, not a singleton or runtime
 state owner. Incoming / outgoing neighborhoods, current available Acts, and completely linked Control meaning are derived from

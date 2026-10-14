@@ -21,6 +21,10 @@ This experiment asks for the behavioral twin:
 VexBehaviorBlueprint
     source State neighborhoods
     ~= behavioral possibility from current truth
+
+VexBehaviorFamily
+    compile-time kinship only
+    ~= these State / Control / Act / Effect alphabets belong together
 ~~~
 
 The goal is not a prettier state machine. The goal is to make the source itself explain:
@@ -324,6 +328,123 @@ expected destination State kind
 
 Act and Effect are separate because UI/product vocabulary should not become coupled to one provider
 implementation. State flavor can change without inventing another State type.
+
+## Family-bound grammar
+
+The four semantic roles are now locked together by one compile-time family identity.
+
+~~~kotlin
+interface VexBehaviorFamily<
+    Self : VexBehaviorFamily<Self>,
+> {
+    interface State<
+        Family : VexBehaviorFamily<Family>,
+    >
+
+    interface Control<
+        Family : VexBehaviorFamily<Family>,
+    >
+
+    interface Act<
+        Family : VexBehaviorFamily<Family>,
+    >
+
+    interface Effect<
+        Family : VexBehaviorFamily<Family>,
+    >
+}
+~~~
+
+A feature must form a concrete self-bound family:
+
+~~~kotlin
+sealed interface VexStreamPlaybackFamily :
+    VexBehaviorFamily<
+        VexStreamPlaybackFamily
+    >
+~~~
+
+Then each semantic alphabet explicitly belongs to that family:
+
+~~~text
+VexStreamPlaybackState
+    : VexBehaviorFamily.State<VexStreamPlaybackFamily>
+
+VexStreamPlaybackControl
+    : VexBehaviorFamily.Control<VexStreamPlaybackFamily>
+
+VexStreamPlaybackAct
+    : VexBehaviorFamily.Act<VexStreamPlaybackFamily>
+
+VexStreamPlaybackEffect
+    : VexBehaviorFamily.Effect<VexStreamPlaybackFamily>
+~~~
+
+The recursive bound prevents generic code from collapsing the family coordinate back to an
+unqualified base interface. The role bounds prevent putting a State in the Act slot. Carrying the
+same Family parameter through Blueprint / ControlBlueprint / Projection / VexPort prevents a
+correctly-role-typed value from another family from being silently mixed in.
+
+~~~text
+ROLE SAFETY
+    PlaybackState cannot occupy Act / Control / Effect positions
+
+FAMILY SAFETY
+    QueueControl cannot be paired with PlaybackState / PlaybackAct
+~~~
+
+The family is a phantom compiler coordinate only. It is not a runtime owner, service, singleton,
+state store, or replacement for the four-move grammar.
+
+### Why VexPort is invariant
+
+The two-way Port both produces a Projection and consumes Control through `activate(Control)`.
+
+Do not make Control covariant with `out` and then bypass Kotlin using `@UnsafeVariance`. That
+would disable the exact compiler protection this family contract exists to provide.
+
+Generic downstream code can still remain swappable by being generic over the exact family:
+
+~~~kotlin
+fun <
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
+> consume(
+    port: VexPort<
+        Family,
+        State,
+        Control,
+        Act
+    >,
+) {
+    // ...
+}
+~~~
+
+This accepts any correctly formed family while preserving its internal type relationships.
+
+If a future convergence surface needs a heterogeneous collection of unrelated families, give that
+specific read-only/erased boundary its own contract rather than weakening the two-way Port.
+
+### Why Control still has two bounds in one place
+
+`VexPort` only requires:
+
+~~~text
+Control : VexBehaviorFamily.Control<Family>
+~~~
+
+The finite Control Blueprint additionally requires:
+
+~~~text
+Control : Enum<Control>
+~~~
+
+because only that builder needs to enumerate the entire vocabulary and prove every Control member is
+deliberately linked. The two bounds answer different questions and therefore belong only where both
+are needed.
 
 ## Type families are architecture boundaries
 

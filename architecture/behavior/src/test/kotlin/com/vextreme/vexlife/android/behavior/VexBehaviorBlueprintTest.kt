@@ -6,11 +6,16 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Foundation proof for state-neighborhood authoring independent of the Playback worked example.
- */
 class VexBehaviorBlueprintTest {
-    private sealed interface QueueState {
+    private sealed interface QueueFamily :
+        VexBehaviorFamily<
+            QueueFamily
+        >
+
+    private sealed interface QueueState :
+        VexBehaviorFamily.State<
+            QueueFamily
+        > {
         data object Empty :
             QueueState
 
@@ -19,29 +24,36 @@ class VexBehaviorBlueprintTest {
         ) : QueueState
     }
 
-    private sealed interface QueueAct {
+    private sealed interface QueueAct :
+        VexBehaviorFamily.Act<
+            QueueFamily
+        > {
         data object Next :
             QueueAct
 
-        /**
-         * Same Act family, deliberately absent from every Queue relationship.
-         */
         data object Orphan :
             QueueAct
     }
 
-    private sealed interface QueueEffect {
+    private sealed interface QueueEffect :
+        VexBehaviorFamily.Effect<
+            QueueFamily
+        > {
         data object Advance :
             QueueEffect
     }
 
-    private enum class QueueControl {
+    private enum class QueueControl :
+        VexBehaviorFamily.Control<
+            QueueFamily
+        > {
         Next,
         Previous,
     }
 
     private fun queueBlueprint() =
         vexBehaviorBlueprint<
+            QueueFamily,
             QueueState,
             QueueAct,
             QueueEffect
@@ -133,15 +145,13 @@ class VexBehaviorBlueprintTest {
                     QueueControl.Next,
                     QueueAct.Next,
                 )
-
-                /*
-                 * QueueControl.Previous is deliberately omitted.
-                 * Construction must reject the incomplete finite vocabulary.
-                 */
             }
     }
 
-    private enum class OrphanControl {
+    private enum class OrphanControl :
+        VexBehaviorFamily.Control<
+            QueueFamily
+        > {
         Orphan,
     }
 

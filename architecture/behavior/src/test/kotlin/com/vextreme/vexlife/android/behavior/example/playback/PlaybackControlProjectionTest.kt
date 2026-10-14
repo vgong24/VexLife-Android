@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.behavior.example.playback
 
+import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -88,7 +89,10 @@ class PlaybackControlProjectionTest {
         )
     }
 
-    private enum class PriorityControl {
+    private enum class PriorityControl :
+        VexBehaviorFamily.Control<
+            PlaybackFamily
+        > {
         PlayPause,
     }
 

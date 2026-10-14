@@ -3,11 +3,9 @@ package com.vextreme.vexlife.android.vexstream.playback
 import com.vextreme.vexlife.android.behavior.VexBehaviorBlueprint
 import com.vextreme.vexlife.android.behavior.vexBehaviorBlueprint
 
-/**
- * VexStream Playback behavior expressed only through State / Control / Act / Effect.
- */
 internal fun vexStreamPlaybackBehavior():
     VexBehaviorBlueprint<
+        VexStreamPlaybackFamily,
         VexStreamPlaybackState,
         VexStreamPlaybackAct,
         VexStreamPlaybackEffect
@@ -54,3 +52,5 @@ internal fun vexStreamPlaybackBehavior():
             }.to<VexStreamPlaybackState.Media>()
         }
     }
+
+// [VXG RealForever]

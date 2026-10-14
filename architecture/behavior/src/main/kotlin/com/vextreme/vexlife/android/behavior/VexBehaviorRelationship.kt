@@ -3,19 +3,13 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * One authored cause/effect bond in a VexBehaviorBlueprint.
- *
- * The current State is the causal context. [act] names what is requested from that context,
- * [effect] names what runtime meaning should be attempted, and [to] names the expected next State
- * kind if that effect converges.
- *
- * Runtime/provider code still owns whether the effect actually succeeds and which State is
- * subsequently observed.
+ * One authored cause/effect bond inside one exact Behavior family.
  */
 class VexBehaviorRelationship<
-    State : Any,
-    Act : Any,
-    Effect : Any,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
+    Effect : VexBehaviorFamily.Effect<Family>,
 > @PublishedApi internal constructor(
     val from: KClass<out State>,
     val act: Act,
@@ -48,12 +42,11 @@ class VexBehaviorRelationship<
 
 /**
  * Read-only semantic consequence of one Act from one current State.
- *
- * Resolution does not perform [effect] and does not fabricate the destination State value.
  */
 data class VexBehaviorResolution<
-    State : Any,
-    Effect : Any,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Effect : VexBehaviorFamily.Effect<Family>,
 >(
     val effect: Effect,
     val destination: KClass<out State>,

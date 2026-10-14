@@ -1,11 +1,12 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-/**
- * Android playback transformations selected by semantic Acts.
- *
- * Effects are attempted runtime verbs, never claims about the resulting State.
- */
-sealed interface VexStreamPlaybackEffect {
+import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
+
+/** Runtime playback transformations selected by semantic Acts. */
+sealed interface VexStreamPlaybackEffect :
+    VexBehaviorFamily.Effect<
+        VexStreamPlaybackFamily
+    > {
     data object RequestPlay :
         VexStreamPlaybackEffect
 
@@ -15,3 +16,5 @@ sealed interface VexStreamPlaybackEffect {
     data object RestartCurrent :
         VexStreamPlaybackEffect
 }
+
+// [VXG RealForever]

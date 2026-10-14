@@ -10,6 +10,7 @@ internal class PlaybackConnectionExample(
     initialState: PlaybackState,
 ) :
     VexPortFlow<
+        PlaybackFamily,
         PlaybackState,
         PlaybackControl,
         PlaybackAct
@@ -33,6 +34,7 @@ internal class PlaybackConnectionExample(
     override val projections:
         StateFlow<
             VexBehaviorProjection<
+                PlaybackFamily,
                 PlaybackState,
                 PlaybackControl,
                 PlaybackAct

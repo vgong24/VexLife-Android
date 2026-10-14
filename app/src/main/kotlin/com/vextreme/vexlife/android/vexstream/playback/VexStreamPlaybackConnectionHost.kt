@@ -16,13 +16,6 @@ import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
 import com.vextreme.vexlife.android.behavior.VexPortFlow
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 
-/**
- * Android configuration-lifetime host for the service-owned MediaController and semantic connection.
- *
- * ViewModel is only the Android retention mechanism. MediaSession/Player remain playback truth
- * owners; [Media3VexStreamPlaybackConnection] remains the semantic projection/effect adapter while
- * implementing the reusable [VexPortFlow] contract.
- */
 internal class VexStreamPlaybackConnectionViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
@@ -53,6 +46,7 @@ internal class VexStreamPlaybackConnectionViewModel(
     var connection by
         mutableStateOf<
             VexPortFlow<
+                VexStreamPlaybackFamily,
                 VexStreamPlaybackState,
                 VexStreamPlaybackControl,
                 VexStreamPlaybackAct
@@ -101,9 +95,6 @@ internal class VexStreamPlaybackConnectionViewModel(
     }
 }
 
-/**
- * Retained Media3 client for queue/progress operations that have not migrated into Behavior yet.
- */
 @Composable
 internal fun rememberVexStreamMediaController():
     MediaController? {
@@ -114,12 +105,10 @@ internal fun rememberVexStreamMediaController():
     return owner.controller
 }
 
-/**
- * Retained two-way semantic Playback connection exposed through the reusable VexPortFlow contract.
- */
 @Composable
 internal fun rememberVexStreamPlaybackConnection():
     VexPortFlow<
+        VexStreamPlaybackFamily,
         VexStreamPlaybackState,
         VexStreamPlaybackControl,
         VexStreamPlaybackAct
@@ -131,18 +120,17 @@ internal fun rememberVexStreamPlaybackConnection():
     return owner.connection
 }
 
-/**
- * Lifecycle-aware Android presentation adapter for one live Playback connection.
- */
 @Composable
 internal fun rememberVexStreamPlaybackProjection(
     connection:
         VexPortFlow<
+            VexStreamPlaybackFamily,
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
             VexStreamPlaybackAct
         >?,
 ): VexBehaviorProjection<
+    VexStreamPlaybackFamily,
     VexStreamPlaybackState,
     VexStreamPlaybackControl,
     VexStreamPlaybackAct

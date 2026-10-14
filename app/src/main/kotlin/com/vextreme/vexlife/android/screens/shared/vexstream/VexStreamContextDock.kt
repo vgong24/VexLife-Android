@@ -31,6 +31,7 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackConnection
@@ -96,12 +97,14 @@ private fun VexStreamContextDockContent(
     playback: VexStreamPlaybackUiState,
     playbackConnection:
         VexPort<
+            VexStreamPlaybackFamily,
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
             VexStreamPlaybackAct
         >?,
     playbackProjection:
         VexBehaviorProjection<
+            VexStreamPlaybackFamily,
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
             VexStreamPlaybackAct

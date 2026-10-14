@@ -7,6 +7,9 @@ This package is the first production-shaped consumer of the reusable Behavior Bl
 Read the files as one small semantic map:
 
 ~~~text
+VexStreamPlaybackFamily.kt
+    compile-time family identity tying State / Control / Act / Effect together
+
 VexStreamPlaybackState.kt
     what Playback truth is observed now
 
@@ -49,6 +52,21 @@ UI activates Control
     -> Media3 truth changes
     -> repeat
 ~~~
+
+## Family lock
+
+Playback fulfills the reusable family grammar explicitly:
+
+~~~text
+VexStreamPlaybackFamily
+    -> State
+    -> Control
+    -> Act
+    -> Effect
+~~~
+
+The family type has no runtime instance. Its job is to make cross-family wiring fail at compile time
+before it can propagate into the Media3 connection, UI projection, or repository-level code.
 
 ## First admitted slice
 

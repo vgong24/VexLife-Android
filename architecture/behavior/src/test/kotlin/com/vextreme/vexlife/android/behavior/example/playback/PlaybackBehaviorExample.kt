@@ -1,28 +1,22 @@
 package com.vextreme.vexlife.android.behavior.example.playback
 
 import com.vextreme.vexlife.android.behavior.VexBehaviorBlueprint
+import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
 import com.vextreme.vexlife.android.behavior.vexBehaviorBlueprint
 
-/**
- * Playback speed is State flavor, not another architecture layer.
- *
- * The current practicum uses three intentionally coarse transport speeds. A real provider may use a
- * richer numeric representation without changing the State / Act / Effect / Control grammar.
- */
+sealed interface PlaybackFamily :
+    VexBehaviorFamily<PlaybackFamily>
+
 enum class PlaybackSpeed {
     Rewind,
     Normal,
     FastForward,
 }
 
-/**
- * Current Playback truth.
- *
- * Paused and Playing have different behavioral neighborhoods, so they earn different State kinds.
- * Fast-forward/rewind remain flavor inside Playing because "playing, but at another speed" can be
- * represented without inventing another architecture category.
- */
-sealed interface PlaybackState {
+sealed interface PlaybackState :
+    VexBehaviorFamily.State<
+        PlaybackFamily
+    > {
     data object Paused :
         PlaybackState
 
@@ -31,10 +25,10 @@ sealed interface PlaybackState {
     ) : PlaybackState
 }
 
-/**
- * Human semantic verbs admitted by Playback.
- */
-sealed interface PlaybackAct {
+sealed interface PlaybackAct :
+    VexBehaviorFamily.Act<
+        PlaybackFamily
+    > {
     data object Play :
         PlaybackAct
 
@@ -48,12 +42,10 @@ sealed interface PlaybackAct {
         PlaybackAct
 }
 
-/**
- * Runtime verbs produced by lawful Playback Acts.
- *
- * Effect is NOT resulting truth. It is the attempted transformation between observed States.
- */
-sealed interface PlaybackEffect {
+sealed interface PlaybackEffect :
+    VexBehaviorFamily.Effect<
+        PlaybackFamily
+    > {
     data class SetSpeed(
         val speed: PlaybackSpeed,
     ) : PlaybackEffect
@@ -62,20 +54,16 @@ sealed interface PlaybackEffect {
         PlaybackEffect
 }
 
-/**
- * Worked State -> Act -> Effect -> observed-State blueprint.
- *
- * A relationship names the expected destination State KIND only. The Effect carries the attempted
- * data change; the runtime/provider remains responsible for what State is actually observed next.
- */
 fun playbackBehaviorBlueprint():
     VexBehaviorBlueprint<
+        PlaybackFamily,
         PlaybackState,
         PlaybackAct,
         PlaybackEffect
     > =
     vexBehaviorBlueprint(
-        behaviorRef = "example.playback.transport",
+        behaviorRef =
+            "example.playback.transport",
     ) {
         state<PlaybackState.Paused> {
             on(

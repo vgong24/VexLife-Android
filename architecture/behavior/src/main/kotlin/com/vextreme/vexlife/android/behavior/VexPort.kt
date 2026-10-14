@@ -3,36 +3,28 @@ package com.vextreme.vexlife.android.behavior
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Reusable two-way semantic port for one Behavior.
+ * Reusable two-way semantic port for one exact Behavior family.
  *
- * Read side:
- *   [currentProjection] tells a consumer what the Behavior means now.
+ * The F-bound makes the family coordinate concrete. The role bounds prevent State / Control / Act
+ * positions from being swapped or supplied from another family.
  *
- * Write side:
- *   [activate] submits one finite Control identity. The implementation must resolve that Control
- *   against its CURRENT State before choosing Act / Effect; callers never send a stale rendered Act.
- *
- * A Port deliberately does not expose Effect or provider APIs.
+ * This two-way Port is intentionally invariant. activate() consumes Control, so using out Control
+ * plus @UnsafeVariance would disable the compiler protection this contract exists to provide.
  */
 interface VexPort<
-    State : Any,
-    Control,
-    Act : Any,
-> where Control : Enum<Control> {
-    /** Current immutable semantic result. */
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
+> {
     val currentProjection:
         VexBehaviorProjection<
+            Family,
             State,
             Control,
             Act
         >
 
-    /**
-     * Activate one Control against current truth.
-     *
-     * Implementations own re-resolution, Effect selection, provider realization, and subsequent
-     * State observation.
-     */
     fun activate(
         control: Control,
     )
@@ -40,28 +32,23 @@ interface VexPort<
 
 /**
  * Live current-value form of [VexPort].
- *
- * StateFlow is appropriate here because a PortFlow publishes current semantic truth, not a
- * fire-and-forget event stream. Consumers can always read [currentProjection] through
- * [projections.value].
- *
- * A local feature that does not need observation over time can implement [VexPort] directly or pass
- * one immutable Projection + Control callback without using this stronger contract.
  */
 interface VexPortFlow<
-    State : Any,
-    Control,
-    Act : Any,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
 > :
     VexPort<
+        Family,
         State,
         Control,
         Act
-    >
-    where Control : Enum<Control> {
+    > {
     val projections:
         StateFlow<
             VexBehaviorProjection<
+                Family,
                 State,
                 Control,
                 Act
@@ -70,6 +57,7 @@ interface VexPortFlow<
 
     override val currentProjection:
         VexBehaviorProjection<
+            Family,
             State,
             Control,
             Act

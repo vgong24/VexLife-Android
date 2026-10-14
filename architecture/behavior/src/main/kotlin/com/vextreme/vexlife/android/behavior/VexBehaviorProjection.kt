@@ -1,14 +1,12 @@
 package com.vextreme.vexlife.android.behavior
 
 /**
- * Current semantic projection of one finite Control.
- *
- * [act] is null when the Control has no meaning from the current State. Presentation decides whether
- * that appears disabled, hidden, replaced, animated, or otherwise rendered.
+ * Current semantic projection of one Control from one exact Behavior family.
  */
 data class VexBehaviorControlProjection<
-    Control : Any,
-    Act : Any,
+    Family : VexBehaviorFamily<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
 >(
     val control: Control,
     val act: Act?,
@@ -19,34 +17,36 @@ data class VexBehaviorControlProjection<
 }
 
 /**
- * Immutable UI/convergence-facing result of one Behavior at one observed State.
+ * Immutable UI/convergence-facing result of one exact Behavior family.
  *
- * This value contains no Effect implementation and performs no mutation. It can therefore be shared
- * with one Composable, many Composables, tests, previews, or a higher convergence owner without
- * transferring Behavior or provider ownership.
+ * Family is a compile-time coordinate only. It prevents a State, Control and Act from unrelated
+ * families from being assembled into one apparently valid Projection.
  */
 data class VexBehaviorProjection<
-    State : Any,
-    Control,
-    Act : Any,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
 >(
     val state: State,
     val controls:
         Map<
             Control,
             VexBehaviorControlProjection<
+                Family,
                 Control,
                 Act
             >
         >,
-) where Control : Enum<Control> {
-    /**
-     * Exact projection for one finite Control.
-     *
-     * Construction of the owning Control blueprint guarantees every enum member is represented.
-     */
+) {
     operator fun get(
         control: Control,
-    ): VexBehaviorControlProjection<Control, Act> =
-        controls.getValue(control)
+    ): VexBehaviorControlProjection<
+        Family,
+        Control,
+        Act
+    > =
+        controls.getValue(
+            control,
+        )
 }

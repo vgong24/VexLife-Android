@@ -3,31 +3,25 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * Immutable relational blueprint for one bounded behavior.
- *
- * The blueprint owns semantic geometry, not runtime truth:
- *
- * current State
- * + Act
- * -> one lawful Relationship
- * -> Effect meaning
- * -> expected next State kind
- *
- * The next observed State becomes the causal context for whatever can happen after that. The
- * blueprint therefore does not need hidden "previous action" history when current State already
- * carries the meaning required to choose the next relationship.
- *
- * A provider, reducer, or service may realize the Effect and report the next actual State. The
- * blueprint does not become a second state store or effect owner.
+ * Immutable relational blueprint for one exact Behavior family.
  */
 class VexBehaviorBlueprint<
-    State : Any,
-    Act : Any,
-    Effect : Any,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
+    Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
     val behaviorRef: String,
     val states: Set<KClass<out State>>,
-    val relationships: List<VexBehaviorRelationship<State, Act, Effect>>,
+    val relationships:
+        List<
+            VexBehaviorRelationship<
+                Family,
+                State,
+                Act,
+                Effect
+            >
+        >,
 ) {
     init {
         require(behaviorRef.isNotBlank()) {
@@ -39,10 +33,12 @@ class VexBehaviorBlueprint<
 
         relationships.forEach { relationship ->
             require(relationship.from in states) {
-                "relationship source is not a registered state: " + relationship.from
+                "relationship source is not a registered state: " +
+                    relationship.from
             }
             require(relationship.to in states) {
-                "relationship destination is not a registered state: " + relationship.to
+                "relationship destination is not a registered state: " +
+                    relationship.to
             }
         }
 
@@ -62,69 +58,83 @@ class VexBehaviorBlueprint<
             }
     }
 
-    /** Every structurally authored relationship leaving one State kind. */
     fun outgoing(
         state: KClass<out State>,
-    ): List<VexBehaviorRelationship<State, Act, Effect>> =
+    ): List<
+        VexBehaviorRelationship<
+            Family,
+            State,
+            Act,
+            Effect
+        >
+    > =
         relationships.filter {
             it.from == state
         }
 
-    /** Every structurally authored relationship arriving at one State kind. */
     fun incoming(
         state: KClass<out State>,
-    ): List<VexBehaviorRelationship<State, Act, Effect>> =
+    ): List<
+        VexBehaviorRelationship<
+            Family,
+            State,
+            Act,
+            Effect
+        >
+    > =
         relationships.filter {
             it.to == state
         }
 
-    /**
-     * Relationships that are structurally present AND conditionally available from this exact
-     * current State value.
-     *
-     * This is the inverse read of the authored graph: "what can I do from here?"
-     */
     fun availableRelationships(
         current: State,
-    ): List<VexBehaviorRelationship<State, Act, Effect>> {
+    ): List<
+        VexBehaviorRelationship<
+            Family,
+            State,
+            Act,
+            Effect
+        >
+    > {
         val currentType =
             current::class
 
         require(currentType in states) {
-            "current state is not registered in " + behaviorRef + ": " + currentType
+            "current state is not registered in " +
+                behaviorRef +
+                ": " +
+                currentType
         }
 
         return relationships.filter { relationship ->
             relationship.from == currentType &&
-                relationship.isAvailableFrom(current)
+                relationship.isAvailableFrom(
+                    current,
+                )
         }
     }
 
-    /**
-     * Semantic Acts currently available from [current].
-     *
-     * Controls and higher projections may consume this set; UI code does not need to re-encode the
-     * State -> Act table.
-     */
     fun availableActs(
         current: State,
     ): List<Act> =
-        availableRelationships(current)
-            .map {
-                it.act
-            }
+        availableRelationships(
+            current,
+        ).map {
+            it.act
+        }
 
-    /**
-     * Resolve one Act against current State without performing the Effect.
-     *
-     * Null means the Act has no lawful/available relationship from this current State.
-     */
     fun resolve(
         current: State,
         act: Act,
-    ): VexBehaviorResolution<State, Effect>? {
+    ): VexBehaviorResolution<
+        Family,
+        State,
+        Effect
+    >? {
         val relationship =
-            availableRelationships(current)
+            availableRelationships(
+                current,
+            )
                 .singleOrNull {
                     it.act == act
                 }
@@ -137,16 +147,31 @@ class VexBehaviorBlueprint<
     }
 
     /**
-     * Bind one finite Control vocabulary to this exact Behavior instance.
+     * Bind one complete enum Control vocabulary from the SAME Behavior family.
      *
-     * Control is reified so enumValues can enforce that every Control member is deliberately
-     * declared exactly once in the Control blueprint.
+     * Enum is required here, not on VexPort, because only this builder needs exhaustive enumeration.
      */
     inline fun <reified Control> controls(
-        block: VexBehaviorControlBlueprintBuilder<Act, Control>.() -> Unit,
-    ): VexBehaviorControlBlueprint<State, Act, Effect, Control>
-        where Control : Enum<Control> =
-        VexBehaviorControlBlueprintBuilder<Act, Control>(
+        block:
+            VexBehaviorControlBlueprintBuilder<
+                Family,
+                Act,
+                Control
+            >.() -> Unit,
+    ): VexBehaviorControlBlueprint<
+        Family,
+        State,
+        Act,
+        Effect,
+        Control
+    >
+        where Control : Enum<Control>,
+              Control : VexBehaviorFamily.Control<Family> =
+        VexBehaviorControlBlueprintBuilder<
+            Family,
+            Act,
+            Control
+        >(
             expectedControls =
                 enumValues<Control>()
                     .toSet(),
@@ -154,34 +179,53 @@ class VexBehaviorBlueprint<
             .apply(block)
             .build(this)
 
-    /** Human/debug projection derived from authored State neighborhoods. */
     fun describe(): String =
         buildString {
-            appendLine(behaviorRef)
+            appendLine(
+                behaviorRef,
+            )
             states.forEach { state ->
-                appendLine(state.simpleName.orEmpty())
-                outgoing(state).forEach { relationship ->
-                    appendLine("  " + relationship)
+                appendLine(
+                    state.simpleName.orEmpty(),
+                )
+                outgoing(
+                    state,
+                ).forEach { relationship ->
+                    appendLine(
+                        "  " +
+                            relationship,
+                    )
                 }
             }
         }.trimEnd()
 }
 
-/**
- * Construct one immutable behavior blueprint.
- *
- * Feature code keeps the resulting instance at the lifetime that actually owns the behavior. This
- * factory does not create a global singleton.
- */
 fun <
-    State : Any,
-    Act : Any,
-    Effect : Any,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
+    Effect : VexBehaviorFamily.Effect<Family>,
 > vexBehaviorBlueprint(
     behaviorRef: String,
-    block: VexBehaviorBlueprintBuilder<State, Act, Effect>.() -> Unit,
-): VexBehaviorBlueprint<State, Act, Effect> =
-    VexBehaviorBlueprintBuilder<State, Act, Effect>(
+    block:
+        VexBehaviorBlueprintBuilder<
+            Family,
+            State,
+            Act,
+            Effect
+        >.() -> Unit,
+): VexBehaviorBlueprint<
+    Family,
+    State,
+    Act,
+    Effect
+> =
+    VexBehaviorBlueprintBuilder<
+        Family,
+        State,
+        Act,
+        Effect
+    >(
         behaviorRef = behaviorRef,
     )
         .apply(block)
