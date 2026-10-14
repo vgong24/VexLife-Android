@@ -190,8 +190,28 @@ abstract class VexCompoundRelay<
      * 2. [currentState] is a processing snapshot of the exact retained current truth.
      *
      * The returned value is only a temporary candidate. It is not retained or observable until
-     * [send] claims it for Relay ownership, compares its semantic branches with retained current,
-     * and commits at most one next state.
+     * [send] compares its semantic branches with retained current, claims only changed branches for
+     * Relay ownership, and commits at most one next state.
+     *
+     * Reducer-authoring rule:
+     *
+     * - do NOT call deepCopy() merely because a value will be returned to Relay;
+     * - do NOT deep-copy previous/input branches merely to build coherent InputState;
+     * - ordinary copy()/constructors/immutable collection operations should express domain meaning;
+     * - use an explicit local copy only when the domain algorithm itself needs independent mutable
+     *   working memory (for example, an in-place sort), not to satisfy Relay ownership.
+     *
+     * [send] already owns admission, reducer isolation, changed-branch retention snapshots, and
+     * outward exposure. Keeping those mechanics here prevents every feature Relay from recreating
+     * ownership folklore inside business logic.
+     *
+     * Recommended reducer shape:
+     *
+     * 1. REFERENCES   -> name previous input/output needed for reasoning;
+     * 2. RECONCILE    -> merge the partial patch into one coherent input snapshot;
+     * 3. DERIVE       -> calculate domain meaning from that coherent input;
+     * 4. PROJECT      -> construct one output value;
+     * 5. RETURN       -> currentState.copy(inputState = coherent, outputState = output).
      *
      * Pseudocode:
      *
