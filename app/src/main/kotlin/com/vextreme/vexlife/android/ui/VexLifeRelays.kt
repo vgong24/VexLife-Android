@@ -43,7 +43,9 @@ internal class VexLifeRelays private constructor(
                 events = events,
                 eventsComparison =
                     EventsArchitectureComparisonLab(
+                        relay = events,
                         traditionalController = traditionalEvents,
+                        scope = scope,
                     ),
             )
         }
