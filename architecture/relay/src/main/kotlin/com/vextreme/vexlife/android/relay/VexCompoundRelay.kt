@@ -172,86 +172,152 @@ abstract class VexCompoundRelay<
      * suspend halfway through a transition, so each admitted patch reconciles against one exact
      * retained current state before the next patch may enter.
      *
-     * [currentState] is an ownership-safe processing snapshot, not a second retained truth. A
-     * reducer may construct as many local values as it needs, but only the returned candidate can be
-     * committed after semantic comparison.
+     * The reducer receives two ownership-safe processing values:
+     *
+     * 1. [inputState] is the admitted patch snapshot;
+     * 2. [currentState] is a processing snapshot of the exact retained current truth.
+     *
+     * The returned value is only a temporary candidate. It is not retained or observable until
+     * [send] claims it for Relay ownership, compares its semantic branches with retained current,
+     * and commits at most one next state.
+     *
+     * Pseudocode:
+     *
+     * retained current
+     * + incoming patch
+     * -> snapshot both for reducer ownership
+     * -> processStates(...)
+     * -> temporary candidate
+     * -> snapshot candidate for Relay ownership
+     * -> compare input/output meaning
+     * -> no change: keep retained current
+     * -> change: commit one next state with revision + 1
      */
     protected abstract fun processStates(
         inputState: InputState,
         currentState: VexCompoundState<InputState, OutputState>,
     ): VexCompoundState<InputState, OutputState>
 
+    /**
+     * Admit one partial input patch and atomically converge it with retained Compound truth.
+     *
+     * Every deepCopy() below marks a different ownership boundary. For a VexImmutable* state each
+     * call returns the same instance, so these boundaries allocate nothing. For mutable-backed
+     * states they remain real copies because the owners are genuinely different.
+     *
+     * Transition protocol:
+     *
+     * caller-owned patch
+     * -> admittedPatch                 // caller -> Relay processing
+     *
+     * retainedCurrent                  // canonical Relay-owned truth; never mutate directly
+     * -> processingCurrent             // Relay retention -> reducer sandbox
+     *
+     * processStates(...)
+     * -> reducerCandidate              // temporary; not yet trusted for retention
+     * -> ownedCandidate                // reducer -> Relay retention ownership
+     *
+     * compare ownedCandidate with retainedCurrent
+     * -> no semantic change: retain retainedCurrent
+     * -> semantic change: commit one next state
+     *
+     * retained result
+     * -> exposedResult                 // Relay retention -> send() caller
+     */
     protected fun send(
         inputState: InputState,
     ): VexCompoundState<InputState, OutputState> =
         synchronized(lock) {
+            // STEP 0 — serialize transitions. A reducer cannot recursively start another transition.
             check(!processing) {
                 "VexCompoundRelay cannot recursively send state from processStates"
             }
 
-            /*
-             * Retained current is already Relay-owned, so reading it requires no copy. The incoming
-             * patch is snapshotted once at admission, and the current state is snapshotted only when
-             * crossing into overridable reducer code.
-             */
-            val current =
+            // STEP 1 — read canonical retained truth by reference. Relay already owns this object.
+            // No copy is needed merely to inspect an object that is already inside the lock/owner.
+            val retainedCurrent =
                 mutableCurrentState.value
-            val admittedInput =
+
+            // STEP 2 — admit caller input into Relay processing ownership.
+            // Mutable-backed patches detach here. Immutable patches return themselves.
+            val admittedPatch =
                 inputState.deepCopy()
+
+            // STEP 3 — isolate retained truth from overridable reducer code.
+            // This copy is not the same boundary as STEP 2: it protects Relay's canonical current
+            // state from accidental mutation by processStates().
+            val processingCurrent =
+                retainedCurrent.deepCopy()
 
             processing = true
             try {
-                val processed =
+                // STEP 4 — calculate one temporary candidate from the admitted patch + exact
+                // processing snapshot. Nothing returned by processStates() is retained yet.
+                val reducerCandidate =
                     processStates(
-                        inputState = admittedInput,
-                        currentState = current.deepCopy(),
+                        inputState = admittedPatch,
+                        currentState = processingCurrent,
                     )
 
-                /*
-                 * Claim exactly one Relay-owned snapshot of arbitrary reducer output. Mutable-backed
-                 * states still detach here. Transitively immutable states may return themselves,
-                 * allowing unchanged child objects and nested Compound outputs to be structurally
-                 * shared rather than recursively recopied.
-                 */
-                val ownedProcessed =
-                    processed.deepCopy()
+                // STEP 5 — claim the reducer result for Relay ownership before comparing/retaining it.
+                // The reducer may have built mutable collections or reused processing objects.
+                // Mutable-backed state detaches here; transitively immutable state is shared.
+                val ownedCandidate =
+                    reducerCandidate.deepCopy()
 
+                // STEP 6 — compare semantic branches, not object identity and not candidate revision.
+                // Compound revision is owned here by the framework and advances only on real meaning.
                 val inputChanged =
-                    ownedProcessed.inputState != current.inputState
+                    ownedCandidate.inputState != retainedCurrent.inputState
                 val outputChanged =
-                    ownedProcessed.outputState != current.outputState
+                    ownedCandidate.outputState != retainedCurrent.outputState
 
                 if (!inputChanged && !outputChanged) {
-                    return@synchronized current.deepCopy()
+                    // STEP 7A — no semantic transition. Keep the exact retained state/revision.
+                    //
+                    // We still snapshot once for exposure because send() returns a value outside the
+                    // Relay owner. For immutable state this is the same object with zero allocation.
+                    // For mutable-backed state this prevents the caller from mutating retained truth.
+                    val exposedCurrent =
+                        retainedCurrent.deepCopy()
+
+                    return@synchronized exposedCurrent
                 }
 
-                /*
-                 * Preserve the exact already-owned branch when its semantic meaning did not change.
-                 * This gives nested Compound graphs stable structural sharing: an input-only child
-                 * revision does not manufacture a replacement output object for downstream parents.
-                 */
-                val next =
+                // STEP 7B — build exactly one new retained wrapper.
+                //
+                // A branch whose meaning did not change keeps the exact already-owned object.
+                // This is the structural-sharing rule that makes nested Compound Relay output cheap.
+                val nextRetained =
                     VexCompoundState(
                         inputState =
                             if (inputChanged) {
-                                ownedProcessed.inputState
+                                ownedCandidate.inputState
                             } else {
-                                current.inputState
+                                retainedCurrent.inputState
                             },
                         outputState =
                             if (outputChanged) {
-                                ownedProcessed.outputState
+                                ownedCandidate.outputState
                             } else {
-                                current.outputState
+                                retainedCurrent.outputState
                             },
-                        revision = current.revision + 1L,
+                        revision = retainedCurrent.revision + 1L,
                     )
 
+                // STEP 8 — atomic commit. This is the only point where canonical Relay truth moves.
                 mutableCurrentState.value =
-                    next
+                    nextRetained
 
-                next.deepCopy()
+                // STEP 9 — expose an ownership-safe result to the caller of send().
+                // Again: immutable state returns the same object; mutable-backed state detaches.
+                val exposedNext =
+                    nextRetained.deepCopy()
+
+                exposedNext
             } finally {
+                // STEP 10 — failure cannot strand the Relay in "processing". The retained state
+                // changes only at STEP 8, so an exception before commit leaves prior truth intact.
                 processing = false
             }
         }
