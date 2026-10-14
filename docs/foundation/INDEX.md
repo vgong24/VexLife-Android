@@ -98,7 +98,7 @@ block declares what Acts have meaning from that current truth, their provider-fa
 the expected next State. The blueprint is a constructed immutable graph, not a singleton or runtime
 state owner. Incoming / outgoing neighborhoods, current available Acts, and completely linked Control meaning are derived from
 relationships authored once. One immutable BehaviorProjection packages current State + every Control's resolved Act
-for UI/test/convergence consumers without exposing Effect execution.
+for UI/test/convergence consumers without exposing Effect execution. VexBehaviorConnection standardizes the two-way boundary as currentProjection + activate(Control); VexObservableBehaviorConnection optionally adds a StateFlow of projections.
 
 No app wiring is admitted yet. The kernel now has a transport-neutral BehaviorProjection. Current VexStream inspection found the next seam at the retained MediaController projection: one semantic Playback client/projection must observe Media3 truth, publish the shared Projection, re-resolve Controls at invocation time, and realize Effects before Mini Player / Context Dock migrate, otherwise behavior would become Compose-owned. Provider execution, ScreenBlueprint binding, parameterized request payloads, and Android/device proof remain held.
 

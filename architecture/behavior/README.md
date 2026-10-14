@@ -600,6 +600,92 @@ cross-behavior composition
 For example, "play queue index 7" carries request data. This experiment deliberately does not invent
 a generic payload architecture before the relational grammar proves useful.
 
+## Reusable Behavior Connection
+
+The common two-way feature boundary is named `VexBehaviorConnection`.
+
+It deliberately exposes only:
+
+~~~text
+READ
+    currentProjection
+
+WRITE
+    activate(Control)
+~~~
+
+The stronger optional contract `VexObservableBehaviorConnection` adds:
+
+~~~text
+projections: StateFlow<BehaviorProjection>
+~~~
+
+because an observable Behavior represents current truth, not a fire-and-forget event stream.
+
+This separates semantic contract from implementation position:
+
+~~~text
+VexBehaviorConnection
+    reusable relationship
+
+VexStreamPlaybackConnection
+    one feature/provider implementation of that relationship
+
+ViewModel / Session / Service
+    possible lifetime hosts for the concrete connection
+~~~
+
+A local feature that does not need an observable lifetime does not have to implement the StateFlow
+contract. It may pass one immutable Projection and one Control callback directly.
+
+### Activation is intentionally Control-shaped
+
+The reusable write boundary is:
+
+~~~kotlin
+activate(control)
+~~~
+
+not:
+
+~~~kotlin
+activate(act)
+execute(effect)
+~~~
+
+because the consumer is allowed to know what affordance was used, but must not freeze a previously
+rendered Act or reach into provider execution.
+
+The implementation must resolve:
+
+~~~text
+CURRENT State
+    + Control
+        -> CURRENT Act
+            -> Effect
+~~~
+
+at activation time.
+
+A test fixture deliberately proves this:
+
+~~~text
+rendered earlier:
+    PlayPause -> Pause
+
+reality changes:
+    Playing(FastForward)
+
+activate:
+    PlayPause
+
+re-resolved now:
+    Play
+    -> SetSpeed(Normal)
+~~~
+
+So the two-way Connection is safe for delayed UI interaction as well as non-UI callers.
+
 ## Sharing one Behavior with one or many UI consumers
 
 The semantic kernel now produces one immutable `VexBehaviorProjection`:
