@@ -12,6 +12,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,29 +31,172 @@ import org.junit.Test
 class VexRelayContractTest {
     private data class CounterState(
         val count: Int = 0,
-    ) : VexState<CounterState> {
-        override fun deepCopy(): CounterState =
-            copy()
+    ) : VexState<CounterState>
+
+    private sealed interface CounterAction :
+        VexAction {
+        data object Increment :
+            CounterAction
+
+        data class Set(
+            val value: Int,
+        ) : CounterAction
     }
 
     private class CounterRelay :
-        VexRelay<CounterState>(
+        VexActionRelay<
+            CounterAction,
+            CounterState
+        >(
             relayRef = "relay.contract.counter",
             initialState = CounterState(),
         ) {
+        var actionReducerCalls: Int =
+            0
+            private set
+
         fun increment() {
-            update { current ->
-                current.copy(
-                    count = current.count + 1,
-                )
-            }
+            sendAction(
+                CounterAction.Increment,
+            )
         }
 
-        fun set(value: Int) {
-            send(
-                CounterState(
-                    count = value,
+        fun set(
+            value: Int,
+        ) {
+            sendAction(
+                CounterAction.Set(
+                    value = value,
                 ),
+            )
+        }
+
+        override fun nextStateFor(
+            action: CounterAction,
+            currentState: CounterState,
+        ): CounterState {
+            actionReducerCalls += 1
+
+            return when (action) {
+                CounterAction.Increment ->
+                    currentState.copy(
+                        count = currentState.count + 1,
+                    )
+
+                is CounterAction.Set ->
+                    currentState.copy(
+                        count = action.value,
+                    )
+            }
+        }
+    }
+
+    private data class ModeProbeState(
+        val value: Int = 0,
+    ) : VexState<ModeProbeState>
+
+    private class ModeProbeRelay :
+        VexRelay<ModeProbeState>(
+            relayRef = "relay.contract.mode-probe",
+            initialState = ModeProbeState(),
+        ) {
+        var processStateCalls: Int =
+            0
+            private set
+
+        override fun processState(
+            inputState: ModeProbeState,
+            currentState: ModeProbeState,
+        ): ModeProbeState {
+            processStateCalls += 1
+            return inputState
+        }
+
+        fun inputDriven(
+            value: Int,
+        ) {
+            send(
+                ModeProbeState(
+                    value = value,
+                ),
+            )
+        }
+    }
+
+    private data class SharedLeaf(
+        val value: Int,
+    )
+
+    private data class ImmutableProbeInput(
+        val left: SharedLeaf? = null,
+        val right: SharedLeaf? = null,
+        val context: String? = null,
+        val blocked: Boolean? = null,
+    ) : VexInputState<ImmutableProbeInput>
+
+    private data class ImmutableProbeOutput(
+        val sum: Int = 0,
+    ) : VexOutputState<ImmutableProbeOutput>
+
+    private class ImmutableProbeCompoundRelay :
+        VexCompoundRelay<ImmutableProbeInput, ImmutableProbeOutput>(
+            relayRef = "relay.contract.immutable-compound",
+            initialInputState = ImmutableProbeInput(),
+            initialOutputState = ImmutableProbeOutput(),
+        ) {
+        fun patch(
+            left: SharedLeaf? = null,
+            right: SharedLeaf? = null,
+            context: String? = null,
+            blocked: Boolean? = null,
+        ) {
+            send(
+                ImmutableProbeInput(
+                    left = left,
+                    right = right,
+                    context = context,
+                    blocked = blocked,
+                ),
+            )
+        }
+
+        override fun processStates(
+            inputState: ImmutableProbeInput,
+            currentState: VexCompoundState<
+                ImmutableProbeInput,
+                ImmutableProbeOutput
+            >,
+        ): VexCompoundState<
+            ImmutableProbeInput,
+            ImmutableProbeOutput
+        > {
+            val previous =
+                currentState.inputState
+
+            val coherent =
+                previous.copy(
+                    left =
+                        inputState.left
+                            ?: previous.left,
+                    right =
+                        inputState.right
+                            ?: previous.right,
+                    context =
+                        inputState.context
+                            ?: previous.context,
+                    blocked =
+                        inputState.blocked
+                            ?: previous.blocked,
+                )
+
+            return currentState.copy(
+                inputState = coherent,
+                outputState =
+                    ImmutableProbeOutput(
+                        sum =
+                            (coherent.left?.value ?: 0) +
+                                (coherent.right?.value ?: 0),
+                    ),
             )
         }
     }
@@ -269,6 +413,117 @@ class VexRelayContractTest {
                     ),
             )
         }
+    }
+
+    @Test
+    fun stateInputAndActionRelaysEachHaveOneRequiredReducerPath() {
+        val stateRelay =
+            ModeProbeRelay()
+        val actionRelay =
+            CounterRelay()
+
+        stateRelay.inputDriven(1)
+
+        assertEquals(
+            1,
+            stateRelay.processStateCalls,
+        )
+        assertEquals(
+            1,
+            stateRelay.current.value,
+        )
+
+        actionRelay.set(2)
+
+        assertEquals(
+            1,
+            actionRelay.actionReducerCalls,
+        )
+        assertEquals(
+            2,
+            actionRelay.current.count,
+        )
+    }
+
+    @Test
+    fun immutableSimpleStateCanBeSharedAcrossReadBoundaries() {
+        val relay =
+            CounterRelay()
+
+        relay.set(7)
+
+        val first =
+            relay.current
+        val second =
+            relay.current
+
+        assertSame(
+            first,
+            second,
+        )
+        assertEquals(
+            7,
+            first.count,
+        )
+    }
+
+    @Test
+    fun oneImmutableCompoundPatchCanChangeSeveralFactsAndReuseUnchangedChildren() {
+        val relay =
+            ImmutableProbeCompoundRelay()
+        val left =
+            SharedLeaf(10)
+        val right =
+            SharedLeaf(32)
+
+        relay.patch(
+            left = left,
+            right = right,
+            context = "home",
+            blocked = false,
+        )
+
+        val before =
+            relay.currentInput
+
+        relay.patch(
+            context = "events",
+            blocked = true,
+        )
+
+        val after =
+            relay.currentInput
+
+        assertNotSame(
+            before,
+            after,
+        )
+        assertSame(
+            before.left,
+            after.left,
+        )
+        assertSame(
+            before.right,
+            after.right,
+        )
+        assertEquals(
+            "events",
+            after.context,
+        )
+        assertEquals(
+            true,
+            after.blocked,
+        )
+        assertEquals(
+            42,
+            relay.currentOutput.sum,
+        )
+
+        // Immutable projection reads may share the exact retained instance.
+        assertSame(
+            after,
+            relay.currentInput,
+        )
     }
 
     @Test

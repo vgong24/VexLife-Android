@@ -14,6 +14,9 @@ import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.open
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertRepository
+import com.vextreme.vexlife.android.data.events.EventsAlertPreferenceRepository
+import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.SyntheticExternalEventController
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
@@ -97,33 +100,33 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.RemoveOldestSyntheticEvent),
     )
 
-    val ResetSyntheticEventLab = buttonRef(
-        id = "body.events-simulator.actions.reset-lab",
-        labelRes = R.string.events_simulator_reset_lab,
+    val ResetEventsDebugMenu = buttonRef(
+        id = "body.events-simulator.actions.reset-debug-menu",
+        labelRes = R.string.events_simulator_reset_debug_menu,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Reset,
-        intent = invoke(AppActions.ResetSyntheticEventLab),
+        intent = invoke(AppActions.ResetEventsDebugMenu),
     )
 
-    val UseRotationAttentionLab = buttonRef(
+    val UseRotationDebugMenuAlertCases = buttonRef(
         id = "body.events-simulator.actions.use-rotation",
         labelRes = R.string.events_simulator_use_rotation,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.UseRotationAttentionLab),
+        intent = invoke(AppActions.UseRotationDebugMenuAlertCases),
     )
 
-    val UseRandomAttentionLab = buttonRef(
+    val UseRandomDebugMenuAlertCases = buttonRef(
         id = "body.events-simulator.actions.use-random",
         labelRes = R.string.events_simulator_use_random,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.UseRandomAttentionLab),
+        intent = invoke(AppActions.UseRandomDebugMenuAlertCases),
     )
 
-    val NextAttentionLabScenario = buttonRef(
-        id = "body.events-simulator.actions.next-scenario",
-        labelRes = R.string.events_simulator_next_scenario,
+    val NextDebugMenuAlertCase = buttonRef(
+        id = "body.events-simulator.actions.next-alert-case",
+        labelRes = R.string.events_simulator_next_alert_case,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.NextAttentionLabScenario),
+        intent = invoke(AppActions.NextDebugMenuAlertCase),
     )
 
     override val content = layout {
@@ -166,14 +169,14 @@ object DebugMenuScreen : AppScreenBlueprint(
                     button(RemoveOldestSyntheticEvent)
                 }
                 row("reset-actions") {
-                    button(ResetSyntheticEventLab)
+                    button(ResetEventsDebugMenu)
                 }
-                row("scenario-mode-actions") {
-                    button(UseRotationAttentionLab)
-                    button(UseRandomAttentionLab)
+                row("alert-case-mode-actions") {
+                    button(UseRotationDebugMenuAlertCases)
+                    button(UseRandomDebugMenuAlertCases)
                 }
-                row("scenario-actions") {
-                    button(NextAttentionLabScenario)
+                row("alert-case-actions") {
+                    button(NextDebugMenuAlertCase)
                 }
                 text(
                     id = "helper",
@@ -212,10 +215,10 @@ object DebugMenuScreen : AppScreenBlueprint(
                 repository = context.repositories.events,
                 scope = context.scope,
             )
-        val eventsAttention =
-            context.repositories.eventsAttention
-        val eventsAttentionLab =
-            context.repositories.eventsAttentionLab
+        val eventsAlertPreferences =
+            context.repositories.eventsAlertPreferences
+        val eventsDebugMenuAlerts =
+            context.repositories.eventsDebugMenuAlerts
         val events =
             context.repositories.events
 
@@ -270,51 +273,122 @@ object DebugMenuScreen : AppScreenBlueprint(
                 syntheticEvents.removeOldest()
             },
             appAction(
-                action = AppActions.ResetSyntheticEventLab,
+                action = AppActions.ResetEventsDebugMenu,
                 ownerRef = screenId,
             ) {
                 syntheticEvents.stop()
                 syntheticEvents.resetCurrent()
-                eventsAttention.resetAll()
-                eventsAttentionLab.reset()
+                eventsAlertPreferences.resetAll()
+                eventsDebugMenuAlerts.reset()
             },
             appAction(
-                action = AppActions.UseRotationAttentionLab,
+                action = AppActions.UseRotationDebugMenuAlertCases,
                 ownerRef = screenId,
             ) {
-                eventsAttentionLab.useRotation()
+                eventsDebugMenuAlerts.useRotation()
             },
             appAction(
-                action = AppActions.UseRandomAttentionLab,
+                action = AppActions.UseRandomDebugMenuAlertCases,
                 ownerRef = screenId,
             ) {
-                eventsAttentionLab.useSeededRandom(
+                eventsDebugMenuAlerts.useSeededRandom(
                     System.currentTimeMillis(),
                 )
             },
             appAction(
-                action = AppActions.NextAttentionLabScenario,
+                action = AppActions.NextDebugMenuAlertCase,
                 ownerRef = screenId,
             ) {
-                if (events.current.events.size < 12) {
-                    syntheticEvents.emitBurst(
-                        12 - events.current.events.size,
-                    )
-                }
-
-                eventsAttention.resetAll()
-
-                val scenario =
-                    eventsAttentionLab.planNext(
-                        events.current.events,
-                    )
-
-                if (scenario.freezeProjection) {
-                    syntheticEvents.start()
-                }
+                /*
+                 * This Debug action means "prepare one complete Events alert case".
+                 *
+                 * Keep the multi-owner fixture choreography out of this registration lambda so the
+                 * action map stays readable. The helper below documents every condition/effect.
+                 */
+                prepareNextEventsAlertCase(
+                    events = events,
+                    syntheticEvents = syntheticEvents,
+                    alertPreferences = eventsAlertPreferences,
+                    debugMenuAlerts = eventsDebugMenuAlerts,
+                )
             },
         )
     }
+
+    /**
+     * Prepare one complete Events Debug-menu alert case.
+     *
+     * This is Debug-menu orchestration, not shared Relay or AlertCase infrastructure. It coordinates
+     * several rightful owners only because one human Debug action needs a repeatable environment.
+     *
+     * Read in order:
+     *
+     * 1. ENSURE ROW DEPTH
+     *    Debug-menu alert cases exercise top/middle/bottom anchored targets, so keep at least
+     *    [ALERT_CASE_MIN_EVENT_COUNT] current Events rows available.
+     *
+     * 2. RESET HUMAN DISPOSITION
+     *    Clear acknowledge/defer/suspend/suppress state so an older Debug-menu alert run cannot hide the row the
+     *    next alert case intends to target.
+     *
+     * 3. PLAN AGAINST REFRESHED EVENT TRUTH
+     *    [SyntheticExternalEventController.emitBurst] publishes through EventsRepository
+     *    synchronously before returning, so the refreshed [EventsRepository.current] read includes
+     *    any rows just added above.
+     *
+     * 4. APPLY OPTIONAL PROVIDER PRESSURE
+     *    A freeze-projection alert case deliberately keeps new provider events arriving while the
+     *    overlay is active. Starting the synthetic producer tests that presentation remains stable
+     *    while canonical feed truth continues changing.
+     *
+     * Consequences:
+     * - may add synthetic provider events;
+     * - resets Events alert-preference state;
+     * - commits one current Debug-menu alert case;
+     * - may start timed synthetic provider arrivals.
+     *
+     * These owners commit independently. EventsConvergenceRelay observes their StateFlows and
+     * converges them; this helper does NOT claim one cross-repository atomic transaction.
+     */
+    private fun prepareNextEventsAlertCase(
+        events: EventsRepository,
+        syntheticEvents: SyntheticExternalEventController,
+        alertPreferences: EventsAlertPreferenceRepository,
+        debugMenuAlerts: EventsDebugMenuAlertRepository,
+    ) {
+        // 1. ENSURE ROW DEPTH
+        val currentEventCount =
+            events.current.events.size
+
+        if (
+            currentEventCount <
+                ALERT_CASE_MIN_EVENT_COUNT
+        ) {
+            syntheticEvents.emitBurst(
+                ALERT_CASE_MIN_EVENT_COUNT -
+                    currentEventCount,
+            )
+        }
+
+        // 2. RESET HUMAN DISPOSITION
+        alertPreferences.resetAll()
+
+        // 3. PLAN AGAINST REFRESHED EVENT TRUTH
+        //
+        // This value is one concrete Debug-menu AlertCase, not a shared framework concept.
+        val alertCase =
+            debugMenuAlerts.planNext(
+                events.current.events,
+            )
+
+        // 4. APPLY OPTIONAL PROVIDER PRESSURE
+        if (alertCase.freezeProjection) {
+            syntheticEvents.start()
+        }
+    }
+
+    private const val ALERT_CASE_MIN_EVENT_COUNT: Int =
+        12
 
     @Composable
     internal override fun renderContent(
@@ -398,7 +472,7 @@ private fun DebugMenuHistoryPreview() {
 /**
  * Preview data belongs beside DebugMenuScreen because it describes a meaningful state of THIS screen.
  * The shared preview layer only knows how to host repositories/runtime; it does not know Debug's
- * sheet/history scenario.
+ * sheet/history state.
  */
 private fun debugHistoryPreviewFixture(): LogHistoryFixture =
     LogHistoryFixture.build {

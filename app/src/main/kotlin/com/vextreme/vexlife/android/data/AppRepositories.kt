@@ -1,11 +1,11 @@
 package com.vextreme.vexlife.android.data
 
 import android.content.Context
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
-import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertRepository
+import com.vextreme.vexlife.android.data.events.EventsAlertPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
-import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepository
-import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsDebugMenuAlertRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsAlertPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.data.loghistory.RoomLogHistoryRepository
@@ -28,8 +28,8 @@ data class AppRepositories(
     val vexMaps: VexMapsRepository,
     val vexStream: VexStreamMusicRepository,
     val events: EventsRepository,
-    val eventsAttention: EventsAttentionPreferenceRepository,
-    val eventsAttentionLab: EventsAttentionLabRepository,
+    val eventsAlertPreferences: EventsAlertPreferenceRepository,
+    val eventsDebugMenuAlerts: EventsDebugMenuAlertRepository,
 )
 
 /**
@@ -56,8 +56,8 @@ object AppRepositoryFactory {
                 context = context,
             ),
             events = RelayEventsRepository(),
-            eventsAttention = RelayEventsAttentionPreferenceRepository(),
-            eventsAttentionLab = RelayEventsAttentionLabRepository(),
+            eventsAlertPreferences = RelayEventsAlertPreferenceRepository(),
+            eventsDebugMenuAlerts = RelayEventsDebugMenuAlertRepository(),
         )
     }
 }

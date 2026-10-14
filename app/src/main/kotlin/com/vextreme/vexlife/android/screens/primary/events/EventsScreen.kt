@@ -27,10 +27,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabExpectedAction
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabPlacement
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenario
+import com.vextreme.vexlife.android.data.events.EventsAlertDisposition
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertExpectedAction
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertPlacement
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertCase
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
@@ -75,25 +75,25 @@ object EventsScreen : AppScreenBlueprint(
 /**
  * Dynamic Events realization.
  *
- * The Screen owns event meaning and attention policy; [VexStableLazyColumn] owns only Android lazy
+ * The Screen owns event meaning and convergence policy; [VexStableLazyColumn] owns only Android lazy
  * list identity/visibility mechanics. This split is deliberate: a future list-based feature can
- * reuse stable repeated-item behavior without inheriting Events repositories or attention rules.
+ * reuse stable repeated-item behavior without inheriting Events repositories or convergence rules.
  */
 @Composable
 fun EventsScreenContent(
     runtime: VexRuntime,
     relay: EventsConvergenceRelay,
 ) {
-    val attention by relay.outputStates.collectAsState(
+    val convergence by relay.outputStates.collectAsState(
         initial = relay.currentOutput,
     )
-    val scenario =
-        attention.scenario
+    val debugMenuAlertCase =
+        convergence.debugMenuAlertCase
 
     val activeCandidateRef =
-        attention.candidate?.eventRef
+        convergence.candidate?.eventRef
     val visibleCandidateRef =
-        attention
+        convergence
             .takeIf { output ->
                 output.availability ==
                     EventsConvergenceAvailability.READY
@@ -102,7 +102,7 @@ fun EventsScreenContent(
             ?.eventRef
 
     /*
-     * Keep one presentation snapshot while the same attention candidate is active. Canonical
+     * Keep one presentation snapshot while the same convergence candidate is active. Canonical
      * provider truth and Relay queue counts continue to advance underneath it, but five-second
      * arrivals cannot insert/reorder rows under the anchored popup. A candidate change refreshes the
      * snapshot from current provider truth.
@@ -117,18 +117,18 @@ fun EventsScreenContent(
 
     LaunchedEffect(
         activeCandidateRef,
-        scenario?.scenarioRef,
+        debugMenuAlertCase?.alertCaseRef,
     ) {
         presentationEvents =
             if (activeCandidateRef == null) {
                 null
             } else {
-                attention.events
+                convergence.events
             }
     }
 
     val displayedEvents =
-        presentationEvents ?: attention.events
+        presentationEvents ?: convergence.events
 
     VexStableLazyColumn(
         listRef = EventsScreen.content.element.elementId,
@@ -136,15 +136,15 @@ fun EventsScreenContent(
         itemRef = VexExternalEvent::eventRef,
         contentType = { "events-event-row" },
         requestedVisibleItemRef =
-            scenario?.targetEventRef,
+            debugMenuAlertCase?.targetEventRef,
         userScrollEnabled =
-            scenario?.blockingAcknowledgeOnly != true,
+            debugMenuAlertCase?.blockingAcknowledgeOnly != true,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         onVisibleItemRefsChanged =
             relay::visibleTargetsChanged,
         emptyContent = {
-            when (attention.list) {
+            when (convergence.list) {
                 EventsConvergenceListState.Unobserved ->
                     Unit
 
@@ -161,17 +161,17 @@ fun EventsScreenContent(
     ) { event ->
         EventRow(
             event = event,
-            isAttentionCandidate =
+            isAlertCandidate =
                 visibleCandidateRef == event.eventRef,
             disposition =
-                attention.dispositionByEventRef[
+                convergence.dispositionByEventRef[
                     event.eventRef
                 ],
-            attention = attention,
-            scenario = scenario,
+            convergence = convergence,
+            debugMenuAlertCase = debugMenuAlertCase,
             onAcknowledge = {
                 runtime.recordDynamicInteraction(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         event.eventRef,
                         "acknowledge",
                     ),
@@ -179,13 +179,13 @@ fun EventsScreenContent(
                 relay.acknowledge(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
+                    relay.completeCurrentAlertCase()
                 }
             },
             onDefer = {
                 runtime.recordDynamicInteraction(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         event.eventRef,
                         "later",
                     ),
@@ -193,13 +193,13 @@ fun EventsScreenContent(
                 relay.later(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
+                    relay.completeCurrentAlertCase()
                 }
             },
             onSuspend = {
                 runtime.recordDynamicInteraction(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         event.eventRef,
                         "suspend",
                     ),
@@ -207,13 +207,13 @@ fun EventsScreenContent(
                 relay.suspend(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
+                    relay.completeCurrentAlertCase()
                 }
             },
             onSuppress = {
                 runtime.recordDynamicInteraction(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         event.eventRef,
                         "suppress",
                     ),
@@ -221,8 +221,8 @@ fun EventsScreenContent(
                 relay.suppress(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
+                    relay.completeCurrentAlertCase()
                 }
             },
             onDismiss = {
@@ -235,8 +235,8 @@ fun EventsScreenContent(
                 relay.later(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
+                    relay.completeCurrentAlertCase()
                 }
             },
         )
@@ -246,17 +246,17 @@ fun EventsScreenContent(
 /**
  * Events-specific row composition.
  *
- * Keeping this beside Events is intentional: kind/title/detail/disposition and its attention actions
+ * Keeping this beside Events is intentional: kind/title/detail/disposition and its convergence actions
  * are product meaning, not generic list-cell behavior. The reusable list only asks this row for one
  * stable [VexExternalEvent.eventRef].
  */
 @Composable
 private fun EventRow(
     event: VexExternalEvent,
-    isAttentionCandidate: Boolean,
-    disposition: EventsAttentionDisposition?,
-    attention: EventsConvergenceOutputState,
-    scenario: EventsAttentionLabScenario?,
+    isAlertCandidate: Boolean,
+    disposition: EventsAlertDisposition?,
+    convergence: EventsConvergenceOutputState,
+    debugMenuAlertCase: EventsDebugMenuAlertCase?,
     onAcknowledge: () -> Unit,
     onDefer: () -> Unit,
     onSuspend: () -> Unit,
@@ -268,7 +268,7 @@ private fun EventRow(
             Modifier
                 .fillMaxWidth()
                 .then(
-                    if (isAttentionCandidate) {
+                    if (isAlertCandidate) {
                         Modifier.border(
                             width = 2.dp,
                             color =
@@ -328,9 +328,9 @@ private fun EventRow(
             }
         }
 
-        if (isAttentionCandidate) {
+        if (isAlertCandidate) {
             val preferredPlacements =
-                scenario
+                debugMenuAlertCase
                     ?.preferredOverlayPlacements()
                     ?: listOf(
                         VexOverlayPlacement.BELOW,
@@ -339,9 +339,9 @@ private fun EventRow(
                         VexOverlayPlacement.START,
                     )
             val blocking =
-                scenario?.blockingAcknowledgeOnly == true
+                debugMenuAlertCase?.blockingAcknowledgeOnly == true
             val expectedAction =
-                scenario?.expectedAction
+                debugMenuAlertCase?.expectedAction
 
             VexAnchoredOverlay(
                 presentationRef =
@@ -349,7 +349,7 @@ private fun EventRow(
                         event.eventRef,
                     ),
                 onDismissRequest = {
-                    if (scenario == null) {
+                    if (debugMenuAlertCase == null) {
                         onDismiss()
                     }
                 },
@@ -359,7 +359,7 @@ private fun EventRow(
                 Text(
                     text =
                         stringResource(
-                            R.string.events_attention_candidate,
+                            R.string.events_alert_candidate,
                         ),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.inversePrimary,
@@ -371,48 +371,48 @@ private fun EventRow(
                 Text(
                     text =
                         stringResource(
-                            R.string.events_attention_compact_queue,
-                            attention.unhandledCount,
-                            attention.currentQueueCount,
-                            attention.nextSequenceCount,
+                            R.string.events_alert_compact_queue,
+                            convergence.unhandledCount,
+                            convergence.currentQueueCount,
+                            convergence.nextSequenceCount,
                         ),
                     style = MaterialTheme.typography.labelMedium,
                 )
 
-                scenario?.let { labScenario ->
+                debugMenuAlertCase?.let { debugMenuAlertCase ->
                     val targetPosition =
-                        labScenario.targetPositionFromTop
+                        debugMenuAlertCase.targetPositionFromTop
 
                     Text(
                         text =
                             if (targetPosition == null) {
                                 stringResource(
-                                    R.string.events_attention_lab_compact_no_target,
-                                    labScenario.ordinal,
-                                    labScenario.kind.name,
+                                    R.string.events_debug_menu_alert_case_compact_no_target,
+                                    debugMenuAlertCase.ordinal,
+                                    debugMenuAlertCase.type.name,
                                 )
                             } else {
                                 stringResource(
-                                    R.string.events_attention_lab_compact,
-                                    labScenario.ordinal,
-                                    labScenario.kind.name,
+                                    R.string.events_debug_menu_alert_case_compact,
+                                    debugMenuAlertCase.ordinal,
+                                    debugMenuAlertCase.type.name,
                                     targetPosition + 1,
-                                    labScenario.listCountAtPlan,
-                                    labScenario.preferredPlacement.name,
+                                    debugMenuAlertCase.listCountAtPlan,
+                                    debugMenuAlertCase.preferredPlacement.name,
                                 )
                             },
                         style = MaterialTheme.typography.bodySmall,
                     )
 
                     if (
-                        labScenario.mode ==
-                            com.vextreme.vexlife.android.data.events.EventsAttentionLabMode.SEEDED_RANDOM
+                        debugMenuAlertCase.mode ==
+                            com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertMode.SEEDED_RANDOM
                     ) {
                         Text(
                             text =
                                 stringResource(
-                                    R.string.events_attention_lab_seed,
-                                    labScenario.seed,
+                                    R.string.events_debug_menu_alert_case_seed,
+                                    debugMenuAlertCase.seed,
                                 ),
                             style = MaterialTheme.typography.labelSmall,
                         )
@@ -422,7 +422,7 @@ private fun EventRow(
                         Text(
                             text =
                                 stringResource(
-                                    R.string.events_attention_blocking_compact,
+                                    R.string.events_alert_blocking_compact,
                                 ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.inversePrimary,
@@ -432,8 +432,8 @@ private fun EventRow(
                     Text(
                         text =
                             stringResource(
-                                R.string.events_attention_press,
-                                labScenario.expectedAction.name,
+                                R.string.events_alert_press,
+                                debugMenuAlertCase.expectedAction.name,
                             ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.inversePrimary,
@@ -441,20 +441,20 @@ private fun EventRow(
                     Text(
                         text =
                             stringResource(
-                                labScenario.expectedResultRes(),
+                                debugMenuAlertCase.expectedResultRes(),
                             ),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 } ?: Text(
                     text =
                         stringResource(
-                            R.string.events_attention_choose_compact,
+                            R.string.events_alert_choose_compact,
                         ),
                     style = MaterialTheme.typography.bodySmall,
                 )
 
-                if (scenario != null) {
-                    AttentionActionButton(
+                if (debugMenuAlertCase != null) {
+                    AlertActionButton(
                         eventRef = event.eventRef,
                         action = expectedAction,
                         onAcknowledge = onAcknowledge,
@@ -467,16 +467,16 @@ private fun EventRow(
                         horizontalArrangement =
                             Arrangement.spacedBy(4.dp),
                     ) {
-                        CompactAttentionButton(
+                        CompactAlertButton(
                             labelRes =
-                                R.string.events_attention_acknowledge,
+                                R.string.events_alert_acknowledge,
                             eventRef = event.eventRef,
                             actionRef = "acknowledge",
                             onClick = onAcknowledge,
                         )
-                        CompactAttentionButton(
+                        CompactAlertButton(
                             labelRes =
-                                R.string.events_attention_later,
+                                R.string.events_alert_later,
                             eventRef = event.eventRef,
                             actionRef = "later",
                             onClick = onDefer,
@@ -486,16 +486,16 @@ private fun EventRow(
                         horizontalArrangement =
                             Arrangement.spacedBy(4.dp),
                     ) {
-                        CompactAttentionButton(
+                        CompactAlertButton(
                             labelRes =
-                                R.string.events_attention_suspend,
+                                R.string.events_alert_suspend,
                             eventRef = event.eventRef,
                             actionRef = "suspend",
                             onClick = onSuspend,
                         )
-                        CompactAttentionButton(
+                        CompactAlertButton(
                             labelRes =
-                                R.string.events_attention_suppress,
+                                R.string.events_alert_suppress,
                             eventRef = event.eventRef,
                             actionRef = "suppress",
                             onClick = onSuppress,
@@ -508,42 +508,42 @@ private fun EventRow(
 }
 
 @Composable
-private fun AttentionActionButton(
+private fun AlertActionButton(
     eventRef: String,
-    action: EventsAttentionLabExpectedAction?,
+    action: EventsDebugMenuAlertExpectedAction?,
     onAcknowledge: () -> Unit,
     onDefer: () -> Unit,
     onSuspend: () -> Unit,
     onSuppress: () -> Unit,
 ) {
     when (action) {
-        EventsAttentionLabExpectedAction.ACKNOWLEDGE ->
-            CompactAttentionButton(
-                labelRes = R.string.events_attention_acknowledge,
+        EventsDebugMenuAlertExpectedAction.ACKNOWLEDGE ->
+            CompactAlertButton(
+                labelRes = R.string.events_alert_acknowledge,
                 eventRef = eventRef,
                 actionRef = "acknowledge",
                 onClick = onAcknowledge,
             )
 
-        EventsAttentionLabExpectedAction.LATER ->
-            CompactAttentionButton(
-                labelRes = R.string.events_attention_later,
+        EventsDebugMenuAlertExpectedAction.LATER ->
+            CompactAlertButton(
+                labelRes = R.string.events_alert_later,
                 eventRef = eventRef,
                 actionRef = "later",
                 onClick = onDefer,
             )
 
-        EventsAttentionLabExpectedAction.SUSPEND ->
-            CompactAttentionButton(
-                labelRes = R.string.events_attention_suspend,
+        EventsDebugMenuAlertExpectedAction.SUSPEND ->
+            CompactAlertButton(
+                labelRes = R.string.events_alert_suspend,
                 eventRef = eventRef,
                 actionRef = "suspend",
                 onClick = onSuspend,
             )
 
-        EventsAttentionLabExpectedAction.SUPPRESS ->
-            CompactAttentionButton(
-                labelRes = R.string.events_attention_suppress,
+        EventsDebugMenuAlertExpectedAction.SUPPRESS ->
+            CompactAlertButton(
+                labelRes = R.string.events_alert_suppress,
                 eventRef = eventRef,
                 actionRef = "suppress",
                 onClick = onSuppress,
@@ -555,7 +555,7 @@ private fun AttentionActionButton(
 }
 
 @Composable
-private fun CompactAttentionButton(
+private fun CompactAlertButton(
     labelRes: Int,
     eventRef: String,
     actionRef: String,
@@ -570,7 +570,7 @@ private fun CompactAttentionButton(
             ),
         modifier =
             Modifier.testTag(
-                EventsPresentationRefs.attentionAction(
+                EventsPresentationRefs.alertAction(
                     eventRef,
                     actionRef,
                 ),
@@ -582,29 +582,29 @@ private fun CompactAttentionButton(
     }
 }
 
-private fun EventsAttentionLabScenario.expectedResultRes(): Int =
+private fun EventsDebugMenuAlertCase.expectedResultRes(): Int =
     when (expectedAction) {
-        EventsAttentionLabExpectedAction.ACKNOWLEDGE ->
+        EventsDebugMenuAlertExpectedAction.ACKNOWLEDGE ->
             if (blockingAcknowledgeOnly) {
-                R.string.events_attention_expected_blocking_short
+                R.string.events_alert_expected_blocking_short
             } else {
-                R.string.events_attention_expected_ack_short
+                R.string.events_alert_expected_ack_short
             }
 
-        EventsAttentionLabExpectedAction.LATER ->
-            R.string.events_attention_expected_later_short
+        EventsDebugMenuAlertExpectedAction.LATER ->
+            R.string.events_alert_expected_later_short
 
-        EventsAttentionLabExpectedAction.SUSPEND ->
-            R.string.events_attention_expected_suspend_short
+        EventsDebugMenuAlertExpectedAction.SUSPEND ->
+            R.string.events_alert_expected_suspend_short
 
-        EventsAttentionLabExpectedAction.SUPPRESS ->
-            R.string.events_attention_expected_suppress_short
+        EventsDebugMenuAlertExpectedAction.SUPPRESS ->
+            R.string.events_alert_expected_suppress_short
     }
 
-private fun EventsAttentionLabScenario.preferredOverlayPlacements():
+private fun EventsDebugMenuAlertCase.preferredOverlayPlacements():
     List<VexOverlayPlacement> =
     when (preferredPlacement) {
-        EventsAttentionLabPlacement.ABOVE ->
+        EventsDebugMenuAlertPlacement.ABOVE ->
             listOf(
                 VexOverlayPlacement.ABOVE,
                 VexOverlayPlacement.BELOW,
@@ -612,7 +612,7 @@ private fun EventsAttentionLabScenario.preferredOverlayPlacements():
                 VexOverlayPlacement.START,
             )
 
-        EventsAttentionLabPlacement.BELOW ->
+        EventsDebugMenuAlertPlacement.BELOW ->
             listOf(
                 VexOverlayPlacement.BELOW,
                 VexOverlayPlacement.ABOVE,
@@ -640,19 +640,19 @@ private fun EventsScreenPreview() {
 
 /**
  * Feature-owned visual fixture for the interesting state: several provider events are already
- * present and no attention preference has handled the oldest candidate yet.
+ * present and no convergence preference has handled the oldest candidate yet.
  *
  * This preview is intentionally beside Events rather than in the shared preview host. It lets a
- * human inspect row composition + anchored attention under every @VexScreenPreviews device/font/theme
- * form without turning Preview infrastructure into another scenario registry.
+ * human inspect row composition + anchored convergence under every @VexScreenPreviews device/font/theme
+ * form without turning Preview infrastructure into another Debug-menu alert-case registry.
  */
 @VexScreenPreviews
 @Composable
-private fun EventsAttentionPreview() {
+private fun EventsAlertPreview() {
     VexPreviewHost(
-        id = "events-attention",
+        id = "events-alert",
         startScreen = EventsScreen,
-        repositoriesFactory = ::eventsAttentionPreviewRepositories,
+        repositoriesFactory = ::eventsAlertPreviewRepositories,
     ) { context ->
         EventsScreenContent(
             runtime = context.runtime,
@@ -661,7 +661,7 @@ private fun EventsAttentionPreview() {
     }
 }
 
-private fun eventsAttentionPreviewRepositories(): AppRepositories {
+private fun eventsAlertPreviewRepositories(): AppRepositories {
     val repositories =
         VexPreviewRepositories.empty()
     val events =
@@ -681,7 +681,7 @@ private fun eventsAttentionPreviewRepositories(): AppRepositories {
                         kind = VexExternalEventKind.MESSAGE,
                         title = "Preview message",
                         detail =
-                            "This row demonstrates stable repeated identity and anchored attention.",
+                            "This row demonstrates stable repeated identity and anchored convergence.",
                         occurredAtEpochMillis = 1_000L,
                     ),
                     VexExternalEvent(

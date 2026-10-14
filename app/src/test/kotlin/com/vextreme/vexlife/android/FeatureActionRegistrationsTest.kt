@@ -1,8 +1,8 @@
 package com.vextreme.vexlife.android
 
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepository
-import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsDebugMenuAlertRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsAlertPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
@@ -27,8 +27,8 @@ class FeatureActionRegistrationsTest {
                 userProfile = InMemoryUserProfileRepository(),
                 vexStream = InMemoryVexStreamMusicRepository(),
                 events = RelayEventsRepository(),
-                eventsAttention = RelayEventsAttentionPreferenceRepository(),
-                eventsAttentionLab = RelayEventsAttentionLabRepository(),
+                eventsAlertPreferences = RelayEventsAlertPreferenceRepository(),
+                eventsDebugMenuAlerts = RelayEventsDebugMenuAlertRepository(),
             ),
             scope = backgroundScope,
         ).appActions

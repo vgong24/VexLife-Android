@@ -77,17 +77,17 @@ class VexRelayEventsPracticumTest {
         override fun deepCopy(): ScreenState = copy()
     }
 
-    private data class AttentionPreferenceState(
+    private data class AlertPreferenceState(
         val acknowledgedEventRefs: Set<String> = emptySet(),
-    ) : VexState<AttentionPreferenceState> {
-        override fun deepCopy(): AttentionPreferenceState =
+    ) : VexState<AlertPreferenceState> {
+        override fun deepCopy(): AlertPreferenceState =
             copy(acknowledgedEventRefs = acknowledgedEventRefs.toSet())
     }
 
     private data class EventsInputState(
         val screen: ScreenState? = null,
         val feed: ExternalFeedState? = null,
-        val preference: AttentionPreferenceState? = null,
+        val preference: AlertPreferenceState? = null,
     ) : VexInputState<EventsInputState> {
         override fun deepCopy(): EventsInputState =
             copy(
@@ -99,7 +99,7 @@ class VexRelayEventsPracticumTest {
 
     private data class EventsOutputState(
         val eventRefs: List<String> = emptyList(),
-        val attentionCandidateEventRef: String? = null,
+        val alertCandidateEventRef: String? = null,
     ) : VexOutputState<EventsOutputState> {
         override fun deepCopy(): EventsOutputState =
             copy(eventRefs = eventRefs.toList())
@@ -107,7 +107,7 @@ class VexRelayEventsPracticumTest {
 
     private class EventsConvergenceRelay :
         VexCompoundRelay<EventsInputState, EventsOutputState>(
-            relayRef = "relay.events.attention",
+            relayRef = "relay.events.alert",
             initialInputState = EventsInputState(),
             initialOutputState = EventsOutputState(),
         ) {
@@ -119,7 +119,7 @@ class VexRelayEventsPracticumTest {
             send(EventsInputState(feed = state))
         }
 
-        fun preferenceChanged(state: AttentionPreferenceState) {
+        fun alertPreferenceChanged(state: AlertPreferenceState) {
             send(EventsInputState(preference = state))
         }
 
@@ -150,7 +150,7 @@ class VexRelayEventsPracticumTest {
             val acknowledged =
                 preference?.acknowledgedEventRefs.orEmpty()
 
-            val attentionCandidate =
+            val alertCandidate =
                 if (screen?.currentScreenId == "events") {
                     items.firstOrNull { item ->
                         item.eventRef !in acknowledged
@@ -164,7 +164,7 @@ class VexRelayEventsPracticumTest {
                 outputState =
                     EventsOutputState(
                         eventRefs = items.map(EventItem::eventRef),
-                        attentionCandidateEventRef = attentionCandidate,
+                        alertCandidateEventRef = alertCandidate,
                     ),
             )
         }
@@ -258,13 +258,13 @@ class VexRelayEventsPracticumTest {
             listOf("event.synthetic.message.001"),
             events.current.outputState.eventRefs,
         )
-        assertNull(events.current.outputState.attentionCandidateEventRef)
+        assertNull(events.current.outputState.alertCandidateEventRef)
 
         events.screenChanged(ScreenState(currentScreenId = "events"))
 
         assertEquals(
             "event.synthetic.message.001",
-            events.current.outputState.attentionCandidateEventRef,
+            events.current.outputState.alertCandidateEventRef,
         )
     }
 
@@ -287,11 +287,11 @@ class VexRelayEventsPracticumTest {
 
         assertEquals(
             "event.synthetic.001",
-            events.current.outputState.attentionCandidateEventRef,
+            events.current.outputState.alertCandidateEventRef,
         )
 
-        events.preferenceChanged(
-            AttentionPreferenceState(
+        events.alertPreferenceChanged(
+            AlertPreferenceState(
                 acknowledgedEventRefs = setOf("event.synthetic.001"),
             ),
         )
@@ -305,7 +305,7 @@ class VexRelayEventsPracticumTest {
         )
         assertEquals(
             "event.synthetic.002",
-            events.current.outputState.attentionCandidateEventRef,
+            events.current.outputState.alertCandidateEventRef,
         )
     }
 
@@ -347,8 +347,8 @@ class VexRelayEventsPracticumTest {
                     executor.submit {
                         ready.countDown()
                         go.await()
-                        events.preferenceChanged(
-                            AttentionPreferenceState(),
+                        events.alertPreferenceChanged(
+                            AlertPreferenceState(),
                         )
                     },
                 )
@@ -385,7 +385,7 @@ class VexRelayEventsPracticumTest {
         )
         assertEquals(
             "event.synthetic.concurrent",
-            events.current.outputState.attentionCandidateEventRef,
+            events.current.outputState.alertCandidateEventRef,
         )
     }
 
@@ -420,8 +420,8 @@ class VexRelayEventsPracticumTest {
          */
         yield()
 
-        events.preferenceChanged(
-            AttentionPreferenceState(
+        events.alertPreferenceChanged(
+            AlertPreferenceState(
                 acknowledgedEventRefs =
                     setOf("event.input-proof"),
             ),
@@ -479,8 +479,8 @@ class VexRelayEventsPracticumTest {
                 currentScreenId = "home",
             ),
         )
-        events.preferenceChanged(
-            AttentionPreferenceState(),
+        events.alertPreferenceChanged(
+            AlertPreferenceState(),
         )
 
         feed.feedArrived(

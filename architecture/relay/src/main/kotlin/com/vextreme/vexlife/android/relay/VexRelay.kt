@@ -1,100 +1,75 @@
 package com.vextreme.vexlife.android.relay
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 
+/**
+ * Relay for input-state-driven reconciliation.
+ *
+ * Use when a caller/source supplies a State-shaped observation and the Relay must reconcile that
+ * input against exact retained current State.
+ *
+ * Path:
+ *
+ *     input State
+ *     -> send(inputState)
+ *     -> processState(inputState, currentState)
+ *     -> one retained next State
+ *
+ * For named human/domain intentions that should not manufacture State-shaped input, use
+ * [VexActionRelay] instead.
+ */
 abstract class VexRelay<State : VexState<State>>(
     val relayRef: String,
     initialState: State,
 ) : VexObservableRelay<State> {
-    private val lock = Any()
-    private var processing = false
-
     init {
-        require(relayRef.isNotBlank()) { "relayRef must not be blank" }
+        require(relayRef.isNotBlank()) {
+            "relayRef must not be blank"
+        }
     }
 
-    private val mutableCurrentState =
-        MutableStateFlow(initialState.deepCopy())
+    private val store =
+        VexRelayStateStore(
+            initialState = initialState,
+        )
 
-    override val states: Flow<State> =
-        mutableCurrentState.map { state ->
-            state.deepCopy()
-        }
+    override val states: Flow<State>
+        get() =
+            store.states
 
     override val current: State
         get() =
-            synchronized(lock) {
-                mutableCurrentState.value.deepCopy()
-            }
+            store.current
 
+    /**
+     * Reconcile one admitted State-shaped observation against exact retained current State.
+     *
+     * Reducer authors own domain meaning only. Do not deepCopy() merely for Relay ownership; the
+     * retained-state kernel owns admission, reducer isolation, retention and outward exposure.
+     */
     protected open fun processState(
         inputState: State,
         currentState: State,
     ): State =
-        inputState.deepCopy()
+        inputState
 
-    protected fun send(inputState: State): State =
-        synchronized(lock) {
-            check(!processing) {
-                "VexRelay cannot recursively send state from processState"
-            }
-
-            val current =
-                mutableCurrentState.value.deepCopy()
-
-            processing = true
-            try {
-                val next =
-                    processState(
-                        inputState = inputState.deepCopy(),
-                        currentState = current.deepCopy(),
-                    ).deepCopy()
-
-                if (next != current) {
-                    mutableCurrentState.value =
-                        next.deepCopy()
-                }
-
-                next.deepCopy()
-            } finally {
-                processing = false
-            }
-        }
-
-    protected fun update(
-        transform: (currentState: State) -> State,
+    /**
+     * Admit one caller/source State value.
+     *
+     * Caller ownership is detached before [processState] receives the input. Concurrent callers
+     * serialize through the shared retained-state kernel; semantic freshness still belongs to the
+     * source/reducer.
+     */
+    protected fun send(
+        inputState: State,
     ): State =
-        synchronized(lock) {
-            check(!processing) {
-                "VexRelay cannot recursively update state from processState"
-            }
-
-            val current =
-                mutableCurrentState.value.deepCopy()
-
-            processing = true
-            try {
-                val candidate =
-                    transform(current.deepCopy()).deepCopy()
-
-                val next =
-                    processState(
-                        inputState = candidate.deepCopy(),
-                        currentState = current.deepCopy(),
-                    ).deepCopy()
-
-                if (next != current) {
-                    mutableCurrentState.value =
-                        next.deepCopy()
-                }
-
-                next.deepCopy()
-            } finally {
-                processing = false
-            }
-        }
+        store.transition(
+            input = inputState,
+            snapshotInput = { admittedInput ->
+                admittedInput.deepCopy()
+            },
+            nextStateFor = ::processState,
+        )
 }
 
 // [VXG RealForever]

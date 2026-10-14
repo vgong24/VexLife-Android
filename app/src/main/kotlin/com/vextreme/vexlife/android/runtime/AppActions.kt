@@ -18,10 +18,19 @@ object AppActions {
     val EmitSyntheticEventBurst = ActionKey("action.events.synthetic.emit-burst")
     val InsertHistoricalSyntheticEvent = ActionKey("action.events.synthetic.insert-historical")
     val RemoveOldestSyntheticEvent = ActionKey("action.events.synthetic.remove-oldest")
-    val ResetSyntheticEventLab = ActionKey("action.events.synthetic.reset-lab")
-    val UseRotationAttentionLab = ActionKey("action.events.attention-lab.use-rotation")
-    val UseRandomAttentionLab = ActionKey("action.events.attention-lab.use-random")
-    val NextAttentionLabScenario = ActionKey("action.events.attention-lab.next-scenario")
+    val ResetEventsDebugMenu = ActionKey("action.events.debug-menu.reset")
+    val UseRotationDebugMenuAlertCases = ActionKey("action.events.debug-menu.alert-cases.use-rotation")
+    val UseRandomDebugMenuAlertCases = ActionKey("action.events.debug-menu.alert-cases.use-random")
+    /**
+     * Debug-only Events action: prepare one next alert case.
+     *
+     * The stable action ID keeps the concrete AlertCase vocabulary; this
+     * is not a shared alert-case framework action.
+     */
+    val NextDebugMenuAlertCase =
+        ActionKey(
+            "action.events.debug-menu.alerts.next-case",
+        )
     val GallerySample = ActionKey("action.gallery.sample")
     val SaveUserProfile = ActionKey("action.user-profile.save")
     val FindNearbyVexStream = ActionKey("action.vexstream-music.connection.find")

@@ -5,11 +5,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class EventsAttentionPreferenceRepositoryTest {
+class EventsAlertPreferenceRepositoryTest {
     @Test
     fun acknowledgementDeferSuppressAndResetRemainSeparateFromEventTruth() {
         val preferences =
-            RelayEventsAttentionPreferenceRepository()
+            RelayEventsAlertPreferenceRepository()
 
         preferences.acknowledge("event.a")
         preferences.defer("event.b")
@@ -17,25 +17,25 @@ class EventsAttentionPreferenceRepositoryTest {
         preferences.suppress("event.d")
 
         assertEquals(
-            EventsAttentionDisposition.ACKNOWLEDGED,
+            EventsAlertDisposition.ACKNOWLEDGED,
             preferences.current
                 .dispositionByEventRef
                 .getValue("event.a"),
         )
         assertEquals(
-            EventsAttentionDisposition.DEFERRED,
+            EventsAlertDisposition.DEFERRED,
             preferences.current
                 .dispositionByEventRef
                 .getValue("event.b"),
         )
         assertEquals(
-            EventsAttentionDisposition.SUSPENDED,
+            EventsAlertDisposition.SUSPENDED,
             preferences.current
                 .dispositionByEventRef
                 .getValue("event.c"),
         )
         assertEquals(
-            EventsAttentionDisposition.SUPPRESSED,
+            EventsAlertDisposition.SUPPRESSED,
             preferences.current
                 .dispositionByEventRef
                 .getValue("event.d"),

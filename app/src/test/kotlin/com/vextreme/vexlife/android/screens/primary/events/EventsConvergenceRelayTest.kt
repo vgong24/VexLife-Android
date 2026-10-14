@@ -1,16 +1,16 @@
 package com.vextreme.vexlife.android.screens.primary.events
 
-import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabMode
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabPlacement
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabExpectedAction
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenario
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenarioKind
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabState
-import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceState
+import com.vextreme.vexlife.android.data.events.EventsAlertDisposition
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertMode
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertPlacement
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertExpectedAction
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertCase
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertCaseType
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertState
+import com.vextreme.vexlife.android.data.events.EventsAlertPreferenceState
 import com.vextreme.vexlife.android.data.events.EventsFeedState
-import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepository
-import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsDebugMenuAlertRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsAlertPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
@@ -108,8 +108,8 @@ class EventsConvergenceRelayTest {
         val relay = EventsConvergenceRelay()
 
         relay.feedChanged(feed())
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(),
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(),
         )
         relay.visibleTargetsChanged(
             setOf("event.first", "event.second"),
@@ -152,8 +152,8 @@ class EventsConvergenceRelayTest {
         )
 
         relay.feedChanged(feed())
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(),
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(),
         )
         relay.visibleTargetsChanged(
             setOf("event.first", "event.second"),
@@ -222,11 +222,11 @@ class EventsConvergenceRelayTest {
             relay.current.outputState.availability,
         )
 
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(
                 mapOf(
                     "event.first" to
-                        EventsAttentionDisposition.ACKNOWLEDGED,
+                        EventsAlertDisposition.ACKNOWLEDGED,
                 ),
             ),
         )
@@ -316,8 +316,8 @@ class EventsConvergenceRelayTest {
         )
         relay.transientBlockedChanged(false)
         relay.screenChanged(EventsScreen.screenId)
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(),
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(),
         )
 
         assertEquals(
@@ -325,11 +325,11 @@ class EventsConvergenceRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
 
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(
                 mapOf(
                     first.eventRef to
-                        EventsAttentionDisposition.SUSPENDED,
+                        EventsAlertDisposition.SUSPENDED,
                 ),
             ),
         )
@@ -342,13 +342,13 @@ class EventsConvergenceRelayTest {
         assertEquals(0, relay.current.outputState.nextSequenceCount)
         assertEquals(1, relay.current.outputState.suspendedCount)
 
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(
                 mapOf(
                     first.eventRef to
-                        EventsAttentionDisposition.SUSPENDED,
+                        EventsAlertDisposition.SUSPENDED,
                     second.eventRef to
-                        EventsAttentionDisposition.DEFERRED,
+                        EventsAlertDisposition.DEFERRED,
                 ),
             ),
         )
@@ -360,15 +360,15 @@ class EventsConvergenceRelayTest {
         assertEquals(2, relay.current.outputState.currentQueueCount)
         assertEquals(1, relay.current.outputState.nextSequenceCount)
 
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(
                 mapOf(
                     first.eventRef to
-                        EventsAttentionDisposition.SUSPENDED,
+                        EventsAlertDisposition.SUSPENDED,
                     second.eventRef to
-                        EventsAttentionDisposition.DEFERRED,
+                        EventsAlertDisposition.DEFERRED,
                     third.eventRef to
-                        EventsAttentionDisposition.ACKNOWLEDGED,
+                        EventsAlertDisposition.ACKNOWLEDGED,
                 ),
             ),
         )
@@ -378,15 +378,15 @@ class EventsConvergenceRelayTest {
             relay.current.outputState.candidate?.eventRef,
         )
 
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(
                 mapOf(
                     first.eventRef to
-                        EventsAttentionDisposition.ACKNOWLEDGED,
+                        EventsAlertDisposition.ACKNOWLEDGED,
                     second.eventRef to
-                        EventsAttentionDisposition.DEFERRED,
+                        EventsAlertDisposition.DEFERRED,
                     third.eventRef to
-                        EventsAttentionDisposition.ACKNOWLEDGED,
+                        EventsAlertDisposition.ACKNOWLEDGED,
                 ),
             ),
         )
@@ -400,13 +400,13 @@ class EventsConvergenceRelayTest {
     }
 
     @Test
-    fun labScenarioTargetsExactStableEventRefInsteadOfVisualPositionGuessing() {
+    fun debugMenuAlertCaseTargetsExactStableEventRefInsteadOfVisualPositionGuessing() {
         val relay = EventsConvergenceRelay()
         val state = feed()
 
         relay.feedChanged(state)
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(),
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(),
         )
         relay.visibleTargetsChanged(
             setOf("event.first", "event.second"),
@@ -414,23 +414,23 @@ class EventsConvergenceRelayTest {
         relay.transientBlockedChanged(false)
         relay.screenChanged(EventsScreen.screenId)
 
-        relay.labChanged(
-            EventsAttentionLabState(
-                currentScenario =
-                    EventsAttentionLabScenario(
-                        scenarioRef = "scenario.test.middle",
+        relay.debugMenuAlertChanged(
+            EventsDebugMenuAlertState(
+                currentAlertCase =
+                    EventsDebugMenuAlertCase(
+                        alertCaseRef = "alert-case.test.middle",
                         ordinal = 2L,
-                        mode = EventsAttentionLabMode.ROTATION,
+                        mode = EventsDebugMenuAlertMode.ROTATION,
                         seed = 1L,
-                        kind =
-                            EventsAttentionLabScenarioKind.ANCHORED_MIDDLE,
+                        type =
+                            EventsDebugMenuAlertCaseType.ANCHORED_MIDDLE,
                         targetEventRef = "event.second",
                         targetPositionFromTop = 0,
                         listCountAtPlan = 2,
                         preferredPlacement =
-                            EventsAttentionLabPlacement.ABOVE,
+                            EventsDebugMenuAlertPlacement.ABOVE,
                         expectedAction =
-                            EventsAttentionLabExpectedAction.LATER,
+                            EventsDebugMenuAlertExpectedAction.LATER,
                         freezeProjection = false,
                         blockingAcknowledgeOnly = false,
                     ),
@@ -497,8 +497,8 @@ class EventsConvergenceRelayTest {
         val relay = EventsConvergenceRelay()
 
         relay.feedChanged(feed(1L, listOf(first, second)))
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(),
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(),
         )
         relay.visibleTargetsChanged(
             setOf(
@@ -558,10 +558,10 @@ class EventsConvergenceRelayTest {
     fun declaredDependenciesObserveProfileNameChangeWithoutComposeForwarding() = runTest {
         val events =
             RelayEventsRepository()
-        val preferences =
-            RelayEventsAttentionPreferenceRepository()
-        val lab =
-            RelayEventsAttentionLabRepository()
+        val alertPreferences =
+            RelayEventsAlertPreferenceRepository()
+        val debugMenuAlerts =
+            RelayEventsDebugMenuAlertRepository()
         val initialProfile =
             UserProfile(
                 profileRef = UserProfileRefs.local,
@@ -575,8 +575,8 @@ class EventsConvergenceRelayTest {
         val relay =
             EventsConvergenceRelay(
                 eventsRepository = events,
-                attentionPreferences = preferences,
-                attentionLab = lab,
+                alertPreferences = alertPreferences,
+                debugMenuAlerts = debugMenuAlerts,
                 userProfile = profiles,
             )
 
@@ -589,7 +589,7 @@ class EventsConvergenceRelayTest {
         withTimeout(1_000L) {
             relay.inputStates.first { input ->
                 input.feed != null &&
-                    input.preferences != null &&
+                    input.alertPreferences != null &&
                     input.profile?.profile?.displayName == "Victor"
             }
         }
@@ -620,7 +620,7 @@ class EventsConvergenceRelayTest {
 
         assertEquals(
             VexExternalEventKind.SYSTEM,
-            notice.kind,
+            notice.type,
         )
         assertEquals(
             "Profile name changed",
@@ -654,13 +654,13 @@ class EventsConvergenceRelayTest {
         val relay = EventsConvergenceRelay()
 
         relay.feedChanged(feed())
-        relay.preferencesChanged(
-            EventsAttentionPreferenceState(
+        relay.alertPreferencesChanged(
+            EventsAlertPreferenceState(
                 mapOf(
                     "event.first" to
-                        EventsAttentionDisposition.ACKNOWLEDGED,
+                        EventsAlertDisposition.ACKNOWLEDGED,
                     "event.second" to
-                        EventsAttentionDisposition.SUPPRESSED,
+                        EventsAlertDisposition.SUPPRESSED,
                 ),
             ),
         )
