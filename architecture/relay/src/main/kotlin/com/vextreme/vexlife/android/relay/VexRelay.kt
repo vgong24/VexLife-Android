@@ -136,72 +136,72 @@ abstract class VexRelay<State : VexState<State>>(
         }
 
     /**
-     * Derive a new State from current truth without exposing Relay's retained object to transform().
+     * Atomically derive next State from exact retained current State.
      *
-     * This is the same protocol as [send], except the incoming candidate is first derived from a
-     * processing snapshot of retained current.
+     * Use this path when the operation itself is naturally expressed as:
+     *
+     *     current -> next
+     *
+     * Examples: acknowledge one item, advance one ordinal, reset one local preference.
+     *
+     * This is intentionally different from [send]:
+     *
+     *     send(input)
+     *     -> processState(input, current)
+     *
+     *     updateCurrent { current -> next }
+     *     -> commit next directly
+     *
+     * updateCurrent does NOT call [processState] afterward. The lambda is already the complete
+     * current-state transition for this operation. This keeps one semantic reducer per path instead
+     * of hiding a second processing pass behind a generic "transform".
+     *
+     * The lambda executes while the Relay serialization lock is held, so every read used to derive
+     * next State belongs to the same atomic transition. Do not read [current] before updateCurrent
+     * when that read participates in deciding the next State; read it through [currentState] here.
      */
-    protected fun update(
-        transform: (currentState: State) -> State,
+    protected fun updateCurrent(
+        nextStateFromCurrent: (currentState: State) -> State,
     ): State =
         synchronized(lock) {
-            // STEP 0 — synchronized(lock) serializes update() with send() and every
-            // other concurrent transition. processing separately rejects recursive reducer re-entry.
+            // STEP 0 — concurrent callers wait for this lock. processing only rejects recursive
+            // same-thread Relay re-entry from inside transition logic.
             check(!processing) {
-                "VexRelay cannot recursively update state from processState"
+                "VexRelay cannot recursively update current state"
             }
 
-            // STEP 1 — canonical Relay-owned current truth.
+            // STEP 1 — canonical retained truth belongs to Relay.
             val retainedCurrent =
                 mutableCurrentState.value
 
-            // STEP 2 — transform() gets its own processing snapshot; it cannot mutate canonical truth.
-            val transformCurrent =
+            // STEP 2 — transition logic receives an ownership-safe snapshot of that exact truth.
+            val processingCurrent =
                 retainedCurrent.deepCopy()
 
             processing = true
             try {
-                // STEP 3 — transformCandidate is temporary and has no retention authority.
-                val transformCandidate =
-                    transform(
-                        transformCurrent,
+                // STEP 3 — derive one temporary next-state candidate from exact current truth.
+                val candidate =
+                    nextStateFromCurrent(
+                        processingCurrent,
                     )
 
-                // STEP 4 — processState() gets the transformed candidate plus a fresh current
-                // processing snapshot. A fresh snapshot matters for mutable-backed states because
-                // transformCurrent belonged to transform() and must not be assumed untouched.
-                val processingCurrent =
-                    retainedCurrent.deepCopy()
-                val reducerCandidate =
-                    processState(
-                        inputState = transformCandidate,
-                        currentState = processingCurrent,
-                    )
-
-                // STEP 5 — compare the temporary reducer result before copying it.
-                if (reducerCandidate == retainedCurrent) {
-                    // STEP 6A — semantic no-op; discard candidate, retain current, expose safely.
-                    val exposedCurrent =
-                        retainedCurrent.deepCopy()
-
-                    return@synchronized exposedCurrent
+                // STEP 4 — no-op candidates never acquire retention ownership.
+                if (candidate == retainedCurrent) {
+                    return@synchronized retainedCurrent.deepCopy()
                 }
 
-                // STEP 6B — changed candidate will enter retained truth, so claim ownership now.
+                // STEP 5 — changed candidate crosses from transition-local ownership into Relay.
                 val ownedNext =
-                    reducerCandidate.deepCopy()
+                    candidate.deepCopy()
 
-                // STEP 7 — one atomic retained-state move.
+                // STEP 6 — one atomic canonical truth move.
                 mutableCurrentState.value =
                     ownedNext
 
-                // STEP 8 — detach only if the returned value can actually be mutated.
-                val exposedNext =
-                    ownedNext.deepCopy()
-
-                exposedNext
+                // STEP 7 — caller receives an ownership-safe projection.
+                ownedNext.deepCopy()
             } finally {
-                // STEP 9 — update execution ends even if transform/processState throws.
                 processing = false
             }
         }
