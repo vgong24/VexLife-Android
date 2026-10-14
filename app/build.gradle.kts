@@ -48,6 +48,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":architecture:behavior"))
     implementation(project(":architecture:elements"))
     implementation(project(":architecture:logging"))
     implementation(project(":architecture:relay"))

@@ -62,7 +62,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
-| BEHAVIOR_BLUEPRINT_EXPERIMENT | relational behavior blueprint | **DRAFT EXPERIMENT / JVM PROOF PENDING** | Test whether behavioral source can read from current State outward as Act -> Effect -> next State, then derive available Acts / Controls without a second UI state table | `:architecture:behavior:test` + `vexVerifyJvm`; later ScreenBlueprint binding only if the source grammar earns it |
+| BEHAVIOR_BLUEPRINT_EXPERIMENT | relational behavior blueprint | **DRAFT EXPERIMENT / FIRST VEXSTREAM CONSUMER FORMED / JVM PROOF PENDING** | Test whether behavioral source can read from current State outward as Act -> Effect -> next State, then derive available Acts / Controls without a second UI state table | `:architecture:behavior:test` + `vexVerifyJvm`; later ScreenBlueprint binding only if the source grammar earns it |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **EXTRACTION CANDIDATE / A019 INDEPENDENT HOST PROOF OBSERVED** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | exact convergence-branch host proof before merge |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
@@ -100,7 +100,28 @@ state owner. Incoming / outgoing neighborhoods, current available Acts, and comp
 relationships authored once. One immutable BehaviorProjection packages current State + every Control's resolved Act
 for UI/test/convergence consumers without exposing Effect execution. VexBehaviorConnection standardizes the two-way boundary as currentProjection + activate(Control); VexObservableBehaviorConnection optionally adds a StateFlow of projections.
 
-No app wiring is admitted yet. The kernel now has a transport-neutral BehaviorProjection. Current VexStream inspection found the next seam at the retained MediaController projection: one semantic Playback client/projection must observe Media3 truth, publish the shared Projection, re-resolve Controls at invocation time, and realize Effects before Mini Player / Context Dock migrate, otherwise behavior would become Compose-owned. Provider execution, ScreenBlueprint binding, parameterized request payloads, and Android/device proof remain held.
+The first app wiring is now admitted narrowly for VexStream Play/Pause: Mini Player and Context Dock consume one retained BehaviorConnection projection rather than independently deriving Play/Pause from Media3. The kernel now has a transport-neutral BehaviorProjection. Current VexStream inspection found the next seam at the retained MediaController projection: one semantic Playback client/projection must observe Media3 truth, publish the shared Projection, re-resolve Controls at invocation time, and realize Effects before Mini Player / Context Dock migrate, otherwise behavior would become Compose-owned. Provider execution, ScreenBlueprint binding, parameterized request payloads, and Android/device proof remain held.
+
+### First VexStream consumer
+
+The experiment now has one production-shaped Android slice:
+
+~~~text
+MediaSession / Player
+    -> Media3VexStreamPlaybackConnection
+    -> VexBehaviorProjection
+    -> Mini Player + Context Dock
+
+Control activation
+    -> latest semantic State
+    -> Act
+    -> Effect
+    -> MediaController
+~~~
+
+The ViewModel retaining that connection is a configuration-lifetime mechanism only. Playback truth
+remains MediaSession/Player-owned. Queue/seek/shuffle/repeat are explicitly not migrated by this
+slice.
 
 ## F1 — UI Blueprint / Home Practicum
 

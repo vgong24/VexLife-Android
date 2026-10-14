@@ -30,6 +30,14 @@ import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackBehaviorProjection
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackBehaviorConnection
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAct
+import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
+import com.vextreme.vexlife.android.behavior.VexBehaviorConnection
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -46,6 +54,12 @@ internal fun rememberVexStreamContextDockPage(
 ): VexContextDockPage? {
     val controller =
         rememberVexStreamMediaController()
+    val behaviorConnection =
+        rememberVexStreamPlaybackBehaviorConnection()
+    val behaviorProjection =
+        rememberVexStreamPlaybackBehaviorProjection(
+            behaviorConnection,
+        )
     val playback by
         rememberVexStreamPlaybackUiState(
             controller,
@@ -65,6 +79,10 @@ internal fun rememberVexStreamContextDockPage(
             runtime = runtime,
             controller = controller,
             playback = playback,
+            behaviorConnection =
+                behaviorConnection,
+            behaviorProjection =
+                behaviorProjection,
             expanded = expanded,
         )
     }
@@ -75,6 +93,18 @@ private fun VexStreamContextDockContent(
     runtime: VexRuntime,
     controller: MediaController?,
     playback: VexStreamPlaybackUiState,
+    behaviorConnection:
+        VexBehaviorConnection<
+            VexStreamPlaybackState,
+            VexStreamPlaybackControl,
+            VexStreamPlaybackAct
+        >?,
+    behaviorProjection:
+        VexBehaviorProjection<
+            VexStreamPlaybackState,
+            VexStreamPlaybackControl,
+            VexStreamPlaybackAct
+        >?,
     expanded: Boolean,
 ) {
     var scrubFraction by
@@ -92,6 +122,10 @@ private fun VexStreamContextDockContent(
             controller.isCommandAvailable(
                 Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
             )
+    val playPause =
+        behaviorProjection?.get(
+            VexStreamPlaybackControl.PlayPause,
+        )
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -168,24 +202,33 @@ private fun VexStreamContextDockContent(
             }
             VexStreamDockIconButton(
                 icon =
-                    if (playback.isPlaying) {
-                        ElementIcon.Pause
-                    } else {
-                        ElementIcon.Play
+                    when (playPause?.act) {
+                        VexStreamPlaybackAct.Play ->
+                            ElementIcon.Play
+
+                        VexStreamPlaybackAct.Pause ->
+                            ElementIcon.Pause
+
+                        null ->
+                            ElementIcon.PlayPause
                     },
                 contentDescription =
                     stringResource(
                         R.string
                             .vexstream_music_play_pause,
                     ),
-                enabled = controller != null,
+                enabled =
+                    playPause?.available ==
+                        true,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =
                         "presentation.context-dock.vexstream.play-pause",
                 )
-                controller
-                    ?.toggleVexStreamPlayback()
+                behaviorConnection
+                    ?.activate(
+                        VexStreamPlaybackControl.PlayPause,
+                    )
             }
             VexStreamDockIconButton(
                 icon = ElementIcon.Next,

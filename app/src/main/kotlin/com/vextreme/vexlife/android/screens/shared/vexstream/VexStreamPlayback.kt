@@ -1,7 +1,5 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-import android.app.Application
-import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Composable
@@ -12,20 +10,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
-import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 
@@ -100,7 +93,6 @@ internal data class VexStreamPlaybackUiState(
     val currentMediaId: String? = null,
     val currentTitle: String = "",
     val currentArtist: String = "",
-    val isPlaying: Boolean = false,
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val queueMediaIds: List<String> = emptyList(),
     val currentIndex: Int = -1,
@@ -135,67 +127,6 @@ internal data class VexStreamPlaybackUiState(
     companion object {
         val Empty = VexStreamPlaybackUiState()
     }
-}
-
-/**
- * Activity/ViewModel-lifetime client for the service-owned VexStream player.
- *
- * The MediaSessionService remains the player/queue owner. Retaining only the UI-side controller here
- * prevents ordinary VexLife Screen navigation from disconnecting the last in-app controller when
- * VexStream leaves composition. The controller is released with the Activity's ViewModel store.
- */
-internal class VexStreamPlaybackViewModel(
-    application: Application,
-) : AndroidViewModel(application) {
-    private var cleared = false
-
-    private val controllerFuture =
-        MediaController.Builder(
-            application,
-            SessionToken(
-                application,
-                ComponentName(
-                    application,
-                    VexStreamPlaybackService::class.java,
-                ),
-            ),
-        ).buildAsync()
-
-    var controller by mutableStateOf<MediaController?>(null)
-        private set
-
-    init {
-        controllerFuture.addListener(
-            {
-                runCatching {
-                    controllerFuture.get()
-                }.onSuccess { connected ->
-                    if (!cleared) {
-                        controller = connected
-                    }
-                }
-            },
-            ContextCompat.getMainExecutor(application),
-        )
-    }
-
-    override fun onCleared() {
-        cleared = true
-        controller = null
-        MediaController.releaseFuture(controllerFuture)
-        super.onCleared()
-    }
-}
-
-/**
- * Projects the retained VexStream media client into Compose.
- *
- * This function does not own player lifetime and does not reconnect on every Screen composition.
- */
-@Composable
-internal fun rememberVexStreamMediaController(): MediaController? {
-    val owner: VexStreamPlaybackViewModel = viewModel()
-    return owner.controller
 }
 
 @Composable
@@ -491,14 +422,6 @@ internal fun MediaController.shuffleVexStreamQueue(): Boolean {
     return true
 }
 
-internal fun MediaController.toggleVexStreamPlayback() {
-    if (isPlaying) {
-        pause()
-    } else {
-        play()
-    }
-}
-
 internal fun MediaController.toggleVexStreamRepeatAll() {
     repeatMode =
         if (repeatMode == Player.REPEAT_MODE_OFF) {
@@ -551,7 +474,6 @@ private fun Player.toVexStreamUiState(): VexStreamPlaybackUiState {
                 ?.artist
                 ?.toString()
                 .orEmpty(),
-        isPlaying = isPlaying,
         repeatMode = repeatMode,
         queueMediaIds =
             (0 until mediaItemCount)

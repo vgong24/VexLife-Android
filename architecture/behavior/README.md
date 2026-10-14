@@ -818,6 +818,93 @@ VexStream client belongs in the existing app session, a feature-scoped ViewModel
 owner, or a service-side projection depends on the real MediaController/provider lifetime chosen by
 the next production slice.
 
+## First production-shaped consumer — VexStream Play/Pause
+
+The generic connection/projection contract now has one real Android consumer under:
+
+~~~text
+app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/
+~~~
+
+The first admitted slice is deliberately only Play/Pause transport meaning.
+
+~~~text
+State
+    NoMedia
+    Media(
+        playRequested,
+        phase = Idle | Buffering | Ready,
+        playPauseAvailable,
+    )
+    Ended(restartAvailable)
+
+Control
+    PlayPause
+
+Act
+    Play
+    Pause
+
+Effect
+    RequestPlay
+    RequestPause
+    RestartCurrent
+~~~
+
+Media3's `playWhenReady` is used as the requested-playback fact. `Player.isPlaying` is not used as
+a Paused alias because Media3 only reports isPlaying=true when playback is READY, playWhenReady is
+true, and playback is not suppressed.
+
+That distinction means:
+
+~~~text
+Buffering + playRequested=true
+    -> PlayPause resolves Pause
+
+Buffering + playRequested=false
+    -> PlayPause resolves Play
+~~~
+
+The old duplicated UI rule:
+
+~~~text
+if (playback.isPlaying) Pause else Play
+~~~
+
+and the old MediaController toggle helper are removed from the migrated surfaces.
+
+### Production ownership
+
+~~~text
+VexStreamPlaybackService / ExoPlayer
+    actual playback + queue truth/lifetime
+
+Media3VexStreamPlaybackConnection
+    observes Player facts
+    -> semantic State
+    -> BehaviorProjection
+
+    activate(Control)
+    -> latest State
+    -> Act
+    -> Effect
+    -> MediaController command
+
+VexStreamPlaybackConnectionViewModel
+    Android configuration lifetime only
+
+Mini Player
+Context Dock
+    consume Projection
+    activate Control
+~~~
+
+The UI imports the reusable `VexBehaviorConnection` contract, not the Media3 implementation.
+
+Queue, seeking, shuffle, repeat, media-item loading and progress rendering intentionally remain on
+their existing routes. This is one vertical seam, not a claim that all VexStream playback work has
+been migrated.
+
 ## Current VexStream integration seam
 
 The repository's current VexStream implementation was inspected before wiring this experiment into
@@ -853,25 +940,8 @@ Do **not** integrate the blueprint by simply placing it inside each Composable. 
 behavior/current-State interpretation presentation-owned and would create multiple observers of the
 same Media3 truth.
 
-The next earned seam is a narrow VexStream Playback client/projection boundary:
-
-~~~text
-MediaSession / Player
-    actual Android playback truth owner
-
-one retained VexStream playback projection/client
-    observes MediaController facts
-    -> forms semantic Behavior State
-    -> resolves Controls / Acts
-    -> translates Effects to MediaController commands
-
-Mini Player
-Context Dock
-future media key / voice / remote caller
-    consume the same semantic projection
-~~~
-
-That client must remain a projection/adapter, not become another player or queue truth owner.
+That seam is now exercised by `Media3VexStreamPlaybackConnection` for Play/Pause only. The
+connection remains a projection/adapter and does not become another player or queue truth owner.
 
 The existing code also reveals one unresolved semantic question that should be answered at this
 boundary rather than hidden in Compose:

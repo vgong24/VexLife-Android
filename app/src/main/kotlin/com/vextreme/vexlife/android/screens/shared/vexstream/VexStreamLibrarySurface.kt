@@ -80,6 +80,14 @@ import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackBehaviorProjection
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackBehaviorConnection
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAct
+import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
+import com.vextreme.vexlife.android.behavior.VexBehaviorConnection
 import kotlinx.coroutines.launch
 
 /**
@@ -103,6 +111,16 @@ internal fun VexStreamLibrarySurface(
         } else {
             rememberVexStreamMediaController()
         }
+    val behaviorConnection =
+        if (inspectionMode) {
+            null
+        } else {
+            rememberVexStreamPlaybackBehaviorConnection()
+        }
+    val behaviorProjection =
+        rememberVexStreamPlaybackBehaviorProjection(
+            behaviorConnection,
+        )
     val playback by rememberVexStreamPlaybackUiState(controller)
     val resolver =
         remember(context.filesDir) {
@@ -184,6 +202,10 @@ internal fun VexStreamLibrarySurface(
                 VexStreamMiniPlayer(
                     playback = playback,
                     controller = controller,
+                    behaviorConnection =
+                        behaviorConnection,
+                    behaviorProjection =
+                        behaviorProjection,
                     runtime = runtime,
                     shuffleSelected = queueShuffleSelected,
                     onShuffle = {
@@ -1714,6 +1736,18 @@ private fun VexStreamTrackMenuItem(
 private fun VexStreamMiniPlayer(
     playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
+    behaviorConnection:
+        VexBehaviorConnection<
+            VexStreamPlaybackState,
+            VexStreamPlaybackControl,
+            VexStreamPlaybackAct
+        >?,
+    behaviorProjection:
+        VexBehaviorProjection<
+            VexStreamPlaybackState,
+            VexStreamPlaybackControl,
+            VexStreamPlaybackAct
+        >?,
     runtime: VexRuntime,
     shuffleSelected: Boolean,
     onShuffle: () -> Unit,
@@ -1728,7 +1762,10 @@ private fun VexStreamMiniPlayer(
                     controller?.seekToPreviousMediaItem()
 
                 VexStreamMusicScreen.TogglePlayback ->
-                    controller?.toggleVexStreamPlayback()
+                    behaviorConnection
+                        ?.activate(
+                            VexStreamPlaybackControl.PlayPause,
+                        )
 
                 VexStreamMusicScreen.NextTrack ->
                     controller?.seekToNextMediaItem()
@@ -1739,6 +1776,10 @@ private fun VexStreamMiniPlayer(
                 else -> Unit
             }
         }
+    val playPause =
+        behaviorProjection?.get(
+            VexStreamPlaybackControl.PlayPause,
+        )
     val queuePosition =
         playback.currentIndex
             .takeIf { it >= 0 }
@@ -1893,12 +1934,19 @@ private fun VexStreamMiniPlayer(
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
                 handler = handler,
-                enabled = controller != null,
+                enabled =
+                    playPause?.available ==
+                        true,
                 iconOverride =
-                    if (playback.isPlaying) {
-                        ElementIcon.Pause
-                    } else {
-                        ElementIcon.Play
+                    when (playPause?.act) {
+                        VexStreamPlaybackAct.Play ->
+                            ElementIcon.Play
+
+                        VexStreamPlaybackAct.Pause ->
+                            ElementIcon.Pause
+
+                        null ->
+                            ElementIcon.PlayPause
                     },
             )
             VexIconButton(
