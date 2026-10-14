@@ -193,8 +193,8 @@ override fun nextStateFor(
 ): LabState =
     when (action) {
         is LabAction.PlanNext -> {
-            val scenario =
-                planScenario(
+            val alertCase =
+                buildAlertCase(
                     mode = currentState.mode,
                     ordinal = currentState.nextOrdinal,
                     events = action.events,
@@ -203,26 +203,26 @@ override fun nextStateFor(
             currentState.copy(
                 nextOrdinal =
                     currentState.nextOrdinal + 1L,
-                currentScenario = scenario,
+                currentAlertCase = alertCase,
             )
         }
     }
 ~~~
 
-`planScenario(...)` owns pure calculation. `nextStateFor(...)` owns the one allowed action-to-state
+`buildAlertCase(...)` owns pure calculation. `nextStateFor(...)` owns the one allowed action-to-state
 transition. `VexActionRelay` owns serialization, snapshots and commit.
 
 Current real examples:
 
 ~~~text
-EventsAttentionPreferenceRelay
+EventsAlertPreferenceRelay
   named disposition action
   -> one exhaustive nextStateFor(...)
 
-EventsAttentionLabRelay
-  UseMode / PlanNext / CompleteCurrent / Reset
+EventsDebugMenuAlertRelay
+  UseMode / PrepareNextAlertCase / CompleteCurrentAlertCase / Reset
   -> one exhaustive nextStateFor(...)
-  -> pure planEventsAttentionLabScenario(...) only where calculation is complex
+  -> pure buildEventsDebugMenuAlertCase(...) only where calculation is complex
 ~~~
 
 ### VexCompoundRelay — several current truths
