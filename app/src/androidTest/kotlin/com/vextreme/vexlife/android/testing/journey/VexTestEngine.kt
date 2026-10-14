@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.FontScale
@@ -270,11 +271,71 @@ class VexTestEngine(
         }
 
     private fun waitForTaggedNode(elementId: String) {
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(elementId)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        val waitFailure =
+            runCatching {
+                compose.waitUntil(timeoutMillis = 5_000) {
+                    compose.onAllNodesWithTag(elementId)
+                        .fetchSemanticsNodes()
+                        .isNotEmpty()
+                }
+            }.exceptionOrNull()
+                ?: return
+
+        val eventsState =
+            repositories.events.current
+        val attentionState =
+            repositories.eventsAttention.current
+        val labState =
+            repositories.eventsAttentionLab.current
+        val vexStreamState =
+            repositories.vexStream.state.value
+
+        val diagnostic =
+            buildString {
+                appendLine(
+                    "Timed out waiting for rendered journey element: $elementId",
+                )
+                appendLine(
+                    "expectedScreen=${expected.currentScreen.screenId}",
+                )
+                appendLine(
+                    "events.currentRefs=" +
+                        eventsState.events.joinToString(",") { event ->
+                            event.eventRef
+                        },
+                )
+                appendLine(
+                    "events.dispositions=" +
+                        attentionState.dispositionByEventRef,
+                )
+                appendLine(
+                    "events.labScenario=" +
+                        labState.currentScenario?.scenarioRef,
+                )
+                appendLine(
+                    "vexStream.connection=" +
+                        vexStreamState.connectionState,
+                )
+                appendLine(
+                    "vexStream.hub=" +
+                        vexStreamState.hubState,
+                )
+                appendLine(
+                    "vexStream.playableTracks=" +
+                        vexStreamState.playableTracks().size,
+                )
+            }.trimEnd()
+
+        Log.e(
+            JOURNEY_WAIT_LOG_TAG,
+            diagnostic,
+            waitFailure,
+        )
+
+        throw AssertionError(
+            diagnostic,
+            waitFailure,
+        )
     }
 
     private fun node(element: ActionElement): SemanticsNodeInteraction {
@@ -369,3 +430,7 @@ private fun VexJourneyEnvironment.LocaleHost(
         content()
     }
 }
+
+
+private const val JOURNEY_WAIT_LOG_TAG =
+    "VexJourneyWait"
