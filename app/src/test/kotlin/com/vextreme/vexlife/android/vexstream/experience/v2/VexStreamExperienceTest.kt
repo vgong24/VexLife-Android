@@ -1,8 +1,10 @@
 package com.vextreme.vexlife.android.vexstream.experience.v2
 
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlaybackSnapshot
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaQueueSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.playback.VexMediaPlaybackContract
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.queue.VexMediaQueueContract
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueSnapshot
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.VexStreamPlayerArchitecture
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.playback.VexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.playback.VexStreamPlaybackCase
@@ -99,15 +101,15 @@ class VexStreamExperienceTest {
     fun playerArchitectureUsesReusableMediaPlayerContractsWithoutNestedArchitectureNames() {
         assertTrue(
             VexStreamPlayerArchitecture is
-                VexMediaPlayerArchitecture.Contract,
+                VexMediaPlayerArchitecture,
         )
         assertTrue(
             VexStreamPlayback is
-                VexMediaPlayerArchitecture.PlaybackContract,
+                VexMediaPlaybackContract,
         )
         assertTrue(
             VexStreamQueue is
-                VexMediaPlayerArchitecture.QueueContract,
+                VexMediaQueueContract,
         )
         assertSame(
             VexStreamPlayback,

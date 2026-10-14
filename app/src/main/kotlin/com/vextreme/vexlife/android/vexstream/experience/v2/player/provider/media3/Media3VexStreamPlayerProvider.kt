@@ -1,8 +1,8 @@
 package com.vextreme.vexlife.android.vexstream.experience.v2.player.provider.media3
 
 import androidx.media3.session.MediaController
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlaybackSnapshot
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaQueueSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueSnapshot
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.provider.VexStreamPlayerProvider
 
 /**

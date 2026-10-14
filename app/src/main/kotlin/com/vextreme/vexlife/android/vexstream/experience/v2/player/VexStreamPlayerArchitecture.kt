@@ -1,7 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.experience.v2.player
 
 import com.vextreme.vexlife.android.vexarchitecture.VexArchitectureContract
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.playback.VexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.queue.VexStreamQueue
 
@@ -12,7 +12,7 @@ import com.vextreme.vexlife.android.vexstream.experience.v2.player.queue.VexStre
  * of this Architecture rather than more classes named "...Architecture", so the nesting level remains
  * obvious to a new developer.
  */
-object VexStreamPlayerArchitecture : VexMediaPlayerArchitecture.Contract {
+object VexStreamPlayerArchitecture : VexMediaPlayerArchitecture {
     /** Stable architecture identity inside the VexStream Experience. */
     override val architectureRef: String = "vexstream.player"
 

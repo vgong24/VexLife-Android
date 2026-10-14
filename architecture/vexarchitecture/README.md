@@ -169,19 +169,34 @@ VexStream Experience
 
 instead of decoding Architecture -> Architecture -> Architecture.
 
-## Reusable Media Player contracts
+## Reusable Media Player structure
 
-The reusable namespace is VexMediaPlayerArchitecture.
-
-It currently exposes only contracts proven by this practicum:
+The reusable media-player layer is visually grouped by the human question it answers:
 
 ~~~text
-VexMediaPlayerArchitecture.Contract
-VexMediaPlayerArchitecture.PlaybackContract
-VexMediaPlayerArchitecture.QueueContract
+mediaplayer/
+├── architecture/                    HOW is player meaning structured?
+│   ├── VexMediaPlayerArchitecture.kt
+│   ├── playback/
+│   │   └── VexMediaPlaybackContract.kt
+│   └── queue/
+│       └── VexMediaQueueContract.kt
+│
+└── provider/                        WHO / WHAT realizes it at runtime?
+    ├── VexMediaPlayerProvider.kt
+    ├── playback/
+    │   ├── VexMediaPlaybackProvider.kt
+    │   └── VexMediaPlaybackSnapshot.kt
+    └── queue/
+        ├── VexMediaQueueProvider.kt
+        └── VexMediaQueueSnapshot.kt
 ~~~
 
-The root contract does not require Queue. A video/live player can still be a media player without claiming capabilities it does not have.
+The package tree is part of the architecture: a developer should be able to locate semantic
+contracts versus runtime providers before opening a file.
+
+The root architecture contract does not require Queue. A video/live player can still be a media
+player without claiming capabilities it does not have.
 
 Do not add Timeline, Output, Tracks, Presentation, Speed, Chapters, etc. merely because modern media players can have them. Add a capability contract when an actual consumer earns it.
 
@@ -217,7 +232,7 @@ Prefer role-bearing names such as:
 
 ~~~text
 VexMediaPlaybackProvider
-VexMediaPlayerArchitecture.PlaybackContract
+VexMediaPlaybackContract
 ~~~
 
 over IVexMediaPlaybackProvider or IPlaybackContract.

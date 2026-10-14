@@ -146,7 +146,7 @@ Prefer role-bearing names:
 
 ~~~text
 VexMediaPlaybackProvider
-VexMediaPlayerArchitecture.PlaybackContract
+VexMediaPlaybackContract
 ~~~
 
 over interface-marker names:

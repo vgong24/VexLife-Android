@@ -1,7 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.experience.v2.player.provider
 
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlaybackProvider
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaQueueProvider
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackProvider
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueProvider
 
 /**
  * Runtime provider shape required by the current VexStream Player Architecture.

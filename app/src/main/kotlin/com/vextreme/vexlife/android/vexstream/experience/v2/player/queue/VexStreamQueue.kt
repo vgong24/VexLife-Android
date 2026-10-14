@@ -11,9 +11,10 @@ import com.vextreme.vexlife.android.vexarchitecture.VexRealmArchitecture
 import com.vextreme.vexlife.android.vexarchitecture.VexTransition
 import com.vextreme.vexlife.android.vexarchitecture.architectureMap
 import com.vextreme.vexlife.android.vexarchitecture.control
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaQueueProvider
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaQueueSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.queue.VexMediaQueueContract
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueProvider
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueSnapshot
 import com.vextreme.vexlife.android.vexarchitecture.placement
 import com.vextreme.vexlife.android.vexarchitecture.transition
 import com.vextreme.vexlife.android.vexarchitecture.vexCurrent
@@ -60,7 +61,7 @@ sealed interface VexStreamQueueCase :
  */
 object VexStreamQueue :
     VexRealmArchitecture<VexStreamQueueRealm>,
-    VexMediaPlayerArchitecture.QueueContract {
+    VexMediaQueueContract {
 
     /** Absolute identity beneath the one Player Architecture. */
     override val architectureRef: String = "vexstream.player.queue"
@@ -69,7 +70,7 @@ object VexStreamQueue :
     override val parent: VexArchitectureContract = VexStreamPlayerArchitecture
 
     /** Player architecture whose optional Queue capability this is. */
-    override val playerArchitecture: VexMediaPlayerArchitecture.Contract =
+    override val playerArchitecture: VexMediaPlayerArchitecture =
         VexStreamPlayerArchitecture
 
     /** Version routing is external; this capability itself remains enabled. */

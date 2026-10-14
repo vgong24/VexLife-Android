@@ -11,9 +11,10 @@ import com.vextreme.vexlife.android.vexarchitecture.VexRealmArchitecture
 import com.vextreme.vexlife.android.vexarchitecture.VexTransition
 import com.vextreme.vexlife.android.vexarchitecture.architectureMap
 import com.vextreme.vexlife.android.vexarchitecture.control
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlaybackProvider
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlaybackSnapshot
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackProvider
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.playback.VexMediaPlaybackContract
 import com.vextreme.vexlife.android.vexarchitecture.placement
 import com.vextreme.vexlife.android.vexarchitecture.transition
 import com.vextreme.vexlife.android.vexarchitecture.vexCurrent
@@ -64,7 +65,7 @@ sealed interface VexStreamPlaybackCase :
  */
 object VexStreamPlayback :
     VexRealmArchitecture<VexStreamPlaybackRealm>,
-    VexMediaPlayerArchitecture.PlaybackContract {
+    VexMediaPlaybackContract {
 
     /** Absolute identity beneath the one Player Architecture. */
     override val architectureRef: String = "vexstream.player.playback"
@@ -73,7 +74,7 @@ object VexStreamPlayback :
     override val parent: VexArchitectureContract = VexStreamPlayerArchitecture
 
     /** The media-player architecture whose Playback capability this is. */
-    override val playerArchitecture: VexMediaPlayerArchitecture.Contract =
+    override val playerArchitecture: VexMediaPlayerArchitecture =
         VexStreamPlayerArchitecture
 
     /** Debug version selection is external; this admitted capability itself remains enabled. */
