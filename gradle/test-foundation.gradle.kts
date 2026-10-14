@@ -22,6 +22,8 @@ tasks.register("vexVerifyJvm") {
         ":architecture:elements:test",
         ":architecture:logging:test",
         ":architecture:relay:test",
+        // The canonical JVM gate should fail before a practicum consumes broken architecture contracts.
+        ":architecture:vexarchitecture:test",
         ":app:testDebugUnitTest",
     )
 }
