@@ -398,7 +398,7 @@ private fun VexAnchoredOverlayBubble(
     Box(
         modifier =
             Modifier.padding(
-                VexAnchoredOverlayCaretRoom,
+                vexAnchoredOverlayCaretRoom,
             ),
     ) {
         VexAnchoredOverlaySurface(
@@ -413,7 +413,7 @@ private fun VexAnchoredOverlayBubble(
                         .align(Alignment.TopCenter)
                         .offset(
                             y =
-                                -VexAnchoredOverlayCaretOffset,
+                                -vexAnchoredOverlayCaretOffset,
                         )
 
                 VexOverlayCaretDirection.DOWN ->
@@ -421,7 +421,7 @@ private fun VexAnchoredOverlayBubble(
                         .align(Alignment.BottomCenter)
                         .offset(
                             y =
-                                VexAnchoredOverlayCaretOffset,
+                                vexAnchoredOverlayCaretOffset,
                         )
 
                 VexOverlayCaretDirection.LEFT ->
@@ -429,7 +429,7 @@ private fun VexAnchoredOverlayBubble(
                         .align(Alignment.CenterStart)
                         .offset(
                             x =
-                                -VexAnchoredOverlayCaretOffset,
+                                -vexAnchoredOverlayCaretOffset,
                         )
 
                 VexOverlayCaretDirection.RIGHT ->
@@ -437,7 +437,7 @@ private fun VexAnchoredOverlayBubble(
                         .align(Alignment.CenterEnd)
                         .offset(
                             x =
-                                VexAnchoredOverlayCaretOffset,
+                                vexAnchoredOverlayCaretOffset,
                         )
 
                 VexOverlayCaretDirection.NONE ->
@@ -616,10 +616,10 @@ private fun VexAnchoredOverlayCaret(
     }
 }
 
-private val VexAnchoredOverlayCaretRoom =
+private val vexAnchoredOverlayCaretRoom =
     10.dp
 
-private val VexAnchoredOverlayCaretOffset =
+private val vexAnchoredOverlayCaretOffset =
     5.dp
 
 
