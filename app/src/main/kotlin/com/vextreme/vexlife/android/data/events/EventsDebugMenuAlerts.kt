@@ -14,7 +14,7 @@ enum class EventsDebugMenuAlertMode {
 /**
  * Feature-local variants for the Events developer alert case.
  *
- * This is not a shared AlertCase framework. It exists only so the Events alert Debug menu can name
+ * This is not a shared AlertCase framework. It exists only so the Events Debug-menu alert cases can name
  * which overlay-placement/interaction case it is asking a developer or test to perform.
  */
 enum class EventsDebugMenuAlertCaseType {
@@ -58,10 +58,10 @@ enum class EventsDebugMenuAlertExpectedAction {
  * The Debug menu needs one immutable plan that can travel through the normal feature path without making
  * Compose invent test meaning locally:
  *
- *     developer asks for next Debug menu case
+ *     developer asks for next alert case
  *     -> EventsDebugMenuAlertAction.PrepareNextAlertCase
  *     -> EventsDebugMenuAlertRelay.nextStateFor(...)
- *     -> planEventsDebugMenuAlertCase(...)
+ *     -> buildEventsDebugMenuAlertCase(...)
  *     -> EventsDebugMenuAlertState.currentAlertCase
  *     -> EventsConvergenceRelay observes Debug-menu alert state
  *     -> EventsScreen renders the requested anchored case
@@ -70,7 +70,7 @@ enum class EventsDebugMenuAlertExpectedAction {
  * case metadata changes canonical event truth.
  *
  * The name "AlertCase" is retained here for current repository compatibility. Treat it as
- * "one Events alert-lab case", not as a reusable AlertCase subsystem.
+ * "one Events Debug-menu alert case", not as a reusable AlertCase subsystem.
  */
 data class EventsDebugMenuAlertCase(
     val alertCaseRef: String,
@@ -106,7 +106,7 @@ data class EventsDebugMenuAlertState(
     /**
      * Active Debug-menu case only.
      *
-     * null means no alert-lab case is currently imposed on Events presentation.
+     * null means no Debug-menu alert case is currently imposed on Events presentation.
      * This is not the current Event, current candidate, or generic app alertCase.
      */
     val currentAlertCase: EventsDebugMenuAlertCase? = null,
@@ -124,7 +124,7 @@ interface EventsDebugMenuAlertRepository {
     fun useSeededRandom(seed: Long)
 
     /**
-     * Plan and commit one next Events alert-lab case against current event truth.
+     * Plan and commit one next Events Debug-menu alert case against current event truth.
      *
      * The return value is the exact case committed by this call. Returning that feature-local
      * value is a convenience for Debug orchestration that may need to react to case metadata
@@ -194,7 +194,7 @@ private sealed interface EventsDebugMenuAlertAction :
 }
 
 /**
- * Action-driven owner of Events alert-lab state.
+ * Action-driven owner of Events Debug-menu alert state.
  *
  * Every state-changing intention enters as one [EventsDebugMenuAlertAction] and reaches exactly one
  * reducer: [nextStateFor]. Public methods below only name/form the action; they never read/copy/mutate
@@ -205,7 +205,7 @@ private class EventsDebugMenuAlertRelay :
         EventsDebugMenuAlertAction,
         EventsDebugMenuAlertState
     >(
-        relayRef = "relay.events.alert-lab",
+        relayRef = "relay.events.debug-menu-alert",
         initialState = EventsDebugMenuAlertState(),
     ) {
     fun updateMode(
@@ -250,7 +250,7 @@ private class EventsDebugMenuAlertRelay :
         return checkNotNull(
             committedState.currentAlertCase,
         ) {
-            "PrepareNextAlertCase must commit one current Events alert-lab case"
+            "PrepareNextAlertCase must commit one current Events Debug-menu alert case"
         }
     }
 
@@ -287,7 +287,7 @@ private class EventsDebugMenuAlertRelay :
 
             is EventsDebugMenuAlertAction.PrepareNextAlertCase -> {
                 val alertCase =
-                    planEventsDebugMenuAlertCase(
+                    buildEventsDebugMenuAlertCase(
                         mode = currentState.mode,
                         seed = currentState.seed,
                         ordinal = currentState.nextOrdinal,
@@ -334,10 +334,10 @@ private data class EventsDebugMenuAlertCaseTemplate(
 )
 
 /**
- * Stable alertCase vocabulary.
+ * Stable Debug-menu alert-case vocabulary.
  *
  * Keep the declarative choices together so the planner below reads as "select -> derive -> project"
- * rather than rebuilding configuration while also reasoning about one alertCase.
+ * rather than rebuilding configuration while also reasoning about one alert case.
  */
 private val eventsDebugMenuAlertCaseTemplates =
     listOf(
@@ -379,12 +379,12 @@ private val eventsDebugMenuAlertCaseTemplates =
  * Read in order:
  *
  * 1. VALIDATE -> reject impossible planning inputs;
- * 2. SELECT   -> choose one stable alertCase template;
+ * 2. SELECT   -> choose one stable alert-case template;
  * 3. DERIVE   -> resolve target position/target from current events;
- * 4. PROJECT  -> construct one complete immutable alertCase;
+ * 4. PROJECT  -> construct one complete immutable alert case;
  * 5. RETURN   -> hand the value back to the atomic Relay transition.
  */
-internal fun planEventsDebugMenuAlertCase(
+internal fun buildEventsDebugMenuAlertCase(
     mode: EventsDebugMenuAlertMode,
     seed: Long,
     ordinal: Long,
@@ -420,7 +420,7 @@ internal fun planEventsDebugMenuAlertCase(
         if (events.isEmpty()) {
             null
         } else {
-            when (kind) {
+            when (type) {
                 EventsDebugMenuAlertCaseType.ANCHORED_TOP,
                 EventsDebugMenuAlertCaseType.BLOCKING_FREEZE_TOP,
                 -> 0
@@ -449,12 +449,12 @@ internal fun planEventsDebugMenuAlertCase(
                     append(".")
                     append(ordinal.toString().padStart(3, '0'))
                     append(".")
-                    append(kind.name.lowercase())
+                    append(type.name.lowercase())
                 },
             ordinal = ordinal,
             mode = mode,
             seed = seed,
-            type = kind,
+            type = type,
             targetEventRef = target?.eventRef,
             targetPositionFromTop = targetPosition,
             listCountAtPlan = events.size,
