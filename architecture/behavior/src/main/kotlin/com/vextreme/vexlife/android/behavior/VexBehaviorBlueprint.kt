@@ -36,26 +36,14 @@ class VexBehaviorBlueprint<
                 "relationship source is not a registered state: " +
                     relationship.from
             }
-            require(relationship.to in states) {
-                "relationship destination is not a registered state: " +
-                    relationship.to
+            require(
+                relationship.admittedStateKind in
+                    states,
+            ) {
+                "relationship admitted state is not registered: " +
+                    relationship.admittedStateKind
             }
         }
-
-        relationships
-            .groupBy {
-                it.from to it.act
-            }
-            .forEach { (coordinate, matches) ->
-                require(matches.size == 1) {
-                    "behavior " +
-                        behaviorRef +
-                        " has ambiguous act " +
-                        coordinate.second +
-                        " from " +
-                        coordinate.first.simpleName
-                }
-            }
     }
 
     fun outgoing(
@@ -83,7 +71,7 @@ class VexBehaviorBlueprint<
         >
     > =
         relationships.filter {
-            it.to == state
+            it.admittedStateKind == state
         }
 
     fun availableRelationships(
@@ -114,14 +102,32 @@ class VexBehaviorBlueprint<
         }
     }
 
+    /**
+     * Every Act that has exactly one lawful relationship from this exact current State value.
+     *
+     * Multiple relationships may share the same source State KIND + Act when their predicates are
+     * mutually exclusive for State flavor. If more than one becomes valid for one current value,
+     * the blueprint rejects that ambiguity instead of picking one by order.
+     */
     fun availableActs(
         current: State,
-    ): List<Act> =
-        availableRelationships(
-            current,
-        ).map {
-            it.act
-        }
+    ): List<Act> {
+        val available =
+            availableRelationships(
+                current,
+            )
+
+        requireNoActAmbiguity(
+            current = current,
+            available = available,
+        )
+
+        return available
+            .map {
+                it.act
+            }
+            .distinct()
+    }
 
     fun resolve(
         current: State,
@@ -131,10 +137,18 @@ class VexBehaviorBlueprint<
         State,
         Effect
     >? {
-        val relationship =
+        val available =
             availableRelationships(
                 current,
             )
+
+        requireNoActAmbiguity(
+            current = current,
+            available = available,
+        )
+
+        val relationship =
+            available
                 .singleOrNull {
                     it.act == act
                 }
@@ -142,8 +156,40 @@ class VexBehaviorBlueprint<
 
         return VexBehaviorResolution(
             effect = relationship.effect,
-            destination = relationship.to,
+            admittedStateKind =
+                relationship.admittedStateKind,
         )
+    }
+
+    private fun requireNoActAmbiguity(
+        current: State,
+        available:
+            List<
+                VexBehaviorRelationship<
+                    Family,
+                    State,
+                    Act,
+                    Effect
+                >
+            >,
+    ) {
+        available
+            .groupBy {
+                it.act
+            }
+            .forEach { (act, matches) ->
+                require(matches.size == 1) {
+                    "behavior " +
+                        behaviorRef +
+                        " has ambiguous act " +
+                        act +
+                        " from current " +
+                        current::class.simpleName +
+                        "; " +
+                        matches.size +
+                        " conditional relationships are simultaneously available"
+                }
+            }
     }
 
     /**

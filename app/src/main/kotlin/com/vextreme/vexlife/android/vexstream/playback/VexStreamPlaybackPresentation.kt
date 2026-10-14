@@ -1,6 +1,5 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
 import com.vextreme.vexlife.android.elements.ElementIcon
 
 internal data class VexStreamPlaybackControlPresentation(
@@ -8,12 +7,7 @@ internal data class VexStreamPlaybackControlPresentation(
     val enabled: Boolean,
 )
 
-internal fun VexBehaviorProjection<
-    VexStreamPlaybackFamily,
-    VexStreamPlaybackState,
-    VexStreamPlaybackControl,
-    VexStreamPlaybackAct
->.present(
+internal fun VexStreamPlaybackProjection.present(
     control: VexStreamPlaybackControl,
 ): VexStreamPlaybackControlPresentation {
     val projected =

@@ -34,7 +34,7 @@ class PlaybackBehaviorExampleTest {
         )
         assertEquals(
             PlaybackState.Playing::class,
-            fastForward?.destination,
+            fastForward?.admittedStateKind,
         )
 
         /*
@@ -60,7 +60,7 @@ class PlaybackBehaviorExampleTest {
         )
         assertEquals(
             PlaybackState.Playing::class,
-            play?.destination,
+            play?.admittedStateKind,
         )
     }
 
@@ -117,7 +117,7 @@ class PlaybackBehaviorExampleTest {
         )
         assertEquals(
             PlaybackState.Playing::class,
-            play?.destination,
+            play?.admittedStateKind,
         )
     }
 

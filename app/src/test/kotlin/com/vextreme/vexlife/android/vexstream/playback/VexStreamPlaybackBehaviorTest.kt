@@ -130,6 +130,22 @@ class VexStreamPlaybackBehaviorTest {
                 VexStreamPlaybackControl.PlayPause
             ].act,
         )
+
+        val restart =
+            behavior.resolve(
+                current = restartable,
+                act =
+                    VexStreamPlaybackAct.Play,
+            )
+
+        assertSame(
+            VexStreamPlaybackEffect.RestartCurrent,
+            restart?.effect,
+        )
+        assertEquals(
+            VexStreamPlaybackState.Ended::class,
+            restart?.admittedStateKind,
+        )
         assertFalse(
             controls.projection(
                 blocked,

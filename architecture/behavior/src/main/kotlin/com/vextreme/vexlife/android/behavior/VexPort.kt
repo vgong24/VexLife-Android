@@ -10,6 +10,15 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * This two-way Port is intentionally invariant. activate() consumes Control, so using out Control
  * plus @UnsafeVariance would disable the compiler protection this contract exists to provide.
+ *
+ * Scope of currentness:
+ * - activate(Control) re-resolves semantic meaning against current State at activation time;
+ * - VexPort does NOT admit or reject later asynchronous provider results;
+ * - request-generation, revision, latest-request, Relay, or other stale-completion gates remain the
+ *   responsibility of the concrete owner/Connection that performs async work.
+ *
+ * Concurrency is also intentionally not prescribed here. A concrete Connection must preserve the
+ * serialization / locking / dispatcher guarantees required by its provider or domain owner.
  */
 interface VexPort<
     Family : VexBehaviorFamily<Family>,

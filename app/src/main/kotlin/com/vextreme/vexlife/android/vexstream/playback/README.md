@@ -28,6 +28,9 @@ VexStreamPlaybackBehavior.kt
 VexStreamPlaybackPresentation.kt
     semantic Control projection -> shared VexStream icon/enabled meaning
 
+VexStreamPlaybackTypes.kt
+    feature-local aliases hiding Family-heavy foundation generics from ordinary callers
+
 Media3VexStreamPlaybackConnection.kt
     Media3 truth projection + Effect realization
     implements reusable VexPortFlow
@@ -105,6 +108,53 @@ acknowledges the requested value.
 
 This is a latency bridge, not another truth owner: Media3 still owns provider playback facts and the
 The connection explicitly exposes when acknowledgement is pending.
+
+## Admission versus provider outcome
+
+The Behavior graph declares the immediate admitted State KIND, not a promised final provider outcome.
+
+For example, restart-from-ended now stays in the Ended kind while the local request is pending:
+
+~~~text
+Ended(restartPending=false)
++ Play
+-> RestartCurrent
+-> admit same Ended kind with restartPending=true
+
+later Media3 observation
+-> Media(...)
+~~~
+
+The connection constructs the concrete pending State value and verifies it matches the graph's
+admitted kind before publishing it.
+
+This is the same boundary a location/provider feature can use for:
+
+~~~text
+Idle
++ Locate
+-> RequestCurrentLocation
+-> admit Finding
+
+later provider observation
+-> Ready | Denied | Disabled | Error | ...
+~~~
+
+## Human-facing aliases
+
+Ordinary VexStream presentation code should use:
+
+~~~text
+VexStreamPlaybackConnection
+VexStreamPlaybackConnectionFlow
+VexStreamPlaybackProjection
+~~~
+
+rather than repeating the full Family / State / Control / Act generic equation.
+
+The aliases do not weaken compiler safety; they simply keep foundation type machinery out of normal
+feature-reading paths.
+
 
 ## Presentation seam
 

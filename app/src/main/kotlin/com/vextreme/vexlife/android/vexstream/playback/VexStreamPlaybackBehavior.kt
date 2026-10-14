@@ -49,7 +49,7 @@ internal fun vexStreamPlaybackBehavior():
             ) { current ->
                 current.restartAvailable &&
                     !current.restartPending
-            }.to<VexStreamPlaybackState.Media>()
+            }.stay()
         }
     }
 

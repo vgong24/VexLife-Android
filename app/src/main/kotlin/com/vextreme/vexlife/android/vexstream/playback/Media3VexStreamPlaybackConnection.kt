@@ -2,8 +2,6 @@ package com.vextreme.vexlife.android.vexstream.playback
 
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPortFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,12 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 internal class Media3VexStreamPlaybackConnection(
     private val controller: MediaController,
 ) :
-    VexPortFlow<
-        VexStreamPlaybackFamily,
-        VexStreamPlaybackState,
-        VexStreamPlaybackControl,
-        VexStreamPlaybackAct
-    >,
+    VexStreamPlaybackConnectionFlow,
     AutoCloseable {
     private val behavior =
         vexStreamPlaybackBehavior()
@@ -44,12 +37,7 @@ internal class Media3VexStreamPlaybackConnection(
 
     override val projections:
         StateFlow<
-            VexBehaviorProjection<
-                VexStreamPlaybackFamily,
-                VexStreamPlaybackState,
-                VexStreamPlaybackControl,
-                VexStreamPlaybackAct
-            >
+            VexStreamPlaybackProjection
         > =
         mutableProjections.asStateFlow()
 
@@ -104,10 +92,26 @@ internal class Media3VexStreamPlaybackConnection(
             pending.after(
                 effect,
             )
-        publish(
+
+        val admitted =
             current.afterIntent(
                 effect,
-            ),
+            )
+
+        check(
+            relationship.admittedStateKind
+                .isInstance(
+                    admitted,
+                ),
+        ) {
+            "admitted State value " +
+                admitted::class.simpleName +
+                " does not match behavior admission " +
+                relationship.admittedStateKind.simpleName
+        }
+
+        publish(
+            admitted,
         )
 
         try {

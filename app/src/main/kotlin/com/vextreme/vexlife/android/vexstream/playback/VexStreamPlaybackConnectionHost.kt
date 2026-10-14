@@ -12,8 +12,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPortFlow
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 
 internal class VexStreamPlaybackConnectionViewModel(
@@ -45,12 +43,7 @@ internal class VexStreamPlaybackConnectionViewModel(
 
     var connection by
         mutableStateOf<
-            VexPortFlow<
-                VexStreamPlaybackFamily,
-                VexStreamPlaybackState,
-                VexStreamPlaybackControl,
-                VexStreamPlaybackAct
-            >?
+            VexStreamPlaybackConnectionFlow?
         >(
             null,
         )
@@ -107,12 +100,7 @@ internal fun rememberVexStreamMediaController():
 
 @Composable
 internal fun rememberVexStreamPlaybackConnection():
-    VexPortFlow<
-        VexStreamPlaybackFamily,
-        VexStreamPlaybackState,
-        VexStreamPlaybackControl,
-        VexStreamPlaybackAct
-    >? {
+    VexStreamPlaybackConnectionFlow? {
     val owner:
         VexStreamPlaybackConnectionViewModel =
         viewModel()
@@ -123,18 +111,8 @@ internal fun rememberVexStreamPlaybackConnection():
 @Composable
 internal fun rememberVexStreamPlaybackProjection(
     connection:
-        VexPortFlow<
-            VexStreamPlaybackFamily,
-            VexStreamPlaybackState,
-            VexStreamPlaybackControl,
-            VexStreamPlaybackAct
-        >?,
-): VexBehaviorProjection<
-    VexStreamPlaybackFamily,
-    VexStreamPlaybackState,
-    VexStreamPlaybackControl,
-    VexStreamPlaybackAct
->? {
+        VexStreamPlaybackConnectionFlow?,
+): VexStreamPlaybackProjection? {
     val projections =
         connection?.projections
             ?: return null

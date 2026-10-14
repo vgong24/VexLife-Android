@@ -96,12 +96,14 @@ VexBehaviorBlueprint
 
 Feature-owned State / Control / Act / Effect vocabularies now share one F-bounded VexBehaviorFamily coordinate, making both role swaps and cross-family combinations compiler-invalid. State carries observed truth (including data/flavor); Effect carries the attempted transformation and never claims the resulting truth. Each State
 block declares what Acts have meaning from that current truth, their provider-facing Effects, and
-the expected next State. The blueprint is a constructed immutable graph, not a singleton or runtime
+the immediate admitted State kind. Provider observation may later produce another truthful State kind. The blueprint is a constructed immutable graph, not a singleton or runtime
 state owner. Incoming / outgoing neighborhoods, current available Acts, and completely linked Control meaning are derived from
 relationships authored once. One immutable BehaviorProjection packages current State + every Control's resolved Act
 for UI/test/convergence consumers without exposing Effect execution. VexPort standardizes the two-way boundary as currentProjection + activate(Control); VexPortFlow optionally adds a StateFlow of projections. The first Media3 connection implementing VexPortFlow also proves synchronous intent emission: admitted local requests publish pending semantic State before provider dispatch, and delayed observations reconcile without erasing the newer intent.
 
 The first app wiring is now admitted narrowly for VexStream Play/Pause: Mini Player and Context Dock consume one retained VexPortFlow projection rather than independently deriving Play/Pause from Media3. Their shared Play/Pause icon/enabled meaning is also derived once in a feature-local presentation mapper rather than repeated in each Composable. The kernel now has a transport-neutral BehaviorProjection. Current VexStream inspection found the next seam at the retained MediaController projection: one semantic Playback client/projection must observe Media3 truth, publish the shared Projection, re-resolve Controls at invocation time, and realize Effects before Mini Player / Context Dock migrate, otherwise behavior would become Compose-owned. Provider execution, ScreenBlueprint binding, parameterized request payloads, and Android/device proof remain held.
+
+VexMaps pressure review adds four explicit compatibility boundaries without expanding the grammar: same State-kind + same Act may use mutually-exclusive conditional relationships; relationship destination means immediate semantic admission rather than guaranteed provider outcome; VexPort re-resolution protects stale meaning at activation but does not replace async generation/revision gates; and concrete Connections retain their own concurrency/serialization guarantees. Feature-local type aliases should hide Family-heavy generics from ordinary Compose source.
 
 ### First VexStream consumer
 

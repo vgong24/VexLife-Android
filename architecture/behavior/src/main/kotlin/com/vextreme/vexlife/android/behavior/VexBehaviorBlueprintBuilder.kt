@@ -115,6 +115,12 @@ class VexBehaviorStateScope<
         )
 }
 
+/**
+ * Completes one authored relationship with its immediate admitted State KIND.
+ *
+ * The admitted kind is semantic topology after an Effect is accepted for dispatch. It is not a
+ * promise about a provider's eventual observed outcome.
+ */
 class VexBehaviorDestination<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
@@ -144,13 +150,21 @@ class VexBehaviorDestination<
             >
         ) -> Unit,
 ) {
-    inline fun <reified Next : State> to() {
+    /**
+     * Admit another semantic State kind immediately after the Effect is accepted for dispatch.
+     *
+     * A concrete Connection remains responsible for constructing the admitted State VALUE when
+     * runtime data is needed. Later provider observations are free to produce other truthful State
+     * kinds.
+     */
+    inline fun <reified Next : State> admit() {
         addRelationship(
             VexBehaviorRelationship(
                 from = from,
                 act = act,
                 effect = effect,
-                to = Next::class,
+                admittedStateKind =
+                    Next::class,
                 conditionName = conditionName,
                 whenCurrent = { current ->
                     @Suppress(
@@ -164,13 +178,33 @@ class VexBehaviorDestination<
         )
     }
 
+    /**
+     * Earlier experiment spelling. Prefer [admit] because "to" looked like a promised final provider
+     * outcome rather than immediate semantic admission.
+     */
+    @Deprecated(
+        message =
+            "Use admit(); the relationship declares immediate semantic admission, not final provider outcome",
+        replaceWith =
+            ReplaceWith(
+                "admit<Next>()",
+            ),
+    )
+    inline fun <reified Next : State> to() {
+        admit<Next>()
+    }
+
+    /**
+     * Admit the same State kind while its data/flavor may change.
+     */
     fun stay() {
         addRelationship(
             VexBehaviorRelationship(
                 from = from,
                 act = act,
                 effect = effect,
-                to = from,
+                admittedStateKind =
+                    from,
                 conditionName = conditionName,
                 whenCurrent = { current ->
                     @Suppress(

@@ -215,14 +215,14 @@ state<PlaybackState.Paused> {
         PlaybackEffect.SetSpeed(
             PlaybackSpeed.Normal,
         ),
-    ).to<PlaybackState.Playing>()
+    ).admit<PlaybackState.Playing>()
 
     on(
         PlaybackAct.FastForward,
         PlaybackEffect.SetSpeed(
             PlaybackSpeed.FastForward,
         ),
-    ).to<PlaybackState.Playing>()
+    ).admit<PlaybackState.Playing>()
 }
 
 state<PlaybackState.Playing> {
@@ -240,7 +240,7 @@ state<PlaybackState.Playing> {
     on(
         PlaybackAct.Pause,
         PlaybackEffect.PausePlayback,
-    ).to<PlaybackState.Paused>()
+    ).admit<PlaybackState.Paused>()
 
     on(
         act = PlaybackAct.FastForward,
@@ -322,7 +322,7 @@ Act
 Effect
     SetSpeed(Normal)
 
-expected destination State kind
+immediate admitted State kind
     Playing
 ~~~
 
@@ -497,7 +497,7 @@ Forward:
 ~~~text
 State + Act
     -> Effect
-    -> expected next State
+    -> immediate admitted State kind
 ~~~
 
 Inverse:
@@ -589,6 +589,142 @@ intentionally prefer Pause without changing Playback architecture.
 
 A Control resolving to no Act means semantic unavailability only. Presentation still owns whether
 that appears hidden, disabled, replaced, animated, or otherwise rendered.
+
+## Maps-pressure compatibility without expanding the grammar
+
+A second read from VexMaps exposed several edge cases that the kernel can support without adding new
+semantic nouns.
+
+### Same State kind + same Act may vary by State flavor
+
+Several relationships may share one source State KIND + Act when their conditions are mutually
+exclusive for an exact current State value:
+
+~~~kotlin
+state<NavigationState> {
+    on(
+        Start,
+        BeginNavigation,
+        conditionName = "ready",
+    ) { current ->
+        current.phase == READY
+    }.stay()
+
+    on(
+        Start,
+        ResumeNavigation,
+        conditionName = "paused",
+    ) { current ->
+        current.phase == PAUSED
+    }.stay()
+}
+~~~
+
+This avoids splitting data-rich States into artificial subclasses merely to satisfy the behavior
+grammar.
+
+The blueprint rejects the relationship only when two same-Act conditions are simultaneously true for
+one current State value. Ambiguity fails instead of being resolved by declaration order.
+
+### Admission is not eventual provider outcome
+
+A relationship's admitted State is the immediate semantic topology after an Effect is accepted for
+dispatch:
+
+~~~text
+Idle
++ Locate
+-> RequestCurrentLocation
+-> admit Finding
+~~~
+
+Provider observation may later produce:
+
+~~~text
+Ready
+Approximate
+Denied
+Disabled
+Unavailable
+Inaccurate
+Error
+~~~
+
+without violating the relationship.
+
+The DSL therefore prefers:
+
+~~~kotlin
+.admit<Finding>()
+~~~
+
+over the older `.to<Finding>()` spelling. `.to()` remains only as a compatibility alias because
+"to" looked like a promised final outcome.
+
+For same-kind admission with changed data/flavor, use `.stay()`.
+
+The graph owns the admitted State KIND. A concrete Connection may own construction of the admitted
+State VALUE when runtime information such as request generation, route revision, timestamps, or
+pending flags is required. That value should be checked against the graph's admitted kind.
+
+### VexPort currentness is activation currentness
+
+~~~text
+rendered meaning becomes stale before click
+    -> VexPort activate(Control) re-resolves against CURRENT State
+~~~
+
+This does NOT replace async result-admission gates:
+
+~~~text
+click
+-> async work begins
+-> reality changes
+-> older result returns
+    -> latest-request / revision / expected-key / Relay gate decides whether result is still current
+~~~
+
+Keep both. VexPort must not become a generic excuse to delete feature-specific request-generation
+or revision gates.
+
+### Concurrency stays concrete
+
+VexPort does not prescribe locking, dispatcher confinement, actor serialization, or Relay reducer
+semantics.
+
+A concrete Connection must preserve the concurrency guarantees of the owner/provider it wraps.
+Media3 and VexMaps may legitimately use different synchronization strategies while implementing the
+same semantic VexPort contract.
+
+### Runtime payloads remain held
+
+Finite authored values such as `SetSpeed(FastForward)` fit the current graph naturally.
+
+Invocation-time payloads such as:
+
+~~~text
+RouteTo(currentGps, selectedDestination, WALK)
+SearchPlaces(currentQuery)
+ImportMap(selectedUri)
+~~~
+
+do not yet have a generic reusable shape. Do not hide those dependencies by having a vague Effect
+secretly read unrelated mutable state. Let a real second consumer earn any request-payload extension.
+
+### Generic safety should stay below human-facing source
+
+Foundation types remain fully family-bound, but ordinary feature/Compose source should prefer
+feature-local aliases such as:
+
+~~~text
+VexStreamPlaybackConnection
+VexStreamPlaybackConnectionFlow
+VexStreamPlaybackProjection
+~~~
+
+The compiler keeps the full Family / State / Control / Act equation underneath; the human reads the
+feature vocabulary.
+
 
 ## Derived connective tissue
 

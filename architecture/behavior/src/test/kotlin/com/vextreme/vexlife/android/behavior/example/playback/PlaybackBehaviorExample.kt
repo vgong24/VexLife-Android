@@ -71,21 +71,21 @@ fun playbackBehaviorBlueprint():
                 PlaybackEffect.SetSpeed(
                     PlaybackSpeed.Normal,
                 ),
-            ).to<PlaybackState.Playing>()
+            ).admit<PlaybackState.Playing>()
 
             on(
                 PlaybackAct.FastForward,
                 PlaybackEffect.SetSpeed(
                     PlaybackSpeed.FastForward,
                 ),
-            ).to<PlaybackState.Playing>()
+            ).admit<PlaybackState.Playing>()
 
             on(
                 PlaybackAct.Rewind,
                 PlaybackEffect.SetSpeed(
                     PlaybackSpeed.Rewind,
                 ),
-            ).to<PlaybackState.Playing>()
+            ).admit<PlaybackState.Playing>()
         }
 
         state<PlaybackState.Playing> {
@@ -105,7 +105,7 @@ fun playbackBehaviorBlueprint():
             on(
                 PlaybackAct.Pause,
                 PlaybackEffect.PausePlayback,
-            ).to<PlaybackState.Paused>()
+            ).admit<PlaybackState.Paused>()
 
             on(
                 act = PlaybackAct.FastForward,

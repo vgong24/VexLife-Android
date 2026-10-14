@@ -21,6 +21,7 @@ class VexBehaviorBlueprintTest {
 
         data class Positioned(
             val hasNext: Boolean,
+            val wrapAtEnd: Boolean = false,
         ) : QueueState
     }
 
@@ -41,6 +42,9 @@ class VexBehaviorBlueprintTest {
         > {
         data object Advance :
             QueueEffect
+
+        data object Wrap :
+            QueueEffect
     }
 
     private enum class QueueControl :
@@ -51,6 +55,10 @@ class VexBehaviorBlueprintTest {
         Previous,
     }
 
+    /**
+     * One State KIND + one Act may have several conditional relationships when State flavor makes
+     * those relationships mutually exclusive for any exact current value.
+     */
     private fun queueBlueprint() =
         vexBehaviorBlueprint<
             QueueFamily,
@@ -69,6 +77,15 @@ class VexBehaviorBlueprintTest {
                     conditionName = "has-next",
                 ) { current ->
                     current.hasNext
+                }.stay()
+
+                on(
+                    act = QueueAct.Next,
+                    effect = QueueEffect.Wrap,
+                    conditionName = "at-end-and-wrap-enabled",
+                ) { current ->
+                    !current.hasNext &&
+                        current.wrapAtEnd
                 }.stay()
             }
         }
@@ -105,7 +122,7 @@ class VexBehaviorBlueprintTest {
         )
         assertEquals(
             QueueState.Positioned::class,
-            next?.destination,
+            next?.admittedStateKind,
         )
         assertTrue(
             blueprint.describe()
@@ -116,21 +133,108 @@ class VexBehaviorBlueprintTest {
     }
 
     @Test
-    fun incomingAndOutgoingAreDerivedFromOneAuthoredRelationship() {
+    fun sameStateKindAndActCanResolveDifferentEffectFromStateFlavor() {
+        val blueprint =
+            queueBlueprint()
+
+        val wrapped =
+            blueprint.resolve(
+                current =
+                    QueueState.Positioned(
+                        hasNext = false,
+                        wrapAtEnd = true,
+                    ),
+                act =
+                    QueueAct.Next,
+            )
+
+        assertSame(
+            QueueEffect.Wrap,
+            wrapped?.effect,
+        )
+        assertEquals(
+            QueueState.Positioned::class,
+            wrapped?.admittedStateKind,
+        )
+
+        assertEquals(
+            listOf(
+                QueueAct.Next,
+            ),
+            blueprint.availableActs(
+                QueueState.Positioned(
+                    hasNext = false,
+                    wrapAtEnd = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun incomingAndOutgoingAreDerivedFromAuthoredRelationships() {
         val blueprint =
             queueBlueprint()
 
         assertEquals(
-            1,
+            2,
             blueprint.outgoing(
                 QueueState.Positioned::class,
             ).size,
         )
         assertEquals(
-            1,
+            2,
             blueprint.incoming(
                 QueueState.Positioned::class,
             ).size,
+        )
+    }
+
+    @Test(
+        expected =
+            IllegalArgumentException::class,
+    )
+    fun overlappingSameStateAndActConditionsAreRejectedForCurrentValue() {
+        val ambiguous =
+            vexBehaviorBlueprint<
+                QueueFamily,
+                QueueState,
+                QueueAct,
+                QueueEffect
+            >(
+                behaviorRef =
+                    "example.queue.ambiguous",
+            ) {
+                state<QueueState.Positioned> {
+                    on(
+                        act = QueueAct.Next,
+                        effect =
+                            QueueEffect.Advance,
+                        conditionName =
+                            "has-next",
+                    ) { current ->
+                        current.hasNext
+                    }.stay()
+
+                    on(
+                        act = QueueAct.Next,
+                        effect =
+                            QueueEffect.Wrap,
+                        conditionName =
+                            "wrap-enabled",
+                    ) { current ->
+                        current.wrapAtEnd
+                    }.stay()
+                }
+            }
+
+        ambiguous.resolve(
+            current =
+                QueueState.Positioned(
+                    hasNext = true,
+                    wrapAtEnd = true,
+                ),
+            act =
+                QueueAct.Next,
         )
     }
 

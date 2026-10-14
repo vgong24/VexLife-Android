@@ -31,15 +31,14 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackFamily
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAct
-import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexPort
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -96,19 +95,9 @@ private fun VexStreamContextDockContent(
     controller: MediaController?,
     playback: VexStreamPlaybackUiState,
     playbackConnection:
-        VexPort<
-            VexStreamPlaybackFamily,
-            VexStreamPlaybackState,
-            VexStreamPlaybackControl,
-            VexStreamPlaybackAct
-        >?,
+        VexStreamPlaybackConnection?,
     playbackProjection:
-        VexBehaviorProjection<
-            VexStreamPlaybackFamily,
-            VexStreamPlaybackState,
-            VexStreamPlaybackControl,
-            VexStreamPlaybackAct
-        >?,
+        VexStreamPlaybackProjection?,
     expanded: Boolean,
 ) {
     var scrubFraction by
