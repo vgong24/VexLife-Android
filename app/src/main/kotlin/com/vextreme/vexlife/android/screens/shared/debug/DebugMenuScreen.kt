@@ -52,6 +52,12 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val EventsArchitectureComparisonStatus = textFieldRef(
+        id = "body.events-architecture.live-comparison",
+        labelRes = R.string.events_architecture_live_comparison,
+        readOnly = true,
+    )
+
     val ShowLog = buttonRef(
         id = "body.log-history.actions.show",
         labelRes = R.string.log_history_show,
@@ -150,6 +156,7 @@ object DebugMenuScreen : AppScreenBlueprint(
                     role = TextRole.Title,
                 )
                 toggle(UseTraditionalEventsArchitecture)
+                textField(EventsArchitectureComparisonStatus)
                 text(
                     id = "helper",
                     textRes = R.string.events_architecture_comparison_helper,
@@ -371,6 +378,11 @@ fun DebugMenuScreenContent(
             .mode
             .collectAsState()
 
+    val architectureComparison by
+        eventsArchitectureComparison
+            .comparisonStates
+            .collectAsState()
+
     val handler =
         ElementActionHandler { element ->
             if (
@@ -415,6 +427,17 @@ fun DebugMenuScreenContent(
 
                 else ->
                     false
+            }
+        },
+        textFieldValue = { element ->
+            when (element.elementId) {
+                DebugMenuScreen
+                    .EventsArchitectureComparisonStatus
+                    .elementId ->
+                    architectureComparison.diagnosticSummary
+
+                else ->
+                    ""
             }
         },
         selectedChild = runtime.presentation::selected,
