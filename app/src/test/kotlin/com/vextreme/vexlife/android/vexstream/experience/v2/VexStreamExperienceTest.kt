@@ -1,10 +1,10 @@
 package com.vextreme.vexlife.android.vexstream.experience.v2
 
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackSnapshot
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.playback.VexMediaPlaybackContract
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.queue.VexMediaQueueContract
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.playback.VexMediaPlaybackStatus
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.playback.VexMediaPlaybackContract
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue.VexMediaQueueContract
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue.VexMediaQueueStatus
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.VexStreamPlayerArchitecture
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.playback.VexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.playback.VexStreamPlaybackCase
@@ -23,17 +23,17 @@ class VexStreamExperienceTest {
 
     /** Narrow provider double implementing only the capabilities the VexStream Player requires. */
     private class FakePlayerProvider(
-        /** Provider-owned Playback observation. */
+        /** Provider-reported Playback status. */
         var playback:
-            VexMediaPlaybackSnapshot =
-            VexMediaPlaybackSnapshot(
+            VexMediaPlaybackStatus =
+            VexMediaPlaybackStatus(
                 hasMedia = true,
                 playbackRequested = false,
             ),
-        /** Provider-owned Queue observation. */
+        /** Provider-reported Queue status. */
         var queue:
-            VexMediaQueueSnapshot =
-            VexMediaQueueSnapshot(
+            VexMediaQueueStatus =
+            VexMediaQueueStatus(
                 itemCount = 2,
                 currentIndex = 0,
                 hasPrevious = false,
@@ -47,12 +47,12 @@ class VexStreamExperienceTest {
         /** Effect count proving Queue.Next is independent from Playback. */
         var nextCalls: Int = 0
 
-        override fun observePlayback():
-            VexMediaPlaybackSnapshot =
+        override fun playbackStatus():
+            VexMediaPlaybackStatus =
             playback
 
-        override fun observeQueue():
-            VexMediaQueueSnapshot =
+        override fun queueStatus():
+            VexMediaQueueStatus =
             queue
 
         override fun play() {
@@ -126,12 +126,12 @@ class VexStreamExperienceTest {
         val provider =
             FakePlayerProvider(
                 playback =
-                    VexMediaPlaybackSnapshot(
+                    VexMediaPlaybackStatus(
                         hasMedia = true,
                         playbackRequested = false,
                     ),
                 queue =
-                    VexMediaQueueSnapshot(
+                    VexMediaQueueStatus(
                         itemCount = 40,
                         currentIndex = 17,
                         hasPrevious = true,
@@ -174,12 +174,12 @@ class VexStreamExperienceTest {
         val provider =
             FakePlayerProvider(
                 playback =
-                    VexMediaPlaybackSnapshot(
+                    VexMediaPlaybackStatus(
                         hasMedia = true,
                         playbackRequested = false,
                     ),
                 queue =
-                    VexMediaQueueSnapshot(
+                    VexMediaQueueStatus(
                         itemCount = 3,
                         currentIndex = 1,
                         hasPrevious = true,

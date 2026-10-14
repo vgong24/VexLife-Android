@@ -70,6 +70,17 @@ PRODUCT MEANING OR TECHNICAL MACHINERY:
 
 Delete/merge the noun if it does not earn a distinct answer.
 
+## Package placement check
+
+~~~text
+HUMAN FEATURE AREAS:
+TECHNICAL ROLES INSIDE EACH AREA:
+CAN SOMEONE FIND THE AREA WITHOUT KNOWING OUR INTERNAL ARCHITECTURE TERMS?:
+~~~
+
+Prefer feature-language packages first. Contract / Provider / Case / Control / Status / Adapter are
+code roles inside the relevant human area, not substitutes for the human area itself.
+
 ## Current source map
 
 ~~~text

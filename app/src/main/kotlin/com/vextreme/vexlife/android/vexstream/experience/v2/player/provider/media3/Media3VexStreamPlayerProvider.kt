@@ -1,8 +1,8 @@
 package com.vextreme.vexlife.android.vexstream.experience.v2.player.provider.media3
 
 import androidx.media3.session.MediaController
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackSnapshot
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.playback.VexMediaPlaybackStatus
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue.VexMediaQueueStatus
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.provider.VexStreamPlayerProvider
 
 /**
@@ -21,16 +21,16 @@ class Media3VexStreamPlayerProvider(
     private val controller: MediaController,
 ) : VexStreamPlayerProvider {
 
-    /** Read only the provider facts the Playback capability needs. */
-    override fun observePlayback(): VexMediaPlaybackSnapshot =
-        VexMediaPlaybackSnapshot(
+    /** Report the current Playback facts the VexStream capability needs. */
+    override fun playbackStatus(): VexMediaPlaybackStatus =
+        VexMediaPlaybackStatus(
             hasMedia = controller.mediaItemCount > 0,
             playbackRequested = controller.playWhenReady,
         )
 
-    /** Read only the provider facts the Queue capability needs. */
-    override fun observeQueue(): VexMediaQueueSnapshot =
-        VexMediaQueueSnapshot(
+    /** Report the current Queue facts the VexStream capability needs. */
+    override fun queueStatus(): VexMediaQueueStatus =
+        VexMediaQueueStatus(
             itemCount = controller.mediaItemCount,
             currentIndex = controller.currentMediaItemIndex,
             hasPrevious = controller.hasPreviousMediaItem(),

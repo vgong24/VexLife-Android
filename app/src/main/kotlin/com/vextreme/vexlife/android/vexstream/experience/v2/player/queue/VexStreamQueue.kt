@@ -11,10 +11,10 @@ import com.vextreme.vexlife.android.vexarchitecture.VexRealmArchitecture
 import com.vextreme.vexlife.android.vexarchitecture.VexTransition
 import com.vextreme.vexlife.android.vexarchitecture.architectureMap
 import com.vextreme.vexlife.android.vexarchitecture.control
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.queue.VexMediaQueueContract
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueProvider
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue.VexMediaQueueSnapshot
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue.VexMediaQueueContract
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue.VexMediaQueueProvider
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue.VexMediaQueueStatus
 import com.vextreme.vexlife.android.vexarchitecture.placement
 import com.vextreme.vexlife.android.vexarchitecture.transition
 import com.vextreme.vexlife.android.vexarchitecture.vexCurrent
@@ -218,14 +218,14 @@ object VexStreamQueuePlacement : VexStreamQueue.PlacementContract {
 
 /** Translation between Queue meaning and a runtime provider. */
 object VexStreamQueueAndroid : VexStreamQueue.AndroidContract {
-    /** Translate one provider observation into current Queue truth. */
+    /** Translate the provider's current Queue status into semantic Queue truth. */
     fun current(
-        snapshot: VexMediaQueueSnapshot,
+        status: VexMediaQueueStatus,
     ): VexCurrent<
         VexStreamQueueRealm,
         out VexStreamQueueCase
     > =
-        if (snapshot.itemCount <= 0) {
+        if (status.itemCount <= 0) {
             vexCurrent(
                 case = VexStreamQueueCase.Empty,
                 placement = VexStreamQueuePlacement.Empty,
@@ -234,10 +234,10 @@ object VexStreamQueueAndroid : VexStreamQueue.AndroidContract {
             vexCurrent(
                 case =
                     VexStreamQueueCase.Positioned(
-                        itemCount = snapshot.itemCount,
-                        currentIndex = snapshot.currentIndex,
-                        hasPrevious = snapshot.hasPrevious,
-                        hasNext = snapshot.hasNext,
+                        itemCount = status.itemCount,
+                        currentIndex = status.currentIndex,
+                        hasPrevious = status.hasPrevious,
+                        hasNext = status.hasNext,
                     ),
                 placement = VexStreamQueuePlacement.Positioned,
             )
@@ -251,7 +251,7 @@ object VexStreamQueueAndroid : VexStreamQueue.AndroidContract {
         out VexStreamQueueCase
     > =
         current(
-            provider.observeQueue(),
+            provider.queueStatus(),
         )
 
     /**

@@ -1,9 +1,9 @@
-package com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.queue
+package com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue
 
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
 
 /**
- * Reusable semantic contract for ordered media around the current item.
+ * Reusable semantic contract for the Queue part of a media player.
  *
  * Queue remains optional. A media-player architecture implements this only when ordered neighboring
  * media is actually part of the experience.

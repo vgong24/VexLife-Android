@@ -1,18 +1,18 @@
-package com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue
+package com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue
 
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.VexMediaPlayerProvider
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerProvider
 
 /**
- * Runtime capability a Vex Queue concern may depend on.
+ * Runtime capability that can realize the Queue part of a media player.
  *
  * Queue is separate from Playback so a provider can truthfully implement one without the other.
  */
 interface VexMediaQueueProvider :
     VexMediaPlayerProvider {
 
-    /** Observe actual provider queue-position truth. */
-    fun observeQueue():
-        VexMediaQueueSnapshot
+    /** Read the provider's current Queue status. */
+    fun queueStatus():
+        VexMediaQueueStatus
 
     /** Move to the provider's next media item. */
     fun next()

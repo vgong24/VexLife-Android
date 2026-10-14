@@ -103,6 +103,32 @@ The feature home should contain, when relevant:
 Do not copy empty sections merely for ceremony. Use the template to discover what the feature really
 needs, then keep the durable home as small as correctness and continuity allow.
 
+## Package placement rule
+
+The package tree should first help someone locate the **human part of the feature**.
+
+~~~text
+feature/
+├── library/
+├── sources/
+├── playback/
+└── queue/
+~~~
+
+Inside that area, use code-role filenames as needed:
+
+~~~text
+playback/
+├── <Contract>
+├── <Provider>
+├── <Case>
+├── <Control>
+└── <Status>
+~~~
+
+Do not make a newcomer choose architecture/ versus provider/ versus model/ before they can even find
+the part of the product they care about.
+
 ## Source map rule
 
 A feature source map should answer:

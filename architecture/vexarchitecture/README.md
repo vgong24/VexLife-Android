@@ -171,34 +171,44 @@ instead of decoding Architecture -> Architecture -> Architecture.
 
 ## Reusable Media Player structure
 
-The reusable media-player layer is visually grouped by the human question it answers:
+The project tree starts with **human feature language**. Technical roles live inside the area a
+person recognizes:
 
 ~~~text
-mediaplayer/
-├── architecture/                    HOW is player meaning structured?
-│   ├── VexMediaPlayerArchitecture.kt
-│   ├── playback/
-│   │   └── VexMediaPlaybackContract.kt
-│   └── queue/
-│       └── VexMediaQueueContract.kt
+mediaplayer/                         "I'm working on the Media Player"
+├── VexMediaPlayerArchitecture.kt
+├── VexMediaPlayerProvider.kt
 │
-└── provider/                        WHO / WHAT realizes it at runtime?
-    ├── VexMediaPlayerProvider.kt
-    ├── playback/
-    │   ├── VexMediaPlaybackProvider.kt
-    │   └── VexMediaPlaybackSnapshot.kt
-    └── queue/
-        ├── VexMediaQueueProvider.kt
-        └── VexMediaQueueSnapshot.kt
+├── playback/                        "I'm working on Playback"
+│   ├── VexMediaPlaybackContract.kt
+│   ├── VexMediaPlaybackProvider.kt
+│   └── VexMediaPlaybackStatus.kt
+│
+└── queue/                           "I'm working on the Queue"
+    ├── VexMediaQueueContract.kt
+    ├── VexMediaQueueProvider.kt
+    └── VexMediaQueueStatus.kt
 ~~~
 
-The package tree is part of the architecture: a developer should be able to locate semantic
-contracts versus runtime providers before opening a file.
+The package/folder answers:
+
+> **What part of the feature am I looking for?**
+
+The files inside answer:
+
+> **What kind of code is this?**
+
+That is why architecture/ and provider/ are not the primary navigation folders here. A newcomer
+should find Playback or Queue before they need to know our implementation taxonomy.
+
+Status means the provider's current report for that human area. It is translated into the feature's
+semantic Case; it is not a second truth owner.
 
 The root architecture contract does not require Queue. A video/live player can still be a media
 player without claiming capabilities it does not have.
 
-Do not add Timeline, Output, Tracks, Presentation, Speed, Chapters, etc. merely because modern media players can have them. Add a capability contract when an actual consumer earns it.
+Do not add Timeline, Output, Tracks, Presentation, Speed, Chapters, etc. merely because modern media
+players can have them. Add a human feature area when an actual consumer earns it.
 
 ## Contract versus Provider
 

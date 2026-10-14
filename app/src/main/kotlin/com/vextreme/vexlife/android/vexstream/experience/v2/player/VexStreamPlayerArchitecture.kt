@@ -1,7 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.experience.v2.player
 
 import com.vextreme.vexlife.android.vexarchitecture.VexArchitectureContract
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.playback.VexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.experience.v2.player.queue.VexStreamQueue
 

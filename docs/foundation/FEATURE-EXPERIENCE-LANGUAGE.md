@@ -46,6 +46,35 @@ already exist.
 
 The table does **not** imply one class per row.
 
+### Package placement follows human feature language
+
+Use package/folder names to answer the human feature question first:
+
+~~~text
+feature/
+├── library/
+├── sources/
+├── playback/
+└── queue/
+~~~
+
+Then use filenames inside the human area to express code roles:
+
+~~~text
+playback/
+├── <PlaybackContract>
+├── <PlaybackProvider>
+├── <PlaybackCase>
+├── <PlaybackControl>
+└── <PlaybackStatus>
+~~~
+
+This lets a newcomer ask **"what part of the feature is this?"** before they need to know
+**"what implementation role am I searching for?"**
+
+Prefer human feature-area packages over top-level implementation buckets such as architecture/,
+provider/, model/, or adapter/ when those buckets would hide the product language.
+
 ## Category-drift test
 
 Before adding a new top-level noun, ask:

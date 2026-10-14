@@ -1,7 +1,11 @@
-package com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.queue
+package com.vextreme.vexlife.android.vexarchitecture.mediaplayer.queue
 
-/** Platform-neutral observation returned by a Queue provider. */
-data class VexMediaQueueSnapshot(
+/**
+ * Current Queue facts reported by a runtime provider.
+ *
+ * Status is translated into the feature's Queue Case; it is not retained as a second truth owner.
+ */
+data class VexMediaQueueStatus(
     /** Number of media items currently owned by the provider queue. */
     val itemCount: Int,
     /** Current provider index, or -1 when no item is selected. */

@@ -11,10 +11,10 @@ import com.vextreme.vexlife.android.vexarchitecture.VexRealmArchitecture
 import com.vextreme.vexlife.android.vexarchitecture.VexTransition
 import com.vextreme.vexlife.android.vexarchitecture.architectureMap
 import com.vextreme.vexlife.android.vexarchitecture.control
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackProvider
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.provider.playback.VexMediaPlaybackSnapshot
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.VexMediaPlayerArchitecture
-import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.architecture.playback.VexMediaPlaybackContract
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.playback.VexMediaPlaybackProvider
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.playback.VexMediaPlaybackStatus
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.VexMediaPlayerArchitecture
+import com.vextreme.vexlife.android.vexarchitecture.mediaplayer.playback.VexMediaPlaybackContract
 import com.vextreme.vexlife.android.vexarchitecture.placement
 import com.vextreme.vexlife.android.vexarchitecture.transition
 import com.vextreme.vexlife.android.vexarchitecture.vexCurrent
@@ -204,21 +204,21 @@ object VexStreamPlaybackPlacement : VexStreamPlayback.PlacementContract {
  * provider contracts themselves remain reusable enough for Media3 or a partner SDK adapter.
  */
 object VexStreamPlaybackAndroid : VexStreamPlayback.AndroidContract {
-    /** Translate one provider observation into the current semantic Playback Case. */
+    /** Translate the provider's current Playback status into the semantic Playback Case. */
     fun current(
-        snapshot: VexMediaPlaybackSnapshot,
+        status: VexMediaPlaybackStatus,
     ): VexCurrent<
         VexStreamPlaybackRealm,
         out VexStreamPlaybackCase
     > =
         when {
-            !snapshot.hasMedia ->
+            !status.hasMedia ->
                 vexCurrent(
                     case = VexStreamPlaybackCase.NoMedia,
                     placement = VexStreamPlaybackPlacement.NoMedia,
                 )
 
-            snapshot.playbackRequested ->
+            status.playbackRequested ->
                 vexCurrent(
                     case = VexStreamPlaybackCase.PlaybackRequested,
                     placement = VexStreamPlaybackPlacement.PlaybackRequested,
@@ -239,7 +239,7 @@ object VexStreamPlaybackAndroid : VexStreamPlayback.AndroidContract {
         out VexStreamPlaybackCase
     > =
         current(
-            provider.observePlayback(),
+            provider.playbackStatus(),
         )
 
     /**
