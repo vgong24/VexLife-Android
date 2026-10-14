@@ -65,7 +65,13 @@ abstract class VexRelay<State : VexState<State>>(
      */
     protected fun send(inputState: State): State =
         synchronized(lock) {
-            // STEP 0 — exactly one state transition may execute at a time.
+            // STEP 0 — synchronized(lock) serializes concurrent callers. A second caller
+            // waits for this transition to release the lock, then processes against the newly
+            // retained current state; it is not rejected by processing.
+            //
+            // processing rejects only same-thread recursive reducer re-entry. JVM synchronized
+            // monitors are re-entrant, so the flag prevents processState() from calling send() and
+            // starting a nested semantic transition before the current one has finished.
             check(!processing) {
                 "VexRelay cannot recursively send state from processState"
             }
@@ -129,7 +135,8 @@ abstract class VexRelay<State : VexState<State>>(
         transform: (currentState: State) -> State,
     ): State =
         synchronized(lock) {
-            // STEP 0 — serialize update() with send() and every other reducer transition.
+            // STEP 0 — synchronized(lock) serializes update() with send() and every
+            // other concurrent transition. processing separately rejects recursive reducer re-entry.
             check(!processing) {
                 "VexRelay cannot recursively update state from processState"
             }
