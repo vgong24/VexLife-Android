@@ -79,7 +79,8 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 
 ## Behavior Blueprint experiment
 
-Canonical detail: [`architecture/behavior/README.md`](../../architecture/behavior/README.md)
+Canonical detail: [`architecture/behavior/README.md`](../../architecture/behavior/README.md)  
+Review checkpoint: [`architecture/behavior/REVIEW-CHECKPOINT.md`](../../architecture/behavior/REVIEW-CHECKPOINT.md)
 
 This candidate starts independently from accepted main and keeps PR #81 as a comparison point rather
 than inheriting its source.

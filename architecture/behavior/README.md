@@ -2,6 +2,8 @@
 
 [VXG RealForever]
 
+Review entry: [`REVIEW-CHECKPOINT.md`](REVIEW-CHECKPOINT.md)
+
 ## Question
 
 Can behavioral source code preserve the **geometry of what a human can do from what is true now**,
