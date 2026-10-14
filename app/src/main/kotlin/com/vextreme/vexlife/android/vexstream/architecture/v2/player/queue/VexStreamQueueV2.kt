@@ -341,12 +341,17 @@ object VexStreamQueueAndroid :
         player: VexStreamPlayer,
         index: Int? = null,
     ): Boolean {
-        return when (
+        val current =
             current(
                 player,
-            ).availableTransition(
+            )
+        val transition =
+            current.availableTransition(
                 control,
             )
+
+        return when (
+            transition
         ) {
             VexStreamQueueControl.Next -> {
                 player.next()
@@ -361,6 +366,17 @@ object VexStreamQueueAndroid :
             VexStreamQueueControl.PlaySelected -> {
                 val selectedIndex =
                     index ?: return false
+                val positioned =
+                    current.case as?
+                        VexStreamQueueCase.Positioned
+                        ?: return false
+
+                if (
+                    selectedIndex !in
+                    0 until positioned.itemCount
+                ) {
+                    return false
+                }
 
                 player.playQueueIndex(
                     selectedIndex,
