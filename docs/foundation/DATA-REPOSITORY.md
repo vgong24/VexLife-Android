@@ -274,12 +274,25 @@ The current test UI is reachable from the shared FAB menu and shows:
 
 That visible round trip is the first lived proof target for User Profile.
 
-Schema version 3 now has:
+Schema evolution now has:
 - v1 -> v2: preserve Log History while moving physical SQL columns to explicit snake_case names and
   add user_profile;
-- v2 -> v3: add nullable details_json for structured submit diagnostics.
+- v2 -> v3: add nullable details_json for structured submit diagnostics;
+- v3 -> v4: add bounded vex_maps_state.
 
 Existing rows remain valid with null details. Schema changes are migrations, not formatting.
+
+### Current committed Room schema baseline
+
+Room export is repository source evidence, not disposable build output. The first host-wide Test
+Foundation proof generated the exact v4 schema from the accepted current entities, so
+`app/schemas/com.vextreme.vexlife.android.data.VexLifeDatabase/4.json` is retained as the current
+schema baseline.
+
+Historical v1-v3 schema JSON was not previously retained. Do not reconstruct those files from the
+current model and call that migration proof. The existing handwritten migrations remain source, but
+true historical migration integration proof stays pending until authentic predecessor schema
+evidence or an equivalent accepted fixture is available.
 
 ## Simplicity bridges without repository sprawl
 

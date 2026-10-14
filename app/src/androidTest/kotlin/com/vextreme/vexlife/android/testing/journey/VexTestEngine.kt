@@ -8,11 +8,13 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.text.intl.LocaleList
 import com.vextreme.vexlife.android.data.AppRepositories
@@ -20,6 +22,7 @@ import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepositor
 import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
+import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
@@ -53,6 +56,7 @@ class VexTestEngine(
     private val repositories = AppRepositories(
         logHistory = logHistory,
         userProfile = InMemoryUserProfileRepository(),
+        vexMaps = InMemoryVexMapsRepository(),
         vexStream = vexStreamJourneyRepository(),
         events = RelayEventsRepository(),
         eventsAttention = RelayEventsAttentionPreferenceRepository(),
@@ -91,11 +95,8 @@ class VexTestEngine(
     override fun start(screen: ScreenElement) {
         expected.start(screen)
 
-        val root = com.vextreme.vexlife.android.screens.AppScreens.registry
-            .screenRoot(screen)
-            .element
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(root.elementId)
+            compose.onAllNodesWithTag(screen.screenId)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
@@ -118,12 +119,14 @@ class VexTestEngine(
     override fun tapDynamic(element: VexDynamicElementRef) {
         expected.tapDynamic(element)
 
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(element.elementId)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
-        compose.onNodeWithTag(element.elementId)
+        waitForSemanticTag(
+            elementId = element.elementId,
+            timeoutMillis = 10_000L,
+        )
+        compose.onNodeWithTag(
+            testTag = element.elementId,
+            useUnmergedTree = true,
+        )
             .performClick()
         compose.waitForIdle()
         observe(
@@ -134,6 +137,12 @@ class VexTestEngine(
 
     override fun tap(element: ActionElement) {
         expected.tap(element)
+        val uiElement = element as? UIElement
+            ?: error("ActionElement must also be a UIElement")
+        waitForSemanticTag(
+            elementId = uiElement.elementId,
+            timeoutMillis = 5_000L,
+        )
         node(element)
             .scrollIntoViewIfPossible()
             .performClick()
@@ -150,7 +159,10 @@ class VexTestEngine(
     ) {
         expected.type(field, value)
 
-        val node = compose.onNodeWithTag(field.elementId)
+        val node = compose.onNodeWithTag(
+            testTag = field.elementId,
+            useUnmergedTree = true,
+        )
             .scrollIntoViewIfPossible()
         node.performTextClearance()
         node.performTextInput(value)
@@ -176,13 +188,19 @@ class VexTestEngine(
     override fun dismiss(element: UIElement) {
         expected.dismiss(element)
 
-        compose.onNodeWithTag(element.elementId)
+        compose.onNodeWithTag(
+            testTag = element.elementId,
+            useUnmergedTree = true,
+        )
             .performTouchInput {
                 swipeDown()
             }
 
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(element.elementId)
+            compose.onAllNodesWithTag(
+                testTag = element.elementId,
+                useUnmergedTree = true,
+            )
                 .fetchSemanticsNodes()
                 .isEmpty()
         }
@@ -200,6 +218,53 @@ class VexTestEngine(
             stepKind = "back",
             semanticRef = "system.back",
         )
+    }
+
+    private fun semanticTreeDiagnostic(
+        missingElementId: String,
+    ): String =
+        runCatching<String> {
+            compose.onRoot(
+                useUnmergedTree = true,
+            )
+                .printToString()
+                .take(20_000)
+        }.getOrElse { failure ->
+            "unable to print Compose semantics: " +
+                failure::class.simpleName +
+                ": " +
+                failure.message
+        }.let { tree ->
+            "Missing semantic tag: " +
+                missingElementId +
+                "\n--- unmerged Compose semantics (bounded) ---\n" +
+                tree
+        }
+
+    private fun waitForSemanticTag(
+        elementId: String,
+        timeoutMillis: Long,
+    ) {
+        val failure =
+            runCatching {
+                compose.waitUntil(
+                    timeoutMillis = timeoutMillis,
+                ) {
+                    compose.onAllNodesWithTag(
+                        testTag = elementId,
+                        useUnmergedTree = true,
+                    )
+                        .fetchSemanticsNodes()
+                        .isNotEmpty()
+                }
+            }.exceptionOrNull()
+
+        if (failure != null) {
+            throw AssertionError(
+                semanticTreeDiagnostic(elementId),
+                failure,
+            )
+        }
     }
 
     private fun observe(
@@ -265,7 +330,10 @@ class VexTestEngine(
     private fun node(element: ActionElement): SemanticsNodeInteraction {
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
-        return compose.onNodeWithTag(uiElement.elementId)
+        return compose.onNodeWithTag(
+            testTag = uiElement.elementId,
+            useUnmergedTree = true,
+        )
     }
 }
 

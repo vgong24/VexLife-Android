@@ -88,6 +88,11 @@ class InMemoryVexStreamMusicRepository(
                 VexStreamConnectionState.Paired(
                     displayName = "VexStream on Test PC",
                 ),
+            tracks = current.tracks.map { state ->
+                state.copy(
+                    hubAvailable = true,
+                )
+            },
         )
 
         return VexStreamRepositoryResult.Accepted()

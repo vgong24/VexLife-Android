@@ -6,6 +6,59 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class InMemoryVexStreamMusicRepositoryTest {
+    @Test
+    fun successfulPairingRestoresFixtureHubAvailability() = runTest {
+        val track =
+            VexStreamTrack(
+                trackRef = VexStreamTrackRef("fixture.pairing"),
+                mediaSha256 =
+                    VexStreamMediaSha256(
+                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    ),
+                mediaByteLength = 1_024L,
+                title = "Pairing Fixture",
+                artist = "Vex",
+            )
+        val repository =
+            InMemoryVexStreamMusicRepository(
+                initialState =
+                    VexStreamMusicState(
+                        tracks =
+                            listOf(
+                                VexStreamTrackState(
+                                    track = track,
+                                    hubAvailable = true,
+                                ),
+                            ),
+                    ),
+            )
+
+        repository.findNearbyVexStream()
+        assertTrue(
+            repository.state.value.tracks.none {
+                it.hubAvailable
+            },
+        )
+
+        repository.confirmPairingCode()
+
+        assertTrue(
+            repository.state.value.hubState is
+                VexStreamHubState.Ready,
+        )
+        assertTrue(
+            repository.state.value.tracks.all {
+                it.hubAvailable
+            },
+        )
+        assertEquals(
+            listOf(track.trackRef),
+            repository.state.value
+                .playableTracks()
+                .map { it.track.trackRef },
+        )
+    }
+
 
     @Test
     fun offlineDownloadSurvivesHubLoss() = runTest {

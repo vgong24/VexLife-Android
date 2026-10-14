@@ -28,7 +28,8 @@ testing/journey/
     VexJourneyEnvironment.kt
 
   catalog/
-    VexJourneyCatalog.kt
+    Journeys.kt                 human/IDE typed path map
+    VexJourneyCatalog.kt        executable catalog derived from registered domains
     VexJourneyShard.kt
 
     shell/
@@ -46,8 +47,49 @@ The shard answers "where should a developer look when this walk fails or coverag
 does not prohibit cross-Screen journeys. A Profile journey may naturally begin at Home/FAB and still
 belong to the Profile shard because the user intention being proved is Profile.
 
-This is still a **journey/walker** foundation, not an autonomous ScreenCrawler. Reserve a future
-`testing/crawler/` package for an actual traversal planner that chooses routes automatically.
+Journey owns the semantic walk. ScreenCrawler is a downstream, opt-in evidence consumer of that
+same catalog; it does not own another traversal language. See
+[`SCREEN-CRAWLER-EVIDENCE.md`](SCREEN-CRAWLER-EVIDENCE.md) for its selection/capture layer.
+
+## Human contribution path
+
+A developer adding a feature does **not** need to study every prior journey first.
+
+Start from the product meaning being changed:
+
+~~~text
+owning *Screen.kt / feature
+-> same-domain *Journeys.kt
+-> typed Journeys.<domain>.<path> address
+-> JVM map/grammar proof
+-> baseline Android journey proof when UI behavior changed
+-> optional ScreenCrawler evidence when visual/configuration review matters
+~~~
+
+For a new journey:
+
+1. Add the walk beside its owning feature shard, for example
+   `shared/profile/UserProfileJourneys.kt`, and include it in that shard's `journeys` list.
+2. Give the walk one human-discoverable typed address in `Journeys.kt`, such as
+   `Journeys.userProfile.formSubmit`. IDE autocomplete under `Journeys.` is the normal map of
+   known paths; raw shard/journey ID strings are engine/report identities, not the human authoring
+   surface.
+3. Run the JVM tests. `VexJourneyHumanMapTest` protects the invariant that every executable catalog
+   journey has exactly one typed human path, while `VexJourneyCoverageTest` reports registered
+   production Screens/actions/editable fields/modals that no journey names.
+4. Run the relevant Android journey proof when the change affects real UI/runtime behavior. Use an
+   exact case/shard/environment selector when a whole connected suite is unnecessary.
+5. Use ScreenCrawler only when screenshot, locale, font, or other visual evidence is actually
+   needed. Adding an ordinary Screen or journey must not require edits to the crawler planner or
+   evidence observer.
+
+Change `VexExpectedWalk` or `VexTestEngine` only when the shared journey grammar/runtime
+realization itself needs a new semantic capability. Do not add feature-specific branches there just
+to make one new feature testable.
+
+Stable `shardId/journeyId` and case refs make failures and evidence addressable later; Git/PR
+history remains the source for *why* a path changed. ScreenCrawler is an executor/evidence consumer,
+not the history owner.
 
 ## One journey, two consumers
 
