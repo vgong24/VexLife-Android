@@ -20,8 +20,8 @@ internal class VexLifeRelays private constructor(
             val events =
                 EventsConvergenceRelay(
                     eventsRepository = repositories.events,
-                    attentionPreferences = repositories.eventsAttention,
-                    attentionLab = repositories.eventsAttentionLab,
+                    alertPreferences = repositories.eventsAlertPreferences,
+                    debugMenuAlerts = repositories.eventsDebugMenuAlerts,
                     userProfile = repositories.userProfile,
                 )
 
