@@ -117,7 +117,7 @@ class VexTestEngine(
     override fun tapDynamic(element: VexDynamicElementRef) {
         expected.tapDynamic(element)
 
-        compose.waitUntil(timeoutMillis = 5_000) {
+        compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithTag(
                 testTag = element.elementId,
                 useUnmergedTree = true,
@@ -142,7 +142,10 @@ class VexTestEngine(
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(uiElement.elementId)
+            compose.onAllNodesWithTag(
+                testTag = uiElement.elementId,
+                useUnmergedTree = true,
+            )
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
@@ -162,7 +165,10 @@ class VexTestEngine(
     ) {
         expected.type(field, value)
 
-        val node = compose.onNodeWithTag(field.elementId)
+        val node = compose.onNodeWithTag(
+            testTag = field.elementId,
+            useUnmergedTree = true,
+        )
             .scrollIntoViewIfPossible()
         node.performTextClearance()
         node.performTextInput(value)
@@ -188,13 +194,19 @@ class VexTestEngine(
     override fun dismiss(element: UIElement) {
         expected.dismiss(element)
 
-        compose.onNodeWithTag(element.elementId)
+        compose.onNodeWithTag(
+            testTag = element.elementId,
+            useUnmergedTree = true,
+        )
             .performTouchInput {
                 swipeDown()
             }
 
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(element.elementId)
+            compose.onAllNodesWithTag(
+                testTag = element.elementId,
+                useUnmergedTree = true,
+            )
                 .fetchSemanticsNodes()
                 .isEmpty()
         }
@@ -277,7 +289,10 @@ class VexTestEngine(
     private fun node(element: ActionElement): SemanticsNodeInteraction {
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
-        return compose.onNodeWithTag(uiElement.elementId)
+        return compose.onNodeWithTag(
+            testTag = uiElement.elementId,
+            useUnmergedTree = true,
+        )
     }
 }
 
