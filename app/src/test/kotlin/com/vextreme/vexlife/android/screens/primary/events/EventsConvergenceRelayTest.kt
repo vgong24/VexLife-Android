@@ -142,6 +142,27 @@ class EventsConvergenceRelayTest {
     }
 
     @Test
+    fun candidateWithPendingVisibilityIsReachabilityHeldNotGloballyUnobserved() {
+        val relay = EventsConvergenceRelay()
+
+        relay.feedChanged(feed())
+        relay.preferencesChanged(
+            EventsAttentionPreferenceState(),
+        )
+        relay.transientBlockedChanged(false)
+        relay.screenChanged(EventsScreen.screenId)
+
+        assertEquals(
+            "event.first",
+            relay.current.outputState.candidate?.eventRef,
+        )
+        assertEquals(
+            EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE,
+            relay.current.outputState.availability,
+        )
+    }
+
+    @Test
     fun candidateIdentitySurvivesScreenReachabilityAndTransientChanges() {
         val relay = EventsConvergenceRelay()
 

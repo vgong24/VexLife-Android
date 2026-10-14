@@ -21,25 +21,25 @@ class VexMapsStyleConvergenceRelayTest {
             )
 
         assertEquals(
-            VexMapsStyleConvergenceAvailability
+            VexMapsStyleConvergenceStatus
                 .NEEDS_APPLY,
-            relay.currentOutput.availability,
+            relay.currentOutput.status,
         )
 
         relay.applyStarted(selected)
 
         assertEquals(
-            VexMapsStyleConvergenceAvailability
+            VexMapsStyleConvergenceStatus
                 .APPLYING,
-            relay.currentOutput.availability,
+            relay.currentOutput.status,
         )
 
         relay.styleLoaded(selected)
 
         assertEquals(
-            VexMapsStyleConvergenceAvailability
+            VexMapsStyleConvergenceStatus
                 .APPLIED,
-            relay.currentOutput.availability,
+            relay.currentOutput.status,
         )
     }
 
@@ -74,9 +74,9 @@ class VexMapsStyleConvergenceRelayTest {
                 ?.styleRef,
         )
         assertEquals(
-            VexMapsStyleConvergenceAvailability
+            VexMapsStyleConvergenceStatus
                 .NEEDS_APPLY,
-            relay.currentOutput.availability,
+            relay.currentOutput.status,
         )
     }
 
@@ -100,9 +100,9 @@ class VexMapsStyleConvergenceRelayTest {
         )
 
         assertEquals(
-            VexMapsStyleConvergenceAvailability
+            VexMapsStyleConvergenceStatus
                 .FAILED,
-            relay.currentOutput.availability,
+            relay.currentOutput.status,
         )
         assertEquals(
             "style source unavailable",
@@ -116,9 +116,9 @@ class VexMapsStyleConvergenceRelayTest {
         )
 
         assertEquals(
-            VexMapsStyleConvergenceAvailability
+            VexMapsStyleConvergenceStatus
                 .NEEDS_APPLY,
-            relay.currentOutput.availability,
+            relay.currentOutput.status,
         )
     }
 

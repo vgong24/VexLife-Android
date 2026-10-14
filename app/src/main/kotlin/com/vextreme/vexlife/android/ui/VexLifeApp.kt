@@ -64,8 +64,15 @@ internal fun VexLifeApp(
     VexLifeApp(session = session)
 }
 
+/**
+ * Session-injectable composition root.
+ *
+ * Production reaches this through [VexLifeViewModel]. Journey instrumentation also uses this exact
+ * boundary so its Relay/logging lifetime mirrors production instead of being tied to the Compose
+ * test composition scope.
+ */
 @Composable
-private fun VexLifeApp(
+internal fun VexLifeApp(
     session: VexLifeSession,
 ) {
     val runtime = session.runtime
@@ -77,10 +84,18 @@ private fun VexLifeApp(
         runtime.appOpened()
     }
 
+    /*
+     * Read the surface facts in this restart scope, not only inside SideEffect. Compose tracks state
+     * reads made during composition; reads performed only by the effect body do not invalidate this
+     * parent scope when navigation/presentation changes in a child composition.
+     */
+    val currentScreenId = runtime.currentScreen.screenId
+    val transientBlocked = runtime.presentation.hasOpenPresentation
+
     SideEffect {
         relays.events.surfaceChanged(
-            screenId = runtime.currentScreen.screenId,
-            transientBlocked = runtime.presentation.hasOpenPresentation,
+            screenId = currentScreenId,
+            transientBlocked = transientBlocked,
         )
     }
 

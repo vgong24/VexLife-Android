@@ -2,6 +2,13 @@ package com.vextreme.vexlife.android.data.maps
 
 import java.time.Instant
 
+/**
+ * Durable checkpoint of the last accepted precise-device observation.
+ *
+ * This is not current device truth. Reopen logic may project it only into non-authoritative map
+ * context while permission remains active; navigation/readiness must wait for a fresh Android fix.
+ * Accuracy and capture time are retained so future restoration policy can make an explicit decision.
+ */
 data class VexMapsStoredLocation(
     val latitude: Double,
     val longitude: Double,
@@ -51,11 +58,11 @@ data class VexMapsStoredState(
  * Durable Android-local Maps preference/state boundary.
  *
  * This answers only:
- * - what last accepted location may make Maps useful immediately on reopen?
+ * - what last accepted precise-location checkpoint may seed non-authoritative map context?
  * - which online map style did the human choose?
  *
- * It is deliberately not a GPS history, navigation-session owner, map-pack catalog, or generic
- * preference store.
+ * The checkpoint never becomes a current fix merely because the app reopened. It is deliberately
+ * not a GPS history, navigation-session owner, map-pack catalog, or generic preference store.
  */
 interface VexMapsRepository {
     suspend fun load(): VexMapsStoredState

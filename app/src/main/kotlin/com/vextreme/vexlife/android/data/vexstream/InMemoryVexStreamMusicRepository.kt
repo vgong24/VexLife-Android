@@ -78,6 +78,12 @@ class InMemoryVexStreamMusicRepository(
             )
         }
 
+        /*
+         * Pairing makes the Hub reachable again. findNearbyVexStream() intentionally marked every
+         * remote track unavailable while pairing; if we only flip hubState/connectionState here,
+         * playableTracks() remains empty and the library cannot render PlayTrack after a successful
+         * pairing. Keep the fixture's per-track availability coherent with the Ready Hub state.
+         */
         mutableState.value = current.copy(
             hubState =
                 VexStreamHubState.Ready(
@@ -88,6 +94,12 @@ class InMemoryVexStreamMusicRepository(
                 VexStreamConnectionState.Paired(
                     displayName = "VexStream on Test PC",
                 ),
+            tracks =
+                current.tracks.map { state ->
+                    state.copy(
+                        hubAvailable = true,
+                    )
+                },
         )
 
         return VexStreamRepositoryResult.Accepted()
