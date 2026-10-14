@@ -24,8 +24,12 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRelay
+import com.vextreme.vexlife.android.screens.primary.events.relationshipConsumerSummary
+import com.vextreme.vexlife.android.screens.primary.events.toPresentationState
 import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureComparisonLab
 import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureMode
+import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.TraditionalEventsController
 import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistorySheet
 import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -55,6 +59,18 @@ object DebugMenuScreen : AppScreenBlueprint(
     val EventsArchitectureComparisonStatus = textFieldRef(
         id = "body.events-architecture.live-comparison",
         labelRes = R.string.events_architecture_live_comparison,
+        readOnly = true,
+    )
+
+    val EventsRelayConsumerSnapshot = textFieldRef(
+        id = "body.events-architecture.relay-consumer",
+        labelRes = R.string.events_architecture_relay_consumer,
+        readOnly = true,
+    )
+
+    val EventsTraditionalConsumerSnapshot = textFieldRef(
+        id = "body.events-architecture.traditional-consumer",
+        labelRes = R.string.events_architecture_traditional_consumer,
         readOnly = true,
     )
 
@@ -157,6 +173,8 @@ object DebugMenuScreen : AppScreenBlueprint(
                 )
                 toggle(UseTraditionalEventsArchitecture)
                 textField(EventsArchitectureComparisonStatus)
+                textField(EventsRelayConsumerSnapshot)
+                textField(EventsTraditionalConsumerSnapshot)
                 text(
                     id = "helper",
                     textRes = R.string.events_architecture_comparison_helper,
@@ -361,6 +379,9 @@ object DebugMenuScreen : AppScreenBlueprint(
             runtime = runtime,
             logHistoryRepository = repositories.logHistory,
             eventsArchitectureComparison = relays.eventsComparison,
+            eventsRelay = relays.events,
+            traditionalEventsController =
+                relays.eventsComparison.traditionalController,
             darkTheme = darkTheme,
         )
     }
@@ -371,6 +392,8 @@ fun DebugMenuScreenContent(
     runtime: VexRuntime,
     logHistoryRepository: LogHistoryRepository,
     eventsArchitectureComparison: EventsArchitectureComparisonLab,
+    eventsRelay: EventsConvergenceRelay,
+    traditionalEventsController: TraditionalEventsController,
     darkTheme: Boolean,
 ) {
     val architectureMode by
@@ -382,6 +405,20 @@ fun DebugMenuScreenContent(
         eventsArchitectureComparison
             .comparisonStates
             .collectAsState()
+
+    val relayConsumerState by
+        eventsRelay
+            .outputStates
+            .collectAsState(
+                initial = eventsRelay.currentOutput,
+            )
+
+    val traditionalConsumerState by
+        traditionalEventsController
+            .uiStates
+            .collectAsState(
+                initial = traditionalEventsController.current,
+            )
 
     val handler =
         ElementActionHandler { element ->
@@ -436,6 +473,20 @@ fun DebugMenuScreenContent(
                     .elementId ->
                     architectureComparison.diagnosticSummary
 
+                DebugMenuScreen
+                    .EventsRelayConsumerSnapshot
+                    .elementId ->
+                    relayConsumerState
+                        .toPresentationState()
+                        .relationshipConsumerSummary
+
+                DebugMenuScreen
+                    .EventsTraditionalConsumerSnapshot
+                    .elementId ->
+                    traditionalConsumerState
+                        .toPresentationState()
+                        .relationshipConsumerSummary
+
                 else ->
                     ""
             }
@@ -465,6 +516,9 @@ private fun DebugMenuScreenPreview() {
             runtime = context.runtime,
             logHistoryRepository = context.repositories.logHistory,
             eventsArchitectureComparison = context.relays.eventsComparison,
+            eventsRelay = context.relays.events,
+            traditionalEventsController =
+                context.relays.eventsComparison.traditionalController,
             darkTheme = context.darkTheme,
         )
     }
