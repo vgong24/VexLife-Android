@@ -12,6 +12,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,10 +31,7 @@ import org.junit.Test
 class VexRelayContractTest {
     private data class CounterState(
         val count: Int = 0,
-    ) : VexState<CounterState> {
-        override fun deepCopy(): CounterState =
-            copy()
-    }
+    ) : VexImmutableState<CounterState>
 
     private class CounterRelay :
         VexRelay<CounterState>(
@@ -53,6 +51,84 @@ class VexRelayContractTest {
                 CounterState(
                     count = value,
                 ),
+            )
+        }
+    }
+
+    private data class SharedLeaf(
+        val value: Int,
+    )
+
+    private data class ImmutableProbeInput(
+        val left: SharedLeaf? = null,
+        val right: SharedLeaf? = null,
+        val context: String? = null,
+        val blocked: Boolean? = null,
+    ) : VexImmutableInputState<ImmutableProbeInput>
+
+    private data class ImmutableProbeOutput(
+        val sum: Int = 0,
+    ) : VexImmutableOutputState<ImmutableProbeOutput>
+
+    private class ImmutableProbeCompoundRelay :
+        VexCompoundRelay<ImmutableProbeInput, ImmutableProbeOutput>(
+            relayRef = "relay.contract.immutable-compound",
+            initialInputState = ImmutableProbeInput(),
+            initialOutputState = ImmutableProbeOutput(),
+        ) {
+        fun patch(
+            left: SharedLeaf? = null,
+            right: SharedLeaf? = null,
+            context: String? = null,
+            blocked: Boolean? = null,
+        ) {
+            send(
+                ImmutableProbeInput(
+                    left = left,
+                    right = right,
+                    context = context,
+                    blocked = blocked,
+                ),
+            )
+        }
+
+        override fun processStates(
+            inputState: ImmutableProbeInput,
+            currentState: VexCompoundState<
+                ImmutableProbeInput,
+                ImmutableProbeOutput
+            >,
+        ): VexCompoundState<
+            ImmutableProbeInput,
+            ImmutableProbeOutput
+        > {
+            val previous =
+                currentState.inputState
+
+            val coherent =
+                previous.copy(
+                    left =
+                        inputState.left
+                            ?: previous.left,
+                    right =
+                        inputState.right
+                            ?: previous.right,
+                    context =
+                        inputState.context
+                            ?: previous.context,
+                    blocked =
+                        inputState.blocked
+                            ?: previous.blocked,
+                )
+
+            return currentState.copy(
+                inputState = coherent,
+                outputState =
+                    ImmutableProbeOutput(
+                        sum =
+                            (coherent.left?.value ?: 0) +
+                                (coherent.right?.value ?: 0),
+                    ),
             )
         }
     }
@@ -269,6 +345,87 @@ class VexRelayContractTest {
                     ),
             )
         }
+    }
+
+    @Test
+    fun immutableSimpleStateCanBeSharedAcrossReadBoundaries() {
+        val relay =
+            CounterRelay()
+
+        relay.set(7)
+
+        val first =
+            relay.current
+        val second =
+            relay.current
+
+        assertSame(
+            first,
+            second,
+        )
+        assertEquals(
+            7,
+            first.count,
+        )
+    }
+
+    @Test
+    fun oneImmutableCompoundPatchCanChangeSeveralFactsAndReuseUnchangedChildren() {
+        val relay =
+            ImmutableProbeCompoundRelay()
+        val left =
+            SharedLeaf(10)
+        val right =
+            SharedLeaf(32)
+
+        relay.patch(
+            left = left,
+            right = right,
+            context = "home",
+            blocked = false,
+        )
+
+        val before =
+            relay.currentInput
+
+        relay.patch(
+            context = "events",
+            blocked = true,
+        )
+
+        val after =
+            relay.currentInput
+
+        assertNotSame(
+            before,
+            after,
+        )
+        assertSame(
+            before.left,
+            after.left,
+        )
+        assertSame(
+            before.right,
+            after.right,
+        )
+        assertEquals(
+            "events",
+            after.context,
+        )
+        assertEquals(
+            true,
+            after.blocked,
+        )
+        assertEquals(
+            42,
+            relay.currentOutput.sum,
+        )
+
+        // Immutable projection reads may share the exact retained instance.
+        assertSame(
+            after,
+            relay.currentInput,
+        )
     }
 
     @Test
