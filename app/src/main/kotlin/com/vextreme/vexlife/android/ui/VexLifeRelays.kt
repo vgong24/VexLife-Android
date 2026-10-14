@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.events.RelayEventsSourceAvailabilityRepository
 import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRelay
 import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureComparisonLab
 import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.TraditionalEventsController
@@ -20,12 +21,16 @@ internal class VexLifeRelays private constructor(
             repositories: AppRepositories,
             scope: CoroutineScope,
         ): VexLifeRelays {
+            val sourceAvailability =
+                RelayEventsSourceAvailabilityRepository()
+
             val events =
                 EventsConvergenceRelay(
                     eventsRepository = repositories.events,
                     attentionPreferences = repositories.eventsAttention,
                     attentionLab = repositories.eventsAttentionLab,
                     userProfile = repositories.userProfile,
+                    sourceAvailability = sourceAvailability,
                 )
 
             events.activate(scope)
@@ -36,6 +41,7 @@ internal class VexLifeRelays private constructor(
                     attentionPreferences = repositories.eventsAttention,
                     attentionLab = repositories.eventsAttentionLab,
                     userProfile = repositories.userProfile,
+                    sourceAvailabilityRepository = sourceAvailability,
                 )
             traditionalEvents.start(scope)
 
