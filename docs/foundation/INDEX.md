@@ -67,7 +67,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
 | ANDROID_HOST_PROOF | repository-owned Android proof requests carried by current VexRelay/VexLocalBridge | **ACCEPTED ON MAIN / PR #78 EXACT HOST PROOF PASS** | Let any feature request exact Android repository/device proof without rebuilding host-carriage mechanics or making Victor interpret routine output | reuse current repository tasks + live SDK contract; evolve only from repeated real proof needs |
 | EVENTS_CONVERGENCE_PRACTICUM | external-information ingress + Relay composition + stable dynamic list + anchored attention | **DRAFT CANDIDATE / PURE KOTLIN SMOKE PASS / ANDROID PROOF PENDING** | Master one convergence node before reverse-building real Messaging/Calls/Maps/Health/VexStream adapters toward it | exact Gradle/Journey/ScreenCrawler + physical-device attention walk |
-| VEXMAPS_FEATURE_TOPOLOGY | native map composition + provider / Relay / session boundaries | **READY FOR REVIEW / A014 PHYSICAL + A016 EXACT LOCAL PASS** | Make Maps teach where semantic identity, durable context, convergence, provider mechanics and presentation belong without turning MapLibre into app architecture | review/merge current topology; keep age/accuracy, gesture and second-renderer questions as separate future work |
+| VEXMAPS_FEATURE_TOPOLOGY | native map composition + provider / Relay / session boundaries | **ACCEPTED ON MAIN / PR #73 MERGED / A014 PHYSICAL + A017 LOCAL PASS** | Make Maps teach where semantic identity, durable context, convergence, provider mechanics and presentation belong without turning MapLibre into app architecture | extend only when real product evidence earns age/accuracy, gesture or second-renderer evolution |
 | F2_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
 | F3_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
 | F4_COMPOSITION_BOUNDARY | composition root / ViewModel / lifecycle boundary | PORT_CANDIDATE | Keep Android lifecycle wiring separate from product semantic ownership | lifecycle + ViewModel contract tests |
@@ -181,7 +181,7 @@ semantic reducer and keeping Compose as an output/presentation observer. It also
 cross-domain UserProfile name-change input. It remains a draft/refinement candidate until exact
 Gradle/Android proof closes.
 
-## VexMaps feature topology candidate
+## VexMaps feature topology
 
 Canonical detail: [`VEXMAPS-FEATURE-TOPOLOGY.md`](VEXMAPS-FEATURE-TOPOLOGY.md)
 
@@ -191,11 +191,12 @@ A fresh developer should be able to descend from VexMaps as a human destination 
 registration, durable Maps state, cross-truth Relay relationships, navigation-session lifetime,
 provider adapters and visible composition without first reconstructing a giant Compose file.
 
-The current ready-for-review candidate keeps MapLibre provider mechanics feature-local, keeps Relay
-for semantic reconciliation rather than turning it into an event bus, and makes custom-Screen
-Preview/Journey use renderer-independent Screen identity. The post-feedback candidate is proved by
-A014's full physical Samsung ScreenCrawler closure (9/9, including Events and VexStream) plus A016's
-exact-head `vexVerifyLocal` PASS and clean source state. A007 remains valid evidence for its earlier
+The accepted PR #73 topology keeps MapLibre provider mechanics feature-local, keeps Relay for
+semantic reconciliation rather than turning it into an event bus, and makes custom-Screen
+Preview/Journey use renderer-independent Screen identity. Its executable behavior is closed by
+A014's full physical Samsung ScreenCrawler proof (9/9, including Events and VexStream), while A017
+proves the documentation-currentized repository-owned `vexVerifyLocal` surface with 260/260 JVM
+tests, debug APK formation and clean source state. A007 remains valid evidence for its earlier
 pre-feedback head; unresolved product questions remain explicitly separate.
 
 ## F0 — Standalone Build Foundation
