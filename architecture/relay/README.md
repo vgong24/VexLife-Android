@@ -173,6 +173,114 @@ and commits at most one next state. There is no separately retained `processingS
 semantically equal. An input-only revision therefore does not manufacture a replacement output
 object.
 
+### One transition, step by step
+
+The copy sites in Relay are intentionally named ownership boundaries, not repeated attempts to clone
+the same thing. Read one Compound transition like this:
+
+~~~text
+0. RETAINED
+   Relay owns current canonical truth.
+
+1. ADMIT
+   caller patch -> deepCopy() -> admittedPatch
+   Why: caller may still own/mutate what it passed.
+
+2. ISOLATE FOR REDUCER
+   retainedCurrent -> deepCopy() -> processingCurrent
+   Why: processStates() is overridable code and must never mutate retained canonical truth.
+
+3. REDUCE
+   admittedPatch + processingCurrent -> processStates() -> reducerCandidate
+   Why: candidate is temporary proposed meaning, not another truth owner.
+
+4. CLAIM
+   reducerCandidate -> deepCopy() -> ownedCandidate
+   Why: Relay must own whatever it may retain; reducer-local mutable values cannot leak in.
+
+5. COMPARE
+   ownedCandidate.input/output vs retainedCurrent.input/output
+   Why: revision advances only when retained semantic meaning changes.
+
+6A. NO CHANGE
+   retain retainedCurrent exactly
+   retainedCurrent -> deepCopy() -> exposedCurrent
+   Why: send() returns outside Relay ownership, so mutable-backed current cannot be handed out.
+
+6B. CHANGE
+   preserve any unchanged retained branch by identity
+   + replace only changed branch(es)
+   + revision + 1
+   -> nextRetained
+
+7. COMMIT
+   mutableCurrentState.value = nextRetained
+   This is the only canonical truth move.
+
+8. EXPOSE
+   nextRetained -> deepCopy() -> exposedNext
+   Why: caller of send() must not be able to mutate retained truth.
+~~~
+
+For a transitively immutable Vex state, every `deepCopy()` above returns the same instance. The
+protocol still documents the ownership boundary, but it performs no allocation.
+
+For a mutable-backed state, the copies at ADMIT, ISOLATE, CLAIM, and EXPOSE are different copies for
+different owners. In particular, the processing copy and the no-change exposure copy are not
+interchangeable: `processingCurrent` was handed to reducer code, while `exposedCurrent` is handed to
+the caller of `send()`.
+
+#### Events-shaped example
+
+Suppose retained Events input is:
+
+~~~kotlin
+val retainedCurrent = EventsConvergenceInputState(
+    currentScreenId = "Home",
+    feed = feed41,
+    preferences = preferences12,
+    lab = lab3,
+    profile = profile8,
+    visibleEventRefsBySurface = visible5,
+    transientBlocked = false,
+)
+~~~
+
+One caller admits two related changes together:
+
+~~~kotlin
+val patch = EventsConvergenceInputState(
+    currentScreenId = "Events",
+    transientBlocked = true,
+)
+~~~
+
+The reducer forms one coherent candidate:
+
+~~~kotlin
+val coherent =
+    retainedCurrent.copy(
+        currentScreenId = patch.currentScreenId ?: retainedCurrent.currentScreenId,
+        transientBlocked = patch.transientBlocked ?: retainedCurrent.transientBlocked,
+    )
+~~~
+
+With immutable children the new root may structurally share:
+
+~~~text
+coherent.feed                       === retainedCurrent.feed
+coherent.preferences                === retainedCurrent.preferences
+coherent.lab                        === retainedCurrent.lab
+coherent.profile                    === retainedCurrent.profile
+coherent.visibleEventRefsBySurface  === retainedCurrent.visibleEventRefsBySurface
+
+coherent.currentScreenId             != retainedCurrent.currentScreenId
+coherent.transientBlocked            != retainedCurrent.transientBlocked
+~~~
+
+So one admitted patch can change several facts atomically without cloning every unchanged branch.
+The Compound reducer still runs once and the framework still commits at most one next state.
+
 ### Nested Compound convergence
 
 A Compound Relay may consume another Compound Relay exactly like any other observable truth. Prefer
