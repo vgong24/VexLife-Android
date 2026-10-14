@@ -34,23 +34,25 @@ class InMemoryVexMapsRepositoryTest {
             "liberty",
             state.onlineStyleRef,
         )
+        val location =
+            requireNotNull(
+                state.lastLocation,
+            )
+
         assertEquals(
             34.5,
-            state.lastLocation
-                ?.latitude,
+            location.latitude,
             0.0,
         )
         assertEquals(
             -118.1,
-            state.lastLocation
-                ?.longitude,
+            location.longitude,
             0.0,
         )
         assertEquals(
             8f,
             requireNotNull(
-                state.lastLocation
-                    ?.accuracyMeters,
+                location.accuracyMeters,
             ),
             0f,
         )
