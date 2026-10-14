@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.data.events
 
-import com.vextreme.vexlife.android.relay.VexRelay
+import com.vextreme.vexlife.android.relay.VexAction
+import com.vextreme.vexlife.android.relay.VexActionRelay
 import com.vextreme.vexlife.android.relay.VexState
 import kotlinx.coroutines.flow.Flow
 
@@ -115,8 +116,70 @@ class RelayEventsAttentionPreferenceRepository :
     }
 }
 
+private sealed interface EventsAttentionPreferenceAction :
+    VexAction {
+    data class Terminal(
+        val eventRef: String,
+        val disposition: EventsAttentionDisposition,
+    ) : EventsAttentionPreferenceAction {
+        init {
+            require(
+                disposition ==
+                    EventsAttentionDisposition.ACKNOWLEDGED ||
+                    disposition ==
+                    EventsAttentionDisposition.SUPPRESSED,
+            )
+            requireSemanticRef(
+                eventRef,
+                "eventRef",
+            )
+        }
+    }
+
+    data class Enqueue(
+        val eventRef: String,
+        val disposition: EventsAttentionDisposition,
+    ) : EventsAttentionPreferenceAction {
+        init {
+            require(
+                disposition ==
+                    EventsAttentionDisposition.DEFERRED ||
+                    disposition ==
+                    EventsAttentionDisposition.SUSPENDED,
+            )
+            requireSemanticRef(
+                eventRef,
+                "eventRef",
+            )
+        }
+    }
+
+    data class Reset(
+        val eventRef: String,
+    ) : EventsAttentionPreferenceAction {
+        init {
+            requireSemanticRef(
+                eventRef,
+                "eventRef",
+            )
+        }
+    }
+
+    data object ResetAll :
+        EventsAttentionPreferenceAction
+}
+
+/**
+ * One action-driven state owner for human Events attention disposition.
+ *
+ * Public methods form named semantic actions only. [nextStateFor] is the one exhaustive location
+ * where those actions become next preference state.
+ */
 private class EventsAttentionPreferenceRelay :
-    VexRelay<EventsAttentionPreferenceState>(
+    VexActionRelay<
+        EventsAttentionPreferenceAction,
+        EventsAttentionPreferenceState
+    >(
         relayRef = "relay.events.attention-preference",
         initialState = EventsAttentionPreferenceState(),
     ) {
@@ -124,92 +187,111 @@ private class EventsAttentionPreferenceRelay :
         eventRef: String,
         disposition: EventsAttentionDisposition,
     ) {
-        require(
-            disposition ==
-                EventsAttentionDisposition.ACKNOWLEDGED ||
-                disposition ==
-                EventsAttentionDisposition.SUPPRESSED,
+        sendAction(
+            EventsAttentionPreferenceAction.Terminal(
+                eventRef = eventRef,
+                disposition = disposition,
+            ),
         )
-        requireSemanticRef(eventRef, "eventRef")
-
-        updateCurrent { current ->
-            current.copy(
-                dispositionByEventRef =
-                    current.dispositionByEventRef +
-                        (eventRef to disposition),
-                deferredOrderByEventRef =
-                    current.deferredOrderByEventRef - eventRef,
-                suspendedOrderByEventRef =
-                    current.suspendedOrderByEventRef - eventRef,
-            )
-        }
     }
 
     fun enqueue(
         eventRef: String,
         disposition: EventsAttentionDisposition,
     ) {
-        require(
-            disposition ==
-                EventsAttentionDisposition.DEFERRED ||
-                disposition ==
-                EventsAttentionDisposition.SUSPENDED,
+        sendAction(
+            EventsAttentionPreferenceAction.Enqueue(
+                eventRef = eventRef,
+                disposition = disposition,
+            ),
         )
-        requireSemanticRef(eventRef, "eventRef")
-
-        updateCurrent { current ->
-            val ordinal =
-                current.nextQueueOrdinal
-
-            current.copy(
-                dispositionByEventRef =
-                    current.dispositionByEventRef +
-                        (eventRef to disposition),
-                deferredOrderByEventRef =
-                    if (
-                        disposition ==
-                            EventsAttentionDisposition.DEFERRED
-                    ) {
-                        current.deferredOrderByEventRef +
-                            (eventRef to ordinal)
-                    } else {
-                        current.deferredOrderByEventRef - eventRef
-                    },
-                suspendedOrderByEventRef =
-                    if (
-                        disposition ==
-                            EventsAttentionDisposition.SUSPENDED
-                    ) {
-                        current.suspendedOrderByEventRef +
-                            (eventRef to ordinal)
-                    } else {
-                        current.suspendedOrderByEventRef - eventRef
-                    },
-                nextQueueOrdinal = ordinal + 1L,
-            )
-        }
     }
 
-    fun reset(eventRef: String) {
-        requireSemanticRef(eventRef, "eventRef")
-
-        updateCurrent { current ->
-            current.copy(
-                dispositionByEventRef =
-                    current.dispositionByEventRef - eventRef,
-                deferredOrderByEventRef =
-                    current.deferredOrderByEventRef - eventRef,
-                suspendedOrderByEventRef =
-                    current.suspendedOrderByEventRef - eventRef,
-            )
-        }
+    fun reset(
+        eventRef: String,
+    ) {
+        sendAction(
+            EventsAttentionPreferenceAction.Reset(
+                eventRef = eventRef,
+            ),
+        )
     }
 
     fun resetAll() {
-        updateCurrent {
-            EventsAttentionPreferenceState()
-        }
+        sendAction(
+            EventsAttentionPreferenceAction.ResetAll,
+        )
     }
+
+    override fun nextStateFor(
+        action: EventsAttentionPreferenceAction,
+        currentState: EventsAttentionPreferenceState,
+    ): EventsAttentionPreferenceState =
+        when (action) {
+            is EventsAttentionPreferenceAction.Terminal ->
+                currentState.copy(
+                    dispositionByEventRef =
+                        currentState.dispositionByEventRef +
+                            (action.eventRef to action.disposition),
+                    deferredOrderByEventRef =
+                        currentState.deferredOrderByEventRef -
+                            action.eventRef,
+                    suspendedOrderByEventRef =
+                        currentState.suspendedOrderByEventRef -
+                            action.eventRef,
+                )
+
+            is EventsAttentionPreferenceAction.Enqueue -> {
+                val ordinal =
+                    currentState.nextQueueOrdinal
+
+                currentState.copy(
+                    dispositionByEventRef =
+                        currentState.dispositionByEventRef +
+                            (action.eventRef to action.disposition),
+                    deferredOrderByEventRef =
+                        if (
+                            action.disposition ==
+                                EventsAttentionDisposition.DEFERRED
+                        ) {
+                            currentState.deferredOrderByEventRef +
+                                (action.eventRef to ordinal)
+                        } else {
+                            currentState.deferredOrderByEventRef -
+                                action.eventRef
+                        },
+                    suspendedOrderByEventRef =
+                        if (
+                            action.disposition ==
+                                EventsAttentionDisposition.SUSPENDED
+                        ) {
+                            currentState.suspendedOrderByEventRef +
+                                (action.eventRef to ordinal)
+                        } else {
+                            currentState.suspendedOrderByEventRef -
+                                action.eventRef
+                        },
+                    nextQueueOrdinal =
+                        ordinal + 1L,
+                )
+            }
+
+            is EventsAttentionPreferenceAction.Reset ->
+                currentState.copy(
+                    dispositionByEventRef =
+                        currentState.dispositionByEventRef -
+                            action.eventRef,
+                    deferredOrderByEventRef =
+                        currentState.deferredOrderByEventRef -
+                            action.eventRef,
+                    suspendedOrderByEventRef =
+                        currentState.suspendedOrderByEventRef -
+                            action.eventRef,
+                )
+
+            EventsAttentionPreferenceAction.ResetAll ->
+                EventsAttentionPreferenceState()
+        }
 }
 
 // [VXG RealForever]
