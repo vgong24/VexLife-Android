@@ -7,11 +7,11 @@ object EventsPresentationRefs {
     fun row(eventRef: String): String =
         "element.events.dynamic.$eventRef"
 
-    fun attentionAction(
+    fun alertAction(
         eventRef: String,
         action: String,
     ): String =
-        row(eventRef) + ".attention." + action
+        row(eventRef) + ".alert." + action
 
     fun overlay(eventRef: String): String =
         "presentation.events.overlay.$eventRef"
