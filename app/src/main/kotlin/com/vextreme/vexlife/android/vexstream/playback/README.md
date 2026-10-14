@@ -1,4 +1,4 @@
-# VexStream Playback — VexPort
+# VexStream Playback
 
 [VXG RealForever]
 
@@ -25,10 +25,11 @@ VexStreamPlaybackBehavior.kt
 VexStreamPlaybackPresentation.kt
     semantic Control projection -> shared VexStream icon/enabled meaning
 
-Media3VexStreamPlaybackPort.kt
+Media3VexStreamPlaybackConnection.kt
     Media3 truth projection + Effect realization
+    implements reusable VexPortFlow
 
-VexStreamPlaybackPortHost.kt
+VexStreamPlaybackConnectionHost.kt
     Android configuration lifetime only
 ~~~
 
@@ -62,7 +63,7 @@ with playback requested can truthfully project Pause even while `Player.isPlayin
 
 ## Synchronous intent emission
 
-The Media3 Port emits admitted intent before dispatching the provider command.
+The Media3 connection emits admitted intent before dispatching the provider command.
 
 ~~~text
 activate(PlayPause)
@@ -110,10 +111,10 @@ language without creating another behavior truth.
 MediaSessionService / ExoPlayer
     actual playback + queue owner
 
-Media3VexStreamPlaybackPort
+Media3VexStreamPlaybackConnection
     projection / Effect adapter only
 
-VexStreamPlaybackPortViewModel
+VexStreamPlaybackConnectionViewModel
     Android configuration-lifetime host only
 
 Mini Player / Context Dock

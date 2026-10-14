@@ -17,12 +17,13 @@ import com.vextreme.vexlife.android.behavior.VexPortFlow
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 
 /**
- * Android configuration-lifetime host for the service-owned MediaController and semantic VexPort.
+ * Android configuration-lifetime host for the service-owned MediaController and semantic connection.
  *
  * ViewModel is only the Android retention mechanism. MediaSession/Player remain playback truth
- * owners; [Media3VexStreamPlaybackPort] remains the semantic projection/effect adapter.
+ * owners; [Media3VexStreamPlaybackConnection] remains the semantic projection/effect adapter while
+ * implementing the reusable [VexPortFlow] contract.
  */
-internal class VexStreamPlaybackPortViewModel(
+internal class VexStreamPlaybackConnectionViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     private var cleared = false
@@ -45,11 +46,11 @@ internal class VexStreamPlaybackPortViewModel(
         )
         private set
 
-    private var media3Port:
-        Media3VexStreamPlaybackPort? =
+    private var media3Connection:
+        Media3VexStreamPlaybackConnection? =
         null
 
-    var port by
+    var connection by
         mutableStateOf<
             VexPortFlow<
                 VexStreamPlaybackState,
@@ -68,14 +69,14 @@ internal class VexStreamPlaybackPortViewModel(
                     controllerFuture.get()
                 }.onSuccess { connected ->
                     if (!cleared) {
-                        val connectedPort =
-                            Media3VexStreamPlaybackPort(
+                        val playbackConnection =
+                            Media3VexStreamPlaybackConnection(
                                 connected,
                             )
-                        media3Port =
-                            connectedPort
-                        port =
-                            connectedPort
+                        media3Connection =
+                            playbackConnection
+                        connection =
+                            playbackConnection
                         controller =
                             connected
                     }
@@ -89,9 +90,9 @@ internal class VexStreamPlaybackPortViewModel(
 
     override fun onCleared() {
         cleared = true
-        port = null
-        media3Port?.close()
-        media3Port = null
+        connection = null
+        media3Connection?.close()
+        media3Connection = null
         controller = null
         MediaController.releaseFuture(
             controllerFuture,
@@ -107,35 +108,35 @@ internal class VexStreamPlaybackPortViewModel(
 internal fun rememberVexStreamMediaController():
     MediaController? {
     val owner:
-        VexStreamPlaybackPortViewModel =
+        VexStreamPlaybackConnectionViewModel =
         viewModel()
 
     return owner.controller
 }
 
 /**
- * Retained two-way semantic Playback Port exposed only through the reusable contract.
+ * Retained two-way semantic Playback connection exposed through the reusable VexPortFlow contract.
  */
 @Composable
-internal fun rememberVexStreamPlaybackPort():
+internal fun rememberVexStreamPlaybackConnection():
     VexPortFlow<
         VexStreamPlaybackState,
         VexStreamPlaybackControl,
         VexStreamPlaybackAct
     >? {
     val owner:
-        VexStreamPlaybackPortViewModel =
+        VexStreamPlaybackConnectionViewModel =
         viewModel()
 
-    return owner.port
+    return owner.connection
 }
 
 /**
- * Lifecycle-aware Android presentation adapter for one live VexPortFlow.
+ * Lifecycle-aware Android presentation adapter for one live Playback connection.
  */
 @Composable
 internal fun rememberVexStreamPlaybackProjection(
-    port:
+    connection:
         VexPortFlow<
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
@@ -147,7 +148,7 @@ internal fun rememberVexStreamPlaybackProjection(
     VexStreamPlaybackAct
 >? {
     val projections =
-        port?.projections
+        connection?.projections
             ?: return null
 
     val current by

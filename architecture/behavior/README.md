@@ -895,7 +895,7 @@ The target is now implemented for the first Play/Pause slice:
 MediaSession / Player
     owns actual playback truth
 
-Media3VexStreamPlaybackPort : VexPortFlow
+Media3VexStreamPlaybackConnection : VexPortFlow
     observes provider truth
     -> forms semantic State
     -> publishes BehaviorProjection
@@ -975,7 +975,7 @@ and the old MediaController toggle helper are removed from the migrated surfaces
 VexStreamPlaybackService / ExoPlayer
     actual playback + queue truth/lifetime
 
-Media3VexStreamPlaybackPort
+Media3VexStreamPlaybackConnection
     observes Player facts
     -> semantic State
     -> BehaviorProjection
@@ -986,7 +986,7 @@ Media3VexStreamPlaybackPort
     -> Effect
     -> MediaController command
 
-VexStreamPlaybackPortViewModel
+VexStreamPlaybackConnectionViewModel
     Android configuration lifetime only
 
 Mini Player
@@ -1036,8 +1036,8 @@ Do **not** integrate the blueprint by simply placing it inside each Composable. 
 behavior/current-State interpretation presentation-owned and would create multiple observers of the
 same Media3 truth.
 
-That seam is now exercised by `Media3VexStreamPlaybackPort` for Play/Pause only. The
-Port remains a projection/adapter and does not become another player or queue truth owner.
+That seam is now exercised by `Media3VexStreamPlaybackConnection` for Play/Pause only. The
+connection remains a projection/adapter and does not become another player or queue truth owner.
 
 The existing code also reveals one unresolved semantic question that should be answered at this
 boundary rather than hidden in Compose:

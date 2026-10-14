@@ -33,7 +33,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.present
-import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackPort
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAct
@@ -55,11 +55,11 @@ internal fun rememberVexStreamContextDockPage(
 ): VexContextDockPage? {
     val controller =
         rememberVexStreamMediaController()
-    val playbackPort =
-        rememberVexStreamPlaybackPort()
+    val playbackConnection =
+        rememberVexStreamPlaybackConnection()
     val playbackProjection =
         rememberVexStreamPlaybackProjection(
-            playbackPort,
+            playbackConnection,
         )
     val playback by
         rememberVexStreamPlaybackUiState(
@@ -80,8 +80,8 @@ internal fun rememberVexStreamContextDockPage(
             runtime = runtime,
             controller = controller,
             playback = playback,
-            playbackPort =
-                playbackPort,
+            playbackConnection =
+                playbackConnection,
             playbackProjection =
                 playbackProjection,
             expanded = expanded,
@@ -94,7 +94,7 @@ private fun VexStreamContextDockContent(
     runtime: VexRuntime,
     controller: MediaController?,
     playback: VexStreamPlaybackUiState,
-    playbackPort:
+    playbackConnection:
         VexPort<
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
@@ -218,7 +218,7 @@ private fun VexStreamContextDockContent(
                     subjectRef =
                         "presentation.context-dock.vexstream.play-pause",
                 )
-                playbackPort
+                playbackConnection
                     ?.activate(
                         VexStreamPlaybackControl.PlayPause,
                     )

@@ -11,13 +11,13 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Android Media3 realization of the reusable VexPortFlow contract.
  *
- * MediaSession/Player remain the actual playback truth owners. This Port is a retained semantic
+ * MediaSession/Player remain the actual playback truth owners. This connection is a retained semantic
  * projection + Effect adapter over one MediaController; it does not own player or queue lifetime.
  *
- * The Port also owns one small pending-intent shock absorber so admitted local Acts become visible
+ * The connection also owns one small pending-intent shock absorber so admitted local Acts become visible
  * synchronously while delayed Media3 observations catch up.
  */
-internal class Media3VexStreamPlaybackPort(
+internal class Media3VexStreamPlaybackConnection(
     private val controller: MediaController,
 ) :
     VexPortFlow<

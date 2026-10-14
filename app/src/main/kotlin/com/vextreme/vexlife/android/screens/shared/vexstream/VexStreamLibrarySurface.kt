@@ -83,7 +83,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.present
-import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackPort
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAct
@@ -112,15 +112,15 @@ internal fun VexStreamLibrarySurface(
         } else {
             rememberVexStreamMediaController()
         }
-    val playbackPort =
+    val playbackConnection =
         if (inspectionMode) {
             null
         } else {
-            rememberVexStreamPlaybackPort()
+            rememberVexStreamPlaybackConnection()
         }
     val playbackProjection =
         rememberVexStreamPlaybackProjection(
-            playbackPort,
+            playbackConnection,
         )
     val playback by rememberVexStreamPlaybackUiState(controller)
     val resolver =
@@ -203,8 +203,8 @@ internal fun VexStreamLibrarySurface(
                 VexStreamMiniPlayer(
                     playback = playback,
                     controller = controller,
-                    playbackPort =
-                        playbackPort,
+                    playbackConnection =
+                        playbackConnection,
                     playbackProjection =
                         playbackProjection,
                     runtime = runtime,
@@ -1737,7 +1737,7 @@ private fun VexStreamTrackMenuItem(
 private fun VexStreamMiniPlayer(
     playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
-    playbackPort:
+    playbackConnection:
         VexPort<
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
@@ -1763,7 +1763,7 @@ private fun VexStreamMiniPlayer(
                     controller?.seekToPreviousMediaItem()
 
                 VexStreamMusicScreen.TogglePlayback ->
-                    playbackPort
+                    playbackConnection
                         ?.activate(
                             VexStreamPlaybackControl.PlayPause,
                         )
