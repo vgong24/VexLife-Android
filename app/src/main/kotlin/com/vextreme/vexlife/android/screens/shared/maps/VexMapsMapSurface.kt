@@ -1620,6 +1620,10 @@ internal fun VexMapsMapSurface(
                 preferredContextDockPage,
             onSelectedPageChanged = {
                     selectedPageRef ->
+                val humanSelectionChanged =
+                    selectedPageRef.value !=
+                        preferredDockPageRef
+
                 preferredDockPageRef =
                     selectedPageRef.value
 
@@ -1634,11 +1638,13 @@ internal fun VexMapsMapSurface(
                                 ?.styleRef !=
                             selectedStyle.styleRef
                         ) {
-                            runtime.recordDynamicInteraction(
-                                subjectRef =
-                                    "presentation.context-dock.vexmaps.style",
-                                action = "Selected",
-                            )
+                            if (humanSelectionChanged) {
+                                runtime.recordDynamicInteraction(
+                                    subjectRef =
+                                        "presentation.context-dock.vexmaps.style",
+                                    action = "Selected",
+                                )
+                            }
                             styleConvergenceRelay
                                 .styleSelected(
                                     styleRef =
