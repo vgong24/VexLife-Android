@@ -731,7 +731,7 @@ Any `VexObservableRelay<State>` can be an input source to another Relay:
 ~~~text
 ScreenContextRelay.states
 ExternalFeedRelay.states
-AttentionPreferenceRelay.states
+AlertPreferenceRelay.states
         \      |      /
          \     |     /
           -> Compound InputState
