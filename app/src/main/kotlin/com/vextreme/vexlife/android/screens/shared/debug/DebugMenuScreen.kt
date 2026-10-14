@@ -14,6 +14,9 @@ import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.open
+import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
+import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
+import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.SyntheticExternalEventController
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
@@ -296,25 +299,97 @@ object DebugMenuScreen : AppScreenBlueprint(
                 action = AppActions.NextAttentionLabScenario,
                 ownerRef = screenId,
             ) {
-                if (events.current.events.size < 12) {
-                    syntheticEvents.emitBurst(
-                        12 - events.current.events.size,
-                    )
-                }
-
-                eventsAttention.resetAll()
-
-                val scenario =
-                    eventsAttentionLab.planNext(
-                        events.current.events,
-                    )
-
-                if (scenario.freezeProjection) {
-                    syntheticEvents.start()
-                }
+                /*
+                 * This Debug action means "prepare one complete Events attention exercise".
+                 *
+                 * Keep the multi-owner fixture choreography out of this registration lambda so the
+                 * action map stays readable. The helper below documents every condition/effect.
+                 */
+                prepareNextEventsAttentionExercise(
+                    events = events,
+                    syntheticEvents = syntheticEvents,
+                    attentionPreferences = eventsAttention,
+                    attentionLab = eventsAttentionLab,
+                )
             },
         )
     }
+
+    /**
+     * Prepare one complete Events developer-lab attention exercise.
+     *
+     * This is Debug-menu orchestration, not reusable Relay/Scenario infrastructure. It coordinates
+     * several rightful owners only because one human Debug action needs a repeatable environment.
+     *
+     * Read in order:
+     *
+     * 1. ENSURE ROW DEPTH
+     *    The attention lab exercises top/middle/bottom anchored targets, so keep at least
+     *    [ATTENTION_EXERCISE_MIN_EVENT_COUNT] current Events rows available.
+     *
+     * 2. RESET HUMAN DISPOSITION
+     *    Clear acknowledge/defer/suspend/suppress state so an older lab run cannot hide the row the
+     *    next exercise intends to target.
+     *
+     * 3. PLAN AGAINST REFRESHED EVENT TRUTH
+     *    [SyntheticExternalEventController.emitBurst] publishes through EventsRepository
+     *    synchronously before returning, so the refreshed [EventsRepository.current] read includes
+     *    any rows just added above.
+     *
+     * 4. APPLY OPTIONAL PROVIDER PRESSURE
+     *    A freeze-projection exercise deliberately keeps new provider events arriving while the
+     *    overlay is active. Starting the synthetic producer tests that presentation remains stable
+     *    while canonical feed truth continues changing.
+     *
+     * Consequences:
+     * - may add synthetic provider events;
+     * - resets Events attention-preference state;
+     * - commits one current attention-lab exercise;
+     * - may start timed synthetic provider arrivals.
+     *
+     * These owners commit independently. EventsConvergenceRelay observes their StateFlows and
+     * converges them; this helper does NOT claim one cross-repository atomic transaction.
+     */
+    private fun prepareNextEventsAttentionExercise(
+        events: EventsRepository,
+        syntheticEvents: SyntheticExternalEventController,
+        attentionPreferences: EventsAttentionPreferenceRepository,
+        attentionLab: EventsAttentionLabRepository,
+    ) {
+        // 1. ENSURE ROW DEPTH
+        val currentEventCount =
+            events.current.events.size
+
+        if (
+            currentEventCount <
+                ATTENTION_EXERCISE_MIN_EVENT_COUNT
+        ) {
+            syntheticEvents.emitBurst(
+                ATTENTION_EXERCISE_MIN_EVENT_COUNT -
+                    currentEventCount,
+            )
+        }
+
+        // 2. RESET HUMAN DISPOSITION
+        attentionPreferences.resetAll()
+
+        // 3. PLAN AGAINST REFRESHED EVENT TRUTH
+        //
+        // "exercise" is intentionally used here instead of "scenario" to make its meaning local:
+        // this is one developer-lab overlay exercise, not a generic Scenario subsystem.
+        val exercise =
+            attentionLab.planNext(
+                events.current.events,
+            )
+
+        // 4. APPLY OPTIONAL PROVIDER PRESSURE
+        if (exercise.freezeProjection) {
+            syntheticEvents.start()
+        }
+    }
+
+    private const val ATTENTION_EXERCISE_MIN_EVENT_COUNT: Int =
+        12
 
     @Composable
     internal override fun renderContent(
