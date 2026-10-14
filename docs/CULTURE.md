@@ -62,6 +62,11 @@ What else becomes wrong if this changes?
 
 Do not let a convenient framework pattern become architecture merely because it compiled.
 
+For a fresh feature or major experience, form the human language before the source taxonomy. Use
+[`foundation/FEATURE-EXPERIENCE-LANGUAGE.md`](foundation/FEATURE-EXPERIENCE-LANGUAGE.md) to write the
+experience sentence and acceptance walk first. The question map is a category-drift test, not a
+requirement to invent a class for every Who / What / Where / How answer.
+
 ## Foundation before features
 
 Build outward only when the layer underneath is stable enough to explain, test, and recover.

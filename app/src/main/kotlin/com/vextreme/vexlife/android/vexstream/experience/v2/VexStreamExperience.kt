@@ -5,12 +5,37 @@ import com.vextreme.vexlife.android.vexstream.experience.v2.player.VexStreamPlay
 /**
  * Human/product front door for the whole VexStream experience.
  *
- * "Experience" is intentionally broader than "Architecture": the user experiences known music,
- * possible media sources, and a player together even though those things have different technical
- * owners. This root integrates/orients them; it does not reimplement their behavior.
+ * The experience can be read as one ordinary sentence:
+ *
+ * A listener comes to VexStream because they want to experience the music they know wherever it can
+ * be realized. [VexStreamLibrary] tells them WHAT music is known. [VexStreamSources] tells VexStream
+ * WHERE playable media can come from. [VexStreamPlayerArchitecture] defines HOW listening is
+ * structured. Playback/Queue Cases and Placements explain WHAT IS TRUE / POSSIBLE NOW. Controls name
+ * WHAT CAN BE REQUESTED. Player Providers realize those meanings through Media3 or future SDK
+ * adapters. UI projections return the observed result to the listener.
+ *
+ * Question lens:
+ *
+ * HOME = VexStream
+ * WHO = listener / consumer
+ * WHY = the whole music experience and why these pieces belong together
+ * WHAT = Library
+ * WHERE = Sources
+ * HOW = Player Architecture
+ * NOW / WHEN = Case + Placement
+ * WHAT CAN I DO = Control
+ * WHO / WHAT REALIZES IT = Provider
+ * WHAT DO I SEE = projection
+ *
+ * "Experience" is therefore intentionally broader than "Architecture": it integrates different
+ * rightful owners without becoming their manager. It does not reimplement repositories, source
+ * resolution, providers, Media3, downloads, networking, or player lifetime.
  *
  * The package carries the version. The class name stays production-shaped so a future maintainer
  * does not have to treat every V2 type as temporary.
+ *
+ * Repository authoring language:
+ * docs/foundation/FEATURE-EXPERIENCE-LANGUAGE.md
  */
 object VexStreamExperience {
     /** Stable semantic identity for the whole VexStream product experience. */

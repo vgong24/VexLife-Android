@@ -79,6 +79,9 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 
 Canonical detail: architecture/vexarchitecture/README.md
 
+Fresh feature/experience language template:
+[FEATURE-EXPERIENCE-LANGUAGE.md](FEATURE-EXPERIENCE-LANGUAGE.md)
+
 ### Intention
 
 V2 separates human/product composition from architectural semantics:

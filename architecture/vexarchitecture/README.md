@@ -16,6 +16,20 @@ Who actually realizes it?
 
 VexArchitecture exists to make those questions walkable in source without turning the app into one giant manager/state-machine framework.
 
+For fresh feature/experience formation, use
+[`docs/foundation/FEATURE-EXPERIENCE-LANGUAGE.md`](../../docs/foundation/FEATURE-EXPERIENCE-LANGUAGE.md)
+before permanent nouns harden. The template turns ordinary Who / Why / What / Where / How / Now /
+Control / Provider questions into source and acceptance language without requiring one class per
+question.
+
+A useful architectural smell test is:
+
+~~~text
+if two peer nouns answer the same human question,
+or a derived fact / technical mechanism is promoted beside human product concepts,
+resolve the category boundary before adding another abstraction
+~~~
+
 PR #80 was the first VexArchitecture practicum. It established useful ideas such as root-only architecture discovery, Case / Control / Placement language and maps derived from local relationship nodes. PR #81 V2 keeps those lessons while correcting category/depth pressure discovered by walking VexStream from a non-engineer's vocabulary.
 
 ## The naming ladder
