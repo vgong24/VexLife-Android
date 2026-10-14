@@ -52,6 +52,123 @@ This branch starts again from accepted main rather than inheriting PR #81 source
 The new hypothesis is that some of those nouns are better **derived representations** than authoring
 concepts.
 
+## The four-move grammar
+
+The current experiment deliberately reduces the authoring language to four semantic moves:
+
+~~~text
+STATE
+    what is actually true now
+
+CONTROL
+    which human-facing affordance may express one or more Acts
+
+ACT
+    the human/product verb intended from current State
+
+EFFECT
+    the runtime verb / attempted transformation
+~~~
+
+The causal loop is:
+
+~~~text
+observed STATE
+    -> CONTROL resolves an ACT
+    -> ACT selects an EFFECT
+    -> rightful runtime/provider attempts that EFFECT
+    -> reality is observed again as STATE
+    -> repeat
+~~~
+
+A compact reading is:
+
+~~~text
+Act asks.
+Effect attempts the travel.
+State tells us what reality answered.
+Control decides which Act one affordance represents from current truth.
+~~~
+
+### State is truth, not a requested outcome
+
+An Effect never authoritatively changes State merely because it was selected.
+
+~~~text
+State = Disconnected
+Act = Connect
+Effect = BeginConnection
+
+possible observed States afterward:
+    Connecting
+    Connected
+    Failed
+    Disconnected
+~~~
+
+If an in-progress condition changes what can happen next, that condition itself is State:
+
+~~~text
+Disconnected
+    -> Connect / BeginConnection
+    -> Connecting
+
+Connecting
+    -> Cancel / EndConnection
+    -> Disconnected
+~~~
+
+Convergence consumes these current truths. It must not treat an Effect request as if the requested
+outcome already became true.
+
+### State kind versus State flavor
+
+Do not create another State type merely because one field changes.
+
+Use a distinct State kind when the difference changes the semantic neighborhood: what Acts have
+meaning, what relationships exist, or what current truth fundamentally means.
+
+Use data/flavor inside the same State when the same kind of truth can carry the difference.
+
+Playback now demonstrates:
+
+~~~kotlin
+sealed interface PlaybackState {
+    data object Paused : PlaybackState
+
+    data class Playing(
+        val speed: PlaybackSpeed,
+    ) : PlaybackState
+}
+~~~
+
+So these are flavor variants of one Playing truth:
+
+~~~text
+Playing(speed = Normal)
+Playing(speed = FastForward)
+Playing(speed = Rewind)
+~~~
+
+The corresponding Effects are attempted transformations:
+
+~~~text
+SetSpeed(Normal)
+SetSpeed(FastForward)
+SetSpeed(Rewind)
+PausePlayback
+~~~
+
+This avoids multiplying architecture nouns such as FastForwardingState / RewindingState when the
+difference can truthfully live as data.
+
+### Hidden history is not current truth
+
+A relationship resolves from current State.
+
+If previous history materially changes what may happen next, preserve only the relevant consequence
+as current State data. Do not make a relationship secretly inspect "what Act happened before".
+
 ## Cause -> effect -> cause
 
 The core relationship is:
@@ -71,88 +188,98 @@ Past behavior matters only when its consequence is still present in current Stat
 
 ## Worked Playback example
 
-This is compiled test source, not pseudocode:
+The compiled Playback practicum now uses State flavor instead of inventing separate State kinds for
+every transport speed:
+
+~~~text
+PlaybackState
+    Paused
+    Playing(speed)
+
+PlaybackSpeed
+    Rewind
+    Normal
+    FastForward
+~~~
+
+The relational source reads:
 
 ~~~kotlin
-vexBehaviorBlueprint<
-    PlaybackState,
-    PlaybackAct,
-    PlaybackEffect
->(
-    behaviorRef = "example.playback.transport",
-) {
-    state<Playing> {
-        on(Pause, PausePlayback)
-            .to<Paused>()
+state<PlaybackState.Paused> {
+    on(
+        PlaybackAct.Play,
+        PlaybackEffect.SetSpeed(
+            PlaybackSpeed.Normal,
+        ),
+    ).to<PlaybackState.Playing>()
 
-        on(FastForward, StartFastForward)
-            .to<FastForwarding>()
+    on(
+        PlaybackAct.FastForward,
+        PlaybackEffect.SetSpeed(
+            PlaybackSpeed.FastForward,
+        ),
+    ).to<PlaybackState.Playing>()
+}
 
-        on(Rewind, StartRewind)
-            .to<Rewinding>()
-    }
+state<PlaybackState.Playing> {
+    on(
+        act = PlaybackAct.Play,
+        effect =
+            PlaybackEffect.SetSpeed(
+                PlaybackSpeed.Normal,
+            ),
+        conditionName = "not-normal-speed",
+    ) { current ->
+        current.speed != PlaybackSpeed.Normal
+    }.stay()
 
-    state<Paused> {
-        on(Play, PlayAtNormalSpeed)
-            .to<Playing>()
+    on(
+        PlaybackAct.Pause,
+        PlaybackEffect.PausePlayback,
+    ).to<PlaybackState.Paused>()
 
-        on(FastForward, StartFastForward)
-            .to<FastForwarding>()
-
-        on(Rewind, StartRewind)
-            .to<Rewinding>()
-    }
-
-    state<FastForwarding> {
-        on(Play, PlayAtNormalSpeed)
-            .to<Playing>()
-
-        on(Pause, PausePlayback)
-            .to<Paused>()
-
-        on(Rewind, StartRewind)
-            .to<Rewinding>()
-    }
-
-    state<Rewinding> {
-        on(Play, PlayAtNormalSpeed)
-            .to<Playing>()
-
-        on(Pause, PausePlayback)
-            .to<Paused>()
-
-        on(FastForward, StartFastForward)
-            .to<FastForwarding>()
-    }
+    on(
+        act = PlaybackAct.FastForward,
+        effect =
+            PlaybackEffect.SetSpeed(
+                PlaybackSpeed.FastForward,
+            ),
+        conditionName = "not-fast-forward-speed",
+    ) { current ->
+        current.speed != PlaybackSpeed.FastForward
+    }.stay()
 }
 ~~~
 
-Read one State block as a semantic neighborhood:
+So the earlier question becomes:
 
 ~~~text
-I am FastForwarding.
+STATE
+    Playing(speed = Normal)
 
-From here:
-    Play   -> attempt normal-speed playback -> Playing
-    Pause  -> attempt pause                 -> Paused
-    Rewind -> attempt rewind                -> Rewinding
+ACT
+    FastForward
+
+EFFECT
+    SetSpeed(FastForward)
+
+expected State kind
+    Playing
+
+then runtime reports:
+    Playing(speed = FastForward)
+
+next ACT
+    Play
+
+next EFFECT
+    SetSpeed(Normal)
+
+then runtime reports:
+    Playing(speed = Normal)
 ~~~
 
-That makes this sequence explicit:
-
-~~~text
-Playing
-    -- FastForward / StartFastForward -->
-FastForwarding
-    -- Play / PlayAtNormalSpeed -->
-Playing
-~~~
-
-Pressing Play while FastForwarding therefore means **resume normal-speed playback**, not "toggle the
-old Playing state and pause".
-
-The blueprint does not inspect a remembered previous Act to decide that. Once FastForwarding is the
-observed current State, that State is sufficient causal context.
+The Effect is the attempted travel; the data-bearing State is the observed answer.
 
 ## State / Act / Effect
 
@@ -472,6 +599,77 @@ cross-behavior composition
 
 For example, "play queue index 7" carries request data. This experiment deliberately does not invent
 a generic payload architecture before the relational grammar proves useful.
+
+## Current VexStream integration seam
+
+The repository's current VexStream implementation was inspected before wiring this experiment into
+production UI.
+
+Current ownership is:
+
+~~~text
+VexStreamPlaybackService
+    owns MediaSession + ExoPlayer lifetime
+
+VexStreamPlaybackViewModel
+    retains one UI-side MediaController across Screen composition
+
+rememberVexStreamPlaybackUiState(controller)
+    converts MediaController/Player facts into Compose-local VexStreamPlaybackUiState
+
+Mini Player
+    reads playback.isPlaying
+    chooses Play/Pause icon
+    calls controller.toggleVexStreamPlayback()
+
+Context Dock
+    reads playback.isPlaying
+    chooses Play/Pause icon
+    calls controller.toggleVexStreamPlayback()
+~~~
+
+This exposes exactly the duplication the Behavior Blueprint is meant to remove, but it also exposes
+a more important owner boundary.
+
+Do **not** integrate the blueprint by simply placing it inside each Composable. That would make
+behavior/current-State interpretation presentation-owned and would create multiple observers of the
+same Media3 truth.
+
+The next earned seam is a narrow VexStream Playback client/projection boundary:
+
+~~~text
+MediaSession / Player
+    actual Android playback truth owner
+
+one retained VexStream playback projection/client
+    observes MediaController facts
+    -> forms semantic Behavior State
+    -> resolves Controls / Acts
+    -> translates Effects to MediaController commands
+
+Mini Player
+Context Dock
+future media key / voice / remote caller
+    consume the same semantic projection
+~~~
+
+That client must remain a projection/adapter, not become another player or queue truth owner.
+
+The existing code also reveals one unresolved semantic question that should be answered at this
+boundary rather than hidden in Compose:
+
+~~~text
+Player.isPlaying == false
+can mean more than "the human is Paused"
+(for example preparing/buffering or another non-playing condition)
+~~~
+
+The current UI already collapses those meanings through `isPlaying`. The new architecture should
+not silently canonize that coarse projection. The next design slice must decide which Media3 facts
+form truthful VexStream Playback State before the two UI surfaces are migrated.
+
+This is the present integration seam; queue, seek, shuffle, repeat, MediaSession lifetime, and source
+resolution remain intentionally untouched.
 
 ## Acceptance threshold
 

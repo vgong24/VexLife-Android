@@ -4,30 +4,35 @@ import com.vextreme.vexlife.android.behavior.VexBehaviorBlueprint
 import com.vextreme.vexlife.android.behavior.vexBehaviorBlueprint
 
 /**
- * Current transport truth.
+ * Playback speed is State flavor, not another architecture layer.
  *
- * The finite semantic family is nested so IDE completion keeps Playback State possibilities inside
- * their own scope instead of leaking Playing/Paused/etc into unrelated domains.
+ * The current practicum uses three intentionally coarse transport speeds. A real provider may use a
+ * richer numeric representation without changing the State / Act / Effect / Control grammar.
+ */
+enum class PlaybackSpeed {
+    Rewind,
+    Normal,
+    FastForward,
+}
+
+/**
+ * Current Playback truth.
+ *
+ * Paused and Playing have different behavioral neighborhoods, so they earn different State kinds.
+ * Fast-forward/rewind remain flavor inside Playing because "playing, but at another speed" can be
+ * represented without inventing another architecture category.
  */
 sealed interface PlaybackState {
     data object Paused :
         PlaybackState
 
-    data object Playing :
-        PlaybackState
-
-    data object FastForwarding :
-        PlaybackState
-
-    data object Rewinding :
-        PlaybackState
+    data class Playing(
+        val speed: PlaybackSpeed,
+    ) : PlaybackState
 }
 
 /**
- * Human/semantic causes admitted by Playback.
- *
- * These are nested under PlaybackAct so a developer sees the bounded family while typing and cannot
- * accidentally substitute another domain's Act type into this Behavior.
+ * Human semantic verbs admitted by Playback.
  */
 sealed interface PlaybackAct {
     data object Play :
@@ -44,31 +49,24 @@ sealed interface PlaybackAct {
 }
 
 /**
- * Provider-facing meanings produced by lawful Playback Acts.
+ * Runtime verbs produced by lawful Playback Acts.
  *
- * Effect remains distinct from Act so product vocabulary is not coupled to one provider API.
+ * Effect is NOT resulting truth. It is the attempted transformation between observed States.
  */
 sealed interface PlaybackEffect {
-    data object PlayAtNormalSpeed :
-        PlaybackEffect
+    data class SetSpeed(
+        val speed: PlaybackSpeed,
+    ) : PlaybackEffect
 
     data object PausePlayback :
-        PlaybackEffect
-
-    data object StartFastForward :
-        PlaybackEffect
-
-    data object StartRewind :
         PlaybackEffect
 }
 
 /**
- * Worked cause -> effect -> new cause blueprint.
+ * Worked State -> Act -> Effect -> observed-State blueprint.
  *
- * Read each State block as:
- *
- * "Given THIS is true now, which Acts have meaning from here, what Effect do they request, and what
- * State should be expected if that Effect converges?"
+ * A relationship names the expected destination State KIND only. The Effect carries the attempted
+ * data change; the runtime/provider remains responsible for what State is actually observed next.
  */
 fun playbackBehaviorBlueprint():
     VexBehaviorBlueprint<
@@ -79,45 +77,42 @@ fun playbackBehaviorBlueprint():
     vexBehaviorBlueprint(
         behaviorRef = "example.playback.transport",
     ) {
-        state<PlaybackState.Playing> {
-            on(
-                PlaybackAct.Pause,
-                PlaybackEffect.PausePlayback,
-            ).to<PlaybackState.Paused>()
-
-            on(
-                PlaybackAct.FastForward,
-                PlaybackEffect.StartFastForward,
-            ).to<PlaybackState.FastForwarding>()
-
-            on(
-                PlaybackAct.Rewind,
-                PlaybackEffect.StartRewind,
-            ).to<PlaybackState.Rewinding>()
-        }
-
         state<PlaybackState.Paused> {
             on(
                 PlaybackAct.Play,
-                PlaybackEffect.PlayAtNormalSpeed,
+                PlaybackEffect.SetSpeed(
+                    PlaybackSpeed.Normal,
+                ),
             ).to<PlaybackState.Playing>()
 
             on(
                 PlaybackAct.FastForward,
-                PlaybackEffect.StartFastForward,
-            ).to<PlaybackState.FastForwarding>()
+                PlaybackEffect.SetSpeed(
+                    PlaybackSpeed.FastForward,
+                ),
+            ).to<PlaybackState.Playing>()
 
             on(
                 PlaybackAct.Rewind,
-                PlaybackEffect.StartRewind,
-            ).to<PlaybackState.Rewinding>()
+                PlaybackEffect.SetSpeed(
+                    PlaybackSpeed.Rewind,
+                ),
+            ).to<PlaybackState.Playing>()
         }
 
-        state<PlaybackState.FastForwarding> {
+        state<PlaybackState.Playing> {
             on(
-                PlaybackAct.Play,
-                PlaybackEffect.PlayAtNormalSpeed,
-            ).to<PlaybackState.Playing>()
+                act = PlaybackAct.Play,
+                effect =
+                    PlaybackEffect.SetSpeed(
+                        PlaybackSpeed.Normal,
+                    ),
+                conditionName =
+                    "not-normal-speed",
+            ) { current ->
+                current.speed !=
+                    PlaybackSpeed.Normal
+            }.stay()
 
             on(
                 PlaybackAct.Pause,
@@ -125,26 +120,30 @@ fun playbackBehaviorBlueprint():
             ).to<PlaybackState.Paused>()
 
             on(
-                PlaybackAct.Rewind,
-                PlaybackEffect.StartRewind,
-            ).to<PlaybackState.Rewinding>()
-        }
-
-        state<PlaybackState.Rewinding> {
-            on(
-                PlaybackAct.Play,
-                PlaybackEffect.PlayAtNormalSpeed,
-            ).to<PlaybackState.Playing>()
-
-            on(
-                PlaybackAct.Pause,
-                PlaybackEffect.PausePlayback,
-            ).to<PlaybackState.Paused>()
+                act = PlaybackAct.FastForward,
+                effect =
+                    PlaybackEffect.SetSpeed(
+                        PlaybackSpeed.FastForward,
+                    ),
+                conditionName =
+                    "not-fast-forward-speed",
+            ) { current ->
+                current.speed !=
+                    PlaybackSpeed.FastForward
+            }.stay()
 
             on(
-                PlaybackAct.FastForward,
-                PlaybackEffect.StartFastForward,
-            ).to<PlaybackState.FastForwarding>()
+                act = PlaybackAct.Rewind,
+                effect =
+                    PlaybackEffect.SetSpeed(
+                        PlaybackSpeed.Rewind,
+                    ),
+                conditionName =
+                    "not-rewind-speed",
+            ) { current ->
+                current.speed !=
+                    PlaybackSpeed.Rewind
+            }.stay()
         }
     }
 

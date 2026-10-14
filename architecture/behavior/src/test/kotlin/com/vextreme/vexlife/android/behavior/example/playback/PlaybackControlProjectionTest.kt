@@ -18,10 +18,13 @@ class PlaybackControlProjectionTest {
         behavior.playbackControls()
 
     @Test
-    fun playingProjectsRewindPauseAndFastForward() {
+    fun normalPlayingProjectsRewindPauseAndFastForward() {
         val projection =
             controls.projection(
-                PlaybackState.Playing,
+                PlaybackState.Playing(
+                    speed =
+                        PlaybackSpeed.Normal,
+                ),
             )
 
         assertSame(
@@ -45,10 +48,13 @@ class PlaybackControlProjectionTest {
     }
 
     @Test
-    fun fastForwardingProjectsRewindPlayAndNoFastForward() {
+    fun fastForwardPlayingProjectsRewindPlayAndNoFastForward() {
         val projection =
             controls.projection(
-                PlaybackState.FastForwarding,
+                PlaybackState.Playing(
+                    speed =
+                        PlaybackSpeed.FastForward,
+                ),
             )
 
         assertSame(
@@ -93,10 +99,12 @@ class PlaybackControlProjectionTest {
                 )
             }
 
-        /*
-         * FastForwarding currently admits BOTH Play and Pause. The Behavior graph exposes both;
-         * the Control blueprint decides which meaning one shared affordance reflects.
-         */
+        val fastForwarding =
+            PlaybackState.Playing(
+                speed =
+                    PlaybackSpeed.FastForward,
+            )
+
         assertEquals(
             setOf(
                 PlaybackAct.Play,
@@ -105,7 +113,7 @@ class PlaybackControlProjectionTest {
             ),
             behavior
                 .availableActs(
-                    PlaybackState.FastForwarding,
+                    fastForwarding,
                 )
                 .toSet(),
         )
@@ -114,7 +122,7 @@ class PlaybackControlProjectionTest {
             PlaybackAct.Play,
             preferPlay.resolve(
                 current =
-                    PlaybackState.FastForwarding,
+                    fastForwarding,
                 control =
                     PriorityControl.PlayPause,
             )?.act,
@@ -123,7 +131,7 @@ class PlaybackControlProjectionTest {
             PlaybackAct.Pause,
             preferPause.resolve(
                 current =
-                    PlaybackState.FastForwarding,
+                    fastForwarding,
                 control =
                     PriorityControl.PlayPause,
             )?.act,

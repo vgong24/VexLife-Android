@@ -93,14 +93,13 @@ VexBehaviorBlueprint
     source relationships ~= behavior relationships
 ~~~
 
-Feature-owned sealed State / Act / Effect families plus a finite enum Control vocabulary provide the compiler coordinates. Each State
+Feature-owned State / Act / Effect families plus a finite Control vocabulary provide the compiler coordinates. State carries observed truth (including data/flavor); Effect carries the attempted transformation and never claims the resulting truth. Each State
 block declares what Acts have meaning from that current truth, their provider-facing Effects, and
 the expected next State. The blueprint is a constructed immutable graph, not a singleton or runtime
 state owner. Incoming / outgoing neighborhoods, current available Acts, and completely linked Control meaning are derived from
 relationships authored once.
 
-No app wiring, provider execution, ScreenBlueprint binding, parameterized request payloads, or
-Android/device claim is admitted yet.
+No app wiring is admitted yet. Current VexStream inspection found the next seam at the retained MediaController projection: one semantic Playback client/projection must observe Media3 truth and realize Effects before Mini Player / Context Dock migrate, otherwise behavior would become Compose-owned. Provider execution, ScreenBlueprint binding, parameterized request payloads, and Android/device proof remain held.
 
 ## F1 — UI Blueprint / Home Practicum
 
