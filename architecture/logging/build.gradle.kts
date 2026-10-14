@@ -7,7 +7,9 @@ android {
     namespace = "com.vextreme.vexlife.android.logging"
     compileSdk = 37
 
-    defaultConfig { minSdk = 23 }
+    defaultConfig {
+        minSdk = 23
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -15,7 +17,9 @@ android {
     }
 }
 
-kotlin { jvmToolchain(17) }
+kotlin {
+    jvmToolchain(17)
+}
 
 dependencies {
     api(project(":architecture:elements"))
