@@ -14,8 +14,8 @@ import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.elements.open
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
-import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertRepository
+import com.vextreme.vexlife.android.data.events.EventsAlertPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.SyntheticExternalEventController
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
@@ -100,33 +100,33 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.RemoveOldestSyntheticEvent),
     )
 
-    val ResetSyntheticEventLab = buttonRef(
+    val ResetEventsDebugMenu = buttonRef(
         id = "body.events-simulator.actions.reset-lab",
         labelRes = R.string.events_simulator_reset_lab,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Reset,
-        intent = invoke(AppActions.ResetSyntheticEventLab),
+        intent = invoke(AppActions.ResetEventsDebugMenu),
     )
 
-    val UseRotationAttentionLab = buttonRef(
+    val UseRotationDebugMenuAlerts = buttonRef(
         id = "body.events-simulator.actions.use-rotation",
         labelRes = R.string.events_simulator_use_rotation,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.UseRotationAttentionLab),
+        intent = invoke(AppActions.UseRotationDebugMenuAlerts),
     )
 
-    val UseRandomAttentionLab = buttonRef(
+    val UseRandomDebugMenuAlerts = buttonRef(
         id = "body.events-simulator.actions.use-random",
         labelRes = R.string.events_simulator_use_random,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.UseRandomAttentionLab),
+        intent = invoke(AppActions.UseRandomDebugMenuAlerts),
     )
 
-    val NextAttentionLabScenario = buttonRef(
+    val NextDebugMenuAlertCase = buttonRef(
         id = "body.events-simulator.actions.next-scenario",
         labelRes = R.string.events_simulator_next_scenario,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.NextAttentionLabScenario),
+        intent = invoke(AppActions.NextDebugMenuAlertCase),
     )
 
     override val content = layout {
@@ -169,14 +169,14 @@ object DebugMenuScreen : AppScreenBlueprint(
                     button(RemoveOldestSyntheticEvent)
                 }
                 row("reset-actions") {
-                    button(ResetSyntheticEventLab)
+                    button(ResetEventsDebugMenu)
                 }
                 row("scenario-mode-actions") {
-                    button(UseRotationAttentionLab)
-                    button(UseRandomAttentionLab)
+                    button(UseRotationDebugMenuAlerts)
+                    button(UseRandomDebugMenuAlerts)
                 }
                 row("scenario-actions") {
-                    button(NextAttentionLabScenario)
+                    button(NextDebugMenuAlertCase)
                 }
                 text(
                     id = "helper",
@@ -215,10 +215,10 @@ object DebugMenuScreen : AppScreenBlueprint(
                 repository = context.repositories.events,
                 scope = context.scope,
             )
-        val eventsAttention =
-            context.repositories.eventsAttention
-        val eventsAttentionLab =
-            context.repositories.eventsAttentionLab
+        val eventsAlertPreferences =
+            context.repositories.eventsAlertPreferences
+        val eventsDebugMenuAlerts =
+            context.repositories.eventsDebugMenuAlerts
         val events =
             context.repositories.events
 
@@ -273,50 +273,50 @@ object DebugMenuScreen : AppScreenBlueprint(
                 syntheticEvents.removeOldest()
             },
             appAction(
-                action = AppActions.ResetSyntheticEventLab,
+                action = AppActions.ResetEventsDebugMenu,
                 ownerRef = screenId,
             ) {
                 syntheticEvents.stop()
                 syntheticEvents.resetCurrent()
-                eventsAttention.resetAll()
-                eventsAttentionLab.reset()
+                eventsAlertPreferences.resetAll()
+                eventsDebugMenuAlerts.reset()
             },
             appAction(
-                action = AppActions.UseRotationAttentionLab,
+                action = AppActions.UseRotationDebugMenuAlerts,
                 ownerRef = screenId,
             ) {
-                eventsAttentionLab.useRotation()
+                eventsDebugMenuAlerts.useRotation()
             },
             appAction(
-                action = AppActions.UseRandomAttentionLab,
+                action = AppActions.UseRandomDebugMenuAlerts,
                 ownerRef = screenId,
             ) {
-                eventsAttentionLab.useSeededRandom(
+                eventsDebugMenuAlerts.useSeededRandom(
                     System.currentTimeMillis(),
                 )
             },
             appAction(
-                action = AppActions.NextAttentionLabScenario,
+                action = AppActions.NextDebugMenuAlertCase,
                 ownerRef = screenId,
             ) {
                 /*
-                 * This Debug action means "prepare one complete Events attention exercise".
+                 * This Debug action means "prepare one complete Events alert case".
                  *
                  * Keep the multi-owner fixture choreography out of this registration lambda so the
                  * action map stays readable. The helper below documents every condition/effect.
                  */
-                prepareNextEventsAttentionExercise(
+                prepareNextEventsAlertCase(
                     events = events,
                     syntheticEvents = syntheticEvents,
-                    attentionPreferences = eventsAttention,
-                    attentionLab = eventsAttentionLab,
+                    alertPreferences = eventsAlertPreferences,
+                    debugMenuAlerts = eventsDebugMenuAlerts,
                 )
             },
         )
     }
 
     /**
-     * Prepare one complete Events developer-lab attention exercise.
+     * Prepare one complete Events developer-lab alert case.
      *
      * This is Debug-menu orchestration, not reusable Relay/Scenario infrastructure. It coordinates
      * several rightful owners only because one human Debug action needs a repeatable environment.
@@ -324,12 +324,12 @@ object DebugMenuScreen : AppScreenBlueprint(
      * Read in order:
      *
      * 1. ENSURE ROW DEPTH
-     *    The attention lab exercises top/middle/bottom anchored targets, so keep at least
-     *    [ATTENTION_EXERCISE_MIN_EVENT_COUNT] current Events rows available.
+     *    The Debug-menu alert cases exercises top/middle/bottom anchored targets, so keep at least
+     *    [ALERT_CASE_MIN_EVENT_COUNT] current Events rows available.
      *
      * 2. RESET HUMAN DISPOSITION
      *    Clear acknowledge/defer/suspend/suppress state so an older lab run cannot hide the row the
-     *    next exercise intends to target.
+     *    next alert case intends to target.
      *
      * 3. PLAN AGAINST REFRESHED EVENT TRUTH
      *    [SyntheticExternalEventController.emitBurst] publishes through EventsRepository
@@ -343,18 +343,18 @@ object DebugMenuScreen : AppScreenBlueprint(
      *
      * Consequences:
      * - may add synthetic provider events;
-     * - resets Events attention-preference state;
-     * - commits one current attention-lab exercise;
+     * - resets Events alert-preference state;
+     * - commits one current Debug-menu alert case;
      * - may start timed synthetic provider arrivals.
      *
      * These owners commit independently. EventsConvergenceRelay observes their StateFlows and
      * converges them; this helper does NOT claim one cross-repository atomic transaction.
      */
-    private fun prepareNextEventsAttentionExercise(
+    private fun prepareNextEventsAlertCase(
         events: EventsRepository,
         syntheticEvents: SyntheticExternalEventController,
-        attentionPreferences: EventsAttentionPreferenceRepository,
-        attentionLab: EventsAttentionLabRepository,
+        alertPreferences: EventsAlertPreferenceRepository,
+        debugMenuAlerts: EventsDebugMenuAlertRepository,
     ) {
         // 1. ENSURE ROW DEPTH
         val currentEventCount =
@@ -362,33 +362,33 @@ object DebugMenuScreen : AppScreenBlueprint(
 
         if (
             currentEventCount <
-                ATTENTION_EXERCISE_MIN_EVENT_COUNT
+                ALERT_CASE_MIN_EVENT_COUNT
         ) {
             syntheticEvents.emitBurst(
-                ATTENTION_EXERCISE_MIN_EVENT_COUNT -
+                ALERT_CASE_MIN_EVENT_COUNT -
                     currentEventCount,
             )
         }
 
         // 2. RESET HUMAN DISPOSITION
-        attentionPreferences.resetAll()
+        alertPreferences.resetAll()
 
         // 3. PLAN AGAINST REFRESHED EVENT TRUTH
         //
         // "exercise" is intentionally used here instead of "scenario" to make its meaning local:
-        // this is one developer-lab overlay exercise, not a generic Scenario subsystem.
-        val exercise =
-            attentionLab.planNext(
+        // this is one Debug-menu alert case, not a generic scenario subsystem.
+        val alertCase =
+            debugMenuAlerts.planNext(
                 events.current.events,
             )
 
         // 4. APPLY OPTIONAL PROVIDER PRESSURE
-        if (exercise.freezeProjection) {
+        if (alertCase.freezeProjection) {
             syntheticEvents.start()
         }
     }
 
-    private const val ATTENTION_EXERCISE_MIN_EVENT_COUNT: Int =
+    private const val ALERT_CASE_MIN_EVENT_COUNT: Int =
         12
 
     @Composable
