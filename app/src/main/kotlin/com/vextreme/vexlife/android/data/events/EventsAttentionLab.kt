@@ -61,12 +61,6 @@ data class EventsAttentionLabState(
     val nextOrdinal: Long = 1L,
     val currentScenario: EventsAttentionLabScenario? = null,
 ) : VexState<EventsAttentionLabState> {
-    override fun deepCopy(): EventsAttentionLabState =
-        copy(
-            currentScenario =
-                currentScenario?.copy(),
-        )
-
     companion object {
         const val DEFAULT_SEED = 24_101_126L
     }
@@ -131,7 +125,7 @@ private class EventsAttentionLabRelay :
         mode: EventsAttentionLabMode,
         seed: Long,
     ) {
-        update { current ->
+        updateCurrent { current ->
             current.copy(
                 mode = mode,
                 seed = seed,
@@ -144,28 +138,36 @@ private class EventsAttentionLabRelay :
     fun planNext(
         events: List<VexExternalEvent>,
     ): EventsAttentionLabScenario {
-        val before =
-            current
-        val scenario =
-            planEventsAttentionLabScenario(
-                mode = before.mode,
-                seed = before.seed,
-                ordinal = before.nextOrdinal,
-                events = events,
-            )
+        /*
+         * Plan + advance are one atomic current -> next transition.
+         *
+         * Do not read relay.current before updateCurrent when that read decides the next ordinal:
+         * two concurrent callers could otherwise both plan from the same stale ordinal and only
+         * serialize the later writes.
+         */
+        val nextState =
+            updateCurrent { current ->
+                val scenario =
+                    planEventsAttentionLabScenario(
+                        mode = current.mode,
+                        seed = current.seed,
+                        ordinal = current.nextOrdinal,
+                        events = events,
+                    )
 
-        update { state ->
-            state.copy(
-                nextOrdinal = state.nextOrdinal + 1L,
-                currentScenario = scenario,
-            )
-        }
+                current.copy(
+                    nextOrdinal = current.nextOrdinal + 1L,
+                    currentScenario = scenario,
+                )
+            }
 
-        return scenario
+        return checkNotNull(
+            nextState.currentScenario,
+        )
     }
 
     fun completeCurrent() {
-        update { current ->
+        updateCurrent { current ->
             current.copy(
                 currentScenario = null,
             )
@@ -173,7 +175,7 @@ private class EventsAttentionLabRelay :
     }
 
     fun reset() {
-        update { current ->
+        updateCurrent { current ->
             EventsAttentionLabState(
                 mode = current.mode,
                 seed = current.seed,
