@@ -12,6 +12,8 @@ dependencies {
     kover(project(":architecture:elements"))
     kover(project(":architecture:logging"))
     kover(project(":architecture:relay"))
+    // VexArchitecture is executable reusable source, so coverage includes its contract logic.
+    kover(project(":architecture:vexarchitecture"))
 }
 
 apply(
