@@ -1,179 +1,222 @@
-# VexArchitecture — readable local relationships
+# VexArchitecture — contract roots and local relational placement
 
 `[VXG RealForever]`
 
-## The question
+## The developer question
 
-A fresh developer should be able to start from a human question such as:
+A fresh developer should not have to learn the whole application before answering:
 
-> What does Play/Pause mean right now, what can happen from here, and who performs it?
+> What is true here, what can happen from here, and where do I go if I am lost?
 
-and walk one constrained path instead of reconstructing behavior from booleans and callbacks.
+VexArchitecture therefore uses inheritance for **bounded discoverability**, not as a universal base
+class for every state/value in the application.
 
 ```text
-observed current truth
--> ordinary domain Case
--> relationships available from that Case
--> semantic control/slot
--> named intention
--> one rightful effect owner
--> platform/service
--> newly observed truth
+VexArchitectureContract
+  -> architecture roots only
+
+VexStreamPlaybackArchitecture
+  -> feature-local Case / Control / Placement / Android contracts
+
+ordinary concrete meaning
+  -> QueueEmpty / ReadyToPlay / PlayRequested
+  -> Play / Pause / PlayPause
 ```
 
-VexArchitecture owns the **relationship language** in that path. It does not own serialization,
-platform execution, service lifetime, or current-state convergence.
+"Find implementations" on the global contract should return architecture roots, not every Case in
+the institution.
 
-## Core vocabulary
+## Reusable language
 
 ```text
-Case
-  ordinary domain condition/value
+*Architecture
+  orientation root / feature realm / derived map / root feature flag
+
+*Case
+  what kind of truth is current
+
+*Control
+  what a consumer may request from current truth
+
+*Placement
+  how a Case can legitimately arrive and leave
 
 Transition<Before, After>
-  one typed relationship: Before -> After
+  one typed doorway inside one architecture realm
 
-Placement<Current>
-  relationships that arrive at or leave this exact Current Case
-
-TransitionSlot
-  one semantic control/location that may represent different transitions from different Cases
-
-Current
-  one Case bound to its exact Placement
+*Android
+  Android-specific observation and effect realization
 ```
 
-The source should read like the human relationship, not like an implementation map.
+The names should read like directory organization:
 
-## Authoring pattern
+```text
+VexStream / Playback / Architecture
+VexStream / Playback / Case
+VexStream / Playback / Control
+VexStream / Playback / Placement
+VexStream / Playback / Android
+```
 
-Prefer domain names that answer **when** the relationship is true:
+Feature words vary. Architecture words should carry the same expectation everywhere.
+
+## Nodes first, map second
+
+The Case is the node. Placements declare local relationships.
 
 ```kotlin
 val Play =
-    vexTransition<ReadyToPlay, PlayRequested>(
-        "playback.play",
-    )
+    VexStreamPlaybackArchitecture
+        .transition<ReadyToPlay, PlayRequested>(
+            "vexstream.playback.play",
+        )
 
-val Pause =
-    vexTransition<PlayRequested, ReadyToPlay>(
-        "playback.pause",
-    )
-
-val WhenReadyToPlay =
-    vexPlacement<ReadyToPlay> {
-        arrivedBy(Pause)
-        can(Play)
-    }
-
-val WhenPlayIsRequested =
-    vexPlacement<PlayRequested> {
-        arrivedBy(Play)
-        can(Pause)
-    }
-
-val PlayPauseControl =
-    vexTransitionSlot(
-        "playback.play-pause",
-        Play,
-        Pause,
-    )
+val ReadyToPlay =
+    VexStreamPlaybackArchitecture
+        .placement<ReadyToPlay> {
+            arrivedBy(Pause)
+            can(Play)
+        }
 ```
 
-A developer can now read:
+The root map is derived from those local declarations. It validates that the SAME transition object
+named as an exit by one Placement is named as an arrival by the destination Placement.
 
 ```text
-ReadyToPlay
--> can Play
--> PlayRequested
+WE ARE NOT THE MAP.
+WE ARE THE NODES.
 
-PlayRequested
--> can Pause
--> ReadyToPlay
+map = derived orientation
+map != second workflow owner
 ```
 
-without first discovering a separate state-machine diagram.
-
-## Current meaning is read-only
-
-`VexCurrent.availableTransition(slot)` answers:
-
-> Which transition in this semantic slot is meaningful from what is current?
-
-It does **not** perform the transition.
+If a developer is lost, the architecture root is the lobby directory:
 
 ```kotlin
-val available =
-    currentPlaybackControl.availableTransition(
-        PlayPauseControl,
-    )
+VexStreamPlaybackArchitecture.map.describe()
 ```
 
-Presentation may use that answer for icon/enabled state. Execution must continue to a named rightful
-owner.
+## Controls and feature gating
+
+One Control may contain one or several candidate transitions.
 
 ```text
-UI observes transition
-!=
-UI owns transition execution
+PlayPause
+  candidates:
+    Play
+    Pause
 ```
 
-## First practicum — VexStream Play/Pause
+Current Placement resolves at most one.
 
-The VexStream path deliberately reads in both directions.
+The architecture root owns one explicit `enabled` flag. Control resolution returns unavailable when
+the root is disabled, and registered Vex Control elements are also rejected by VexRuntime before
+activation.
 
-### Observation / presentation
+This means a future real feature flag can close the architecture realm without scattering:
 
 ```text
-Media3
--> VexStreamPlaybackObservation
-     queueHasItems
-     playRequested
--> VexStreamPlaybackArchitecture.currentControl(...)
--> QueueEmpty / ReadyToPlay / PlayRequested
--> available PlayPauseControl transition
--> VexStream Screen + Context Dock render the same meaning
+if (featureEnabled) ...
 ```
 
-### Human intention / execution
+through every descendant.
+
+Keep these distinct:
 
 ```text
-human presses Play/Pause
--> VexStreamPlaybackControlAction.TogglePlayPause
--> VexStreamPlaybackControlOwner
--> owner re-reads exact Media3 truth
--> currentControl(...)
--> availableTransition(PlayPauseControl)
--> MediaController play() / pause()
--> Media3 reports new truth
+architecture enabled
+!= runtime available
+!= authorized
+!= current Placement permits this Control
 ```
 
-The owner re-reads Media3 at execution time so a stale UI snapshot cannot become execution authority.
+## Question-first refactor discipline
 
-## Fresh developer walk
+Do not begin with:
 
-1. Start at the human-facing control.
-2. Follow its `transitionSlot`.
-3. Read the named Transition's `Before -> After` Cases.
-4. Read the `When...` Placement to understand arrivals and legal exits.
-5. For presentation, follow `availableTransition(...)`.
-6. For execution, follow the named action to its one effect owner.
-7. Follow platform realization only when the question becomes "how is this performed here?"
-8. Follow current observation only when the question becomes "why are we in this Case now?"
+> refactor this whole feature
+
+Preserve one ordinary question first:
+
+```text
+How do I play a song?
+How do I pause/resume?
+How do Next/Previous work?
+How does offline download work?
+How does connection/pairing work?
+```
+
+For each question:
+
+```text
+question
+-> current implementation walk
+-> mark conceptual detours
+-> find convergent meaning
+-> form Case / Control / Placement
+-> bind rightful platform realization
+-> walk backward from observed result
+-> ask the original question again
+```
+
+If the new walk still requires unrelated implementation knowledge, the slice is not finished.
 
 ## Boundaries
 
 ```text
-Placement != global workflow manager
-Transition != command execution
-TransitionSlot != execution authority
+Architecture root != manager
 Case != implementation phase
-Current != durable event ledger
+Control != Android Controller
+Placement != global state machine
+Map != execution authority
+Architecture enabled != permission/availability
 Compiler-valid relationship != exact live currentness
 ```
 
-Relay remains the owner when exact currentness, serialized state transitions, dependency convergence,
-or atomic commit are required. VexArchitecture describes lawful local relationships; it does not
-replace Relay.
+Relay remains the right owner when serialization, convergence and atomic exact-current commit are
+required. VexArchitecture makes the semantic relational lattice perceivable; it does not replace
+Relay.
+
+## First practicum — VexStream Playback
+
+Start at:
+
+```text
+VexStreamPlaybackArchitecture
+```
+
+Then choose what you need:
+
+```text
+cases
+  VexStreamPlaybackCase
+
+controls
+  VexStreamPlaybackControl
+
+placements
+  VexStreamPlaybackPlacement
+
+android realization
+  VexStreamPlaybackAndroid
+
+whole orientation
+  VexStreamPlaybackArchitecture.map
+```
+
+Play/Pause now reads:
+
+```text
+ReadyToPlay
+  -- Play -->
+PlayRequested
+
+PlayRequested
+  -- Pause -->
+ReadyToPlay
+```
+
+Both the VexStream mini-player and Context Dock consume the same Control. Android realization re-reads
+exact Media3 truth before performing the selected transition.
 
 <!-- [VXG RealForever][VEX-ARCHITECTURE] -->

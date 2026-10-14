@@ -391,18 +391,22 @@ controls remain registered Vex actions and dynamic catalog rows remain repositor
 
 ### VexArchitecture playback practicum
 
-The Play/Pause control is the first VexArchitecture consumer. The source now reads in the same
-language as the human question instead of making each UI surface rediscover meaning from Media3
-booleans.
+Playback now has one explicit design root:
 
 ```text
-Media3
--> VexStreamPlaybackObservation
-     queueHasItems
-     playRequested
--> VexStreamPlaybackArchitecture.currentControl(...)
--> QueueEmpty / ReadyToPlay / PlayRequested
+VexStreamPlaybackArchitecture
+  cases      -> VexStreamPlaybackCase
+  controls   -> VexStreamPlaybackControl
+  placements -> VexStreamPlaybackPlacement
+  android    -> VexStreamPlaybackAndroid
+  map        -> derived orientation from local relationships
+```
 
+The root implements the global `VexArchitectureContract`. Its child layers implement only
+Playback-local contracts, so IDE implementation search does not flatten the whole application into
+one giant result set.
+
+```text
 ReadyToPlay
   arrived by Pause
   can Play
@@ -412,39 +416,32 @@ PlayRequested
   arrived by Play
   can Pause
     PlayRequested -> ReadyToPlay
-
--> PlayPauseControl
 ```
 
-Presentation may read the currently available Play/Pause transition for icon/enabled state. That
-read does not make presentation the playback-command owner.
+The registered Screen element points to:
 
 ```text
-human presses Play/Pause
--> VexStreamPlaybackControlAction.TogglePlayPause
--> VexStreamPlaybackControlOwner
--> re-read exact Media3 observation now
--> currentControl(...)
--> availableTransition(PlayPauseControl)
--> MediaController play() / pause()
--> Media3 reports new truth
+VexStreamPlaybackArchitecture.controls.PlayPause
 ```
 
-`playWhenReady` is translated exactly once into the domain phrase `playRequested`. The relational
-Case therefore says what is true without leaking Media3 vocabulary through the UI.
+Both Mini Player and Context Dock consume that same Control. Android realization re-reads exact
+Media3 truth at click time, resolves the Control against the current Placement, then calls
+`MediaController.play()` or `pause()`.
 
-Previous/Next are deliberately not forced into this Play/Pause relationship. Their availability
-depends on queue position, which is an orthogonal truth dimension and therefore a separate future
-convergence/relationship pressure test.
+The root also owns one explicit `enabled` realm flag. Control availability and VexRuntime activation
+respect that root automatically; descendants do not scatter feature-flag `if` statements.
 
 ```text
-UI_MAY_OBSERVE_RELATIONSHIP
-UI_DOES_NOT_GAIN_EXECUTION_AUTHORITY
-PLATFORM_FACT -> DOMAIN_OBSERVATION -> CURRENT_RELATIONSHIP
-HUMAN_INTENTION -> ONE_EFFECT_OWNER -> PLATFORM_COMMAND
+CASE = CURRENT TRUTH
+CONTROL = REQUESTABLE MEANING
+PLACEMENT = LOCAL RELATIONSHIPS
+ARCHITECTURE = ROOT ORIENTATION / REALM
+ANDROID = PLATFORM REALIZATION
 ```
-QUEUE_POSITION != PLAY_PAUSE_RELATIONSHIP
-```
+
+Previous/Next remain intentionally outside this first relational axis because queue-position truth is
+orthogonal to Play/Pause truth. The question-first checklist on PR #80 governs that next slice rather
+than flattening queue state into playback Cases.
 
 ### Playback lifetime + perceivable mobile player refinement
 
