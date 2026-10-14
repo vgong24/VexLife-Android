@@ -114,6 +114,7 @@ class EventsArchitectureParityTest {
             current.currentOutput.comparable(),
             traditional.current.comparable(),
         )
+    }
 
     @Test
     fun currentRelayAndTraditionalControllerAgreeAcrossSurfaceAndProviderPressure() = runTest {
