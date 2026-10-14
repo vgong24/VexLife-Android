@@ -1,5 +1,8 @@
 package com.vextreme.vexlife.android.data.events
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -142,6 +145,76 @@ class EventsAttentionLabTest {
             middle.targetEventRef,
             bottom.targetEventRef,
         )
+    }
+
+    @Test
+    fun concurrentPlanNextCallsUseUniqueAtomicOrdinals() {
+        val repository =
+            RelayEventsAttentionLabRepository()
+        val fixtureEvents =
+            events(9)
+        val count =
+            24
+        val ready =
+            CountDownLatch(count)
+        val go =
+            CountDownLatch(1)
+        val executor =
+            Executors.newFixedThreadPool(count)
+
+        try {
+            val futures =
+                (0 until count).map {
+                    executor.submit<EventsAttentionLabScenario> {
+                        ready.countDown()
+                        go.await()
+
+                        repository.planNext(
+                            fixtureEvents,
+                        )
+                    }
+                }
+
+            assertTrue(
+                ready.await(
+                    2L,
+                    TimeUnit.SECONDS,
+                ),
+            )
+            go.countDown()
+
+            val scenarios =
+                futures.map { future ->
+                    future.get(
+                        3L,
+                        TimeUnit.SECONDS,
+                    )
+                }
+
+            assertEquals(
+                (1L..count.toLong()).toSet(),
+                scenarios
+                    .map(EventsAttentionLabScenario::ordinal)
+                    .toSet(),
+            )
+            assertEquals(
+                count,
+                scenarios
+                    .map(EventsAttentionLabScenario::scenarioRef)
+                    .toSet()
+                    .size,
+            )
+            assertEquals(
+                count.toLong() + 1L,
+                repository.current.nextOrdinal,
+            )
+            assertEquals(
+                count.toLong(),
+                repository.current.currentScenario?.ordinal,
+            )
+        } finally {
+            executor.shutdownNow()
+        }
     }
 
     @Test
