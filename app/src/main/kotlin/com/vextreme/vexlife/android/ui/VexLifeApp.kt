@@ -77,10 +77,21 @@ private fun VexLifeApp(
         runtime.appOpened()
     }
 
+    /*
+     * Read surface truth during composition so navigation/presentation changes invalidate this
+     * composition and produce a fresh Relay surface patch. Reading these values only inside
+     * SideEffect would observe whatever happened to be current when the effect ran without
+     * subscribing this composition to later state changes.
+     */
+    val currentScreenId =
+        runtime.currentScreen.screenId
+    val transientBlocked =
+        runtime.presentation.hasOpenPresentation
+
     SideEffect {
         relays.events.surfaceChanged(
-            screenId = runtime.currentScreen.screenId,
-            transientBlocked = runtime.presentation.hasOpenPresentation,
+            screenId = currentScreenId,
+            transientBlocked = transientBlocked,
         )
     }
 
