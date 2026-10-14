@@ -101,8 +101,8 @@ object DebugMenuScreen : AppScreenBlueprint(
     )
 
     val ResetEventsDebugMenu = buttonRef(
-        id = "body.events-simulator.actions.reset-lab",
-        labelRes = R.string.events_simulator_reset_lab,
+        id = "body.events-simulator.actions.reset-debug-menu",
+        labelRes = R.string.events_simulator_reset_debug_menu,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Reset,
         intent = invoke(AppActions.ResetEventsDebugMenu),
@@ -123,8 +123,8 @@ object DebugMenuScreen : AppScreenBlueprint(
     )
 
     val NextDebugMenuAlertCase = buttonRef(
-        id = "body.events-simulator.actions.next-scenario",
-        labelRes = R.string.events_simulator_next_scenario,
+        id = "body.events-simulator.actions.next-alert-case",
+        labelRes = R.string.events_simulator_next_alert_case,
         style = VexElementStyles.SecondaryAction,
         intent = invoke(AppActions.NextDebugMenuAlertCase),
     )
@@ -171,11 +171,11 @@ object DebugMenuScreen : AppScreenBlueprint(
                 row("reset-actions") {
                     button(ResetEventsDebugMenu)
                 }
-                row("scenario-mode-actions") {
+                row("alert-case-mode-actions") {
                     button(UseRotationDebugMenuAlerts)
                     button(UseRandomDebugMenuAlerts)
                 }
-                row("scenario-actions") {
+                row("alert-case-actions") {
                     button(NextDebugMenuAlertCase)
                 }
                 text(
@@ -316,19 +316,19 @@ object DebugMenuScreen : AppScreenBlueprint(
     }
 
     /**
-     * Prepare one complete Events developer-lab alert case.
+     * Prepare one complete Events Debug-menu alert case.
      *
-     * This is Debug-menu orchestration, not reusable Relay/Scenario infrastructure. It coordinates
+     * This is Debug-menu orchestration, not shared Relay or AlertCase infrastructure. It coordinates
      * several rightful owners only because one human Debug action needs a repeatable environment.
      *
      * Read in order:
      *
      * 1. ENSURE ROW DEPTH
-     *    The Debug-menu alert cases exercises top/middle/bottom anchored targets, so keep at least
+     *    Debug-menu alert cases exercise top/middle/bottom anchored targets, so keep at least
      *    [ALERT_CASE_MIN_EVENT_COUNT] current Events rows available.
      *
      * 2. RESET HUMAN DISPOSITION
-     *    Clear acknowledge/defer/suspend/suppress state so an older lab run cannot hide the row the
+     *    Clear acknowledge/defer/suspend/suppress state so an older Debug-menu alert run cannot hide the row the
      *    next alert case intends to target.
      *
      * 3. PLAN AGAINST REFRESHED EVENT TRUTH
@@ -337,7 +337,7 @@ object DebugMenuScreen : AppScreenBlueprint(
      *    any rows just added above.
      *
      * 4. APPLY OPTIONAL PROVIDER PRESSURE
-     *    A freeze-projection exercise deliberately keeps new provider events arriving while the
+     *    A freeze-projection alert case deliberately keeps new provider events arriving while the
      *    overlay is active. Starting the synthetic producer tests that presentation remains stable
      *    while canonical feed truth continues changing.
      *
@@ -375,8 +375,7 @@ object DebugMenuScreen : AppScreenBlueprint(
 
         // 3. PLAN AGAINST REFRESHED EVENT TRUTH
         //
-        // "exercise" is intentionally used here instead of "scenario" to make its meaning local:
-        // this is one Debug-menu alert case, not a generic scenario subsystem.
+        // This value is one concrete Debug-menu AlertCase, not a shared framework concept.
         val alertCase =
             debugMenuAlerts.planNext(
                 events.current.events,
@@ -473,7 +472,7 @@ private fun DebugMenuHistoryPreview() {
 /**
  * Preview data belongs beside DebugMenuScreen because it describes a meaningful state of THIS screen.
  * The shared preview layer only knows how to host repositories/runtime; it does not know Debug's
- * sheet/history scenario.
+ * sheet/history state.
  */
 private fun debugHistoryPreviewFixture(): LogHistoryFixture =
     LogHistoryFixture.build {
