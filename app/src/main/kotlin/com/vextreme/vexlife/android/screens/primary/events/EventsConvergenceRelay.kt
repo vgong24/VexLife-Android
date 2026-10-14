@@ -193,7 +193,7 @@ class EventsConvergenceRelay internal constructor(
     private val attentionPreferences: EventsAttentionPreferenceRepository?,
     private val attentionLab: EventsAttentionLabRepository?,
     private val userProfile: UserProfileRepository?,
-    private val sourceAvailability: EventsSourceAvailabilityRepository?,
+    private val sourceAvailability: EventsSourceAvailabilityRepository? = null,
 ) : VexCompoundRelay<EventsConvergenceInputState, EventsConvergenceOutputState>(
     relayRef = "relay.events.convergence",
     initialInputState = EventsConvergenceInputState(),
@@ -551,18 +551,21 @@ class EventsConvergenceRelay internal constructor(
                     deferredQueue
             }
 
+        /*
+         * Source availability is a negative constraint. No explicit observation means no source has
+         * been marked unavailable, preserving the existing reducer seam and repository default.
+         */
         val attentionEligiblePool =
             activePool.filter { event ->
                 sourceAvailability
                     ?.isAvailable(event.sourceRef)
-                    ?: false
+                    ?: true
             }
 
         val candidateEvent =
             if (
                 feed != null &&
-                preferences != null &&
-                sourceAvailability != null
+                preferences != null
             ) {
                 val labTargetRef =
                     lab
@@ -602,7 +605,6 @@ class EventsConvergenceRelay internal constructor(
             when {
                 feed == null ||
                     preferences == null ||
-                    sourceAvailability == null ||
                     screenId == null ||
                     transientBlocked == null ->
                     EventsConvergenceAvailability.UNOBSERVED
