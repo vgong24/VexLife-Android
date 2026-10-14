@@ -5,6 +5,7 @@ import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepositor
 import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
+import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.logging.VexLogKind
@@ -25,6 +26,7 @@ class VexLifeSessionTest {
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
                 userProfile = InMemoryUserProfileRepository(),
+                vexMaps = InMemoryVexMapsRepository(),
                 vexStream = InMemoryVexStreamMusicRepository(),
                 events = RelayEventsRepository(),
                 eventsAttention = RelayEventsAttentionPreferenceRepository(),
@@ -52,6 +54,7 @@ class VexLifeSessionTest {
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
                 userProfile = InMemoryUserProfileRepository(),
+                vexMaps = InMemoryVexMapsRepository(),
                 vexStream = InMemoryVexStreamMusicRepository(),
                 events = RelayEventsRepository(),
                 eventsAttention = RelayEventsAttentionPreferenceRepository(),
