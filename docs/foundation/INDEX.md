@@ -117,7 +117,9 @@ carriage. Events A008 and Test Foundation A019 independently established the reu
 
 PR #78 is accepted on `main` and received its own exact host proof before merge. Feature branches
 such as VexMaps now consume the repository-owned proof surface rather than copying another lane's
-Relay package formation or proof command list.
+Relay package formation or proof command list. For a fresh agent composing several dependent checks
+into one human round trip, use the **Reusable multi-path host-task template** in
+`ANDROID-HOST-PROOF.md`; it preserves per-path evidence while keeping one canonical RETURN.
 
 ## Test / Proof Architecture candidate
 
