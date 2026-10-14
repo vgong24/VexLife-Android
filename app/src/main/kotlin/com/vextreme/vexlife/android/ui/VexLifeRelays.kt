@@ -2,6 +2,8 @@ package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRelay
+import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureComparisonLab
+import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.TraditionalEventsController
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -11,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
  */
 internal class VexLifeRelays private constructor(
     val events: EventsConvergenceRelay,
+    val eventsComparison: EventsArchitectureComparisonLab,
 ) {
     companion object {
         fun create(
@@ -27,8 +30,21 @@ internal class VexLifeRelays private constructor(
 
             events.activate(scope)
 
+            val traditionalEvents =
+                TraditionalEventsController(
+                    eventsRepository = repositories.events,
+                    attentionPreferences = repositories.eventsAttention,
+                    attentionLab = repositories.eventsAttentionLab,
+                    userProfile = repositories.userProfile,
+                )
+            traditionalEvents.start(scope)
+
             return VexLifeRelays(
                 events = events,
+                eventsComparison =
+                    EventsArchitectureComparisonLab(
+                        traditionalController = traditionalEvents,
+                    ),
             )
         }
     }
