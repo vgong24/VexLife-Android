@@ -39,7 +39,7 @@ class VexRelayContractTest {
             initialState = CounterState(),
         ) {
         fun increment() {
-            update { current ->
+            updateCurrent { current ->
                 current.copy(
                     count = current.count + 1,
                 )
