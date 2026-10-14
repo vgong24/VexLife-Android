@@ -80,6 +80,7 @@ import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.architecture.experiment.VexStreamArchitectureExperiment
 import kotlinx.coroutines.launch
 
 /**
@@ -1725,13 +1726,28 @@ private fun VexStreamMiniPlayer(
             )
             when (element) {
                 VexStreamMusicScreen.PreviousTrack ->
-                    controller?.seekToPreviousMediaItem()
+                    controller?.let {
+                        VexStreamArchitectureExperiment
+                            .requestPrevious(
+                                it,
+                            )
+                    }
 
                 VexStreamMusicScreen.TogglePlayback ->
-                    controller?.toggleVexStreamPlayback()
+                    controller?.let {
+                        VexStreamArchitectureExperiment
+                            .requestPlayPause(
+                                it,
+                            )
+                    }
 
                 VexStreamMusicScreen.NextTrack ->
-                    controller?.seekToNextMediaItem()
+                    controller?.let {
+                        VexStreamArchitectureExperiment
+                            .requestNext(
+                                it,
+                            )
+                    }
 
                 VexStreamMusicScreen.ShuffleQueue ->
                     onShuffle()
@@ -2183,16 +2199,15 @@ private fun VexStreamQueueSheet(
                                         runtime.activate(
                                             VexStreamMusicScreen.QueuePlay,
                                         )
-                                        if (
-                                            latestIndex !=
-                                            playback.currentIndex
-                                        ) {
-                                            controller
-                                                ?.seekToDefaultPosition(
-                                                    latestIndex,
+                                        controller?.let {
+                                            VexStreamArchitectureExperiment
+                                                .requestQueueSelection(
+                                                    controller =
+                                                        it,
+                                                    index =
+                                                        latestIndex,
                                                 )
                                         }
-                                        controller?.play()
                                     },
                                 horizontalArrangement =
                                     Arrangement.spacedBy(
