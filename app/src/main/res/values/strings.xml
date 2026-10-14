@@ -12,6 +12,8 @@
     <string name="events_architecture_comparison_title">Events architecture comparison</string>
     <string name="events_architecture_use_traditional">Use traditional Events controller</string>
     <string name="events_architecture_live_comparison">Live comparison</string>
+    <string name="events_architecture_relay_consumer">Relay relationship snapshot</string>
+    <string name="events_architecture_traditional_consumer">Traditional relationship snapshot</string>
     <string name="events_architecture_comparison_helper">Off uses the Vextreme Convergence Relay. On uses the traditional controller. Both continue observing the same Events repositories; the read-only comparison reports presentation parity or the exact fields that currently diverge.</string>
     <string name="gallery_title">Gallery</string>
     <string name="vexmaps_title">VexMaps</string>
