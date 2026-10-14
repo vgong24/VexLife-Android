@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.data.events
 
-import com.vextreme.vexlife.android.relay.VexRelay
+import com.vextreme.vexlife.android.relay.VexAction
+import com.vextreme.vexlife.android.relay.VexActionRelay
 import com.vextreme.vexlife.android.relay.VexState
 import kotlin.random.Random
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,15 @@ enum class EventsAttentionLabExpectedAction {
     SUPPRESS,
 }
 
+/**
+ * One planned attention-overlay exercise used by the Events developer lab.
+ *
+ * It tells the lab which event row should receive the anchored attention prompt, where that prompt
+ * prefers to appear, which human response the exercise expects, and whether the underlying list
+ * projection should freeze while the prompt is active.
+ *
+ * This is developer-lab presentation/test meaning, not canonical external-event truth.
+ */
 data class EventsAttentionLabScenario(
     val scenarioRef: String,
     val ordinal: Long,
@@ -116,8 +126,36 @@ class RelayEventsAttentionLabRepository :
     }
 }
 
+private sealed interface EventsAttentionLabAction :
+    VexAction {
+    data class UseMode(
+        val mode: EventsAttentionLabMode,
+        val seed: Long,
+    ) : EventsAttentionLabAction
+
+    data class PlanNext(
+        val events: List<VexExternalEvent>,
+    ) : EventsAttentionLabAction
+
+    data object CompleteCurrent :
+        EventsAttentionLabAction
+
+    data object Reset :
+        EventsAttentionLabAction
+}
+
+/**
+ * Action-driven owner of Events attention-lab state.
+ *
+ * Every state-changing intention enters as one [EventsAttentionLabAction] and reaches exactly one
+ * reducer: [nextStateFor]. Public methods below only name/form the action; they never read/copy/mutate
+ * current state themselves.
+ */
 private class EventsAttentionLabRelay :
-    VexRelay<EventsAttentionLabState>(
+    VexActionRelay<
+        EventsAttentionLabAction,
+        EventsAttentionLabState
+    >(
         relayRef = "relay.events.attention-lab",
         initialState = EventsAttentionLabState(),
     ) {
@@ -125,41 +163,27 @@ private class EventsAttentionLabRelay :
         mode: EventsAttentionLabMode,
         seed: Long,
     ) {
-        updateCurrent { current ->
-            current.copy(
+        sendAction(
+            EventsAttentionLabAction.UseMode(
                 mode = mode,
                 seed = seed,
-                nextOrdinal = 1L,
-                currentScenario = null,
-            )
-        }
+            ),
+        )
     }
 
     fun planNext(
         events: List<VexExternalEvent>,
     ): EventsAttentionLabScenario {
-        /*
-         * Plan + advance are one atomic current -> next transition.
-         *
-         * Do not read relay.current before updateCurrent when that read decides the next ordinal:
-         * two concurrent callers could otherwise both plan from the same stale ordinal and only
-         * serialize the later writes.
-         */
         val nextState =
-            updateCurrent { current ->
-                val scenario =
-                    planEventsAttentionLabScenario(
-                        mode = current.mode,
-                        seed = current.seed,
-                        ordinal = current.nextOrdinal,
-                        events = events,
-                    )
-
-                current.copy(
-                    nextOrdinal = current.nextOrdinal + 1L,
-                    currentScenario = scenario,
-                )
-            }
+            sendAction(
+                EventsAttentionLabAction.PlanNext(
+                    // The action is immutable by contract; detach the caller-owned list once here.
+                    events =
+                        events.map(
+                            VexExternalEvent::deepCopy,
+                        ),
+                ),
+            )
 
         return checkNotNull(
             nextState.currentScenario,
@@ -167,21 +191,62 @@ private class EventsAttentionLabRelay :
     }
 
     fun completeCurrent() {
-        updateCurrent { current ->
-            current.copy(
-                currentScenario = null,
-            )
-        }
+        sendAction(
+            EventsAttentionLabAction.CompleteCurrent,
+        )
     }
 
     fun reset() {
-        updateCurrent { current ->
-            EventsAttentionLabState(
-                mode = current.mode,
-                seed = current.seed,
-            )
-        }
+        sendAction(
+            EventsAttentionLabAction.Reset,
+        )
     }
+
+    /**
+     * The only action -> next-state path for this Relay.
+     *
+     * No caller supplies "the next State" and no caller receives an anonymous current-state lambda.
+     * If the lab gains a new behavior, add one action above and one exhaustive branch here.
+     */
+    override fun nextStateFor(
+        action: EventsAttentionLabAction,
+        currentState: EventsAttentionLabState,
+    ): EventsAttentionLabState =
+        when (action) {
+            is EventsAttentionLabAction.UseMode ->
+                currentState.copy(
+                    mode = action.mode,
+                    seed = action.seed,
+                    nextOrdinal = 1L,
+                    currentScenario = null,
+                )
+
+            is EventsAttentionLabAction.PlanNext -> {
+                val scenario =
+                    planEventsAttentionLabScenario(
+                        mode = currentState.mode,
+                        seed = currentState.seed,
+                        ordinal = currentState.nextOrdinal,
+                        events = action.events,
+                    )
+
+                currentState.copy(
+                    nextOrdinal = currentState.nextOrdinal + 1L,
+                    currentScenario = scenario,
+                )
+            }
+
+            EventsAttentionLabAction.CompleteCurrent ->
+                currentState.copy(
+                    currentScenario = null,
+                )
+
+            EventsAttentionLabAction.Reset ->
+                EventsAttentionLabState(
+                    mode = currentState.mode,
+                    seed = currentState.seed,
+                )
+        }
 }
 
 private fun foldedRandomSeed(
@@ -244,7 +309,7 @@ private val eventsAttentionLabTemplates =
  *
  * This function owns scenario calculation only. It does not read Relay current state and does not
  * mutate Relay state. EventsAttentionLabRelay.planNext() supplies one exact current mode/seed/ordinal
- * from inside updateCurrent(), then atomically stores the returned scenario.
+ * from one exact current State inside the action reducer, then atomically retains the returned State.
  *
  * Read in order:
  *
