@@ -310,40 +310,40 @@ Example:
 
 ~~~text
 State
-    FastForwarding
+    Playing(speed = FastForward)
 
 Act
     Play
 
 Effect
-    PlayAtNormalSpeed
+    SetSpeed(Normal)
 
-expected destination State
+expected destination State kind
     Playing
 ~~~
 
 Act and Effect are separate because UI/product vocabulary should not become coupled to one provider
-implementation.
+implementation. State flavor can change without inventing another State type.
 
 ## Type families are architecture boundaries
 
 The worked Playback example keeps finite meanings inside their family scope:
 
 ~~~text
-PlaybackState.Playing
+PlaybackState.Playing(speed)
 PlaybackState.Paused
-PlaybackState.FastForwarding
-PlaybackState.Rewinding
+
+PlaybackSpeed.Normal
+PlaybackSpeed.FastForward
+PlaybackSpeed.Rewind
 
 PlaybackAct.Play
 PlaybackAct.Pause
 PlaybackAct.FastForward
 PlaybackAct.Rewind
 
-PlaybackEffect.PlayAtNormalSpeed
+PlaybackEffect.SetSpeed(speed)
 PlaybackEffect.PausePlayback
-PlaybackEffect.StartFastForward
-PlaybackEffect.StartRewind
 
 PlaybackControl.Rewind
 PlaybackControl.PlayPause
@@ -444,7 +444,7 @@ resolved Control meaning:
     Pause
 ~~~
 
-From `FastForwarding`:
+From `Playing(speed = FastForward)`:
 
 ~~~text
 available Acts:
@@ -460,11 +460,11 @@ resolved Control meaning:
 ~~~
 
 That lets a shared Play/Pause affordance reflect Play while fast-forwarding and Pause while playing
-without embedding those State checks in Compose.
+normally without embedding those State checks in Compose.
 
-The Behavior graph still exposes both Play and Pause from FastForwarding. The Control owns the
-choice to prefer Play when both are meaningful. A different Control can intentionally prefer Pause
-without changing Playback architecture.
+The Behavior graph still exposes both Play and Pause from the fast-forward flavor of Playing. The
+Control owns the choice to prefer Play when both are meaningful. A different Control can
+intentionally prefer Pause without changing Playback architecture.
 
 A Control resolving to no Act means semantic unavailability only. Presentation still owns whether
 that appears hidden, disabled, replaced, animated, or otherwise rendered.
@@ -558,7 +558,7 @@ Do **not** encode combinations such as:
 ~~~text
 PlayingAndIncomingEvent
 PausedAndRelayUnavailable
-FastForwardingAndTransientOccupied
+PlayingFastForwardAndTransientOccupied
 ~~~
 
 inside the Playback graph merely because presentation priority depends on several domains.
@@ -887,40 +887,36 @@ A convergence feature may consume another owner's Flow.
 Those are transport/lifetime decisions. The semantic payload remains the same
 `VexBehaviorProjection`.
 
-### Fresh VexStream target
+### Real VexStream Port
 
-A clean VexStream integration should aim toward:
+The target is now implemented for the first Play/Pause slice:
 
 ~~~text
 MediaSession / Player
     owns actual playback truth
 
-VexStreamPlaybackClient
+Media3VexStreamPlaybackPort : VexPortFlow
     observes provider truth
-    -> builds current semantic State
-    -> builds one BehaviorProjection
-    -> exposes observable Projection
+    -> forms semantic State
+    -> publishes BehaviorProjection
     -> accepts Control activation
     -> resolves latest Act / Effect
-    -> asks MediaController/provider to realize Effect
+    -> emits pending intent synchronously
+    -> asks MediaController to realize Effect
+    -> reconciles delayed provider observations
 
 Mini Player
 Context Dock
-other future surfaces
-    receive the same Projection shape
-    + invoke(Control)
+    read Projection
+    + activate(Control)
 ~~~
 
-The name `VexStreamPlaybackClient` is descriptive here, not yet a committed generic base class.
-
-The unresolved design question at this seam is lifetime/hosting, not semantics: whether the concrete
-VexStream client belongs in the existing app session, a feature-scoped ViewModel, another retained
-owner, or a service-side projection depends on the real MediaController/provider lifetime chosen by
-the next production slice.
+The concrete Port is retained by a ViewModel only because Android configuration lifetime currently
+needs a host. ViewModel is not part of the VexPort contract or the four-move grammar.
 
 ## First production-shaped consumer — VexStream Play/Pause
 
-The generic connection/projection contract now has one real Android consumer under:
+The generic VexPort/projection contract now has one real Android consumer under:
 
 ~~~text
 app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/
@@ -1041,7 +1037,7 @@ behavior/current-State interpretation presentation-owned and would create multip
 same Media3 truth.
 
 That seam is now exercised by `Media3VexStreamPlaybackPort` for Play/Pause only. The
-connection remains a projection/adapter and does not become another player or queue truth owner.
+Port remains a projection/adapter and does not become another player or queue truth owner.
 
 The existing code also reveals one unresolved semantic question that should be answered at this
 boundary rather than hidden in Compose:
