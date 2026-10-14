@@ -272,8 +272,8 @@ relay.states
 That would encode a Relay invariant as consumer folklore and eventually create avoidable
 recomposition/flicker bugs. `VexCompoundRelay.outputStates` owns that projection once.
 
-`currentOutput` provides the corresponding defensively copied current snapshot for initial UI
-state.
+`currentOutput` provides the corresponding ownership-safe current snapshot for initial UI state.
+Mutable-backed outputs are detached; transitively immutable outputs may be shared.
 
 The full `states` stream remains available deliberately; it is not deprecated or hidden. Some
 coordination owners genuinely need retained-input/currentness changes even when derived output is
@@ -316,7 +316,7 @@ inputs are available.
 - semantic no-op suppression;
 - Compound revision only when retained/derived meaning changes;
 - canonical distinct-by-output projection through `outputStates`;
-- defensively copied `currentOutput` for downstream initialization.
+- ownership-safe `currentOutput` for downstream initialization.
 
 ## EAP-00 deliberately does not own
 
