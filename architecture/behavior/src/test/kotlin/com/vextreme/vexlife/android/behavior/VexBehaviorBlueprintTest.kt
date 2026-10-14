@@ -7,144 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Proof that relational source declarations preserve the behavior geometry they describe.
+ * Foundation proof for state-neighborhood authoring independent of the Playback worked example.
  */
 class VexBehaviorBlueprintTest {
-    private sealed interface PlaybackState {
-        data object NoMedia :
-            PlaybackState
-
-        data object NotRequested :
-            PlaybackState
-
-        data object Requested :
-            PlaybackState
-    }
-
-    private sealed interface PlaybackIntention {
-        data object PlayPause :
-            PlaybackIntention
-    }
-
-    private sealed interface PlaybackEffect {
-        data object Play :
-            PlaybackEffect
-
-        data object Pause :
-            PlaybackEffect
-    }
-
-    private fun playbackBlueprint() =
-        vexBehaviorBlueprint<
-            PlaybackState,
-            PlaybackIntention,
-            PlaybackEffect
-        >(
-            behaviorRef = "example.playback",
-        ) {
-            state<PlaybackState.NoMedia>()
-            state<PlaybackState.NotRequested>()
-            state<PlaybackState.Requested>()
-
-            intention(
-                PlaybackIntention.PlayPause,
-            ) {
-                cycle<
-                    PlaybackState.NotRequested,
-                    PlaybackState.Requested
-                >(
-                    forward =
-                        PlaybackEffect.Play,
-                    backward =
-                        PlaybackEffect.Pause,
-                )
-            }
-        }
-
-    @Test
-    fun playAndPauseAreOneVisibleAndResolvableCycle() {
-        val blueprint =
-            playbackBlueprint()
-
-        val play =
-            blueprint.resolve(
-                current =
-                    PlaybackState.NotRequested,
-                intention =
-                    PlaybackIntention.PlayPause,
-            )
-
-        assertSame(
-            PlaybackEffect.Play,
-            play?.effect,
-        )
-        assertEquals(
-            PlaybackState.Requested::class,
-            play?.destination,
-        )
-
-        val pause =
-            blueprint.resolve(
-                current =
-                    PlaybackState.Requested,
-                intention =
-                    PlaybackIntention.PlayPause,
-            )
-
-        assertSame(
-            PlaybackEffect.Pause,
-            pause?.effect,
-        )
-        assertEquals(
-            PlaybackState.NotRequested::class,
-            pause?.destination,
-        )
-    }
-
-    @Test
-    fun incomingAndOutgoingNeighborhoodsAreDerivedFromTheBond() {
-        val blueprint =
-            playbackBlueprint()
-
-        val requestedIncoming =
-            blueprint.incoming(
-                PlaybackState.Requested::class,
-            )
-        val requestedOutgoing =
-            blueprint.outgoing(
-                PlaybackState.Requested::class,
-            )
-
-        assertEquals(
-            1,
-            requestedIncoming.size,
-        )
-        assertSame(
-            PlaybackEffect.Play,
-            requestedIncoming.single().effect,
-        )
-        assertEquals(
-            1,
-            requestedOutgoing.size,
-        )
-        assertSame(
-            PlaybackEffect.Pause,
-            requestedOutgoing.single().effect,
-        )
-    }
-
-    @Test
-    fun noMediaDoesNotInventAPlayPauseRelationship() {
-        assertNull(
-            playbackBlueprint().resolve(
-                current =
-                    PlaybackState.NoMedia,
-                intention =
-                    PlaybackIntention.PlayPause,
-            ),
-        )
-    }
-
     private sealed interface QueueState {
         data object Empty :
             QueueState
@@ -154,42 +19,41 @@ class VexBehaviorBlueprintTest {
         ) : QueueState
     }
 
-    private sealed interface QueueIntention {
+    private sealed interface QueueAct {
         data object Next :
-            QueueIntention
+            QueueAct
     }
 
     private sealed interface QueueEffect {
-        data object Next :
+        data object Advance :
             QueueEffect
     }
+
+    private fun queueBlueprint() =
+        vexBehaviorBlueprint<
+            QueueState,
+            QueueAct,
+            QueueEffect
+        >(
+            behaviorRef = "example.queue",
+        ) {
+            state<QueueState.Empty>()
+
+            state<QueueState.Positioned> {
+                on(
+                    act = QueueAct.Next,
+                    effect = QueueEffect.Advance,
+                    conditionName = "has-next",
+                ) { current ->
+                    current.hasNext
+                }.stay()
+            }
+        }
 
     @Test
     fun conditionalSelfRelationshipKeepsQueuePositioned() {
         val blueprint =
-            vexBehaviorBlueprint<
-                QueueState,
-                QueueIntention,
-                QueueEffect
-            >(
-                behaviorRef = "example.queue",
-            ) {
-                state<QueueState.Empty>()
-                state<QueueState.Positioned>()
-
-                intention(
-                    QueueIntention.Next,
-                ) {
-                    stay<QueueState.Positioned>(
-                        effect =
-                            QueueEffect.Next,
-                        conditionName =
-                            "has-next",
-                    ) { current ->
-                        current.hasNext
-                    }
-                }
-            }
+            queueBlueprint()
 
         assertNull(
             blueprint.resolve(
@@ -197,8 +61,8 @@ class VexBehaviorBlueprintTest {
                     QueueState.Positioned(
                         hasNext = false,
                     ),
-                intention =
-                    QueueIntention.Next,
+                act =
+                    QueueAct.Next,
             ),
         )
 
@@ -208,12 +72,12 @@ class VexBehaviorBlueprintTest {
                     QueueState.Positioned(
                         hasNext = true,
                     ),
-                intention =
-                    QueueIntention.Next,
+                act =
+                    QueueAct.Next,
             )
 
         assertSame(
-            QueueEffect.Next,
+            QueueEffect.Advance,
             next?.effect,
         )
         assertEquals(
@@ -225,6 +89,25 @@ class VexBehaviorBlueprintTest {
                 .contains(
                     "when has-next",
                 ),
+        )
+    }
+
+    @Test
+    fun incomingAndOutgoingAreDerivedFromOneAuthoredRelationship() {
+        val blueprint =
+            queueBlueprint()
+
+        assertEquals(
+            1,
+            blueprint.outgoing(
+                QueueState.Positioned::class,
+            ).size,
+        )
+        assertEquals(
+            1,
+            blueprint.incoming(
+                QueueState.Positioned::class,
+            ).size,
         )
     }
 }

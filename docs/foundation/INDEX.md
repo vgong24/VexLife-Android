@@ -62,7 +62,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
-| BEHAVIOR_BLUEPRINT_EXPERIMENT | relational behavior blueprint | **DRAFT EXPERIMENT / JVM PROOF PENDING** | Test whether behavioral source can read like its intention/state relationship graph, deriving incoming/outgoing structure instead of authoring connective mirrors | `:architecture:behavior:test` + `vexVerifyJvm`; later ScreenBlueprint binding only if the source grammar earns it |
+| BEHAVIOR_BLUEPRINT_EXPERIMENT | relational behavior blueprint | **DRAFT EXPERIMENT / JVM PROOF PENDING** | Test whether behavioral source can read from current State outward as Act -> Effect -> next State, deriving connective views instead of authoring mirrors | `:architecture:behavior:test` + `vexVerifyJvm`; later ScreenBlueprint binding only if the source grammar earns it |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **EXTRACTION CANDIDATE / A019 INDEPENDENT HOST PROOF OBSERVED** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | exact convergence-branch host proof before merge |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
@@ -93,9 +93,11 @@ VexBehaviorBlueprint
     source relationships ~= behavior relationships
 ~~~
 
-Feature-owned sealed State / Intention / Effect families provide the compiler coordinates. The
-blueprint is a constructed immutable graph, not a singleton or runtime state owner. Incoming /
-outgoing neighborhoods and readable graph views are derived from relationships authored once.
+Feature-owned sealed State / Act / Effect families provide the compiler coordinates. Each State
+block declares what Acts have meaning from that current truth, their provider-facing Effects, and
+the expected next State. The blueprint is a constructed immutable graph, not a singleton or runtime
+state owner. Incoming / outgoing neighborhoods and readable graph views are derived from
+relationships authored once.
 
 No app wiring, provider execution, ScreenBlueprint binding, parameterized request payloads, or
 Android/device claim is admitted yet.

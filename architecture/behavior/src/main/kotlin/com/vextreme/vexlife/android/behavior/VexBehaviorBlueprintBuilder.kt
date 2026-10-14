@@ -3,14 +3,21 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * Construction scope whose source shape is intended to resemble the behavior graph.
+ * Construction scope whose source shape is intended to resemble the behavior itself.
  *
- * Declaration is mutable only while the blueprint is being formed. Build freezes it into an
- * immutable VexBehaviorBlueprint.
+ * Each State block is a semantic neighborhood:
+ *
+ * state<Playing> {
+ *     on(Pause, PausePlayback).to<Paused>()
+ *     on(FastForward, StartFastForward).to<FastForwarding>()
+ * }
+ *
+ * The feature authors each relationship once. Incoming neighborhoods and whole-graph views are
+ * derived from those same declarations.
  */
 class VexBehaviorBlueprintBuilder<
     State : Any,
-    Intention : Any,
+    Act : Any,
     Effect : Any,
 > internal constructor(
     private val behaviorRef: String,
@@ -21,29 +28,25 @@ class VexBehaviorBlueprintBuilder<
 
     @PublishedApi
     internal val authoredRelationships =
-        mutableListOf<VexBehaviorRelationship<State, Intention, Effect>>()
-
-    /** Admit one state kind into this behavior. */
-    inline fun <reified Current : State> state() {
-        stateTypes +=
-            Current::class
-    }
+        mutableListOf<VexBehaviorRelationship<State, Act, Effect>>()
 
     /**
-     * Keep every relationship selected by one human intention visually together.
+     * Admit one State kind and declare the Acts that have meaning from that current State.
      */
-    fun intention(
-        intention: Intention,
-        block: VexBehaviorIntentionScope<State, Intention, Effect>.() -> Unit,
+    inline fun <reified Current : State> state(
+        block: VexBehaviorStateScope<State, Act, Effect, Current>.() -> Unit = {},
     ) {
-        VexBehaviorIntentionScope(
-            intention = intention,
+        stateTypes +=
+            Current::class
+
+        VexBehaviorStateScope<State, Act, Effect, Current>(
+            from = Current::class,
             addRelationship = authoredRelationships::add,
         ).apply(block)
     }
 
     internal fun build():
-        VexBehaviorBlueprint<State, Intention, Effect> =
+        VexBehaviorBlueprint<State, Act, Effect> =
         VexBehaviorBlueprint(
             behaviorRef = behaviorRef,
             states = stateTypes.toSet(),
@@ -52,98 +55,103 @@ class VexBehaviorBlueprintBuilder<
 }
 
 /**
- * Relationships that share one human intention.
+ * One current State's outward-facing behavioral neighborhood.
  *
- * This scope makes cycles and bonds first-class source structure rather than unrelated val
- * declarations.
+ * An Act is meaningful here only when this scope declares a relationship for it.
  */
-class VexBehaviorIntentionScope<
+class VexBehaviorStateScope<
     State : Any,
-    Intention : Any,
+    Act : Any,
     Effect : Any,
-> internal constructor(
+    Current : State,
+> @PublishedApi internal constructor(
     @PublishedApi
-    internal val intention: Intention,
+    internal val from: KClass<Current>,
     @PublishedApi
     internal val addRelationship:
-        (VexBehaviorRelationship<State, Intention, Effect>) -> Unit,
+        (VexBehaviorRelationship<State, Act, Effect>) -> Unit,
 ) {
-    /** One directional relationship between two state kinds. */
-    inline fun <
-        reified From : State,
-        reified To : State,
-    > move(
+    /**
+     * Begin one relationship from this current State.
+     *
+     * [effect] is deliberately separate from [act]: a UI/human action names the cause while the
+     * provider-facing Effect names what runtime meaning should be attempted.
+     */
+    fun on(
+        act: Act,
         effect: Effect,
         conditionName: String? = null,
-        noinline whenCurrent: (From) -> Boolean = {
+        whenCurrent: (Current) -> Boolean = {
             true
         },
-    ) {
+    ): VexBehaviorDestination<State, Act, Effect, Current> =
+        VexBehaviorDestination(
+            from = from,
+            act = act,
+            effect = effect,
+            conditionName = conditionName,
+            whenCurrent = whenCurrent,
+            addRelationship = addRelationship,
+        )
+}
+
+/**
+ * Destination half of an Act authored from one exact current State.
+ */
+class VexBehaviorDestination<
+    State : Any,
+    Act : Any,
+    Effect : Any,
+    Current : State,
+> @PublishedApi internal constructor(
+    @PublishedApi
+    internal val from: KClass<Current>,
+    @PublishedApi
+    internal val act: Act,
+    @PublishedApi
+    internal val effect: Effect,
+    @PublishedApi
+    internal val conditionName: String?,
+    @PublishedApi
+    internal val whenCurrent: (Current) -> Boolean,
+    @PublishedApi
+    internal val addRelationship:
+        (VexBehaviorRelationship<State, Act, Effect>) -> Unit,
+) {
+    /** Finish the relationship at another admitted State kind. */
+    inline fun <reified Next : State> to() {
         addRelationship(
             VexBehaviorRelationship(
-                from = From::class,
-                intention = intention,
+                from = from,
+                act = act,
                 effect = effect,
-                to = To::class,
+                to = Next::class,
                 conditionName = conditionName,
                 whenCurrent = { current ->
                     @Suppress("UNCHECKED_CAST")
-                    whenCurrent(current as From)
+                    whenCurrent(current as Current)
                 },
             ),
         )
     }
 
     /**
-     * Two opposite relationships authored as one visible bond.
-     *
-     * This is useful for behavior such as Play/Pause where the relationship makes sense as a cycle.
+     * Finish the relationship at the same State kind while allowing data inside that State to
+     * change. Queue position movement is one example.
      */
-    inline fun <
-        reified Left : State,
-        reified Right : State,
-    > cycle(
-        forward: Effect,
-        backward: Effect,
-        forwardConditionName: String? = null,
-        backwardConditionName: String? = null,
-        noinline forwardWhen: (Left) -> Boolean = {
-            true
-        },
-        noinline backwardWhen: (Right) -> Boolean = {
-            true
-        },
-    ) {
-        move<Left, Right>(
-            effect = forward,
-            conditionName = forwardConditionName,
-            whenCurrent = forwardWhen,
-        )
-        move<Right, Left>(
-            effect = backward,
-            conditionName = backwardConditionName,
-            whenCurrent = backwardWhen,
-        )
-    }
-
-    /**
-     * Relationship whose state kind remains the same while its data may change.
-     *
-     * Queue Next or Previous are examples: Positioned stays Positioned while index data changes.
-     */
-    inline fun <
-        reified Current : State,
-    > stay(
-        effect: Effect,
-        conditionName: String? = null,
-        noinline whenCurrent: (Current) -> Boolean = {
-            true
-        },
-    ) {
-        move<Current, Current>(
-            effect = effect,
-            conditionName = conditionName,
-            whenCurrent = whenCurrent,
+    fun stay() {
+        addRelationship(
+            VexBehaviorRelationship(
+                from = from,
+                act = act,
+                effect = effect,
+                to = from,
+                conditionName = conditionName,
+                whenCurrent = { current ->
+                    @Suppress("UNCHECKED_CAST")
+                    whenCurrent(current as Current)
+                },
+            ),
         )
     }
 }
