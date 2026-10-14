@@ -88,6 +88,17 @@ class VexTestEngine(
             }
         }
 
+        /*
+         * Establish the Compose host before the semantic walk starts.
+         *
+         * createComposeRule() currently runs through Compose's legacy unconfined test dispatcher.
+         * Android Studio often gives the scheduled setContent work enough incidental time to settle,
+         * while headless Gradle/adb instrumentation can reach start() immediately and observe no
+         * semantics owner yet. Waiting here makes host establishment part of VexTestEngine's own
+         * contract instead of an accidental property of the caller.
+         */
+        compose.waitForIdle()
+
         journey.walk(this)
         verifyWalkHistory(caseLabel)
         observer.afterJourney(
