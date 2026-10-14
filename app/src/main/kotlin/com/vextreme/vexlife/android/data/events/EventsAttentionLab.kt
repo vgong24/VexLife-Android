@@ -122,7 +122,16 @@ interface EventsAttentionLabRepository {
 
     fun useRotation()
     fun useSeededRandom(seed: Long)
+
+    /**
+     * Plan and commit one next Events attention-lab exercise against current event truth.
+     *
+     * The return value is the exact exercise committed by this call. Returning that feature-local
+     * value is a convenience for Debug orchestration that may need to react to exercise metadata
+     * (for example freezeProjection); it is not a generic VexActionRelay result contract.
+     */
     fun planNext(events: List<VexExternalEvent>): EventsAttentionLabScenario
+
     fun completeCurrent()
     fun reset()
 }
@@ -220,7 +229,7 @@ private class EventsAttentionLabRelay :
     fun planNext(
         events: List<VexExternalEvent>,
     ): EventsAttentionLabScenario {
-        val nextState =
+        val committedState =
             sendAction(
                 EventsAttentionLabAction.PlanNext(
                     // The action is immutable by contract; detach the caller-owned list once here.
@@ -231,9 +240,18 @@ private class EventsAttentionLabRelay :
                 ),
             )
 
+        /*
+         * sendAction() returns the post-transition State. PlanNext's reducer contract always stores
+         * the exercise it just planned in currentScenario, so this method projects that one
+         * domain-specific result back to its caller.
+         *
+         * Higher layers should call planNext(); they should not inspect Relay State to recover this.
+         */
         return checkNotNull(
-            nextState.currentScenario,
-        )
+            committedState.currentScenario,
+        ) {
+            "PlanNext must commit one current Events attention-lab exercise"
+        }
     }
 
     fun completeCurrent() {
