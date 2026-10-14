@@ -132,7 +132,7 @@ private class EventsAttentionPreferenceRelay :
         )
         requireSemanticRef(eventRef, "eventRef")
 
-        update { current ->
+        updateCurrent { current ->
             current.copy(
                 dispositionByEventRef =
                     current.dispositionByEventRef +
@@ -157,7 +157,7 @@ private class EventsAttentionPreferenceRelay :
         )
         requireSemanticRef(eventRef, "eventRef")
 
-        update { current ->
+        updateCurrent { current ->
             val ordinal =
                 current.nextQueueOrdinal
 
@@ -193,7 +193,7 @@ private class EventsAttentionPreferenceRelay :
     fun reset(eventRef: String) {
         requireSemanticRef(eventRef, "eventRef")
 
-        update { current ->
+        updateCurrent { current ->
             current.copy(
                 dispositionByEventRef =
                     current.dispositionByEventRef - eventRef,
@@ -206,7 +206,7 @@ private class EventsAttentionPreferenceRelay :
     }
 
     fun resetAll() {
-        update {
+        updateCurrent {
             EventsAttentionPreferenceState()
         }
     }
