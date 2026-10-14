@@ -29,6 +29,8 @@ abstract class VexCompoundRelay<
         require(relayRef.isNotBlank()) { "relayRef must not be blank" }
     }
 
+    // CONSTRUCTION BOUNDARY — initial input/output arrive from the constructing caller and become
+    // Relay-owned retained truth. Mutable-backed branches detach here; immutable branches may share.
     private val mutableCurrentState =
         MutableStateFlow(
             VexCompoundState(
@@ -37,11 +39,15 @@ abstract class VexCompoundRelay<
             ),
         )
 
+    // FULL-STATE STREAM EXPOSURE — collectors that need input + output + revision receive an
+    // ownership-safe snapshot of the whole retained relationship.
     override val states: Flow<VexCompoundState<InputState, OutputState>> =
         mutableCurrentState.map { state ->
             state.deepCopy()
         }
 
+    // INPUT PROJECTION EXPOSURE — distinctUntilChanged() evaluates Relay-owned input meaning first;
+    // only values that actually emit cross the observation boundary through deepCopy().
     val inputStates: Flow<InputState> =
         mutableCurrentState
             .map { state ->
@@ -52,6 +58,7 @@ abstract class VexCompoundRelay<
                 input.deepCopy()
             }
 
+    // POINT-IN-TIME INPUT EXPOSURE — never return a mutable retained input branch directly.
     val currentInput: InputState
         get() =
             synchronized(lock) {
@@ -60,6 +67,8 @@ abstract class VexCompoundRelay<
                     .deepCopy()
             }
 
+    // OUTPUT PROJECTION EXPOSURE — output equality is decided before exposure so an input-only
+    // Compound revision cannot wake downstream consumers. Emitted output is then ownership-safe.
     val outputStates: Flow<OutputState> =
         mutableCurrentState
             .map { state ->
@@ -70,6 +79,7 @@ abstract class VexCompoundRelay<
                 output.deepCopy()
             }
 
+    // POINT-IN-TIME OUTPUT EXPOSURE — same boundary as outputStates for direct current reads.
     val currentOutput: OutputState
         get() =
             synchronized(lock) {
@@ -78,6 +88,8 @@ abstract class VexCompoundRelay<
                     .deepCopy()
             }
 
+    // POINT-IN-TIME FULL EXPOSURE — current returns the complete relationship without leaking a
+    // mutable retained branch to its caller.
     override val current: VexCompoundState<InputState, OutputState>
         get() =
             synchronized(lock) {
