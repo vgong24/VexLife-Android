@@ -1,6 +1,8 @@
 package com.vextreme.vexlife.android.screens.shared.maps
 
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.maps.VexMapsStoredLocation
+import java.time.Instant
 
 /**
  * VexMaps location projection/readiness meaning.
@@ -8,6 +10,44 @@ import com.vextreme.vexlife.android.R
  * Android LocationManager remains in VexDeviceLocationSource. This file answers how observed location
  * results project into Maps and navigation readiness/presentation state.
  */
+internal data class VexMapsRestoredMapContext(
+    val center: VexMapCoordinate,
+    val observedAccuracyMeters: Float?,
+    val capturedAt: Instant,
+)
+
+/**
+ * Projects a durable location checkpoint into non-authoritative browse context.
+ *
+ * A stored checkpoint is never a current Android location fix and cannot satisfy navigation
+ * readiness. While precise-location permission remains active it may only seed where the map opens
+ * until a fresh device observation arrives. Age/accuracy restoration policy remains a separate
+ * product decision; this projection preserves those facts rather than silently treating them as
+ * current truth.
+ */
+internal fun projectVexMapsStoredMapContext(
+    storedLocation: VexMapsStoredLocation?,
+    precisePermissionGranted: Boolean,
+): VexMapsRestoredMapContext? {
+    if (
+        !precisePermissionGranted ||
+        storedLocation == null
+    ) {
+        return null
+    }
+
+    return VexMapsRestoredMapContext(
+        center =
+            VexMapCoordinate(
+                latitude = storedLocation.latitude,
+                longitude = storedLocation.longitude,
+            ),
+        observedAccuracyMeters =
+            storedLocation.accuracyMeters,
+        capturedAt = storedLocation.capturedAt,
+    )
+}
+
 internal fun projectVexMapsDeviceLocation(
     result: VexDeviceLocationResult,
 ): VexDeviceLocationResult.Located? =

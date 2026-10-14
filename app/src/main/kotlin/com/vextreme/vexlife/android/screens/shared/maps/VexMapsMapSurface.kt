@@ -119,6 +119,13 @@ internal fun VexMapsMapSurface(
             >(null)
         }
 
+    var restoredMapContext by
+        remember {
+            mutableStateOf<
+                VexMapsRestoredMapContext?
+            >(null)
+        }
+
     val defaultOnlineStyle =
         VexMapsOnlineStyle.default(
             darkTheme,
@@ -526,23 +533,15 @@ internal fun VexMapsMapSurface(
             ) ==
                 PackageManager.PERMISSION_GRANTED
 
-        if (precisePermissionGranted) {
-            storedState
-                ?.lastLocation
-                ?.let { storedLocation ->
-                    currentLocation =
-                        VexDeviceLocationResult.Located(
-                            latitude =
-                                storedLocation.latitude,
-                            longitude =
-                                storedLocation.longitude,
-                            accuracyMeters =
-                                storedLocation.accuracyMeters,
-                        )
-                    locationState =
-                        VexMapsLocationState.Finding
-                }
+        restoredMapContext =
+            projectVexMapsStoredMapContext(
+                storedLocation =
+                    storedState?.lastLocation,
+                precisePermissionGranted =
+                    precisePermissionGranted,
+            )
 
+        if (precisePermissionGranted) {
             readCurrentPreciseLocation()
         }
     }
@@ -846,6 +845,23 @@ internal fun VexMapsMapSurface(
                     selection.styleRef,
                 )
             }
+        }
+    }
+
+    LaunchedEffect(
+        restoredMapContext,
+        currentLocation,
+        styleConvergence.status,
+        mapAdapter,
+    ) {
+        if (
+            styleConvergence.status ==
+                VexMapsStyleConvergenceStatus.APPLIED &&
+            currentLocation == null
+        ) {
+            restoredMapContext
+                ?.center
+                ?.let(mapAdapter::focusOn)
         }
     }
 

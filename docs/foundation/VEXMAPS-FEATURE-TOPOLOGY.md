@@ -164,12 +164,40 @@ VexMapsLocation.kt
 A file is not split merely because it is long. Split when another human question already exists and
 the current file physically hides that owner.
 
+## Persisted location checkpoint is not live location
+
+The structural split exposed one semantic ambiguity that can be resolved without inventing a new
+persistence schema: the durable last-location row is an observation checkpoint, not a current Android
+fix.
+
+~~~text
+VexMapsStoredLocation
+  -> durable last accepted precise-device observation
+  -> accuracy + capturedAt remain evidence
+
+projectVexMapsStoredMapContext(...)
+  -> non-authoritative browse context only
+  -> requires precise-location permission to remain active
+
+currentLocation / navigation readiness
+  -> fresh Android observation only
+~~~
+
+On reopen, a retained checkpoint may center the map while no fresh fix is available, but it is no
+longer promoted into `currentLocation`, cannot become a route origin merely by surviving process
+history, and cannot satisfy navigation-start readiness.
+
+No age/accuracy cutoff is invented in this pass. Those facts remain attached to the checkpoint so a
+future product decision can define when historical context is too stale or imprecise to restore. A
+full durable viewport (zoom/bearing/tilt) would require a separate persistence/migration decision and
+is not smuggled into the existing location columns.
+
 ## Still intentionally unresolved
 
 This topology pass does not silently settle behavioral questions that need their own proof:
 
-- whether persisted location should become explicit last-map-context / viewport state;
-- how age and accuracy affect restoration semantics;
+- whether the durable checkpoint should graduate into explicit persisted viewport state;
+- what age/accuracy policy should govern historical browse-context restoration;
 - whether Context Dock depth gestures should move exclusively to the drag handle;
 - whether a future second renderer earns a provider-neutral rendering contract.
 

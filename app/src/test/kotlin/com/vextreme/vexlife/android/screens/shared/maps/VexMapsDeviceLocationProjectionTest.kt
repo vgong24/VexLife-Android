@@ -1,10 +1,64 @@
 package com.vextreme.vexlife.android.screens.shared.maps
 
+import com.vextreme.vexlife.android.data.maps.VexMapsStoredLocation
+import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class VexMapsDeviceLocationProjectionTest {
+    @Test
+    fun storedCheckpointRestoresOnlyAsMapContextWithPrecisePermission() {
+        val capturedAt =
+            Instant.parse(
+                "2026-10-13T05:00:00Z",
+            )
+        val stored =
+            VexMapsStoredLocation(
+                latitude = 34.5794,
+                longitude = -118.1165,
+                accuracyMeters = 120f,
+                capturedAt = capturedAt,
+            )
+
+        assertEquals(
+            VexMapsRestoredMapContext(
+                center =
+                    VexMapCoordinate(
+                        latitude = 34.5794,
+                        longitude = -118.1165,
+                    ),
+                observedAccuracyMeters = 120f,
+                capturedAt = capturedAt,
+            ),
+            projectVexMapsStoredMapContext(
+                storedLocation = stored,
+                precisePermissionGranted = true,
+            ),
+        )
+    }
+
+    @Test
+    fun revokedPrecisePermissionDoesNotRestoreStoredMapContext() {
+        val stored =
+            VexMapsStoredLocation(
+                latitude = 34.5794,
+                longitude = -118.1165,
+                accuracyMeters = 8f,
+                capturedAt =
+                    Instant.parse(
+                        "2026-10-13T05:00:00Z",
+                    ),
+            )
+
+        assertNull(
+            projectVexMapsStoredMapContext(
+                storedLocation = stored,
+                precisePermissionGranted = false,
+            ),
+        )
+    }
+
     @Test
     fun preciseLocatedResultRemainsRenderable() {
         val located =
