@@ -240,7 +240,18 @@ abstract class VexCompoundRelay<
         inputState: InputState,
     ): VexCompoundState<InputState, OutputState> =
         synchronized(lock) {
-            // STEP 0 — serialize transitions. A reducer cannot recursively start another transition.
+            // STEP 0 — serialize concurrent callers before any transition work begins.
+            //
+            // synchronized(lock) is the concurrency gate:
+            // - if another thread/coroutine calls send() while this transition owns the lock, that
+            //   caller waits outside this block and continues after the lock is released;
+            // - its patch is not intentionally dropped or overwritten by the processing flag;
+            // - this is monitor serialization, not an explicit FIFO/fair event queue, so source
+            //   freshness/order still belongs to the source (revision/attempt/epoch when needed).
+            //
+            // processing solves a different problem. JVM monitors are re-entrant, so processStates()
+            // could otherwise call send() recursively on the same thread and start a nested semantic
+            // transition against half-finished reducer work. The flag rejects only that re-entry.
             check(!processing) {
                 "VexCompoundRelay cannot recursively send state from processStates"
             }
