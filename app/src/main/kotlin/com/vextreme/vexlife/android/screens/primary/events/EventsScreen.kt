@@ -50,7 +50,7 @@ object EventsScreen : AppScreenBlueprint(
     titleRes = R.string.events_title,
 ) {
     override val content = layout {
-        scrolDebug menuleColumn("body") {
+        scrollableColumn("body") {
             text(
                 id = "empty",
                 textRes = R.string.events_preview_body,
@@ -87,16 +87,16 @@ fun EventsScreenContent(
     val convergence by relay.outputStates.collectAsState(
         initial = relay.currentOutput,
     )
-    val alertCase =
-        convergence.alertCase
+    val debugMenuAlertCase =
+        convergence.debugMenuAlertCase
 
     val activeCandidateRef =
         convergence.candidate?.eventRef
     val visibleCandidateRef =
         convergence
             .takeIf { output ->
-                output.avaiDebug menuility ==
-                    EventsConvergenceAvaiDebug menuility.READY
+                output.availability ==
+                    EventsConvergenceAvailability.READY
             }
             ?.candidate
             ?.eventRef
@@ -117,7 +117,7 @@ fun EventsScreenContent(
 
     LaunchedEffect(
         activeCandidateRef,
-        alertCase?.alertCaseRef,
+        debugMenuAlertCase?.alertCaseRef,
     ) {
         presentationEvents =
             if (activeCandidateRef == null) {
@@ -136,9 +136,9 @@ fun EventsScreenContent(
         itemRef = VexExternalEvent::eventRef,
         contentType = { "events-event-row" },
         requestedVisibleItemRef =
-            alertCase?.targetEventRef,
+            debugMenuAlertCase?.targetEventRef,
         userScrollEnabled =
-            alertCase?.blockingAcknowledgeOnly != true,
+            debugMenuAlertCase?.blockingAcknowledgeOnly != true,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         onVisibleItemRefsChanged =
@@ -168,7 +168,7 @@ fun EventsScreenContent(
                     event.eventRef
                 ],
             convergence = convergence,
-            alertCase = alertCase,
+            debugMenuAlertCase = debugMenuAlertCase,
             onAcknowledge = {
                 runtime.recordDynamicInteraction(
                     EventsPresentationRefs.alertAction(
@@ -179,7 +179,7 @@ fun EventsScreenContent(
                 relay.acknowledge(
                     event.eventRef,
                 )
-                if (alertCase?.targetEventRef == event.eventRef) {
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
                     relay.completeCurrentAlertCase()
                 }
             },
@@ -193,7 +193,7 @@ fun EventsScreenContent(
                 relay.later(
                     event.eventRef,
                 )
-                if (alertCase?.targetEventRef == event.eventRef) {
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
                     relay.completeCurrentAlertCase()
                 }
             },
@@ -207,7 +207,7 @@ fun EventsScreenContent(
                 relay.suspend(
                     event.eventRef,
                 )
-                if (alertCase?.targetEventRef == event.eventRef) {
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
                     relay.completeCurrentAlertCase()
                 }
             },
@@ -221,7 +221,7 @@ fun EventsScreenContent(
                 relay.suppress(
                     event.eventRef,
                 )
-                if (alertCase?.targetEventRef == event.eventRef) {
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
                     relay.completeCurrentAlertCase()
                 }
             },
@@ -235,7 +235,7 @@ fun EventsScreenContent(
                 relay.later(
                     event.eventRef,
                 )
-                if (alertCase?.targetEventRef == event.eventRef) {
+                if (debugMenuAlertCase?.targetEventRef == event.eventRef) {
                     relay.completeCurrentAlertCase()
                 }
             },
@@ -295,8 +295,8 @@ private fun EventRow(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = event.type.name,
-                    style = MaterialTheme.typography.Debug menuelMedium,
+                    text = event.kind.name,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
@@ -309,19 +309,19 @@ private fun EventRow(
                 )
                 Text(
                     text = event.sourceRef,
-                    style = MaterialTheme.typography.Debug menuelSmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = event.eventRef,
-                    style = MaterialTheme.typography.Debug menuelSmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 disposition?.let {
                     Text(
                         text = it.name,
-                        style = MaterialTheme.typography.Debug menuelSmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -339,9 +339,9 @@ private fun EventRow(
                         VexOverlayPlacement.START,
                     )
             val blocking =
-                alertCase?.blockingAcknowledgeOnly == true
+                debugMenuAlertCase?.blockingAcknowledgeOnly == true
             val expectedAction =
-                alertCase?.expectedAction
+                debugMenuAlertCase?.expectedAction
 
             VexAnchoredOverlay(
                 presentationRef =
@@ -349,7 +349,7 @@ private fun EventRow(
                         event.eventRef,
                     ),
                 onDismissRequest = {
-                    if (alertCase == null) {
+                    if (debugMenuAlertCase == null) {
                         onDismiss()
                     }
                 },
@@ -361,7 +361,7 @@ private fun EventRow(
                         stringResource(
                             R.string.events_alert_candidate,
                         ),
-                    style = MaterialTheme.typography.Debug menuelLarge,
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.inversePrimary,
                 )
                 Text(
@@ -376,45 +376,45 @@ private fun EventRow(
                             convergence.currentQueueCount,
                             convergence.nextSequenceCount,
                         ),
-                    style = MaterialTheme.typography.Debug menuelMedium,
+                    style = MaterialTheme.typography.labelMedium,
                 )
 
-                alertCase?.let { Debug menuAlertCase ->
+                debugMenuAlertCase?.let { debugMenuAlertCase ->
                     val targetPosition =
-                        Debug menuAlertCase.targetPositionFromTop
+                        debugMenuAlertCase.targetPositionFromTop
 
                     Text(
                         text =
                             if (targetPosition == null) {
                                 stringResource(
-                                    R.string.events_alert_Debug menu_compact_no_target,
-                                    Debug menuAlertCase.ordinal,
-                                    Debug menuAlertCase.type.name,
+                                    R.string.events_debug_menu_alert_case_compact_no_target,
+                                    debugMenuAlertCase.ordinal,
+                                    debugMenuAlertCase.type.name,
                                 )
                             } else {
                                 stringResource(
-                                    R.string.events_alert_Debug menu_compact,
-                                    Debug menuAlertCase.ordinal,
-                                    Debug menuAlertCase.type.name,
+                                    R.string.events_debug_menu_alert_case_compact,
+                                    debugMenuAlertCase.ordinal,
+                                    debugMenuAlertCase.type.name,
                                     targetPosition + 1,
-                                    Debug menuAlertCase.listCountAtPlan,
-                                    Debug menuAlertCase.preferredPlacement.name,
+                                    debugMenuAlertCase.listCountAtPlan,
+                                    debugMenuAlertCase.preferredPlacement.name,
                                 )
                             },
                         style = MaterialTheme.typography.bodySmall,
                     )
 
                     if (
-                        Debug menuAlertCase.mode ==
+                        debugMenuAlertCase.mode ==
                             com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertMode.SEEDED_RANDOM
                     ) {
                         Text(
                             text =
                                 stringResource(
-                                    R.string.events_alert_Debug menu_seed,
-                                    Debug menuAlertCase.seed,
+                                    R.string.events_debug_menu_alert_case_seed,
+                                    debugMenuAlertCase.seed,
                                 ),
-                            style = MaterialTheme.typography.Debug menuelSmall,
+                            style = MaterialTheme.typography.labelSmall,
                         )
                     }
 
@@ -433,15 +433,15 @@ private fun EventRow(
                         text =
                             stringResource(
                                 R.string.events_alert_press,
-                                Debug menuAlertCase.expectedAction.name,
+                                debugMenuAlertCase.expectedAction.name,
                             ),
-                        style = MaterialTheme.typography.Debug menuelMedium,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.inversePrimary,
                     )
                     Text(
                         text =
                             stringResource(
-                                Debug menuAlertCase.expectedResultRes(),
+                                debugMenuAlertCase.expectedResultRes(),
                             ),
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -453,7 +453,7 @@ private fun EventRow(
                     style = MaterialTheme.typography.bodySmall,
                 )
 
-                if (alertCase != null) {
+                if (debugMenuAlertCase != null) {
                     AlertActionButton(
                         eventRef = event.eventRef,
                         action = expectedAction,
@@ -468,14 +468,14 @@ private fun EventRow(
                             Arrangement.spacedBy(4.dp),
                     ) {
                         CompactAlertButton(
-                            Debug menuelRes =
+                            labelRes =
                                 R.string.events_alert_acknowledge,
                             eventRef = event.eventRef,
                             actionRef = "acknowledge",
                             onClick = onAcknowledge,
                         )
                         CompactAlertButton(
-                            Debug menuelRes =
+                            labelRes =
                                 R.string.events_alert_later,
                             eventRef = event.eventRef,
                             actionRef = "later",
@@ -487,14 +487,14 @@ private fun EventRow(
                             Arrangement.spacedBy(4.dp),
                     ) {
                         CompactAlertButton(
-                            Debug menuelRes =
+                            labelRes =
                                 R.string.events_alert_suspend,
                             eventRef = event.eventRef,
                             actionRef = "suspend",
                             onClick = onSuspend,
                         )
                         CompactAlertButton(
-                            Debug menuelRes =
+                            labelRes =
                                 R.string.events_alert_suppress,
                             eventRef = event.eventRef,
                             actionRef = "suppress",
@@ -519,7 +519,7 @@ private fun AlertActionButton(
     when (action) {
         EventsDebugMenuAlertExpectedAction.ACKNOWLEDGE ->
             CompactAlertButton(
-                Debug menuelRes = R.string.events_alert_acknowledge,
+                labelRes = R.string.events_alert_acknowledge,
                 eventRef = eventRef,
                 actionRef = "acknowledge",
                 onClick = onAcknowledge,
@@ -527,7 +527,7 @@ private fun AlertActionButton(
 
         EventsDebugMenuAlertExpectedAction.LATER ->
             CompactAlertButton(
-                Debug menuelRes = R.string.events_alert_later,
+                labelRes = R.string.events_alert_later,
                 eventRef = eventRef,
                 actionRef = "later",
                 onClick = onDefer,
@@ -535,7 +535,7 @@ private fun AlertActionButton(
 
         EventsDebugMenuAlertExpectedAction.SUSPEND ->
             CompactAlertButton(
-                Debug menuelRes = R.string.events_alert_suspend,
+                labelRes = R.string.events_alert_suspend,
                 eventRef = eventRef,
                 actionRef = "suspend",
                 onClick = onSuspend,
@@ -543,7 +543,7 @@ private fun AlertActionButton(
 
         EventsDebugMenuAlertExpectedAction.SUPPRESS ->
             CompactAlertButton(
-                Debug menuelRes = R.string.events_alert_suppress,
+                labelRes = R.string.events_alert_suppress,
                 eventRef = eventRef,
                 actionRef = "suppress",
                 onClick = onSuppress,
@@ -556,7 +556,7 @@ private fun AlertActionButton(
 
 @Composable
 private fun CompactAlertButton(
-    Debug menuelRes: Int,
+    labelRes: Int,
     eventRef: String,
     actionRef: String,
     onClick: () -> Unit,
@@ -577,7 +577,7 @@ private fun CompactAlertButton(
             ),
     ) {
         Text(
-            stringResource(Debug menuelRes),
+            stringResource(labelRes),
         )
     }
 }
