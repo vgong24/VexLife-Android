@@ -5,39 +5,35 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Produces a value that is safe to hand to another ownership boundary.
  *
- * Historical Relay code calls this deepCopy because mutable-backed states must detach their nested
- * collections/objects. A transitively immutable state may safely return itself: sharing an object
- * that cannot mutate does not create shared mutable ownership.
+ * Historical Relay code calls this deepCopy because mutable-backed values may need to detach nested
+ * collections/objects. Relay State itself is immutable by contract, so ordinary VexState
+ * implementations inherit an identity snapshot. Mutable-backed exceptions must override deepCopy()
+ * and detach every mutable descendant they expose.
  */
 interface VexDeepCopyable<Self : VexDeepCopyable<Self>> {
     fun deepCopy(): Self
 }
 
-interface VexState<Self : VexState<Self>> : VexDeepCopyable<Self>
-interface VexInputState<Self : VexInputState<Self>> : VexState<Self>
-interface VexOutputState<Self : VexOutputState<Self>> : VexState<Self>
-
 /**
- * Opt-in contract for a transitively immutable ordinary Relay state.
+ * Base Relay state contract.
  *
- * Implement this only when every reachable value is immutable for the lifetime of the state. The
- * same instance may then cross Relay ownership/observation boundaries without defensive allocation.
+ * Default rule:
+ *
+ *     VexState is transitively immutable
+ *     -> deepCopy() may safely return this
+ *
+ * A State that contains mutable-backed data is an explicit exception and must override deepCopy()
+ * to produce a detached ownership snapshot. Prefer normalizing third-party/provider-owned mutable
+ * objects before they enter Relay rather than spreading mutable state through the graph.
  */
-interface VexImmutableState<Self : VexImmutableState<Self>> : VexState<Self> {
+interface VexState<Self : VexState<Self>> : VexDeepCopyable<Self> {
     @Suppress("UNCHECKED_CAST")
     override fun deepCopy(): Self =
         this as Self
 }
 
-/** Transitively immutable Compound input state. */
-interface VexImmutableInputState<Self : VexImmutableInputState<Self>> :
-    VexInputState<Self>,
-    VexImmutableState<Self>
-
-/** Transitively immutable Compound output state. */
-interface VexImmutableOutputState<Self : VexImmutableOutputState<Self>> :
-    VexOutputState<Self>,
-    VexImmutableState<Self>
+interface VexInputState<Self : VexInputState<Self>> : VexState<Self>
+interface VexOutputState<Self : VexOutputState<Self>> : VexState<Self>
 
 /**
  * Minimal Relay source contract.
