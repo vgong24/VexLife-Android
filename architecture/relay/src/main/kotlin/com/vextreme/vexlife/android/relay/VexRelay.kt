@@ -15,14 +15,19 @@ abstract class VexRelay<State : VexState<State>>(
         require(relayRef.isNotBlank()) { "relayRef must not be blank" }
     }
 
+    // CONSTRUCTION BOUNDARY — the caller that supplied initialState must not share mutable ownership
+    // with Relay's first retained truth. Immutable state returns itself here.
     private val mutableCurrentState =
         MutableStateFlow(initialState.deepCopy())
 
+    // STREAM EXPOSURE BOUNDARY — every collector receives an ownership-safe state view. Immutable
+    // state may be shared; mutable-backed state detaches per emission.
     override val states: Flow<State> =
         mutableCurrentState.map { state ->
             state.deepCopy()
         }
 
+    // POINT-IN-TIME EXPOSURE BOUNDARY — current never hands the retained mutable object to a caller.
     override val current: State
         get() =
             synchronized(lock) {
