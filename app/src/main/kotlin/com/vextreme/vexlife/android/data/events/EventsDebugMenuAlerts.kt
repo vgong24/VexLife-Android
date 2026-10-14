@@ -369,7 +369,7 @@ private val eventsDebugMenuAlertCaseTemplates =
     )
 
 /**
- * Pure planner for one Events alert-lab overlay case.
+ * Pure builder for one Events Debug-menu alert case.
  *
  * This is feature-local calculation, not shared infrastructure. It does not read Relay current state
  * and does not mutate Relay state. EventsDebugMenuAlertRelay.prepareNextAlertCase() supplies one exact current
