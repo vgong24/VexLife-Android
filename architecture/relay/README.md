@@ -64,6 +64,121 @@ VexCompoundRelay<InputState, OutputState>
 So the plural is not "more threads" or "more processing phases." It means the Compound reducer is
 reconciling a family of retained inputs into a separate derived output.
 
+### Two simple VexRelay authoring modes
+
+A singular `VexRelay<State>` has two intentionally different entry shapes. Pick the one that matches
+the operation; do not hide both inside one lambda.
+
+**Input-driven reconciliation**
+
+Use when an outside/current source value arrives and its relationship to retained truth matters:
+
+~~~kotlin
+fun sourceSnapshotArrived(snapshot: SourceSnapshot): State =
+    send(
+        State(
+            sourceSnapshots =
+                mapOf(
+                    snapshot.sourceRef to snapshot,
+                ),
+        ),
+    )
+
+override fun processState(
+    inputState: State,
+    currentState: State,
+): State {
+    // reconcile incoming source meaning against retained source meaning
+    return ...
+}
+~~~
+
+Read it as:
+
+~~~text
+external input
+-> send(input)
+-> processState(input, current)
+-> next
+~~~
+
+**Current-driven atomic transition**
+
+Use when the product intention is naturally "take exact current state and derive next state":
+
+~~~kotlin
+fun acknowledge(eventRef: String) {
+    updateCurrent { current ->
+        current.copy(
+            acknowledgedRefs =
+                current.acknowledgedRefs + eventRef,
+        )
+    }
+}
+~~~
+
+Read it as:
+
+~~~text
+exact retained current
+-> updateCurrent { current -> next }
+-> next
+~~~
+
+`updateCurrent` does not invoke `processState` afterward. The lambda is the complete transition for
+that path.
+
+Important continuity rule:
+
+~~~text
+If a read determines the next state,
+that read belongs inside updateCurrent.
+~~~
+
+Do not:
+
+~~~kotlin
+val before = current
+val planned = plan(before)
+
+updateCurrent { current ->
+    current.copy(result = planned)
+}
+~~~
+
+because another transition can occur between the external read and the atomic update.
+
+Do:
+
+~~~kotlin
+val next =
+    updateCurrent { current ->
+        val planned =
+            plan(current)
+
+        current.copy(
+            result = planned,
+        )
+    }
+~~~
+
+If `plan(current)` is complex, keep it as a named pure function. The lambda should make transaction
+continuity obvious; the pure function should make domain logic understandable.
+
+Current real example:
+
+~~~text
+EventsAttentionLabRelay.planNext()
+  updateCurrent { exact current
+    -> planEventsAttentionLabScenario(...)   // pure planner
+    -> current.copy(nextOrdinal + scenario)
+  }
+  -> return scenario from committed next state
+~~~
+
+This avoids a stale read/plan/write split while keeping scenario-planning rules outside Relay
+mechanics.
+
 ### Copy-paste reducer blueprint
 
 For new Compound Relays, use this order unless the domain genuinely needs something different:
