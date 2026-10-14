@@ -137,9 +137,9 @@ fun EventsScreenContent(
         contentType = { "events-event-row" },
         /*
          * A newly selected candidate can be below the fold after queue advancement. Request its
-         * visibility once when candidate identity changes so the anchored overlay has a real row to
-         * attach to. VexStableLazyColumn keys the scroll effect by the requested ref, so ordinary
-         * human scrolling is not fought while the same candidate remains active.
+         * visibility so the anchored overlay has a real row to attach to. VexStableLazyColumn
+         * re-evaluates the request when the requested identity or row set changes; it does not
+         * continuously snap during an otherwise-stable candidate/list state.
          *
          * Lab scenarios still win because their explicit target is part of the scenario contract.
          */
