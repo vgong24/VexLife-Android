@@ -21,6 +21,11 @@ The front door should stay small. Architecture belongs with its owning building 
 
 ## Common contribution routes
 
+- **New product feature or major feature evolution:** start with docs/features/README.md. Form the
+  experience sentence/question map before package taxonomy, create/update one durable feature home,
+  use VexStream only as the current worked example, and finish through the feature completion
+  contract rather than stopping at a compiling implementation.
+
 A contributor should not need to learn testing-framework internals before changing product code.
 
 - **New Screen or interaction:** start with the owning `*Screen.kt`, then follow
