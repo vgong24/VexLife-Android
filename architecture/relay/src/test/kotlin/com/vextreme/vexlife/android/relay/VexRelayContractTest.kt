@@ -33,25 +33,61 @@ class VexRelayContractTest {
         val count: Int = 0,
     ) : VexState<CounterState>
 
+    private sealed interface CounterAction :
+        VexAction {
+        data object Increment :
+            CounterAction
+
+        data class Set(
+            val value: Int,
+        ) : CounterAction
+    }
+
     private class CounterRelay :
-        VexRelay<CounterState>(
+        VexActionRelay<
+            CounterAction,
+            CounterState
+        >(
             relayRef = "relay.contract.counter",
             initialState = CounterState(),
         ) {
+        var actionReducerCalls: Int =
+            0
+            private set
+
         fun increment() {
-            updateCurrent { current ->
-                current.copy(
-                    count = current.count + 1,
-                )
-            }
+            sendAction(
+                CounterAction.Increment,
+            )
         }
 
-        fun set(value: Int) {
-            send(
-                CounterState(
-                    count = value,
+        fun set(
+            value: Int,
+        ) {
+            sendAction(
+                CounterAction.Set(
+                    value = value,
                 ),
             )
+        }
+
+        override fun nextStateFor(
+            action: CounterAction,
+            currentState: CounterState,
+        ): CounterState {
+            actionReducerCalls += 1
+
+            return when (action) {
+                CounterAction.Increment ->
+                    currentState.copy(
+                        count = currentState.count + 1,
+                    )
+
+                is CounterAction.Set ->
+                    currentState.copy(
+                        count = action.value,
+                    )
+            }
         }
     }
 
@@ -76,20 +112,14 @@ class VexRelayContractTest {
             return inputState
         }
 
-        fun inputDriven(value: Int) {
+        fun inputDriven(
+            value: Int,
+        ) {
             send(
                 ModeProbeState(
                     value = value,
                 ),
             )
-        }
-
-        fun currentDriven(value: Int) {
-            updateCurrent { current ->
-                current.copy(
-                    value = value,
-                )
-            }
         }
     }
 
@@ -386,30 +416,32 @@ class VexRelayContractTest {
     }
 
     @Test
-    fun sendAndUpdateCurrentHaveDistinctReducerOwnership() {
-        val relay =
+    fun stateInputAndActionRelaysEachHaveOneRequiredReducerPath() {
+        val stateRelay =
             ModeProbeRelay()
+        val actionRelay =
+            CounterRelay()
 
-        relay.inputDriven(1)
+        stateRelay.inputDriven(1)
 
         assertEquals(
             1,
-            relay.processStateCalls,
+            stateRelay.processStateCalls,
         )
         assertEquals(
             1,
-            relay.current.value,
+            stateRelay.current.value,
         )
 
-        relay.currentDriven(2)
+        actionRelay.set(2)
 
         assertEquals(
             1,
-            relay.processStateCalls,
+            actionRelay.actionReducerCalls,
         )
         assertEquals(
             2,
-            relay.current.value,
+            actionRelay.current.count,
         )
     }
 
