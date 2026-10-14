@@ -8,6 +8,8 @@ import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceReposit
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceState
 import com.vextreme.vexlife.android.data.events.EventsFeedState
 import com.vextreme.vexlife.android.data.events.EventsRepository
+import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityRepository
+import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityState
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
 import com.vextreme.vexlife.android.data.userprofile.UserProfile
@@ -44,6 +46,7 @@ class TraditionalEventsController(
     private val attentionPreferences: EventsAttentionPreferenceRepository,
     private val attentionLab: EventsAttentionLabRepository,
     private val userProfile: UserProfileRepository,
+    private val sourceAvailabilityRepository: EventsSourceAvailabilityRepository,
 ) {
     private val lock = Any()
     private var ownerJob: Job? = null
@@ -53,6 +56,7 @@ class TraditionalEventsController(
     private var lab: EventsAttentionLabState? = null
     private var profileObserved = false
     private var profile: UserProfile? = null
+    private var sourceAvailability: EventsSourceAvailabilityState? = null
     private var currentScreenId: String? = null
     private var transientBlocked: Boolean? = null
     private var visibleEventRefsBySurface: Map<String, Set<String>> = emptyMap()
@@ -123,6 +127,15 @@ class TraditionalEventsController(
                 userProfile.observe(UserProfileRefs.local).collect { observed ->
                     synchronized(lock) {
                         updateProfileLocked(observed)
+                        recomputeLocked()
+                    }
+                }
+            }
+
+            controllerScope.launch(CoroutineName("traditional-events/source-availability")) {
+                sourceAvailabilityRepository.states.collect { observed ->
+                    synchronized(lock) {
+                        sourceAvailability = observed.deepCopy()
                         recomputeLocked()
                     }
                 }
@@ -318,13 +331,24 @@ class TraditionalEventsController(
         val labTargetRef =
             lab?.currentScenario?.targetEventRef
 
+        val attentionEligiblePool =
+            activePool.filter { event ->
+                sourceAvailability
+                    ?.isAvailable(event.sourceRef)
+                    ?: false
+            }
+
         val candidateEvent =
-            if (feed != null && preferences != null) {
-                activePool.firstOrNull { event ->
+            if (
+                feed != null &&
+                preferences != null &&
+                sourceAvailability != null
+            ) {
+                attentionEligiblePool.firstOrNull { event ->
                     event.eventRef == labTargetRef
-                } ?: activePool.firstOrNull { event ->
+                } ?: attentionEligiblePool.firstOrNull { event ->
                     event.eventRef == previousCandidateRef
-                } ?: activePool.firstOrNull()
+                } ?: attentionEligiblePool.firstOrNull()
             } else {
                 null
             }
@@ -345,6 +369,7 @@ class TraditionalEventsController(
             when {
                 feed == null ||
                     preferences == null ||
+                    sourceAvailability == null ||
                     currentScreenId == null ||
                     transientBlocked == null ->
                     TraditionalEventsAvailability.UNOBSERVED
