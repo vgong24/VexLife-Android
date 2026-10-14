@@ -107,28 +107,28 @@ object VexStreamPlaybackControl :
      * All three converge on PlayRequested; the exact selected track/queue data is observed from Media3
      * after the Android realization.
      */
-    val PlayTrackFromQueueEmpty =
+    val ReplaceContextFromQueueEmpty =
         VexStreamPlaybackArchitecture.transition<
             VexStreamPlaybackCase.QueueEmpty,
             VexStreamPlaybackCase.PlayRequested
         >(
-            "vexstream.playback.play-track.queue-empty",
+            "vexstream.playback.replace-context.queue-empty",
         )
 
-    val PlayTrackFromReady =
+    val ReplaceContextFromReady =
         VexStreamPlaybackArchitecture.transition<
             VexStreamPlaybackCase.ReadyToPlay,
             VexStreamPlaybackCase.PlayRequested
         >(
-            "vexstream.playback.play-track.ready",
+            "vexstream.playback.replace-context.ready",
         )
 
-    val PlayTrackFromPlayRequested =
+    val ReplaceContextFromPlayRequested =
         VexStreamPlaybackArchitecture.transition<
             VexStreamPlaybackCase.PlayRequested,
             VexStreamPlaybackCase.PlayRequested
         >(
-            "vexstream.playback.play-track.play-requested",
+            "vexstream.playback.replace-context.play-requested",
         )
 
     val NextWhileReady =
@@ -193,9 +193,25 @@ object VexStreamPlaybackControl :
     val PlayTrack =
         VexStreamPlaybackArchitecture.control(
             "vexstream.playback.play-track",
-            PlayTrackFromQueueEmpty,
-            PlayTrackFromReady,
-            PlayTrackFromPlayRequested,
+            ReplaceContextFromQueueEmpty,
+            ReplaceContextFromReady,
+            ReplaceContextFromPlayRequested,
+        )
+
+    val PlayAll =
+        VexStreamPlaybackArchitecture.control(
+            "vexstream.playback.play-all",
+            ReplaceContextFromQueueEmpty,
+            ReplaceContextFromReady,
+            ReplaceContextFromPlayRequested,
+        )
+
+    val ShuffleAll =
+        VexStreamPlaybackArchitecture.control(
+            "vexstream.playback.shuffle-all",
+            ReplaceContextFromQueueEmpty,
+            ReplaceContextFromReady,
+            ReplaceContextFromPlayRequested,
         )
 
     val Next =
@@ -216,6 +232,8 @@ object VexStreamPlaybackControl :
         listOf(
             PlayPause,
             PlayTrack,
+            PlayAll,
+            ShuffleAll,
             Previous,
             Next,
         )
@@ -229,7 +247,7 @@ object VexStreamPlaybackPlacement :
             VexStreamPlaybackCase.QueueEmpty
         > {
             can(
-                VexStreamPlaybackControl.PlayTrackFromQueueEmpty,
+                VexStreamPlaybackControl.ReplaceContextFromQueueEmpty,
             )
         }
 
@@ -241,7 +259,7 @@ object VexStreamPlaybackPlacement :
                 VexStreamPlaybackControl.Pause,
             )
             can(
-                VexStreamPlaybackControl.PlayTrackFromReady,
+                VexStreamPlaybackControl.ReplaceContextFromReady,
             )
             arrivedBy(
                 VexStreamPlaybackControl.NextWhileReady,
@@ -268,16 +286,16 @@ object VexStreamPlaybackPlacement :
                 VexStreamPlaybackControl.Play,
             )
             arrivedBy(
-                VexStreamPlaybackControl.PlayTrackFromQueueEmpty,
+                VexStreamPlaybackControl.ReplaceContextFromQueueEmpty,
             )
             arrivedBy(
-                VexStreamPlaybackControl.PlayTrackFromReady,
+                VexStreamPlaybackControl.ReplaceContextFromReady,
             )
             arrivedBy(
-                VexStreamPlaybackControl.PlayTrackFromPlayRequested,
+                VexStreamPlaybackControl.ReplaceContextFromPlayRequested,
             )
             can(
-                VexStreamPlaybackControl.PlayTrackFromPlayRequested,
+                VexStreamPlaybackControl.ReplaceContextFromPlayRequested,
             )
             arrivedBy(
                 VexStreamPlaybackControl.NextWhilePlayRequested,
@@ -378,6 +396,16 @@ internal object VexStreamPlaybackAndroid :
                 ),
         )
 
+    fun isAvailable(
+        control: VexControl,
+        controller: MediaController,
+    ): Boolean =
+        current(
+            controller,
+        ).availableTransition(
+            control,
+        ) != null
+
     fun request(
         control: VexControl,
         controller: MediaController,
@@ -418,6 +446,38 @@ internal object VexStreamPlaybackAndroid :
             selected = selected,
             contextTracks = contextTracks,
             resolver = resolver,
+        )
+    }
+
+    fun playCollection(
+        control: VexControl,
+        controller: MediaController,
+        tracks: List<VexStreamTrackState>,
+        resolver: VexStreamPlaybackSourceResolver,
+    ): Boolean {
+        val shuffled =
+            when (control) {
+                VexStreamPlaybackControl.PlayAll ->
+                    false
+
+                VexStreamPlaybackControl.ShuffleAll ->
+                    true
+
+                else ->
+                    return false
+            }
+
+        current(
+            controller,
+        ).availableTransition(
+            control,
+        )
+            ?: return false
+
+        return controller.replaceVexStreamCollectionAndPlay(
+            tracks = tracks,
+            resolver = resolver,
+            shuffled = shuffled,
         )
     }
 

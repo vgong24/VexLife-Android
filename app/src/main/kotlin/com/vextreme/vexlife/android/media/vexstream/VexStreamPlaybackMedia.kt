@@ -112,4 +112,84 @@ internal fun MediaController.replaceVexStreamContextAndPlay(
     return true
 }
 
+
+internal fun vexStreamQueueShuffleTargetOrder(
+    itemCount: Int,
+    currentIndex: Int,
+    random: kotlin.random.Random = kotlin.random.Random.Default,
+): List<Int> {
+    if (itemCount <= 0) {
+        return emptyList()
+    }
+
+    val lockedThrough =
+        currentIndex.coerceIn(
+            -1,
+            itemCount - 1,
+        )
+    val prefix =
+        if (lockedThrough >= 0) {
+            (0..lockedThrough).toList()
+        } else {
+            emptyList()
+        }
+    val future =
+        ((lockedThrough + 1) until itemCount)
+            .toList()
+
+    if (future.size <= 1) {
+        return prefix + future
+    }
+
+    val randomized =
+        future.shuffled(
+            random,
+        )
+    val changed =
+        if (randomized == future) {
+            randomized.drop(1) +
+                randomized.first()
+        } else {
+            randomized
+        }
+
+    return prefix + changed
+}
+
+internal fun MediaController.replaceVexStreamCollectionAndPlay(
+    tracks: List<VexStreamTrackState>,
+    resolver: VexStreamPlaybackSourceResolver,
+    shuffled: Boolean,
+): Boolean {
+    val items =
+        tracks.mapNotNull(
+            resolver::mediaItem,
+        )
+    if (items.isEmpty()) {
+        return false
+    }
+
+    val order =
+        if (shuffled) {
+            vexStreamQueueShuffleTargetOrder(
+                itemCount = items.size,
+                currentIndex = -1,
+            )
+        } else {
+            items.indices.toList()
+        }
+    val orderedItems =
+        order.map(
+            items::get,
+        )
+
+    shuffleModeEnabled = false
+    setMediaItems(
+        orderedItems,
+    )
+    prepare()
+    play()
+    return true
+}
+
 // [VXG RealForever]

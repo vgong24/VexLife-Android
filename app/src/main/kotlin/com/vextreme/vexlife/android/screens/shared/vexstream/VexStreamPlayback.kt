@@ -20,6 +20,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackSourceResolver
+import com.vextreme.vexlife.android.media.vexstream.vexStreamQueueShuffleTargetOrder
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackCase
@@ -248,38 +249,6 @@ internal fun rememberVexStreamPlaybackUiState(
     return projected
 }
 
-internal fun MediaController.playVexStreamCollection(
-    tracks: List<VexStreamTrackState>,
-    resolver: VexStreamPlaybackSourceResolver,
-    shuffled: Boolean = false,
-): Boolean {
-    val items =
-        tracks.mapNotNull(
-            resolver::mediaItem,
-        )
-    if (items.isEmpty()) {
-        return false
-    }
-
-    val order =
-        if (shuffled) {
-            vexStreamQueueShuffleTargetOrder(
-                itemCount = items.size,
-                currentIndex = -1,
-            )
-        } else {
-            items.indices.toList()
-        }
-    val orderedItems =
-        order.map(items::get)
-
-    shuffleModeEnabled = false
-    setMediaItems(orderedItems)
-    prepare()
-    play()
-    return true
-}
-
 internal fun MediaController.playNextVexStream(
     state: VexStreamTrackState,
     resolver: VexStreamPlaybackSourceResolver,
@@ -362,45 +331,6 @@ internal fun vexStreamQueueAdjacentMoveTarget(
  * If randomness produces the same order, rotate once so an explicit reshuffle is perceptible when
  * at least two future items exist.
  */
-internal fun vexStreamQueueShuffleTargetOrder(
-    itemCount: Int,
-    currentIndex: Int,
-    random: Random = Random.Default,
-): List<Int> {
-    if (itemCount <= 0) {
-        return emptyList()
-    }
-
-    val lockedThrough =
-        currentIndex.coerceIn(
-            -1,
-            itemCount - 1,
-        )
-    val prefix =
-        if (lockedThrough >= 0) {
-            (0..lockedThrough).toList()
-        } else {
-            emptyList()
-        }
-    val future =
-        ((lockedThrough + 1) until itemCount)
-            .toList()
-
-    if (future.size <= 1) {
-        return prefix + future
-    }
-
-    val randomized = future.shuffled(random)
-    val changed =
-        if (randomized == future) {
-            randomized.drop(1) + randomized.first()
-        } else {
-            randomized
-        }
-
-    return prefix + changed
-}
-
 internal fun MediaController.shuffleVexStreamQueue(): Boolean {
     val count = mediaItemCount
     if (
