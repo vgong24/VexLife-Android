@@ -9,6 +9,9 @@
     <string name="events_title">Events</string>
     <string name="settings_title">Settings</string>
     <string name="debug_menu_title">Debug Menu</string>
+    <string name="events_architecture_comparison_title">Events architecture comparison</string>
+    <string name="events_architecture_use_traditional">Use traditional Events controller</string>
+    <string name="events_architecture_comparison_helper">Off uses the Vextreme Convergence Relay. On uses the traditional controller. Both continue observing the same Events repositories; this switch changes only which projection drives the Events screen.</string>
     <string name="gallery_title">Gallery</string>
     <string name="vexmaps_title">VexMaps</string>
     <string name="vexstream_music_title">VexStream</string>
