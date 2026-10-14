@@ -97,11 +97,9 @@ abstract class VexRelay<State : VexState<State>>(
                         currentState = processingCurrent,
                     )
 
-                // STEP 5 — claim candidate ownership for Relay before semantic comparison/commit.
-                val ownedCandidate =
-                    reducerCandidate.deepCopy()
-
-                if (ownedCandidate == retainedCurrent) {
+                // STEP 5 — compare before claiming ownership. A no-op candidate is discarded, so
+                // copying it first would be wasted work.
+                if (reducerCandidate == retainedCurrent) {
                     // STEP 6A — semantic no-op. Canonical truth stays exactly where it is.
                     // Snapshot once because the return value crosses back out of Relay ownership.
                     val exposedCurrent =
@@ -110,17 +108,21 @@ abstract class VexRelay<State : VexState<State>>(
                     return@synchronized exposedCurrent
                 }
 
-                // STEP 6B — atomic commit of the already-owned candidate.
-                mutableCurrentState.value =
-                    ownedCandidate
+                // STEP 6B — this candidate will be retained, so now claim Relay ownership.
+                val ownedNext =
+                    reducerCandidate.deepCopy()
 
-                // STEP 7 — return an ownership-safe value to the caller.
+                // STEP 7 — atomic commit of the owned candidate.
+                mutableCurrentState.value =
+                    ownedNext
+
+                // STEP 8 — return an ownership-safe value to the caller.
                 val exposedNext =
-                    ownedCandidate.deepCopy()
+                    ownedNext.deepCopy()
 
                 exposedNext
             } finally {
-                // STEP 8 — processing is temporary execution state, never durable product truth.
+                // STEP 9 — processing is temporary execution state, never durable product truth.
                 processing = false
             }
         }
@@ -168,29 +170,30 @@ abstract class VexRelay<State : VexState<State>>(
                         currentState = processingCurrent,
                     )
 
-                // STEP 5 — claim reducer output for Relay ownership.
-                val ownedCandidate =
-                    reducerCandidate.deepCopy()
-
-                if (ownedCandidate == retainedCurrent) {
-                    // STEP 6A — semantic no-op; retain exact canonical current and expose safely.
+                // STEP 5 — compare the temporary reducer result before copying it.
+                if (reducerCandidate == retainedCurrent) {
+                    // STEP 6A — semantic no-op; discard candidate, retain current, expose safely.
                     val exposedCurrent =
                         retainedCurrent.deepCopy()
 
                     return@synchronized exposedCurrent
                 }
 
-                // STEP 6B — one atomic retained-state move.
-                mutableCurrentState.value =
-                    ownedCandidate
+                // STEP 6B — changed candidate will enter retained truth, so claim ownership now.
+                val ownedNext =
+                    reducerCandidate.deepCopy()
 
-                // STEP 7 — detach only if the returned value can actually be mutated.
+                // STEP 7 — one atomic retained-state move.
+                mutableCurrentState.value =
+                    ownedNext
+
+                // STEP 8 — detach only if the returned value can actually be mutated.
                 val exposedNext =
-                    ownedCandidate.deepCopy()
+                    ownedNext.deepCopy()
 
                 exposedNext
             } finally {
-                // STEP 8 — update execution ends even if transform/processState throws.
+                // STEP 9 — update execution ends even if transform/processState throws.
                 processing = false
             }
         }
