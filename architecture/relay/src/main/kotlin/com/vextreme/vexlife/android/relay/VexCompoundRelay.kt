@@ -171,6 +171,10 @@ abstract class VexCompoundRelay<
      * Keep blocking IO, SDK waits and other suspending work in dependency owners. This method cannot
      * suspend halfway through a transition, so each admitted patch reconciles against one exact
      * retained current state before the next patch may enter.
+     *
+     * [currentState] is an ownership-safe processing snapshot, not a second retained truth. A
+     * reducer may construct as many local values as it needs, but only the returned candidate can be
+     * committed after semantic comparison.
      */
     protected abstract fun processStates(
         inputState: InputState,
@@ -185,20 +189,36 @@ abstract class VexCompoundRelay<
                 "VexCompoundRelay cannot recursively send state from processStates"
             }
 
+            /*
+             * Retained current is already Relay-owned, so reading it requires no copy. The incoming
+             * patch is snapshotted once at admission, and the current state is snapshotted only when
+             * crossing into overridable reducer code.
+             */
             val current =
-                mutableCurrentState.value.deepCopy()
+                mutableCurrentState.value
+            val admittedInput =
+                inputState.deepCopy()
 
             processing = true
             try {
                 val processed =
                     processStates(
-                        inputState = inputState.deepCopy(),
+                        inputState = admittedInput,
                         currentState = current.deepCopy(),
-                    ).deepCopy()
+                    )
+
+                /*
+                 * Claim exactly one Relay-owned snapshot of arbitrary reducer output. Mutable-backed
+                 * states still detach here. Transitively immutable states may return themselves,
+                 * allowing unchanged child objects and nested Compound outputs to be structurally
+                 * shared rather than recursively recopied.
+                 */
+                val ownedProcessed =
+                    processed.deepCopy()
 
                 val meaningChanged =
-                    processed.inputState != current.inputState ||
-                        processed.outputState != current.outputState
+                    ownedProcessed.inputState != current.inputState ||
+                        ownedProcessed.outputState != current.outputState
 
                 if (!meaningChanged) {
                     return@synchronized current.deepCopy()
@@ -206,13 +226,13 @@ abstract class VexCompoundRelay<
 
                 val next =
                     VexCompoundState(
-                        inputState = processed.inputState.deepCopy(),
-                        outputState = processed.outputState.deepCopy(),
+                        inputState = ownedProcessed.inputState,
+                        outputState = ownedProcessed.outputState,
                         revision = current.revision + 1L,
                     )
 
                 mutableCurrentState.value =
-                    next.deepCopy()
+                    next
 
                 next.deepCopy()
             } finally {
