@@ -173,6 +173,43 @@ and commits at most one next state. There is no separately retained `processingS
 semantically equal. An input-only revision therefore does not manufacture a replacement output
 object.
 
+### Serialization, waiting, and staleness
+
+`synchronized(lock)` and the `processing` flag solve different problems.
+
+~~~text
+concurrent caller A enters send()
+-> owns lock
+-> processes one transition
+
+concurrent caller B calls send()
+-> waits for the lock
+-> enters after A commits/releases
+-> reconciles its patch against A's newly retained current truth
+~~~
+
+So Relay does not intentionally drop a sibling patch merely because another transition is already
+processing. There is no explicit Relay event queue, however: JVM monitor waiting is not a FIFO/fair
+ordering contract, and StateFlow remains a current-state projection rather than an event ledger.
+
+The `processing` flag exists because `synchronized` monitors are re-entrant on the same thread.
+Without the flag, `processStates()` could recursively call `send()` and begin a nested transition
+while the first reducer is unfinished. That recursive semantic re-entry fails closed.
+
+This gives Relay **local serialization**, not universal source freshness. If an older provider result
+arrives after a newer result, the lock cannot know which one is semantically stale. The rightful
+source must carry/order that meaning when needed, for example:
+
+~~~text
+sourceRevision
+attemptId
+requestGeneration
+sourceEpoch
+~~~
+
+Relay then serializes those facts; the source/reducer decides whether an admitted fact is still
+authoritative.
+
 ### One transition, step by step
 
 The copy sites in Relay are intentionally named ownership boundaries, not repeated attempts to clone
