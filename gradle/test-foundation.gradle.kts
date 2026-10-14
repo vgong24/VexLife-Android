@@ -97,6 +97,9 @@ tasks.register("vexVisualValidate") {
  */
 val vexTestFoundationProofBundle =
     tasks.register<Zip>("vexTestFoundationProofBundle") {
+        notCompatibleWithConfigurationCache(
+            "Collects host-local evidence by spawning git and reading generated proof artifacts at execution time.",
+        )
         group = "verification"
         description =
             "Collect Test Foundation reports and generated visual references into one ZIP."
@@ -259,7 +262,14 @@ val vexTestFoundationProofBundle =
         }
         from(
             layout.projectDirectory.dir(
-                "app/build/reports/screenshotTest/debug",
+                "app/build/reports/tests/updateDebugScreenshotTest",
+            ),
+        ) {
+            into("visual/update-report")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "app/build/reports/screenshotTest/preview/debug",
             ),
         ) {
             into("visual/validation-report")
@@ -270,6 +280,27 @@ val vexTestFoundationProofBundle =
             ),
         ) {
             into("visual/reference")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "app/schemas",
+            ),
+        ) {
+            into("room/schemas-candidate")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "build/reports/problems",
+            ),
+        ) {
+            into("diagnostics/problems")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "build/reports/configuration-cache",
+            ),
+        ) {
+            into("diagnostics/configuration-cache")
         }
     }
 

@@ -3,13 +3,16 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
 import android.content.res.Configuration
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
-import com.vextreme.vexlife.android.elements.ElementActionHandler
-import com.vextreme.vexlife.android.ui.VexLifeTheme
 import com.android.tools.screenshot.PreviewTest
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
-import com.vextreme.vexlife.android.preview.VexPreviewHost
-import com.vextreme.vexlife.android.preview.VexPreviewRepositories
+import com.vextreme.vexlife.android.elements.ElementActionHandler
+import com.vextreme.vexlife.android.logging.VexLogger
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
+import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.AppScreens
+import com.vextreme.vexlife.android.ui.VexLifeTheme
 
 /**
  * Semantic visual case: vexstream.library.paired
@@ -31,24 +34,35 @@ import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 )
 @Composable
 fun vexStreamPairedLibraryGolden() {
-    VexPreviewHost(
-        id = "golden-vexstream-library-paired",
-        startScreen = VexStreamMusicScreen,
-        repositoriesFactory = {
-            VexPreviewRepositories
-                .empty()
-                .copy(
-                    vexStream =
-                        InMemoryVexStreamMusicRepository(
-                            initialState =
-                                vexStreamPreviewState(),
-                        ),
+    val repository =
+        remember {
+            InMemoryVexStreamMusicRepository(
+                initialState = vexStreamPreviewState(),
+            )
+        }
+    val runtime =
+        remember {
+            VexRuntime(
+                registry = AppScreens.registry,
+                logger = VexLogger(),
+                initialScreen = AppScreens.primary.first(),
+                primaryScreens = AppScreens.primary,
+                currentAppActions = {
+                    AppActionRegistrations.Empty
+                },
+            ).apply {
+                navigation.push(
+                    VexStreamMusicScreen,
                 )
-        },
-    ) { context ->
+            }
+        }
+
+    VexLifeTheme(
+        darkTheme = true,
+    ) {
         VexStreamMusicScreenContent(
-            runtime = context.runtime,
-            repository = context.repositories.vexStream,
+            runtime = runtime,
+            repository = repository,
         )
     }
 }
