@@ -19,6 +19,28 @@ For substantial work:
 
 The front door should stay small. Architecture belongs with its owning building block.
 
+## Common contribution routes
+
+A contributor should not need to learn testing-framework internals before changing product code.
+
+- **New Screen or interaction:** start with the owning `*Screen.kt`, then follow
+  `docs/foundation/F1-UI-BLUEPRINT-HOME.md`. Register the Screen once in `AppScreens`, keep
+  feature-owned effects beside the Screen/domain, and add focused behavior proof.
+- **New or changed user journey:** use the owning feature's `*Journeys.kt` plus the typed
+  `Journeys.<domain>.<path>` map. Read `docs/foundation/JOURNEY-INSTRUMENTATION.md` for the
+  exact authoring/proof route. You do not need to read every existing journey first.
+- **Screenshot / locale / font evidence:** configure
+  `VexScreenCrawlerInstrumentedTest.kt`; do not edit crawler planner/evidence internals merely
+  because a new Screen or journey exists. See `docs/foundation/SCREEN-CRAWLER-EVIDENCE.md`.
+- **Android host proof when the active worker lacks the required local substrate:** start with
+  `docs/foundation/ANDROID-HOST-PROOF.md`. Prefer repository-owned `vexVerifyLocal` /
+  `vexVerifyDevice` entry points and the live SDK Relay contract; do not reconstruct package,
+  launcher, ADB, or RETURN mechanics from predecessor chat.
+
+The journey coverage report names registered production semantics that no journey currently covers,
+including the owning Screen where known. Use that as a discovery aid rather than maintaining a
+second checklist of every feature path.
+
 ## Repository boundary
 
 `vgong24/VexLife-Android` owns the standalone **native Android implementation and native proof
