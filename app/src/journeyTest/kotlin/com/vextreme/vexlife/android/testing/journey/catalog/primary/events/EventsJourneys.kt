@@ -75,10 +75,10 @@ object EventsJourneys : VexJourneyShard {
             )
         }
 
-    val externalAttention =
+    val externalAlert =
         vexJourney(
-            id = "external-attention",
-            title = "Events external information attention lattice",
+            id = "external-alert",
+            title = "Events external information alert lattice",
             environments =
                 listOf(
                     VexJourneyEnvironments.Baseline,
@@ -92,7 +92,7 @@ object EventsJourneys : VexJourneyShard {
             tap(AppShell.Elements.Events)
             tapDynamic(
                 dynamicElement(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         MessageRef,
                         "acknowledge",
                     ),
@@ -111,7 +111,7 @@ object EventsJourneys : VexJourneyShard {
             // LATER moves Call out of the current queue and into the next sequence.
             tapDynamic(
                 dynamicElement(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         CallRef,
                         "later",
                     ),
@@ -121,7 +121,7 @@ object EventsJourneys : VexJourneyShard {
             // SUSPEND keeps Map active but puts it behind unsuspended current-queue work.
             tapDynamic(
                 dynamicElement(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         MapRef,
                         "suspend",
                     ),
@@ -131,7 +131,7 @@ object EventsJourneys : VexJourneyShard {
             // MEDIA is now the remaining normal current-queue item.
             tapDynamic(
                 dynamicElement(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         MediaRef,
                         "suppress",
                     ),
@@ -141,7 +141,7 @@ object EventsJourneys : VexJourneyShard {
             // Suspended Map returns before the deferred next-sequence Call.
             tapDynamic(
                 dynamicElement(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         MapRef,
                         "acknowledge",
                     ),
@@ -151,7 +151,7 @@ object EventsJourneys : VexJourneyShard {
             // Current queue drained: deferred Call becomes the next-sequence candidate.
             tapDynamic(
                 dynamicElement(
-                    EventsPresentationRefs.attentionAction(
+                    EventsPresentationRefs.alertAction(
                         CallRef,
                         "acknowledge",
                     ),
@@ -161,7 +161,7 @@ object EventsJourneys : VexJourneyShard {
 
     override val journeys =
         listOf(
-            externalAttention,
+            externalAlert,
         )
 }
 
