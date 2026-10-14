@@ -26,10 +26,9 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
-import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackControlCase
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackCase
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackObservation
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
-import com.vextreme.vexlife.android.media.vexstream.vexStreamPlaybackObservation
 import com.vextreme.vexlife.android.vexarchitecture.VexCurrent
 import com.vextreme.vexlife.android.vexarchitecture.VexTransition
 import kotlinx.coroutines.delay
@@ -108,13 +107,15 @@ internal data class VexStreamPlaybackUiState(
      *
      * Presentation may read this relationship; it does not gain playback execution authority.
      */
-    val currentPlaybackControl: VexCurrent<out VexStreamPlaybackControlCase> =
-        VexStreamPlaybackArchitecture.currentControl(
-            VexStreamPlaybackObservation(
-                queueHasItems = false,
-                playRequested = false,
+    val currentPlayback: VexCurrent<out VexStreamPlaybackCase> =
+        VexStreamPlaybackArchitecture
+            .android
+            .current(
+                VexStreamPlaybackObservation(
+                    queueHasItems = false,
+                    playRequested = false,
+                ),
             ),
-        ),
     val currentMediaId: String? = null,
     val currentTitle: String = "",
     val currentArtist: String = "",
@@ -134,8 +135,10 @@ internal data class VexStreamPlaybackUiState(
     /** Read-only transition currently represented by the shared Play/Pause control. */
     val availablePlayPauseTransition: VexTransition<*, *>?
         get() =
-            currentPlaybackControl.availableTransition(
-                VexStreamPlaybackArchitecture.PlayPauseControl,
+            currentPlayback.availableTransition(
+                VexStreamPlaybackArchitecture
+                    .controls
+                    .PlayPause,
             )
 
     val progressFraction: Float
@@ -554,10 +557,12 @@ private fun Player.toVexStreamUiState(): VexStreamPlaybackUiState {
             }
 
     return VexStreamPlaybackUiState(
-        currentPlaybackControl =
-            VexStreamPlaybackArchitecture.currentControl(
-                vexStreamPlaybackObservation(),
-            ),
+        currentPlayback =
+            VexStreamPlaybackArchitecture
+                .android
+                .current(
+                    this,
+                ),
         currentMediaId = current?.mediaId,
         currentTitle =
             current

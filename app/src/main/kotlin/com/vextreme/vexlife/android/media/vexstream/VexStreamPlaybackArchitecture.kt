@@ -2,227 +2,267 @@ package com.vextreme.vexlife.android.media.vexstream
 
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.vexarchitecture.VexArchitectureContract
+import com.vextreme.vexlife.android.vexarchitecture.VexArchitectureMap
+import com.vextreme.vexlife.android.vexarchitecture.VexControl
 import com.vextreme.vexlife.android.vexarchitecture.VexCurrent
+import com.vextreme.vexlife.android.vexarchitecture.VexPlacementView
 import com.vextreme.vexlife.android.vexarchitecture.VexTransition
+import com.vextreme.vexlife.android.vexarchitecture.architectureMap
+import com.vextreme.vexlife.android.vexarchitecture.control
+import com.vextreme.vexlife.android.vexarchitecture.placement
+import com.vextreme.vexlife.android.vexarchitecture.transition
 import com.vextreme.vexlife.android.vexarchitecture.vexCurrent
-import com.vextreme.vexlife.android.vexarchitecture.vexPlacement
-import com.vextreme.vexlife.android.vexarchitecture.vexTransition
-import com.vextreme.vexlife.android.vexarchitecture.vexTransitionSlot
 
 /**
- * The concrete Play/Pause-control condition currently observed from Media3.
+ * ROOT DESIGN for VexStream playback.
  *
- * These names describe what is true, not what button should be drawn:
+ * Start here when the symptom is "something about playback is wrong" and you do not yet know which
+ * UI/service file matters.
  *
- * - [QueueEmpty]      -> no queued media exists, so Play/Pause has no meaningful transition;
- * - [ReadyToPlay]     -> media exists and playback is not currently requested;
- * - [PlayRequested]   -> Media3 playWhenReady is true, including prepare/buffer time before audio.
+ * The root intentionally owns orientation, realm gating and the derived map only. It is not a
+ * playback manager.
  */
-sealed interface VexStreamPlaybackControlCase {
+object VexStreamPlaybackArchitecture :
+    VexArchitectureContract {
+
+    override val architectureRef: String =
+        "vexstream.playback"
+
+    /**
+     * Feature-realm gate.
+     *
+     * Replacing this constant with a real product flag later turns every Control below this root off
+     * through the shared contract; descendants must not scatter their own flag checks.
+     */
+    override val enabled: Boolean =
+        true
+
+    /** Feature-local child contracts. Only playback-owned layers implement these. */
+    interface CaseContract
+    interface ControlContract
+    interface PlacementContract
+    interface AndroidContract
+
+    val controls: VexStreamPlaybackControl
+        get() = VexStreamPlaybackControl
+
+    val placements: VexStreamPlaybackPlacement
+        get() = VexStreamPlaybackPlacement
+
+    internal val android: VexStreamPlaybackAndroid
+        get() = VexStreamPlaybackAndroid
+
+    override val map: VexArchitectureMap by lazy {
+        architectureMap(
+            placements =
+                placements.all,
+            controls =
+                controls.all,
+        )
+    }
+}
+
+/** Current relational playback truth. These names describe reality, not UI controls. */
+sealed interface VexStreamPlaybackCase :
+    VexStreamPlaybackArchitecture.CaseContract {
+
     data object QueueEmpty :
-        VexStreamPlaybackControlCase
+        VexStreamPlaybackCase
 
     data object ReadyToPlay :
-        VexStreamPlaybackControlCase
+        VexStreamPlaybackCase
 
+    /**
+     * Media3 is currently pursuing playback, including prepare/buffer time before audio is audible.
+     */
     data object PlayRequested :
-        VexStreamPlaybackControlCase
+        VexStreamPlaybackCase
 }
 
 /**
- * Platform facts needed to answer exactly one question:
+ * Controls and their typed relationships.
  *
- *     "What does the VexStream Play/Pause control mean right now?"
- *
- * Media3 names stay at this boundary. The relational architecture below reasons only from these
- * explicit observed facts.
+ *     Play  : ReadyToPlay -> PlayRequested
+ *     Pause : PlayRequested -> ReadyToPlay
+ *     PlayPause : whichever one current Placement offers
  */
+object VexStreamPlaybackControl :
+    VexStreamPlaybackArchitecture.ControlContract {
+
+    val Play =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.ReadyToPlay,
+            VexStreamPlaybackCase.PlayRequested
+        >(
+            "vexstream.playback.play",
+        )
+
+    val Pause =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.PlayRequested,
+            VexStreamPlaybackCase.ReadyToPlay
+        >(
+            "vexstream.playback.pause",
+        )
+
+    val PlayPause =
+        VexStreamPlaybackArchitecture.control(
+            controlRef =
+                "vexstream.playback.play-pause",
+            Play,
+            Pause,
+        )
+
+    val all: List<VexControl> =
+        listOf(
+            PlayPause,
+        )
+}
+
+/**
+ * Local relational surroundings for each playback Case.
+ */
+object VexStreamPlaybackPlacement :
+    VexStreamPlaybackArchitecture.PlacementContract {
+
+    val QueueEmpty =
+        VexStreamPlaybackArchitecture.placement<
+            VexStreamPlaybackCase.QueueEmpty
+        > {}
+
+    val ReadyToPlay =
+        VexStreamPlaybackArchitecture.placement<
+            VexStreamPlaybackCase.ReadyToPlay
+        > {
+            arrivedBy(
+                VexStreamPlaybackControl.Pause,
+            )
+            can(
+                VexStreamPlaybackControl.Play,
+            )
+        }
+
+    val PlayRequested =
+        VexStreamPlaybackArchitecture.placement<
+            VexStreamPlaybackCase.PlayRequested
+        > {
+            arrivedBy(
+                VexStreamPlaybackControl.Play,
+            )
+            can(
+                VexStreamPlaybackControl.Pause,
+            )
+        }
+
+    val all: List<VexPlacementView> =
+        listOf(
+            QueueEmpty,
+            ReadyToPlay,
+            PlayRequested,
+        )
+}
+
+/** Platform facts needed to answer exactly: "What playback Case is current?" */
 data class VexStreamPlaybackObservation(
     val queueHasItems: Boolean,
     val playRequested: Boolean,
 )
 
-/** Named intention accepted by the single playback-control effect owner. */
-sealed interface VexStreamPlaybackControlAction {
-    data object TogglePlayPause :
-        VexStreamPlaybackControlAction
-}
-
 /**
- * Human-readable VexStream Play/Pause relationship.
+ * Android observation/effect boundary for the playback architecture.
  *
- * Read top-to-bottom as English:
- *
- *     ReadyToPlay --Play--> PlayRequested
- *     PlayRequested --Pause--> ReadyToPlay
- *
- * The When... values answer what relationships exist while one Case is current. They do not perform
- * Media3 commands.
+ * UI surfaces consume Cases/Controls. Android effects are performed here after exact Media3 truth is
+ * re-read.
  */
-object VexStreamPlaybackArchitecture {
-    /** Human requests playback from a state where media is ready but playback is not requested. */
-    val Play =
-        vexTransition<
-            VexStreamPlaybackControlCase.ReadyToPlay,
-            VexStreamPlaybackControlCase.PlayRequested
-        >(
-            "vexstream.playback.play",
-        )
+internal object VexStreamPlaybackAndroid :
+    VexStreamPlaybackArchitecture.AndroidContract {
 
-    /** Human requests playback to stop being pursued while playback is currently requested. */
-    val Pause =
-        vexTransition<
-            VexStreamPlaybackControlCase.PlayRequested,
-            VexStreamPlaybackControlCase.ReadyToPlay
-        >(
-            "vexstream.playback.pause",
-        )
-
-    /** No queue means the Play/Pause control currently has no legal transition. */
-    val WhenQueueIsEmpty =
-        vexPlacement<
-            VexStreamPlaybackControlCase.QueueEmpty
-        > {}
-
-    /** Media exists and Play is the one legal Play/Pause transition. */
-    val WhenReadyToPlay =
-        vexPlacement<
-            VexStreamPlaybackControlCase.ReadyToPlay
-        > {
-            arrivedBy(Pause)
-            can(Play)
-        }
-
-    /** Playback is requested and Pause is the one legal Play/Pause transition. */
-    val WhenPlayIsRequested =
-        vexPlacement<
-            VexStreamPlaybackControlCase.PlayRequested
-        > {
-            arrivedBy(Play)
-            can(Pause)
-        }
-
-    /** One physical/semantic Play-Pause control whose meaning depends on exact current Case. */
-    val PlayPauseControl =
-        vexTransitionSlot(
-            slotRef = "vexstream.playback.play-pause",
-            Play,
-            Pause,
-        )
-
-    /**
-     * Translate one explicit platform observation into current relational meaning.
-     *
-     * This is pure classification:
-     *
-     *     observation -> current Case + its lawful relationships
-     *
-     * It does not execute playback and does not own Media3 state.
-     */
-    fun currentControl(
+    fun current(
         observation: VexStreamPlaybackObservation,
-    ): VexCurrent<out VexStreamPlaybackControlCase> =
+    ): VexCurrent<out VexStreamPlaybackCase> =
         when {
             !observation.queueHasItems ->
                 vexCurrent(
                     case =
-                        VexStreamPlaybackControlCase
+                        VexStreamPlaybackCase
                             .QueueEmpty,
-                    placement = WhenQueueIsEmpty,
+                    placement =
+                        VexStreamPlaybackPlacement
+                            .QueueEmpty,
                 )
 
             observation.playRequested ->
                 vexCurrent(
                     case =
-                        VexStreamPlaybackControlCase
+                        VexStreamPlaybackCase
                             .PlayRequested,
-                    placement = WhenPlayIsRequested,
+                    placement =
+                        VexStreamPlaybackPlacement
+                            .PlayRequested,
                 )
 
             else ->
                 vexCurrent(
                     case =
-                        VexStreamPlaybackControlCase
+                        VexStreamPlaybackCase
                             .ReadyToPlay,
-                    placement = WhenReadyToPlay,
+                    placement =
+                        VexStreamPlaybackPlacement
+                            .ReadyToPlay,
                 )
         }
-}
 
-/**
- * Translate Media3 names exactly once at the platform boundary.
- *
- * UI/domain callers should not reinterpret playWhenReady or queue count themselves.
- */
-internal fun Player.vexStreamPlaybackObservation():
-    VexStreamPlaybackObservation =
-    VexStreamPlaybackObservation(
-        queueHasItems =
-            mediaItemCount > 0,
-        playRequested =
-            playWhenReady,
-    )
+    fun current(
+        player: Player,
+    ): VexCurrent<out VexStreamPlaybackCase> =
+        current(
+            observation =
+                VexStreamPlaybackObservation(
+                    queueHasItems =
+                        player.mediaItemCount > 0,
+                    playRequested =
+                        player.playWhenReady,
+                ),
+        )
 
-/**
- * One effect owner for VexStream Play/Pause control intentions.
- *
- * UI surfaces may render from VexArchitecture current meaning, but execution always travels here:
- *
- *     TogglePlayPause
- *     -> re-read exact Media3 facts now
- *     -> currentControl(...)
- *     -> available Play/Pause transition
- *     -> realize that transition through MediaController
- *
- * Re-reading current Media3 truth here prevents a stale UI snapshot from becoming execution
- * authority.
- */
-internal object VexStreamPlaybackControlOwner {
+    /** Perform one Control against exact current platform truth. */
     fun request(
-        action: VexStreamPlaybackControlAction,
+        control: VexControl,
         controller: MediaController,
+    ): Boolean {
+        val transition =
+            current(
+                controller,
+            ).availableTransition(
+                control,
+            )
+                ?: return false
+
+        return realize(
+            controller = controller,
+            transition = transition,
+        )
+    }
+
+    private fun realize(
+        controller: MediaController,
+        transition: VexTransition<*, *>,
     ): Boolean =
-        when (action) {
-            VexStreamPlaybackControlAction.TogglePlayPause -> {
-                val currentControl =
-                    VexStreamPlaybackArchitecture.currentControl(
-                        controller.vexStreamPlaybackObservation(),
-                    )
-
-                val availableTransition =
-                    currentControl.availableTransition(
-                        VexStreamPlaybackArchitecture.PlayPauseControl,
-                    )
-                        ?: return false
-
-                controller.realizeVexStreamPlaybackTransition(
-                    availableTransition,
-                )
+        when (transition) {
+            VexStreamPlaybackControl.Play -> {
+                controller.play()
+                true
             }
+
+            VexStreamPlaybackControl.Pause -> {
+                controller.pause()
+                true
+            }
+
+            else ->
+                false
         }
 }
-
-/**
- * Android realization of one already-selected semantic playback relationship.
- *
- * This function deliberately does not choose Play versus Pause. Selection belongs to
- * [VexStreamPlaybackControlOwner], which resolves against exact current playback truth first.
- */
-private fun MediaController.realizeVexStreamPlaybackTransition(
-    transition: VexTransition<*, *>,
-): Boolean =
-    when (transition) {
-        VexStreamPlaybackArchitecture.Play -> {
-            play()
-            true
-        }
-
-        VexStreamPlaybackArchitecture.Pause -> {
-            pause()
-            true
-        }
-
-        else -> false
-    }
 
 // [VXG RealForever]

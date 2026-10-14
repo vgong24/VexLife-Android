@@ -30,8 +30,6 @@ import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
-import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackControlAction
-import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackControlOwner
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
@@ -175,10 +173,10 @@ private fun VexStreamContextDockContent(
             VexStreamDockIconButton(
                 icon =
                     when (playPauseTransition) {
-                        VexStreamPlaybackArchitecture.Pause ->
+                        VexStreamPlaybackArchitecture.controls.Pause ->
                             ElementIcon.Pause
 
-                        VexStreamPlaybackArchitecture.Play ->
+                        VexStreamPlaybackArchitecture.controls.Play ->
                             ElementIcon.Play
 
                         else ->
@@ -198,12 +196,16 @@ private fun VexStreamContextDockContent(
                         "presentation.context-dock.vexstream.play-pause",
                 )
                 controller?.let { connectedController ->
-                    VexStreamPlaybackControlOwner.request(
-                        action =
-                            VexStreamPlaybackControlAction
-                                .TogglePlayPause,
-                        controller = connectedController,
-                    )
+                    VexStreamPlaybackArchitecture
+                        .android
+                        .request(
+                            control =
+                                VexStreamPlaybackArchitecture
+                                    .controls
+                                    .PlayPause,
+                            controller =
+                                connectedController,
+                        )
                 }
             }
             VexStreamDockIconButton(

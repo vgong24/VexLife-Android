@@ -304,10 +304,13 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val TogglePlayback = transitionButtonRef(
+    val TogglePlayback = controlButtonRef(
         id = "body.player.play-pause",
         labelRes = R.string.vexstream_music_play_pause,
-        transitionSlot = VexStreamPlaybackArchitecture.PlayPauseControl,
+        control =
+            VexStreamPlaybackArchitecture
+                .controls
+                .PlayPause,
         style = VexElementStyles.PrimaryAction,
         icon = ElementIcon.PlayPause,
     )

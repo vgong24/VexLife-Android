@@ -3,117 +3,215 @@ package com.vextreme.vexlife.android.vexarchitecture
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexArchitectureTest {
     private data object CaseA
     private data object CaseB
-    private data object CaseC
 
-    private val becomeB =
-        vexTransition<CaseA, CaseB>(
-            "example.a-to-b",
-        )
-
-    private val becomeC =
-        vexTransition<CaseA, CaseC>(
-            "example.a-to-c",
-        )
-
-    private val returnToA =
-        vexTransition<CaseB, CaseA>(
-            "example.b-to-a",
-        )
+    private class TestArchitecture(
+        override val architectureRef: String,
+        override val enabled: Boolean,
+    ) : VexArchitectureContract {
+        override lateinit var map: VexArchitectureMap
+    }
 
     @Test
-    fun placementKeepsCurrentImplicitWhileRelationshipsStayPreciselyTyped() {
+    fun architectureRootOwnsTypedLocalRelationshipsAndDerivedMap() {
+        val architecture =
+            TestArchitecture(
+                architectureRef = "example.flow",
+                enabled = true,
+            )
+        val becomeB =
+            architecture.transition<CaseA, CaseB>(
+                "example.a-to-b",
+            )
+        val returnToA =
+            architecture.transition<CaseB, CaseA>(
+                "example.b-to-a",
+            )
         val caseA =
-            vexPlacement<CaseA> {
+            architecture.placement<CaseA> {
                 arrivedBy(returnToA)
                 can(becomeB)
-                can(becomeC)
             }
+        val caseB =
+            architecture.placement<CaseB> {
+                arrivedBy(becomeB)
+                can(returnToA)
+            }
+        val primary =
+            architecture.control(
+                "example.primary",
+                becomeB,
+                returnToA,
+            )
+
+        architecture.map =
+            architecture.architectureMap(
+                placements =
+                    listOf(
+                        caseA,
+                        caseB,
+                    ),
+                controls =
+                    listOf(
+                        primary,
+                    ),
+            )
 
         assertEquals(
-            CaseA::class,
-            caseA.caseType,
-        )
-        assertEquals(
-            listOf(returnToA),
-            caseA.arrivals,
+            listOf(
+                CaseA::class,
+                CaseB::class,
+            ),
+            architecture.map.cases,
         )
         assertEquals(
             listOf(
                 becomeB,
-                becomeC,
+                returnToA,
             ),
-            caseA.transitions,
+            architecture.map.transitions,
+        )
+        assertTrue(
+            architecture.map
+                .describe()
+                .contains(
+                    "CaseA",
+                ),
         )
     }
 
     @Test
-    fun transitionSlotResolvesFromCurrentPlacementInsteadOfReinterpretingState() {
+    fun currentCaseResolvesOneControlWithoutReinterpretingState() {
+        val architecture =
+            TestArchitecture(
+                architectureRef = "example.flow",
+                enabled = true,
+            )
+        val becomeB =
+            architecture.transition<CaseA, CaseB>(
+                "example.a-to-b",
+            )
         val caseA =
-            vexPlacement<CaseA> {
+            architecture.placement<CaseA> {
                 can(becomeB)
             }
-        val current =
-            vexCurrent(
-                case = CaseA,
-                placement = caseA,
-            )
-        val slot =
-            vexTransitionSlot(
-                "example.primary-control",
+        val primary =
+            architecture.control(
+                "example.primary",
                 becomeB,
-                returnToA,
             )
 
         assertSame(
             becomeB,
-            current.availableTransition(slot),
+            vexCurrent(
+                case = CaseA,
+                placement = caseA,
+            ).availableTransition(
+                primary,
+            ),
         )
     }
 
     @Test
-    fun transitionSlotIsAbsentWhenCurrentCaseOffersNoCandidate() {
-        val caseC =
-            vexPlacement<CaseC> {}
-        val current =
-            vexCurrent(
-                case = CaseC,
-                placement = caseC,
+    fun disabledArchitectureTurnsOffItsControlsAtTheRootBoundary() {
+        val architecture =
+            TestArchitecture(
+                architectureRef = "example.disabled",
+                enabled = false,
             )
-        val slot =
-            vexTransitionSlot(
-                "example.primary-control",
+        val becomeB =
+            architecture.transition<CaseA, CaseB>(
+                "example.a-to-b",
+            )
+        val caseA =
+            architecture.placement<CaseA> {
+                can(becomeB)
+            }
+        val primary =
+            architecture.control(
+                "example.primary",
                 becomeB,
-                returnToA,
             )
 
         assertNull(
-            current.availableTransition(slot),
+            vexCurrent(
+                case = CaseA,
+                placement = caseA,
+            ).availableTransition(
+                primary,
+            ),
         )
     }
 
     @Test(expected = IllegalStateException::class)
-    fun transitionSlotRejectsAmbiguousCurrentPlacement() {
-        val caseA =
-            vexPlacement<CaseA> {
-                can(becomeB)
-                can(becomeC)
-            }
-        val slot =
-            vexTransitionSlot(
-                "example.bad-slot",
-                becomeB,
-                becomeC,
+    fun controlCannotCrossArchitectureRealms() {
+        val first =
+            TestArchitecture(
+                architectureRef = "example.first",
+                enabled = true,
             )
+        val second =
+            TestArchitecture(
+                architectureRef = "example.second",
+                enabled = true,
+            )
+        val firstTransition =
+            first.transition<CaseA, CaseB>(
+                "example.first.a-to-b",
+            )
+        val firstControl =
+            first.control(
+                "example.first.primary",
+                firstTransition,
+            )
+        val secondCaseA =
+            second.placement<CaseA> {}
 
         vexCurrent(
             case = CaseA,
-            placement = caseA,
-        ).availableTransition(slot)
+            placement = secondCaseA,
+        ).availableTransition(
+            firstControl,
+        )
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun derivedMapRejectsAnExitWhoseDestinationDoesNotNameTheSameArrival() {
+        val architecture =
+            TestArchitecture(
+                architectureRef = "example.incomplete",
+                enabled = true,
+            )
+        val becomeB =
+            architecture.transition<CaseA, CaseB>(
+                "example.a-to-b",
+            )
+        val caseA =
+            architecture.placement<CaseA> {
+                can(becomeB)
+            }
+        val caseB =
+            architecture.placement<CaseB> {}
+
+        architecture.architectureMap(
+            placements =
+                listOf(
+                    caseA,
+                    caseB,
+                ),
+            controls =
+                listOf(
+                    architecture.control(
+                        "example.primary",
+                        becomeB,
+                    ),
+                ),
+        )
     }
 }
 

@@ -12,6 +12,7 @@ import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.SwappableContainerElement
 import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.elements.UIElement
+import com.vextreme.vexlife.android.elements.VexControlButtonElement
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.elements.navigation.BackLayer
 
@@ -560,6 +561,15 @@ class VexRuntime(
         val registered = registry.element(source.elementId)
         check(registered === source) {
             "cannot activate unregistered element instance: ${source.elementId}"
+        }
+
+        if (source is VexControlButtonElement) {
+            val architecture =
+                source.control.architecture
+            check(architecture.enabled) {
+                "cannot activate ${source.elementId} because architecture " +
+                    "${architecture.architectureRef} is disabled"
+            }
         }
 
         val owner = registry.ownerScreenOf(source) ?: return

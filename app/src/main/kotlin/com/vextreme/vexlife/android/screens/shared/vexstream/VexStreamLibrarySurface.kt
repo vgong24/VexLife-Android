@@ -80,8 +80,6 @@ import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
-import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackControlAction
-import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackControlOwner
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import kotlinx.coroutines.launch
 
@@ -1732,12 +1730,16 @@ private fun VexStreamMiniPlayer(
 
                 VexStreamMusicScreen.TogglePlayback ->
                     controller?.let { connectedController ->
-                        VexStreamPlaybackControlOwner.request(
-                            action =
-                                VexStreamPlaybackControlAction
-                                    .TogglePlayPause,
-                            controller = connectedController,
-                        )
+                        VexStreamPlaybackArchitecture
+                            .android
+                            .request(
+                                control =
+                                    VexStreamPlaybackArchitecture
+                                        .controls
+                                        .PlayPause,
+                                controller =
+                                    connectedController,
+                            )
                     }
 
                 VexStreamMusicScreen.NextTrack ->
@@ -1910,10 +1912,10 @@ private fun VexStreamMiniPlayer(
                     when (
                         playback.availablePlayPauseTransition
                     ) {
-                        VexStreamPlaybackArchitecture.Pause ->
+                        VexStreamPlaybackArchitecture.controls.Pause ->
                             ElementIcon.Pause
 
-                        VexStreamPlaybackArchitecture.Play ->
+                        VexStreamPlaybackArchitecture.controls.Play ->
                             ElementIcon.Play
 
                         else ->
