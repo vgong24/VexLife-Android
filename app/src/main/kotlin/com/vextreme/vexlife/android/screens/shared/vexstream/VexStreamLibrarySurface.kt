@@ -80,6 +80,7 @@ import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackSourceResolver
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import kotlinx.coroutines.launch
 
@@ -1433,11 +1434,18 @@ private fun VexStreamTrackCard(
             )
             when (element) {
                 VexStreamMusicScreen.PlayTrack ->
-                    controller?.playVexStreamContext(
-                        selected = state,
-                        contextTracks = contextTracks,
-                        resolver = resolver,
-                    )
+                    controller?.let { connectedController ->
+                        VexStreamPlaybackArchitecture
+                            .android
+                            .playTrack(
+                                controller =
+                                    connectedController,
+                                selected = state,
+                                contextTracks =
+                                    contextTracks,
+                                resolver = resolver,
+                            )
+                    }
 
                 VexStreamMusicScreen.PlayTrackNext ->
                     controller?.playNextVexStream(

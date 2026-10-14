@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.media.vexstream
 
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.vexarchitecture.VexArchitectureContract
 import com.vextreme.vexlife.android.vexarchitecture.VexArchitectureMap
 import com.vextreme.vexlife.android.vexarchitecture.VexControl
@@ -99,6 +100,37 @@ object VexStreamPlaybackControl :
             "vexstream.playback.pause",
         )
 
+    /**
+     * Play Track replaces/selects the Media3 queue context and requests playback.
+     *
+     * The human Control is one intention, while its typed relationship depends on the current Case.
+     * All three converge on PlayRequested; the exact selected track/queue data is observed from Media3
+     * after the Android realization.
+     */
+    val PlayTrackFromQueueEmpty =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.QueueEmpty,
+            VexStreamPlaybackCase.PlayRequested
+        >(
+            "vexstream.playback.play-track.queue-empty",
+        )
+
+    val PlayTrackFromReady =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.ReadyToPlay,
+            VexStreamPlaybackCase.PlayRequested
+        >(
+            "vexstream.playback.play-track.ready",
+        )
+
+    val PlayTrackFromPlayRequested =
+        VexStreamPlaybackArchitecture.transition<
+            VexStreamPlaybackCase.PlayRequested,
+            VexStreamPlaybackCase.PlayRequested
+        >(
+            "vexstream.playback.play-track.play-requested",
+        )
+
     val NextWhileReady =
         VexStreamPlaybackArchitecture.transition<
             VexStreamPlaybackCase.ReadyToPlay,
@@ -158,6 +190,14 @@ object VexStreamPlaybackControl :
             Pause,
         )
 
+    val PlayTrack =
+        VexStreamPlaybackArchitecture.control(
+            "vexstream.playback.play-track",
+            PlayTrackFromQueueEmpty,
+            PlayTrackFromReady,
+            PlayTrackFromPlayRequested,
+        )
+
     val Next =
         VexStreamPlaybackArchitecture.control(
             "vexstream.playback.next",
@@ -175,6 +215,7 @@ object VexStreamPlaybackControl :
     val all: List<VexControl> =
         listOf(
             PlayPause,
+            PlayTrack,
             Previous,
             Next,
         )
@@ -186,7 +227,11 @@ object VexStreamPlaybackPlacement :
     val QueueEmpty =
         VexStreamPlaybackArchitecture.placement<
             VexStreamPlaybackCase.QueueEmpty
-        > {}
+        > {
+            can(
+                VexStreamPlaybackControl.PlayTrackFromQueueEmpty,
+            )
+        }
 
     val ReadyToPlay =
         VexStreamPlaybackArchitecture.placement<
@@ -194,6 +239,9 @@ object VexStreamPlaybackPlacement :
         > {
             arrivedBy(
                 VexStreamPlaybackControl.Pause,
+            )
+            can(
+                VexStreamPlaybackControl.PlayTrackFromReady,
             )
             arrivedBy(
                 VexStreamPlaybackControl.NextWhileReady,
@@ -218,6 +266,18 @@ object VexStreamPlaybackPlacement :
         > {
             arrivedBy(
                 VexStreamPlaybackControl.Play,
+            )
+            arrivedBy(
+                VexStreamPlaybackControl.PlayTrackFromQueueEmpty,
+            )
+            arrivedBy(
+                VexStreamPlaybackControl.PlayTrackFromReady,
+            )
+            arrivedBy(
+                VexStreamPlaybackControl.PlayTrackFromPlayRequested,
+            )
+            can(
+                VexStreamPlaybackControl.PlayTrackFromPlayRequested,
             )
             arrivedBy(
                 VexStreamPlaybackControl.NextWhilePlayRequested,
@@ -333,6 +393,31 @@ internal object VexStreamPlaybackAndroid :
         return realize(
             controller = controller,
             transition = transition,
+        )
+    }
+
+    /**
+     * Human question: "How do I play this song?"
+     *
+     * Resolve the PlayTrack Control against exact current playback truth before replacing the queue.
+     */
+    fun playTrack(
+        controller: MediaController,
+        selected: VexStreamTrackState,
+        contextTracks: List<VexStreamTrackState>,
+        resolver: VexStreamPlaybackSourceResolver,
+    ): Boolean {
+        current(
+            controller,
+        ).availableTransition(
+            VexStreamPlaybackControl.PlayTrack,
+        )
+            ?: return false
+
+        return controller.replaceVexStreamContextAndPlay(
+            selected = selected,
+            contextTracks = contextTracks,
+            resolver = resolver,
         )
     }
 

@@ -146,4 +146,65 @@ class VexStreamPlaybackArchitectureTest {
     }
 }
 
+    @Test
+    fun playTrackConvergesEveryPlaybackCaseOnPlayRequested() {
+        val controls =
+            VexStreamPlaybackControl
+
+        val empty =
+            VexStreamPlaybackArchitecture
+                .android
+                .current(
+                    VexStreamPlaybackObservation(
+                        queue = null,
+                        playRequested = false,
+                    ),
+                )
+        val ready =
+            VexStreamPlaybackArchitecture
+                .android
+                .current(
+                    VexStreamPlaybackObservation(
+                        queue =
+                            queue(
+                                hasPrevious = false,
+                                hasNext = true,
+                            ),
+                        playRequested = false,
+                    ),
+                )
+        val requested =
+            VexStreamPlaybackArchitecture
+                .android
+                .current(
+                    VexStreamPlaybackObservation(
+                        queue =
+                            queue(
+                                hasPrevious = true,
+                                hasNext = true,
+                            ),
+                        playRequested = true,
+                    ),
+                )
+
+        assertSame(
+            controls.PlayTrackFromQueueEmpty,
+            empty.availableTransition(
+                controls.PlayTrack,
+            ),
+        )
+        assertSame(
+            controls.PlayTrackFromReady,
+            ready.availableTransition(
+                controls.PlayTrack,
+            ),
+        )
+        assertSame(
+            controls.PlayTrackFromPlayRequested,
+            requested.availableTransition(
+                controls.PlayTrack,
+            ),
+        )
+    }
+
 // [VXG RealForever]

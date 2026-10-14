@@ -2,8 +2,6 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import android.app.Application
 import android.content.ComponentName
-import android.content.Context
-import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,14 +15,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
-import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackSourceResolver
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackCase
@@ -34,73 +29,6 @@ import com.vextreme.vexlife.android.vexarchitecture.VexCurrent
 import com.vextreme.vexlife.android.vexarchitecture.VexTransition
 import kotlinx.coroutines.delay
 import kotlin.random.Random
-
-/**
- * Resolves product-level track availability into one Media3 item.
- *
- * Local verified bytes win. A Hub-backed track becomes an opaque vexstream:// item whose real
- * endpoint/token/certificate are resolved by VexStreamNetworkDataSource inside the playback service.
- */
-internal class VexStreamPlaybackSourceResolver(
-    context: Context,
-) {
-    private val mediaStore =
-        VexStreamMediaStore.production(
-            contextFilesDir = context.filesDir,
-        )
-
-    fun mediaItem(
-        state: VexStreamTrackState,
-    ): MediaItem? {
-        val localCopy =
-            state.localCopy as? VexStreamLocalCopyState.Downloaded
-
-        val uri =
-            localCopy
-                ?.let(mediaStore::fileForPlayback)
-                ?.let(Uri::fromFile)
-                ?: if (state.hubAvailable) {
-                    Uri.Builder()
-                        .scheme("vexstream")
-                        .authority("media")
-                        .appendPath(
-                            state.track.trackRef.value,
-                        )
-                        .build()
-                } else {
-                    return null
-                }
-
-        val clipping =
-            MediaItem.ClippingConfiguration.Builder()
-                .setStartPositionMs(
-                    (state.track.playbackStartSeconds * 1000.0)
-                        .toLong(),
-                )
-                .apply {
-                    state.track.playbackEndSeconds?.let { end ->
-                        setEndPositionMs(
-                            (end * 1000.0).toLong(),
-                        )
-                    }
-                }
-                .build()
-
-        return MediaItem.Builder()
-            .setMediaId(state.track.trackRef.value)
-            .setUri(uri)
-            .setMimeType(MimeTypes.AUDIO_MPEG)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(state.track.title)
-                    .setArtist(state.track.artist)
-                    .setAlbumTitle(state.track.album)
-                    .build(),
-            )
-            .setClippingConfiguration(clipping)
-            .build()
-    }
-}
 
 internal data class VexStreamPlaybackUiState(
     /**
@@ -318,38 +246,6 @@ internal fun rememberVexStreamPlaybackUiState(
     }
 
     return projected
-}
-
-internal fun MediaController.playVexStreamContext(
-    selected: VexStreamTrackState,
-    contextTracks: List<VexStreamTrackState>,
-    resolver: VexStreamPlaybackSourceResolver,
-): Boolean {
-    val items =
-        contextTracks
-            .mapNotNull(resolver::mediaItem)
-
-    if (items.isEmpty()) {
-        return false
-    }
-
-    val selectedIndex =
-        items.indexOfFirst {
-            it.mediaId == selected.track.trackRef.value
-        }
-    if (selectedIndex < 0) {
-        return false
-    }
-
-    setMediaItems(
-        items,
-        selectedIndex,
-        0L,
-    )
-    shuffleModeEnabled = false
-    prepare()
-    play()
-    return true
 }
 
 internal fun MediaController.playVexStreamCollection(

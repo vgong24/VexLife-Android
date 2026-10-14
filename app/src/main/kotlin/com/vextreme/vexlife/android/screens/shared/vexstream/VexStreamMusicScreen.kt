@@ -232,12 +232,15 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val PlayTrack = buttonRef(
+    val PlayTrack = controlButtonRef(
         id = "body.track-actions.play",
         labelRes = R.string.vexstream_music_play,
+        control =
+            VexStreamPlaybackArchitecture
+                .controls
+                .PlayTrack,
         style = VexElementStyles.PrimaryAction,
         icon = ElementIcon.Play,
-        intent = localEffect(),
     )
 
     val PlayTrackNext = buttonRef(
