@@ -506,6 +506,30 @@ state<Positioned> {
 
 This keeps discrete semantic modes separate from ordinary data variation.
 
+## Presentation remains a derived boundary
+
+The first real VexStream consumer exposed a second kind of duplication after Behavior migration:
+both Mini Player and Context Dock still mapped the same semantic Act to the same icon.
+
+That mapping now has one feature-local owner:
+
+~~~text
+BehaviorProjection
+    Control -> Act / unavailable
+
+feature presentation mapping
+    Act / unavailable -> icon + enabled visual meaning
+
+UIElement / Composable
+    renders that presentation
+~~~
+
+This is deliberately **not** a fifth Behavior move. State / Control / Act / Effect remain the
+semantic grammar. Presentation is a consumer projection.
+
+The reusable Behavior module therefore does not know about ElementIcon, resources, Compose, labels,
+animation, loading spinners, hidden/disabled treatment, or other visual language.
+
 ## Convergence boundary — do not cross-multiply domain States
 
 The repository already has a real multi-source convergence consumer:

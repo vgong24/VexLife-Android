@@ -32,6 +32,7 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackBehaviorProjection
+import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackBehaviorConnection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
@@ -123,7 +124,7 @@ private fun VexStreamContextDockContent(
                 Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
             )
     val playPause =
-        behaviorProjection?.get(
+        behaviorProjection?.present(
             VexStreamPlaybackControl.PlayPause,
         )
 
@@ -202,23 +203,15 @@ private fun VexStreamContextDockContent(
             }
             VexStreamDockIconButton(
                 icon =
-                    when (playPause?.act) {
-                        VexStreamPlaybackAct.Play ->
-                            ElementIcon.Play
-
-                        VexStreamPlaybackAct.Pause ->
-                            ElementIcon.Pause
-
-                        null ->
-                            ElementIcon.PlayPause
-                    },
+                    playPause?.icon
+                        ?: ElementIcon.PlayPause,
                 contentDescription =
                     stringResource(
                         R.string
                             .vexstream_music_play_pause,
                     ),
                 enabled =
-                    playPause?.available ==
+                    playPause?.enabled ==
                         true,
             ) {
                 runtime.recordDynamicInteraction(

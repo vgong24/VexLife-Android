@@ -82,6 +82,7 @@ import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackBehaviorProjection
+import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackBehaviorConnection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
@@ -1777,7 +1778,7 @@ private fun VexStreamMiniPlayer(
             }
         }
     val playPause =
-        behaviorProjection?.get(
+        behaviorProjection?.present(
             VexStreamPlaybackControl.PlayPause,
         )
     val queuePosition =
@@ -1935,19 +1936,11 @@ private fun VexStreamMiniPlayer(
                 element = VexStreamMusicScreen.TogglePlayback,
                 handler = handler,
                 enabled =
-                    playPause?.available ==
+                    playPause?.enabled ==
                         true,
                 iconOverride =
-                    when (playPause?.act) {
-                        VexStreamPlaybackAct.Play ->
-                            ElementIcon.Play
-
-                        VexStreamPlaybackAct.Pause ->
-                            ElementIcon.Pause
-
-                        null ->
-                            ElementIcon.PlayPause
-                    },
+                    playPause?.icon
+                        ?: ElementIcon.PlayPause,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.NextTrack,

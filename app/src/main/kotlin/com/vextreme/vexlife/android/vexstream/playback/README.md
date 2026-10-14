@@ -22,6 +22,9 @@ VexStreamPlaybackEffect.kt
 VexStreamPlaybackBehavior.kt
     State -> Act -> Effect relationships
 
+VexStreamPlaybackPresentation.kt
+    semantic Control projection -> shared VexStream icon/enabled meaning
+
 Media3VexStreamPlaybackConnection.kt
     Media3 truth projection + Effect realization
 
@@ -56,6 +59,23 @@ operations. Those are not silently claimed by this package merely because they a
 The old `Player.isPlaying -> icon -> toggle()` duplication is intentionally replaced. Media3
 `playWhenReady` plus lifecycle/command facts form the semantic Playback State instead, so buffering
 with playback requested can truthfully project Pause even while `Player.isPlaying` is false.
+
+## Presentation seam
+
+Mini Player and Context Dock both consume the same semantic Projection and the same feature-local
+presentation mapping:
+
+~~~text
+BehaviorProjection
+    PlayPause -> Act.Play | Act.Pause | unavailable
+
+VexStreamPlaybackPresentation
+    -> Play icon / Pause icon / neutral disabled PlayPause icon
+~~~
+
+This mapping is intentionally feature-local rather than part of the reusable Behavior kernel.
+Presentation may choose icons, labels, animation, hidden/disabled treatment, or other visual
+language without creating another behavior truth.
 
 ## Ownership
 
