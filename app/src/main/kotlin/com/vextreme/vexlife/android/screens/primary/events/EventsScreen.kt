@@ -79,6 +79,19 @@ object EventsScreen : AppScreenBlueprint(
  * list identity/visibility mechanics. This split is deliberate: a future list-based feature can
  * reuse stable repeated-item behavior without inheriting Events repositories or attention rules.
  */
+/**
+ * Whether a candidate row that is already being composed may host its anchored attention surface.
+ *
+ * HELD_TARGET_UNREACHABLE is included intentionally: the Relay visibility projection is asynchronous
+ * and can lag one layout observation behind the actual LazyColumn composition. A non-visible row
+ * cannot call EventRow at all, so row composition itself is stronger immediate evidence of an
+ * anchor than the lagging visibility set. Other held states remain ineligible.
+ */
+internal fun EventsConvergenceAvailability
+    .allowsAnchoredCandidateInComposedRow(): Boolean =
+    this == EventsConvergenceAvailability.READY ||
+        this == EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
+
 @Composable
 fun EventsScreenContent(
     runtime: VexRuntime,
@@ -104,10 +117,8 @@ fun EventsScreenContent(
     val visibleCandidateRef =
         attention
             .takeIf { output ->
-                output.availability ==
-                    EventsConvergenceAvailability.READY ||
-                    output.availability ==
-                    EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
+                output.availability
+                    .allowsAnchoredCandidateInComposedRow()
             }
             ?.candidate
             ?.eventRef
