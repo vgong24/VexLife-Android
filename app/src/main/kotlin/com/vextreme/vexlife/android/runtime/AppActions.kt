@@ -25,7 +25,7 @@ object AppActions {
      * Debug-only Events action: prepare one next alert case.
      *
      * The stable action ID keeps the concrete AlertCase vocabulary; this
-     * is not a generic scenario-framework action.
+     * is not a shared alert-case framework action.
      */
     val NextDebugMenuAlertCase =
         ActionKey(
