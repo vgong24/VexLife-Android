@@ -61,7 +61,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | Ref | Building block | State | Why it exists | Next proof |
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
-| F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
+| F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |\n| VEX_ARCHITECTURE_V2 | semantic directory + typed concern realms + VexStream Legacy/V2 practicum | **DRAFT EXPERIMENT / SOURCE PROOF PENDING** | Make the codebase walkable from human concern -> current truth -> requestable meaning -> rightful realization owner without one giant state/handler map | exact vexVerifyJvm/vexVerifyLocal + lived Legacy/V2 VexStream comparison + second independent concern consumer before broad promotion |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **EXTRACTION CANDIDATE / A019 INDEPENDENT HOST PROOF OBSERVED** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | exact convergence-branch host proof before merge |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
@@ -74,6 +74,49 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F6_DESIGN_LAB | debug/developer component gallery | FIRST PRACTICUM INCLUDED IN F1 | Exercise building blocks and inspect their registered topology without creating another truth map | prove F1 Gallery + AppGraph on device |
 | F7_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F8_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+
+## VexArchitecture V2 — semantic-directory experiment
+
+Canonical detail: [`architecture/vexarchitecture/README.md`](../../architecture/vexarchitecture/README.md)
+
+### Intention
+
+VexArchitecture V2 asks whether architecture can be a typed coordinate system through product code
+rather than another manager/state-machine framework.
+
+The first practicum starts from the human VexStream music walk:
+
+```text
+VexStream
+-> Music
+-> Player
+   -> Playback
+   -> Queue
+```
+
+Playback and Queue are separate generic realms because playback request truth and listening-order
+truth can change independently. Group nodes such as Music and Player remain orientation-only when
+they do not truthfully own one current Case lattice.
+
+The V2 descent deliberately ends at:
+
+```text
+VexStreamPlayer
+-> Media3VexStreamPlayer
+-> MediaController / MediaSession
+-> ExoPlayer
+```
+
+rather than wrapping native/player vocabulary indefinitely.
+
+PR #80 is the predecessor experiment/quarry that established root-only contracts, Case/Control/
+Placement language and derived maps. V2 is formed from current main as a fresh candidate so its
+history records the new reasoning directly instead of inheriting the earlier experiment's partial
+renames/evolution.
+
+Debug Menu keeps Legacy and V2 simultaneously runnable for the first comparison slice. Both routes
+retain the same VexStream UI, MediaController, MediaSessionService and ExoPlayer lifetime owner; only
+the semantic request path changes.
 
 ## F1 — UI Blueprint / Home Practicum
 
