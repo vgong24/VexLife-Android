@@ -129,28 +129,20 @@ Its question is:
 Reference replacement is a judgment operation. A mismatch must not automatically rewrite the
 reference.
 
-The current source candidate uses the official Compose Preview Screenshot Testing standalone plugin
-at `0.0.1-alpha16`, because the repository's current AGP 9.4 / Kotlin 2.4 / JDK 17 toolchain
-supports the underlying Gradle tasks without moving the whole build to AGP 9.5 alpha test suites.
+The shared foundation wires the official Compose Preview Screenshot Testing standalone plugin at
+`0.0.1-alpha16`, because the repository's current AGP 9.4 / Kotlin 2.4 / JDK 17 toolchain supports
+the underlying Gradle tasks without moving the whole build to AGP 9.5 alpha test suites.
 
 This is explicitly a compatibility bridge, not a forever plugin choice.
 
-The first two deterministic cases deliberately stay at the narrowest stable presentation owner:
+The independent Test Foundation candidate on PR #76 previously proved two VexStream deterministic
+cases (`vexstream.player.playing` and `vexstream.player.paused`) and rejected a broader whole-screen
+candidate when Layoutlib exposed a native media-files dependency. Those feature-owned screenshot
+tests/references are **evidence for this foundation**, not source owned by this extraction.
 
-~~~text
-vexstream.player.playing
-vexstream.player.paused
-~~~
-
-Both render the extracted `VexStreamMiniPlayerContent` from already-projected playback truth under a
-fixed 412dp-wide dark configuration with no system UI. The first host run proved this presentation
-seam renders deterministically in Layoutlib.
-
-A broader `vexstream.library.paired` screenshot candidate was attempted and intentionally withdrawn
-after Layoutlib exposed a native media-files dependency (`Context.filesDir`) inside the whole-screen
-surface. The Test Foundation does not bend production Media3/file-resolution ownership merely to make
-a whole-screen host renderer happy. Whole-screen VexStream evidence remains owned by
-Journey/ScreenCrawler until a second deterministic whole-screen need earns a separate seam.
+PR #78 intentionally carries the reusable screenshot task/plugin surface without importing VexStream
+feature semantics or accepted reference PNGs. A feature that admits deterministic visual cases keeps
+those cases and reference bytes beside the rightful presentation owner.
 
 Routine validation:
 
@@ -237,21 +229,21 @@ ScreenCrawler remains opt-in; see `SCREEN-CRAWLER-EVIDENCE.md`.
 The Test Foundation candidate can be exercised entirely from a terminal. Android Studio does not
 need to be open.
 
-### First reference formation only
+### Visual-reference formation is feature-triggered
 
-No approved screenshot references exist yet, so the **first** exact host pass must render candidate
-references before validation:
+The shared extraction contains the screenshot proof machinery but intentionally contains no
+feature-owned screenshot cases or accepted reference PNGs. Therefore `vexVisualValidate` may be
+`NO-SOURCE` on the shared foundation alone; that is not a visual-regression claim.
+
+When a feature admits its first deterministic visual case, reference formation is explicit:
 
 ~~~text
 java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --no-configuration-cache --continue vexVerifyLocal vexCoverage :app:updateDebugScreenshotTest vexVisualValidate vexTestFoundationProofBundle
 ~~~
 
-The generated PNGs are still unaccepted candidates. The proof bundle returns them together with Git
-status so their source mutations are visible and reviewable.
+Generated PNGs remain unaccepted candidates until reviewed.
 
-### Ordinary proof after references are accepted
-
-Once reviewed reference PNGs are committed, ordinary proof must **not** run the update task first:
+After feature-owned references are accepted, ordinary proof must **not** run the update task first:
 
 ~~~text
 java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --no-configuration-cache --continue vexVerifyLocal vexCoverage vexVisualValidate vexTestFoundationProofBundle
@@ -338,9 +330,10 @@ Coverage should help answer:
 It should not incentivize tests for trivial getters or duplicate higher-level behavior just to raise
 a number.
 
-## First exemplar consumers
+## Independent exemplar evidence
 
-VexStream and VexMaps are deliberately different enough to pressure this foundation.
+VexStream and VexMaps were deliberately different enough to pressure the Test Foundation candidate.
+Their feature-specific source remains outside this shared extraction:
 
 ~~~text
 VexStream
