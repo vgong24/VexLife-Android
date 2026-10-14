@@ -31,7 +31,7 @@ import org.junit.Test
 class VexRelayContractTest {
     private data class CounterState(
         val count: Int = 0,
-    ) : VexImmutableState<CounterState>
+    ) : VexState<CounterState>
 
     private class CounterRelay :
         VexRelay<CounterState>(
@@ -64,11 +64,11 @@ class VexRelayContractTest {
         val right: SharedLeaf? = null,
         val context: String? = null,
         val blocked: Boolean? = null,
-    ) : VexImmutableInputState<ImmutableProbeInput>
+    ) : VexInputState<ImmutableProbeInput>
 
     private data class ImmutableProbeOutput(
         val sum: Int = 0,
-    ) : VexImmutableOutputState<ImmutableProbeOutput>
+    ) : VexOutputState<ImmutableProbeOutput>
 
     private class ImmutableProbeCompoundRelay :
         VexCompoundRelay<ImmutableProbeInput, ImmutableProbeOutput>(
