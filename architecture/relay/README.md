@@ -45,36 +45,45 @@ The concrete Relay should be boring to inspect:
 3. read `processState / processStates` to see the reconciliation law;
 4. read its output state to see what consumers are allowed to depend on.
 
-### Why `processState` vs `processStates`
+### Three bounded Relay authoring shapes
 
-The names reflect two different Relay shapes:
+The foundation now has three intentionally different paths. Choosing the path answers the developer's
+first question before any feature logic is written.
 
 ~~~text
 VexRelay<State>
-  one State family
-  input/current/next are the same semantic type
+  source/current State arrives
+  -> send(inputState)
   -> processState(inputState, currentState)
+  -> next State
+
+VexActionRelay<Action, State>
+  named semantic Action arrives
+  -> sendAction(action)
+  -> nextStateFor(action, currentState)
+  -> next State
 
 VexCompoundRelay<InputState, OutputState>
-  several related truths converge
-  retained totality = coherent InputState + derived OutputState + revision
+  several independently changing truths converge
+  -> send(partialInputState)
   -> processStates(inputState, currentCompoundState)
+  -> coherent InputState + derived OutputState
 ~~~
 
-So the plural is not "more threads" or "more processing phases." It means the Compound reducer is
-reconciling a family of retained inputs into a separate derived output.
+The difference is semantic, not threading:
 
-### Two simple VexRelay authoring modes
+- **VexRelay** answers "how does this incoming State-shaped observation reconcile with current truth?";
+- **VexActionRelay** answers "given this named intention and exact current truth, what is next?";
+- **VexCompoundRelay** answers "what do these several current truths mean together?".
 
-A singular `VexRelay<State>` has two intentionally different entry shapes. Pick the one that matches
-the operation; do not hide both inside one lambda.
+### VexRelay — state-shaped source input
 
-**Input-driven reconciliation**
-
-Use when an outside/current source value arrives and its relationship to retained truth matters:
+Use when an outside/current source value arrives and source/current reconciliation matters:
 
 ~~~kotlin
-fun sourceSnapshotArrived(snapshot: SourceSnapshot): State =
+fun sourceSnapshotArrived(
+    snapshot: SourceSnapshot,
+): State =
     send(
         State(
             sourceSnapshots =
@@ -88,97 +97,138 @@ override fun processState(
     inputState: State,
     currentState: State,
 ): State {
-    // reconcile incoming source meaning against retained source meaning
+    // One visible input State -> current State -> next State law.
     return ...
 }
 ~~~
 
-Read it as:
+Path:
 
 ~~~text
-external input
--> send(input)
--> processState(input, current)
--> next
+source
+-> send(inputState)
+-> processState(inputState, currentState)
+-> next State
 ~~~
 
-**Current-driven atomic transition**
+### VexActionRelay — named intention input
 
-Use when the product intention is naturally "take exact current state and derive next state":
+Use when the caller should name **what happened/requested**, not manufacture a next State or receive
+an anonymous current-state lambda.
 
 ~~~kotlin
-fun acknowledge(eventRef: String) {
-    updateCurrent { current ->
-        current.copy(
-            acknowledgedRefs =
-                current.acknowledgedRefs + eventRef,
+sealed interface PreferenceAction :
+    VexAction {
+    data class Acknowledge(
+        val eventRef: String,
+    ) : PreferenceAction
+
+    data object ResetAll :
+        PreferenceAction
+}
+
+class PreferenceRelay :
+    VexActionRelay<
+        PreferenceAction,
+        PreferenceState
+    >(...) {
+
+    fun acknowledge(
+        eventRef: String,
+    ) {
+        sendAction(
+            PreferenceAction.Acknowledge(
+                eventRef = eventRef,
+            ),
         )
     }
+
+    override fun nextStateFor(
+        action: PreferenceAction,
+        currentState: PreferenceState,
+    ): PreferenceState =
+        when (action) {
+            is PreferenceAction.Acknowledge ->
+                currentState.copy(
+                    acknowledgedRefs =
+                        currentState.acknowledgedRefs +
+                            action.eventRef,
+                )
+
+            PreferenceAction.ResetAll ->
+                PreferenceState()
+        }
 }
 ~~~
 
-Read it as:
+Path:
 
 ~~~text
-exact retained current
--> updateCurrent { current -> next }
--> next
+named action
+-> sendAction(action)
+-> nextStateFor(action, exact current State)
+-> next State
 ~~~
 
-`updateCurrent` does not invoke `processState` afterward. The lambda is the complete transition for
-that path.
+There is no feature-authored `current -> next` transition lambda. If a new behavior is added, add one
+action and one exhaustive `when` branch. That makes the action family itself an inspectable map of
+every allowed state-changing path.
 
-Important continuity rule:
+Continuity rule:
 
 ~~~text
-If a read determines the next state,
-that read belongs inside updateCurrent.
+If current State participates in deciding next State,
+the decision belongs inside nextStateFor(action, currentState).
 ~~~
 
-Do not:
+Do not read `relay.current`, derive something elsewhere, and later send a separate update. That would
+split one semantic transition into a read/derive/write race.
+
+For complex calculation, keep the transition visible and extract only the pure domain calculation:
 
 ~~~kotlin
-val before = current
-val planned = plan(before)
+override fun nextStateFor(
+    action: LabAction,
+    currentState: LabState,
+): LabState =
+    when (action) {
+        is LabAction.PlanNext -> {
+            val scenario =
+                planScenario(
+                    mode = currentState.mode,
+                    ordinal = currentState.nextOrdinal,
+                    events = action.events,
+                )
 
-updateCurrent { current ->
-    current.copy(result = planned)
-}
-~~~
-
-because another transition can occur between the external read and the atomic update.
-
-Do:
-
-~~~kotlin
-val next =
-    updateCurrent { current ->
-        val planned =
-            plan(current)
-
-        current.copy(
-            result = planned,
-        )
+            currentState.copy(
+                nextOrdinal =
+                    currentState.nextOrdinal + 1L,
+                currentScenario = scenario,
+            )
+        }
     }
 ~~~
 
-If `plan(current)` is complex, keep it as a named pure function. The lambda should make transaction
-continuity obvious; the pure function should make domain logic understandable.
+`planScenario(...)` owns pure calculation. `nextStateFor(...)` owns the one allowed action-to-state
+transition. `VexActionRelay` owns serialization, snapshots and commit.
 
-Current real example:
+Current real examples:
 
 ~~~text
-EventsAttentionLabRelay.planNext()
-  updateCurrent { exact current
-    -> planEventsAttentionLabScenario(...)   // pure planner
-    -> current.copy(nextOrdinal + scenario)
-  }
-  -> return scenario from committed next state
+EventsAttentionPreferenceRelay
+  named disposition action
+  -> one exhaustive nextStateFor(...)
+
+EventsAttentionLabRelay
+  UseMode / PlanNext / CompleteCurrent / Reset
+  -> one exhaustive nextStateFor(...)
+  -> pure planEventsAttentionLabScenario(...) only where calculation is complex
 ~~~
 
-This avoids a stale read/plan/write split while keeping scenario-planning rules outside Relay
-mechanics.
+### VexCompoundRelay — several current truths
 
+The plural in `processStates` does not mean "more threads." It means the Compound reducer reconciles
+a family of retained inputs into a separate derived output.
 ### Copy-paste reducer blueprint
 
 For new Compound Relays, use this order unless the domain genuinely needs something different:
