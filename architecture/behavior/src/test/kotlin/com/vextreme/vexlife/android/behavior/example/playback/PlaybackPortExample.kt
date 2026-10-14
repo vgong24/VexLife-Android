@@ -1,15 +1,15 @@
 package com.vextreme.vexlife.android.behavior.example.playback
 
 import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexObservableBehaviorConnection
+import com.vextreme.vexlife.android.behavior.VexPortFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-internal class PlaybackBehaviorConnectionExample(
+internal class PlaybackPortExample(
     initialState: PlaybackState,
 ) :
-    VexObservableBehaviorConnection<
+    VexPortFlow<
         PlaybackState,
         PlaybackControl,
         PlaybackAct

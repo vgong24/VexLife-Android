@@ -1,4 +1,4 @@
-# VexStream Playback — behavior connection
+# VexStream Playback — VexPort
 
 [VXG RealForever]
 
@@ -25,10 +25,10 @@ VexStreamPlaybackBehavior.kt
 VexStreamPlaybackPresentation.kt
     semantic Control projection -> shared VexStream icon/enabled meaning
 
-Media3VexStreamPlaybackConnection.kt
+Media3VexStreamPlaybackPort.kt
     Media3 truth projection + Effect realization
 
-VexStreamPlaybackConnectionHost.kt
+VexStreamPlaybackPortHost.kt
     Android configuration lifetime only
 ~~~
 
@@ -41,7 +41,7 @@ Media3 Player truth
     -> UI reads Controls / Acts
 
 UI activates Control
-    -> Connection re-resolves from latest State
+    -> Port re-resolves from latest State
     -> Act
     -> Effect
     -> MediaController
@@ -59,6 +59,33 @@ operations. Those are not silently claimed by this package merely because they a
 The old `Player.isPlaying -> icon -> toggle()` duplication is intentionally replaced. Media3
 `playWhenReady` plus lifecycle/command facts form the semantic Playback State instead, so buffering
 with playback requested can truthfully project Pause even while `Player.isPlaying` is false.
+
+## Synchronous intent emission
+
+The Media3 Port emits admitted intent before dispatching the provider command.
+
+~~~text
+activate(PlayPause)
+    -> resolve Act.Play
+    -> resolve Effect.RequestPlay
+
+synchronously:
+    Media(
+        playRequested=true,
+        requestPending=true,
+        ...
+    )
+
+then:
+    MediaController.play()
+~~~
+
+A delayed Media3 observation that still reports playWhenReady=false is folded under the newer local
+request rather than flickering the UI back to Play. The pending flag clears only after Media3
+acknowledges the requested value.
+
+This is a latency bridge, not another truth owner: Media3 still owns provider playback facts and the
+Port explicitly exposes when acknowledgement is pending.
 
 ## Presentation seam
 
@@ -83,10 +110,10 @@ language without creating another behavior truth.
 MediaSessionService / ExoPlayer
     actual playback + queue owner
 
-Media3VexStreamPlaybackConnection
+Media3VexStreamPlaybackPort
     projection / Effect adapter only
 
-VexStreamPlaybackConnectionViewModel
+VexStreamPlaybackPortViewModel
     Android configuration-lifetime host only
 
 Mini Player / Context Dock

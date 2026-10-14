@@ -4,11 +4,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
 
-class PlaybackBehaviorConnectionExampleTest {
+class PlaybackPortExampleTest {
     @Test
-    fun observableConnectionPublishesCurrentProjectionAndAcceptsControl() {
-        val connection =
-            PlaybackBehaviorConnectionExample(
+    fun portFlowPublishesCurrentProjectionAndAcceptsControl() {
+        val port =
+            PlaybackPortExample(
                 initialState =
                     PlaybackState.Playing(
                         speed =
@@ -17,36 +17,36 @@ class PlaybackBehaviorConnectionExampleTest {
             )
 
         assertEquals(
-            connection.projections.value,
-            connection.currentProjection,
+            port.projections.value,
+            port.currentProjection,
         )
         assertSame(
             PlaybackAct.Pause,
-            connection.currentProjection[
+            port.currentProjection[
                 PlaybackControl.PlayPause
             ].act,
         )
 
-        connection.activate(
+        port.activate(
             PlaybackControl.PlayPause,
         )
 
         assertEquals(
             PlaybackState.Paused,
-            connection.currentProjection.state,
+            port.currentProjection.state,
         )
         assertEquals(
             listOf(
                 PlaybackEffect.PausePlayback,
             ),
-            connection.realizedEffects,
+            port.realizedEffects,
         )
     }
 
     @Test
     fun activationReResolvesControlFromLatestStateInsteadOfRenderedAct() {
-        val connection =
-            PlaybackBehaviorConnectionExample(
+        val port =
+            PlaybackPortExample(
                 initialState =
                     PlaybackState.Playing(
                         speed =
@@ -55,7 +55,7 @@ class PlaybackBehaviorConnectionExampleTest {
             )
 
         val renderedAct =
-            connection.currentProjection[
+            port.currentProjection[
                 PlaybackControl.PlayPause
             ].act
 
@@ -64,14 +64,14 @@ class PlaybackBehaviorConnectionExampleTest {
             renderedAct,
         )
 
-        connection.observe(
+        port.observe(
             PlaybackState.Playing(
                 speed =
                     PlaybackSpeed.FastForward,
             ),
         )
 
-        connection.activate(
+        port.activate(
             PlaybackControl.PlayPause,
         )
 
@@ -80,13 +80,13 @@ class PlaybackBehaviorConnectionExampleTest {
                 speed =
                     PlaybackSpeed.Normal,
             ),
-            connection.currentProjection.state,
+            port.currentProjection.state,
         )
         assertEquals(
             PlaybackEffect.SetSpeed(
                 PlaybackSpeed.Normal,
             ),
-            connection.realizedEffects.single(),
+            port.realizedEffects.single(),
         )
     }
 }

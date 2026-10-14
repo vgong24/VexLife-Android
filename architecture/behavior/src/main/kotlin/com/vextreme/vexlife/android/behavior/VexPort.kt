@@ -3,7 +3,7 @@ package com.vextreme.vexlife.android.behavior
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Reusable two-way semantic connection to one Behavior.
+ * Reusable two-way semantic port for one Behavior.
  *
  * Read side:
  *   [currentProjection] tells a consumer what the Behavior means now.
@@ -12,9 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
  *   [activate] submits one finite Control identity. The implementation must resolve that Control
  *   against its CURRENT State before choosing Act / Effect; callers never send a stale rendered Act.
  *
- * This interface deliberately does not expose Effect or provider APIs.
+ * A Port deliberately does not expose Effect or provider APIs.
  */
-interface VexBehaviorConnection<
+interface VexPort<
     State : Any,
     Control,
     Act : Any,
@@ -39,20 +39,21 @@ interface VexBehaviorConnection<
 }
 
 /**
- * Observable Behavior connection for owners that publish an always-current semantic stream.
+ * Live current-value form of [VexPort].
  *
- * StateFlow is chosen here because Behavior projection is current truth, not a fire-and-forget event
- * stream. Consumers can always read [currentProjection] through [projections.value].
+ * StateFlow is appropriate here because a PortFlow publishes current semantic truth, not a
+ * fire-and-forget event stream. Consumers can always read [currentProjection] through
+ * [projections.value].
  *
- * This is an optional stronger contract. A local feature may use VexBehaviorConnection directly or
- * simply pass one immutable Projection + callback without implementing this interface.
+ * A local feature that does not need observation over time can implement [VexPort] directly or pass
+ * one immutable Projection + Control callback without using this stronger contract.
  */
-interface VexObservableBehaviorConnection<
+interface VexPortFlow<
     State : Any,
     Control,
     Act : Any,
 > :
-    VexBehaviorConnection<
+    VexPort<
         State,
         Control,
         Act

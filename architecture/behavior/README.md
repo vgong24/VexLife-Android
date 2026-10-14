@@ -624,9 +624,12 @@ cross-behavior composition
 For example, "play queue index 7" carries request data. This experiment deliberately does not invent
 a generic payload architecture before the relational grammar proves useful.
 
-## Reusable Behavior Connection
+## Reusable VexPort
 
-The common two-way feature boundary is named `VexBehaviorConnection`.
+The common two-way feature boundary is named `VexPort`.
+
+A Port is intentionally smaller than a client/service/controller concept. It names the reusable
+semantic crossing point between a consumer and one isolated Behavior.
 
 It deliberately exposes only:
 
@@ -638,21 +641,22 @@ WRITE
     activate(Control)
 ~~~
 
-The stronger optional contract `VexObservableBehaviorConnection` adds:
+The stronger optional contract `VexPortFlow` adds:
 
 ~~~text
 projections: StateFlow<BehaviorProjection>
 ~~~
 
-because an observable Behavior represents current truth, not a fire-and-forget event stream.
+because a live Port publishes current truth, not a fire-and-forget event stream. The Flow suffix
+therefore describes the observation form rather than creating another semantic owner.
 
 This separates semantic contract from implementation position:
 
 ~~~text
-VexBehaviorConnection
+VexPort
     reusable relationship
 
-VexStreamPlaybackConnection
+VexStreamPlaybackPort
     one feature/provider implementation of that relationship
 
 ViewModel / Session / Service
@@ -708,7 +712,79 @@ re-resolved now:
     -> SetSpeed(Normal)
 ~~~
 
-So the two-way Connection is safe for delayed UI interaction as well as non-UI callers.
+So the two-way Port is safe for delayed UI interaction as well as non-UI callers.
+
+## Synchronous intent emission
+
+A live Port may sit between immediate human input and a provider whose observable state arrives
+later. The Port must not force UI latency merely to preserve provider authority.
+
+The VexStream Media3 consumer now uses a Port-local shock absorber:
+
+~~~text
+current semantic State
+
+activate(Control)
+    -> resolve current Act
+    -> resolve Effect
+
+BEFORE provider dispatch
+    -> record newest pending request
+    -> synchronously publish pending semantic State
+
+dispatch Effect to provider
+
+provider observation arrives
+    -> reconcile with pending request
+    -> stale observation cannot erase newer local intent
+    -> pending clears when provider acknowledges
+~~~
+
+This is not optimistic UI and it does not claim that the provider has already converged.
+
+Example:
+
+~~~text
+provider observed:
+    Media(playRequested=false, Buffering)
+
+human:
+    activate(PlayPause)
+
+Port synchronously publishes:
+    Media(
+        playRequested=true,
+        requestPending=true,
+        Buffering
+    )
+
+then:
+    Media3.play()
+
+stale Media3 callback:
+    playWhenReady=false
+
+Port keeps:
+    playRequested=true
+    requestPending=true
+
+later Media3 acknowledgement:
+    playWhenReady=true
+
+Port publishes:
+    playRequested=true
+    requestPending=false
+~~~
+
+The semantic truth is therefore two-part while latency exists:
+
+~~~text
+what this system has admitted/requested
+!=
+what the external provider has acknowledged so far
+~~~
+
+Both facts can coexist in State without turning Effect into fake outcome truth.
 
 ## Sharing one Behavior with one or many UI consumers
 
@@ -903,7 +979,7 @@ and the old MediaController toggle helper are removed from the migrated surfaces
 VexStreamPlaybackService / ExoPlayer
     actual playback + queue truth/lifetime
 
-Media3VexStreamPlaybackConnection
+Media3VexStreamPlaybackPort
     observes Player facts
     -> semantic State
     -> BehaviorProjection
@@ -914,7 +990,7 @@ Media3VexStreamPlaybackConnection
     -> Effect
     -> MediaController command
 
-VexStreamPlaybackConnectionViewModel
+VexStreamPlaybackPortViewModel
     Android configuration lifetime only
 
 Mini Player
@@ -923,7 +999,7 @@ Context Dock
     activate Control
 ~~~
 
-The UI imports the reusable `VexBehaviorConnection` contract, not the Media3 implementation.
+The UI imports the reusable `VexPort` contract, not the Media3 implementation.
 
 Queue, seeking, shuffle, repeat, media-item loading and progress rendering intentionally remain on
 their existing routes. This is one vertical seam, not a claim that all VexStream playback work has
@@ -964,7 +1040,7 @@ Do **not** integrate the blueprint by simply placing it inside each Composable. 
 behavior/current-State interpretation presentation-owned and would create multiple observers of the
 same Media3 truth.
 
-That seam is now exercised by `Media3VexStreamPlaybackConnection` for Play/Pause only. The
+That seam is now exercised by `Media3VexStreamPlaybackPort` for Play/Pause only. The
 connection remains a projection/adapter and does not become another player or queue truth owner.
 
 The existing code also reveals one unresolved semantic question that should be answered at this

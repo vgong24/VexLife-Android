@@ -3,21 +3,24 @@ package com.vextreme.vexlife.android.vexstream.playback
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexObservableBehaviorConnection
+import com.vextreme.vexlife.android.behavior.VexPortFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Android Media3 realization of the reusable VexBehaviorConnection contract.
+ * Android Media3 realization of the reusable VexPortFlow contract.
  *
- * MediaSession/Player remain the actual playback truth owners. This class is a retained semantic
+ * MediaSession/Player remain the actual playback truth owners. This Port is a retained semantic
  * projection + Effect adapter over one MediaController; it does not own player or queue lifetime.
+ *
+ * The Port also owns one small pending-intent shock absorber so admitted local Acts become visible
+ * synchronously while delayed Media3 observations catch up.
  */
-internal class Media3VexStreamPlaybackConnection(
+internal class Media3VexStreamPlaybackPort(
     private val controller: MediaController,
 ) :
-    VexObservableBehaviorConnection<
+    VexPortFlow<
         VexStreamPlaybackState,
         VexStreamPlaybackControl,
         VexStreamPlaybackAct
@@ -29,10 +32,15 @@ internal class Media3VexStreamPlaybackConnection(
     private val controls =
         behavior.vexStreamPlaybackControls()
 
+    private var pending =
+        VexStreamPlaybackPending()
+
     private val mutableProjections =
         MutableStateFlow(
             controls.projection(
-                controller.toVexStreamPlaybackState(),
+                currentSemanticState(
+                    controller,
+                ),
             ),
         )
 
@@ -52,8 +60,8 @@ internal class Media3VexStreamPlaybackConnection(
                 player: Player,
                 events: Player.Events,
             ) {
-                publish(
-                    player.toVexStreamPlaybackState(),
+                publishObserved(
+                    player,
                 )
             }
         }
@@ -65,13 +73,18 @@ internal class Media3VexStreamPlaybackConnection(
     }
 
     /**
-     * Resolve from live Media3 truth at interaction time, never from a previously rendered Act.
+     * Resolve from current semantic truth, emit admitted intent synchronously, then dispatch Effect.
+     *
+     * The UI never waits for Media3 callback latency to learn that the system has accepted a new
+     * playback request. Pending State remains explicitly pending until provider observation agrees.
      */
     override fun activate(
         control: VexStreamPlaybackControl,
     ) {
         val current =
-            controller.toVexStreamPlaybackState()
+            currentSemanticState(
+                controller,
+            )
 
         publish(
             current,
@@ -91,22 +104,76 @@ internal class Media3VexStreamPlaybackConnection(
             )
                 ?: return
 
-        realize(
-            relationship.effect,
-        )
+        val effect =
+            relationship.effect
 
         /*
-         * Media3 listener events remain authoritative for eventual truth. This immediate reread lets
-         * synchronous playWhenReady changes become visible without waiting for another callback.
+         * Synchronous intent emission:
+         * 1. record newest pending semantic request;
+         * 2. publish truthful pending State;
+         * 3. only then dispatch to Media3.
          */
+        pending =
+            pending.after(
+                effect,
+            )
         publish(
-            controller.toVexStreamPlaybackState(),
+            current.afterIntent(
+                effect,
+            ),
+        )
+
+        try {
+            realize(
+                effect,
+            )
+        } catch (failure: Throwable) {
+            pending =
+                VexStreamPlaybackPending()
+            publishObserved(
+                controller,
+            )
+            throw failure
+        }
+
+        /*
+         * Immediate provider reread may already acknowledge the request. If not, reconciliation
+         * preserves the pending semantic request until a later listener observation catches up.
+         */
+        publishObserved(
+            controller,
         )
     }
 
     override fun close() {
         controller.removeListener(
             listener,
+        )
+    }
+
+    private fun currentSemanticState(
+        player: Player,
+    ): VexStreamPlaybackState {
+        val reconciled =
+            reconcileVexStreamPlaybackObservation(
+                observed =
+                    player.toVexStreamPlaybackState(),
+                pending = pending,
+            )
+
+        pending =
+            reconciled.pending
+
+        return reconciled.state
+    }
+
+    private fun publishObserved(
+        player: Player,
+    ) {
+        publish(
+            currentSemanticState(
+                player,
+            ),
         )
     }
 
@@ -229,3 +296,5 @@ internal fun vexStreamPlaybackState(
             )
     }
 }
+
+// [VXG RealForever]

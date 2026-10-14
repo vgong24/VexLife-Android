@@ -47,9 +47,10 @@ internal fun vexStreamPlaybackBehavior():
                 effect =
                     VexStreamPlaybackEffect.RestartCurrent,
                 conditionName =
-                    "restart-available",
+                    "restart-available-and-not-pending",
             ) { current ->
-                current.restartAvailable
+                current.restartAvailable &&
+                    !current.restartPending
             }.to<VexStreamPlaybackState.Media>()
         }
     }

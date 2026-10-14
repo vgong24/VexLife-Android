@@ -13,17 +13,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.behavior.VexBehaviorProjection
-import com.vextreme.vexlife.android.behavior.VexObservableBehaviorConnection
+import com.vextreme.vexlife.android.behavior.VexPortFlow
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 
 /**
- * Android configuration-lifetime host for the service-owned MediaController and its semantic
- * Behavior connection.
+ * Android configuration-lifetime host for the service-owned MediaController and semantic VexPort.
  *
  * ViewModel is only the Android retention mechanism. MediaSession/Player remain playback truth
- * owners; [Media3VexStreamPlaybackConnection] remains the semantic projection/effect adapter.
+ * owners; [Media3VexStreamPlaybackPort] remains the semantic projection/effect adapter.
  */
-internal class VexStreamPlaybackConnectionViewModel(
+internal class VexStreamPlaybackPortViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     private var cleared = false
@@ -46,13 +45,13 @@ internal class VexStreamPlaybackConnectionViewModel(
         )
         private set
 
-    private var media3Connection:
-        Media3VexStreamPlaybackConnection? =
+    private var media3Port:
+        Media3VexStreamPlaybackPort? =
         null
 
-    var behaviorConnection by
+    var port by
         mutableStateOf<
-            VexObservableBehaviorConnection<
+            VexPortFlow<
                 VexStreamPlaybackState,
                 VexStreamPlaybackControl,
                 VexStreamPlaybackAct
@@ -69,14 +68,14 @@ internal class VexStreamPlaybackConnectionViewModel(
                     controllerFuture.get()
                 }.onSuccess { connected ->
                     if (!cleared) {
-                        val connection =
-                            Media3VexStreamPlaybackConnection(
+                        val connectedPort =
+                            Media3VexStreamPlaybackPort(
                                 connected,
                             )
-                        media3Connection =
-                            connection
-                        behaviorConnection =
-                            connection
+                        media3Port =
+                            connectedPort
+                        port =
+                            connectedPort
                         controller =
                             connected
                     }
@@ -90,9 +89,9 @@ internal class VexStreamPlaybackConnectionViewModel(
 
     override fun onCleared() {
         cleared = true
-        behaviorConnection = null
-        media3Connection?.close()
-        media3Connection = null
+        port = null
+        media3Port?.close()
+        media3Port = null
         controller = null
         MediaController.releaseFuture(
             controllerFuture,
@@ -108,36 +107,36 @@ internal class VexStreamPlaybackConnectionViewModel(
 internal fun rememberVexStreamMediaController():
     MediaController? {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlaybackPortViewModel =
         viewModel()
 
     return owner.controller
 }
 
 /**
- * Retained two-way semantic Playback connection exposed only through the reusable contract.
+ * Retained two-way semantic Playback Port exposed only through the reusable contract.
  */
 @Composable
-internal fun rememberVexStreamPlaybackBehaviorConnection():
-    VexObservableBehaviorConnection<
+internal fun rememberVexStreamPlaybackPort():
+    VexPortFlow<
         VexStreamPlaybackState,
         VexStreamPlaybackControl,
         VexStreamPlaybackAct
     >? {
     val owner:
-        VexStreamPlaybackConnectionViewModel =
+        VexStreamPlaybackPortViewModel =
         viewModel()
 
-    return owner.behaviorConnection
+    return owner.port
 }
 
 /**
- * Lifecycle-aware Android presentation adapter for one observable Behavior connection.
+ * Lifecycle-aware Android presentation adapter for one live VexPortFlow.
  */
 @Composable
-internal fun rememberVexStreamPlaybackBehaviorProjection(
-    connection:
-        VexObservableBehaviorConnection<
+internal fun rememberVexStreamPlaybackProjection(
+    port:
+        VexPortFlow<
             VexStreamPlaybackState,
             VexStreamPlaybackControl,
             VexStreamPlaybackAct
@@ -148,7 +147,7 @@ internal fun rememberVexStreamPlaybackBehaviorProjection(
     VexStreamPlaybackAct
 >? {
     val projections =
-        connection?.projections
+        port?.projections
             ?: return null
 
     val current by
