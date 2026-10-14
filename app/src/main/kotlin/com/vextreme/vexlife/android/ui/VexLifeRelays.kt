@@ -29,7 +29,6 @@ internal class VexLifeRelays private constructor(
                     eventsRepository = repositories.events,
                     attentionPreferences = repositories.eventsAttention,
                     attentionLab = repositories.eventsAttentionLab,
-                    userProfile = repositories.userProfile,
                     sourceAvailability = sourceAvailability,
                 )
 
@@ -40,7 +39,6 @@ internal class VexLifeRelays private constructor(
                     eventsRepository = repositories.events,
                     attentionPreferences = repositories.eventsAttention,
                     attentionLab = repositories.eventsAttentionLab,
-                    userProfile = repositories.userProfile,
                     sourceAvailabilityRepository = sourceAvailability,
                 )
             traditionalEvents.start(scope)
