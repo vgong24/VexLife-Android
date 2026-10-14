@@ -21,7 +21,16 @@ object AppActions {
     val ResetSyntheticEventLab = ActionKey("action.events.synthetic.reset-lab")
     val UseRotationAttentionLab = ActionKey("action.events.attention-lab.use-rotation")
     val UseRandomAttentionLab = ActionKey("action.events.attention-lab.use-random")
-    val NextAttentionLabScenario = ActionKey("action.events.attention-lab.next-scenario")
+    /**
+     * Debug-only Events action: prepare one next attention-overlay lab exercise.
+     *
+     * The stable action ID keeps the historical "scenario" vocabulary for compatibility, but this
+     * is not a generic Scenario-framework action.
+     */
+    val NextAttentionLabScenario =
+        ActionKey(
+            "action.events.attention-lab.next-scenario",
+        )
     val GallerySample = ActionKey("action.gallery.sample")
     val SaveUserProfile = ActionKey("action.user-profile.save")
     val FindNearbyVexStream = ActionKey("action.vexstream-music.connection.find")
