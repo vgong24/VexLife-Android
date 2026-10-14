@@ -106,7 +106,7 @@ internal class VexPreviewSetup(
 }
 
 /**
- * Reusable fake DATA configurations. These know repository/domain fixtures, not Screen scenarios.
+ * Reusable fake DATA configurations. These know repository/domain fixtures, not Screen-specific cases.
  */
 internal object VexPreviewRepositories {
     fun empty(): AppRepositories =
