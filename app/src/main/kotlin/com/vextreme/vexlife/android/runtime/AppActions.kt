@@ -12,6 +12,8 @@ import com.vextreme.vexlife.android.elements.ActionKey
 object AppActions {
     val ToggleDarkMode = ActionKey("action.theme.dark-mode.toggle")
     val ClearLogHistory = ActionKey("action.log-history.clear")
+    // Debug-only semantic action: switch the VexStream implementation experience, not product state.
+    val ToggleVexStreamArchitectureV2 = ActionKey("action.vexstream-architecture.toggle-v2")
     val StartSyntheticEvents = ActionKey("action.events.synthetic.start")
     val StopSyntheticEvents = ActionKey("action.events.synthetic.stop")
     val EmitSyntheticEvent = ActionKey("action.events.synthetic.emit-next")
