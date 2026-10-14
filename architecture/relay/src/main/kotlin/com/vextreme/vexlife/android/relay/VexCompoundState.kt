@@ -21,11 +21,28 @@ data class VexCompoundState<
         require(revision >= 0L) { "revision must be non-negative" }
     }
 
-    override fun deepCopy(): VexCompoundState<InputState, OutputState> =
-        copy(
-            inputState = inputState.deepCopy(),
-            outputState = outputState.deepCopy(),
-        )
+    override fun deepCopy(): VexCompoundState<InputState, OutputState> {
+        val inputSnapshot =
+            inputState.deepCopy()
+        val outputSnapshot =
+            outputState.deepCopy()
+
+        /*
+         * VexCompoundState itself is immutable. If both children are transitively immutable and
+         * therefore returned themselves, sharing this exact wrapper is also ownership-safe.
+         */
+        return if (
+            inputSnapshot === inputState &&
+            outputSnapshot === outputState
+        ) {
+            this
+        } else {
+            copy(
+                inputState = inputSnapshot,
+                outputState = outputSnapshot,
+            )
+        }
+    }
 }
 
 // [VXG RealForever]
