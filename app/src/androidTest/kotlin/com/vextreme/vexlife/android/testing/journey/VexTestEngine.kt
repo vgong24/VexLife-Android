@@ -222,7 +222,7 @@ class VexTestEngine(
     private fun semanticTreeDiagnostic(
         missingElementId: String,
     ): String =
-        runCatching {
+        runCatching<String> {
             compose.onRoot(
                 useUnmergedTree = true,
             )
