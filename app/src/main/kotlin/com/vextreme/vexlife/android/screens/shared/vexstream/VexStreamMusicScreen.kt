@@ -24,6 +24,7 @@ import com.vextreme.vexlife.android.elements.localEffect
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.elements.swapTo
 import com.vextreme.vexlife.android.elements.then
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -303,12 +304,12 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val TogglePlayback = buttonRef(
+    val TogglePlayback = transitionButtonRef(
         id = "body.player.play-pause",
         labelRes = R.string.vexstream_music_play_pause,
+        transitionSlot = VexStreamPlaybackArchitecture.PlayPauseControl,
         style = VexElementStyles.PrimaryAction,
         icon = ElementIcon.PlayPause,
-        intent = localEffect(),
     )
 
     val NextTrack = buttonRef(

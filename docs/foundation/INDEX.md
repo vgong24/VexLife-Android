@@ -62,6 +62,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
+| VEX_ARCHITECTURE_RELATIONAL_PLACEMENT | typed local Case placement + Before/After transitions + UI transition slots | **DRAFT CANDIDATE / VEXSTREAM FIRST PRACTICUM** | Let code expose the local relational walk directly: what can arrive here, what can leave here, and which semantic relationship a UI control presents | exact VexRelay host proof + second independent feature consumer before broad promotion |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **EXTRACTION CANDIDATE / A019 INDEPENDENT HOST PROOF OBSERVED** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | exact convergence-branch host proof before merge |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
@@ -74,6 +75,21 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F6_DESIGN_LAB | debug/developer component gallery | FIRST PRACTICUM INCLUDED IN F1 | Exercise building blocks and inspect their registered topology without creating another truth map | prove F1 Gallery + AppGraph on device |
 | F7_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F8_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+
+## VexArchitecture — relational placement candidate
+
+Canonical detail: [`architecture/vexarchitecture/README.md`](../../architecture/vexarchitecture/README.md)
+
+### Intention
+
+A developer should be able to enter from a human question, inspect the current Case, see the typed
+relationships that can arrive or leave, and follow a UI control directly to the semantic transition
+it presents without reconstructing a second state machine from booleans and handlers.
+
+Cases remain ordinary domain types. The foundation owns only typed `Transition<Before, After>`,
+local `Placement<Current>`, dynamic transition slots, and the smallest UI identity that can point to
+a slot. The whole-system map is derivable from those local relationships rather than becoming
+another truth owner.
 
 ## F1 — UI Blueprint / Home Practicum
 

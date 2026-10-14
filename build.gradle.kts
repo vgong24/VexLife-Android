@@ -12,6 +12,7 @@ dependencies {
     kover(project(":architecture:elements"))
     kover(project(":architecture:logging"))
     kover(project(":architecture:relay"))
+    kover(project(":architecture:vexarchitecture"))
 }
 
 apply(

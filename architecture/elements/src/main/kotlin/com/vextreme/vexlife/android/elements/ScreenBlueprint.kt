@@ -53,6 +53,29 @@ abstract class ScreenBlueprint(
         intent = intent,
     )
 
+
+    /**
+     * UI identity whose semantic behavior is one current VexArchitecture transition.
+     *
+     * The element names the transition slot directly so a fresh developer can jump from the Screen
+     * control to the legal relationships it presents. VexRuntime still owns validation/logging;
+     * the feature owner resolves the slot against exact current architecture truth and realizes the
+     * selected transition at the narrow platform boundary.
+     */
+    protected fun transitionButtonRef(
+        id: String,
+        @StringRes labelRes: Int,
+        transitionSlot: com.vextreme.vexlife.android.vexarchitecture.VexTransitionSlot,
+        style: ElementStyleKey = VexElementStyles.PrimaryAction,
+        icon: ElementIcon? = null,
+    ): TransitionButtonElement = TransitionButtonElement(
+        elementId = elementId(id),
+        labelRes = labelRes,
+        style = style,
+        icon = icon,
+        transitionSlot = transitionSlot,
+    )
+
     protected fun fabRef(
         id: String,
         @StringRes labelRes: Int,

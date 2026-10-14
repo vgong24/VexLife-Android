@@ -79,6 +79,9 @@ import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackControlAction
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackControlOwner
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import kotlinx.coroutines.launch
 
@@ -1728,7 +1731,14 @@ private fun VexStreamMiniPlayer(
                     controller?.seekToPreviousMediaItem()
 
                 VexStreamMusicScreen.TogglePlayback ->
-                    controller?.toggleVexStreamPlayback()
+                    controller?.let { connectedController ->
+                        VexStreamPlaybackControlOwner.request(
+                            action =
+                                VexStreamPlaybackControlAction
+                                    .TogglePlayPause,
+                            controller = connectedController,
+                        )
+                    }
 
                 VexStreamMusicScreen.NextTrack ->
                     controller?.seekToNextMediaItem()
@@ -1893,12 +1903,21 @@ private fun VexStreamMiniPlayer(
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
                 handler = handler,
-                enabled = controller != null,
+                enabled =
+                    controller != null &&
+                        playback.availablePlayPauseTransition != null,
                 iconOverride =
-                    if (playback.isPlaying) {
-                        ElementIcon.Pause
-                    } else {
-                        ElementIcon.Play
+                    when (
+                        playback.availablePlayPauseTransition
+                    ) {
+                        VexStreamPlaybackArchitecture.Pause ->
+                            ElementIcon.Pause
+
+                        VexStreamPlaybackArchitecture.Play ->
+                            ElementIcon.Play
+
+                        else ->
+                            ElementIcon.PlayPause
                     },
             )
             VexIconButton(

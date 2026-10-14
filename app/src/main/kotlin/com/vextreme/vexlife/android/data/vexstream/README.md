@@ -389,6 +389,63 @@ Long/duplicated title/artist/album presentation is compacted for the phone, whil
 controls remain registered Vex actions and dynamic catalog rows remain repository data.
 
 
+### VexArchitecture playback practicum
+
+The Play/Pause control is the first VexArchitecture consumer. The source now reads in the same
+language as the human question instead of making each UI surface rediscover meaning from Media3
+booleans.
+
+```text
+Media3
+-> VexStreamPlaybackObservation
+     queueHasItems
+     playRequested
+-> VexStreamPlaybackArchitecture.currentControl(...)
+-> QueueEmpty / ReadyToPlay / PlayRequested
+
+ReadyToPlay
+  arrived by Pause
+  can Play
+    ReadyToPlay -> PlayRequested
+
+PlayRequested
+  arrived by Play
+  can Pause
+    PlayRequested -> ReadyToPlay
+
+-> PlayPauseControl
+```
+
+Presentation may read the currently available Play/Pause transition for icon/enabled state. That
+read does not make presentation the playback-command owner.
+
+```text
+human presses Play/Pause
+-> VexStreamPlaybackControlAction.TogglePlayPause
+-> VexStreamPlaybackControlOwner
+-> re-read exact Media3 observation now
+-> currentControl(...)
+-> availableTransition(PlayPauseControl)
+-> MediaController play() / pause()
+-> Media3 reports new truth
+```
+
+`playWhenReady` is translated exactly once into the domain phrase `playRequested`. The relational
+Case therefore says what is true without leaking Media3 vocabulary through the UI.
+
+Previous/Next are deliberately not forced into this Play/Pause relationship. Their availability
+depends on queue position, which is an orthogonal truth dimension and therefore a separate future
+convergence/relationship pressure test.
+
+```text
+UI_MAY_OBSERVE_RELATIONSHIP
+UI_DOES_NOT_GAIN_EXECUTION_AUTHORITY
+PLATFORM_FACT -> DOMAIN_OBSERVATION -> CURRENT_RELATIONSHIP
+HUMAN_INTENTION -> ONE_EFFECT_OWNER -> PLATFORM_COMMAND
+```
+QUEUE_POSITION != PLAY_PAUSE_RELATIONSHIP
+```
+
 ### Playback lifetime + perceivable mobile player refinement
 
 A006 proved the prior exact head through the Mac Android toolchain and the complete requested

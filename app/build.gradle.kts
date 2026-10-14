@@ -51,6 +51,7 @@ dependencies {
     implementation(project(":architecture:elements"))
     implementation(project(":architecture:logging"))
     implementation(project(":architecture:relay"))
+    implementation(project(":architecture:vexarchitecture"))
 
     implementation(libs.activityCompose)
     implementation(platform(libs.composeBom))

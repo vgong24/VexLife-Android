@@ -27,6 +27,8 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":architecture:vexarchitecture"))
+
     implementation(platform(libs.composeBom))
     implementation(libs.composeFoundation)
     implementation(libs.composeMaterial3)

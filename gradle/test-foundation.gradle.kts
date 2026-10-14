@@ -22,6 +22,7 @@ tasks.register("vexVerifyJvm") {
         ":architecture:elements:test",
         ":architecture:logging:test",
         ":architecture:relay:test",
+        ":architecture:vexarchitecture:test",
         ":app:testDebugUnitTest",
     )
 }
@@ -259,6 +260,13 @@ val vexTestFoundationProofBundle =
             ),
         ) {
             into("tests/architecture-relay")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "architecture/vexarchitecture/build/test-results",
+            ),
+        ) {
+            into("tests/architecture-vexarchitecture")
         }
         from(
             layout.projectDirectory.dir(

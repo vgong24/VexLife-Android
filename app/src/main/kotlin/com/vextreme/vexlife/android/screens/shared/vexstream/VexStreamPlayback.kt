@@ -25,7 +25,13 @@ import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackArchitecture
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackControlCase
+import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackObservation
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
+import com.vextreme.vexlife.android.media.vexstream.vexStreamPlaybackObservation
+import com.vextreme.vexlife.android.vexarchitecture.VexCurrent
+import com.vextreme.vexlife.android.vexarchitecture.VexTransition
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 
@@ -97,10 +103,21 @@ internal class VexStreamPlaybackSourceResolver(
 }
 
 internal data class VexStreamPlaybackUiState(
+    /**
+     * Current Play/Pause meaning observed from Media3.
+     *
+     * Presentation may read this relationship; it does not gain playback execution authority.
+     */
+    val currentPlaybackControl: VexCurrent<out VexStreamPlaybackControlCase> =
+        VexStreamPlaybackArchitecture.currentControl(
+            VexStreamPlaybackObservation(
+                queueHasItems = false,
+                playRequested = false,
+            ),
+        ),
     val currentMediaId: String? = null,
     val currentTitle: String = "",
     val currentArtist: String = "",
-    val isPlaying: Boolean = false,
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val queueMediaIds: List<String> = emptyList(),
     val currentIndex: Int = -1,
@@ -113,6 +130,13 @@ internal data class VexStreamPlaybackUiState(
 
     val repeatEnabled: Boolean
         get() = repeatMode != Player.REPEAT_MODE_OFF
+
+    /** Read-only transition currently represented by the shared Play/Pause control. */
+    val availablePlayPauseTransition: VexTransition<*, *>?
+        get() =
+            currentPlaybackControl.availableTransition(
+                VexStreamPlaybackArchitecture.PlayPauseControl,
+            )
 
     val progressFraction: Float
         get() =
@@ -242,7 +266,7 @@ internal fun rememberVexStreamPlaybackUiState(
         while (true) {
             projected.value = controller.toVexStreamUiState()
             delay(
-                if (controller.isPlaying) {
+                if (controller.playWhenReady) {
                     250L
                 } else {
                     1_000L
@@ -491,14 +515,6 @@ internal fun MediaController.shuffleVexStreamQueue(): Boolean {
     return true
 }
 
-internal fun MediaController.toggleVexStreamPlayback() {
-    if (isPlaying) {
-        pause()
-    } else {
-        play()
-    }
-}
-
 internal fun MediaController.toggleVexStreamRepeatAll() {
     repeatMode =
         if (repeatMode == Player.REPEAT_MODE_OFF) {
@@ -538,6 +554,10 @@ private fun Player.toVexStreamUiState(): VexStreamPlaybackUiState {
             }
 
     return VexStreamPlaybackUiState(
+        currentPlaybackControl =
+            VexStreamPlaybackArchitecture.currentControl(
+                vexStreamPlaybackObservation(),
+            ),
         currentMediaId = current?.mediaId,
         currentTitle =
             current
@@ -551,7 +571,6 @@ private fun Player.toVexStreamUiState(): VexStreamPlaybackUiState {
                 ?.artist
                 ?.toString()
                 .orEmpty(),
-        isPlaying = isPlaying,
         repeatMode = repeatMode,
         queueMediaIds =
             (0 until mediaItemCount)
