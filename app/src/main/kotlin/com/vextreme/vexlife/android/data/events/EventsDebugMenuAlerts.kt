@@ -12,10 +12,12 @@ enum class EventsDebugMenuAlertMode {
 }
 
 /**
- * Feature-local variants for the Events developer alert case.
+ * Concrete type of one Events Debug-menu alert case.
  *
- * This is not a shared AlertCase framework. It exists only so the Events Debug-menu alert cases can name
- * which overlay-placement/interaction case it is asking a developer or test to perform.
+ * "Type" answers what this specific alert case asks Events presentation to demonstrate:
+ * top anchor, middle anchor, bottom anchor, or blocking/frozen top anchor.
+ *
+ * This enum is feature-local Debug-menu vocabulary, not a shared AlertCase type system.
  */
 enum class EventsDebugMenuAlertCaseType {
     ANCHORED_TOP,
@@ -77,6 +79,7 @@ data class EventsDebugMenuAlertCase(
     val ordinal: Long,
     val mode: EventsDebugMenuAlertMode,
     val seed: Long,
+    /** Concrete presentation/test behavior this Debug-menu alert case represents. */
     val type: EventsDebugMenuAlertCaseType,
     val targetEventRef: String?,
     val targetPositionFromTop: Int?,
