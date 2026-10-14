@@ -11,10 +11,6 @@ import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityRepository
 import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityState
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
-import com.vextreme.vexlife.android.data.events.VexExternalEventKind
-import com.vextreme.vexlife.android.data.userprofile.UserProfile
-import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
-import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.screens.primary.events.EventsPresentationRefs
 import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
 import kotlinx.coroutines.CoroutineName
@@ -45,7 +41,6 @@ class TraditionalEventsController(
     private val eventsRepository: EventsRepository,
     private val attentionPreferences: EventsAttentionPreferenceRepository,
     private val attentionLab: EventsAttentionLabRepository,
-    private val userProfile: UserProfileRepository,
     private val sourceAvailabilityRepository: EventsSourceAvailabilityRepository,
 ) {
     private val lock = Any()
@@ -54,13 +49,10 @@ class TraditionalEventsController(
     private var feed: EventsFeedState? = null
     private var preferences: EventsAttentionPreferenceState? = null
     private var lab: EventsAttentionLabState? = null
-    private var profileObserved = false
-    private var profile: UserProfile? = null
     private var sourceAvailability: EventsSourceAvailabilityState? = null
     private var currentScreenId: String? = null
     private var transientBlocked: Boolean? = null
     private var visibleEventRefsBySurface: Map<String, Set<String>> = emptyMap()
-    private var latestProfileNameChange: VexExternalEvent? = null
 
     private val mutableUiState =
         MutableStateFlow(TraditionalEventsUiState())
@@ -118,15 +110,6 @@ class TraditionalEventsController(
                 attentionLab.states.collect { observed ->
                     synchronized(lock) {
                         lab = observed.deepCopy()
-                        recomputeLocked()
-                    }
-                }
-            }
-
-            controllerScope.launch(CoroutineName("traditional-events/profile")) {
-                userProfile.observe(UserProfileRefs.local).collect { observed ->
-                    synchronized(lock) {
-                        updateProfileLocked(observed)
                         recomputeLocked()
                     }
                 }
@@ -205,36 +188,6 @@ class TraditionalEventsController(
     fun completeCurrentScenario() =
         attentionLab.completeCurrent()
 
-    private fun updateProfileLocked(incoming: UserProfile?) {
-        if (profileObserved) {
-            val before = profile
-            val after = incoming
-
-            if (
-                before != null &&
-                after != null &&
-                before.profileRef == after.profileRef &&
-                before.displayName != after.displayName
-            ) {
-                latestProfileNameChange =
-                    VexExternalEvent(
-                        eventRef =
-                            "event.user-profile.display-name-change@" +
-                                after.updatedAt.toString(),
-                        sourceRef =
-                            "source.user-profile." + after.profileRef,
-                        kind = VexExternalEventKind.SYSTEM,
-                        title = "Profile name changed",
-                        detail = before.displayName + " → " + after.displayName,
-                        occurredAtEpochMillis = after.updatedAt.toEpochMilli(),
-                    )
-            }
-        }
-
-        profileObserved = true
-        profile = incoming?.copy()
-    }
-
     /**
      * Traditional controller recomputation boundary.
      *
@@ -243,15 +196,11 @@ class TraditionalEventsController(
      */
     private fun recomputeLocked() {
         val events =
-            (
-                feed
-                    ?.events
-                    .orEmpty()
-                    .map(VexExternalEvent::deepCopy) +
-                    listOfNotNull(
-                        latestProfileNameChange?.deepCopy(),
-                    )
-            ).also { combined ->
+            feed
+                ?.events
+                .orEmpty()
+                .map(VexExternalEvent::deepCopy)
+                .also { combined ->
                 check(
                     combined.map(VexExternalEvent::eventRef)
                         .distinct()
@@ -413,7 +362,6 @@ class TraditionalEventsController(
                 availability = availability,
                 dispositionByEventRef = dispositions.toMap(),
                 scenario = lab?.currentScenario?.copy(),
-                latestProfileNameChange = latestProfileNameChange?.deepCopy(),
                 unhandledCount = unhandledCount,
                 queuedAfterCurrentCount =
                     if (candidate == null) 0
@@ -465,7 +413,6 @@ data class TraditionalEventsUiState(
         TraditionalEventsAvailability.UNOBSERVED,
     val dispositionByEventRef: Map<String, EventsAttentionDisposition> = emptyMap(),
     val scenario: EventsAttentionLabScenario? = null,
-    val latestProfileNameChange: VexExternalEvent? = null,
     val unhandledCount: Int = 0,
     val queuedAfterCurrentCount: Int = 0,
     val acknowledgedCount: Int = 0,
@@ -502,7 +449,6 @@ data class TraditionalEventsUiState(
             candidate = candidate?.copy(),
             dispositionByEventRef = dispositionByEventRef.toMap(),
             scenario = scenario?.copy(),
-            latestProfileNameChange = latestProfileNameChange?.deepCopy(),
         )
 }
 
