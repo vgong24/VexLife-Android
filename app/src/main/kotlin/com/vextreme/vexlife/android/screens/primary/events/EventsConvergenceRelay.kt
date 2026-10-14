@@ -13,7 +13,6 @@ import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityState
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
-import com.vextreme.vexlife.android.relay.VexDeepCopyable
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
 import com.vextreme.vexlife.android.relay.vexDependencies
