@@ -45,6 +45,21 @@ internal data class EventsPresentationState(
                 is EventsPresentationListState.Content ->
                     current.events.map(VexExternalEvent::deepCopy)
             }
+
+    val relationshipConsumerSummary: String
+        get() =
+            buildString {
+                append("events=")
+                append(events.size)
+                append(" · candidate=")
+                append(candidateEventRef ?: "none")
+                append(" · ready=")
+                append(candidateReady)
+                append(" · current=")
+                append(currentQueueCount)
+                append(" · next=")
+                append(nextSequenceCount)
+            }
 }
 
 internal fun EventsConvergenceOutputState.toPresentationState():
