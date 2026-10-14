@@ -93,10 +93,10 @@ VexBehaviorBlueprint
     source relationships ~= behavior relationships
 ~~~
 
-Feature-owned sealed State / Act / Effect families provide the compiler coordinates. Each State
+Feature-owned sealed State / Act / Effect families plus a finite enum Control vocabulary provide the compiler coordinates. Each State
 block declares what Acts have meaning from that current truth, their provider-facing Effects, and
 the expected next State. The blueprint is a constructed immutable graph, not a singleton or runtime
-state owner. Incoming / outgoing neighborhoods, current available Acts, and Control meaning are derived from
+state owner. Incoming / outgoing neighborhoods, current available Acts, and completely linked Control meaning are derived from
 relationships authored once.
 
 No app wiring, provider execution, ScreenBlueprint binding, parameterized request payloads, or

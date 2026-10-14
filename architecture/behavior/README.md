@@ -156,20 +156,27 @@ observed current State, that State is sufficient causal context.
 
 ## State / Act / Effect
 
-The prototype deliberately keeps three meanings separate:
+The prototype deliberately keeps semantic families separate and compiler-bounded:
 
 ~~~text
 State
     what is semantically true now
-    preferably a sealed feature-owned family
+    sealed feature-owned family
+    may carry data
 
 Act
     what the human/control means to do from current State
-    preferably a sealed feature-owned family
+    sealed feature-owned family
+    may later carry request data
 
 Effect
     provider-facing meaning that runtime should attempt
-    preferably a sealed feature-owned family
+    sealed feature-owned family
+    may later carry provider parameters
+
+Control
+    finite identity-only affordance vocabulary
+    enum in this experiment so every member can be exhaustively linked
 ~~~
 
 Example:
@@ -190,6 +197,48 @@ expected destination State
 
 Act and Effect are separate because UI/product vocabulary should not become coupled to one provider
 implementation.
+
+## Type families are architecture boundaries
+
+The worked Playback example keeps finite meanings inside their family scope:
+
+~~~text
+PlaybackState.Playing
+PlaybackState.Paused
+PlaybackState.FastForwarding
+PlaybackState.Rewinding
+
+PlaybackAct.Play
+PlaybackAct.Pause
+PlaybackAct.FastForward
+PlaybackAct.Rewind
+
+PlaybackEffect.PlayAtNormalSpeed
+PlaybackEffect.PausePlayback
+PlaybackEffect.StartFastForward
+PlaybackEffect.StartRewind
+
+PlaybackControl.Rewind
+PlaybackControl.PlayPause
+PlaybackControl.FastForward
+~~~
+
+This is not cosmetic namespacing. It gives a human IDE-completion boundaries and gives the compiler
+different types for different semantic families.
+
+The intended pressure is:
+
+~~~text
+too much generic freedom
+    -> accidental cross-domain combinations
+
+bounded family + typed relationship
+    -> illegal crossover becomes difficult or impossible to express
+~~~
+
+Controls use an enum in this prototype because they are finite identity-only possibilities and the
+Control blueprint can therefore require every member to be deliberately linked. State / Act / Effect
+remain sealed families because those concepts may legitimately carry data later.
 
 ## Inverse read — current State -> available Acts -> Controls
 
@@ -215,18 +264,43 @@ The reusable blueprint now derives `availableActs(current)` from the same State 
 Feature/UI code therefore does not need another `when(state)` table merely to decide whether Play,
 Pause, Rewind, or FastForward currently has meaning.
 
-A Control is a separate constructed value that names which Acts one human affordance can represent:
+Controls are not detached `val` objects. Playback declares a finite Control vocabulary:
 
 ~~~kotlin
-val playPause =
-    vexBehaviorControl<PlaybackAct>(
-        "example.playback.control.play-pause",
-        Play,
-        Pause,
-    )
+enum class PlaybackControl {
+    Rewind,
+    PlayPause,
+    FastForward,
+}
 ~~~
 
-Argument order is explicit conflict priority, not Behavior policy.
+and binds the entire vocabulary to one exact Playback Behavior instance:
+
+~~~kotlin
+behavior.controls<PlaybackControl> {
+    control(
+        PlaybackControl.Rewind,
+        PlaybackAct.Rewind,
+    )
+
+    control(
+        PlaybackControl.PlayPause,
+        PlaybackAct.Play,
+        PlaybackAct.Pause,
+    )
+
+    control(
+        PlaybackControl.FastForward,
+        PlaybackAct.FastForward,
+    )
+}
+~~~
+
+Construction rejects a missing enum Control, a duplicate Control, and any candidate Act that never
+appears in the bound Behavior graph. Kotlin's generic `PlaybackAct` type also prevents a different
+domain's Act family from being supplied without an explicit unsafe cast.
+
+Argument order inside one Control is explicit conflict priority, not Behavior policy.
 
 From `Playing`:
 

@@ -22,11 +22,22 @@ class VexBehaviorBlueprintTest {
     private sealed interface QueueAct {
         data object Next :
             QueueAct
+
+        /**
+         * Same Act family, deliberately absent from every Queue relationship.
+         */
+        data object Orphan :
+            QueueAct
     }
 
     private sealed interface QueueEffect {
         data object Advance :
             QueueEffect
+    }
+
+    private enum class QueueControl {
+        Next,
+        Previous,
     }
 
     private fun queueBlueprint() =
@@ -109,6 +120,43 @@ class VexBehaviorBlueprintTest {
                 QueueState.Positioned::class,
             ).size,
         )
+    }
+
+    @Test(
+        expected =
+            IllegalArgumentException::class,
+    )
+    fun finiteControlVocabularyMustBeCompletelyLinked() {
+        queueBlueprint()
+            .controls<QueueControl> {
+                control(
+                    QueueControl.Next,
+                    QueueAct.Next,
+                )
+
+                /*
+                 * QueueControl.Previous is deliberately omitted.
+                 * Construction must reject the incomplete finite vocabulary.
+                 */
+            }
+    }
+
+    private enum class OrphanControl {
+        Orphan,
+    }
+
+    @Test(
+        expected =
+            IllegalArgumentException::class,
+    )
+    fun controlCannotReferenceActNotAdmittedByItsBoundBehavior() {
+        queueBlueprint()
+            .controls<OrphanControl> {
+                control(
+                    OrphanControl.Orphan,
+                    QueueAct.Orphan,
+                )
+            }
     }
 }
 

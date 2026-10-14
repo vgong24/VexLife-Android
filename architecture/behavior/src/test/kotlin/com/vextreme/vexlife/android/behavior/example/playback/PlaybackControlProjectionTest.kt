@@ -1,6 +1,5 @@
 package com.vextreme.vexlife.android.behavior.example.playback
 
-import com.vextreme.vexlife.android.behavior.vexBehaviorControl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -9,102 +8,124 @@ import org.junit.Test
 /**
  * Proof for the inverse read:
  *
- * current State -> available Acts -> resolved Controls.
+ * current State -> available Acts -> complete finite Control vocabulary.
  */
 class PlaybackControlProjectionTest {
-    private val blueprint =
+    private val behavior =
         playbackBehaviorBlueprint()
 
     private val controls =
-        PlaybackControls()
+        behavior.playbackControls()
 
     @Test
     fun playingProjectsRewindPauseAndFastForward() {
         val projection =
-            controls.project(
-                blueprint = blueprint,
-                current = Playing,
+            controls.projection(
+                PlaybackState.Playing,
             )
 
         assertSame(
-            Rewind,
-            projection.rewind,
+            PlaybackAct.Rewind,
+            projection[
+                PlaybackControl.Rewind
+            ],
         )
         assertSame(
-            Pause,
-            projection.playPause,
+            PlaybackAct.Pause,
+            projection[
+                PlaybackControl.PlayPause
+            ],
         )
         assertSame(
-            FastForward,
-            projection.fastForward,
+            PlaybackAct.FastForward,
+            projection[
+                PlaybackControl.FastForward
+            ],
         )
     }
 
     @Test
     fun fastForwardingProjectsRewindPlayAndNoFastForward() {
         val projection =
-            controls.project(
-                blueprint = blueprint,
-                current = FastForwarding,
+            controls.projection(
+                PlaybackState.FastForwarding,
             )
 
         assertSame(
-            Rewind,
-            projection.rewind,
+            PlaybackAct.Rewind,
+            projection[
+                PlaybackControl.Rewind
+            ],
         )
         assertSame(
-            Play,
-            projection.playPause,
+            PlaybackAct.Play,
+            projection[
+                PlaybackControl.PlayPause
+            ],
         )
         assertNull(
-            projection.fastForward,
+            projection[
+                PlaybackControl.FastForward
+            ],
         )
+    }
+
+    private enum class PriorityControl {
+        PlayPause,
     }
 
     @Test
     fun playPausePriorityIsControlPolicyNotBehaviorPolicy() {
         val preferPlay =
-            vexBehaviorControl<PlaybackAct>(
-                "example.prefer-play",
-                Play,
-                Pause,
-            )
+            behavior.controls<PriorityControl> {
+                control(
+                    PriorityControl.PlayPause,
+                    PlaybackAct.Play,
+                    PlaybackAct.Pause,
+                )
+            }
         val preferPause =
-            vexBehaviorControl<PlaybackAct>(
-                "example.prefer-pause",
-                Pause,
-                Play,
-            )
+            behavior.controls<PriorityControl> {
+                control(
+                    PriorityControl.PlayPause,
+                    PlaybackAct.Pause,
+                    PlaybackAct.Play,
+                )
+            }
 
         /*
          * FastForwarding currently admits BOTH Play and Pause. The Behavior graph exposes both;
-         * the Control decides which meaning one shared affordance reflects.
+         * the Control blueprint decides which meaning one shared affordance reflects.
          */
         assertEquals(
             setOf(
-                Play,
-                Pause,
-                Rewind,
+                PlaybackAct.Play,
+                PlaybackAct.Pause,
+                PlaybackAct.Rewind,
             ),
-            blueprint
+            behavior
                 .availableActs(
-                    FastForwarding,
+                    PlaybackState.FastForwarding,
                 )
                 .toSet(),
         )
 
         assertSame(
-            Play,
+            PlaybackAct.Play,
             preferPlay.resolve(
-                blueprint = blueprint,
-                current = FastForwarding,
+                current =
+                    PlaybackState.FastForwarding,
+                control =
+                    PriorityControl.PlayPause,
             )?.act,
         )
         assertSame(
-            Pause,
+            PlaybackAct.Pause,
             preferPause.resolve(
-                blueprint = blueprint,
-                current = FastForwarding,
+                current =
+                    PlaybackState.FastForwarding,
+                control =
+                    PriorityControl.PlayPause,
             )?.act,
         )
     }
@@ -112,22 +133,27 @@ class PlaybackControlProjectionTest {
     @Test
     fun pausedProjectsRewindPlayAndFastForward() {
         val projection =
-            controls.project(
-                blueprint = blueprint,
-                current = Paused,
+            controls.projection(
+                PlaybackState.Paused,
             )
 
         assertSame(
-            Rewind,
-            projection.rewind,
+            PlaybackAct.Rewind,
+            projection[
+                PlaybackControl.Rewind
+            ],
         )
         assertSame(
-            Play,
-            projection.playPause,
+            PlaybackAct.Play,
+            projection[
+                PlaybackControl.PlayPause
+            ],
         )
         assertSame(
-            FastForward,
-            projection.fastForward,
+            PlaybackAct.FastForward,
+            projection[
+                PlaybackControl.FastForward
+            ],
         )
     }
 }

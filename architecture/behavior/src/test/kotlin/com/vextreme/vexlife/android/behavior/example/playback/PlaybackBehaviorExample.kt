@@ -6,67 +6,66 @@ import com.vextreme.vexlife.android.behavior.vexBehaviorBlueprint
 /**
  * Current transport truth.
  *
- * These are deliberately semantic transport modes, not button labels. FastForwarding and Rewinding
- * are real current modes in this practicum rather than hidden history attached to Playing.
+ * The finite semantic family is nested so IDE completion keeps Playback State possibilities inside
+ * their own scope instead of leaking Playing/Paused/etc into unrelated domains.
  */
-sealed interface PlaybackState
+sealed interface PlaybackState {
+    data object Paused :
+        PlaybackState
 
-data object Paused :
-    PlaybackState
+    data object Playing :
+        PlaybackState
 
-data object Playing :
-    PlaybackState
+    data object FastForwarding :
+        PlaybackState
 
-data object FastForwarding :
-    PlaybackState
-
-data object Rewinding :
-    PlaybackState
+    data object Rewinding :
+        PlaybackState
+}
 
 /**
- * Human/semantic acts that may be meaningful from a current PlaybackState.
+ * Human/semantic causes admitted by Playback.
  *
- * A physical Play/Pause button may choose Play or Pause from the current state. That control mapping
- * is outside this behavior graph; the graph owns what each Act means once selected.
+ * These are nested under PlaybackAct so a developer sees the bounded family while typing and cannot
+ * accidentally substitute another domain's Act type into this Behavior.
  */
-sealed interface PlaybackAct
+sealed interface PlaybackAct {
+    data object Play :
+        PlaybackAct
 
-data object Play :
-    PlaybackAct
+    data object Pause :
+        PlaybackAct
 
-data object Pause :
-    PlaybackAct
+    data object FastForward :
+        PlaybackAct
 
-data object FastForward :
-    PlaybackAct
-
-data object Rewind :
-    PlaybackAct
+    data object Rewind :
+        PlaybackAct
+}
 
 /**
- * Provider-facing meanings produced by lawful Acts.
+ * Provider-facing meanings produced by lawful Playback Acts.
  *
- * Effect is kept separate from Act so the runtime implementation can change without changing the
- * human behavioral vocabulary.
+ * Effect remains distinct from Act so product vocabulary is not coupled to one provider API.
  */
-sealed interface PlaybackEffect
+sealed interface PlaybackEffect {
+    data object PlayAtNormalSpeed :
+        PlaybackEffect
 
-data object PlayAtNormalSpeed :
-    PlaybackEffect
+    data object PausePlayback :
+        PlaybackEffect
 
-data object PausePlayback :
-    PlaybackEffect
+    data object StartFastForward :
+        PlaybackEffect
 
-data object StartFastForward :
-    PlaybackEffect
-
-data object StartRewind :
-    PlaybackEffect
+    data object StartRewind :
+        PlaybackEffect
+}
 
 /**
  * Worked cause -> effect -> new cause blueprint.
  *
- * Read each state block as:
+ * Read each State block as:
  *
  * "Given THIS is true now, which Acts have meaning from here, what Effect do they request, and what
  * State should be expected if that Effect converges?"
@@ -80,72 +79,72 @@ fun playbackBehaviorBlueprint():
     vexBehaviorBlueprint(
         behaviorRef = "example.playback.transport",
     ) {
-        state<Playing> {
+        state<PlaybackState.Playing> {
             on(
-                Pause,
-                PausePlayback,
-            ).to<Paused>()
+                PlaybackAct.Pause,
+                PlaybackEffect.PausePlayback,
+            ).to<PlaybackState.Paused>()
 
             on(
-                FastForward,
-                StartFastForward,
-            ).to<FastForwarding>()
+                PlaybackAct.FastForward,
+                PlaybackEffect.StartFastForward,
+            ).to<PlaybackState.FastForwarding>()
 
             on(
-                Rewind,
-                StartRewind,
-            ).to<Rewinding>()
+                PlaybackAct.Rewind,
+                PlaybackEffect.StartRewind,
+            ).to<PlaybackState.Rewinding>()
         }
 
-        state<Paused> {
+        state<PlaybackState.Paused> {
             on(
-                Play,
-                PlayAtNormalSpeed,
-            ).to<Playing>()
+                PlaybackAct.Play,
+                PlaybackEffect.PlayAtNormalSpeed,
+            ).to<PlaybackState.Playing>()
 
             on(
-                FastForward,
-                StartFastForward,
-            ).to<FastForwarding>()
+                PlaybackAct.FastForward,
+                PlaybackEffect.StartFastForward,
+            ).to<PlaybackState.FastForwarding>()
 
             on(
-                Rewind,
-                StartRewind,
-            ).to<Rewinding>()
+                PlaybackAct.Rewind,
+                PlaybackEffect.StartRewind,
+            ).to<PlaybackState.Rewinding>()
         }
 
-        state<FastForwarding> {
+        state<PlaybackState.FastForwarding> {
             on(
-                Play,
-                PlayAtNormalSpeed,
-            ).to<Playing>()
+                PlaybackAct.Play,
+                PlaybackEffect.PlayAtNormalSpeed,
+            ).to<PlaybackState.Playing>()
 
             on(
-                Pause,
-                PausePlayback,
-            ).to<Paused>()
+                PlaybackAct.Pause,
+                PlaybackEffect.PausePlayback,
+            ).to<PlaybackState.Paused>()
 
             on(
-                Rewind,
-                StartRewind,
-            ).to<Rewinding>()
+                PlaybackAct.Rewind,
+                PlaybackEffect.StartRewind,
+            ).to<PlaybackState.Rewinding>()
         }
 
-        state<Rewinding> {
+        state<PlaybackState.Rewinding> {
             on(
-                Play,
-                PlayAtNormalSpeed,
-            ).to<Playing>()
+                PlaybackAct.Play,
+                PlaybackEffect.PlayAtNormalSpeed,
+            ).to<PlaybackState.Playing>()
 
             on(
-                Pause,
-                PausePlayback,
-            ).to<Paused>()
+                PlaybackAct.Pause,
+                PlaybackEffect.PausePlayback,
+            ).to<PlaybackState.Paused>()
 
             on(
-                FastForward,
-                StartFastForward,
-            ).to<FastForwarding>()
+                PlaybackAct.FastForward,
+                PlaybackEffect.StartFastForward,
+            ).to<PlaybackState.FastForwarding>()
         }
     }
 

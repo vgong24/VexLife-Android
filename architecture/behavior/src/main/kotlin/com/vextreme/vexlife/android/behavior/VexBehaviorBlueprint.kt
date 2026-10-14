@@ -136,6 +136,24 @@ class VexBehaviorBlueprint<
         )
     }
 
+    /**
+     * Bind one finite Control vocabulary to this exact Behavior instance.
+     *
+     * Control is reified so enumValues can enforce that every Control member is deliberately
+     * declared exactly once in the Control blueprint.
+     */
+    inline fun <reified Control> controls(
+        block: VexBehaviorControlBlueprintBuilder<Act, Control>.() -> Unit,
+    ): VexBehaviorControlBlueprint<State, Act, Effect, Control>
+        where Control : Enum<Control> =
+        VexBehaviorControlBlueprintBuilder<Act, Control>(
+            expectedControls =
+                enumValues<Control>()
+                    .toSet(),
+        )
+            .apply(block)
+            .build(this)
+
     /** Human/debug projection derived from authored State neighborhoods. */
     fun describe(): String =
         buildString {

@@ -17,16 +17,18 @@ class PlaybackBehaviorExampleTest {
     fun fastForwardThenPlayReturnsToNormalPlayingInsteadOfTogglingToPause() {
         val fastForward =
             blueprint.resolve(
-                current = Playing,
-                act = FastForward,
+                current =
+                    PlaybackState.Playing,
+                act =
+                    PlaybackAct.FastForward,
             )
 
         assertSame(
-            StartFastForward,
+            PlaybackEffect.StartFastForward,
             fastForward?.effect,
         )
         assertEquals(
-            FastForwarding::class,
+            PlaybackState.FastForwarding::class,
             fastForward?.destination,
         )
 
@@ -36,16 +38,18 @@ class PlaybackBehaviorExampleTest {
          */
         val play =
             blueprint.resolve(
-                current = FastForwarding,
-                act = Play,
+                current =
+                    PlaybackState.FastForwarding,
+                act =
+                    PlaybackAct.Play,
             )
 
         assertSame(
-            PlayAtNormalSpeed,
+            PlaybackEffect.PlayAtNormalSpeed,
             play?.effect,
         )
         assertEquals(
-            Playing::class,
+            PlaybackState.Playing::class,
             play?.destination,
         )
     }
@@ -54,27 +58,31 @@ class PlaybackBehaviorExampleTest {
     fun playMeansNormalPlaybackFromFastForwardingRegardlessOfHowThatStateWasReached() {
         val fromPaused =
             blueprint.resolve(
-                current = Paused,
-                act = FastForward,
+                current =
+                    PlaybackState.Paused,
+                act =
+                    PlaybackAct.FastForward,
             )
 
         assertEquals(
-            FastForwarding::class,
+            PlaybackState.FastForwarding::class,
             fromPaused?.destination,
         )
 
         val play =
             blueprint.resolve(
-                current = FastForwarding,
-                act = Play,
+                current =
+                    PlaybackState.FastForwarding,
+                act =
+                    PlaybackAct.Play,
             )
 
         assertEquals(
-            Playing::class,
+            PlaybackState.Playing::class,
             play?.destination,
         )
         assertSame(
-            PlayAtNormalSpeed,
+            PlaybackEffect.PlayAtNormalSpeed,
             play?.effect,
         )
     }
@@ -83,29 +91,33 @@ class PlaybackBehaviorExampleTest {
     fun currentStateDefinesWhichActsHaveMeaning() {
         assertNull(
             blueprint.resolve(
-                current = Playing,
-                act = Play,
+                current =
+                    PlaybackState.Playing,
+                act =
+                    PlaybackAct.Play,
             ),
         )
         assertNull(
             blueprint.resolve(
-                current = Paused,
-                act = Pause,
+                current =
+                    PlaybackState.Paused,
+                act =
+                    PlaybackAct.Pause,
             ),
         )
 
         val fastForwardActs =
             blueprint.outgoing(
-                FastForwarding::class,
+                PlaybackState.FastForwarding::class,
             ).map {
                 it.act
             }.toSet()
 
         assertEquals(
             setOf(
-                Play,
-                Pause,
-                Rewind,
+                PlaybackAct.Play,
+                PlaybackAct.Pause,
+                PlaybackAct.Rewind,
             ),
             fastForwardActs,
         )
