@@ -54,6 +54,23 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.maps.MapView
 
+/**
+ * Native VexMaps composition root.
+ *
+ * Read this file as wiring between already-owned questions, not as one giant Maps controller:
+ *
+ * - VexMapsNavigationProcess / VexMapsStyleConvergenceRelay own changing semantic relationships;
+ * - VexMapsRepository owns durable Maps-local checkpoints/preferences;
+ * - VexDeviceLocationSource / stores own Android or provider observations/effects;
+ * - VexMapLibreAdapter owns translation from Maps rendering intent into MapLibre mechanics;
+ * - planner/navigation/location files own their smaller state or presentation questions;
+ * - this function decides when those owners are created, which current facts are handed between
+ *   them, and how their projections are composed on screen.
+ *
+ * If a future change starts answering "what does this fact mean?" rather than "when/how do these
+ * existing owners meet?", it probably belongs in one of those narrower owners instead of growing
+ * this composition surface again.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VexMapsMapSurface(
@@ -106,6 +123,15 @@ internal fun VexMapsMapSurface(
             )
         }
 
+    /*
+     * Keep three different notions separate:
+     * - locationState: human-facing readiness/failure projection;
+     * - currentLocation: fresh Android observation allowed to affect routing/navigation;
+     * - restoredMapContext: historical repository checkpoint allowed only to seed browsing context.
+     *
+     * Their coordinate shapes may look similar, but their authority/currentness is intentionally
+     * different. Do not collapse restoredMapContext back into currentLocation.
+     */
     var locationState by
         remember {
             mutableStateOf<VexMapsLocationState>(
@@ -126,6 +152,12 @@ internal fun VexMapsMapSurface(
             >(null)
         }
 
+    /*
+     * Style selection is semantic relationship state; MapLibre loading is a provider effect.
+     * The Relay reconciles selected/requested/loaded/failed meaning while VexMapLibreAdapter performs
+     * the actual SDK work below. Keeping those two halves separate prevents provider callbacks from
+     * becoming the source of human intent.
+     */
     val defaultOnlineStyle =
         VexMapsOnlineStyle.default(
             darkTheme,
@@ -150,6 +182,11 @@ internal fun VexMapsMapSurface(
                     .value,
             )
         }
+    /*
+     * These gates are not domain state. They are composition-level admission tokens that stop a
+     * slower async request from overwriting a newer human/location decision after the coroutine
+     * eventually returns.
+     */
     val routeRequestGate =
         remember {
             VexMapsLatestRequestGate()
@@ -159,6 +196,11 @@ internal fun VexMapsMapSurface(
             VexMapsLatestRequestGate()
         }
 
+    /*
+     * Viewport retention belongs to this rendered Screen lifetime, not to durable location truth.
+     * Saving the camera components across recomposition/configuration lets MapLibre be recreated
+     * without pretending a camera center is a fresh device fix or a persisted route origin.
+     */
     var viewportLatitude by
         rememberSaveable {
             mutableStateOf<Double?>(null)
@@ -497,6 +539,15 @@ internal fun VexMapsMapSurface(
             }
         }
 
+    /*
+     * Repository restoration is intentionally one-way into bounded startup context:
+     * - persisted style becomes current human preference;
+     * - persisted location becomes restored browse context only;
+     * - a fresh precise Android observation is requested separately when permission allows.
+     *
+     * This is the currentness boundary that prevents process history from silently satisfying
+     * navigation readiness.
+     */
     LaunchedEffect(repository) {
         val storedState =
             runCatching {
@@ -1061,6 +1112,11 @@ internal fun VexMapsMapSurface(
             }
         }
 
+    /*
+     * Visual layering starts with the provider view and then composes Vex-owned controls above it.
+     * AndroidView is therefore an effect/rendering boundary, not another Screen registry or source
+     * of Maps semantic truth.
+     */
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -1614,6 +1670,11 @@ internal fun VexMapsMapSurface(
                 }
         }
 
+        /*
+         * Context Dock may project a style choice into style convergence, but automatic convergence
+         * is not a human interaction. We record Selected only when the human actually changed the
+         * preferred page; restored/already-preferred synchronization remains non-human evidence.
+         */
         VexContextDock(
             pages = contextDockPages,
             preferredPageRef =
