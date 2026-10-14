@@ -19,8 +19,8 @@ object AppActions {
     val InsertHistoricalSyntheticEvent = ActionKey("action.events.synthetic.insert-historical")
     val RemoveOldestSyntheticEvent = ActionKey("action.events.synthetic.remove-oldest")
     val ResetEventsDebugMenu = ActionKey("action.events.debug-menu.reset")
-    val UseRotationDebugMenuAlerts = ActionKey("action.events.debug-menu.alerts.use-rotation")
-    val UseRandomDebugMenuAlerts = ActionKey("action.events.debug-menu.alerts.use-random")
+    val UseRotationDebugMenuAlertCases = ActionKey("action.events.debug-menu.alert-cases.use-rotation")
+    val UseRandomDebugMenuAlertCases = ActionKey("action.events.debug-menu.alert-cases.use-random")
     /**
      * Debug-only Events action: prepare one next alert case.
      *
