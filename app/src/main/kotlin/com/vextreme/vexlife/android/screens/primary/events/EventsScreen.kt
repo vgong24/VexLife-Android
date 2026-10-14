@@ -43,6 +43,7 @@ import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureMode
 import com.vextreme.vexlife.android.ui.VexLifeRelays
 
 object EventsScreen : AppScreenBlueprint(
@@ -67,7 +68,7 @@ object EventsScreen : AppScreenBlueprint(
     ) {
         EventsScreenContent(
             runtime = runtime,
-            relay = relays.events,
+            relays = relays,
         )
     }
 }
@@ -80,35 +81,97 @@ object EventsScreen : AppScreenBlueprint(
  * reuse stable repeated-item behavior without inheriting Events repositories or attention rules.
  */
 @Composable
-fun EventsScreenContent(
+internal fun EventsScreenContent(
     runtime: VexRuntime,
-    relay: EventsConvergenceRelay,
+    relays: VexLifeRelays,
 ) {
-    val attention by relay.outputStates.collectAsState(
-        initial = relay.currentOutput,
-    )
+    val architectureMode by
+        relays.eventsComparison
+            .mode
+            .collectAsState()
+
+    val relayAttention by
+        relays.events
+            .outputStates
+            .collectAsState(
+                initial =
+                    relays.events
+                        .currentOutput,
+            )
+
+    val traditionalAttention by
+        relays.eventsComparison
+            .traditionalController
+            .uiStates
+            .collectAsState(
+                initial =
+                    relays.eventsComparison
+                        .traditionalController
+                        .current,
+            )
+
+    val attention =
+        when (architectureMode) {
+            EventsArchitectureMode.VEXTREME_RELAY ->
+                relayAttention.toPresentationState()
+
+            EventsArchitectureMode.TRADITIONAL_CONTROLLER ->
+                traditionalAttention.toPresentationState()
+        }
+
+    val actions =
+        when (architectureMode) {
+            EventsArchitectureMode.VEXTREME_RELAY ->
+                EventsPresentationActions(
+                    acknowledge =
+                        relays.events::acknowledge,
+                    later =
+                        relays.events::later,
+                    suspend =
+                        relays.events::suspend,
+                    suppress =
+                        relays.events::suppress,
+                    completeCurrentScenario =
+                        relays.events::completeCurrentScenario,
+                )
+
+            EventsArchitectureMode.TRADITIONAL_CONTROLLER ->
+                EventsPresentationActions(
+                    acknowledge =
+                        relays.eventsComparison
+                            .traditionalController::acknowledge,
+                    later =
+                        relays.eventsComparison
+                            .traditionalController::later,
+                    suspend =
+                        relays.eventsComparison
+                            .traditionalController::suspend,
+                    suppress =
+                        relays.eventsComparison
+                            .traditionalController::suppress,
+                    completeCurrentScenario =
+                        relays.eventsComparison
+                            .traditionalController::completeCurrentScenario,
+                )
+        }
+
     val scenario =
         attention.scenario
 
     val activeCandidateRef =
-        attention.candidate?.eventRef
+        attention.candidateEventRef
     val visibleCandidateRef =
         attention
-            .takeIf { output ->
-                output.availability ==
-                    EventsConvergenceAvailability.READY
+            .takeIf { state ->
+                state.candidateReady
             }
-            ?.candidate
-            ?.eventRef
+            ?.candidateEventRef
 
     /*
      * Keep one presentation snapshot while the same attention candidate is active. Canonical
-     * provider truth and Relay queue counts continue to advance underneath it, but five-second
-     * arrivals cannot insert/reorder rows under the anchored popup. A candidate change refreshes the
-     * snapshot from current provider truth.
-     *
-     * BLOCKING_FREEZE_TOP adds user-scroll lock and acknowledge-only dismissal on top of this common
-     * anti-flicker presentation hold.
+     * provider truth and queue counts continue to advance underneath it, but provider arrivals
+     * cannot insert/reorder rows under the anchored popup. Switching comparison architecture also
+     * refreshes the snapshot so the selected implementation is what the human actually sees.
      */
     var presentationEvents by
         remember {
@@ -116,6 +179,7 @@ fun EventsScreenContent(
         }
 
     LaunchedEffect(
+        architectureMode,
         activeCandidateRef,
         scenario?.scenarioRef,
     ) {
@@ -141,20 +205,33 @@ fun EventsScreenContent(
             scenario?.blockingAcknowledgeOnly != true,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        onVisibleItemRefsChanged =
-            relay::visibleTargetsChanged,
+        onVisibleItemRefsChanged = { eventRefs ->
+            relays.events
+                .visibleTargetsChanged(
+                    eventRefs,
+                )
+            relays.eventsComparison
+                .traditionalController
+                .visibleTargetsChanged(
+                    eventRefs,
+                )
+        },
         emptyContent = {
             when (attention.list) {
-                EventsConvergenceListState.Unobserved ->
+                EventsPresentationListState.Unobserved ->
                     Unit
 
-                EventsConvergenceListState.Empty ->
+                EventsPresentationListState.Empty ->
                     Text(
-                        text = stringResource(R.string.events_preview_body),
-                        style = MaterialTheme.typography.bodyLarge,
+                        text =
+                            stringResource(
+                                R.string.events_preview_body,
+                            ),
+                        style =
+                            MaterialTheme.typography.bodyLarge,
                     )
 
-                is EventsConvergenceListState.Content ->
+                is EventsPresentationListState.Content ->
                     Unit
             }
         },
@@ -162,7 +239,8 @@ fun EventsScreenContent(
         EventRow(
             event = event,
             isAttentionCandidate =
-                visibleCandidateRef == event.eventRef,
+                visibleCandidateRef ==
+                    event.eventRef,
             disposition =
                 attention.dispositionByEventRef[
                     event.eventRef
@@ -176,11 +254,14 @@ fun EventsScreenContent(
                         "acknowledge",
                     ),
                 )
-                relay.acknowledge(
+                actions.acknowledge(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (
+                    scenario?.targetEventRef ==
+                    event.eventRef
+                ) {
+                    actions.completeCurrentScenario()
                 }
             },
             onDefer = {
@@ -190,11 +271,14 @@ fun EventsScreenContent(
                         "later",
                     ),
                 )
-                relay.later(
+                actions.later(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (
+                    scenario?.targetEventRef ==
+                    event.eventRef
+                ) {
+                    actions.completeCurrentScenario()
                 }
             },
             onSuspend = {
@@ -204,11 +288,14 @@ fun EventsScreenContent(
                         "suspend",
                     ),
                 )
-                relay.suspend(
+                actions.suspend(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (
+                    scenario?.targetEventRef ==
+                    event.eventRef
+                ) {
+                    actions.completeCurrentScenario()
                 }
             },
             onSuppress = {
@@ -218,11 +305,14 @@ fun EventsScreenContent(
                         "suppress",
                     ),
                 )
-                relay.suppress(
+                actions.suppress(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (
+                    scenario?.targetEventRef ==
+                    event.eventRef
+                ) {
+                    actions.completeCurrentScenario()
                 }
             },
             onDismiss = {
@@ -232,16 +322,27 @@ fun EventsScreenContent(
                     ),
                     action = "Dismissed",
                 )
-                relay.later(
+                actions.later(
                     event.eventRef,
                 )
-                if (scenario?.targetEventRef == event.eventRef) {
-                    relay.completeCurrentScenario()
+                if (
+                    scenario?.targetEventRef ==
+                    event.eventRef
+                ) {
+                    actions.completeCurrentScenario()
                 }
             },
         )
     }
 }
+
+private data class EventsPresentationActions(
+    val acknowledge: (String) -> Unit,
+    val later: (String) -> Unit,
+    val suspend: (String) -> Unit,
+    val suppress: (String) -> Unit,
+    val completeCurrentScenario: () -> Unit,
+)
 
 /**
  * Events-specific row composition.
@@ -255,7 +356,7 @@ private fun EventRow(
     event: VexExternalEvent,
     isAttentionCandidate: Boolean,
     disposition: EventsAttentionDisposition?,
-    attention: EventsConvergenceOutputState,
+    attention: EventsPresentationState,
     scenario: EventsAttentionLabScenario?,
     onAcknowledge: () -> Unit,
     onDefer: () -> Unit,
@@ -633,7 +734,7 @@ private fun EventsScreenPreview() {
     ) { context ->
         EventsScreenContent(
             runtime = context.runtime,
-            relay = context.relays.events,
+            relays = context.relays,
         )
     }
 }
@@ -656,7 +757,7 @@ private fun EventsAttentionPreview() {
     ) { context ->
         EventsScreenContent(
             runtime = context.runtime,
-            relay = context.relays.events,
+            relays = context.relays,
         )
     }
 }
