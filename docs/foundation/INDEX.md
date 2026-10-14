@@ -63,7 +63,9 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
+| TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **EXTRACTION CANDIDATE / A019 INDEPENDENT HOST PROOF OBSERVED** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | exact convergence-branch host proof before merge |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
+| ANDROID_HOST_PROOF | repository-owned Android proof requests carried by current VexRelay/VexLocalBridge | **EXTRACTION CANDIDATE / EVENTS A008 + TEST FOUNDATION A019 EVIDENCE** | Let any feature request exact Android repository/device proof without rebuilding host-carriage mechanics or making Victor interpret routine output | exact convergence-branch host proof before merge |
 | EVENTS_CONVERGENCE_PRACTICUM | external-information ingress + Relay composition + stable dynamic list + anchored attention | **DRAFT CANDIDATE / PURE KOTLIN SMOKE PASS / ANDROID PROOF PENDING** | Master one convergence node before reverse-building real Messaging/Calls/Maps/Health/VexStream adapters toward it | exact Gradle/Journey/ScreenCrawler + physical-device attention walk |
 | F2_STATE_PROJECTION | StateFlow/state projection kernel | PORT_CANDIDATE | Preserve one-owner observable semantic state and emission discipline | isolated JVM/native contract tests |
 | F3_INTENTION_OPERATION_RESULT | intention -> operation -> attempt -> result grammar | PORT_CANDIDATE | Keep requested meaning, execution identity, retry identity, and result admission separate | deterministic operation/admission tests |
@@ -101,6 +103,36 @@ domain fixture shape should seed previews, unit tests, and in-memory repository 
 creating a second mock data model.
 
 No generic `BaseRepository<T>` is admitted by this candidate.
+
+## Android host-proof convergence candidate
+
+Canonical detail: [`ANDROID-HOST-PROOF.md`](ANDROID-HOST-PROOF.md)
+
+### Intention
+
+A feature lane should declare **what Android claim needs proof** while the repository owns the
+canonical Gradle/device proof entry points and the live Vextreme-SDK contract owns task/RETURN
+carriage. Events A008 and Test Foundation A019 independently established the reusable boundary.
+
+The extracted source still requires its own exact host proof before merge. Once accepted on main,
+feature branches such as VexMaps should rebase onto this foundation rather than copying another
+lane's Relay package formation or proof command list.
+
+## Test / Proof Architecture candidate
+
+Canonical detail: [`TEST-PROOF-ARCHITECTURE.md`](TEST-PROOF-ARCHITECTURE.md)
+
+### Intention
+
+A developer should be able to prove feature meaning, Android rendering, user journeys, visual
+stability and executable-code coverage at the narrowest truthful owner, then invoke the ordinary
+source/JVM/build bundle through one repository-owned local command. CI remains a caller rather than
+another proof definition.
+
+The current candidate converges already-earned Relay, Journey and ScreenCrawler test surfaces. It
+does not yet claim accepted code-coverage tooling, deterministic visual-golden tooling, or native
+device proof.
+
 
 ## ScreenCrawler evidence candidate
 

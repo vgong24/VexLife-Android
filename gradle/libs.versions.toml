@@ -1,4 +1,6 @@
 [versions]
+kover = "0.9.8"
+screenshot = "0.0.1-alpha16"
 agp = "9.4.0"
 kotlin = "2.4.20"
 composeBom = "2026.09.00"
@@ -19,6 +21,7 @@ valhallaMobile = "0.6.4"
 valhallaModels = "0.5.2"
 
 [libraries]
+screenshotValidationApi = { module = "com.android.tools.screenshot:screenshot-validation-api", version.ref = "screenshot" }
 composeBom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 composeMaterial3 = { module = "androidx.compose.material3:material3" }
 composeFoundation = { module = "androidx.compose.foundation:foundation" }
@@ -54,6 +57,8 @@ valhallaModels = { module = "io.github.rallista:valhalla-models", version.ref = 
 valhallaModelsConfig = { module = "io.github.rallista:valhalla-models-config", version.ref = "valhallaModels" }
 
 [plugins]
+screenshot = { id = "com.android.compose.screenshot", version.ref = "screenshot" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

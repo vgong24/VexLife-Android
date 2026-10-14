@@ -1,4 +1,5 @@
 plugins {
+    alias(libs.plugins.kover)
     alias(libs.plugins.androidLibrary)
 }
 

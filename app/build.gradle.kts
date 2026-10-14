@@ -1,6 +1,8 @@
 import org.gradle.api.tasks.testing.Test
 
 plugins {
+    alias(libs.plugins.kover)
+    alias(libs.plugins.screenshot)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.ksp)
@@ -8,6 +10,7 @@ plugins {
 
 android {
     namespace = "com.vextreme.vexlife.android"
+    experimentalProperties["android.experimental.enableScreenshotTest"] = true
     compileSdk = 37
 
     defaultConfig {
@@ -85,6 +88,9 @@ dependencies {
     androidTestImplementation(libs.androidxTestExtJunit)
     androidTestImplementation(libs.espressoCore)
     androidTestUtil(libs.androidxTestServices)
+
+    screenshotTestImplementation(libs.screenshotValidationApi)
+    screenshotTestImplementation(libs.composeUiTooling)
 }
 
 
