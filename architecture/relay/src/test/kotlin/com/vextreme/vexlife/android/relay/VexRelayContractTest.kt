@@ -55,6 +55,44 @@ class VexRelayContractTest {
         }
     }
 
+    private data class ModeProbeState(
+        val value: Int = 0,
+    ) : VexState<ModeProbeState>
+
+    private class ModeProbeRelay :
+        VexRelay<ModeProbeState>(
+            relayRef = "relay.contract.mode-probe",
+            initialState = ModeProbeState(),
+        ) {
+        var processStateCalls: Int =
+            0
+            private set
+
+        override fun processState(
+            inputState: ModeProbeState,
+            currentState: ModeProbeState,
+        ): ModeProbeState {
+            processStateCalls += 1
+            return inputState
+        }
+
+        fun inputDriven(value: Int) {
+            send(
+                ModeProbeState(
+                    value = value,
+                ),
+            )
+        }
+
+        fun currentDriven(value: Int) {
+            updateCurrent { current ->
+                current.copy(
+                    value = value,
+                )
+            }
+        }
+    }
+
     private data class SharedLeaf(
         val value: Int,
     )
@@ -345,6 +383,34 @@ class VexRelayContractTest {
                     ),
             )
         }
+    }
+
+    @Test
+    fun sendAndUpdateCurrentHaveDistinctReducerOwnership() {
+        val relay =
+            ModeProbeRelay()
+
+        relay.inputDriven(1)
+
+        assertEquals(
+            1,
+            relay.processStateCalls,
+        )
+        assertEquals(
+            1,
+            relay.current.value,
+        )
+
+        relay.currentDriven(2)
+
+        assertEquals(
+            1,
+            relay.processStateCalls,
+        )
+        assertEquals(
+            2,
+            relay.current.value,
+        )
     }
 
     @Test
