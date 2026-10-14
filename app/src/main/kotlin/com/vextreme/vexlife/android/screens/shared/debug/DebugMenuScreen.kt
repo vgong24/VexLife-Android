@@ -108,18 +108,18 @@ object DebugMenuScreen : AppScreenBlueprint(
         intent = invoke(AppActions.ResetEventsDebugMenu),
     )
 
-    val UseRotationDebugMenuAlerts = buttonRef(
+    val UseRotationDebugMenuAlertCases = buttonRef(
         id = "body.events-simulator.actions.use-rotation",
         labelRes = R.string.events_simulator_use_rotation,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.UseRotationDebugMenuAlerts),
+        intent = invoke(AppActions.UseRotationDebugMenuAlertCases),
     )
 
-    val UseRandomDebugMenuAlerts = buttonRef(
+    val UseRandomDebugMenuAlertCases = buttonRef(
         id = "body.events-simulator.actions.use-random",
         labelRes = R.string.events_simulator_use_random,
         style = VexElementStyles.SecondaryAction,
-        intent = invoke(AppActions.UseRandomDebugMenuAlerts),
+        intent = invoke(AppActions.UseRandomDebugMenuAlertCases),
     )
 
     val NextDebugMenuAlertCase = buttonRef(
@@ -172,8 +172,8 @@ object DebugMenuScreen : AppScreenBlueprint(
                     button(ResetEventsDebugMenu)
                 }
                 row("alert-case-mode-actions") {
-                    button(UseRotationDebugMenuAlerts)
-                    button(UseRandomDebugMenuAlerts)
+                    button(UseRotationDebugMenuAlertCases)
+                    button(UseRandomDebugMenuAlertCases)
                 }
                 row("alert-case-actions") {
                     button(NextDebugMenuAlertCase)
@@ -282,13 +282,13 @@ object DebugMenuScreen : AppScreenBlueprint(
                 eventsDebugMenuAlerts.reset()
             },
             appAction(
-                action = AppActions.UseRotationDebugMenuAlerts,
+                action = AppActions.UseRotationDebugMenuAlertCases,
                 ownerRef = screenId,
             ) {
                 eventsDebugMenuAlerts.useRotation()
             },
             appAction(
-                action = AppActions.UseRandomDebugMenuAlerts,
+                action = AppActions.UseRandomDebugMenuAlertCases,
                 ownerRef = screenId,
             ) {
                 eventsDebugMenuAlerts.useSeededRandom(
