@@ -213,10 +213,13 @@ transitively immutable Vex value
 -> deepCopy() may return the same instance
 ~~~
 
-Use `VexImmutableState`, `VexImmutableInputState`, or `VexImmutableOutputState` only when every value
-reachable from the state is immutable for that state's lifetime. A state containing a
-`MutableList`, `MutableMap`, array, mutable SDK object, or another externally mutable value must keep
-a real detaching `deepCopy()` implementation.
+Immutability is the default `VexState` contract; there is no separate immutable marker to choose.
+A normal state therefore inherits `deepCopy() = this`.
+
+If a state intentionally contains a `MutableList`, `MutableMap`, array, mutable SDK object, or
+another externally mutable value, that state is an explicit exception and must override
+`deepCopy()` to detach those descendants. Prefer adapting provider-owned mutable objects before they
+enter Relay rather than making mutable-backed state common.
 
 This lets one admitted Compound patch change several facts atomically without recursively copying
 unchanged state:
@@ -240,6 +243,34 @@ and commits at most one next state. There is no separately retained `processingS
 `VexCompoundRelay` also preserves the exact retained input/output branch when that branch is
 semantically equal. An input-only revision therefore does not manufacture a replacement output
 object.
+
+Normal authoring therefore stays simple:
+
+~~~kotlin
+data class ExampleInput(
+    val screenId: String? = null,
+    val selectedRef: String? = null,
+) : VexInputState<ExampleInput>
+
+data class ExampleOutput(
+    val ready: Boolean = false,
+) : VexOutputState<ExampleOutput>
+~~~
+
+No immutable marker and no boilerplate `deepCopy()` are required.
+
+A mutable-backed exception makes the exception visible in the type itself:
+
+~~~kotlin
+data class MutableBackedInput(
+    val refs: MutableList<String>,
+) : VexInputState<MutableBackedInput> {
+    override fun deepCopy(): MutableBackedInput =
+        copy(
+            refs = refs.toMutableList(),
+        )
+}
+~~~
 
 ### Serialization, waiting, and staleness
 
@@ -362,14 +393,14 @@ Examples:
   both changed        -> 5 top-level/branch snapshots
 ~~~
 
-Those counts describe framework call sites, not necessarily allocations. With `VexImmutable*`,
-every snapshot of an immutable value returns the same instance, so the immutable path allocates only
-the genuinely new state objects created by the reducer/wrapper.
+Those counts describe framework call sites, not necessarily allocations. For an ordinary
+transitively immutable `VexState`, every inherited snapshot returns the same instance, so the
+immutable path allocates only the genuinely new state objects created by the reducer/wrapper.
 
-Current Events state has not been converted to `VexImmutable*` in this PR. It still performs real
-defensive snapshots for its Lists/Maps/domain children, but it benefits immediately from the removed
-whole-state recopying and unchanged-branch retention. A future Events immutability migration would
-need to prove all nested values are actually immutable before opting in.
+Current Events state explicitly overrides `deepCopy()` because its Lists/Maps/domain children are
+still treated as mutable-backed ownership boundaries. It benefits immediately from the removed
+whole-state recopying and unchanged-branch retention. A future Events cleanup may remove those
+overrides only after the nested values are proven transitively immutable.
 
 #### Events-shaped example
 
