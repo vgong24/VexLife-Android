@@ -2,17 +2,21 @@ package com.vextreme.vexlife.android.screens.shared.debug
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
+import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.invoke
+import com.vextreme.vexlife.android.elements.localEffect
 import com.vextreme.vexlife.android.elements.open
 import com.vextreme.vexlife.android.data.events.SyntheticExternalEventController
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
@@ -20,12 +24,15 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureComparisonLab
+import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureMode
 import com.vextreme.vexlife.android.screens.shared.debug.loghistory.LogHistorySheet
 import com.vextreme.vexlife.android.shell.AppShell
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.ui.VexLifeRelays
 
 object DebugMenuScreen : AppScreenBlueprint(
     screenKey = "debug-menu",
@@ -37,6 +44,12 @@ object DebugMenuScreen : AppScreenBlueprint(
         id = "body.dark-mode",
         labelRes = R.string.dark_mode,
         intent = invoke(AppActions.ToggleDarkMode),
+    )
+
+    val UseTraditionalEventsArchitecture = toggleRef(
+        id = "body.events-architecture.use-traditional",
+        labelRes = R.string.events_architecture_use_traditional,
+        intent = localEffect(),
     )
 
     val ShowLog = buttonRef(
@@ -129,6 +142,20 @@ object DebugMenuScreen : AppScreenBlueprint(
     override val content = layout {
         scrollableColumn("body") {
             toggle(DarkMode)
+
+            card("events-architecture") {
+                text(
+                    id = "title",
+                    textRes = R.string.events_architecture_comparison_title,
+                    role = TextRole.Title,
+                )
+                toggle(UseTraditionalEventsArchitecture)
+                text(
+                    id = "helper",
+                    textRes = R.string.events_architecture_comparison_helper,
+                    role = TextRole.Supporting,
+                )
+            }
 
             card("log-history") {
                 text(
@@ -320,11 +347,13 @@ object DebugMenuScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
+        relays: VexLifeRelays,
         darkTheme: Boolean,
     ) {
         DebugMenuScreenContent(
             runtime = runtime,
             logHistoryRepository = repositories.logHistory,
+            eventsArchitectureComparison = relays.eventsComparison,
             darkTheme = darkTheme,
         )
     }
@@ -334,14 +363,60 @@ object DebugMenuScreen : AppScreenBlueprint(
 fun DebugMenuScreenContent(
     runtime: VexRuntime,
     logHistoryRepository: LogHistoryRepository,
+    eventsArchitectureComparison: EventsArchitectureComparisonLab,
     darkTheme: Boolean,
 ) {
+    val architectureMode by
+        eventsArchitectureComparison
+            .mode
+            .collectAsState()
+
+    val handler =
+        ElementActionHandler { element ->
+            if (
+                element ===
+                DebugMenuScreen
+                    .UseTraditionalEventsArchitecture
+            ) {
+                runtime.activate(element)
+
+                if (
+                    architectureMode ==
+                    EventsArchitectureMode
+                        .TRADITIONAL_CONTROLLER
+                ) {
+                    eventsArchitectureComparison
+                        .useVextremeRelay()
+                } else {
+                    eventsArchitectureComparison
+                        .useTraditionalController()
+                }
+            } else {
+                runtime.activate(element)
+            }
+        }
+
     VexElementTree(
         placement = DebugMenuScreen.content,
         registry = runtime.registry,
-        handler = runtime,
+        handler = handler,
         modifier = Modifier.fillMaxSize(),
-        toggleChecked = { it.elementId == DebugMenuScreen.DarkMode.elementId && darkTheme },
+        toggleChecked = { element ->
+            when (element.elementId) {
+                DebugMenuScreen.DarkMode.elementId ->
+                    darkTheme
+
+                DebugMenuScreen
+                    .UseTraditionalEventsArchitecture
+                    .elementId ->
+                    architectureMode ==
+                        EventsArchitectureMode
+                            .TRADITIONAL_CONTROLLER
+
+                else ->
+                    false
+            }
+        },
         selectedChild = runtime.presentation::selected,
     )
 
@@ -366,6 +441,7 @@ private fun DebugMenuScreenPreview() {
         DebugMenuScreenContent(
             runtime = context.runtime,
             logHistoryRepository = context.repositories.logHistory,
+            eventsArchitectureComparison = context.relays.eventsComparison,
             darkTheme = context.darkTheme,
         )
     }
@@ -389,6 +465,7 @@ private fun DebugMenuHistoryPreview() {
         DebugMenuScreenContent(
             runtime = context.runtime,
             logHistoryRepository = context.repositories.logHistory,
+            eventsArchitectureComparison = context.relays.eventsComparison,
             darkTheme = context.darkTheme,
         )
     }
