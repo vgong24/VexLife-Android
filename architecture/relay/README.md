@@ -132,6 +132,91 @@ offered for every optional-argument/K2 editing case.
 Only `.idea/externalDependencies.xml` is admitted to Git. Other `.idea` workspace state remains
 ignored.
 
+### Immutable ownership and structural sharing
+
+Relay still owns a defensive boundary, but "defensive" does not require allocating a new object when
+the value is transitively immutable.
+
+~~~text
+mutable / provider-owned value
+-> deepCopy() detaches at the ownership boundary
+
+transitively immutable Vex value
+-> deepCopy() may return the same instance
+~~~
+
+Use `VexImmutableState`, `VexImmutableInputState`, or `VexImmutableOutputState` only when every value
+reachable from the state is immutable for that state's lifetime. A state containing a
+`MutableList`, `MutableMap`, array, mutable SDK object, or another externally mutable value must keep
+a real detaching `deepCopy()` implementation.
+
+This lets one admitted Compound patch change several facts atomically without recursively copying
+unchanged state:
+
+~~~kotlin
+val coherent =
+    previous.copy(
+        currentScreenId =
+            patch.currentScreenId
+                ?: previous.currentScreenId,
+        transientBlocked =
+            patch.transientBlocked
+                ?: previous.transientBlocked,
+    )
+~~~
+
+The new root is different, but unchanged immutable children remain the same objects. `processStates`
+still returns one temporary candidate; Relay compares that candidate with retained current meaning
+and commits at most one next state. There is no separately retained `processingState`.
+
+`VexCompoundRelay` also preserves the exact retained input/output branch when that branch is
+semantically equal. An input-only revision therefore does not manufacture a replacement output
+object.
+
+### Nested Compound convergence
+
+A Compound Relay may consume another Compound Relay exactly like any other observable truth. Prefer
+the smallest projection that answers the parent's question:
+
+~~~text
+child.outputStates
+  default when parent needs only the child's derived meaning
+
+child.inputStates
+  only when parent genuinely needs the child's retained dependency context
+
+child.states
+  only when full child coordination/revision state matters
+~~~
+
+For the normal case:
+
+~~~text
+A ----\
+B -----+-> Child.processStates() -> ChildOutput --\
+C ----/                                           +-> Parent.processStates()
+D ------------------------------------------------/
+~~~
+
+`outputStates` is distinct-by-output. Therefore:
+
+~~~text
+child input/revision changes
++ child output meaning stays equal
+-> parent does not process
+
+child output meaning changes
+-> parent receives one changed semantic parameter
+-> parent processes once
+~~~
+
+When the child output is transitively immutable, the exact output object may be structurally shared
+into the parent instead of recopied. This keeps convergence hierarchical without turning nested
+Relays into a chain of defensive allocations.
+
+Third-party SDK/provider objects remain outside this trusted immutable graph. Normalize/snapshot
+provider-owned mutable objects into Vex-owned state at the adapter boundary first.
+
 ### Compound observation surfaces
 
 A Compound Relay has three intentionally different observation surfaces:
@@ -219,12 +304,15 @@ inputs are available.
 
 ## EAP-00 owns
 
-- explicit transitive defensive-copy contract;
+- explicit ownership-snapshot contract with immutable structural-sharing opt-in;
 - one serialized processing boundary;
 - source-level semantic freshness in the smallest rightful Relay;
 - Compound Relay retained input + derived output;
 - nullable top-level input patches as "no new dependency value supplied";
 - sibling patch serialization so concurrent inputs cannot erase one another;
+- one admitted patch may change several fields atomically while unchanged immutable children are shared;
+- unchanged Compound input/output branches retain their already-owned object identity;
+- nested Compound consumers can observe the smallest distinct projection without re-running child logic;
 - semantic no-op suppression;
 - Compound revision only when retained/derived meaning changes;
 - canonical distinct-by-output projection through `outputStates`;
