@@ -81,7 +81,7 @@ object EventsScreen : AppScreenBlueprint(
  * reuse stable repeated-item behavior without inheriting Events repositories or attention rules.
  */
 @Composable
-fun EventsScreenContent(
+internal fun EventsScreenContent(
     runtime: VexRuntime,
     relays: VexLifeRelays,
 ) {
