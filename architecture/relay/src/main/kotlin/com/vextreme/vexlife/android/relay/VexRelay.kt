@@ -33,7 +33,7 @@ abstract class VexRelay<State : VexState<State>>(
         inputState: State,
         currentState: State,
     ): State =
-        inputState.deepCopy()
+        inputState
 
     protected fun send(inputState: State): State =
         synchronized(lock) {
@@ -41,23 +41,41 @@ abstract class VexRelay<State : VexState<State>>(
                 "VexRelay cannot recursively send state from processState"
             }
 
+            /*
+             * The retained current value is already Relay-owned. Do not copy it merely to read it.
+             * Only the value handed into overridable processing is detached when the state contract
+             * requires detachment; VexImmutableState turns that snapshot into a zero-allocation
+             * identity operation.
+             */
             val current =
-                mutableCurrentState.value.deepCopy()
+                mutableCurrentState.value
+            val admittedInput =
+                inputState.deepCopy()
 
             processing = true
             try {
-                val next =
+                val processed =
                     processState(
-                        inputState = inputState.deepCopy(),
+                        inputState = admittedInput,
                         currentState = current.deepCopy(),
-                    ).deepCopy()
+                    )
 
-                if (next != current) {
-                    mutableCurrentState.value =
-                        next.deepCopy()
+                /*
+                 * Claim exactly one ownership snapshot before retaining arbitrary reducer output.
+                 * A legacy mutable-backed state is detached here; a transitively immutable state is
+                 * safely shared.
+                 */
+                val ownedNext =
+                    processed.deepCopy()
+
+                if (ownedNext == current) {
+                    return@synchronized current.deepCopy()
                 }
 
-                next.deepCopy()
+                mutableCurrentState.value =
+                    ownedNext
+
+                ownedNext.deepCopy()
             } finally {
                 processing = false
             }
@@ -72,25 +90,37 @@ abstract class VexRelay<State : VexState<State>>(
             }
 
             val current =
-                mutableCurrentState.value.deepCopy()
+                mutableCurrentState.value
 
             processing = true
             try {
+                /*
+                 * transform() receives an ownership-safe snapshot. Its result is temporary candidate
+                 * state, not a second retained truth. processState() reconciles that candidate
+                 * against another ownership-safe view of the exact retained current state.
+                 */
                 val candidate =
-                    transform(current.deepCopy()).deepCopy()
+                    transform(
+                        current.deepCopy(),
+                    )
 
-                val next =
+                val processed =
                     processState(
-                        inputState = candidate.deepCopy(),
+                        inputState = candidate,
                         currentState = current.deepCopy(),
-                    ).deepCopy()
+                    )
 
-                if (next != current) {
-                    mutableCurrentState.value =
-                        next.deepCopy()
+                val ownedNext =
+                    processed.deepCopy()
+
+                if (ownedNext == current) {
+                    return@synchronized current.deepCopy()
                 }
 
-                next.deepCopy()
+                mutableCurrentState.value =
+                    ownedNext
+
+                ownedNext.deepCopy()
             } finally {
                 processing = false
             }
