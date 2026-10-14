@@ -582,8 +582,16 @@ class EventsConvergenceRelay internal constructor(
                 transientBlocked ->
                     EventsConvergenceAvailability.HELD_TRANSIENT_OCCUPIED
 
+                /*
+                 * At this point canonical feed/preferences/screen/transient truth is already
+                 * observed and a concrete candidate exists. A missing LazyList visibility snapshot
+                 * means only "target reachability has not reported yet", not "the Events
+                 * relationship is unobserved". Classify it with the same bounded presentation hold
+                 * as a known off-screen target so an already-composed row can bridge the one-layout
+                 * observation gap without weakening other held states.
+                 */
                 eventsSurfaceVisibility == null ->
-                    EventsConvergenceAvailability.UNOBSERVED
+                    EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
 
                 candidate.eventRef !in eventsSurfaceVisibility ->
                     EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
