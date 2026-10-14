@@ -235,7 +235,7 @@ the caller of `send()`.
 Suppose retained Events input is:
 
 ~~~kotlin
-val retainedCurrent = EventsConvergenceInputState(
+val retainedInput = EventsConvergenceInputState(
     currentScreenId = "Home",
     feed = feed41,
     preferences = preferences12,
@@ -259,23 +259,23 @@ The reducer forms one coherent candidate:
 
 ~~~kotlin
 val coherent =
-    retainedCurrent.copy(
-        currentScreenId = patch.currentScreenId ?: retainedCurrent.currentScreenId,
-        transientBlocked = patch.transientBlocked ?: retainedCurrent.transientBlocked,
+    retainedInput.copy(
+        currentScreenId = patch.currentScreenId ?: retainedInput.currentScreenId,
+        transientBlocked = patch.transientBlocked ?: retainedInput.transientBlocked,
     )
 ~~~
 
 With immutable children the new root may structurally share:
 
 ~~~text
-coherent.feed                       === retainedCurrent.feed
-coherent.preferences                === retainedCurrent.preferences
-coherent.lab                        === retainedCurrent.lab
-coherent.profile                    === retainedCurrent.profile
-coherent.visibleEventRefsBySurface  === retainedCurrent.visibleEventRefsBySurface
+coherent.feed                       === retainedInput.feed
+coherent.preferences                === retainedInput.preferences
+coherent.lab                        === retainedInput.lab
+coherent.profile                    === retainedInput.profile
+coherent.visibleEventRefsBySurface  === retainedInput.visibleEventRefsBySurface
 
-coherent.currentScreenId             != retainedCurrent.currentScreenId
-coherent.transientBlocked            != retainedCurrent.transientBlocked
+coherent.currentScreenId             != retainedInput.currentScreenId
+coherent.transientBlocked            != retainedInput.transientBlocked
 ~~~
 
 So one admitted patch can change several facts atomically without cloning every unchanged branch.
