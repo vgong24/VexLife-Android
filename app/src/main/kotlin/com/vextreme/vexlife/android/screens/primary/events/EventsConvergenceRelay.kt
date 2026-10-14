@@ -1,11 +1,11 @@
 package com.vextreme.vexlife.android.screens.primary.events
 
-import com.vextreme.vexlife.android.data.events.EventsAttentionDisposition
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabScenario
-import com.vextreme.vexlife.android.data.events.EventsAttentionLabState
-import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
-import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceState
+import com.vextreme.vexlife.android.data.events.EventsAlertDisposition
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertRepository
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertCase
+import com.vextreme.vexlife.android.data.events.EventsDebugMenuAlertState
+import com.vextreme.vexlife.android.data.events.EventsAlertPreferenceRepository
+import com.vextreme.vexlife.android.data.events.EventsAlertPreferenceState
 import com.vextreme.vexlife.android.data.events.EventsFeedState
 import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
@@ -38,8 +38,8 @@ data class EventsProfileObservation(
 data class EventsConvergenceInputState(
     val currentScreenId: String? = null,
     val feed: EventsFeedState? = null,
-    val preferences: EventsAttentionPreferenceState? = null,
-    val lab: EventsAttentionLabState? = null,
+    val alertPreferences: EventsAlertPreferenceState? = null,
+    val debugMenuAlert: EventsDebugMenuAlertState? = null,
     val profile: EventsProfileObservation? = null,
     val visibleEventRefsBySurface: Map<String, Set<String>>? = null,
     val transientBlocked: Boolean? = null,
@@ -47,8 +47,8 @@ data class EventsConvergenceInputState(
     override fun deepCopy(): EventsConvergenceInputState =
         copy(
             feed = feed?.deepCopy(),
-            preferences = preferences?.deepCopy(),
-            lab = lab?.deepCopy(),
+            alertPreferences = alertPreferences?.deepCopy(),
+            debugMenuAlert = debugMenuAlert?.deepCopy(),
             profile = profile?.deepCopy(),
             visibleEventRefsBySurface =
                 visibleEventRefsBySurface?.mapValues { (_, refs) ->
@@ -75,7 +75,7 @@ enum class EventsConvergenceAvailability {
     /** Candidate exists and Events is current, but its exact row is not presently reachable. */
     HELD_TARGET_UNREACHABLE,
 
-    /** Candidate exists, but another transient surface currently owns presentation attention. */
+    /** Candidate exists, but another transient surface currently owns presentation alert. */
     HELD_TRANSIENT_OCCUPIED,
 
     /** Candidate exists and the exact target is currently eligible for anchored presentation. */
@@ -112,8 +112,8 @@ data class EventsConvergenceOutputState(
         EventsConvergenceAvailability.UNOBSERVED,
 
     /** Current presentation facts already resolved by the Relay, not recomputed in Compose. */
-    val dispositionByEventRef: Map<String, EventsAttentionDisposition> = emptyMap(),
-    val scenario: EventsAttentionLabScenario? = null,
+    val dispositionByEventRef: Map<String, EventsAlertDisposition> = emptyMap(),
+    val debugMenuAlertCase: EventsDebugMenuAlertCase? = null,
 
     /**
      * The latest observed local-profile display-name transition.
@@ -166,7 +166,7 @@ data class EventsConvergenceOutputState(
                 },
             candidate = candidate?.copy(),
             dispositionByEventRef = dispositionByEventRef.toMap(),
-            scenario = scenario?.copy(),
+            debugMenuAlertCase = debugMenuAlertCase?.copy(),
             latestProfileNameChange = latestProfileNameChange?.deepCopy(),
         )
 }
@@ -186,8 +186,8 @@ data class EventsConvergenceOutputState(
  */
 class EventsConvergenceRelay internal constructor(
     private val eventsRepository: EventsRepository?,
-    private val attentionPreferences: EventsAttentionPreferenceRepository?,
-    private val attentionLab: EventsAttentionLabRepository?,
+    private val alertPreferences: EventsAlertPreferenceRepository?,
+    private val debugMenuAlerts: EventsDebugMenuAlertRepository?,
     private val userProfile: UserProfileRepository?,
 ) : VexCompoundRelay<EventsConvergenceInputState, EventsConvergenceOutputState>(
     relayRef = "relay.events.convergence",
@@ -197,8 +197,8 @@ class EventsConvergenceRelay internal constructor(
     /** Pure reducer tests may drive partial inputs directly without starting dependency observers. */
     internal constructor() : this(
         eventsRepository = null,
-        attentionPreferences = null,
-        attentionLab = null,
+        alertPreferences = null,
+        debugMenuAlerts = null,
         userProfile = null,
     )
 
@@ -215,24 +215,24 @@ class EventsConvergenceRelay internal constructor(
                 }
             }
 
-            attentionPreferences?.let { repository ->
+            alertPreferences?.let { repository ->
                 observe(
                     dependencyRef = PREFERENCES_DEPENDENCY,
                     flow = repository.states,
-                ) { preferences ->
+                ) { alertPreferences ->
                     EventsConvergenceInputState(
-                        preferences = preferences.deepCopy(),
+                        alertPreferences = alertPreferences.deepCopy(),
                     )
                 }
             }
 
-            attentionLab?.let { repository ->
+            debugMenuAlerts?.let { repository ->
                 observe(
                     dependencyRef = LAB_DEPENDENCY,
                     flow = repository.states,
                 ) { lab ->
                     EventsConvergenceInputState(
-                        lab = lab.deepCopy(),
+                        debugMenuAlert = lab.deepCopy(),
                     )
                 }
             }
@@ -296,27 +296,27 @@ class EventsConvergenceRelay internal constructor(
     }
 
     fun acknowledge(eventRef: String) {
-        requireAttentionPreferences()
+        requireAlertPreferences()
             .acknowledge(eventRef)
     }
 
     fun later(eventRef: String) {
-        requireAttentionPreferences()
+        requireAlertPreferences()
             .defer(eventRef)
     }
 
     fun suspend(eventRef: String) {
-        requireAttentionPreferences()
+        requireAlertPreferences()
             .suspend(eventRef)
     }
 
     fun suppress(eventRef: String) {
-        requireAttentionPreferences()
+        requireAlertPreferences()
             .suppress(eventRef)
     }
 
-    fun completeCurrentScenario() {
-        requireAttentionLab()
+    fun completeCurrentAlertCase() {
+        requireDebugMenuAlerts()
             .completeCurrent()
     }
 
@@ -341,20 +341,20 @@ class EventsConvergenceRelay internal constructor(
         )
     }
 
-    internal fun preferencesChanged(
-        preferences: EventsAttentionPreferenceState,
+    internal fun alertPreferencesChanged(
+        preferences: EventsAlertPreferenceState,
     ) {
         send(
             EventsConvergenceInputState(
-                preferences = preferences.deepCopy(),
+                alertPreferences = alertPreferences.deepCopy(),
             ),
         )
     }
 
-    internal fun labChanged(lab: EventsAttentionLabState) {
+    internal fun debugMenuAlertChanged(lab: EventsDebugMenuAlertState) {
         send(
             EventsConvergenceInputState(
-                lab = lab.deepCopy(),
+                debugMenuAlert = lab.deepCopy(),
             ),
         )
     }
@@ -386,12 +386,12 @@ class EventsConvergenceRelay internal constructor(
         val feed =
             inputState.feed
                 ?: previous.feed
-        val preferences =
-            inputState.preferences
-                ?: previous.preferences
-        val lab =
-            inputState.lab
-                ?: previous.lab
+        val alertPreferences =
+            inputState.alertPreferences
+                ?: previous.alertPreferences
+        val debugMenuAlert =
+            inputState.debugMenuAlert
+                ?: previous.debugMenuAlert
         val profile =
             inputState.profile
                 ?: previous.profile
@@ -461,8 +461,8 @@ class EventsConvergenceRelay internal constructor(
             EventsConvergenceInputState(
                 currentScreenId = screenId,
                 feed = feed?.deepCopy(),
-                preferences = preferences?.deepCopy(),
-                lab = lab?.deepCopy(),
+                alertPreferences = alertPreferences?.deepCopy(),
+                debugMenuAlert = debugMenuAlert?.deepCopy(),
                 profile = profile?.deepCopy(),
                 visibleEventRefsBySurface =
                     visibleEventRefsBySurface?.mapValues { (_, refs) ->
@@ -482,7 +482,7 @@ class EventsConvergenceRelay internal constructor(
          * NORMAL      -> current queue
          * SUSPENDED   -> back of current queue
          * DEFERRED    -> next sequence, only after current queue drains
-         * ACK/SUPPRESS-> terminal for proactive attention this lab/session
+         * ACK/SUPPRESS-> terminal for proactive alert this lab/session
          */
         val normalQueue =
             events
@@ -495,7 +495,7 @@ class EventsConvergenceRelay internal constructor(
             events
                 .filter { event ->
                     dispositions[event.eventRef] ==
-                        EventsAttentionDisposition.SUSPENDED
+                        EventsAlertDisposition.SUSPENDED
                 }
                 .sortedBy { event ->
                     preferences
@@ -508,7 +508,7 @@ class EventsConvergenceRelay internal constructor(
             events
                 .filter { event ->
                     dispositions[event.eventRef] ==
-                        EventsAttentionDisposition.DEFERRED
+                        EventsAlertDisposition.DEFERRED
                 }
                 .sortedBy { event ->
                     preferences
@@ -530,10 +530,10 @@ class EventsConvergenceRelay internal constructor(
             }
 
         val candidateEvent =
-            if (feed != null && preferences != null) {
-                val labTargetRef =
+            if (feed != null && alertPreferences != null) {
+                val debugMenuAlertTargetRef =
                     lab
-                        ?.currentScenario
+                        ?.currentAlertCase
                         ?.targetEventRef
 
                 val retainedCandidateRef =
@@ -542,7 +542,7 @@ class EventsConvergenceRelay internal constructor(
                         ?.eventRef
 
                 activePool.firstOrNull { event ->
-                    event.eventRef == labTargetRef
+                    event.eventRef == debugMenuAlertTargetRef
                 } ?: activePool.firstOrNull { event ->
                     event.eventRef == retainedCandidateRef
                 } ?: activePool.firstOrNull()
@@ -568,7 +568,7 @@ class EventsConvergenceRelay internal constructor(
         val availability =
             when {
                 feed == null ||
-                    preferences == null ||
+                    alertPreferences == null ||
                     screenId == null ||
                     transientBlocked == null ->
                     EventsConvergenceAvailability.UNOBSERVED
@@ -621,9 +621,9 @@ class EventsConvergenceRelay internal constructor(
                     candidate = candidate,
                     availability = availability,
                     dispositionByEventRef = dispositions.toMap(),
-                    scenario =
+                    debugMenuAlertCase =
                         lab
-                            ?.currentScenario
+                            ?.currentAlertCase
                             ?.copy(),
                     latestProfileNameChange =
                         latestProfileNameChange
@@ -639,7 +639,7 @@ class EventsConvergenceRelay internal constructor(
                     acknowledgedCount =
                         dispositions.values.count { disposition ->
                             disposition ==
-                                EventsAttentionDisposition.ACKNOWLEDGED
+                                EventsAlertDisposition.ACKNOWLEDGED
                         },
                     deferredCount =
                         deferredQueue.size,
@@ -648,7 +648,7 @@ class EventsConvergenceRelay internal constructor(
                     suppressedCount =
                         dispositions.values.count { disposition ->
                             disposition ==
-                                EventsAttentionDisposition.SUPPRESSED
+                                EventsAlertDisposition.SUPPRESSED
                         },
                     currentQueueCount =
                         currentQueueCount,
@@ -658,14 +658,14 @@ class EventsConvergenceRelay internal constructor(
         )
     }
 
-    private fun requireAttentionPreferences(): EventsAttentionPreferenceRepository =
-        checkNotNull(attentionPreferences) {
-            "EventsConvergenceRelay action methods require an attention repository"
+    private fun requireAlertPreferences(): EventsAlertPreferenceRepository =
+        checkNotNull(alertPreferences) {
+            "EventsConvergenceRelay action methods require an alert repository"
         }
 
-    private fun requireAttentionLab(): EventsAttentionLabRepository =
-        checkNotNull(attentionLab) {
-            "EventsConvergenceRelay lab methods require a lab repository"
+    private fun requireDebugMenuAlerts(): EventsDebugMenuAlertRepository =
+        checkNotNull(debugMenuAlerts) {
+            "EventsConvergenceRelay Debug-menu alert methods require a Debug-menu alert repository"
         }
 
     private fun mergeVisibleSurfacePatches(
@@ -737,7 +737,7 @@ class EventsConvergenceRelay internal constructor(
         const val PREFERENCES_DEPENDENCY =
             "events.preferences"
         const val LAB_DEPENDENCY =
-            "events.lab"
+            "events.debug-menu-alert"
         const val PROFILE_DEPENDENCY =
             "user-profile.local"
     }
