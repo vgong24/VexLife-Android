@@ -11,10 +11,6 @@ import com.vextreme.vexlife.android.data.events.EventsRepository
 import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityRepository
 import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityState
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
-import com.vextreme.vexlife.android.data.events.VexExternalEventKind
-import com.vextreme.vexlife.android.data.userprofile.UserProfile
-import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
-import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexDeepCopyable
@@ -22,27 +18,11 @@ import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
 import com.vextreme.vexlife.android.relay.vexDependencies
 
-/**
- * Observed profile value.
- *
- * The wrapper matters because the Compound patch itself uses null for "this dependency supplied no
- * new value". An observed null profile instead means "the profile source was observed and is empty".
- */
-data class EventsProfileObservation(
-    val profile: UserProfile?,
-) : VexDeepCopyable<EventsProfileObservation> {
-    override fun deepCopy(): EventsProfileObservation =
-        copy(
-            profile = profile?.copy(),
-        )
-}
-
 data class EventsConvergenceInputState(
     val currentScreenId: String? = null,
     val feed: EventsFeedState? = null,
     val preferences: EventsAttentionPreferenceState? = null,
     val lab: EventsAttentionLabState? = null,
-    val profile: EventsProfileObservation? = null,
     val sourceAvailability: EventsSourceAvailabilityState? = null,
     val visibleEventRefsBySurface: Map<String, Set<String>>? = null,
     val transientBlocked: Boolean? = null,
@@ -52,7 +32,6 @@ data class EventsConvergenceInputState(
             feed = feed?.deepCopy(),
             preferences = preferences?.deepCopy(),
             lab = lab?.deepCopy(),
-            profile = profile?.deepCopy(),
             sourceAvailability = sourceAvailability?.deepCopy(),
             visibleEventRefsBySurface =
                 visibleEventRefsBySurface?.mapValues { (_, refs) ->
@@ -119,15 +98,6 @@ data class EventsConvergenceOutputState(
     val dispositionByEventRef: Map<String, EventsAttentionDisposition> = emptyMap(),
     val scenario: EventsAttentionLabScenario? = null,
 
-    /**
-     * The latest observed local-profile display-name transition.
-     *
-     * This is intentionally a current bounded notice rather than an event ledger. The profile's
-     * domain-owned updatedAt identifies the change; no artificial click/revision counter is created
-     * merely to force StateFlow inequality.
-     */
-    val latestProfileNameChange: VexExternalEvent? = null,
-
     /** Human/debug-facing queue metadata derived from the same Relay decision. */
     val unhandledCount: Int = 0,
     val queuedAfterCurrentCount: Int = 0,
@@ -171,7 +141,6 @@ data class EventsConvergenceOutputState(
             candidate = candidate?.copy(),
             dispositionByEventRef = dispositionByEventRef.toMap(),
             scenario = scenario?.copy(),
-            latestProfileNameChange = latestProfileNameChange?.deepCopy(),
         )
 }
 
@@ -192,7 +161,6 @@ class EventsConvergenceRelay internal constructor(
     private val eventsRepository: EventsRepository?,
     private val attentionPreferences: EventsAttentionPreferenceRepository?,
     private val attentionLab: EventsAttentionLabRepository?,
-    private val userProfile: UserProfileRepository?,
     private val sourceAvailability: EventsSourceAvailabilityRepository? = null,
 ) : VexCompoundRelay<EventsConvergenceInputState, EventsConvergenceOutputState>(
     relayRef = "relay.events.convergence",
@@ -204,7 +172,6 @@ class EventsConvergenceRelay internal constructor(
         eventsRepository = null,
         attentionPreferences = null,
         attentionLab = null,
-        userProfile = null,
         sourceAvailability = null,
     )
 
@@ -239,20 +206,6 @@ class EventsConvergenceRelay internal constructor(
                 ) { lab ->
                     EventsConvergenceInputState(
                         lab = lab.deepCopy(),
-                    )
-                }
-            }
-
-            userProfile?.let { repository ->
-                observe(
-                    dependencyRef = PROFILE_DEPENDENCY,
-                    flow = repository.observe(UserProfileRefs.local),
-                ) { profile ->
-                    EventsConvergenceInputState(
-                        profile =
-                            EventsProfileObservation(
-                                profile = profile?.copy(),
-                            ),
                     )
                 }
             }
@@ -410,9 +363,6 @@ class EventsConvergenceRelay internal constructor(
         val lab =
             inputState.lab
                 ?: previous.lab
-        val profile =
-            inputState.profile
-                ?: previous.profile
         val sourceAvailability =
             inputState.sourceAvailability
                 ?: previous.sourceAvailability
@@ -427,25 +377,12 @@ class EventsConvergenceRelay internal constructor(
             inputState.transientBlocked
                 ?: previous.transientBlocked
 
-        val latestProfileNameChange =
-            profileNameChangeFromPatch(
-                previousProfile = previous.profile,
-                incomingProfile = inputState.profile,
-            )
-                ?: currentState.outputState
-                    .latestProfileNameChange
-                    ?.deepCopy()
-
         val events =
-            (
-                feed
-                    ?.events
-                    .orEmpty()
-                    .map(VexExternalEvent::deepCopy) +
-                    listOfNotNull(
-                        latestProfileNameChange?.deepCopy(),
-                    )
-            ).also { combined ->
+            feed
+                ?.events
+                .orEmpty()
+                .map(VexExternalEvent::deepCopy)
+                .also { combined ->
                 check(
                     combined.map(VexExternalEvent::eventRef)
                         .distinct()
@@ -484,7 +421,6 @@ class EventsConvergenceRelay internal constructor(
                 feed = feed?.deepCopy(),
                 preferences = preferences?.deepCopy(),
                 lab = lab?.deepCopy(),
-                profile = profile?.deepCopy(),
                 sourceAvailability = sourceAvailability?.deepCopy(),
                 visibleEventRefsBySurface =
                     visibleEventRefsBySurface?.mapValues { (_, refs) ->
@@ -661,9 +597,6 @@ class EventsConvergenceRelay internal constructor(
                         lab
                             ?.currentScenario
                             ?.copy(),
-                    latestProfileNameChange =
-                        latestProfileNameChange
-                            ?.deepCopy(),
                     unhandledCount = unhandledCount,
                     queuedAfterCurrentCount =
                         if (candidate == null) {
@@ -729,44 +662,6 @@ class EventsConvergenceRelay internal constructor(
                     }
         }
 
-    private fun profileNameChangeFromPatch(
-        previousProfile: EventsProfileObservation?,
-        incomingProfile: EventsProfileObservation?,
-    ): VexExternalEvent? {
-        val before =
-            previousProfile
-                ?.profile
-                ?: return null
-        val after =
-            incomingProfile
-                ?.profile
-                ?: return null
-
-        if (
-            before.profileRef != after.profileRef ||
-            before.displayName == after.displayName
-        ) {
-            return null
-        }
-
-        return VexExternalEvent(
-            eventRef =
-                "event.user-profile.display-name-change@" +
-                    after.updatedAt.toString(),
-            sourceRef =
-                "source.user-profile." +
-                    after.profileRef,
-            kind = VexExternalEventKind.SYSTEM,
-            title = "Profile name changed",
-            detail =
-                before.displayName +
-                    " → " +
-                    after.displayName,
-            occurredAtEpochMillis =
-                after.updatedAt.toEpochMilli(),
-        )
-    }
-
     private companion object {
         const val FEED_DEPENDENCY =
             "events.feed"
@@ -774,8 +669,6 @@ class EventsConvergenceRelay internal constructor(
             "events.preferences"
         const val LAB_DEPENDENCY =
             "events.lab"
-        const val PROFILE_DEPENDENCY =
-            "user-profile.local"
         const val SOURCE_AVAILABILITY_DEPENDENCY =
             "events.source-availability"
     }
