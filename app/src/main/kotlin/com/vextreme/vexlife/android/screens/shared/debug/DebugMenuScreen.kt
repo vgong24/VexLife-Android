@@ -26,6 +26,7 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.architecture.experiment.VexStreamArchitectureExperiment
 
 object DebugMenuScreen : AppScreenBlueprint(
     screenKey = "debug-menu",
@@ -37,6 +38,18 @@ object DebugMenuScreen : AppScreenBlueprint(
         id = "body.dark-mode",
         labelRes = R.string.dark_mode,
         intent = invoke(AppActions.ToggleDarkMode),
+    )
+
+    /**
+     * Process-local comparison switch for the VexStream architecture experiment.
+     *
+     * The word V2 is intentionally visible here because this is a Debug Menu experiment, not a
+     * product-facing preference. Checked means V2 routing; unchecked means current Legacy routing.
+     */
+    val VexStreamArchitectureV2 = toggleRef(
+        id = "body.vexarchitecture-vexstream.v2",
+        labelRes = R.string.vexarchitecture_vexstream_v2_toggle,
+        intent = invoke(AppActions.ToggleVexStreamArchitectureV2),
     )
 
     val ShowLog = buttonRef(
@@ -129,6 +142,20 @@ object DebugMenuScreen : AppScreenBlueprint(
     override val content = layout {
         scrollableColumn("body") {
             toggle(DarkMode)
+
+            card("vexarchitecture-vexstream") {
+                text(
+                    id = "title",
+                    textRes = R.string.vexarchitecture_vexstream_title,
+                    role = TextRole.Title,
+                )
+                toggle(VexStreamArchitectureV2)
+                text(
+                    id = "helper",
+                    textRes = R.string.vexarchitecture_vexstream_helper,
+                    role = TextRole.Supporting,
+                )
+            }
 
             card("log-history") {
                 text(
@@ -225,6 +252,12 @@ object DebugMenuScreen : AppScreenBlueprint(
                 ownerRef = screenId,
             ) {
                 toggleDarkMode()
+            },
+            appAction(
+                action = AppActions.ToggleVexStreamArchitectureV2,
+                ownerRef = screenId,
+            ) {
+                VexStreamArchitectureExperiment.toggle()
             },
             appAction(
                 action = AppActions.ClearLogHistory,
@@ -341,7 +374,18 @@ fun DebugMenuScreenContent(
         registry = runtime.registry,
         handler = runtime,
         modifier = Modifier.fillMaxSize(),
-        toggleChecked = { it.elementId == DebugMenuScreen.DarkMode.elementId && darkTheme },
+        toggleChecked = { element ->
+            when (element.elementId) {
+                DebugMenuScreen.DarkMode.elementId ->
+                    darkTheme
+
+                DebugMenuScreen.VexStreamArchitectureV2.elementId ->
+                    VexStreamArchitectureExperiment.usesV2
+
+                else ->
+                    false
+            }
+        },
         selectedChild = runtime.presentation::selected,
     )
 
