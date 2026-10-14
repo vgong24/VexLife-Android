@@ -600,6 +600,138 @@ cross-behavior composition
 For example, "play queue index 7" carries request data. This experiment deliberately does not invent
 a generic payload architecture before the relational grammar proves useful.
 
+## Sharing one Behavior with one or many UI consumers
+
+The semantic kernel now produces one immutable `VexBehaviorProjection`:
+
+~~~text
+Projection
+    current State
+    every finite Control
+        -> resolved Act
+        OR unavailable
+~~~
+
+Effects are deliberately absent from this value.
+
+The Projection is safe to hand to:
+
+~~~text
+one Composable
+many sibling Composables
+preview fixtures
+JVM tests
+a later Convergence owner
+~~~
+
+without transferring provider/runtime ownership.
+
+### UI reads Projection; UI sends Control
+
+A UI should not send back the Act it happened to render.
+
+State may change between composition and interaction.
+
+Use:
+
+~~~text
+render:
+    Projection says PlayPause -> Pause
+
+time passes
+State may change
+
+click:
+    send Control.PlayPause back to feature owner
+    owner resolves Control again from CURRENT State
+    -> current Act
+    -> current Effect
+~~~
+
+This avoids stale rendered meaning becoming stale execution.
+
+### ViewModel is a lifetime mechanism, not part of the behavior language
+
+The four-move architecture does not require Android ViewModel.
+
+A ViewModel is useful when Android configuration recreation should retain the feature client /
+observation lifetime and there is no stronger owner already providing that lifetime.
+
+Examples:
+
+~~~text
+small local Composable-only behavior
+    immutable Projection parameter + callback may be enough
+    no ViewModel required
+
+feature owner already lives in a Service / repository / session
+    that owner remains truth/lifetime owner
+    UI may observe a projection directly or through a retained client
+    ViewModel is optional glue, not semantic truth
+
+Activity/session-scoped feature client
+    ViewModel can retain the client across configuration recreation
+
+several Composables on one surface
+    nearest common owner may collect one observable Projection
+    and pass the same immutable value downward
+~~~
+
+Multiple collectors of one hot StateFlow can also be valid when surfaces have independent lifetimes.
+The semantic requirement is not "collect exactly once"; it is "do not recompute competing truth in
+each consumer".
+
+### Observable transport remains outside the kernel
+
+This module intentionally does not prescribe `StateFlow`, Compose State, LiveData, or Relay as the
+only transport.
+
+A concrete feature may expose:
+
+~~~kotlin
+StateFlow<VexBehaviorProjection<State, Control, Act>>
+~~~
+
+because StateFlow is appropriate to its lifetime and platform.
+
+Another feature may receive an immutable Projection from its parent.
+
+A convergence feature may consume another owner's Flow.
+
+Those are transport/lifetime decisions. The semantic payload remains the same
+`VexBehaviorProjection`.
+
+### Fresh VexStream target
+
+A clean VexStream integration should aim toward:
+
+~~~text
+MediaSession / Player
+    owns actual playback truth
+
+VexStreamPlaybackClient
+    observes provider truth
+    -> builds current semantic State
+    -> builds one BehaviorProjection
+    -> exposes observable Projection
+    -> accepts Control activation
+    -> resolves latest Act / Effect
+    -> asks MediaController/provider to realize Effect
+
+Mini Player
+Context Dock
+other future surfaces
+    receive the same Projection shape
+    + invoke(Control)
+~~~
+
+The name `VexStreamPlaybackClient` is descriptive here, not yet a committed generic base class.
+
+The unresolved design question at this seam is lifetime/hosting, not semantics: whether the concrete
+VexStream client belongs in the existing app session, a feature-scoped ViewModel, another retained
+owner, or a service-side projection depends on the real MediaController/provider lifetime chosen by
+the next production slice.
+
 ## Current VexStream integration seam
 
 The repository's current VexStream implementation was inspected before wiring this experiment into

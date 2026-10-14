@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * Proof for the inverse read:
  *
- * current State -> available Acts -> complete finite Control vocabulary.
+ * current State -> available Acts -> complete finite Control vocabulary -> immutable Projection.
  */
 class PlaybackControlProjectionTest {
     private val behavior =
@@ -19,31 +19,37 @@ class PlaybackControlProjectionTest {
 
     @Test
     fun normalPlayingProjectsRewindPauseAndFastForward() {
+        val current =
+            PlaybackState.Playing(
+                speed =
+                    PlaybackSpeed.Normal,
+            )
         val projection =
             controls.projection(
-                PlaybackState.Playing(
-                    speed =
-                        PlaybackSpeed.Normal,
-                ),
+                current,
             )
 
+        assertEquals(
+            current,
+            projection.state,
+        )
         assertSame(
             PlaybackAct.Rewind,
             projection[
                 PlaybackControl.Rewind
-            ],
+            ].act,
         )
         assertSame(
             PlaybackAct.Pause,
             projection[
                 PlaybackControl.PlayPause
-            ],
+            ].act,
         )
         assertSame(
             PlaybackAct.FastForward,
             projection[
                 PlaybackControl.FastForward
-            ],
+            ].act,
         )
     }
 
@@ -61,18 +67,24 @@ class PlaybackControlProjectionTest {
             PlaybackAct.Rewind,
             projection[
                 PlaybackControl.Rewind
-            ],
+            ].act,
         )
         assertSame(
             PlaybackAct.Play,
             projection[
                 PlaybackControl.PlayPause
-            ],
+            ].act,
         )
         assertNull(
             projection[
                 PlaybackControl.FastForward
-            ],
+            ].act,
+        )
+        assertEquals(
+            false,
+            projection[
+                PlaybackControl.FastForward
+            ].available,
         )
     }
 
@@ -149,19 +161,52 @@ class PlaybackControlProjectionTest {
             PlaybackAct.Rewind,
             projection[
                 PlaybackControl.Rewind
-            ],
+            ].act,
         )
         assertSame(
             PlaybackAct.Play,
             projection[
                 PlaybackControl.PlayPause
-            ],
+            ].act,
         )
         assertSame(
             PlaybackAct.FastForward,
             projection[
                 PlaybackControl.FastForward
-            ],
+            ].act,
+        )
+    }
+
+    @Test
+    fun oneProjectionCanFeedSeveralUiConsumersWithoutRecomputingBehavior() {
+        val projection =
+            controls.projection(
+                PlaybackState.Playing(
+                    speed =
+                        PlaybackSpeed.Normal,
+                ),
+            )
+
+        /*
+         * These stand in for two independent presentation consumers such as Mini Player and Context
+         * Dock. Both read the same immutable semantic result; neither owns State/Act inference.
+         */
+        val miniPlayerMeaning =
+            projection[
+                PlaybackControl.PlayPause
+            ].act
+        val contextDockMeaning =
+            projection[
+                PlaybackControl.PlayPause
+            ].act
+
+        assertSame(
+            PlaybackAct.Pause,
+            miniPlayerMeaning,
+        )
+        assertSame(
+            miniPlayerMeaning,
+            contextDockMeaning,
         )
     }
 }

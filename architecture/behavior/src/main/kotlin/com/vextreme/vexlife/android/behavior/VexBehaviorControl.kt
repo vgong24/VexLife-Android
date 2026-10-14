@@ -56,19 +56,29 @@ class VexBehaviorControlBlueprint<
     }
 
     /**
-     * Complete semantic Control projection for one current State.
+     * Complete immutable semantic projection for one observed State.
      *
-     * Every enum Control is present because construction rejects an incomplete Control vocabulary.
+     * This is the common value boundary for UI, tests, previews, or later convergence. Effects stay
+     * behind invocation/runtime ownership and are intentionally absent here.
      */
     fun projection(
         current: State,
-    ): Map<Control, Act?> =
-        actPriorityByControl.keys.associateWith { control ->
-            resolve(
-                current = current,
-                control = control,
-            )?.act
-        }
+    ): VexBehaviorProjection<State, Control, Act> =
+        VexBehaviorProjection(
+            state = current,
+            controls =
+                actPriorityByControl.keys
+                    .associateWith { control ->
+                        VexBehaviorControlProjection(
+                            control = control,
+                            act =
+                                resolve(
+                                    current = current,
+                                    control = control,
+                                )?.act,
+                        )
+                    },
+        )
 }
 
 /** Current semantic meaning of one finite Control. */
