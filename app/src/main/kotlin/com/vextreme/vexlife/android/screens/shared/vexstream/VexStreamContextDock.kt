@@ -30,6 +30,7 @@ import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.architecture.experiment.VexStreamArchitectureExperiment
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -163,8 +164,12 @@ private fun VexStreamContextDockContent(
                     subjectRef =
                         "presentation.context-dock.vexstream.previous",
                 )
-                controller
-                    ?.seekToPreviousMediaItem()
+                controller?.let {
+                    VexStreamArchitectureExperiment
+                        .requestPrevious(
+                            it,
+                        )
+                }
             }
             VexStreamDockIconButton(
                 icon =
@@ -184,8 +189,12 @@ private fun VexStreamContextDockContent(
                     subjectRef =
                         "presentation.context-dock.vexstream.play-pause",
                 )
-                controller
-                    ?.toggleVexStreamPlayback()
+                controller?.let {
+                    VexStreamArchitectureExperiment
+                        .requestPlayPause(
+                            it,
+                        )
+                }
             }
             VexStreamDockIconButton(
                 icon = ElementIcon.Next,
@@ -203,8 +212,12 @@ private fun VexStreamContextDockContent(
                     subjectRef =
                         "presentation.context-dock.vexstream.next",
                 )
-                controller
-                    ?.seekToNextMediaItem()
+                controller?.let {
+                    VexStreamArchitectureExperiment
+                        .requestNext(
+                            it,
+                        )
+                }
             }
         }
 
@@ -330,10 +343,12 @@ private fun VexStreamContextDockContent(
                                     "presentation.context-dock.vexstream.queue-item",
                                 action = "Selected",
                             )
-                            controller.seekToDefaultPosition(
-                                index,
-                            )
-                            controller.play()
+                            VexStreamArchitectureExperiment
+                                .requestQueueSelection(
+                                    controller =
+                                        controller,
+                                    index = index,
+                                )
                         },
                     ) {
                         Text(
