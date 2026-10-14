@@ -231,22 +231,24 @@ the same thing. Read one Compound transition like this:
    admittedPatch + processingCurrent -> processStates() -> reducerCandidate
    Why: candidate is temporary proposed meaning, not another truth owner.
 
-4. CLAIM
-   reducerCandidate -> deepCopy() -> ownedCandidate
-   Why: Relay must own whatever it may retain; reducer-local mutable values cannot leak in.
+4. COMPARE
+   reducerCandidate.input/output vs retainedCurrent.input/output
+   Why: a temporary no-op candidate should be discarded before any ownership copy.
 
-5. COMPARE
-   ownedCandidate.input/output vs retainedCurrent.input/output
-   Why: revision advances only when retained semantic meaning changes.
-
-6A. NO CHANGE
+5A. NO CHANGE
+   discard reducerCandidate
    retain retainedCurrent exactly
    retainedCurrent -> deepCopy() -> exposedCurrent
    Why: send() returns outside Relay ownership, so mutable-backed current cannot be handed out.
 
-6B. CHANGE
-   preserve any unchanged retained branch by identity
-   + replace only changed branch(es)
+5B. CHANGE / CLAIM
+   deepCopy() only the changed candidate branch(es)
+   preserve unchanged retained branch(es) by identity
+   Why: only values entering canonical Relay truth need a new ownership snapshot.
+
+6. BUILD
+   changed owned branch(es)
+   + unchanged retained branch(es)
    + revision + 1
    -> nextRetained
 
@@ -262,10 +264,44 @@ the same thing. Read one Compound transition like this:
 For a transitively immutable Vex state, every `deepCopy()` above returns the same instance. The
 protocol still documents the ownership boundary, but it performs no allocation.
 
-For a mutable-backed state, the copies at ADMIT, ISOLATE, CLAIM, and EXPOSE are different copies for
-different owners. In particular, the processing copy and the no-change exposure copy are not
+For a mutable-backed state, the copies at ADMIT, ISOLATE, changed-branch CLAIM, and EXPOSE are
+different copies for different owners. A no-op candidate is now compared and discarded before any
+CLAIM copy happens. In particular, the processing copy and the no-change exposure copy are not
 interchangeable: `processingCurrent` was handed to reducer code, while `exposedCurrent` is handed to
 the caller of `send()`.
+
+#### Copy budget: main vs this PR
+
+The source can look copy-heavier because formerly chained calls are now named, but the framework
+transition performs fewer ownership snapshots.
+
+~~~text
+VexCompoundRelay.send()
+
+semantic NO-OP
+  main: 5 top-level deepCopy() calls
+  PR77: 3 top-level deepCopy() calls
+
+semantic CHANGE
+  main: 8 top-level deepCopy() calls
+  PR77: 2 fixed snapshots
+        + 1 snapshot per changed input/output branch
+        + 1 outward exposure snapshot
+
+Examples:
+  only input changed  -> 4 top-level/branch snapshots
+  only output changed -> 4 top-level/branch snapshots
+  both changed        -> 5 top-level/branch snapshots
+~~~
+
+Those counts describe framework call sites, not necessarily allocations. With `VexImmutable*`,
+every snapshot of an immutable value returns the same instance, so the immutable path allocates only
+the genuinely new state objects created by the reducer/wrapper.
+
+Current Events state has not been converted to `VexImmutable*` in this PR. It still performs real
+defensive snapshots for its Lists/Maps/domain children, but it benefits immediately from the removed
+whole-state recopying and unchanged-branch retention. A future Events immutability migration would
+need to prove all nested values are actually immutable before opting in.
 
 #### Events-shaped example
 
