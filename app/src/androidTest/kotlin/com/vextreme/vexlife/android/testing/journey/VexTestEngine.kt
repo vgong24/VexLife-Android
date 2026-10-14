@@ -118,11 +118,17 @@ class VexTestEngine(
         expected.tapDynamic(element)
 
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(element.elementId)
+            compose.onAllNodesWithTag(
+                testTag = element.elementId,
+                useUnmergedTree = true,
+            )
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
-        compose.onNodeWithTag(element.elementId)
+        compose.onNodeWithTag(
+            testTag = element.elementId,
+            useUnmergedTree = true,
+        )
             .performClick()
         compose.waitForIdle()
         observe(
@@ -133,6 +139,13 @@ class VexTestEngine(
 
     override fun tap(element: ActionElement) {
         expected.tap(element)
+        val uiElement = element as? UIElement
+            ?: error("ActionElement must also be a UIElement")
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithTag(uiElement.elementId)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
         node(element)
             .scrollIntoViewIfPossible()
             .performClick()
