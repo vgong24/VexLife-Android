@@ -79,6 +79,42 @@ class VexBehaviorBlueprint<
         }
 
     /**
+     * Relationships that are structurally present AND conditionally available from this exact
+     * current State value.
+     *
+     * This is the inverse read of the authored graph: "what can I do from here?"
+     */
+    fun availableRelationships(
+        current: State,
+    ): List<VexBehaviorRelationship<State, Act, Effect>> {
+        val currentType =
+            current::class
+
+        require(currentType in states) {
+            "current state is not registered in " + behaviorRef + ": " + currentType
+        }
+
+        return relationships.filter { relationship ->
+            relationship.from == currentType &&
+                relationship.isAvailableFrom(current)
+        }
+    }
+
+    /**
+     * Semantic Acts currently available from [current].
+     *
+     * Controls and higher projections may consume this set; UI code does not need to re-encode the
+     * State -> Act table.
+     */
+    fun availableActs(
+        current: State,
+    ): List<Act> =
+        availableRelationships(current)
+            .map {
+                it.act
+            }
+
+    /**
      * Resolve one Act against current State without performing the Effect.
      *
      * Null means the Act has no lawful/available relationship from this current State.
@@ -87,24 +123,12 @@ class VexBehaviorBlueprint<
         current: State,
         act: Act,
     ): VexBehaviorResolution<State, Effect>? {
-        val currentType =
-            current::class
-
-        require(currentType in states) {
-            "current state is not registered in " + behaviorRef + ": " + currentType
-        }
-
         val relationship =
-            relationships
+            availableRelationships(current)
                 .singleOrNull {
-                    it.from == currentType &&
-                        it.act == act
+                    it.act == act
                 }
                 ?: return null
-
-        if (!relationship.isAvailableFrom(current)) {
-            return null
-        }
 
         return VexBehaviorResolution(
             effect = relationship.effect,

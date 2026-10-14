@@ -191,28 +191,82 @@ expected destination State
 Act and Effect are separate because UI/product vocabulary should not become coupled to one provider
 implementation.
 
-## Control is a neighboring question
+## Inverse read — current State -> available Acts -> Controls
 
-A physical Play/Pause button is not automatically the same thing as the semantic Act.
+The authored graph can be read in both directions.
 
-For example a UI control may choose:
+Forward:
 
 ~~~text
-Paused
-    Play/Pause button -> Act.Play
-
-Playing
-    Play/Pause button -> Act.Pause
-
-FastForwarding
-    Play/Pause button -> Act.Play
-
-Rewinding
-    Play/Pause button -> Act.Play
+State + Act
+    -> Effect
+    -> expected next State
 ~~~
 
-That contextual Control-to-Act mapping is deliberately not generalized in this first kernel. This
-PR first proves the State -> Act -> Effect -> State relationship.
+Inverse:
+
+~~~text
+current State
+    -> currently available Acts
+    -> Controls that can resolve one of those Acts
+~~~
+
+The reusable blueprint now derives `availableActs(current)` from the same State relationships.
+Feature/UI code therefore does not need another `when(state)` table merely to decide whether Play,
+Pause, Rewind, or FastForward currently has meaning.
+
+A Control is a separate constructed value that names which Acts one human affordance can represent:
+
+~~~kotlin
+val playPause =
+    vexBehaviorControl<PlaybackAct>(
+        "example.playback.control.play-pause",
+        Play,
+        Pause,
+    )
+~~~
+
+Argument order is explicit conflict priority, not Behavior policy.
+
+From `Playing`:
+
+~~~text
+available Acts:
+    Pause
+    Rewind
+    FastForward
+
+PlayPause Control candidates:
+    Play > Pause
+
+resolved Control meaning:
+    Pause
+~~~
+
+From `FastForwarding`:
+
+~~~text
+available Acts:
+    Play
+    Pause
+    Rewind
+
+PlayPause Control candidates:
+    Play > Pause
+
+resolved Control meaning:
+    Play
+~~~
+
+That lets a shared Play/Pause affordance reflect Play while fast-forwarding and Pause while playing
+without embedding those State checks in Compose.
+
+The Behavior graph still exposes both Play and Pause from FastForwarding. The Control owns the
+choice to prefer Play when both are meaningful. A different Control can intentionally prefer Pause
+without changing Playback architecture.
+
+A Control resolving to no Act means semantic unavailability only. Presentation still owns whether
+that appears hidden, disabled, replaced, animated, or otherwise rendered.
 
 ## Derived connective tissue
 
@@ -223,7 +277,9 @@ The blueprint derives:
 ~~~text
 outgoing relationships
 incoming relationships
+available Acts from current State
 Act resolution
+Control resolution
 readable relationship graph
 ~~~
 
@@ -248,6 +304,46 @@ state<Positioned> {
 ~~~
 
 This keeps discrete semantic modes separate from ordinary data variation.
+
+## Convergence boundary — do not cross-multiply domain States
+
+The repository already has a real multi-source convergence consumer:
+`EventsConvergenceRelay`.
+
+Its current job is to combine independently owned facts such as feed truth, attention preferences,
+current Screen, reachable event targets, and transient presentation occupancy into one current
+Events projection.
+
+That existing pressure teaches an important boundary for this experiment:
+
+~~~text
+Playback State
+    -> Playback available Acts
+    -> Playback Controls
+
+Events convergence truth
+    -> Events attention affordances
+
+higher presentation/convergence owner
+    -> may arbitrate between those projections
+~~~
+
+Do **not** encode combinations such as:
+
+~~~text
+PlayingAndIncomingEvent
+PausedAndRelayUnavailable
+FastForwardingAndTransientOccupied
+~~~
+
+inside the Playback graph merely because presentation priority depends on several domains.
+
+Likewise, do not append `.show()` / `.hide()` clauses to Behavior transitions as another authored
+truth. The local graph should remain true even when another domain temporarily wins attention.
+
+This PR intentionally stops before inventing a generic cross-domain convergence kernel. The current
+Events consumer is evidence that convergence is real; one Playback Control projection is enough to
+establish the seam without generalizing the arbitration policy prematurely.
 
 ## ScreenBlueprint relationship
 
@@ -291,7 +387,7 @@ Not generalized yet:
 
 ~~~text
 parameterized Acts / payloads
-physical Control -> Act mapping
+generic cross-domain Control arbitration
 provider execution
 async convergence / failure
 authorization
