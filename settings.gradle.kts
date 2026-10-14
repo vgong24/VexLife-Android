@@ -21,3 +21,5 @@ include(":app")
 include(":architecture:elements")
 include(":architecture:logging")
 include(":architecture:relay")
+// VexArchitecture is reusable semantic-directory vocabulary, not VexStream-owned product code.
+include(":architecture:vexarchitecture")
