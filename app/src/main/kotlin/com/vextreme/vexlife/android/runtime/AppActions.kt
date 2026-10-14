@@ -18,18 +18,18 @@ object AppActions {
     val EmitSyntheticEventBurst = ActionKey("action.events.synthetic.emit-burst")
     val InsertHistoricalSyntheticEvent = ActionKey("action.events.synthetic.insert-historical")
     val RemoveOldestSyntheticEvent = ActionKey("action.events.synthetic.remove-oldest")
-    val ResetSyntheticEventLab = ActionKey("action.events.synthetic.reset-lab")
-    val UseRotationAttentionLab = ActionKey("action.events.attention-lab.use-rotation")
-    val UseRandomAttentionLab = ActionKey("action.events.attention-lab.use-random")
+    val ResetEventsDebugMenu = ActionKey("action.events.debug-menu.reset")
+    val UseRotationDebugMenuAlerts = ActionKey("action.events.debug-menu.alerts.use-rotation")
+    val UseRandomDebugMenuAlerts = ActionKey("action.events.debug-menu.alerts.use-random")
     /**
-     * Debug-only Events action: prepare one next attention-overlay lab exercise.
+     * Debug-only Events action: prepare one next alert case.
      *
-     * The stable action ID keeps the historical "scenario" vocabulary for compatibility, but this
-     * is not a generic Scenario-framework action.
+     * The stable action ID keeps the concrete AlertCase vocabulary; this
+     * is not a generic scenario-framework action.
      */
-    val NextAttentionLabScenario =
+    val NextDebugMenuAlertCase =
         ActionKey(
-            "action.events.attention-lab.next-scenario",
+            "action.events.debug-menu.alerts.next-case",
         )
     val GallerySample = ActionKey("action.gallery.sample")
     val SaveUserProfile = ActionKey("action.user-profile.save")
