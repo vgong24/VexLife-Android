@@ -53,6 +53,14 @@ internal fun projectVexMapsDeviceLocation(
 ): VexDeviceLocationResult.Located? =
     result as? VexDeviceLocationResult.Located
 
+/**
+ * Chooses the coordinate the map should *render* as current device position.
+ *
+ * During active navigation the process-owned visual location may be route-matched/smoothed and is
+ * therefore the better rendering projection. The planner still retains the fresh raw device fix for
+ * route-origin/readiness decisions. This function selects presentation truth; it does not rewrite
+ * either owner.
+ */
 internal fun projectVexMapsMapDeviceLocation(
     plannerLocation:
         VexDeviceLocationResult.Located?,
@@ -72,6 +80,12 @@ internal fun projectVexMapsMapDeviceLocation(
         }
         ?: plannerLocation
 
+/**
+ * Navigation-start readiness is intentionally stricter than "we have some coordinate."
+ *
+ * Only a fresh device result reaches this predicate; restored browse context never calls it. The
+ * route-matching policy owns the accepted accuracy threshold so Maps does not duplicate that rule.
+ */
 internal fun isVexMapsNavigationStartPreflightSatisfied(
     result: VexDeviceLocationResult,
     matchingPolicy:
