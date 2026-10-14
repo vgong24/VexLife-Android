@@ -226,12 +226,12 @@ abstract class VexCompoundRelay<
      * -> processingCurrent             // Relay retention -> reducer sandbox
      *
      * processStates(...)
-     * -> reducerCandidate              // temporary; not yet trusted for retention
-     * -> ownedCandidate                // reducer -> Relay retention ownership
+     * -> reducerCandidate              // temporary; not retained
      *
-     * compare ownedCandidate with retainedCurrent
-     * -> no semantic change: retain retainedCurrent
-     * -> semantic change: commit one next state
+     * compare reducerCandidate with retainedCurrent
+     * -> no semantic change: discard candidate, retain retainedCurrent
+     * -> semantic change: snapshot only changed branch(es) for Relay ownership
+     * -> commit one next state
      *
      * retained result
      * -> exposedResult                 // Relay retention -> send() caller
@@ -282,49 +282,49 @@ abstract class VexCompoundRelay<
                         currentState = processingCurrent,
                     )
 
-                // STEP 5 — claim the reducer result for Relay ownership before comparing/retaining it.
-                // The reducer may have built mutable collections or reused processing objects.
-                // Mutable-backed state detaches here; transitively immutable state is shared.
-                val ownedCandidate =
-                    reducerCandidate.deepCopy()
-
-                // STEP 6 — compare semantic branches, not object identity and not candidate revision.
-                // Compound revision is owned here by the framework and advances only on real meaning.
+                // STEP 5 — compare the temporary candidate before copying it.
+                //
+                // Comparison does not transfer ownership, and a no-op candidate will be discarded.
+                // Delaying the ownership snapshot avoids copying a state we will never retain.
                 val inputChanged =
-                    ownedCandidate.inputState != retainedCurrent.inputState
+                    reducerCandidate.inputState != retainedCurrent.inputState
                 val outputChanged =
-                    ownedCandidate.outputState != retainedCurrent.outputState
+                    reducerCandidate.outputState != retainedCurrent.outputState
 
                 if (!inputChanged && !outputChanged) {
-                    // STEP 7A — no semantic transition. Keep the exact retained state/revision.
-                    //
-                    // We still snapshot once for exposure because send() returns a value outside the
-                    // Relay owner. For immutable state this is the same object with zero allocation.
-                    // For mutable-backed state this prevents the caller from mutating retained truth.
+                    // STEP 6A — no semantic transition. Discard reducerCandidate and keep the exact
+                    // retained state/revision. Only the outward return boundary still needs a
+                    // snapshot for mutable-backed state.
                     val exposedCurrent =
                         retainedCurrent.deepCopy()
 
                     return@synchronized exposedCurrent
                 }
 
-                // STEP 7B — build exactly one new retained wrapper.
+                // STEP 6B — claim ownership only for branches that will actually enter retained truth.
                 //
-                // A branch whose meaning did not change keeps the exact already-owned object.
-                // This is the structural-sharing rule that makes nested Compound Relay output cheap.
+                // Unchanged branches already belong to Relay, so copying them would add no isolation.
+                // Changed mutable-backed branches detach from reducer ownership here. Changed
+                // immutable branches return themselves and remain structurally shared.
+                val nextInput =
+                    if (inputChanged) {
+                        reducerCandidate.inputState.deepCopy()
+                    } else {
+                        retainedCurrent.inputState
+                    }
+                val nextOutput =
+                    if (outputChanged) {
+                        reducerCandidate.outputState.deepCopy()
+                    } else {
+                        retainedCurrent.outputState
+                    }
+
+                // STEP 7 — build exactly one new retained wrapper from the changed owned branch(es)
+                // plus unchanged already-owned branch(es).
                 val nextRetained =
                     VexCompoundState(
-                        inputState =
-                            if (inputChanged) {
-                                ownedCandidate.inputState
-                            } else {
-                                retainedCurrent.inputState
-                            },
-                        outputState =
-                            if (outputChanged) {
-                                ownedCandidate.outputState
-                            } else {
-                                retainedCurrent.outputState
-                            },
+                        inputState = nextInput,
+                        outputState = nextOutput,
                         revision = retainedCurrent.revision + 1L,
                     )
 
@@ -333,7 +333,7 @@ abstract class VexCompoundRelay<
                     nextRetained
 
                 // STEP 9 — expose an ownership-safe result to the caller of send().
-                // Again: immutable state returns the same object; mutable-backed state detaches.
+                // Immutable state returns the same object; mutable-backed state detaches.
                 val exposedNext =
                     nextRetained.deepCopy()
 
