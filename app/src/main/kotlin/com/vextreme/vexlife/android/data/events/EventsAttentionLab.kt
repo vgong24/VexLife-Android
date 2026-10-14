@@ -11,6 +11,12 @@ enum class EventsAttentionLabMode {
     SEEDED_RANDOM,
 }
 
+/**
+ * Feature-local variants for the Events developer attention exercise.
+ *
+ * This is not a shared Scenario framework. It exists only so the Events attention lab can name
+ * which overlay-placement/interaction exercise it is asking a developer or test to perform.
+ */
 enum class EventsAttentionLabScenarioKind {
     ANCHORED_TOP,
     ANCHORED_MIDDLE,
@@ -31,13 +37,40 @@ enum class EventsAttentionLabExpectedAction {
 }
 
 /**
- * One planned attention-overlay exercise used by the Events developer lab.
+ * One planned attention-overlay exercise used only by the Events developer lab.
  *
- * It tells the lab which event row should receive the anchored attention prompt, where that prompt
- * prefers to appear, which human response the exercise expects, and whether the underlying list
- * projection should freeze while the prompt is active.
+ * IMPORTANT:
  *
- * This is developer-lab presentation/test meaning, not canonical external-event truth.
+ *     EventsAttentionLabScenario
+ *     != Relay infrastructure
+ *     != generic app Scenario infrastructure
+ *     != canonical Events/provider truth
+ *
+ * It is a feature-local developer/test fixture that answers:
+ *
+ * - which current Events row should receive the anchored attention overlay;
+ * - where that overlay prefers to appear;
+ * - which human response this exercise expects;
+ * - whether presentation should freeze while the exercise is active.
+ *
+ * Why this value exists:
+ *
+ * The lab needs one immutable plan that can travel through the normal feature path without making
+ * Compose invent test meaning locally:
+ *
+ *     developer asks for next lab exercise
+ *     -> EventsAttentionLabAction.PlanNext
+ *     -> EventsAttentionLabRelay.nextStateFor(...)
+ *     -> planEventsAttentionLabScenario(...)
+ *     -> EventsAttentionLabState.currentScenario
+ *     -> EventsConvergenceRelay observes lab state
+ *     -> EventsScreen renders the requested anchored exercise
+ *
+ * During ordinary Events use, [EventsAttentionLabState.currentScenario] is null and none of this
+ * exercise metadata changes canonical event truth.
+ *
+ * The name "Scenario" is retained here for current repository compatibility. Treat it as
+ * "one Events attention-lab exercise", not as a reusable Scenario subsystem.
  */
 data class EventsAttentionLabScenario(
     val scenarioRef: String,
@@ -69,6 +102,13 @@ data class EventsAttentionLabState(
         EventsAttentionLabMode.ROTATION,
     val seed: Long = DEFAULT_SEED,
     val nextOrdinal: Long = 1L,
+
+    /**
+     * Active developer-lab exercise only.
+     *
+     * null means no attention-lab exercise is currently imposed on Events presentation.
+     * This is not the current Event, current candidate, or generic app scenario.
+     */
     val currentScenario: EventsAttentionLabScenario? = null,
 ) : VexState<EventsAttentionLabState> {
     companion object {
@@ -171,6 +211,12 @@ private class EventsAttentionLabRelay :
         )
     }
 
+    /**
+     * Ask the Events developer lab to form and retain one next overlay exercise.
+     *
+     * Callers provide current event truth only; they do not construct Scenario state themselves.
+     * The named PlanNext action is the only entry, and [nextStateFor] is the only state transition.
+     */
     fun planNext(
         events: List<VexExternalEvent>,
     ): EventsAttentionLabScenario {
@@ -305,11 +351,12 @@ private val eventsAttentionLabTemplates =
     )
 
 /**
- * Pure scenario planner.
+ * Pure planner for one Events attention-lab overlay exercise.
  *
- * This function owns scenario calculation only. It does not read Relay current state and does not
- * mutate Relay state. EventsAttentionLabRelay.planNext() supplies one exact current mode/seed/ordinal
- * from one exact current State inside the action reducer, then atomically retains the returned State.
+ * This is feature-local calculation, not shared infrastructure. It does not read Relay current state
+ * and does not mutate Relay state. EventsAttentionLabRelay.planNext() supplies one exact current
+ * mode/seed/ordinal from one exact current State inside the action reducer, then atomically retains
+ * the returned exercise in EventsAttentionLabState.currentScenario.
  *
  * Read in order:
  *
