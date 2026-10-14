@@ -374,10 +374,9 @@ fun DebugMenuScreenContent(
     val handler =
         ElementActionHandler { element ->
             if (
-                element.elementId ==
+                element ===
                 DebugMenuScreen
                     .UseTraditionalEventsArchitecture
-                    .elementId
             ) {
                 runtime.activate(element)
 
