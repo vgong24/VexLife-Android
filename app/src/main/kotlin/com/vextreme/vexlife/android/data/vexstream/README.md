@@ -391,81 +391,86 @@ controls remain registered Vex actions and dynamic catalog rows remain repositor
 
 ### VexArchitecture V2 comparison
 
-VexStream is the first lived VexArchitecture V2 practicum, formed on a fresh branch from accepted
-main rather than inheriting PR #80's evolving source history.
+V2 now starts from the whole human/product experience rather than treating every navigable noun as another Architecture:
 
-The human directory is:
+~~~text
+VexStreamExperience
+│
+├── Library
+├── Sources
+└── VexStreamPlayerArchitecture
+    ├── Playback
+    └── Queue
+~~~
 
-```text
-VexStream
--> Music
-   -> Library
-   -> Player
-      -> Playback
-      -> Queue
-   -> Availability
-   -> Connection
-```
+The distinctions are intentional:
 
-Only the concerns that currently earn relational machinery use Case / Control / Placement. Music and
-Player are orientation/composition nodes, so V2 does not invent MusicCase or PlayerCase merely for
-symmetry.
+~~~text
+Library
+    what music VexStream knows about
+    != where media bytes are stored
 
-Playback owns only:
+Sources
+    where playable media can come from
 
-```text
-NoMedia
-PlaybackNotRequested
-PlaybackRequested
+Connection
+    state of a remote Source
 
-Play
-Pause
-PlayPause
-```
+Availability
+    derived answer from which Sources can satisfy the media
 
-Queue independently owns:
+PlayerArchitecture
+    reusable structure of active media-player meaning
 
-```text
-Empty
-Positioned(itemCount, currentIndex, hasPrevious, hasNext)
+Playback / Queue
+    capabilities of that one Architecture
+~~~
 
+The previous V2 draft had promoted Library / Availability / Connection / Path as if they were peer architectural categories. That mixed human concepts, derived facts, technical mechanisms and coordination abstractions at one level. The current model removes that category drift.
+
+The reusable media-player boundary is now explicit:
+
+~~~text
+VexMediaPlayerArchitecture
+    Contract
+    PlaybackContract
+    QueueContract
+
+runtime:
+    VexMediaPlaybackProvider
+    VexMediaQueueProvider
+
+VexStream:
+    VexStreamPlayerProvider
+        -> Media3VexStreamPlayerProvider
+~~~
+
+Provider means runtime realization, not another Experience sibling.
+
+Normal source names do not carry V2:
+
+~~~text
+VexStreamExperience
+VexStreamPlayerArchitecture
+VexStreamPlayback
+VexStreamQueue
+Media3VexStreamPlayerProvider
+~~~
+
+The v2 package plus Debug Menu version router carries version status.
+
+The current lived comparison still routes only:
+
+~~~text
+Play / Pause
 Previous
 Next
-PlaySelected
-```
+queue-row selection
+~~~
 
-This removes the need for names such as NextWhilePlaybackRequested: Next changes Queue truth while
-Playback truth can remain unchanged.
+through either current Legacy behavior or the V2 semantics while preserving the exact same MediaController / MediaSessionService / ExoPlayer owner.
 
-Cross-concern human intentions are preserved one level above both realms:
-
-```text
-PlaySong
-PlayAll
-ShuffleAll
--> Queue + Playback
-```
-
-V2 calls these feature-local Paths for now. Path is not promoted into the reusable architecture
-module until another consumer proves the same abstraction is useful.
-
-The actual platform walk deliberately stops at:
-
-```text
-semantic Control
--> VexStream Playback/Queue Android bridge
--> VexStreamPlayer
--> Media3VexStreamPlayer
--> existing MediaController
--> existing MediaSessionService / ExoPlayer
-```
-
-Debug Menu exposes one process-local "Use VexArchitecture V2" switch. Off preserves the current
-Legacy direct Media3 behavior. On routes Play/Pause, Previous, Next and queue selection through V2.
-The selector resets to Legacy on app restart and is not product/user preference state.
-
-Both experiences keep the same player, session, repository and UI. That boundary is intentional: a
-lived difference should teach us about the architecture path, not about two different audio engines.
+The comparison therefore asks whether the new source/semantic walk is easier to understand and more truthful, not whether a different audio engine behaves differently.
 
 ### Playback lifetime + perceivable mobile player refinement
 

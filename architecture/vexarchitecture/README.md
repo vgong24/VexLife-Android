@@ -1,222 +1,340 @@
-# VexArchitecture V2 - semantic directory + bounded relational truth
+# VexArchitecture V2 — human experience to rightful provider
 
 [VXG RealForever]
 
 ## Question
 
-A developer usually starts with a human question:
+A fresh developer usually starts with ordinary questions:
 
-```text
-How do I play this song?
-Why is Next unavailable?
-What happens when Download finishes?
-How do I reconnect to my computer?
-```
+~~~text
+What whole thing am I working on?
+What part of that experience owns this meaning?
+What is currently true?
+What can be requested?
+Who actually realizes it?
+~~~
 
-The first VexArchitecture experiment in PR #80 proved several useful ideas: architecture roots can be
-IDE navigation indexes, Cases can name current truth, Controls can name human requests, Placements can
-name local arrivals/exits, and a map can validate those local declarations without becoming another
-workflow owner.
+VexArchitecture exists to make those questions walkable in source without turning the app into one giant manager/state-machine framework.
 
-It also exposed pressure. Playback began absorbing Queue truth, multi-concern intentions such as Play
-Song felt awkward inside one realm, naming drift appeared as the experiment evolved, and one practicum
-file started becoming another object a fresh developer had to mentally decompose.
+PR #80 was the first VexArchitecture practicum. It established useful ideas such as root-only architecture discovery, Case / Control / Placement language and maps derived from local relationship nodes. PR #81 V2 keeps those lessons while correcting category/depth pressure discovered by walking VexStream from a non-engineer's vocabulary.
 
-V2 keeps the useful discoveries but asks a larger question:
+## The naming ladder
 
-> Can code act like a typed semantic directory that keeps narrowing from the human concern until
-> another owner - repository, Relay, player, Android service, Media3 - has the better vocabulary?
+The current ladder is intentionally small:
 
-PR #80 is provenance/quarry for this version, not a branch dependency.
+~~~text
+Experience
+    whole integrated product experience
 
-## Directory grammar
-
-```text
-System
--> Domain
--> Concern
--> Role
--> Meaning
-```
-
-Example:
-
-```text
-VexStream
--> Music
--> Player
--> Playback
--> Control
--> Play
-```
-
-The absolute walk is for orientation. Local feature code stays relative, such as
-`VexStreamPlaybackControl.Play`, just as a filesystem has absolute and relative paths.
-
-## Reserved words
-
-```text
 Architecture
-    Start here for this concern. Orientation/realm boundary, not manager.
+    reusable structural meaning inside that experience
+
+Capability
+    one recognizable part of an Architecture
 
 Case
-    Which kind of semantic truth currently applies.
+    which kind of semantic truth currently applies
 
 Control
-    Meaning a consumer may request. Not Android MediaController.
+    what semantic meaning may be requested
 
 Placement
-    Local neighborhood: how this Case can arrive and where it can go.
+    how the current Case can arrive / where it can go
 
-Transition
-    Typed Case -> Case relationship. Never the external effect itself.
+Provider
+    runtime implementation boundary
 
-Android
-    Android translation/realization for that concern.
+SDK / native owner
+    actual third-party/platform machinery
+~~~
 
-Observation
-    Facts entering architecture from the real owner/platform.
+The words should answer different questions. Do not use Architecture merely as another word for "folder".
 
-Projection
-    Read-only composition of rightful truths for a consumer.
+## VexStream example
 
-Path
-    Feature-local human intention that crosses more than one concern.
-```
+~~~text
+VexStreamExperience
+│
+├── Library
+├── Sources
+└── VexStreamPlayerArchitecture
+    ├── Playback
+    └── Queue
+~~~
 
-Path is intentionally not yet a reusable core VexArchitecture primitive. VexStream V2 will test
-whether the word remains useful before the foundation promotes it.
+This shape is deliberately flatter than MusicArchitecture -> PlayerArchitecture -> PlaybackArchitecture.
 
-## Fractal does not mean identical
+### Experience
 
-```text
-Music
-|-- Library
-|-- Player
-|-- Availability
-+-- Connection
+VexStreamExperience means the whole thing the human is living through.
 
-Player
-|-- Playback
-+-- Queue
-```
+It integrates/orients:
+- what music VexStream knows;
+- where usable media may come from;
+- how playing media is structured.
 
-Music and Player can be orientation groups. Playback and Queue can independently own
-Case/Control/Placement. We do not invent a MusicCase merely to make every layer symmetrical.
+Experience is broader than Architecture and must not become a God object. It connects/orients; it does not reimplement repositories, source resolution, Media3, downloads, networking or player lifetime.
 
-The invariant is:
+The package carries the candidate version:
 
-```text
-same architecture word -> same expectation
-```
+~~~text
+...vexstream.experience.v2
+~~~
 
-not:
+Ordinary class names remain production-shaped:
 
-```text
-every architecture node -> every role
-```
+~~~text
+VexStreamExperience
+VexStreamPlayerArchitecture
+VexStreamPlayback
+VexStreamQueue
+~~~
 
-## Realm generics
+### Library
 
-`VexCase<R>` and `VexTransition<R, Before, After>` make the concern a type-level coordinate. Queue
-truth cannot accidentally become the source/destination of a Playback Transition.
+Library answers: What music does VexStream know about?
 
-That generic is infrastructure depth, not developer vocabulary. Feature code should still read:
+It means song / album / artist / playlist / catalog identity.
 
-```text
-VexStreamPlaybackCase.PlaybackRequested
-VexStreamQueueControl.Next
-```
+It does not mean:
+- where media bytes physically live;
+- a filesystem;
+- a network source;
+- a player provider.
 
-## Relative names, absolute refs
+The existing VexStream repository remains the current data/state owner.
 
-A root owns an absolute identity:
+### Sources
 
-```text
-vexstream.music.player.playback
-```
+Sources answers: Where can this media actually come from?
 
-Local source declares:
+Current examples include verified local bytes and the paired VexStream desktop source. Future partner sources can join the same concept.
 
-```text
-play
-pause
-play-pause
-```
+This collapses two previously over-promoted nouns:
 
-and the foundation derives:
+~~~text
+Connection
+    = state of a remote Source
 
-```text
-vexstream.music.player.playback.play
-```
+Availability
+    = answer derived from which Sources can satisfy the media
+~~~
 
-This removes repetitive prefix typing while keeping semantic identity independent from Kotlin package
-movement.
+Neither needs to be a peer Architecture merely because the facts matter.
 
-## Parent gating
+### Player Architecture
 
-```text
-VexStream disabled
--> Music disabled
--> Player disabled
--> Playback and Queue disabled
-```
+VexStreamPlayerArchitecture describes the familiar human concept of a media player.
 
-Keep these truths separate:
+It currently exposes two implemented capabilities:
 
-```text
-ARCHITECTURE_ENABLED
-!= RUNTIME_AVAILABLE
-!= AUTHORIZED
-!= CURRENT_PLACEMENT_ALLOWS_CONTROL
-```
+~~~text
+Playback
+    what is current media being asked to do?
+
+Queue
+    what media surrounds the current item and where are we in that order?
+~~~
+
+Capability objects deliberately omit the Architecture suffix:
+
+~~~text
+VexStreamPlayback
+VexStreamQueue
+~~~
+
+They still implement the generic Vex realm contracts underneath so typed Case/Transition validation continues to work.
+
+This lets a newcomer read:
+
+~~~text
+VexStream Experience
+-> Player Architecture
+-> Playback capability
+~~~
+
+instead of decoding Architecture -> Architecture -> Architecture.
+
+## Reusable Media Player contracts
+
+The reusable namespace is VexMediaPlayerArchitecture.
+
+It currently exposes only contracts proven by this practicum:
+
+~~~text
+VexMediaPlayerArchitecture.Contract
+VexMediaPlayerArchitecture.PlaybackContract
+VexMediaPlayerArchitecture.QueueContract
+~~~
+
+The root contract does not require Queue. A video/live player can still be a media player without claiming capabilities it does not have.
+
+Do not add Timeline, Output, Tracks, Presentation, Speed, Chapters, etc. merely because modern media players can have them. Add a capability contract when an actual consumer earns it.
+
+## Contract versus Provider
+
+These are different axes.
+
+~~~text
+Architecture Contract
+    describes semantic/source organization
+
+Provider
+    promises runtime capability
+~~~
+
+Runtime contracts currently include:
+
+~~~text
+VexMediaPlayerProvider
+VexMediaPlaybackProvider
+VexMediaQueueProvider
+~~~
+
+VexStream combines the capabilities it actually needs as VexStreamPlayerProvider.
+
+The current implementation is Media3VexStreamPlayerProvider.
+
+A future adapter could be VlcVexStreamPlayerProvider, PartnerSdkVexStreamPlayerProvider or RemoteVexStreamPlayerProvider without changing Playback/Queue meaning.
+
+### Why no I prefix?
+
+Prefer role-bearing names such as:
+
+~~~text
+VexMediaPlaybackProvider
+VexMediaPlayerArchitecture.PlaybackContract
+~~~
+
+over IVexMediaPlaybackProvider or IPlaybackContract.
+
+I only says "Kotlin interface". Contract and Provider tell the maintainer why the interface exists.
+
+## Playback
+
+~~~text
+VexStreamPlayback
+├── Case
+├── Control
+├── Placement
+└── Android
+~~~
+
+Current Cases:
+
+~~~text
+NoMedia
+PlaybackNotRequested
+PlaybackRequested
+~~~
+
+Current Control relationships:
+
+~~~text
+PlaybackNotRequested --Play--> PlaybackRequested
+PlaybackRequested --Pause--> PlaybackNotRequested
+~~~
+
+PlayPause is the human Control that resolves whichever exact relationship is lawful now.
+
+The wording intentionally translates Media3 playWhenReady without overclaiming that audio is already "Playing" while buffering/preparing.
+
+## Queue
+
+~~~text
+VexStreamQueue
+├── Case
+├── Control
+├── Placement
+└── Android
+~~~
+
+Current Cases:
+
+~~~text
+Empty
+Positioned(itemCount, currentIndex, hasPrevious, hasNext)
+~~~
+
+Current controls:
+
+~~~text
+Previous
+Next
+PlaySelected
+~~~
+
+Next/Previous are conditional self-transitions of Positioned. Playback truth is not duplicated into Queue relationship names.
+
+## Hidden realm generics
+
+~~~text
+VexCase<R>
+VexTransition<R, Before, After>
+~~~
+
+make the concern a type-level coordinate. Queue Cases cannot accidentally become Playback Before/After types.
+
+That generic is infrastructure depth, not normal feature vocabulary.
 
 ## Nodes first, map second
 
-Placements are local source declarations. The map is derived validation/orientation.
+Placements remain local source declarations. Architecture maps are derived validation/orientation.
 
-```text
+~~~text
 WE ARE NOT THE MAP.
 WE ARE THE NODES.
-```
+~~~
 
-The map must never become another reducer or effect owner.
+A map must never become another reducer, workflow owner or provider.
 
-## Where the fractal stops
+## Where VexArchitecture stops
 
-The intended VexStream walk is:
+For VexStream:
 
-```text
-VexStream
--> Music
--> Player
+~~~text
+VexStreamExperience
+-> VexStreamPlayerArchitecture
 -> Playback / Queue
--> Android realization
--> VexStreamPlayer
--> Media3VexStreamPlayer
--> MediaController / MediaSession
+-> Android translation
+-> VexStreamPlayerProvider
+-> Media3VexStreamPlayerProvider
+-> MediaController
+-> MediaSessionService
 -> ExoPlayer
-```
+~~~
 
-VexArchitecture stops where the real player/platform vocabulary becomes clearer. There is no
-VexExoPlayerArchitecture merely because deeper nesting is possible.
+Once Media3/provider vocabulary is clearer, VexArchitecture stops.
 
 ## Legacy versus V2
 
-V2 is introduced beside current VexStream rather than replacing it immediately.
+Debug Menu keeps both routes available for lived comparison.
 
-Debug Menu selects:
-
-```text
+~~~text
 Legacy
-    current direct VexStream / Media3 path
+    current direct VexStream / Media3 behavior
 
 V2
-    semantic directory -> realm -> Android bridge -> same real Media3 owner
-```
+    VexStreamExperience
+    -> PlayerArchitecture
+    -> Playback / Queue
+    -> same Media3 provider
+~~~
 
-Both must use the same underlying player/lifetime owner. The comparison asks whether V2 actually
-improves orientation, naming, debugging direction and separation of Playback versus Queue - not
-whether a different audio engine happens to behave differently.
+The selected version is process-local and resets to Legacy after app restart.
 
-<!-- [VXG RealForever][VEX-ARCHITECTURE-V2][SEMANTIC-DIRECTORY] -->
+The version/experimental status belongs in the package, PR and debug router—not in every normal class name.
+
+## What is deliberately NOT present
+
+V2 currently does not create:
+- VexStreamAvailabilityArchitecture;
+- VexStreamConnectionArchitecture;
+- a reusable Path abstraction;
+- a universal giant media-player interface;
+- unsupported capability stubs;
+- an I-prefix convention.
+
+If cross-node use cases such as Play Song need a reusable composition abstraction later, they must earn it from repeated real consumers rather than being named in advance.
+
+<!-- [VXG RealForever][VEX-ARCHITECTURE-V2][EXPERIENCE][MEDIA-PLAYER] -->
