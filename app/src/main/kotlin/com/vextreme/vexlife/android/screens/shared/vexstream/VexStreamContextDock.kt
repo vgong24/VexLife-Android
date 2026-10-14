@@ -30,7 +30,7 @@ import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.vexstream.architecture.experiment.VexStreamArchitectureExperiment
+import com.vextreme.vexlife.android.vexstream.experience.VexStreamExperienceRouter
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -165,7 +165,7 @@ private fun VexStreamContextDockContent(
                         "presentation.context-dock.vexstream.previous",
                 )
                 controller?.let {
-                    VexStreamArchitectureExperiment
+                    VexStreamExperienceRouter
                         .requestPrevious(
                             it,
                         )
@@ -190,7 +190,7 @@ private fun VexStreamContextDockContent(
                         "presentation.context-dock.vexstream.play-pause",
                 )
                 controller?.let {
-                    VexStreamArchitectureExperiment
+                    VexStreamExperienceRouter
                         .requestPlayPause(
                             it,
                         )
@@ -213,7 +213,7 @@ private fun VexStreamContextDockContent(
                         "presentation.context-dock.vexstream.next",
                 )
                 controller?.let {
-                    VexStreamArchitectureExperiment
+                    VexStreamExperienceRouter
                         .requestNext(
                             it,
                         )
@@ -343,7 +343,7 @@ private fun VexStreamContextDockContent(
                                     "presentation.context-dock.vexstream.queue-item",
                                 action = "Selected",
                             )
-                            VexStreamArchitectureExperiment
+                            VexStreamExperienceRouter
                                 .requestQueueSelection(
                                     controller =
                                         controller,

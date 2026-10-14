@@ -9,9 +9,9 @@
     <string name="events_title">Events</string>
     <string name="settings_title">Settings</string>
     <string name="debug_menu_title">Debug Menu</string>
-    <string name="vexarchitecture_vexstream_title">VexArchitecture - VexStream</string>
-    <string name="vexarchitecture_vexstream_v2_toggle">Use VexArchitecture V2</string>
-    <string name="vexarchitecture_vexstream_helper">Off keeps the current direct VexStream / Media3 path. On routes Play/Pause, Previous, Next, and queue selection through the V2 semantic directory while keeping the same real player. Restarting the app returns to Legacy.</string>
+    <string name="vexstream_experience_version_title">VexStream experience version</string>
+    <string name="vexstream_experience_v2_toggle">Use V2 experience</string>
+    <string name="vexstream_experience_version_helper">Off keeps the current VexStream behavior. On uses the V2 package: VexStream Experience → Player Architecture → Playback/Queue → the same Media3 provider. Restarting the app returns to Legacy.</string>
     <string name="gallery_title">Gallery</string>
     <string name="vexmaps_title">VexMaps</string>
     <string name="vexstream_music_title">VexStream</string>

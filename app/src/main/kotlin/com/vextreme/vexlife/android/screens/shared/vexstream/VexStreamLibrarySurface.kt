@@ -80,7 +80,7 @@ import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.vexstream.architecture.experiment.VexStreamArchitectureExperiment
+import com.vextreme.vexlife.android.vexstream.experience.VexStreamExperienceRouter
 import kotlinx.coroutines.launch
 
 /**
@@ -1727,7 +1727,7 @@ private fun VexStreamMiniPlayer(
             when (element) {
                 VexStreamMusicScreen.PreviousTrack ->
                     controller?.let {
-                        VexStreamArchitectureExperiment
+                        VexStreamExperienceRouter
                             .requestPrevious(
                                 it,
                             )
@@ -1735,7 +1735,7 @@ private fun VexStreamMiniPlayer(
 
                 VexStreamMusicScreen.TogglePlayback ->
                     controller?.let {
-                        VexStreamArchitectureExperiment
+                        VexStreamExperienceRouter
                             .requestPlayPause(
                                 it,
                             )
@@ -1743,7 +1743,7 @@ private fun VexStreamMiniPlayer(
 
                 VexStreamMusicScreen.NextTrack ->
                     controller?.let {
-                        VexStreamArchitectureExperiment
+                        VexStreamExperienceRouter
                             .requestNext(
                                 it,
                             )
@@ -2200,7 +2200,7 @@ private fun VexStreamQueueSheet(
                                             VexStreamMusicScreen.QueuePlay,
                                         )
                                         controller?.let {
-                                            VexStreamArchitectureExperiment
+                                            VexStreamExperienceRouter
                                                 .requestQueueSelection(
                                                     controller =
                                                         it,

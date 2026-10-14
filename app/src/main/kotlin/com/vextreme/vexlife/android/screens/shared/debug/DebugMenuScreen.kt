@@ -26,7 +26,7 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.vexstream.architecture.experiment.VexStreamArchitectureExperiment
+import com.vextreme.vexlife.android.vexstream.experience.VexStreamExperienceRouter
 
 object DebugMenuScreen : AppScreenBlueprint(
     screenKey = "debug-menu",
@@ -41,15 +41,15 @@ object DebugMenuScreen : AppScreenBlueprint(
     )
 
     /**
-     * Process-local comparison switch for the VexStream architecture experiment.
+     * Process-local comparison switch for the VexStream experience version.
      *
-     * The word V2 is intentionally visible here because this is a Debug Menu experiment, not a
+     * The word V2 is intentionally visible here because this is a Debug Menu version selector, not a
      * product-facing preference. Checked means V2 routing; unchecked means current Legacy routing.
      */
-    val VexStreamArchitectureV2 = toggleRef(
+    val VexStreamExperienceV2 = toggleRef(
         id = "body.vexarchitecture-vexstream.v2",
-        labelRes = R.string.vexarchitecture_vexstream_v2_toggle,
-        intent = invoke(AppActions.ToggleVexStreamArchitectureV2),
+        labelRes = R.string.vexstream_experience_v2_toggle,
+        intent = invoke(AppActions.ToggleVexStreamExperienceV2),
     )
 
     val ShowLog = buttonRef(
@@ -143,16 +143,16 @@ object DebugMenuScreen : AppScreenBlueprint(
         scrollableColumn("body") {
             toggle(DarkMode)
 
-            card("vexarchitecture-vexstream") {
+            card("vexstream-experience-version") {
                 text(
                     id = "title",
-                    textRes = R.string.vexarchitecture_vexstream_title,
+                    textRes = R.string.vexstream_experience_version_title,
                     role = TextRole.Title,
                 )
-                toggle(VexStreamArchitectureV2)
+                toggle(VexStreamExperienceV2)
                 text(
                     id = "helper",
-                    textRes = R.string.vexarchitecture_vexstream_helper,
+                    textRes = R.string.vexstream_experience_version_helper,
                     role = TextRole.Supporting,
                 )
             }
@@ -254,10 +254,10 @@ object DebugMenuScreen : AppScreenBlueprint(
                 toggleDarkMode()
             },
             appAction(
-                action = AppActions.ToggleVexStreamArchitectureV2,
+                action = AppActions.ToggleVexStreamExperienceV2,
                 ownerRef = screenId,
             ) {
-                VexStreamArchitectureExperiment.toggle()
+                VexStreamExperienceRouter.toggleVersion()
             },
             appAction(
                 action = AppActions.ClearLogHistory,
@@ -379,8 +379,8 @@ fun DebugMenuScreenContent(
                 DebugMenuScreen.DarkMode.elementId ->
                     darkTheme
 
-                DebugMenuScreen.VexStreamArchitectureV2.elementId ->
-                    VexStreamArchitectureExperiment.usesV2
+                DebugMenuScreen.VexStreamExperienceV2.elementId ->
+                    VexStreamExperienceRouter.usesV2
 
                 else ->
                     false
