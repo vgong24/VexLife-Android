@@ -121,15 +121,6 @@ Journey is not a feature-state reducer and ScreenCrawler does not own a second t
 A visual golden, when admitted, should represent a **meaningful named conditional state**, not every
 Composable merely because it exists.
 
-Examples:
-
-~~~text
-vexstream.player.playing
-vexstream.player.paused
-vexmaps.style.failed
-vexmaps.navigation.active
-~~~
-
 Its question is:
 
 > Given this controlled state and render configuration, are the current pixels the approved visual
@@ -138,13 +129,28 @@ Its question is:
 Reference replacement is a judgment operation. A mismatch must not automatically rewrite the
 reference.
 
-The first source candidate uses the official Compose Preview Screenshot Testing plugin at
-`0.0.1-alpha16`, because the repository's current AGP 9.4 / Kotlin 2.4 / JDK 17 toolchain satisfies
-its host-side Gradle requirements without moving the whole build to AGP 9.5 alpha test suites.
+The current source candidate uses the official Compose Preview Screenshot Testing standalone plugin
+at `0.0.1-alpha16`, because the repository's current AGP 9.4 / Kotlin 2.4 / JDK 17 toolchain
+supports the underlying Gradle tasks without moving the whole build to AGP 9.5 alpha test suites.
 
-This is explicitly a compatibility bridge, not a forever plugin choice. The official AGP-native test
-suite path becomes the migration target when the repository can adopt it without taking an unrelated
-alpha build-toolchain dependency.
+This is explicitly a compatibility bridge, not a forever plugin choice.
+
+The first two deterministic cases deliberately stay at the narrowest stable presentation owner:
+
+~~~text
+vexstream.player.playing
+vexstream.player.paused
+~~~
+
+Both render the extracted `VexStreamMiniPlayerContent` from already-projected playback truth under a
+fixed 412dp-wide dark configuration with no system UI. The first host run proved this presentation
+seam renders deterministically in Layoutlib.
+
+A broader `vexstream.library.paired` screenshot candidate was attempted and intentionally withdrawn
+after Layoutlib exposed a native media-files dependency (`Context.filesDir`) inside the whole-screen
+surface. The Test Foundation does not bend production Media3/file-resolution ownership merely to make
+a whole-screen host renderer happy. Whole-screen VexStream evidence remains owned by
+Journey/ScreenCrawler until a second deterministic whole-screen need earns a separate seam.
 
 Routine validation:
 
@@ -152,18 +158,13 @@ Routine validation:
 ./gradlew vexVisualValidate
 ~~~
 
-Reference formation/update is intentionally explicit:
+Reference formation/update remains explicit:
 
 ~~~bash
 ./gradlew :app:updateDebugScreenshotTest
 ~~~
 
-A changed reference must be reviewed as a product-appearance decision before its PNG is committed.
-The first source case is `vexstream.library.paired`: fixed 412x915 dark rendering, no system UI, and
-feature-owned repository fixture input. Playing/paused goldens are held until VexStream earns a
-narrow injectable presentation seam instead of faking Media3.
-
-No reference PNG is accepted until the host actually renders it and the returned image is reviewed.
+No reference PNG becomes accepted merely because the update task generated it.
 
 ### ScreenCrawler
 
@@ -242,7 +243,7 @@ No approved screenshot references exist yet, so the **first** exact host pass mu
 references before validation:
 
 ~~~text
-java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --continue vexVerifyLocal vexCoverage :app:updateDebugScreenshotTest vexVisualValidate vexTestFoundationProofBundle
+java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --no-configuration-cache --continue vexVerifyLocal vexCoverage :app:updateDebugScreenshotTest vexVisualValidate vexTestFoundationProofBundle
 ~~~
 
 The generated PNGs are still unaccepted candidates. The proof bundle returns them together with Git
@@ -253,7 +254,7 @@ status so their source mutations are visible and reviewable.
 Once reviewed reference PNGs are committed, ordinary proof must **not** run the update task first:
 
 ~~~text
-java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --continue vexVerifyLocal vexCoverage vexVisualValidate vexTestFoundationProofBundle
+java -classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --no-configuration-cache --continue vexVerifyLocal vexCoverage vexVisualValidate vexTestFoundationProofBundle
 ~~~
 
 That distinction is essential:
@@ -271,6 +272,16 @@ foundation.
 
 Both commands use the checked-in Gradle wrapper JAR directly, so the human/host route does not need
 to choose between `./gradlew` and `.\\gradlew.bat`.
+
+### Host-proof configuration-cache boundary
+
+The exact host-proof command currently disables Gradle configuration cache. That is intentional:
+`verifySourceAlignment` performs repository-file scanning and `vexTestFoundationProofBundle`
+collects host-local Git/generated evidence at execution time. Those proof/evidence tasks should not
+silently dictate whether ordinary product builds use configuration cache.
+
+A future reusable proof-task implementation may earn configuration-cache compatibility. The current
+foundation prefers truthful execution over pretending these host-observation tasks are cacheable.
 
 `vexTestFoundationProofBundle` is collection-only. It does not make failed tasks pass and it does
 not accept generated reference images. It forms:
