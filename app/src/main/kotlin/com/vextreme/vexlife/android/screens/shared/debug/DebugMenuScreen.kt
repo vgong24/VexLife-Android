@@ -25,7 +25,6 @@ import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRelay
-import com.vextreme.vexlife.android.screens.primary.events.relationshipConsumerSummary
 import com.vextreme.vexlife.android.screens.primary.events.toPresentationState
 import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureComparisonLab
 import com.vextreme.vexlife.android.screens.primary.events.traditionalApproach.EventsArchitectureMode
@@ -543,6 +542,9 @@ private fun DebugMenuHistoryPreview() {
             runtime = context.runtime,
             logHistoryRepository = context.repositories.logHistory,
             eventsArchitectureComparison = context.relays.eventsComparison,
+            eventsRelay = context.relays.events,
+            traditionalEventsController =
+                context.relays.eventsComparison.traditionalController,
             darkTheme = context.darkTheme,
         )
     }
