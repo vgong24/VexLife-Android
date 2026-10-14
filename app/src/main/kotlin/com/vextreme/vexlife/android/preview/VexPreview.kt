@@ -10,8 +10,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.data.events.RelayEventsAttentionLabRepository
-import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsDebugMenuAlertRepository
+import com.vextreme.vexlife.android.data.events.RelayEventsAlertPreferenceRepository
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
@@ -116,8 +116,8 @@ internal object VexPreviewRepositories {
             vexMaps = InMemoryVexMapsRepository(),
             vexStream = InMemoryVexStreamMusicRepository(),
             events = RelayEventsRepository(),
-            eventsAttention = RelayEventsAttentionPreferenceRepository(),
-            eventsAttentionLab = RelayEventsAttentionLabRepository(),
+            eventsAlertPreferences = RelayEventsAlertPreferenceRepository(),
+            eventsDebugMenuAlerts = RelayEventsDebugMenuAlertRepository(),
         )
 
     fun withLogHistory(fixture: LogHistoryFixture): AppRepositories =
