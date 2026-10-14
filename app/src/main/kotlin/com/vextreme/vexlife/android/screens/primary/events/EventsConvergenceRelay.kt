@@ -8,6 +8,8 @@ import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceReposit
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceState
 import com.vextreme.vexlife.android.data.events.EventsFeedState
 import com.vextreme.vexlife.android.data.events.EventsRepository
+import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityRepository
+import com.vextreme.vexlife.android.data.events.EventsSourceAvailabilityState
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
 import com.vextreme.vexlife.android.data.userprofile.UserProfile
@@ -41,6 +43,7 @@ data class EventsConvergenceInputState(
     val preferences: EventsAttentionPreferenceState? = null,
     val lab: EventsAttentionLabState? = null,
     val profile: EventsProfileObservation? = null,
+    val sourceAvailability: EventsSourceAvailabilityState? = null,
     val visibleEventRefsBySurface: Map<String, Set<String>>? = null,
     val transientBlocked: Boolean? = null,
 ) : VexInputState<EventsConvergenceInputState> {
@@ -50,6 +53,7 @@ data class EventsConvergenceInputState(
             preferences = preferences?.deepCopy(),
             lab = lab?.deepCopy(),
             profile = profile?.deepCopy(),
+            sourceAvailability = sourceAvailability?.deepCopy(),
             visibleEventRefsBySurface =
                 visibleEventRefsBySurface?.mapValues { (_, refs) ->
                     refs.toSet()
@@ -189,6 +193,7 @@ class EventsConvergenceRelay internal constructor(
     private val attentionPreferences: EventsAttentionPreferenceRepository?,
     private val attentionLab: EventsAttentionLabRepository?,
     private val userProfile: UserProfileRepository?,
+    private val sourceAvailability: EventsSourceAvailabilityRepository?,
 ) : VexCompoundRelay<EventsConvergenceInputState, EventsConvergenceOutputState>(
     relayRef = "relay.events.convergence",
     initialInputState = EventsConvergenceInputState(),
@@ -200,6 +205,7 @@ class EventsConvergenceRelay internal constructor(
         attentionPreferences = null,
         attentionLab = null,
         userProfile = null,
+        sourceAvailability = null,
     )
 
     override fun dependencies() =
@@ -247,6 +253,18 @@ class EventsConvergenceRelay internal constructor(
                             EventsProfileObservation(
                                 profile = profile?.copy(),
                             ),
+                    )
+                }
+            }
+
+            sourceAvailability?.let { repository ->
+                observe(
+                    dependencyRef = SOURCE_AVAILABILITY_DEPENDENCY,
+                    flow = repository.states,
+                ) { availability ->
+                    EventsConvergenceInputState(
+                        sourceAvailability =
+                            availability.deepCopy(),
                     )
                 }
             }
@@ -395,6 +413,9 @@ class EventsConvergenceRelay internal constructor(
         val profile =
             inputState.profile
                 ?: previous.profile
+        val sourceAvailability =
+            inputState.sourceAvailability
+                ?: previous.sourceAvailability
         val visibleEventRefsBySurface =
             mergeVisibleSurfacePatches(
                 previous =
@@ -464,6 +485,7 @@ class EventsConvergenceRelay internal constructor(
                 preferences = preferences?.deepCopy(),
                 lab = lab?.deepCopy(),
                 profile = profile?.deepCopy(),
+                sourceAvailability = sourceAvailability?.deepCopy(),
                 visibleEventRefsBySurface =
                     visibleEventRefsBySurface?.mapValues { (_, refs) ->
                         refs.toSet()
@@ -529,8 +551,19 @@ class EventsConvergenceRelay internal constructor(
                     deferredQueue
             }
 
+        val attentionEligiblePool =
+            activePool.filter { event ->
+                sourceAvailability
+                    ?.isAvailable(event.sourceRef)
+                    ?: false
+            }
+
         val candidateEvent =
-            if (feed != null && preferences != null) {
+            if (
+                feed != null &&
+                preferences != null &&
+                sourceAvailability != null
+            ) {
                 val labTargetRef =
                     lab
                         ?.currentScenario
@@ -541,11 +574,11 @@ class EventsConvergenceRelay internal constructor(
                         .candidate
                         ?.eventRef
 
-                activePool.firstOrNull { event ->
+                attentionEligiblePool.firstOrNull { event ->
                     event.eventRef == labTargetRef
-                } ?: activePool.firstOrNull { event ->
+                } ?: attentionEligiblePool.firstOrNull { event ->
                     event.eventRef == retainedCandidateRef
-                } ?: activePool.firstOrNull()
+                } ?: attentionEligiblePool.firstOrNull()
             } else {
                 null
             }
@@ -569,6 +602,7 @@ class EventsConvergenceRelay internal constructor(
             when {
                 feed == null ||
                     preferences == null ||
+                    sourceAvailability == null ||
                     screenId == null ||
                     transientBlocked == null ->
                     EventsConvergenceAvailability.UNOBSERVED
@@ -740,6 +774,8 @@ class EventsConvergenceRelay internal constructor(
             "events.lab"
         const val PROFILE_DEPENDENCY =
             "user-profile.local"
+        const val SOURCE_AVAILABILITY_DEPENDENCY =
+            "events.source-availability"
     }
 }
 
