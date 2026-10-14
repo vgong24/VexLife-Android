@@ -36,7 +36,12 @@ import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.TextFieldElement
 import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.ui.VexLifeApp
+import com.vextreme.vexlife.android.ui.VexLifeSession
 import androidx.test.espresso.Espresso
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import org.junit.Assert.fail
 
 /**
@@ -63,6 +68,7 @@ class VexTestEngine(
     )
     private val expected = VexExpectedWalk()
     private var stepIndex = 0
+    private var activeSession: VexLifeSession? = null
 
     fun run(case: VexJourneyCase) {
         run(
@@ -82,34 +88,47 @@ class VexTestEngine(
             "START case=$caseLabel",
         )
 
-        compose.setContent {
-            environment.Host {
-                VexLifeApp(repositories = repositories)
-            }
-        }
-
         /*
-         * Establish the Compose host before the semantic walk starts.
-         *
-         * createComposeRule() currently runs through Compose's legacy unconfined test dispatcher.
-         * Android Studio often gives the scheduled setContent work enough incidental time to settle,
-         * while headless Gradle/adb instrumentation can reach start() immediately and observe no
-         * semantics owner yet. Waiting here makes host establishment part of VexTestEngine's own
-         * contract instead of an accidental property of the caller.
+         * Production owns VexLifeSession from a ViewModel scope, not from the current composition.
+         * Instrumentation mirrors that lifetime explicitly: Relay dependency collectors and logging
+         * continue on Android Main while the Compose test scheduler drives UI work. This prevents a
+         * semantic dependency from being accidentally stalled by the caller's Compose test scope.
          */
-        compose.waitForIdle()
+        val sessionScope =
+            CoroutineScope(
+                SupervisorJob() +
+                    Dispatchers.Main.immediate,
+            )
+        val session =
+            VexLifeSession(
+                repositories = repositories,
+                scope = sessionScope,
+            )
+        activeSession = session
 
-        journey.walk(this)
-        verifyWalkHistory(caseLabel)
-        observer.afterJourney(
-            caseLabel = caseLabel,
-            finalScreenId = expected.currentScreen.screenId,
-        )
+        try {
+            compose.setContent {
+                environment.Host {
+                    VexLifeApp(session = session)
+                }
+            }
+            compose.waitForIdle()
 
-        Log.i(
-            JOURNEY_TRACE_LOG_TAG,
-            "COMPLETE case=$caseLabel finalScreen=${expected.currentScreen.screenId}",
-        )
+            journey.walk(this)
+            verifyWalkHistory(caseLabel)
+            observer.afterJourney(
+                caseLabel = caseLabel,
+                finalScreenId = expected.currentScreen.screenId,
+            )
+
+            Log.i(
+                JOURNEY_TRACE_LOG_TAG,
+                "COMPLETE case=$caseLabel finalScreen=${expected.currentScreen.screenId}",
+            )
+        } finally {
+            activeSession = null
+            sessionScope.cancel()
+        }
     }
 
     override fun start(screen: ScreenElement) {
@@ -319,6 +338,11 @@ class VexTestEngine(
             repositories.eventsAttentionLab.current
         val vexStreamState =
             repositories.vexStream.state.value
+        val eventsOutput =
+            activeSession
+                ?.relays
+                ?.events
+                ?.currentOutput
 
         val diagnostic =
             buildString {
@@ -341,6 +365,18 @@ class VexTestEngine(
                 appendLine(
                     "events.labScenario=" +
                         labState.currentScenario?.scenarioRef,
+                )
+                appendLine(
+                    "events.relayCandidate=" +
+                        eventsOutput?.candidate?.eventRef,
+                )
+                appendLine(
+                    "events.relayAvailability=" +
+                        eventsOutput?.availability,
+                )
+                appendLine(
+                    "events.relayListState=" +
+                        eventsOutput?.list,
                 )
                 appendLine(
                     "vexStream.connection=" +
