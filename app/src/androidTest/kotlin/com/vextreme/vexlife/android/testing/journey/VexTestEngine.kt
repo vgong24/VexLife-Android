@@ -8,6 +8,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
@@ -117,14 +118,10 @@ class VexTestEngine(
     override fun tapDynamic(element: VexDynamicElementRef) {
         expected.tapDynamic(element)
 
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(
-                testTag = element.elementId,
-                useUnmergedTree = true,
-            )
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        waitForSemanticTag(
+            elementId = element.elementId,
+            timeoutMillis = 10_000L,
+        )
         compose.onNodeWithTag(
             testTag = element.elementId,
             useUnmergedTree = true,
@@ -141,14 +138,10 @@ class VexTestEngine(
         expected.tap(element)
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(
-                testTag = uiElement.elementId,
-                useUnmergedTree = true,
-            )
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        waitForSemanticTag(
+            elementId = uiElement.elementId,
+            timeoutMillis = 5_000L,
+        )
         node(element)
             .scrollIntoViewIfPossible()
             .performClick()
@@ -224,6 +217,53 @@ class VexTestEngine(
             stepKind = "back",
             semanticRef = "system.back",
         )
+    }
+
+    private fun semanticTreeDiagnostic(
+        missingElementId: String,
+    ): String =
+        runCatching {
+            compose.onRoot(
+                useUnmergedTree = true,
+            )
+                .printToString()
+                .take(20_000)
+        }.getOrElse { failure ->
+            "unable to print Compose semantics: " +
+                failure::class.simpleName +
+                ": " +
+                failure.message
+        }.let { tree ->
+            "Missing semantic tag: " +
+                missingElementId +
+                "\n--- unmerged Compose semantics (bounded) ---\n" +
+                tree
+        }
+
+    private fun waitForSemanticTag(
+        elementId: String,
+        timeoutMillis: Long,
+    ) {
+        val failure =
+            runCatching {
+                compose.waitUntil(
+                    timeoutMillis = timeoutMillis,
+                ) {
+                    compose.onAllNodesWithTag(
+                        testTag = elementId,
+                        useUnmergedTree = true,
+                    )
+                        .fetchSemanticsNodes()
+                        .isNotEmpty()
+                }
+            }.exceptionOrNull()
+
+        if (failure != null) {
+            throw AssertionError(
+                semanticTreeDiagnostic(elementId),
+                failure,
+            )
+        }
     }
 
     private fun observe(
