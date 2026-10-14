@@ -166,6 +166,9 @@ val collectSourceAlignmentViolations: () -> List<String> = {
 }
 
 tasks.register("sourceAlignmentReport") {
+    notCompatibleWithConfigurationCache(
+        "Source alignment scans repository files through script-local closures at execution time.",
+    )
     group = "verification"
     description = "Warns when Screen/Preview/Room source conventions drift."
 
@@ -182,6 +185,9 @@ tasks.register("sourceAlignmentReport") {
 }
 
 tasks.register("verifySourceAlignment") {
+    notCompatibleWithConfigurationCache(
+        "Source alignment scans repository files through script-local closures at execution time.",
+    )
     group = "verification"
     description = "Fails when repository-owned source conventions drift."
 
