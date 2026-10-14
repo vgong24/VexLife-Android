@@ -418,7 +418,7 @@ class EventsConvergenceRelayTest {
             EventsDebugMenuAlertState(
                 currentAlertCase =
                     EventsDebugMenuAlertCase(
-                        alertCaseRef = "scenario.test.middle",
+                        alertCaseRef = "alert-case.test.middle",
                         ordinal = 2L,
                         mode = EventsDebugMenuAlertMode.ROTATION,
                         seed = 1L,
@@ -560,7 +560,7 @@ class EventsConvergenceRelayTest {
             RelayEventsRepository()
         val alertPreferences =
             RelayEventsAlertPreferenceRepository()
-        val debugMenuAlert =
+        val debugMenuAlerts =
             RelayEventsDebugMenuAlertRepository()
         val initialProfile =
             UserProfile(
@@ -575,8 +575,8 @@ class EventsConvergenceRelayTest {
         val relay =
             EventsConvergenceRelay(
                 eventsRepository = events,
-                alertPreferences = preferences,
-                debugMenuAlerts = lab,
+                alertPreferences = alertPreferences,
+                debugMenuAlerts = debugMenuAlerts,
                 userProfile = profiles,
             )
 
@@ -589,7 +589,7 @@ class EventsConvergenceRelayTest {
         withTimeout(1_000L) {
             relay.inputStates.first { input ->
                 input.feed != null &&
-                    input.preferences != null &&
+                    input.alertPreferences != null &&
                     input.profile?.profile?.displayName == "Victor"
             }
         }
