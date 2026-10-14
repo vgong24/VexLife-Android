@@ -93,11 +93,8 @@ class VexTestEngine(
     override fun start(screen: ScreenElement) {
         expected.start(screen)
 
-        val root = com.vextreme.vexlife.android.screens.AppScreens.registry
-            .screenRoot(screen)
-            .element
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(root.elementId)
+            compose.onAllNodesWithTag(screen.screenId)
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
