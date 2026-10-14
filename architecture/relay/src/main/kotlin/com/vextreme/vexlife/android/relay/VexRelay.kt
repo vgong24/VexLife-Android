@@ -39,7 +39,7 @@ abstract class VexRelay<State : VexState<State>>(
      *
      * VexRelay uses singular processState because input/current/next are the same semantic State
      * type. Reducer authors should return domain meaning directly and should not deepCopy() merely
-     * for Relay ownership; send()/update() own admission, reducer isolation, retention, and exposure
+     * for Relay ownership; send()/updateCurrent() own admission, reducer isolation, retention, and exposure
      * snapshots around this method.
      */
     protected open fun processState(
