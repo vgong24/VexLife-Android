@@ -51,6 +51,8 @@ dependencies {
     implementation(project(":architecture:elements"))
     implementation(project(":architecture:logging"))
     implementation(project(":architecture:relay"))
+    // VexStream V2 consumes the reusable semantic-directory contracts without owning them.
+    implementation(project(":architecture:vexarchitecture"))
 
     implementation(libs.activityCompose)
     implementation(platform(libs.composeBom))
