@@ -87,11 +87,11 @@ class VexCompoundRelayDependencyTest {
     private data class ChildInput(
         val value: Int? = null,
         val context: String? = null,
-    ) : VexImmutableInputState<ChildInput>
+    ) : VexInputState<ChildInput>
 
     private data class ChildOutput(
         val bucket: Int = 0,
-    ) : VexImmutableOutputState<ChildOutput>
+    ) : VexOutputState<ChildOutput>
 
     private class ChildCompoundRelay :
         VexCompoundRelay<ChildInput, ChildOutput>(
@@ -146,11 +146,11 @@ class VexCompoundRelayDependencyTest {
     private data class ParentInput(
         val child: ChildOutput? = null,
         val multiplier: Int? = null,
-    ) : VexImmutableInputState<ParentInput>
+    ) : VexInputState<ParentInput>
 
     private data class ParentOutput(
         val score: Int = 0,
-    ) : VexImmutableOutputState<ParentOutput>
+    ) : VexOutputState<ParentOutput>
 
     private class ParentCompoundRelay(
         private val child: ChildCompoundRelay,
