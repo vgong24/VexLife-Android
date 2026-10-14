@@ -22,26 +22,29 @@ data class VexCompoundState<
     }
 
     override fun deepCopy(): VexCompoundState<InputState, OutputState> {
+        // STEP 1 — ask each semantic branch for an ownership-safe snapshot.
+        // Mutable-backed branches detach here; immutable branches return themselves.
         val inputSnapshot =
             inputState.deepCopy()
         val outputSnapshot =
             outputState.deepCopy()
 
-        /*
-         * VexCompoundState itself is immutable. If both children are transitively immutable and
-         * therefore returned themselves, sharing this exact wrapper is also ownership-safe.
-         */
-        return if (
+        // STEP 2 — the Compound wrapper itself is immutable. If neither child needed detachment,
+        // this exact wrapper is already safe for the new owner and allocating another wrapper would
+        // add no isolation at all.
+        val childrenAlreadyShareable =
             inputSnapshot === inputState &&
-            outputSnapshot === outputState
-        ) {
-            this
-        } else {
-            copy(
-                inputState = inputSnapshot,
-                outputState = outputSnapshot,
-            )
+                outputSnapshot === outputState
+
+        if (childrenAlreadyShareable) {
+            return this
         }
+
+        // STEP 3 — at least one child detached, so return one wrapper containing those safe snapshots.
+        return copy(
+            inputState = inputSnapshot,
+            outputState = outputSnapshot,
+        )
     }
 }
 
