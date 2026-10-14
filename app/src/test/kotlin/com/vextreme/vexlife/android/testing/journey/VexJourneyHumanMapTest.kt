@@ -72,9 +72,7 @@ private fun collectTypedJourneyPaths(): List<Pair<String, JourneyPath>> =
                 }
                     ?: return@flatMap emptyList()
 
-            check(instanceField.trySetAccessible()) {
-                "cannot inspect Journeys domain ${domainClass.simpleName}"
-            }
+            instanceField.isAccessible = true
             val instance = instanceField.get(null)
 
             domainClass.declaredMethods
@@ -83,9 +81,7 @@ private fun collectTypedJourneyPaths(): List<Pair<String, JourneyPath>> =
                         method.returnType == JourneyPath::class.java
                 }
                 .map { method ->
-                    check(method.trySetAccessible()) {
-                        "cannot inspect ${domainClass.simpleName}.${method.name}"
-                    }
+                    method.isAccessible = true
 
                     val path = method.invoke(instance) as JourneyPath
                     val propertyName = method.name
