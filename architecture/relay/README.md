@@ -45,6 +45,72 @@ The concrete Relay should be boring to inspect:
 3. read `processState / processStates` to see the reconciliation law;
 4. read its output state to see what consumers are allowed to depend on.
 
+### Why `processState` vs `processStates`
+
+The names reflect two different Relay shapes:
+
+~~~text
+VexRelay<State>
+  one State family
+  input/current/next are the same semantic type
+  -> processState(inputState, currentState)
+
+VexCompoundRelay<InputState, OutputState>
+  several related truths converge
+  retained totality = coherent InputState + derived OutputState + revision
+  -> processStates(inputState, currentCompoundState)
+~~~
+
+So the plural is not "more threads" or "more processing phases." It means the Compound reducer is
+reconciling a family of retained inputs into a separate derived output.
+
+### Copy-paste reducer blueprint
+
+For new Compound Relays, use this order unless the domain genuinely needs something different:
+
+~~~text
+1. REFERENCES
+   name previous input/output needed for reasoning
+
+2. RECONCILE
+   merge the partial patch into one coherent input snapshot
+
+3. DERIVE
+   calculate domain meaning from coherent input only
+
+4. PROJECT
+   construct exactly the output consumers should observe
+
+5. RETURN
+   return currentState.copy(inputState = coherentInput, outputState = output)
+~~~
+
+Ownership rule:
+
+~~~text
+Reducer author owns meaning.
+Relay framework owns ownership snapshots.
+~~~
+
+Do **not** add `deepCopy()` inside `processStates()` merely because a value is being returned to
+Relay. `send()` already snapshots caller input before reducer execution, isolates retained current
+from reducer code, snapshots only changed candidate branches before retention, and snapshots exposed
+results for callers/collectors.
+
+Use a local copy inside the reducer only when the domain algorithm itself needs independent mutable
+working memory, not as Relay ceremony.
+
+The executable reference is:
+
+~~~text
+architecture/relay/src/test/.../VexCompoundRelayBlueprintTest.kt
+~~~
+
+That fixture deliberately uses mutable-backed provider/list/set state while keeping **zero
+`deepCopy()` calls inside `processStates()`**. Its test proves caller mutation and consumer mutation
+still cannot reach retained Relay truth. This makes it the copy-paste authoring blueprint; Events
+remains the richer product-semantic example.
+
 ### Declarative Compound dependencies
 
 A Compound Relay may declare continuously observed Flows:
@@ -56,7 +122,9 @@ override fun dependencies() =
             dependencyRef = "feed",
             flow = repository.states,
         ) { feed ->
-            ExampleInputState(feed = feed)
+            ExampleInputState(
+                feed = feed,
+            )
         }
     }
 ~~~
@@ -121,7 +189,7 @@ particular patch does not supply:
 
 ~~~kotlin
 EventsConvergenceInputState(
-    feed = feed.deepCopy(),
+    feed = feed,
 )
 ~~~
 
