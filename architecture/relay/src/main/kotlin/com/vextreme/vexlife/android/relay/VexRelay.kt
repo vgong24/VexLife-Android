@@ -68,7 +68,7 @@ abstract class VexRelay<State : VexState<State>>(
      * retained result
      * -> exposed result
      *
-     * VexImmutableState makes each snapshot an identity operation. Mutable-backed states still copy
+     * Ordinary immutable VexState makes each snapshot an identity operation. Mutable-backed states still copy
      * at the individual ownership boundaries.
      */
     protected fun send(inputState: State): State =
