@@ -92,11 +92,22 @@ fun EventsScreenContent(
 
     val activeCandidateRef =
         attention.candidate?.eventRef
+    /*
+     * Lazy-list visibility reaches the Relay asynchronously. A candidate row may already be in
+     * composition while the Relay still reports HELD_TARGET_UNREACHABLE from the previous layout
+     * observation. EventRow itself is the final proof that this exact stable row has an anchor.
+     *
+     * READY remains the settled state. HELD_TARGET_UNREACHABLE is allowed only as this short
+     * presentation bridge; HELD_OTHER_SCREEN / HELD_TRANSIENT_OCCUPIED / UNOBSERVED still cannot
+     * render attention even if HorizontalPager happens to precompose the Events page.
+     */
     val visibleCandidateRef =
         attention
             .takeIf { output ->
                 output.availability ==
-                    EventsConvergenceAvailability.READY
+                    EventsConvergenceAvailability.READY ||
+                    output.availability ==
+                    EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
             }
             ?.candidate
             ?.eventRef
