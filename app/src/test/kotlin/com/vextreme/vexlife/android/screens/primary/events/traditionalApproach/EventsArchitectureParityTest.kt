@@ -8,14 +8,10 @@ import com.vextreme.vexlife.android.data.events.RelayEventsSourceAvailabilityRep
 import com.vextreme.vexlife.android.data.events.VexExternalEvent
 import com.vextreme.vexlife.android.data.events.VexExternalEventKind
 import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
-import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
-import com.vextreme.vexlife.android.data.userprofile.UserProfile
-import com.vextreme.vexlife.android.data.userprofile.UserProfileRefs
 import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceListState
 import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceOutputState
 import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRelay
 import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
-import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -37,23 +33,11 @@ class EventsArchitectureParityTest {
         val preferences = RelayEventsAttentionPreferenceRepository()
         val lab = RelayEventsAttentionLabRepository()
         val sourceAvailability = RelayEventsSourceAvailabilityRepository()
-        val profiles =
-            InMemoryUserProfileRepository(
-                listOf(
-                    UserProfile(
-                        profileRef = UserProfileRefs.local,
-                        displayName = "Victor",
-                        updatedAt = Instant.parse("2026-10-13T00:00:00Z"),
-                    ),
-                ),
-            )
-
         val current =
             EventsConvergenceRelay(
                 eventsRepository = events,
                 attentionPreferences = preferences,
                 attentionLab = lab,
-                userProfile = profiles,
                 sourceAvailability = sourceAvailability,
             )
         val traditional =
@@ -61,7 +45,6 @@ class EventsArchitectureParityTest {
                 eventsRepository = events,
                 attentionPreferences = preferences,
                 attentionLab = lab,
-                userProfile = profiles,
                 sourceAvailabilityRepository = sourceAvailability,
             )
 
@@ -132,33 +115,18 @@ class EventsArchitectureParityTest {
             traditional.current.comparable(),
         )
 
-        profiles.updateDisplayName(
-            profileRef = UserProfileRefs.local,
-            displayName = "Vex",
-            updatedAt = Instant.parse("2026-10-13T00:01:00Z"),
-        )
-        runCurrent()
-        assertEquals(
-            current.currentOutput.comparable(),
-            traditional.current.comparable(),
-        )
-
-    }
-
     @Test
     fun currentRelayAndTraditionalControllerAgreeAcrossSurfaceAndProviderPressure() = runTest {
         val events = RelayEventsRepository()
         val preferences = RelayEventsAttentionPreferenceRepository()
         val lab = RelayEventsAttentionLabRepository()
         val sourceAvailability = RelayEventsSourceAvailabilityRepository()
-        val profiles = InMemoryUserProfileRepository()
 
         val current =
             EventsConvergenceRelay(
                 eventsRepository = events,
                 attentionPreferences = preferences,
                 attentionLab = lab,
-                userProfile = profiles,
                 sourceAvailability = sourceAvailability,
             )
         val traditional =
@@ -166,7 +134,6 @@ class EventsArchitectureParityTest {
                 eventsRepository = events,
                 attentionPreferences = preferences,
                 attentionLab = lab,
-                userProfile = profiles,
                 sourceAvailabilityRepository = sourceAvailability,
             )
 
@@ -354,14 +321,12 @@ class EventsArchitectureParityTest {
         val preferences = RelayEventsAttentionPreferenceRepository()
         val lab = RelayEventsAttentionLabRepository()
         val sourceAvailability = RelayEventsSourceAvailabilityRepository()
-        val profiles = InMemoryUserProfileRepository()
 
         val current =
             EventsConvergenceRelay(
                 eventsRepository = events,
                 attentionPreferences = preferences,
                 attentionLab = lab,
-                userProfile = profiles,
                 sourceAvailability = sourceAvailability,
             )
         val traditional =
@@ -369,7 +334,6 @@ class EventsArchitectureParityTest {
                 eventsRepository = events,
                 attentionPreferences = preferences,
                 attentionLab = lab,
-                userProfile = profiles,
                 sourceAvailabilityRepository = sourceAvailability,
             )
 
@@ -497,9 +461,6 @@ private data class ComparableEventsProjection(
     val availability: String,
     val dispositions: Map<String, EventsAttentionDisposition>,
     val scenarioRef: String?,
-    val latestProfileEventRef: String?,
-    val latestProfileTitle: String?,
-    val latestProfileDetail: String?,
     val unhandledCount: Int,
     val queuedAfterCurrentCount: Int,
     val acknowledgedCount: Int,
@@ -523,9 +484,6 @@ private fun EventsConvergenceOutputState.comparable(): ComparableEventsProjectio
         availability = availability.name,
         dispositions = dispositionByEventRef,
         scenarioRef = scenario?.scenarioRef,
-        latestProfileEventRef = latestProfileNameChange?.eventRef,
-        latestProfileTitle = latestProfileNameChange?.title,
-        latestProfileDetail = latestProfileNameChange?.detail,
         unhandledCount = unhandledCount,
         queuedAfterCurrentCount = queuedAfterCurrentCount,
         acknowledgedCount = acknowledgedCount,
@@ -549,9 +507,6 @@ private fun TraditionalEventsUiState.comparable(): ComparableEventsProjection =
         availability = availability.name,
         dispositions = dispositionByEventRef,
         scenarioRef = scenario?.scenarioRef,
-        latestProfileEventRef = latestProfileNameChange?.eventRef,
-        latestProfileTitle = latestProfileNameChange?.title,
-        latestProfileDetail = latestProfileNameChange?.detail,
         unhandledCount = unhandledCount,
         queuedAfterCurrentCount = queuedAfterCurrentCount,
         acknowledgedCount = acknowledgedCount,
