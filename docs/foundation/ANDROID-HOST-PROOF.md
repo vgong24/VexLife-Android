@@ -121,6 +121,175 @@ stop conditions
 The host must verify the requested candidate before execution. A successful command run against a
 different checkout/head is not candidate proof.
 
+## Reusable multi-path host-task template
+
+One host package does **not** mean one proof command. A single bounded task may carry several ordered
+Android proof paths when they belong to the same exact candidate and one host round trip materially
+reduces repeated setup.
+
+The reusable shape earned by the Events/VexStream/ScreenCrawler recovery work is:
+
+```text
+one exact candidate
++ one current-contract VexRelay package
++ one exact platform launcher
+        |
+        v
+host preflight
+  exact repository/head/tree
+  required SDK/JDK/ADB/device facts
+        |
+        v
+proof path A
+  cheap/focused owner proof
+  retain structured evidence
+        |
+        +-- failure classified as source-owned?
+        |     -> stop dependent paths; keep A evidence
+        |
+        v
+proof path B
+  Android/Compose/Journey smoke when host realization itself is in question
+  retain JUnit + semantic trace evidence
+        |
+        +-- host failure?
+        |     -> stop product-dependent paths; keep prior PASS evidence
+        |
+        v
+proof path C
+  wider Journey / ScreenCrawler / device matrix
+  retain counts + screenshots/logcat/test XML as required
+        |
+        v
+optional aggregate repository proof
+  repository-owned task such as vexVerifyLocal
+        |
+        v
+one canonical RETURN ZIP
+  exact candidate binding
+  per-path receipts
+  first substantive failure or terminal PASS
+  retained structured evidence from every reached path
+```
+
+The paths are **ordered claims**, not a shell script that blindly runs everything. A later path should
+execute only when its prerequisites are satisfied. Completed proof remains valid when a later,
+different claim fails.
+
+A useful task-local path table is:
+
+```text
+pathRef
+claim
+prerequisites
+command / repository-owned entry point
+accepted exits
+timeout
+maxOutputBytes
+evidence roots
+PASS predicate
+failure owner / next safe route
+```
+
+Examples of legitimate composition:
+
+```text
+focused JVM reducer test
+-> one exact Journey
+-> full configured ScreenCrawler
+
+device awake/keyguard preflight
+-> ordinary Compose Journey smoke
+-> full physical-device crawler
+
+vexVerifyLocal
+-> APK existence + digest
+```
+
+Do not combine unrelated source candidates, unrelated authority scopes, or independent human
+judgments merely to save a round trip.
+
+### Evidence and RETURN routing
+
+Each reached path should leave enough structured evidence to be consumed independently:
+
+```text
+Gradle/JVM
+  JUnit XML + first failing suite/test + exit code
+
+Journey
+  exact caseRef + semantic trace/wait diagnostics
+
+ScreenCrawler
+  RUN / COMPLETE / CAPTURE counts
+  JUnit XML
+  screenshot/TestStorage evidence when the claim requires it
+
+device preflight
+  exact serial/model
+  boot / power / keyguard state
+  install/launch facts when relevant
+```
+
+The task may use one shell RUN operation to orchestrate several paths, or several Relay operations,
+but **human return cardinality stays one**:
+
+```text
+MULTIPLE_PROOF_PATHS
+!=
+MULTIPLE_HUMAN_RETURNS
+
+one task attempt
+-> one canonical VexRelay RETURN
+-> retained evidence for every reached path
+-> one VexLocalBridge RETURN
+```
+
+Do not ask Victor to return separate logs/ZIPs for each path when the canonical RETURN can retain
+them. If a path generates a repository-owned evidence ZIP, retain that artifact *inside* the task
+evidence/RETURN rather than replacing the canonical RETURN with it.
+
+### Host script safety learned from real recovery
+
+The host script is execution glue, not proof authority. Keep it small and defensive:
+
+- use repository-owned Gradle/Journey/ScreenCrawler entry points rather than reimplementing their
+  semantics;
+- explicitly provide required host environment that VexRelay intentionally does not inherit
+  (for the current macOS host, Android work may need
+  `ANDROID_HOME="$HOME/Library/Android/sdk"` / `ANDROID_SDK_ROOT`);
+- keep requested Relay `maxOutputBytes` within the **current live SDK** bound rather than copying a
+  historical value;
+- under `set -o pipefail`, do not use early-exit consumers such as `grep -q` in a pipeline when an
+  upstream SIGPIPE could turn a truthful match into a false failure; use a non-pipeline predicate
+  when the distinction matters;
+- record device wake/keyguard facts before classifying a Compose-host failure as product behavior;
+- restore temporary host/device settings that the task changed;
+- never let a later carrier/collection failure erase already-completed semantic proof.
+
+These are reusable Android-host lessons. Exact manifest fields, package member sets, task windows,
+digest formation, replay rules and launcher implementation remain owned by the live Vextreme-SDK
+contract and package producer.
+
+### Fresh-agent formation recipe
+
+A fresh source worker that needs this pattern should:
+
+```text
+1. enter through AGENTS.md -> foundation INDEX -> this document
+2. identify the smallest proof paths and their dependency order
+3. read current repository-owned proof entry points
+4. read live Vextreme-SDK current-contract.json
+5. form a fresh task/attempt/package with the current SDK producer
+6. bind exact candidate head/tree and required host/device facts
+7. make each path retain structured evidence before advancing
+8. deliver one digest-bound ZIP + one exact launcher command
+9. consume the one canonical RETURN before replaying anything
+```
+
+A previous successful task is an example of the **shape**, never a template for copying attempt IDs,
+digests, timestamps, absolute task windows, SDK revisions or adapter bindings.
+
 ## Repository-owned Gradle proof
 
 The Android host layer should ask the repository for proof instead of reproducing its task list.
