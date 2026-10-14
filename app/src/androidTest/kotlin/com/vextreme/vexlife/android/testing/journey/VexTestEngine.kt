@@ -77,6 +77,11 @@ class VexTestEngine(
         environment: VexJourneyEnvironment,
         caseLabel: String,
     ) {
+        Log.i(
+            JOURNEY_TRACE_LOG_TAG,
+            "START case=$caseLabel",
+        )
+
         compose.setContent {
             environment.Host {
                 VexLifeApp(repositories = repositories)
@@ -88,6 +93,11 @@ class VexTestEngine(
         observer.afterJourney(
             caseLabel = caseLabel,
             finalScreenId = expected.currentScreen.screenId,
+        )
+
+        Log.i(
+            JOURNEY_TRACE_LOG_TAG,
+            "COMPLETE case=$caseLabel finalScreen=${expected.currentScreen.screenId}",
         )
     }
 
@@ -214,14 +224,23 @@ class VexTestEngine(
         stepKind: String,
         semanticRef: String?,
     ) {
-        observer.afterStep(
+        val observation =
             VexJourneyStepObservation(
                 stepIndex = stepIndex++,
                 stepKind = stepKind,
                 screenId = expected.currentScreen.screenId,
                 semanticRef = semanticRef,
-            ),
+            )
+
+        Log.i(
+            JOURNEY_TRACE_LOG_TAG,
+            "STEP index=${observation.stepIndex} " +
+                "kind=${observation.stepKind} " +
+                "screen=${observation.screenId} " +
+                "semantic=${observation.semanticRef}",
         )
+
+        observer.afterStep(observation)
     }
 
     private fun verifyWalkHistory(title: String) {
@@ -434,3 +453,7 @@ private fun VexJourneyEnvironment.LocaleHost(
 
 private const val JOURNEY_WAIT_LOG_TAG =
     "VexJourneyWait"
+
+
+private const val JOURNEY_TRACE_LOG_TAG =
+    "VexJourneyTrace"
