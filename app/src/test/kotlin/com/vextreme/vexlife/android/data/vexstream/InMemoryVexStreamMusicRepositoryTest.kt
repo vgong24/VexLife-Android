@@ -76,6 +76,62 @@ class InMemoryVexStreamMusicRepositoryTest {
     }
 
     @Test
+    fun pairingConfirmationRestoresRemoteTrackAvailability() = runTest {
+        val trackRef =
+            VexStreamTrackRef(
+                "hub.track.pairing",
+            )
+        val repository =
+            InMemoryVexStreamMusicRepository(
+                VexStreamMusicState(
+                    tracks =
+                        listOf(
+                            VexStreamTrackState(
+                                track =
+                                    VexStreamTrack(
+                                        trackRef = trackRef,
+                                        mediaSha256 =
+                                            VexStreamMediaSha256(
+                                                DIGEST,
+                                            ),
+                                        mediaByteLength = 1_234,
+                                        title = "Pairing Track",
+                                        artist = "Vex",
+                                    ),
+                                hubAvailable = true,
+                            ),
+                        ),
+                ),
+            )
+
+        assertTrue(
+            repository.findNearbyVexStream() is
+                VexStreamRepositoryResult.Accepted,
+        )
+        assertEquals(
+            VexStreamTrackAvailability.UNAVAILABLE,
+            repository.state.value.track(trackRef)?.availability,
+        )
+
+        assertTrue(
+            repository.confirmPairingCode() is
+                VexStreamRepositoryResult.Accepted,
+        )
+        assertTrue(
+            repository.state.value.hubState is
+                VexStreamHubState.Ready,
+        )
+        assertTrue(
+            repository.state.value.connectionState is
+                VexStreamConnectionState.Paired,
+        )
+        assertEquals(
+            VexStreamTrackAvailability.HUB_ONLY,
+            repository.state.value.track(trackRef)?.availability,
+        )
+    }
+
+    @Test
     fun reconnectRestoresPairedHubReachabilityWithoutDiscoverySemantics() = runTest {
         val trackRef =
             VexStreamTrackRef(
