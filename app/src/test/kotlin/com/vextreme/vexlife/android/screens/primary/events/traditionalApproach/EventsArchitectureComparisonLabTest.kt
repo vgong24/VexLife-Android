@@ -37,6 +37,23 @@ class EventsArchitectureComparisonLabTest {
     }
 
     @Test
+    fun secondConsumerSummaryUsesOnlySharedPresentationTruth() {
+        val state =
+            EventsPresentationState(
+                candidateEventRef = "event.alpha",
+                candidateReady = true,
+                unhandledCount = 3,
+                currentQueueCount = 2,
+                nextSequenceCount = 1,
+            )
+
+        assertEquals(
+            "events=0 · candidate=event.alpha · ready=true · current=2 · next=1",
+            state.relationshipConsumerSummary,
+        )
+    }
+
+    @Test
     fun divergenceNamesOnlyThePresentationFieldsThatDiffer() {
         val relay =
             EventsPresentationState(
