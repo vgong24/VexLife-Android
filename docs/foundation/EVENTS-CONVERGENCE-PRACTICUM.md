@@ -5,7 +5,7 @@
 ## The question
 
 > Can one mastered Android node prove how information arriving outside the current Screen becomes
-> truthful, addressable, composable human attention — then let future real services reverse-build
+> truthful, addressable, composable human alerts — then let future real services reverse-build
 > only the adapter/protocol pieces they actually own?
 
 This practicum deliberately starts from the **finished human-facing convergence** rather than
@@ -28,7 +28,7 @@ EventsRepository
         +--------------------------+
         |                          |
         v                          v
-stable dynamic rows        EventsAttentionPreferenceRepository
+stable dynamic rows        EventsAlertPreferenceRepository
 eventRef identity          ack / defer / suppress
         |                          |
         +------------+-------------+
@@ -74,8 +74,8 @@ continuous repository observation out of Compose:
 
 ~~~text
 EventsRepository.states ------------------\
-AttentionPreferenceRepository.states ------+
-AttentionLabRepository.states -------------+-> EventsConvergenceRelay.dependencies()
+AlertPreferenceRepository.states ------+
+DebugMenuAlertRepository.states -------------+-> EventsConvergenceRelay.dependencies()
 UserProfileRepository.observe(local) -------/        |
                                                      | one named coroutine per dependency
                                                      v
@@ -145,7 +145,7 @@ app/.../data/events/
   VexExternalEventSourceSnapshot
   EventsFeedState
   EventsRepository / RelayEventsRepository
-  EventsAttentionPreferences
+  EventsAlertPreferences
   SyntheticExternalEventSource
   SyntheticExternalEventController
 
@@ -185,7 +185,7 @@ The shortest debugging route is:
 -> resolveVexAnchoredOverlay(...)
 
 "What exact row/action did the proof address?"
--> EventsPresentationRefs + Journeys.events.externalAttention
+-> EventsPresentationRefs + Journeys.events.externalAlert
 ~~~
 
 ## Normalized provider boundary
@@ -278,7 +278,7 @@ same Events convergence node
 A second real adapter may eventually justify a reusable adapter interface. The first practicum does
 not create one speculatively.
 
-## Truth versus attention preference
+## Truth versus alert preference
 
 ~~~text
 EVENT_HAPPENED
@@ -297,7 +297,7 @@ SUPPRESSED
 
 `EventsRepository` owns the normalized current event projection.
 
-`EventsAttentionPreferenceRepository` separately owns session presentation preference:
+`EventsAlertPreferenceRepository` separately owns session presentation preference:
 
 ~~~text
 ACKNOWLEDGED
@@ -314,7 +314,7 @@ Candidate selection happens **before** target reachability.
 
 The current policy first retains the already-selected candidate while that exact event still exists
 in the provider projection and remains unhandled. This means insertion, reorder, timestamp change,
-or a newer arrival cannot steal the active attention identity.
+or a newer arrival cannot steal the active alert identity.
 
 When no retained candidate remains, the Relay chooses the oldest unhandled event from normalized
 event truth. A provider removal of the retained event is therefore allowed to advance the candidate.
@@ -335,7 +335,7 @@ HELD_TARGET_UNREACHABLE
   same candidate exists but its stable row is not currently visible
 
 HELD_TRANSIENT_OCCUPIED
-  same candidate exists but another transient owns presentation attention
+  same candidate exists but another transient owns alert presentation
 
 READY
   exact candidate + exact visible target may render
@@ -467,9 +467,9 @@ GEOMETRY_CHANGE != SEMANTIC_EVENT_CHANGE
 AUTOMATIC_REPOSITION != HUMAN_PREFERENCE
 ~~~
 
-## Lived attention contract
+## Lived alert contract
 
-The attention popup is an **interactive anchored rich anchored overlay**, not another Events row.
+The alert popup is an **interactive anchored rich anchored overlay**, not another Events row.
 
 A lived-device review exposed two requirements that are now part of the practicum:
 
@@ -545,7 +545,7 @@ the post-calculation result. If it genuinely renders dependency/currentness cont
 `inputStates/currentInput`. It should not unpack full `states` or re-run `processStates` logic in
 Compose by habit.
 
-A blocking lab scenario adds one stronger condition on top of the common presentation snapshot:
+A blocking Debug-menu alert case adds one stronger condition on top of the common presentation snapshot:
 the target is auto-scrolled into view, user scrolling is disabled, outside dismissal is ignored and
 Acknowledge releases the lock.
 
@@ -555,7 +555,7 @@ overlay shows only the information needed for the current human decision:
 ~~~text
 event title
 active/current/next queue counts
-scenario step/target/placement when present
+alert-case step/target/placement when present
 random replay seed when present
 one expected press
 one short expected result
@@ -571,7 +571,7 @@ is wrong.
 ACKNOWLEDGE
   event row remains
   terminal proactive handling
-  attention advances
+  alert advances
 
 LATER
   event row remains
@@ -585,7 +585,7 @@ SUSPEND
 
 SUPPRESS
   event row remains
-  terminal proactive suppression for this lab/session
+  terminal proactive suppression for this Debug-menu run
 ~~~
 
 At this practicum stage, Later means the next modeled sequence, not a wall-clock snooze. If repeated
@@ -595,21 +595,21 @@ that distinction.
 If any stated next state above does not occur, preserve it as a failing lived case / bug rather than
 reinterpreting the button after the fact.
 
-### Repeatable lab reset
+### Repeatable Debug-menu reset
 
-`Reset lab`:
+`Reset Debug Menu`:
 
 ~~~text
 stop timed producer
 -> publish an empty current source projection at a newer sourceRevision
--> clear attention dispositions
+-> clear alert dispositions
 -> preserve monotonic provider/event identity for later emissions
 ~~~
 
 This gives a human a reproducible clean starting point without teaching the mock provider that reset
 means returning to revision 1.
 
-## Synthetic fixture and live condition lab
+## Synthetic fixture and live Debug-menu conditions
 
 The Debug Menu owns a session-scoped deterministic fixture. All controls operate the **same**
 SyntheticExternalEventSource and normalized EventsRepository ingress; there is no second fake test
@@ -662,14 +662,14 @@ Events keeps two feature-owned previews beside `EventsScreen.kt`:
 EventsScreenPreview
   empty/default state
 
-EventsAttentionPreview
+EventsAlertPreview
   populated message/call/map rows
-  attention candidate active
+  alert candidate active
   rendered through all @VexScreenPreviews device/theme/font forms
 ~~~
 
 The preview fixture uses the real Events repository contract and real Screen content. It does not add
-Preview-only behavior to VexRuntime or create another scenario registry.
+Preview-only behavior to VexRuntime or create another fixture registry.
 
 ### Test-time customizability
 
@@ -689,9 +689,9 @@ removeOldest()
 Journey uses deterministic `signal(...)` snapshots instead of wall-clock sleeps, so causal
 instrumentation remains fast/repeatable while the Debug Menu preserves a human live-play path.
 
-## Attention expectation scenario lab
+## Debug-menu alert cases
 
-The Debug fixture now owns a separate scenario planner. This is intentionally **not** external event
+The Debug fixture now owns a separate alert-case builder. This is intentionally **not** external event
 truth and not part of a real service adapter.
 
 ~~~text
@@ -701,7 +701,7 @@ SyntheticExternalEventSource
 EventsConvergenceRelay
   -> owns queue + candidate + availability
 
-EventsAttentionLabRepository
+EventsDebugMenuAlertRepository
   -> chooses which edge condition the human is trying to prove next
 ~~~
 
@@ -709,11 +709,11 @@ Two modes are available:
 
 ~~~text
 ROTATION
-  stable five-scenario cycle
+  stable five-alert-case cycle
 
 SEEDED_RANDOM
-  chooses from the same scenario templates
-  displayed seed + scenarioRef make the run reproducible
+  chooses from the same alert-case templates
+  displayed seed + alertCaseRef make the run reproducible
 ~~~
 
 Current deterministic rotation:
@@ -750,8 +750,8 @@ Current deterministic rotation:
 ~~~
 
 The planner stores the exact target eventRef, plan-time row position, list count, seed, ordinal,
-preferred placement, expected action and scenario ref. Row position is test expectation metadata;
-the attention relationship still addresses the event by eventRef.
+preferred placement, expected action and alert-case ref. Row position is test expectation metadata;
+the alert relationship still addresses the event by eventRef.
 
 ~~~text
 SCENARIO_POSITION = TEST_EXPECTATION_METADATA
@@ -760,7 +760,7 @@ VISUAL_INDEX != SEMANTIC_IDENTITY
 ~~~
 
 VexStableLazyColumn(requestedVisibleItemRef=...) brings a planned stable item into the viewport.
-VexAnchoredOverlay(preferredPlacements=...) tries the scenario's preferred side first and may use
+VexAnchoredOverlay(preferredPlacements=...) tries the alert case's preferred side first and may use
 a documented safe fallback when the requested side does not fit.
 
 ### Queue action law
@@ -769,11 +769,11 @@ The lived buttons now exercise different queue semantics rather than three versi
 
 ~~~text
 ACKNOWLEDGE
-  terminal handled for proactive attention
+  terminal handled for proactive alerts
   row remains canonical event truth
 
 SUPPRESS
-  terminal proactive suppression for this lab/session
+  terminal proactive suppression for this Debug-menu run
   row remains canonical event truth
 
 SUSPEND
@@ -799,7 +799,7 @@ suspendedCount
 suppressedCount
 ~~~
 
-These values are rendered directly in the attention popup. Compose does not maintain a second queue.
+These values are rendered directly in the alert popup. Compose does not maintain a second queue.
 
 One current limitation is deliberate and visible: if an item is already in the deferred next
 sequence and the human presses Later on that same item again after the next sequence becomes active,
@@ -808,7 +808,7 @@ additional sequence depth instead of silently inventing it.
 
 ### Blocking freeze
 
-The blocking scenario proves a stronger distinction:
+The blocking alert case proves a stronger distinction:
 
 ~~~text
 CANONICAL_PROVIDER_TRUTH_CONTINUES
@@ -816,7 +816,7 @@ CANONICAL_PROVIDER_TRUTH_CONTINUES
 DISPLAYED_EVENTS_PROJECTION_MUST_UPDATE_NOW
 ~~~
 
-On scenario entry, Events captures the currently displayed row projection. The synthetic provider
+On alert-case entry, Events captures the currently displayed row projection. The synthetic provider
 continues admitting newer snapshots underneath it. The blocking popup remains anchored to the exact
 planned event and exposes queue metadata while the visible list stays frozen.
 
@@ -824,25 +824,25 @@ Acknowledge:
 
 ~~~text
 mark blocking event ACKNOWLEDGED
--> complete current lab scenario
+-> complete current alert case
 -> release frozen displayed projection
 -> reveal provider events accumulated while blocked
--> normal attention processing may then continue
+-> normal alert processing may then continue
 ~~~
 
 The timed source is source-lock gated so Reset can disable timed emission before publishing an empty
-projection. A waking five-second tick cannot legally repopulate the lab after Reset.
+projection. A waking five-second tick cannot legally repopulate Debug-menu alert state after Reset.
 
 ### Human failure rule
 
-The attention popup displays the expected action and expected result contract. For a lab run:
+The alert popup displays the expected action and expected result contract. For a Debug-menu run:
 
 ~~~text
 EXPECTED_NEXT_STATE != OBSERVED_NEXT_STATE
 -> FAILING_LIVED_CASE / BUG
 ~~~
 
-Do not reinterpret a mismatch as a different button meaning after the fact. Preserve the scenario
+Do not reinterpret a mismatch as a different button meaning after the fact. Preserve the alert case
 ref, random seed when present, event ref, queue metadata and screenshot so the exact condition can be
 replayed.
 ## Executable causal walk
@@ -850,7 +850,7 @@ replayed.
 Human/IDE path:
 
 ~~~text
-Journeys.events.externalAttention
+Journeys.events.externalAlert
 ~~~
 
 The journey uses two distinct kinds of step:
@@ -889,13 +889,13 @@ The same declaration is consumable by Android instrumentation and ScreenCrawler.
 Useful ScreenCrawler selections:
 
 ~~~kotlin
-journey(Journeys.events.externalAttention)
+journey(Journeys.events.externalAlert)
 
 screens(EventsScreen)
 ~~~
 
 This is the intended causal evidence route for font/locale/geometry pressure. It is not a separate
-screenshot-only scenario.
+screenshot-only case.
 
 ## Proof state
 
@@ -944,7 +944,7 @@ after exact Android proof establishes the current candidate**.
 After that proof, future service work should descend from this map in reverse:
 
 ~~~text
-desired human event row/attention
+desired human event row/alert
 -> required normalized event identity
 -> required source snapshot/currentness
 -> provider-specific adapter semantics
