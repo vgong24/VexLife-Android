@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -251,10 +252,15 @@ class VexCompoundRelayDependencyTest {
                 value = 7,
                 context = "changed-without-output-change",
             )
+            yield()
 
             assertEquals(
                 parentProcessesBeforeInputOnlyChildChange,
                 parent.processCount.get(),
+            )
+            assertSame(
+                child.currentOutput,
+                parent.currentInput.child,
             )
 
             child.update(
