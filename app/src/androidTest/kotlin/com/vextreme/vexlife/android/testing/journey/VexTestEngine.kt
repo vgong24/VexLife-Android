@@ -117,11 +117,7 @@ class VexTestEngine(
     override fun tapDynamic(element: VexDynamicElementRef) {
         expected.tapDynamic(element)
 
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithTag(element.elementId)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+        waitForTaggedNode(element.elementId)
         compose.onNodeWithTag(element.elementId)
             .performClick()
         compose.waitForIdle()
@@ -133,13 +129,25 @@ class VexTestEngine(
 
     override fun tap(element: ActionElement) {
         expected.tap(element)
-        node(element)
+
+        val uiElement =
+            element as? UIElement
+                ?: error("ActionElement must also be a UIElement")
+
+        /*
+         * Registered action identity is static; visual availability is not. A button may appear only
+         * after a repository/Relay/coroutine transition (VexStream pairing/reconnect is the concrete
+         * example). Synchronize on the production element identity instead of assuming Compose
+         * idleness means the preceding semantic operation has already projected its next surface.
+         */
+        waitForTaggedNode(uiElement.elementId)
+        compose.onNodeWithTag(uiElement.elementId)
             .scrollIntoViewIfPossible()
             .performClick()
         compose.waitForIdle()
         observe(
             stepKind = "tap",
-            semanticRef = (element as UIElement).elementId,
+            semanticRef = uiElement.elementId,
         )
     }
 
@@ -260,6 +268,14 @@ class VexTestEngine(
         logHistory.records.value.map { record ->
             record.toJourneyRecord()
         }
+
+    private fun waitForTaggedNode(elementId: String) {
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithTag(elementId)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+    }
 
     private fun node(element: ActionElement): SemanticsNodeInteraction {
         val uiElement = element as? UIElement
