@@ -5,6 +5,22 @@
 > Copy the sections that are useful into the new feature's durable home. Delete sections that have
 > no truthful distinct answer. This template is a thinking/continuity aid, not a documentation quota.
 
+## Worked reference context
+
+When the questions in this template are easier to understand through a concrete feature, VexStream is
+the current worked reference:
+
+- Feature-owned context: ../../app/src/main/kotlin/com/vextreme/vexlife/android/data/vexstream/README.md
+- Experience root: ../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/experience/v2/VexStreamExperience.kt
+- Reusable architecture vocabulary: ../../architecture/vexarchitecture/README.md
+
+VexStream helped earn and refine parts of this authoring language, so it shows how the questions can
+become source, contracts, providers, journeys, tests, and proof. Use that relationship as context.
+
+Do **not** infer that Library, Sources, PlayerArchitecture, Playback, Queue, Media3, or VexStream's
+package depth are required answers. The new feature still has to answer the template's questions from
+its own human outcome and rightful owners.
+
 ## Feature identity
 
 ~~~text

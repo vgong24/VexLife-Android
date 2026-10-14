@@ -21,6 +21,27 @@ What must be updated before this feature is actually "done"?
 This file is a router and completion contract. It deliberately does not duplicate the detailed
 architecture, Journey, Test Foundation, ScreenCrawler, or Android-host-proof manuals.
 
+## Bidirectional discoverability
+
+Feature authoring must be findable from either direction:
+
+~~~text
+repository front door
+    -> Feature Home / Template
+    -> worked feature
+
+worked feature README / experience root
+    -> Feature Home / Template
+~~~
+
+A feature used as an example should link back to this authoring home and the template that explains
+the reusable language. That keeps an example from silently becoming the template merely because its
+code already exists.
+
+The reciprocal link should provide **context, not answers**: it explains the questions, contracts,
+proof routes, and completion expectations while leaving the new feature to discover its own truthful
+nouns and structure.
+
 ## Fresh feature entry
 
 When assigned a new feature:

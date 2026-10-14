@@ -34,8 +34,13 @@ import com.vextreme.vexlife.android.vexstream.experience.v2.player.VexStreamPlay
  * The package carries the version. The class name stays production-shaped so a future maintainer
  * does not have to treat every V2 type as temporary.
  *
- * Repository authoring language:
+ * Repository feature-authoring context:
+ * docs/features/README.md
+ * docs/features/VEX-FEATURE-TEMPLATE.md
  * docs/foundation/FEATURE-EXPERIENCE-LANGUAGE.md
+ *
+ * The feature documents explain the reusable authoring contract; this source shows how that contract
+ * resolves for VexStream rather than defining the required shape of every future feature.
  */
 object VexStreamExperience {
     /** Stable semantic identity for the whole VexStream product experience. */

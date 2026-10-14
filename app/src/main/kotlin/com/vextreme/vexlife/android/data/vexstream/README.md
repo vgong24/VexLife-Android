@@ -2,6 +2,18 @@
 
 [VXG RealForever]
 
+> **Feature-authoring context**
+>
+> VexStream is maintained against the repository's
+> [Feature Home](../../../../../../../../../../docs/features/README.md) and
+> [Vex Feature Template](../../../../../../../../../../docs/features/VEX-FEATURE-TEMPLATE.md).
+> The reusable question/acceptance language lives in
+> [Feature Experience Language](../../../../../../../../../../docs/foundation/FEATURE-EXPERIENCE-LANGUAGE.md).
+>
+> This README records how those authoring contracts resolve for **VexStream specifically**. It is a
+> worked reference for the relationships between experience language, source ownership, providers,
+> journeys, and proof—not a requirement that another feature copy VexStream's nouns or package shape.
+
 ## Question
 
 How can VexLife play a VexStream library on the phone, optionally keep verified songs for offline
