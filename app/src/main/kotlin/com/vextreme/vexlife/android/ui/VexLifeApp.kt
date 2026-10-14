@@ -64,8 +64,15 @@ internal fun VexLifeApp(
     VexLifeApp(session = session)
 }
 
+/**
+ * Session-injectable composition root.
+ *
+ * Production reaches this through [VexLifeViewModel]. Journey instrumentation also uses this exact
+ * boundary so its Relay/logging lifetime mirrors production instead of being tied to the Compose
+ * test composition scope.
+ */
 @Composable
-private fun VexLifeApp(
+internal fun VexLifeApp(
     session: VexLifeSession,
 ) {
     val runtime = session.runtime
