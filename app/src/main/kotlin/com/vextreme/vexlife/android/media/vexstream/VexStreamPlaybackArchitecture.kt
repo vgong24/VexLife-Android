@@ -66,17 +66,35 @@ data class VexStreamPlaybackQueuePosition(
     }
 }
 
+/**
+ * Naming rationale for playback Cases:
+ *
+ * Media3 source term: playWhenReady
+ * Vex term: PlaybackRequested / PlaybackNotRequested
+ *
+ * Why:
+ * - "Playing" would be false while Media3 is buffering/preparing even though playback is requested.
+ * - "Paused" would overclaim why playback is not requested; the user may never have started it, the
+ *   item may have ended, or another platform event may have cleared the request.
+ * - "ReadyToPlay" sounds like a platform readiness guarantee we do not actually observe.
+ *
+ * The Vex names therefore preserve only the stable meaning we truly know: whether playback is
+ * currently requested while a non-empty queue exists.
+ *
+ * QueueEmpty stays separate because "no playback" would wrongly merge an empty queue with a
+ * non-empty queue whose playback is merely not requested.
+ */
 sealed interface VexStreamPlaybackCase :
     VexStreamPlaybackArchitecture.CaseContract {
 
     data object QueueEmpty :
         VexStreamPlaybackCase
 
-    data class ReadyToPlay(
+    data class PlaybackNotRequested(
         val queue: VexStreamPlaybackQueuePosition,
     ) : VexStreamPlaybackCase
 
-    data class PlayRequested(
+    data class PlaybackRequested(
         val queue: VexStreamPlaybackQueuePosition,
     ) : VexStreamPlaybackCase
 }
@@ -86,97 +104,107 @@ object VexStreamPlaybackControl :
 
     val Play =
         VexStreamPlaybackArchitecture.transition<
-            VexStreamPlaybackCase.ReadyToPlay,
-            VexStreamPlaybackCase.PlayRequested
+            VexStreamPlaybackCase.PlaybackNotRequested,
+            VexStreamPlaybackCase.PlaybackRequested
         >(
             "vexstream.playback.play",
         )
 
     val Pause =
         VexStreamPlaybackArchitecture.transition<
-            VexStreamPlaybackCase.PlayRequested,
-            VexStreamPlaybackCase.ReadyToPlay
+            VexStreamPlaybackCase.PlaybackRequested,
+            VexStreamPlaybackCase.PlaybackNotRequested
         >(
             "vexstream.playback.pause",
         )
 
     /**
-     * Play Track replaces/selects the Media3 queue context and requests playback.
+     * Shared queue-replacement relationship used by Play Track / Play All / Shuffle All.
+     *
+     * Naming rationale:
+     *
+     * PlayTrackFrom...                  -> rejected: names one caller, not the shared consequence.
+     * ReplaceContextFrom...             -> rejected: "Context" is vague and collides with Android
+     *                                      Context terminology.
+     * ReplaceQueueAndRequestPlayback... -> chosen: says exactly what all three Controls cause.
+     *
+     * The human Control is still named PlayTrack / PlayAll / ShuffleAll. The Transition names the
+     * common Before -> After consequence beneath those different intentions.
      *
      * The human Control is one intention, while its typed relationship depends on the current Case.
-     * All three converge on PlayRequested; the exact selected track/queue data is observed from Media3
+     * All three converge on PlaybackRequested; the exact selected track/queue data is observed from Media3
      * after the Android realization.
      */
-    val ReplaceContextFromQueueEmpty =
+    val ReplaceQueueAndRequestPlaybackFromQueueEmpty =
         VexStreamPlaybackArchitecture.transition<
             VexStreamPlaybackCase.QueueEmpty,
-            VexStreamPlaybackCase.PlayRequested
+            VexStreamPlaybackCase.PlaybackRequested
         >(
-            "vexstream.playback.replace-context.queue-empty",
+            "vexstream.playback.replace-queue-and-request-playback.queue-empty",
         )
 
     val ReplaceContextFromReady =
         VexStreamPlaybackArchitecture.transition<
-            VexStreamPlaybackCase.ReadyToPlay,
-            VexStreamPlaybackCase.PlayRequested
+            VexStreamPlaybackCase.PlaybackNotRequested,
+            VexStreamPlaybackCase.PlaybackRequested
         >(
-            "vexstream.playback.replace-context.ready",
+            "vexstream.playback.replace-queue-and-request-playback.not-requested",
         )
 
-    val ReplaceContextFromPlayRequested =
+    val ReplaceQueueAndRequestPlaybackFromPlaybackRequested =
         VexStreamPlaybackArchitecture.transition<
-            VexStreamPlaybackCase.PlayRequested,
-            VexStreamPlaybackCase.PlayRequested
+            VexStreamPlaybackCase.PlaybackRequested,
+            VexStreamPlaybackCase.PlaybackRequested
         >(
-            "vexstream.playback.replace-context.play-requested",
+            "vexstream.playback.replace-queue-and-request-playback.requested",
         )
 
-    val NextWhileReady =
+    val NextWhilePlaybackNotRequested =
         VexStreamPlaybackArchitecture.transition<
-            VexStreamPlaybackCase.ReadyToPlay,
-            VexStreamPlaybackCase.ReadyToPlay
+            VexStreamPlaybackCase.PlaybackNotRequested,
+            VexStreamPlaybackCase.PlaybackNotRequested
         >(
             transitionRef =
-                "vexstream.playback.next.ready",
+                "vexstream.playback.next.not-requested",
             conditionRef =
                 "queue-has-next",
         ) { current ->
             current.queue.hasNext
         }
 
-    val NextWhilePlayRequested =
+    val NextWhilePlaybackRequested =
         VexStreamPlaybackArchitecture.transition<
-            VexStreamPlaybackCase.PlayRequested,
-            VexStreamPlaybackCase.PlayRequested
+            VexStreamPlaybackCase.PlaybackRequested,
+            VexStreamPlaybackCase.PlaybackRequested
         >(
             transitionRef =
-                "vexstream.playback.next.play-requested",
+                "vexstream.playback.next.requested",
             conditionRef =
                 "queue-has-next",
         ) { current ->
             current.queue.hasNext
         }
 
-    val PreviousWhileReady =
+    val PreviousWhilePlaybackNotRequested =
         VexStreamPlaybackArchitecture.transition<
-            VexStreamPlaybackCase.ReadyToPlay,
-            VexStreamPlaybackCase.ReadyToPlay
+            VexStreamPlaybackCase.PlaybackNotRequested,
+            VexStreamPlaybackCase.PlaybackNotRequested
         >(
             transitionRef =
-                "vexstream.playback.previous.ready",
+                "vexstream.playback.previous.not-requested",
             conditionRef =
                 "queue-has-previous",
         ) { current ->
             current.queue.hasPrevious
         }
 
-    val PreviousWhilePlayRequested =
+    val PreviousWhilePlaybackRequested =
         VexStreamPlaybackArchitecture.transition<
-            VexStreamPlaybackCase.PlayRequested,
-            VexStreamPlaybackCase.PlayRequested
+            VexStreamPlaybackCase.PlaybackRequested,
+            VexStreamPlaybackCase.PlaybackRequested
         >(
             transitionRef =
-                "vexstream.playback.previous.play-requested",
+                "vexstream.playback.previous.requested",
             conditionRef =
                 "queue-has-previous",
         ) { current ->
@@ -193,39 +221,39 @@ object VexStreamPlaybackControl :
     val PlayTrack =
         VexStreamPlaybackArchitecture.control(
             "vexstream.playback.play-track",
-            ReplaceContextFromQueueEmpty,
+            ReplaceQueueAndRequestPlaybackFromQueueEmpty,
             ReplaceContextFromReady,
-            ReplaceContextFromPlayRequested,
+            ReplaceQueueAndRequestPlaybackFromPlaybackRequested,
         )
 
     val PlayAll =
         VexStreamPlaybackArchitecture.control(
             "vexstream.playback.play-all",
-            ReplaceContextFromQueueEmpty,
+            ReplaceQueueAndRequestPlaybackFromQueueEmpty,
             ReplaceContextFromReady,
-            ReplaceContextFromPlayRequested,
+            ReplaceQueueAndRequestPlaybackFromPlaybackRequested,
         )
 
     val ShuffleAll =
         VexStreamPlaybackArchitecture.control(
             "vexstream.playback.shuffle-all",
-            ReplaceContextFromQueueEmpty,
+            ReplaceQueueAndRequestPlaybackFromQueueEmpty,
             ReplaceContextFromReady,
-            ReplaceContextFromPlayRequested,
+            ReplaceQueueAndRequestPlaybackFromPlaybackRequested,
         )
 
     val Next =
         VexStreamPlaybackArchitecture.control(
             "vexstream.playback.next",
-            NextWhileReady,
-            NextWhilePlayRequested,
+            NextWhilePlaybackNotRequested,
+            NextWhilePlaybackRequested,
         )
 
     val Previous =
         VexStreamPlaybackArchitecture.control(
             "vexstream.playback.previous",
-            PreviousWhileReady,
-            PreviousWhilePlayRequested,
+            PreviousWhilePlaybackNotRequested,
+            PreviousWhilePlaybackRequested,
         )
 
     val all: List<VexControl> =
@@ -247,13 +275,13 @@ object VexStreamPlaybackPlacement :
             VexStreamPlaybackCase.QueueEmpty
         > {
             can(
-                VexStreamPlaybackControl.ReplaceContextFromQueueEmpty,
+                VexStreamPlaybackControl.ReplaceQueueAndRequestPlaybackFromQueueEmpty,
             )
         }
 
-    val ReadyToPlay =
+    val PlaybackNotRequested =
         VexStreamPlaybackArchitecture.placement<
-            VexStreamPlaybackCase.ReadyToPlay
+            VexStreamPlaybackCase.PlaybackNotRequested
         > {
             arrivedBy(
                 VexStreamPlaybackControl.Pause,
@@ -262,69 +290,76 @@ object VexStreamPlaybackPlacement :
                 VexStreamPlaybackControl.ReplaceContextFromReady,
             )
             arrivedBy(
-                VexStreamPlaybackControl.NextWhileReady,
+                VexStreamPlaybackControl.NextWhilePlaybackNotRequested,
             )
             arrivedBy(
-                VexStreamPlaybackControl.PreviousWhileReady,
+                VexStreamPlaybackControl.PreviousWhilePlaybackNotRequested,
             )
             can(
                 VexStreamPlaybackControl.Play,
             )
             can(
-                VexStreamPlaybackControl.NextWhileReady,
+                VexStreamPlaybackControl.NextWhilePlaybackNotRequested,
             )
             can(
-                VexStreamPlaybackControl.PreviousWhileReady,
+                VexStreamPlaybackControl.PreviousWhilePlaybackNotRequested,
             )
         }
 
-    val PlayRequested =
+    val PlaybackRequested =
         VexStreamPlaybackArchitecture.placement<
-            VexStreamPlaybackCase.PlayRequested
+            VexStreamPlaybackCase.PlaybackRequested
         > {
             arrivedBy(
                 VexStreamPlaybackControl.Play,
             )
             arrivedBy(
-                VexStreamPlaybackControl.ReplaceContextFromQueueEmpty,
+                VexStreamPlaybackControl.ReplaceQueueAndRequestPlaybackFromQueueEmpty,
             )
             arrivedBy(
                 VexStreamPlaybackControl.ReplaceContextFromReady,
             )
             arrivedBy(
-                VexStreamPlaybackControl.ReplaceContextFromPlayRequested,
+                VexStreamPlaybackControl.ReplaceQueueAndRequestPlaybackFromPlaybackRequested,
             )
             can(
-                VexStreamPlaybackControl.ReplaceContextFromPlayRequested,
+                VexStreamPlaybackControl.ReplaceQueueAndRequestPlaybackFromPlaybackRequested,
             )
             arrivedBy(
-                VexStreamPlaybackControl.NextWhilePlayRequested,
+                VexStreamPlaybackControl.NextWhilePlaybackRequested,
             )
             arrivedBy(
-                VexStreamPlaybackControl.PreviousWhilePlayRequested,
+                VexStreamPlaybackControl.PreviousWhilePlaybackRequested,
             )
             can(
                 VexStreamPlaybackControl.Pause,
             )
             can(
-                VexStreamPlaybackControl.NextWhilePlayRequested,
+                VexStreamPlaybackControl.NextWhilePlaybackRequested,
             )
             can(
-                VexStreamPlaybackControl.PreviousWhilePlayRequested,
+                VexStreamPlaybackControl.PreviousWhilePlaybackRequested,
             )
         }
 
     val all: List<VexPlacementView> =
         listOf(
             QueueEmpty,
-            ReadyToPlay,
-            PlayRequested,
+            PlaybackNotRequested,
+            PlaybackRequested,
         )
 }
 
+/**
+ * Android facts translated into Vex playback vocabulary.
+ *
+ * Naming rationale:
+ * Media3 "playWhenReady" becomes "playbackRequested" here because this object is the translation
+ * boundary. The platform name remains in [VexStreamPlaybackAndroid.current(Player)] where it belongs.
+ */
 data class VexStreamPlaybackObservation(
     val queue: VexStreamPlaybackQueuePosition?,
-    val playRequested: Boolean,
+    val playbackRequested: Boolean,
 )
 
 internal object VexStreamPlaybackAndroid :
@@ -344,27 +379,27 @@ internal object VexStreamPlaybackAndroid :
                             .QueueEmpty,
                 )
 
-        return if (observation.playRequested) {
+        return if (observation.playbackRequested) {
             vexCurrent(
                 case =
                     VexStreamPlaybackCase
-                        .PlayRequested(
+                        .PlaybackRequested(
                             queue = queue,
                         ),
                 placement =
                     VexStreamPlaybackPlacement
-                        .PlayRequested,
+                        .PlaybackRequested,
             )
         } else {
             vexCurrent(
                 case =
                     VexStreamPlaybackCase
-                        .ReadyToPlay(
+                        .PlaybackNotRequested(
                             queue = queue,
                         ),
                 placement =
                     VexStreamPlaybackPlacement
-                        .ReadyToPlay,
+                        .PlaybackNotRequested,
             )
         }
     }
@@ -391,7 +426,7 @@ internal object VexStreamPlaybackAndroid :
                                         player.hasNextMediaItem(),
                                 )
                             },
-                    playRequested =
+                    playbackRequested =
                         player.playWhenReady,
                 ),
         )
@@ -442,7 +477,7 @@ internal object VexStreamPlaybackAndroid :
         )
             ?: return false
 
-        return controller.replaceVexStreamContextAndPlay(
+        return controller.replaceVexStreamQueueAndPlay(
             selected = selected,
             contextTracks = contextTracks,
             resolver = resolver,
@@ -496,14 +531,14 @@ internal object VexStreamPlaybackAndroid :
                 true
             }
 
-            VexStreamPlaybackControl.NextWhileReady,
-            VexStreamPlaybackControl.NextWhilePlayRequested -> {
+            VexStreamPlaybackControl.NextWhilePlaybackNotRequested,
+            VexStreamPlaybackControl.NextWhilePlaybackRequested -> {
                 controller.seekToNextMediaItem()
                 true
             }
 
-            VexStreamPlaybackControl.PreviousWhileReady,
-            VexStreamPlaybackControl.PreviousWhilePlayRequested -> {
+            VexStreamPlaybackControl.PreviousWhilePlaybackNotRequested,
+            VexStreamPlaybackControl.PreviousWhilePlaybackRequested -> {
                 controller.seekToPreviousMediaItem()
                 true
             }

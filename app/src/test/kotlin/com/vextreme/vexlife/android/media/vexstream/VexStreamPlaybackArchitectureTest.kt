@@ -23,21 +23,18 @@ class VexStreamPlaybackArchitectureTest {
     fun architectureRootIsTheReadablePlaybackEntryPoint() {
         assertEquals(
             "vexstream.playback",
-            VexStreamPlaybackArchitecture
-                .architectureRef,
+            VexStreamPlaybackArchitecture.architectureRef,
         )
         assertTrue(
             VexStreamPlaybackArchitecture.enabled,
         )
 
         val description =
-            VexStreamPlaybackArchitecture
-                .map
-                .describe()
+            VexStreamPlaybackArchitecture.map.describe()
 
         assertTrue(
             description.contains(
-                "ReadyToPlay",
+                "PlaybackNotRequested",
             ),
         )
         assertTrue(
@@ -48,16 +45,14 @@ class VexStreamPlaybackArchitectureTest {
     }
 
     @Test
-    fun emptyQueueExposesNoPlaybackNavigationControl() {
+    fun emptyQueueExposesNoPlayPauseOrQueueNavigation() {
         val current =
-            VexStreamPlaybackArchitecture
-                .android
-                .current(
-                    VexStreamPlaybackObservation(
-                        queue = null,
-                        playRequested = false,
-                    ),
-                )
+            VexStreamPlaybackArchitecture.android.current(
+                VexStreamPlaybackObservation(
+                    queue = null,
+                    playbackRequested = false,
+                ),
+            )
 
         assertEquals(
             VexStreamPlaybackCase.QueueEmpty,
@@ -76,20 +71,18 @@ class VexStreamPlaybackArchitectureTest {
     }
 
     @Test
-    fun readyToPlayExposesPlayAndOnlyAvailableQueueDirections() {
+    fun playbackNotRequestedExposesPlayAndOnlyAvailableQueueDirections() {
         val current =
-            VexStreamPlaybackArchitecture
-                .android
-                .current(
-                    VexStreamPlaybackObservation(
-                        queue =
-                            queue(
-                                hasPrevious = false,
-                                hasNext = true,
-                            ),
-                        playRequested = false,
-                    ),
-                )
+            VexStreamPlaybackArchitecture.android.current(
+                VexStreamPlaybackObservation(
+                    queue =
+                        queue(
+                            hasPrevious = false,
+                            hasNext = true,
+                        ),
+                    playbackRequested = false,
+                ),
+            )
 
         assertSame(
             VexStreamPlaybackControl.Play,
@@ -98,7 +91,7 @@ class VexStreamPlaybackArchitectureTest {
             ),
         )
         assertSame(
-            VexStreamPlaybackControl.NextWhileReady,
+            VexStreamPlaybackControl.NextWhilePlaybackNotRequested,
             current.availableTransition(
                 VexStreamPlaybackControl.Next,
             ),
@@ -111,20 +104,18 @@ class VexStreamPlaybackArchitectureTest {
     }
 
     @Test
-    fun playRequestedKeepsQueueNavigationWithinTheSameCaseType() {
+    fun playbackRequestedExposesPauseAndPreservesConditionalQueueNavigation() {
         val current =
-            VexStreamPlaybackArchitecture
-                .android
-                .current(
-                    VexStreamPlaybackObservation(
-                        queue =
-                            queue(
-                                hasPrevious = true,
-                                hasNext = false,
-                            ),
-                        playRequested = true,
-                    ),
-                )
+            VexStreamPlaybackArchitecture.android.current(
+                VexStreamPlaybackObservation(
+                    queue =
+                        queue(
+                            hasPrevious = true,
+                            hasNext = false,
+                        ),
+                    playbackRequested = true,
+                ),
+            )
 
         assertSame(
             VexStreamPlaybackControl.Pause,
@@ -133,7 +124,7 @@ class VexStreamPlaybackArchitectureTest {
             ),
         )
         assertSame(
-            VexStreamPlaybackControl.PreviousWhilePlayRequested,
+            VexStreamPlaybackControl.PreviousWhilePlaybackRequested,
             current.availableTransition(
                 VexStreamPlaybackControl.Previous,
             ),
@@ -144,67 +135,61 @@ class VexStreamPlaybackArchitectureTest {
             ),
         )
     }
-}
 
     @Test
-    fun playTrackConvergesEveryPlaybackCaseOnPlayRequested() {
+    fun contextPlayingControlsShareOneQueueReplacementRelationshipFamily() {
         val controls =
             VexStreamPlaybackControl
 
         val empty =
-            VexStreamPlaybackArchitecture
-                .android
-                .current(
-                    VexStreamPlaybackObservation(
-                        queue = null,
-                        playRequested = false,
-                    ),
-                )
-        val ready =
-            VexStreamPlaybackArchitecture
-                .android
-                .current(
-                    VexStreamPlaybackObservation(
-                        queue =
-                            queue(
-                                hasPrevious = false,
-                                hasNext = true,
-                            ),
-                        playRequested = false,
-                    ),
-                )
+            VexStreamPlaybackArchitecture.android.current(
+                VexStreamPlaybackObservation(
+                    queue = null,
+                    playbackRequested = false,
+                ),
+            )
+        val notRequested =
+            VexStreamPlaybackArchitecture.android.current(
+                VexStreamPlaybackObservation(
+                    queue =
+                        queue(
+                            hasPrevious = false,
+                            hasNext = true,
+                        ),
+                    playbackRequested = false,
+                ),
+            )
         val requested =
-            VexStreamPlaybackArchitecture
-                .android
-                .current(
-                    VexStreamPlaybackObservation(
-                        queue =
-                            queue(
-                                hasPrevious = true,
-                                hasNext = true,
-                            ),
-                        playRequested = true,
-                    ),
-                )
+            VexStreamPlaybackArchitecture.android.current(
+                VexStreamPlaybackObservation(
+                    queue =
+                        queue(
+                            hasPrevious = true,
+                            hasNext = true,
+                        ),
+                    playbackRequested = true,
+                ),
+            )
 
-        assertSame(
-            controls.PlayTrackFromQueueEmpty,
-            empty.availableTransition(
-                controls.PlayTrack,
-            ),
-        )
-        assertSame(
-            controls.PlayTrackFromReady,
-            ready.availableTransition(
-                controls.PlayTrack,
-            ),
-        )
-        assertSame(
-            controls.PlayTrackFromPlayRequested,
-            requested.availableTransition(
-                controls.PlayTrack,
-            ),
-        )
+        for (control in listOf(
+            controls.PlayTrack,
+            controls.PlayAll,
+            controls.ShuffleAll,
+        )) {
+            assertSame(
+                controls.ReplaceQueueAndRequestPlaybackFromQueueEmpty,
+                empty.availableTransition(control),
+            )
+            assertSame(
+                controls.ReplaceQueueAndRequestPlaybackFromPlaybackNotRequested,
+                notRequested.availableTransition(control),
+            )
+            assertSame(
+                controls.ReplaceQueueAndRequestPlaybackFromPlaybackRequested,
+                requested.availableTransition(control),
+            )
+        }
     }
+}
 
 // [VXG RealForever]

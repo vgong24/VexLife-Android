@@ -80,7 +80,7 @@ internal class VexStreamPlaybackSourceResolver(
 /**
  * Android realization for the PlayTrack Control after architecture admission.
  */
-internal fun MediaController.replaceVexStreamContextAndPlay(
+internal fun MediaController.replaceVexStreamQueueAndPlay(
     selected: VexStreamTrackState,
     contextTracks: List<VexStreamTrackState>,
     resolver: VexStreamPlaybackSourceResolver,
