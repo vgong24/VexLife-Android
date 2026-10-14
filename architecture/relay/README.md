@@ -17,7 +17,7 @@ wholesale and did not import its experimental AppScope/observability stack.
 The current concrete consumer is the Events Convergence Practicum under
 `docs/foundation/EVENTS-CONVERGENCE-PRACTICUM.md`. That feature now exercises this kernel with a
 normalized external feed, stable dynamic list identity, acknowledgement/defer/suppress state,
-attention availability, anchored overlay rendering, deterministic Journey signals, and ScreenCrawler
+alert availability, anchored overlay rendering, deterministic Journey signals, and ScreenCrawler
 selection. Those feature concerns remain outside this module rather than accreting into Relay itself.
 
 ## Developer shape
@@ -35,7 +35,7 @@ Several related truths:
 ~~~text
 current screen ----\
 external feed ------+-> EventsConvergenceRelay.processStates(...) -> current Events projection
-ack/preference -----/
+alert preference -----/
 ~~~
 
 The concrete Relay should be boring to inspect:
@@ -341,8 +341,8 @@ can be expanded into an editable discovery scaffold resembling:
 EventsConvergenceInputState(
     currentScreenId = null,
     feed = null,
-    preferences = null,
-    lab = null,
+    alertPreferences = null,
+    debugMenuAlert = null,
     profile = null,
     visibleEventRefsBySurface = null,
     transientBlocked = null,
@@ -575,8 +575,8 @@ Suppose retained Events input is:
 val retainedInput = EventsConvergenceInputState(
     currentScreenId = "Home",
     feed = feed41,
-    preferences = preferences12,
-    lab = lab3,
+    alertPreferences = alertPreferences12,
+    debugMenuAlert = debugMenuAlert3,
     profile = profile8,
     visibleEventRefsBySurface = visible5,
     transientBlocked = false,
@@ -606,8 +606,8 @@ With immutable children the new root may structurally share:
 
 ~~~text
 coherent.feed                       === retainedInput.feed
-coherent.preferences                === retainedInput.preferences
-coherent.lab                        === retainedInput.lab
+coherent.alertPreferences           === retainedInput.alertPreferences
+coherent.debugMenuAlert             === retainedInput.debugMenuAlert
 coherent.profile                    === retainedInput.profile
 coherent.visibleEventRefsBySurface  === retainedInput.visibleEventRefsBySurface
 
@@ -789,7 +789,7 @@ older provider revision -> cannot overwrite
 
 external event arrives while Home current
 -> event truth retained
--> attention candidate = none
+-> alert candidate = none
 
 Events becomes current
 -> same retained event becomes eligible
@@ -798,7 +798,7 @@ acknowledge first event
 -> event remains in truth
 -> next unacknowledged event becomes candidate
 
-screen/feed/preference arrive concurrently
+screen/feed/alert-preference arrive concurrently
 -> one coherent result
 -> no sibling dependency is lost
 ~~~
