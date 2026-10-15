@@ -74,6 +74,44 @@ though their product effects are intentionally small.
 The rule remains need-based: static one-off text/layout nodes do not become named fields merely
 because tests exist.
 
+## VexModifier — one Compose inspection boundary
+
+Production semantic identity should not be reimplemented as raw Compose `testTag(...)` calls across
+features.
+
+Use the Vex-owned modifier boundary:
+
+~~~kotlin
+Modifier.vex(
+    VexModifier.element(SomeScreen.Save),
+)
+
+Modifier.vex(
+    VexModifier.semantic(dynamicRuntimeRef),
+)
+~~~
+
+`VexModifier.element(...)` projects one statically registered `UIElement`.
+`VexModifier.semantic(...)` projects stable runtime-data identity such as one event row/action.
+
+Today that boundary realizes identity through a Compose test tag. Feature code should not depend on
+that implementation detail. If inspection later needs richer semantics, evidence metadata, or another
+Compose projection, the shared boundary can evolve without editing every Screen.
+
+Dynamic product data remains dynamic:
+
+~~~text
+repository/domain item identity
+-> feature-owned stable presentation ref
+-> VexModifier.semantic(...)
+-> Compose inspection / Journey / instrumentation
+
+DYNAMIC ITEM != STATIC SCREEN REGISTRY ELEMENT
+~~~
+
+Do not register every track/event/search result as a permanent `UIElement` merely to make it
+testable.
+
 ## Repository shape
 
 ~~~text
