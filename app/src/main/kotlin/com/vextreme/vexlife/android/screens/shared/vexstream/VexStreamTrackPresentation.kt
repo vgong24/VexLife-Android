@@ -51,6 +51,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 @Composable
 internal fun VexStreamTrackCard(
     runtime: VexRuntime,
+    presentationScope: VexStreamTrackPresentationScope,
     state: VexStreamTrackState,
     contextTracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
@@ -110,6 +111,8 @@ internal fun VexStreamTrackCard(
                 element = element,
                 subjectRef =
                     VexStreamPresentationRefs.trackRowAction(
+                        scope =
+                            presentationScope,
                         trackRef =
                             state.track.trackRef,
                         action = element,
@@ -126,6 +129,8 @@ internal fun VexStreamTrackCard(
                 element = element,
                 subjectRef =
                     VexStreamPresentationRefs.trackMenuAction(
+                        scope =
+                            presentationScope,
                         trackRef =
                             state.track.trackRef,
                         action = element,
@@ -201,6 +206,8 @@ internal fun VexStreamTrackCard(
             .vex(
                 VexModifier.semantic(
                     VexStreamPresentationRefs.trackRowAction(
+                        scope =
+                            presentationScope,
                         trackRef =
                             state.track.trackRef,
                         action =
@@ -233,7 +240,10 @@ internal fun VexStreamTrackCard(
                     .vex(
                         VexModifier.semantic(
                             VexStreamPresentationRefs.trackRow(
-                                state.track.trackRef,
+                                scope =
+                                    presentationScope,
+                                trackRef =
+                                    state.track.trackRef,
                             ),
                         ),
                     ),
@@ -318,18 +328,24 @@ internal fun VexStreamTrackCard(
                     },
                 ) {
                     VexStreamTrackMenuItem(
+                        presentationScope =
+                            presentationScope,
                         trackRef = state.track.trackRef,
                         element = VexStreamMusicScreen.PlayTrack,
                         handler = menuHandler,
                         enabled = controller != null,
                     )
                     VexStreamTrackMenuItem(
+                        presentationScope =
+                            presentationScope,
                         trackRef = state.track.trackRef,
                         element = VexStreamMusicScreen.PlayTrackNext,
                         handler = menuHandler,
                         enabled = controller != null,
                     )
                     VexStreamTrackMenuItem(
+                        presentationScope =
+                            presentationScope,
                         trackRef = state.track.trackRef,
                         element = VexStreamMusicScreen.AddTrackToQueue,
                         handler = menuHandler,
@@ -340,6 +356,8 @@ internal fun VexStreamTrackCard(
                         when (state.localCopy) {
                             is VexStreamLocalCopyState.Downloaded ->
                                 VexStreamTrackMenuItem(
+                                    presentationScope =
+                                        presentationScope,
                                     trackRef = state.track.trackRef,
                                     element =
                                         VexStreamMusicScreen
@@ -381,6 +399,7 @@ internal fun VexStreamTrackCard(
 
 @Composable
 private fun VexStreamTrackMenuItem(
+    presentationScope: VexStreamTrackPresentationScope,
     trackRef: VexStreamTrackRef,
     element: ButtonElement,
     handler: ElementActionHandler,
@@ -391,6 +410,8 @@ private fun VexStreamTrackMenuItem(
             Modifier.vex(
                 VexModifier.semantic(
                     VexStreamPresentationRefs.trackMenuAction(
+                        scope =
+                            presentationScope,
                         trackRef = trackRef,
                         action = element,
                     ),
