@@ -1624,6 +1624,18 @@ internal fun VexMapsMapSurface(
                     )
             },
             onAddStop = {
+                val currentRunState =
+                    distributionExperience
+                        .runProjection
+                        .state
+                if (
+                    currentRunState !is
+                        VexMapsDistributionRunState.Empty &&
+                    currentRunState !is
+                        VexMapsDistributionRunState.Draft
+                ) {
+                    return@vexMapsDistributionContextDockPage
+                }
                 runtime.activate(
                     VexMapsScreen
                         .AddDistributionStop,
@@ -1634,6 +1646,18 @@ internal fun VexMapsMapSurface(
                 )
             },
             onRemoveStop = { stopRef ->
+                val currentRunState =
+                    distributionExperience
+                        .runProjection
+                        .state
+                if (
+                    currentRunState !is
+                        VexMapsDistributionRunState.Empty &&
+                    currentRunState !is
+                        VexMapsDistributionRunState.Draft
+                ) {
+                    return@vexMapsDistributionContextDockPage
+                }
                 runtime.recordDynamicInteraction(
                     subjectRef =
                         "presentation.vexmaps.distribution.stop." +
@@ -1672,6 +1696,18 @@ internal fun VexMapsMapSurface(
                 }
             },
             onToggleReturnToStart = {
+                val currentRunState =
+                    distributionExperience
+                        .runProjection
+                        .state
+                if (
+                    currentRunState !is
+                        VexMapsDistributionRunState.Empty &&
+                    currentRunState !is
+                        VexMapsDistributionRunState.Draft
+                ) {
+                    return@vexMapsDistributionContextDockPage
+                }
                 runtime.activate(
                     VexMapsScreen
                         .ToggleDistributionReturnToStart,
@@ -1708,6 +1744,15 @@ internal fun VexMapsMapSurface(
                 }
             },
             onPrepare = {
+                if (
+                    !distributionExperience
+                        .runProjection[
+                            VexMapsDistributionRunControl.Prepare
+                        ]
+                        .isAvailable
+                ) {
+                    return@vexMapsDistributionContextDockPage
+                }
                 runtime.activate(
                     VexMapsScreen
                         .PrepareDistributionRun,
@@ -1731,6 +1776,15 @@ internal fun VexMapsMapSurface(
                     )
             },
             onCompleteStop = {
+                if (
+                    !distributionExperience
+                        .runProjection[
+                            VexMapsDistributionRunControl.CompleteStop
+                        ]
+                        .isAvailable
+                ) {
+                    return@vexMapsDistributionContextDockPage
+                }
                 runtime.activate(
                     VexMapsScreen
                         .CompleteDistributionStop,
@@ -1765,6 +1819,15 @@ internal fun VexMapsMapSurface(
                     )
             },
             onReset = {
+                if (
+                    !distributionExperience
+                        .runProjection[
+                            VexMapsDistributionRunControl.Reset
+                        ]
+                        .isAvailable
+                ) {
+                    return@vexMapsDistributionContextDockPage
+                }
                 runtime.activate(
                     VexMapsScreen
                         .ResetDistributionRun,
@@ -2072,6 +2135,19 @@ internal fun VexMapsMapSurface(
                             .state is
                             VexMapsDistributionModeState.Distribution
                     ) {
+                        val currentRunState =
+                            distributionExperience
+                                .runProjection
+                                .state
+                        if (
+                            currentRunState !is
+                                VexMapsDistributionRunState.Empty &&
+                            currentRunState !is
+                                VexMapsDistributionRunState.Draft
+                        ) {
+                            return@VexMapsRoutePlannerCard
+                        }
+
                         runtime.recordDynamicInteraction(
                             subjectRef =
                                 "presentation.vexmaps.place-search.result",
