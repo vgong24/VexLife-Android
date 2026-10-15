@@ -47,6 +47,7 @@ internal enum class VexMapsDistributionControlLayer {
     DistributionReady,
     DistributionRunning,
     DistributionAtStop,
+    DistributionReturning,
     DistributionCompleted,
 }
 
@@ -162,6 +163,10 @@ internal fun projectVexMapsDistributionControlContext(
                 is VexMapsDistributionRunState.AtStop ->
                     VexMapsDistributionControlLayer
                         .DistributionAtStop
+
+                is VexMapsDistributionRunState.Returning ->
+                    VexMapsDistributionControlLayer
+                        .DistributionReturning
 
                 is VexMapsDistributionRunState.Completed ->
                     VexMapsDistributionControlLayer
