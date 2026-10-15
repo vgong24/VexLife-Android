@@ -39,10 +39,16 @@ One-argument work stays type-safe:
 launchOnce(repository::download, trackRef)
 ```
 
-A maintained Flow observation:
+A maintained Flow observation may reference either a Flow-returning function or Flow property:
 
 ```kotlin
 launchForCollect(repository::states) { state ->
+    accept(state)
+}
+```
+
+```kotlin
+launchForCollect(session::states) { state ->
     accept(state)
 }
 ```

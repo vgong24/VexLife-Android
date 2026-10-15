@@ -135,22 +135,10 @@ internal class VexCoroutineLauncher(
     fun forceStopAll(
         reason: String,
     ) {
-        val jobs =
-            synchronized(
-                registryLock,
-            ) {
-                acceptingWork = false
-                active.values.map { managed ->
-                    managed.job
-                }
-            }
-
-        jobs.forEach { job ->
-            job.cancel(
-                CancellationException(
-                    reason,
-                ),
-            )
+        synchronized(
+            registryLock,
+        ) {
+            acceptingWork = false
         }
 
         parentJob.cancel(

@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.execution
 import kotlin.reflect.KCallable
 import kotlin.reflect.KFunction0
 import kotlin.reflect.KFunction1
+import kotlin.reflect.KProperty0
 import kotlin.reflect.KSuspendFunction0
 import kotlin.reflect.KSuspendFunction1
 import kotlin.reflect.KSuspendFunction2
@@ -79,6 +80,18 @@ abstract class VexExecution protected constructor(
             ref = ref(source),
             shouldRestart = shouldRestart,
             source = source,
+            onEach = onEach,
+        )
+
+    protected fun <Value, Source : Flow<Value>> launchForCollect(
+        source: KProperty0<Source>,
+        shouldRestart: Boolean = true,
+        onEach: suspend (Value) -> Unit,
+    ): VexCoroutineHandle =
+        executionRoot.coroutineLauncher.launchForCollect(
+            ref = ref(source),
+            shouldRestart = shouldRestart,
+            source = source::get,
             onEach = onEach,
         )
 

@@ -58,6 +58,13 @@ class VexExecutionTest {
                 awaitCancellation()
             }
 
+        val propertyStates: Flow<Int>
+            get() =
+                flow {
+                    emit(13)
+                    awaitCancellation()
+                }
+
         fun failedStates(): Flow<Int> =
             flow {
                 error("collector failed")
@@ -110,6 +117,15 @@ class VexExecutionTest {
         ): VexCoroutineHandle =
             launchForCollect(
                 repository::secondaryStates,
+            ) { value ->
+                values += value
+            }
+
+        fun observeProperty(
+            values: MutableList<Int>,
+        ): VexCoroutineHandle =
+            launchForCollect(
+                repository::propertyStates,
             ) { value ->
                 values += value
             }
@@ -216,6 +232,31 @@ class VexExecutionTest {
                     VexCoroutineStatus.CANCELLED,
                     handle.state.value.status,
                 )
+            } finally {
+                root.joinStopAll("test complete")
+            }
+        }
+
+    @Test
+    fun launchForCollectAcceptsFlowPropertyReference() =
+        runBlocking {
+            val root = VexExecutionRoot()
+            val repository = TestRepository()
+            val execution = TestExecution(root, repository)
+            val values = mutableListOf<Int>()
+
+            try {
+                val handle =
+                    execution.observeProperty(values)
+
+                withTimeout(2_000L) {
+                    while (values.isEmpty()) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertEquals(listOf(13), values)
+                handle.joinStop("test complete")
             } finally {
                 root.joinStopAll("test complete")
             }
