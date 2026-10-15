@@ -87,6 +87,19 @@ abstract class ScreenBlueprint(
         readOnly = readOnly,
     )
 
+    protected fun textRef(
+        id: String,
+        @StringRes textRes: Int,
+        role: TextRole = TextRole.Body,
+        style: ElementStyleKey = VexElementStyles.Default,
+    ): TextElement =
+        TextElement(
+            elementId = elementId(id),
+            textRes = textRes,
+            role = role,
+            style = style,
+        )
+
     protected fun columnRef(id: String): ColumnElement =
         ColumnElement(elementId(id))
 
@@ -173,6 +186,14 @@ class ScreenLayoutScope internal constructor(
         element: TextFieldElement,
         style: ElementStyleKey? = null,
     ) = place(element, style)
+
+    fun text(
+        element: TextElement,
+        style: ElementStyleKey? = null,
+    ) = place(
+        element,
+        style,
+    )
 
     fun text(
         id: String,
