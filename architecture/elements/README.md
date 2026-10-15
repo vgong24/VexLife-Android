@@ -170,6 +170,11 @@ Existing registered cells such as `VexButton`, `VexIconButton`, `VexTextField`,
 foundation. Static container cells now also provide their registered element as the inherited parent
 for nested Vex Compose content.
 
+A real consumer may already own a more specific Compose typography choice than a broad semantic
+`TextRole`. `VexText` therefore keeps role-derived typography as the default while permitting an
+explicit `TextStyle` override. That override preserves product presentation; it does not create a
+second semantic identity or text-role owner.
+
 Do not create one-for-one wrappers for every Compose API merely for naming symmetry. Add a Vex
 primitive when it carries recurring architectural meaning: inherited identity, semantic styling,
 interaction ownership, QA/evidence hooks, or another repeated cross-feature contract.
@@ -182,6 +187,12 @@ paths declared in the Gallery Blueprint.
 
 This makes Gallery the place to inspect and pressure new sanctioned Vex Compose habits before they
 spread through product Screens.
+
+PR #88 graduated the first product consumer as well: VexStream Search enters through a registered
+sheet, derives new nested structure from that parent, preserves pre-existing stable Search field/action
+IDs through registry relationships, and addresses dynamic track rows through feature-owned runtime
+presentation refs. A013 proved that exact foundation on repository-local verification and a physical
+connected Android run.
 
 ### Migration visibility
 
@@ -210,7 +221,20 @@ architectural lattice that keeps product presentation discoverable, addressable 
 instrumentable.
 
 Dynamic product data remains dynamic and must not be registered as fake static Screen elements merely
-to make it testable.
+to make it testable. When a feature already owns a lawful full runtime presentation ref, that ref may
+become the Vex Compose parent directly:
+
+~~~text
+feature-owned runtime presentation ref
+-> VexComposeScope(parentRef = runtimeRef)
+-> VexBox("artwork")
+-> VexColumn("copy")
+   -> VexText("title")
+~~~
+
+The feature remains the owner of runtime instance identity; Vex Compose owns only the nested
+presentation-continuity law. Do not invent a generic dynamic-ID registry merely to make these two
+systems look symmetrical.
 
 ## Repository shape
 
