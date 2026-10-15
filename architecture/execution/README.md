@@ -141,6 +141,54 @@ Use Relay when several changing truths must converge. Use `launchOnce` when one 
 semantic operation should execute once. Use `launchForCollect` only in an execution/runtime bridge
 that truly owns a sustained Flow observation.
 
+## Deterministic feature-test pattern
+
+The production test seam is the dispatcher supplied to `VexExecutionRoot`. A feature test may use
+the standard coroutine test scheduler directly:
+
+```kotlin
+runTest {
+    val root =
+        VexExecutionRoot(
+            dispatcher =
+                StandardTestDispatcher(
+                    testScheduler,
+                ),
+        )
+
+    val execution =
+        MyFeatureExecution(
+            root = root,
+            repository = fakeRepository,
+        )
+
+    execution.start()
+    runCurrent()
+
+    advanceTimeBy(1_000L)
+    runCurrent()
+}
+```
+
+This keeps scheduling authority with `kotlinx-coroutines-test` instead of inventing a second Vex
+clock/scheduler abstraction merely for tests.
+
+Canonical consumer-style example:
+
+```text
+src/test/.../execution/usage/VexExecutionVirtualTimeUsageTest.kt
+```
+
+It deliberately lives outside the foundation package and uses only public VexExecution APIs. It
+proves:
+- two independent `launchForCollect` calls begin as concurrent sibling Jobs;
+- bounded restart delay can be advanced without real sleeping;
+- `joinStop` remains suspended until structured cleanup really finishes.
+
+Do not extract another shared test harness until multiple real feature consumers repeat enough setup
+to justify one; the existing dispatcher seam plus standard TestScope is currently the smaller
+truthful solution.
+
 ## Proof
 
 `VexExecutionTest` protects the inherited PR #3 execution laws plus the new public-language rules:
