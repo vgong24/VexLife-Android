@@ -83,6 +83,10 @@ class VexExpectedWalk : VexJourneyScope {
         )
     }
 
+    override fun expectVisible(element: VexDynamicElementRef) {
+        requireStarted()
+    }
+
     override fun tap(element: ActionElement) {
         requireStarted()
         val source = element as? UIElement
