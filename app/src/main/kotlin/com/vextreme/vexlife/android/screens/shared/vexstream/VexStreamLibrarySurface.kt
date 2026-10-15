@@ -85,6 +85,7 @@ import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaCon
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
 import kotlinx.coroutines.launch
 
@@ -2010,7 +2011,7 @@ private fun vexStreamQueueEntries(
 @Composable
 private fun VexStreamQueueSheet(
     state: VexStreamMusicState,
-    playback: VexStreamPlaybackUiState,
+    playback: VexStreamPlaybackReadState,
     controller: androidx.media3.session.MediaController?,
     runtime: VexRuntime,
     shuffleSelected: Boolean,
