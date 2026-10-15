@@ -171,8 +171,14 @@ class VexTestEngine(
     override fun expectVisible(element: VexDynamicElementRef) {
         expected.expectVisible(element)
 
-        waitForTaggedNode(element.elementId)
-        compose.onNodeWithTag(element.elementId)
+        waitForTaggedNode(
+            elementId = element.elementId,
+            useUnmergedTree = true,
+        )
+        compose.onNodeWithTag(
+            testTag = element.elementId,
+            useUnmergedTree = true,
+        )
             .assertIsDisplayed()
         compose.waitForIdle()
         observe(
@@ -332,11 +338,17 @@ class VexTestEngine(
             record.toJourneyRecord()
         }
 
-    private fun waitForTaggedNode(elementId: String) {
+    private fun waitForTaggedNode(
+        elementId: String,
+        useUnmergedTree: Boolean = false,
+    ) {
         val waitFailure =
             runCatching {
                 compose.waitUntil(timeoutMillis = 5_000) {
-                    compose.onAllNodesWithTag(elementId)
+                    compose.onAllNodesWithTag(
+                        testTag = elementId,
+                        useUnmergedTree = useUnmergedTree,
+                    )
                         .fetchSemanticsNodes()
                         .isNotEmpty()
                 }
