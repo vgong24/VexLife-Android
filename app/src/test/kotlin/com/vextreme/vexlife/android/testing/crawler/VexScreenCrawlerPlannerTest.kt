@@ -1,9 +1,11 @@
 package com.vextreme.vexlife.android.testing.crawler
 
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
 import com.vextreme.vexlife.android.testing.journey.JourneyDomain
 import com.vextreme.vexlife.android.testing.journey.Journeys
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
+import com.vextreme.vexlife.android.testing.journey.VexStreamJourneyFixtures
 import com.vextreme.vexlife.android.testing.journey.journeyFor
 import com.vextreme.vexlife.android.testing.journey.shardFor
 import org.junit.Assert.assertEquals
@@ -144,7 +146,9 @@ class VexScreenCrawlerPlannerTest {
             ).single()
 
         val runtimeRef =
-            "element.vexstream-music.track.dynamic.17:journey.track.one"
+            VexStreamPresentationRefs.trackRow(
+                VexStreamJourneyFixtures.TrackOne,
+            )
 
         val identity =
             case.evidenceIdentity(
