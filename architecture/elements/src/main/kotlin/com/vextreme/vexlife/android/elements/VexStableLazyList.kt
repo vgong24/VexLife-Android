@@ -12,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -118,7 +117,9 @@ fun <Item> VexStableLazyColumn(
     LazyColumn(
         state = listState,
         modifier =
-            modifier.testTag(listRef),
+            modifier.vex(
+                VexModifier.semantic(listRef),
+            ),
         contentPadding = contentPadding,
         verticalArrangement = verticalArrangement,
         userScrollEnabled = userScrollEnabled,
