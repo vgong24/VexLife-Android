@@ -328,11 +328,15 @@
     <string name="vexmaps_distribution_clear">Clear run</string>
     <string name="vexmaps_distribution_state_empty">No stops yet.</string>
     <string name="vexmaps_distribution_state_draft">Drafting stops</string>
+    <string name="vexmaps_distribution_state_preparing">Preparing run…</string>
     <string name="vexmaps_distribution_state_ready">Run ready</string>
     <string name="vexmaps_distribution_state_running">Driving stop %1$d of %2$d</string>
     <string name="vexmaps_distribution_state_at_stop">At stop %1$d of %2$d</string>
     <string name="vexmaps_distribution_state_returning">Returning to start</string>
     <string name="vexmaps_distribution_state_complete">Run complete</string>
+    <string name="vexmaps_distribution_preparation_failed">Preparation failed: %1$s</string>
+    <string name="vexmaps_distribution_leg_failed">Next leg unavailable: %1$s</string>
+    <string name="vexmaps_distribution_retry">Retry</string>
     <string name="vexmaps_distribution_plan_eta">Optimized travel estimate: ~%1$d min</string>
     <string name="vexmaps_distribution_optimized_order">Optimized order</string>
 </resources>

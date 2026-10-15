@@ -14,13 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
-import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegAttempt
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationLayer
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPlan
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
 
@@ -32,19 +32,14 @@ internal val VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF =
 /**
  * Distribution's feature-owned projection into the host-owned Context Dock.
  *
- * The Dock owns paging/expansion only. The Distribution Experience owns behavior and the durable
- * draft repository owns stop payload truth.
+ * The Dock owns paging/expansion only. The Distribution Experience owns the lived session membrane;
+ * lower Mode/Run families and durable Draft custody remain independently owned behind it.
  */
 @Composable
 internal fun vexMapsDistributionContextDockPage(
     experience:
         VexMapsDistributionExperience,
-    draft:
-        VexMapsDistributionDraft,
-    plan:
-        VexMapsDistributionPlan?,
     canPrepare: Boolean,
-    canStart: Boolean,
     onToggleMode: () -> Unit,
     onAddStop: () -> Unit,
     onRemoveStop: (String) -> Unit,
@@ -52,15 +47,29 @@ internal fun vexMapsDistributionContextDockPage(
     onPrepare: () -> Unit,
     onStart: () -> Unit,
     onCompleteStop: () -> Unit,
+    onRetryLeg: () -> Unit,
     onReset: () -> Unit,
 ): VexContextDockPage {
+    val session by
+        experience.states
+            .collectAsState()
     val modeProjection by
         experience.modeProjections
             .collectAsState()
     val runProjection by
         experience.runProjections
             .collectAsState()
+    val navigation by
+        experience.navigationOutputs
+            .collectAsState(
+                initial =
+                    experience.currentNavigation,
+            )
 
+    val draft =
+        session.draft
+    val plan =
+        session.plan
     val distributionActive =
         modeProjection.state is
             VexMapsDistributionModeState.Distribution
@@ -69,6 +78,13 @@ internal fun vexMapsDistributionContextDockPage(
             VexMapsDistributionRunState.Empty ||
             runProjection.state is
             VexMapsDistributionRunState.Draft
+    val canStart =
+        runProjection[
+            VexMapsDistributionRunControl.Start
+        ].isAvailable &&
+            navigation.layer ==
+            VexMapsDistributionNavigationLayer
+                .ReadyToStart
 
     return VexContextDockPage(
         pageRef =
@@ -183,11 +199,6 @@ internal fun vexMapsDistributionContextDockPage(
                     }
 
                 plan
-                    ?.takeIf {
-                        it.isCurrentFor(
-                            draft,
-                        )
-                    }
                     ?.let { currentPlan ->
                         Text(
                             stringResource(
@@ -296,6 +307,14 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
 
+                is VexMapsDistributionRunState.Preparing ->
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_distribution_state_preparing,
+                        ),
+                    )
+
                 is VexMapsDistributionRunState.Ready ->
                     Text(
                         stringResource(
@@ -304,25 +323,41 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
 
-                is VexMapsDistributionRunState.Running ->
+                is VexMapsDistributionRunState.Running -> {
+                    val index =
+                        state.orderedStopRefs
+                            .indexOf(
+                                state.currentStopRef,
+                            ) +
+                            1
                     Text(
                         stringResource(
                             R.string
                                 .vexmaps_distribution_state_running,
-                            state.currentStopIndex + 1,
-                            state.stopCount,
+                            index,
+                            state.orderedStopRefs
+                                .size,
                         ),
                     )
+                }
 
-                is VexMapsDistributionRunState.AtStop ->
+                is VexMapsDistributionRunState.AtStop -> {
+                    val index =
+                        state.orderedStopRefs
+                            .indexOf(
+                                state.currentStopRef,
+                            ) +
+                            1
                     Text(
                         stringResource(
                             R.string
                                 .vexmaps_distribution_state_at_stop,
-                            state.currentStopIndex + 1,
-                            state.stopCount,
+                            index,
+                            state.orderedStopRefs
+                                .size,
                         ),
                     )
+                }
 
                 is VexMapsDistributionRunState.Returning ->
                     Text(
@@ -340,6 +375,42 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
             }
+
+            session
+                .preparationFailure
+                ?.let { reason ->
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_distribution_preparation_failed,
+                            reason,
+                        ),
+                    )
+                }
+
+            (
+                session.legAttempt as?
+                    VexMapsDistributionLegAttempt.Failed
+            )
+                ?.let { failed ->
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_distribution_leg_failed,
+                            failed.reason,
+                        ),
+                    )
+                    Button(
+                        onClick =
+                            onRetryLeg,
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_distribution_retry,
+                        ))
+                    }
+                }
 
             Row(
                 horizontalArrangement =
