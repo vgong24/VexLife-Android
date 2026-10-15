@@ -9,6 +9,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexRouteGeometryPoint
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLeg
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLegState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegAttempt
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegFailureStage
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegTarget
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationConvergenceRelay
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationLayer
@@ -282,6 +283,9 @@ class VexMapsDistributionNavigationConvergenceRelayTest {
                     VexMapsDistributionLegAttempt
                 >(
                     VexMapsDistributionLegAttempt.Failed(
+                        stage =
+                            VexMapsDistributionLegFailureStage
+                                .RoutePreparation,
                         target =
                             target,
                         reason =

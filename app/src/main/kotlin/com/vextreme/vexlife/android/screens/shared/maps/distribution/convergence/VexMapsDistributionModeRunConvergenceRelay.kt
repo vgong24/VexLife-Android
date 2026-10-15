@@ -191,7 +191,7 @@ private fun projectModeRun(
                     .NeedsDistributionMode,
             requestedModeControl =
                 VexMapsDistributionModeControl
-                    .ToggleDistribution,
+                    .UseDistribution,
         )
     } else {
         VexMapsDistributionModeRunOutput(

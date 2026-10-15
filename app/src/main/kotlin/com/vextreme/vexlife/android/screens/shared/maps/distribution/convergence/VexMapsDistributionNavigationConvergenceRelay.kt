@@ -59,6 +59,12 @@ internal sealed interface VexMapsDistributionExpectedLegState {
         VexMapsDistributionExpectedLegState
 }
 
+internal enum class VexMapsDistributionLegFailureStage {
+    RoutePreparation,
+    NavigationStart,
+    PreviousLegCleanup,
+}
+
 internal sealed interface VexMapsDistributionLegAttempt {
     data object Idle :
         VexMapsDistributionLegAttempt
@@ -70,6 +76,8 @@ internal sealed interface VexMapsDistributionLegAttempt {
         VexMapsDistributionLegAttempt
 
     data class Failed(
+        val stage:
+            VexMapsDistributionLegFailureStage,
         val target:
             VexMapsDistributionLegTarget,
         val reason: String,

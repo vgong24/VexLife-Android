@@ -325,7 +325,7 @@ internal fun VexMapsMapSurface(
     ) {
         routeRequestGate.invalidate()
         distributionExperience
-            .planningInputChanged()
+            .humanPlanningInputChanged()
         selectedOriginLatitude =
             coordinate?.latitude
         selectedOriginLongitude =
@@ -434,11 +434,17 @@ internal fun VexMapsMapSurface(
     ) {
         routeRequestGate.invalidate()
         distributionExperience
-            .planningInputChanged()
+            .humanPlanningInputChanged()
         travelModeName =
             mode.name
     }
 
+    /*
+     * Live device fixes are current Navigation/provider observations. They invalidate ordinary
+     * one-off route-request currentness when the device is the route origin, but they do not replace
+     * a Ready Distribution Plan's sealed preparation origin. Only explicit human planning changes
+     * call humanPlanningInputChanged().
+     */
     fun invalidateDeviceRouteOriginIfUnpinned() {
         if (
             !shouldVexMapsCurrentLocationAffectRoute(

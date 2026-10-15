@@ -115,8 +115,8 @@ internal class VexMapsDistributionExperience(
         Boolean =
         session.routingRegionReplacementRequested()
 
-    fun planningInputChanged() =
-        session.planningInputChanged()
+    fun humanPlanningInputChanged() =
+        session.humanPlanningInputChanged()
 
     fun startPreparedRun() =
         session.startPreparedRun()

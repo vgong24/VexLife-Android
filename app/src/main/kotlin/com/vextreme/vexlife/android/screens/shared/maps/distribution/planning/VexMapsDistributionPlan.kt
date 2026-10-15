@@ -8,6 +8,10 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexMapsTravelMode
 /**
  * Exact immutable inputs admitted when the human asks Distribution to prepare a run.
  *
+ * [origin] is the planning seed admitted at Prepare time. Once the Run reaches Ready, that origin is
+ * sealed with the Plan: later live device fixes are Navigation observations, not silent replacements
+ * for the admitted planning input. An explicit human planning change must invalidate/re-prepare.
+ *
  * This is intentionally feature-local rather than a generic request-currentness envelope.
  */
 internal data class VexMapsDistributionPreparationSnapshot(

@@ -4,6 +4,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunConvergenceRelay
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeConnection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunConnection
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -56,14 +57,28 @@ class VexMapsDistributionModeRunConvergenceRelayTest {
                     }
 
                 assertEquals(
-                    VexMapsDistributionModeControl.ToggleDistribution,
+                    VexMapsDistributionModeControl.UseDistribution,
                     needsMode.requestedModeControl,
                 )
 
+                // Satisfy the relationship before consuming the stale Relay output.
+                mode.activate(
+                    VexMapsDistributionModeControl.ToggleDistribution,
+                )
+                assertEquals(
+                    VexMapsDistributionModeState.Distribution,
+                    mode.currentProjection.state,
+                )
+
+                // Directional feedback is now unavailable instead of toggling back to Regular.
                 mode.activate(
                     requireNotNull(
                         needsMode.requestedModeControl,
                     ),
+                )
+                assertEquals(
+                    VexMapsDistributionModeState.Distribution,
+                    mode.currentProjection.state,
                 )
 
                 val coherent =

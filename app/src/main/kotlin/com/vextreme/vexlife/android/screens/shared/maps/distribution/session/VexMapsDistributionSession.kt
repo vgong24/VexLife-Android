@@ -14,6 +14,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexOfflineRouteResult
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLeg
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLegState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegAttempt
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegFailureStage
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegTarget
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunConvergenceRelay
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationConvergenceRelay
@@ -33,12 +34,10 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMaps
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 internal interface VexMapsDistributionRouting {
     suspend fun optimize(
@@ -89,12 +88,41 @@ internal data class VexMapsDistributionSessionState(
     val preparationFailure:
         String? =
         null,
+    val preparationCleanupFailure:
+        String? =
+        null,
     val legAttempt:
         VexMapsDistributionLegAttempt =
         VexMapsDistributionLegAttempt.Idle,
     val expectedLeg:
         VexMapsDistributionExpectedLegState =
         VexMapsDistributionExpectedLegState.None,
+)
+
+internal data class VexMapsDistributionAddStopWork(
+    val placeRef: String?,
+    val name: String,
+    val subtitle: String?,
+    val latitude: Double,
+    val longitude: Double,
+)
+
+internal data class VexMapsDistributionPreparationWork(
+    val draft:
+        VexMapsDistributionDraft,
+    val preparation:
+        VexMapsDistributionPreparationSnapshot,
+    val pack:
+        VexMapsRegionPack,
+)
+
+internal data class VexMapsDistributionLegWork(
+    val target:
+        VexMapsDistributionLegTarget,
+    val plan:
+        VexMapsDistributionPlan,
+    val pack:
+        VexMapsRegionPack,
 )
 
 /**
@@ -111,9 +139,9 @@ internal class VexMapsDistributionSession(
         VexMapsDistributionRouting,
     private val navigation:
         VexMapsDistributionNavigationPort,
-    private val executionRoot:
+    executionRoot:
         VexExecutionRoot,
-    private val scope:
+    private val relayScope:
         CoroutineScope,
     private val mode:
         VexMapsDistributionModeExperience =
@@ -200,35 +228,24 @@ internal class VexMapsDistributionSession(
         get() =
             navigationRelay.currentOutput
 
-    private var preparationJob:
-        Job? =
-        null
-    private var legJob:
-        Job? =
-        null
     private var activePack:
         VexMapsRegionPack? =
         null
 
     init {
         modeRunRelay.activate(
-            scope,
+            relayScope,
         )
         navigationRelay.activate(
-            scope,
+            relayScope,
         )
 
         execution.start()
-
-        scope.launch {
-            restoreDraft()
-        }
+        execution.restoreDraft()
     }
 
     internal suspend fun shutdown() {
-        executionRoot.joinStopAll(
-            "VexMaps Distribution session shut down",
-        )
+        execution.shutdown()
         modeRunRelay.deactivate()
         navigationRelay.deactivate()
     }
@@ -251,31 +268,49 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        scope.launch {
-            runCatching {
-                repository.addStop(
-                    placeRef =
-                        placeRef,
-                    name =
-                        name,
-                    subtitle =
-                        subtitle,
-                    latitude =
-                        latitude,
-                    longitude =
-                        longitude,
-                )
-            }.onSuccess {
-                finishDraftOperation(
-                    draft =
-                        it,
-                )
-            }.onFailure {
-                finishDraftOperation(
-                    error =
-                        it,
-                )
-            }
+        execution.addStop(
+            VexMapsDistributionAddStopWork(
+                placeRef =
+                    placeRef,
+                name =
+                    name,
+                subtitle =
+                    subtitle,
+                latitude =
+                    latitude,
+                longitude =
+                    longitude,
+            ),
+        )
+    }
+
+    internal suspend fun addStopForExecution(
+        work:
+            VexMapsDistributionAddStopWork,
+    ) {
+        runCatching {
+            repository.addStop(
+                placeRef =
+                    work.placeRef,
+                name =
+                    work.name,
+                subtitle =
+                    work.subtitle,
+                latitude =
+                    work.latitude,
+                longitude =
+                    work.longitude,
+            )
+        }.onSuccess {
+            finishDraftOperation(
+                draft =
+                    it,
+            )
+        }.onFailure {
+            finishDraftOperation(
+                error =
+                    it,
+            )
         }
     }
 
@@ -286,22 +321,28 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        scope.launch {
-            runCatching {
-                repository.removeStop(
-                    stopRef,
-                )
-            }.onSuccess {
-                finishDraftOperation(
-                    draft =
-                        it,
-                )
-            }.onFailure {
-                finishDraftOperation(
-                    error =
-                        it,
-                )
-            }
+        execution.removeStop(
+            stopRef,
+        )
+    }
+
+    internal suspend fun removeStopForExecution(
+        stopRef: String,
+    ) {
+        runCatching {
+            repository.removeStop(
+                stopRef,
+            )
+        }.onSuccess {
+            finishDraftOperation(
+                draft =
+                    it,
+            )
+        }.onFailure {
+            finishDraftOperation(
+                error =
+                    it,
+            )
         }
     }
 
@@ -312,22 +353,28 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        scope.launch {
-            runCatching {
-                repository.setReturnToStart(
-                    enabled,
-                )
-            }.onSuccess {
-                finishDraftOperation(
-                    draft =
-                        it,
-                )
-            }.onFailure {
-                finishDraftOperation(
-                    error =
-                        it,
-                )
-            }
+        execution.setReturnToStart(
+            enabled,
+        )
+    }
+
+    internal suspend fun setReturnToStartForExecution(
+        enabled: Boolean,
+    ) {
+        runCatching {
+            repository.setReturnToStart(
+                enabled,
+            )
+        }.onSuccess {
+            finishDraftOperation(
+                draft =
+                    it,
+            )
+        }.onFailure {
+            finishDraftOperation(
+                error =
+                    it,
+            )
         }
     }
 
@@ -363,8 +410,8 @@ internal class VexMapsDistributionSession(
                 VexMapsDistributionRunState.Preparing
                 ?: return
 
-        preparationJob?.cancel()
-        legJob?.cancel()
+        execution.cancelPreparation()
+        execution.cancelLeg()
         clearExpectedLeg()
         setLegAttempt(
             VexMapsDistributionLegAttempt.Idle,
@@ -385,6 +432,8 @@ internal class VexMapsDistributionSession(
                 preparationFailure =
                     cleanupFailure
                         .failureMeaning(),
+                preparationCleanupFailure =
+                    null,
             )
             return
         }
@@ -414,109 +463,141 @@ internal class VexMapsDistributionSession(
                 null,
             preparationFailure =
                 null,
+            preparationCleanupFailure =
+                null,
         )
 
-        preparationJob =
-            scope.launch {
-                try {
-                    val plan =
-                        routing.optimize(
-                            draft =
-                                draft,
-                            preparation =
-                                preparation,
-                            pack =
-                                pack,
-                        )
+        execution.startPreparation(
+            VexMapsDistributionPreparationWork(
+                draft =
+                    draft,
+                preparation =
+                    preparation,
+                pack =
+                    pack,
+            ),
+        )
+    }
 
-                    ensurePreparationStillCurrent(
+    internal suspend fun prepareForExecution(
+        work:
+            VexMapsDistributionPreparationWork,
+    ) {
+        val draft =
+            work.draft
+        val preparation =
+            work.preparation
+        val pack =
+            work.pack
+
+        try {
+            val plan =
+                routing.optimize(
+                    draft =
+                        draft,
+                    preparation =
                         preparation,
-                    )
+                    pack =
+                        pack,
+                )
 
-                    val firstStopRef =
-                        plan.orderedStops
-                            .first()
-                            .stopRef
-                    val route =
-                        routeToStop(
-                            plan =
-                                plan,
-                            stopRef =
+            ensurePreparationStillCurrent(
+                preparation,
+            )
+
+            val firstStopRef =
+                plan.orderedStops
+                    .first()
+                    .stopRef
+            val route =
+                routeToStop(
+                    plan =
+                        plan,
+                    stopRef =
+                        firstStopRef,
+                    pack =
+                        pack,
+                )
+
+            ensurePreparationStillCurrent(
+                preparation,
+            )
+
+            navigation.prepare(
+                routeResult =
+                    route,
+                routingPack =
+                    pack,
+            )
+            setExpectedLeg(
+                VexMapsDistributionExpectedLeg(
+                    planRef =
+                        plan.planRef,
+                    target =
+                        VexMapsDistributionLegTarget
+                            .Stop(
                                 firstStopRef,
-                            pack =
-                                pack,
-                        )
+                            ),
+                    route =
+                        route.identity(),
+                ),
+            )
 
-                    ensurePreparationStillCurrent(
-                        preparation,
-                    )
-
-                    navigation.prepare(
-                        routeResult =
-                            route,
-                        routingPack =
-                            pack,
-                    )
-                    setExpectedLeg(
-                        VexMapsDistributionExpectedLeg(
-                            planRef =
-                                plan.planRef,
-                            target =
-                                VexMapsDistributionLegTarget
-                                    .Stop(
-                                        firstStopRef,
-                                    ),
-                            route =
-                                route.identity(),
-                        ),
-                    )
-
-                    if (
-                        !run.preparationSucceeded(
-                            preparationRef =
-                                preparation.preparationRef,
-                            planRef =
-                                plan.planRef,
-                            orderedStopRefs =
-                                plan.orderedStops
-                                    .map {
-                                        it.stopRef
-                                    },
-                        )
-                    ) {
-                        return@launch
-                    }
-
-                    publishSession(
-                        plan =
-                            plan,
-                        preparationFailure =
-                            null,
-                    )
-                } catch (
-                    cancelled:
-                        CancellationException,
-                ) {
-                    throw cancelled
-                } catch (
-                    error:
-                        Throwable,
-                ) {
-                    run.preparationFailed(
+            if (
+                !run.preparationSucceeded(
+                    preparationRef =
                         preparation.preparationRef,
-                    )
-                    activePack =
-                        null
-                    clearExpectedLeg()
-                    navigation.stop()
-                    publishSession(
-                        plan =
-                            null,
-                        preparationFailure =
-                            error.failureMeaning(),
-                    )
-                }
+                    planRef =
+                        plan.planRef,
+                    orderedStopRefs =
+                        plan.orderedStops
+                            .map {
+                                it.stopRef
+                            },
+                )
+            ) {
+                return
             }
+
+            publishSession(
+                plan =
+                    plan,
+                preparationFailure =
+                    null,
+                preparationCleanupFailure =
+                    null,
+            )
+        } catch (
+            cancelled:
+                CancellationException,
+        ) {
+            throw cancelled
+        } catch (
+            error:
+                Throwable,
+        ) {
+            run.preparationFailed(
+                preparation.preparationRef,
+            )
+            activePack =
+                null
+            clearExpectedLeg()
+
+            val cleanupFailure =
+                runCatching {
+                    navigation.stop()
+                }.exceptionOrNull()
+
+            publishSession(
+                plan =
+                    null,
+                preparationFailure =
+                    error.failureMeaning(),
+                preparationCleanupFailure =
+                    cleanupFailure
+                        ?.failureMeaning(),
+            )
+        }
     }
 
     /**
@@ -546,18 +627,23 @@ internal class VexMapsDistributionSession(
             return false
         }
 
-        planningInputChanged()
+        humanPlanningInputChanged()
         return true
     }
 
-    fun planningInputChanged() {
+    /**
+     * Invalidates Preparing/Ready reality only for an explicit human change to a material planning
+     * input. A Ready Plan seals the origin admitted at Prepare time; later live device fixes are
+     * Navigation observations and do not silently redefine that Plan.
+     */
+    fun humanPlanningInputChanged() {
         when (
             val state =
                 run.currentProjection
                     .state
         ) {
             is VexMapsDistributionRunState.Preparing -> {
-                preparationJob?.cancel()
+                execution.cancelPreparation()
                 run.preparationFailed(
                     state.preparationRef,
                 )
@@ -576,6 +662,10 @@ internal class VexMapsDistributionSession(
         }
     }
 
+    /**
+     * Starts the exact Ready Plan. Its preparation origin is sealed; the fresh precise-location read
+     * performed by VexMapsMapSurface is Navigation start preflight, not a new Distribution origin.
+     */
     fun startPreparedRun() {
         val ready =
             run.currentProjection
@@ -621,10 +711,7 @@ internal class VexMapsDistributionSession(
         )
 
         val cleanupFailure =
-            runCatching {
-                navigation.dismissArrival()
-                navigation.stop()
-            }.exceptionOrNull()
+            cleanupArrivedNavigation()
 
         clearExpectedLeg()
 
@@ -637,11 +724,13 @@ internal class VexMapsDistributionSession(
         ) {
             setLegAttempt(
                 VexMapsDistributionLegAttempt.Failed(
+                    stage =
+                        VexMapsDistributionLegFailureStage
+                            .PreviousLegCleanup,
                     target =
                         nextTarget,
                     reason =
-                        cleanupFailure
-                            .failureMeaning(),
+                        cleanupFailure,
                 ),
             )
         } else {
@@ -665,9 +754,6 @@ internal class VexMapsDistributionSession(
     }
 
     fun cancelExecutionPreservingDraft() {
-        preparationJob?.cancel()
-        legJob?.cancel()
-
         if (
             run.currentProjection[
                 VexMapsDistributionRunControl.Reset
@@ -698,8 +784,8 @@ internal class VexMapsDistributionSession(
             mutableState.value
                 .draft
 
-        preparationJob?.cancel()
-        legJob?.cancel()
+        execution.cancelPreparation()
+        execution.cancelLeg()
 
         val currentRunState =
             run.currentProjection
@@ -732,24 +818,26 @@ internal class VexMapsDistributionSession(
                         null,
                 )
 
-        scope.launch {
-            runCatching {
-                repository.clearDraft()
-            }.onSuccess {
-                finishDraftOperation(
-                    draft =
-                        it,
-                )
-            }.onFailure {
-                finishDraftOperation(
-                    error =
-                        it,
-                )
-            }
+        execution.clearDraft()
+    }
+
+    internal suspend fun clearDraftForExecution() {
+        runCatching {
+            repository.clearDraft()
+        }.onSuccess {
+            finishDraftOperation(
+                draft =
+                    it,
+            )
+        }.onFailure {
+            finishDraftOperation(
+                error =
+                    it,
+            )
         }
     }
 
-    private suspend fun restoreDraft() {
+    internal suspend fun restoreDraftForExecution() {
         runCatching {
             repository.loadDraft()
         }.onSuccess {
@@ -794,6 +882,8 @@ internal class VexMapsDistributionSession(
                         plan =
                             null,
                         preparationFailure =
+                            null,
+                        preparationCleanupFailure =
                             null,
                     )
         }
@@ -862,6 +952,10 @@ internal class VexMapsDistributionSession(
             VexMapsDistributionPlan?,
         preparationFailure:
             String?,
+        preparationCleanupFailure:
+            String? =
+            mutableState.value
+                .preparationCleanupFailure,
     ) {
         mutableState.value =
             mutableState.value
@@ -870,6 +964,8 @@ internal class VexMapsDistributionSession(
                         plan,
                     preparationFailure =
                         preparationFailure,
+                    preparationCleanupFailure =
+                        preparationCleanupFailure,
                     legAttempt =
                         mutableLegAttempt.value,
                     expectedLeg =
@@ -926,8 +1022,8 @@ internal class VexMapsDistributionSession(
     }
 
     private fun invalidatePreparedReality() {
-        preparationJob?.cancel()
-        legJob?.cancel()
+        execution.cancelPreparation()
+        execution.cancelLeg()
         runCatching {
             navigation.stop()
         }
@@ -941,6 +1037,8 @@ internal class VexMapsDistributionSession(
             plan =
                 null,
             preparationFailure =
+                null,
+            preparationCleanupFailure =
                 null,
         )
     }
@@ -1076,6 +1174,9 @@ internal class VexMapsDistributionSession(
                 }.onFailure { error ->
                     setLegAttempt(
                         VexMapsDistributionLegAttempt.Failed(
+                            stage =
+                                VexMapsDistributionLegFailureStage
+                                    .NavigationStart,
                             target =
                                 target,
                             reason =
@@ -1112,12 +1213,7 @@ internal class VexMapsDistributionSession(
                      * Navigation truth even when the best-effort service-stop request fails.
                      * Arrival-notification dismissal is an independent cleanup effect.
                      */
-                    runCatching {
-                        navigation.stop()
-                    }
-                    runCatching {
-                        navigation.dismissArrival()
-                    }
+                    cleanupArrivedNavigation()
                     clearExpectedLeg()
                 }
             }
@@ -1169,7 +1265,6 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        legJob?.cancel()
         setLegAttempt(
             VexMapsDistributionLegAttempt.Preparing(
                 target,
@@ -1177,79 +1272,143 @@ internal class VexMapsDistributionSession(
         )
         clearExpectedLeg()
 
-        legJob =
-            scope.launch {
-                try {
-                    val route =
-                        when (
-                            target
-                        ) {
-                            is VexMapsDistributionLegTarget.Stop ->
-                                routeToStop(
-                                    plan =
-                                        plan,
-                                    stopRef =
-                                        target.stopRef,
-                                    pack =
-                                        pack,
-                                )
+        execution.startLeg(
+            VexMapsDistributionLegWork(
+                target =
+                    target,
+                plan =
+                    plan,
+                pack =
+                    pack,
+            ),
+        )
+    }
 
-                            VexMapsDistributionLegTarget.ReturnToStart ->
-                                routeReturn(
-                                    plan =
-                                        plan,
-                                    pack =
-                                        pack,
-                                )
-                        }
+    internal suspend fun prepareLegForExecution(
+        work:
+            VexMapsDistributionLegWork,
+    ) {
+        val target =
+            work.target
+        val plan =
+            work.plan
+        val pack =
+            work.pack
 
-                    if (
-                        mutableState.value
-                            .plan
-                            ?.planRef !=
-                        plan.planRef
-                    ) {
-                        return@launch
+        try {
+            val route =
+                when (
+                    target
+                ) {
+                    is VexMapsDistributionLegTarget.Stop ->
+                        routeToStop(
+                            plan =
+                                plan,
+                            stopRef =
+                                target.stopRef,
+                            pack =
+                                pack,
+                        )
+
+                    VexMapsDistributionLegTarget.ReturnToStart ->
+                        routeReturn(
+                            plan =
+                                plan,
+                            pack =
+                                pack,
+                        )
+                }
+
+            if (
+                mutableState.value
+                    .plan
+                    ?.planRef !=
+                plan.planRef
+            ) {
+                return
+            }
+
+            navigation.prepare(
+                routeResult =
+                    route,
+                routingPack =
+                    pack,
+            )
+            setExpectedLeg(
+                VexMapsDistributionExpectedLeg(
+                    planRef =
+                        plan.planRef,
+                    target =
+                        target,
+                    route =
+                        route.identity(),
+                ),
+            )
+            setLegAttempt(
+                VexMapsDistributionLegAttempt.Idle,
+            )
+        } catch (
+            cancelled:
+                CancellationException,
+        ) {
+            throw cancelled
+        } catch (
+            error:
+                Throwable,
+        ) {
+            setLegAttempt(
+                VexMapsDistributionLegAttempt.Failed(
+                    stage =
+                        VexMapsDistributionLegFailureStage
+                            .RoutePreparation,
+                    target =
+                        target,
+                    reason =
+                        error.failureMeaning(),
+                ),
+            )
+        }
+    }
+
+    /**
+     * Stop Navigation semantic truth first, then attempt arrival-notification cleanup independently.
+     * The returned diagnostic blocks a next leg under PreviousLegCleanup rather than mislabeling it
+     * as a route-preparation/provider failure.
+     */
+    private fun cleanupArrivedNavigation():
+        String? {
+        val failures =
+            buildList {
+                runCatching {
+                    navigation.stop()
+                }.exceptionOrNull()
+                    ?.let { failure ->
+                        add(
+                            "stop: " +
+                                failure
+                                    .failureMeaning(),
+                        )
                     }
 
-                    navigation.prepare(
-                        routeResult =
-                            route,
-                        routingPack =
-                            pack,
-                    )
-                    setExpectedLeg(
-                        VexMapsDistributionExpectedLeg(
-                            planRef =
-                                plan.planRef,
-                            target =
-                                target,
-                            route =
-                                route.identity(),
-                        ),
-                    )
-                    setLegAttempt(
-                        VexMapsDistributionLegAttempt.Idle,
-                    )
-                } catch (
-                    cancelled:
-                        CancellationException,
-                ) {
-                    throw cancelled
-                } catch (
-                    error:
-                        Throwable,
-                ) {
-                    setLegAttempt(
-                        VexMapsDistributionLegAttempt.Failed(
-                            target =
-                                target,
-                            reason =
-                                error.failureMeaning(),
-                        ),
-                    )
-                }
+                runCatching {
+                    navigation.dismissArrival()
+                }.exceptionOrNull()
+                    ?.let { failure ->
+                        add(
+                            "dismiss-arrival: " +
+                                failure
+                                    .failureMeaning(),
+                        )
+                    }
             }
+
+        return failures
+            .takeIf {
+                it.isNotEmpty()
+            }
+            ?.joinToString(
+                separator = "; ",
+            )
     }
 
     private suspend fun routeToStop(

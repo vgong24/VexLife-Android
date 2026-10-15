@@ -7,6 +7,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMap
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.vexMapsDistributionModeBehavior
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.vexMapsDistributionModeControls
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Test
 
@@ -41,6 +42,17 @@ class VexMapsDistributionModeBehaviorTest {
             distribution[
                 VexMapsDistributionModeControl.ToggleDistribution
             ].act,
+        )
+        assertSame(
+            VexMapsDistributionModeAct.EnterDistribution,
+            regular[
+                VexMapsDistributionModeControl.UseDistribution
+            ].act,
+        )
+        assertFalse(
+            distribution[
+                VexMapsDistributionModeControl.UseDistribution
+            ].isAvailable,
         )
     }
 

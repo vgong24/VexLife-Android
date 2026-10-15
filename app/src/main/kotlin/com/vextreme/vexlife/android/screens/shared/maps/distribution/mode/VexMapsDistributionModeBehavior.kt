@@ -52,6 +52,10 @@ internal fun VexBehaviorBlueprint<
             VexMapsDistributionModeAct.EnterDistribution,
             VexMapsDistributionModeAct.ExitDistribution,
         )
+        control(
+            VexMapsDistributionModeControl.UseDistribution,
+            VexMapsDistributionModeAct.EnterDistribution,
+        )
     }
 
 // [VXG RealForever]

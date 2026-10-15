@@ -21,10 +21,10 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.Vex
  * - [VexMapsDistributionNavigationConvergenceRelay] relates Run to one exact expected Navigation leg.
  * - [VexMapsDistributionSession] owns the process-lifetime lived relationship: current Draft, Plan,
  *   provider attempts, expected leg, failure/retry truth and bounded Control feedback.
- * - [VexMapsDistributionExecution] owns only maintained coroutine custody for convergence-output
- *   observation under the accepted VexExecution foundation. It owns no Distribution meaning.
- * - finite preparation/leg work remains Session-owned in this generation; migrate it only when
- *   replacement/cancellation semantics are proven as a real VexExecution consumer need.
+ * - [VexMapsDistributionExecution] owns coroutine custody under the accepted VexExecution
+ *   foundation: maintained convergence observation plus finite draft/preparation/leg operations.
+ *   [VexMapsDistributionSession] still owns what those operations mean, currentness, provider
+ *   result/failure meaning and retry law.
  * - [VexMapsDistributionExperience] is the UI-facing membrane over the Session.
  *
  * Lower owners remain independently complete. Convergence never executes a foreign Effect; any

@@ -17,6 +17,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexOfflineRouteResult
 import com.vextreme.vexlife.android.screens.shared.maps.VexRouteGeometryPoint
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLegState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegAttempt
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegFailureStage
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegTarget
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPlan
@@ -131,7 +132,7 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    scope =
+                    relayScope =
                         CoroutineScope(
                             coroutineContext +
                                 owner,
@@ -204,7 +205,7 @@ class VexMapsDistributionSessionTest {
                         ?.planRef,
                 )
 
-                session.planningInputChanged()
+                session.humanPlanningInputChanged()
 
                 awaitDraft(
                     session,
@@ -218,9 +219,7 @@ class VexMapsDistributionSessionTest {
                     navigation.current.phase,
                 )
             } finally {
-                executionRoot.joinStopAll(
-                    "Distribution session test complete",
-                )
+                session.shutdown()
                 owner.cancelAndJoin()
             }
         }
@@ -261,7 +260,7 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    scope =
+                    relayScope =
                         CoroutineScope(
                             coroutineContext +
                                 owner,
@@ -306,14 +305,18 @@ class VexMapsDistributionSessionTest {
                             }
                     }
 
+                val failedAttempt =
+                    failed.legAttempt as
+                        VexMapsDistributionLegAttempt.Failed
+                assertEquals(
+                    VexMapsDistributionLegFailureStage.RoutePreparation,
+                    failedAttempt.stage,
+                )
                 assertEquals(
                     VexMapsDistributionLegTarget.Stop(
                         "alpha",
                     ),
-                    (
-                        failed.legAttempt as
-                            VexMapsDistributionLegAttempt.Failed
-                    ).target,
+                    failedAttempt.target,
                 )
 
                 session.retryFailedLeg()
@@ -345,9 +348,7 @@ class VexMapsDistributionSessionTest {
                         VexMapsDistributionExpectedLegState.Expected,
                 )
             } finally {
-                executionRoot.joinStopAll(
-                    "Distribution session test complete",
-                )
+                session.shutdown()
                 owner.cancelAndJoin()
             }
         }
@@ -391,7 +392,7 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    scope =
+                    relayScope =
                         CoroutineScope(
                             coroutineContext +
                                 owner,
@@ -449,6 +450,13 @@ class VexMapsDistributionSessionTest {
                     failed.expectedLeg as?
                         VexMapsDistributionExpectedLegState.Expected,
                 )
+                assertEquals(
+                    VexMapsDistributionLegFailureStage.NavigationStart,
+                    (
+                        failed.legAttempt as
+                            VexMapsDistributionLegAttempt.Failed
+                    ).stage,
+                )
 
                 session.retryFailedLeg()
 
@@ -475,9 +483,7 @@ class VexMapsDistributionSessionTest {
                         .legAttempt,
                 )
             } finally {
-                executionRoot.joinStopAll(
-                    "Distribution session test complete",
-                )
+                session.shutdown()
                 owner.cancelAndJoin()
             }
         }
@@ -516,7 +522,7 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    scope =
+                    relayScope =
                         CoroutineScope(
                             coroutineContext +
                                 owner,
@@ -587,9 +593,413 @@ class VexMapsDistributionSessionTest {
                         .isEmpty(),
                 )
             } finally {
-                executionRoot.joinStopAll(
-                    "Distribution session test complete",
+                session.shutdown()
+                owner.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun deliveredStopCleanupFailureKeepsTrueStageAndRetryCanAdvance() =
+        runBlocking {
+            val repository =
+                InMemoryVexMapsDistributionRepository(
+                    initialDraft(),
                 )
+            val routing =
+                FakeRouting(
+                    CompletableDeferred(
+                        Unit,
+                    ),
+                )
+            val navigation =
+                FakeNavigation()
+            val owner =
+                SupervisorJob(
+                    coroutineContext[
+                        Job
+                    ],
+                )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
+            val session =
+                VexMapsDistributionSession(
+                    repository =
+                        repository,
+                    routing =
+                        routing,
+                    navigation =
+                        navigation,
+                    executionRoot =
+                        executionRoot,
+                    relayScope =
+                        CoroutineScope(
+                            coroutineContext +
+                                owner,
+                        ),
+                )
+
+            try {
+                awaitDraft(
+                    session,
+                )
+                prepareAndStart(
+                    session =
+                        session,
+                    navigation =
+                        navigation,
+                )
+
+                navigation.arrive()
+                withTimeout(
+                    1_000L,
+                ) {
+                    session.runProjections
+                        .first {
+                            it.state is
+                                VexMapsDistributionRunState.AtStop
+                        }
+                }
+
+                navigation.failNextDismiss =
+                    true
+                session.completeCurrentStop()
+
+                val failed =
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        session.states
+                            .first {
+                                it.legAttempt is
+                                    VexMapsDistributionLegAttempt.Failed
+                            }
+                    }
+                val failedAttempt =
+                    failed.legAttempt as
+                        VexMapsDistributionLegAttempt.Failed
+
+                assertEquals(
+                    VexMapsDistributionLegFailureStage.PreviousLegCleanup,
+                    failedAttempt.stage,
+                )
+                assertEquals(
+                    VexMapsDistributionLegTarget.Stop(
+                        "alpha",
+                    ),
+                    failedAttempt.target,
+                )
+                assertEquals(
+                    VexNavigationSessionPhase.IDLE,
+                    navigation.current.phase,
+                )
+
+                session.retryFailedLeg()
+
+                withTimeout(
+                    1_000L,
+                ) {
+                    navigation.states
+                        .first {
+                            it.phase ==
+                                VexNavigationSessionPhase.ACTIVE &&
+                                it.routeResult
+                                    ?.route
+                                    ?.routeRef
+                                    ?.endsWith(
+                                        ".stop.alpha",
+                                    ) == true
+                        }
+                }
+            } finally {
+                session.shutdown()
+                owner.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun preparationFailureRemainsVisibleWhenNavigationCleanupAlsoFails() =
+        runBlocking {
+            val repository =
+                InMemoryVexMapsDistributionRepository(
+                    initialDraft(),
+                )
+            val navigation =
+                FakeNavigation()
+            val routing =
+                FakeRouting(
+                    CompletableDeferred(
+                        Unit,
+                    ),
+                ).also {
+                    it.remainingRouteFailures =
+                        1
+                    it.beforeRouteFailure = {
+                        navigation.failNextStop =
+                            true
+                    }
+                }
+            val owner =
+                SupervisorJob(
+                    coroutineContext[
+                        Job
+                    ],
+                )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
+            val session =
+                VexMapsDistributionSession(
+                    repository =
+                        repository,
+                    routing =
+                        routing,
+                    navigation =
+                        navigation,
+                    executionRoot =
+                        executionRoot,
+                    relayScope =
+                        CoroutineScope(
+                            coroutineContext +
+                                owner,
+                        ),
+                )
+
+            try {
+                awaitDraft(
+                    session,
+                )
+
+                session.prepare(
+                    origin =
+                        origin,
+                    travelMode =
+                        VexMapsTravelMode.DRIVE,
+                    pack =
+                        pack,
+                )
+
+                val failed =
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        session.states
+                            .first {
+                                it.preparationFailure ==
+                                    "synthetic route failure"
+                            }
+                    }
+
+                assertEquals(
+                    "synthetic navigation stop failure",
+                    failed.preparationCleanupFailure,
+                )
+                assertTrue(
+                    session.currentRun
+                        .state is
+                        VexMapsDistributionRunState.Draft,
+                )
+                assertEquals(
+                    VexNavigationSessionPhase.IDLE,
+                    navigation.current.phase,
+                )
+            } finally {
+                session.shutdown()
+                owner.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun readyStartUsesSealedPreparationWithoutReoptimizing() =
+        runBlocking {
+            val repository =
+                InMemoryVexMapsDistributionRepository(
+                    initialDraft(),
+                )
+            val routing =
+                FakeRouting(
+                    CompletableDeferred(
+                        Unit,
+                    ),
+                )
+            val navigation =
+                FakeNavigation()
+            val owner =
+                SupervisorJob(
+                    coroutineContext[
+                        Job
+                    ],
+                )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
+            val session =
+                VexMapsDistributionSession(
+                    repository =
+                        repository,
+                    routing =
+                        routing,
+                    navigation =
+                        navigation,
+                    executionRoot =
+                        executionRoot,
+                    relayScope =
+                        CoroutineScope(
+                            coroutineContext +
+                                owner,
+                        ),
+                )
+
+            try {
+                awaitDraft(
+                    session,
+                )
+                session.prepare(
+                    origin =
+                        origin,
+                    travelMode =
+                        VexMapsTravelMode.DRIVE,
+                    pack =
+                        pack,
+                )
+                val ready =
+                    awaitReady(
+                        session,
+                    )
+                val planRef =
+                    (
+                        ready.state as
+                            VexMapsDistributionRunState.Ready
+                    ).planRef
+
+                session.startPreparedRun()
+
+                withTimeout(
+                    1_000L,
+                ) {
+                    navigation.states
+                        .first {
+                            it.phase ==
+                                VexNavigationSessionPhase.ACTIVE
+                        }
+                }
+
+                assertEquals(
+                    1,
+                    routing.optimizeCalls,
+                )
+                assertEquals(
+                    1,
+                    routing.routeCalls,
+                )
+                assertEquals(
+                    planRef,
+                    session.states.value
+                        .plan
+                        ?.planRef,
+                )
+                assertEquals(
+                    origin,
+                    session.states.value
+                        .plan
+                        ?.origin,
+                )
+            } finally {
+                session.shutdown()
+                owner.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun shutdownCancelsInFlightFinitePreparationWork() =
+        runBlocking {
+            val repository =
+                InMemoryVexMapsDistributionRepository(
+                    initialDraft(),
+                )
+            val optimizeGate =
+                CompletableDeferred<Unit>()
+            val routing =
+                FakeRouting(
+                    optimizeGate,
+                )
+            val navigation =
+                FakeNavigation()
+            val owner =
+                SupervisorJob(
+                    coroutineContext[
+                        Job
+                    ],
+                )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
+            val session =
+                VexMapsDistributionSession(
+                    repository =
+                        repository,
+                    routing =
+                        routing,
+                    navigation =
+                        navigation,
+                    executionRoot =
+                        executionRoot,
+                    relayScope =
+                        CoroutineScope(
+                            coroutineContext +
+                                owner,
+                        ),
+                )
+
+            try {
+                awaitDraft(
+                    session,
+                )
+                session.prepare(
+                    origin =
+                        origin,
+                    travelMode =
+                        VexMapsTravelMode.DRIVE,
+                    pack =
+                        pack,
+                )
+
+                assertTrue(
+                    session.currentRun
+                        .state is
+                        VexMapsDistributionRunState.Preparing,
+                )
+
+                session.shutdown()
+
+                assertEquals(
+                    0,
+                    navigation.prepareCalls,
+                )
+                assertTrue(
+                    executionRoot
+                        .executions
+                        .value
+                        .values
+                        .none {
+                            it.status ==
+                                VexCoroutineStatus.STARTING ||
+                                it.status ==
+                                VexCoroutineStatus.RUNNING ||
+                                it.status ==
+                                VexCoroutineStatus.RESTARTING
+                        },
+                )
+            } finally {
+                session.shutdown()
                 owner.cancelAndJoin()
             }
         }
@@ -628,7 +1038,7 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    scope =
+                    relayScope =
                         CoroutineScope(
                             coroutineContext +
                                 owner,
@@ -690,10 +1100,10 @@ class VexMapsDistributionSessionTest {
                         }
                 }
 
-                navigation.remainingStopFailures =
-                    1
-                navigation.remainingDismissFailures =
-                    1
+                navigation.failNextStop =
+                    true
+                navigation.failNextDismiss =
+                    true
                 navigation.arrive()
 
                 withTimeout(
@@ -724,9 +1134,7 @@ class VexMapsDistributionSessionTest {
                         },
                 )
             } finally {
-                executionRoot.joinStopAll(
-                    "Distribution session test complete",
-                )
+                session.shutdown()
                 owner.cancelAndJoin()
             }
         }
@@ -765,7 +1173,7 @@ class VexMapsDistributionSessionTest {
                         navigation,
                     executionRoot =
                         executionRoot,
-                    scope =
+                    relayScope =
                         CoroutineScope(
                             coroutineContext +
                                 owner,
@@ -827,9 +1235,7 @@ class VexMapsDistributionSessionTest {
                         .plan,
                 )
             } finally {
-                executionRoot.joinStopAll(
-                    "Distribution session test complete",
-                )
+                session.shutdown()
                 owner.cancelAndJoin()
             }
         }
@@ -909,6 +1315,13 @@ class VexMapsDistributionSessionTest {
         VexMapsDistributionRouting {
         var remainingRouteFailures =
             0
+        var beforeRouteFailure:
+            (() -> Unit)? =
+            null
+        var optimizeCalls =
+            0
+        var routeCalls =
+            0
 
         override suspend fun optimize(
             draft:
@@ -918,6 +1331,8 @@ class VexMapsDistributionSessionTest {
             pack:
                 VexMapsRegionPack,
         ): VexMapsDistributionPlan {
+            optimizeCalls +=
+                1
             optimizeGate.await()
 
             return VexMapsDistributionPlan(
@@ -940,12 +1355,17 @@ class VexMapsDistributionSessionTest {
             request:
                 VexOfflineRouteRequest,
         ): VexOfflineRouteResult {
+            routeCalls +=
+                1
+
             if (
                 remainingRouteFailures >
                 0
             ) {
                 remainingRouteFailures -=
                     1
+                beforeRouteFailure
+                    ?.invoke()
                 error(
                     "synthetic route failure",
                 )
@@ -961,18 +1381,19 @@ class VexMapsDistributionSessionTest {
         var remainingStartFailures:
             Int =
             0,
-        var remainingStopFailures:
-            Int =
-            0,
-        var remainingDismissFailures:
-            Int =
-            0,
     ) :
         VexMapsDistributionNavigationPort {
         private val mutableStates =
             MutableStateFlow(
                 VexNavigationSessionState(),
             )
+
+        var failNextStop =
+            false
+        var failNextDismiss =
+            false
+        var prepareCalls =
+            0
 
         override val states:
             StateFlow<VexNavigationSessionState> =
@@ -989,6 +1410,8 @@ class VexMapsDistributionSessionTest {
             routingPack:
                 VexMapsRegionPack,
         ) {
+            prepareCalls +=
+                1
             mutableStates.value =
                 VexNavigationSessionState(
                     phase =
@@ -1026,12 +1449,9 @@ class VexMapsDistributionSessionTest {
             mutableStates.value =
                 VexNavigationSessionState()
 
-            if (
-                remainingStopFailures >
-                0
-            ) {
-                remainingStopFailures -=
-                    1
+            if (failNextStop) {
+                failNextStop =
+                    false
                 error(
                     "synthetic navigation stop failure",
                 )
@@ -1039,12 +1459,9 @@ class VexMapsDistributionSessionTest {
         }
 
         override fun dismissArrival() {
-            if (
-                remainingDismissFailures >
-                0
-            ) {
-                remainingDismissFailures -=
-                    1
+            if (failNextDismiss) {
+                failNextDismiss =
+                    false
                 error(
                     "synthetic arrival dismissal failure",
                 )

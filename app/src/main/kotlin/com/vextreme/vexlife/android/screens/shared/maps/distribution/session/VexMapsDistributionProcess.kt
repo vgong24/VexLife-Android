@@ -104,7 +104,7 @@ internal object VexMapsDistributionProcess {
                     dispatcher =
                         Dispatchers.Main.immediate,
                 ),
-            scope =
+            relayScope =
                 scope,
         )
 }
