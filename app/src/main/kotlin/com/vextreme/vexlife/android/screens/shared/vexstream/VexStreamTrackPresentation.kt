@@ -204,16 +204,14 @@ internal fun VexStreamTrackCard(
                 vertical = 2.dp,
             )
             .vex(
-                VexModifier.semantic(
-                    VexStreamPresentationRefs.trackRowAction(
+VexStreamPresentationRefs.trackRowAction(
                         scope =
                             presentationScope,
                         trackRef =
                             state.track.trackRef,
                         action =
-                            VexStreamMusicScreen.PlayTrack,
-                    ),
-                ),
+                            VexStreamMusicScreen.PlayTrack,,
+),
             )
             .clickable(
                 enabled = controller != null,
@@ -238,14 +236,12 @@ internal fun VexStreamTrackCard(
                         vertical = 8.dp,
                     )
                     .vex(
-                        VexModifier.semantic(
-                            VexStreamPresentationRefs.trackRow(
+VexStreamPresentationRefs.trackRow(
                                 scope =
                                     presentationScope,
                                 trackRef =
-                                    state.track.trackRef,
-                            ),
-                        ),
+                                    state.track.trackRef,,
+),
                     ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -310,16 +306,14 @@ internal fun VexStreamTrackCard(
                 VexIconButton(
                     element = VexStreamMusicScreen.TrackMenu,
                     handler = menuOpenHandler,
-                    vexModifier =
-                        VexModifier.semantic(
-                            VexStreamPresentationRefs.trackRowAction(
+                    semanticRef =
+VexStreamPresentationRefs.trackRowAction(
                                 scope =
                                     presentationScope,
                                 trackRef =
                                     state.track.trackRef,
                                 action =
-                                    VexStreamMusicScreen.TrackMenu,
-                            ),
+                                    VexStreamMusicScreen.TrackMenu,,
                         ),
                 )
 
@@ -414,14 +408,12 @@ private fun VexStreamTrackMenuItem(
     DropdownMenuItem(
         modifier =
             Modifier.vex(
-                VexModifier.semantic(
-                    VexStreamPresentationRefs.trackMenuAction(
+VexStreamPresentationRefs.trackMenuAction(
                         scope =
                             presentationScope,
                         trackRef = trackRef,
-                        action = element,
-                    ),
-                ),
+                        action = element,,
+),
             ),
         text = {
             Text(
