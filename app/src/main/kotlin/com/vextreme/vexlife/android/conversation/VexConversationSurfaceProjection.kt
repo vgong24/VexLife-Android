@@ -1,22 +1,11 @@
 package com.vextreme.vexlife.android.conversation
 
-/**
- * Home reachability observed for the Android Conversation surface.
- *
- * This is an input projection from the rightful Home/transport owner. It is not Conversation state
- * and does not grant authentication or authorization by itself.
- */
 enum class VexConversationHomeAvailability {
     Unobserved,
     Available,
     Unavailable,
 }
 
-/**
- * Companion/runtime availability observed for one participant projected as a Companion.
- *
- * This remains independent of ordinary human Conversation availability.
- */
 enum class VexConversationCompanionAvailability {
     Unknown,
     Available,
@@ -24,36 +13,10 @@ enum class VexConversationCompanionAvailability {
 }
 
 /**
- * Why the current Android surface may or may not offer Send as an eligible human action.
- *
- * This is presentation eligibility only. A Ready surface does not promise provider admission:
- * VexConversationRepository still revalidates thread/channel/membership currentness and addressing
- * at Send time.
- */
-sealed interface VexConversationSurfaceSendAvailability {
-    data object Ready :
-        VexConversationSurfaceSendAvailability
-
-    data object HomeUnobserved :
-        VexConversationSurfaceSendAvailability
-
-    data object HomeUnavailable :
-        VexConversationSurfaceSendAvailability
-
-    data object AuthenticatedParticipantUnobserved :
-        VexConversationSurfaceSendAvailability
-
-    data object AuthenticatedParticipantUnknown :
-        VexConversationSurfaceSendAvailability
-
-    data object AuthenticatedParticipantNotCurrent :
-        VexConversationSurfaceSendAvailability
-}
-
-/**
  * Derived UI-facing participant projection.
  *
- * [companionAvailability] is populated only for Companion participants and stays null for humans.
+ * Companion availability is presentation input from the Companion/runtime owner; it is not stored in
+ * generic Conversation state.
  */
 data class VexConversationSurfaceParticipant(
     val participant:
@@ -67,24 +30,10 @@ data class VexConversationSurfaceParticipant(
 )
 
 /**
- * Pure Android presentation projection over several already-owned truths.
+ * Pure generic Android presentation projection.
  *
- * This type deliberately does NOT use the word Experience:
- *
- * - draft PR #81 uses Experience for a broad human/product orientation root;
- * - merged PR #82 uses <Name>Experience for a Behavior-local UI membrane.
- *
- * Conversation should not silently choose between those repository-wide meanings.
- *
- * This projection owns no state or effects. It merely combines:
- *
- * - Conversation-owned [thread];
- * - authenticated participant identity projected by the Home/session owner;
- * - Home reachability projected by the Home/transport owner;
- * - Companion availability projected by the Companion/runtime owner.
- *
- * The source owners remain visible in the constructor rather than being hidden inside
- * [VexConversationThreadState].
+ * It deliberately does not claim that the current thread has a writable provider. Write eligibility
+ * is provider/domain-specific and layered separately.
  */
 data class VexConversationSurfaceProjection(
     val thread:
@@ -95,8 +44,6 @@ data class VexConversationSurfaceProjection(
         VexConversationHomeAvailability,
     val participants:
         List<VexConversationSurfaceParticipant>,
-    val sendAvailability:
-        VexConversationSurfaceSendAvailability,
 ) {
     init {
         require(
@@ -144,11 +91,34 @@ data class VexConversationSurfaceProjection(
 }
 
 /**
- * Compose several current owner projections without creating another state owner.
+ * Family-only Send eligibility for the Android surface.
  *
- * Companion availability is keyed by exact participant identity. Missing entries project Unknown.
- * Human participants never receive a Companion availability value.
+ * Ready means the Family UI may truthfully offer an attempt. It does not mean VF-02C has admitted the
+ * request; provider currentness/idempotency revalidation still occurs in VexFamilyConversationRepository.
  */
+sealed interface VexFamilyConversationSurfaceSendAvailability {
+    data object Ready :
+        VexFamilyConversationSurfaceSendAvailability
+
+    data object NotFamilyConversation :
+        VexFamilyConversationSurfaceSendAvailability
+
+    data object HomeUnobserved :
+        VexFamilyConversationSurfaceSendAvailability
+
+    data object HomeUnavailable :
+        VexFamilyConversationSurfaceSendAvailability
+
+    data object AuthenticatedParticipantUnobserved :
+        VexFamilyConversationSurfaceSendAvailability
+
+    data object AuthenticatedParticipantUnknown :
+        VexFamilyConversationSurfaceSendAvailability
+
+    data object AuthenticatedParticipantNotCurrent :
+        VexFamilyConversationSurfaceSendAvailability
+}
+
 fun projectVexConversationSurface(
     thread:
         VexConversationThreadState,
@@ -163,42 +133,6 @@ fun projectVexConversationSurface(
         > =
         emptyMap(),
 ): VexConversationSurfaceProjection {
-    val knownParticipant =
-        authenticatedParticipantRef
-            ?.let(
-                thread::participant,
-            )
-
-    val sendAvailability =
-        when {
-            homeAvailability ==
-                VexConversationHomeAvailability.Unobserved ->
-                VexConversationSurfaceSendAvailability
-                    .HomeUnobserved
-
-            homeAvailability ==
-                VexConversationHomeAvailability.Unavailable ->
-                VexConversationSurfaceSendAvailability
-                    .HomeUnavailable
-
-            authenticatedParticipantRef == null ->
-                VexConversationSurfaceSendAvailability
-                    .AuthenticatedParticipantUnobserved
-
-            knownParticipant == null ->
-                VexConversationSurfaceSendAvailability
-                    .AuthenticatedParticipantUnknown
-
-            authenticatedParticipantRef !in
-                thread.currentAudienceRefs ->
-                VexConversationSurfaceSendAvailability
-                    .AuthenticatedParticipantNotCurrent
-
-            else ->
-                VexConversationSurfaceSendAvailability
-                    .Ready
-        }
-
     val participants =
         thread.knownParticipants
             .map { participant ->
@@ -234,9 +168,66 @@ fun projectVexConversationSurface(
             homeAvailability,
         participants =
             participants,
-        sendAvailability =
-            sendAvailability,
     )
+}
+
+/**
+ * Derive only the Family write-affordance portion of the current surface.
+ *
+ * Generic/direct Conversation deliberately receives NotFamilyConversation here rather than being
+ * forced through Family membership semantics.
+ */
+fun projectVexFamilyConversationSendAvailability(
+    surface:
+        VexConversationSurfaceProjection,
+): VexFamilyConversationSurfaceSendAvailability {
+    val thread =
+        surface.thread
+
+    if (thread.familyBinding == null) {
+        return VexFamilyConversationSurfaceSendAvailability
+            .NotFamilyConversation
+    }
+
+    if (
+        surface.homeAvailability ==
+        VexConversationHomeAvailability.Unobserved
+    ) {
+        return VexFamilyConversationSurfaceSendAvailability
+            .HomeUnobserved
+    }
+
+    if (
+        surface.homeAvailability ==
+        VexConversationHomeAvailability.Unavailable
+    ) {
+        return VexFamilyConversationSurfaceSendAvailability
+            .HomeUnavailable
+    }
+
+    val participantRef =
+        surface.authenticatedParticipantRef
+            ?: return VexFamilyConversationSurfaceSendAvailability
+                .AuthenticatedParticipantUnobserved
+
+    if (
+        thread.participant(
+            participantRef,
+        ) == null
+    ) {
+        return VexFamilyConversationSurfaceSendAvailability
+            .AuthenticatedParticipantUnknown
+    }
+
+    if (
+        participantRef !in
+        thread.currentAudienceRefs
+    ) {
+        return VexFamilyConversationSurfaceSendAvailability
+            .AuthenticatedParticipantNotCurrent
+    }
+
+    return VexFamilyConversationSurfaceSendAvailability.Ready
 }
 
 // [VXG RealForever]

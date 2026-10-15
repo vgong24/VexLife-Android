@@ -34,13 +34,11 @@ class VexConversationSurfaceProjectionTest {
         )
 
     @Test
-    fun unavailableCompanionDoesNotBlockHumanConversationSendEligibility() {
-        val thread =
-            currentThread()
-
+    fun unavailableCompanionDoesNotBlockFamilyHumanSendEligibility() {
         val projection =
             projectVexConversationSurface(
-                thread = thread,
+                thread =
+                    familyThread(),
                 authenticatedParticipantRef =
                     victorRef,
                 homeAvailability =
@@ -53,8 +51,10 @@ class VexConversationSurfaceProjectionTest {
             )
 
         assertSame(
-            VexConversationSurfaceSendAvailability.Ready,
-            projection.sendAvailability,
+            VexFamilyConversationSurfaceSendAvailability.Ready,
+            projectVexFamilyConversationSendAvailability(
+                projection,
+            ),
         )
         assertEquals(
             VexConversationCompanionAvailability.Unavailable,
@@ -70,9 +70,63 @@ class VexConversationSurfaceProjectionTest {
     }
 
     @Test
-    fun homeUnavailableBlocksSendEligibilityWithoutRewritingConversationTruth() {
+    fun genericDirectConversationDoesNotSilentlyGainFamilySendSemantics() {
+        val direct =
+            VexConversationThreadState(
+                threadRef =
+                    VexConversationThreadRef(
+                        "thread.fixture.direct",
+                    ),
+                currentChannelRef =
+                    VexConversationChannelRef(
+                        "channel.fixture.direct",
+                    ),
+                knownParticipants =
+                    listOf(
+                        VexConversationParticipant(
+                            participantRef =
+                                victorRef,
+                            kind =
+                                VexConversationParticipantKind.Human,
+                        ),
+                        VexConversationParticipant(
+                            participantRef =
+                                vexRef,
+                            kind =
+                                VexConversationParticipantKind.Companion,
+                        ),
+                    ),
+                currentAudienceRefs =
+                    listOf(
+                        victorRef,
+                        vexRef,
+                    ),
+                messages =
+                    emptyList(),
+            )
+
+        val projection =
+            projectVexConversationSurface(
+                thread =
+                    direct,
+                authenticatedParticipantRef =
+                    victorRef,
+                homeAvailability =
+                    VexConversationHomeAvailability.Available,
+            )
+
+        assertSame(
+            VexFamilyConversationSurfaceSendAvailability.NotFamilyConversation,
+            projectVexFamilyConversationSendAvailability(
+                projection,
+            ),
+        )
+    }
+
+    @Test
+    fun homeUnavailableBlocksFamilySendEligibilityWithoutRewritingConversationTruth() {
         val thread =
-            currentThread()
+            familyThread()
 
         val projection =
             projectVexConversationSurface(
@@ -84,36 +138,21 @@ class VexConversationSurfaceProjectionTest {
             )
 
         assertSame(
-            VexConversationSurfaceSendAvailability.HomeUnavailable,
-            projection.sendAvailability,
+            VexFamilyConversationSurfaceSendAvailability.HomeUnavailable,
+            projectVexFamilyConversationSendAvailability(
+                projection,
+            ),
         )
         assertEquals(
             thread,
             projection.thread,
         )
-        assertEquals(
-            listOf(
-                victorRef,
-                mayaRef,
-                vexRef,
-            ),
-            projection
-                .participants
-                .filter { participant ->
-                    participant.isCurrentAudienceMember
-                }
-                .map { participant ->
-                    participant
-                        .participant
-                        .participantRef
-                },
-        )
     }
 
     @Test
-    fun removedHistoricalParticipantRemainsRenderableButCannotBeCurrentSpeaker() {
+    fun removedHistoricalParticipantRemainsRenderableButCannotBeCurrentFamilySpeaker() {
         val thread =
-            currentThread().copy(
+            familyThread().copy(
                 currentAudienceRefs =
                     listOf(
                         victorRef,
@@ -131,9 +170,11 @@ class VexConversationSurfaceProjectionTest {
             )
 
         assertSame(
-            VexConversationSurfaceSendAvailability
+            VexFamilyConversationSurfaceSendAvailability
                 .AuthenticatedParticipantNotCurrent,
-            projection.sendAvailability,
+            projectVexFamilyConversationSendAvailability(
+                projection,
+            ),
         )
 
         val maya =
@@ -162,7 +203,7 @@ class VexConversationSurfaceProjectionTest {
         val projection =
             projectVexConversationSurface(
                 thread =
-                    currentThread(),
+                    familyThread(),
                 authenticatedParticipantRef =
                     unknown,
                 homeAvailability =
@@ -170,9 +211,11 @@ class VexConversationSurfaceProjectionTest {
             )
 
         assertSame(
-            VexConversationSurfaceSendAvailability
+            VexFamilyConversationSurfaceSendAvailability
                 .AuthenticatedParticipantUnknown,
-            projection.sendAvailability,
+            projectVexFamilyConversationSendAvailability(
+                projection,
+            ),
         )
         assertNull(
             projection.participant(
@@ -182,9 +225,9 @@ class VexConversationSurfaceProjectionTest {
     }
 
     @Test
-    fun unobservedHomeAndPrincipalRemainDifferentSurfaceReasons() {
+    fun unobservedHomeAndPrincipalRemainDifferentFamilySendReasons() {
         val thread =
-            currentThread()
+            familyThread()
 
         val homeUnobserved =
             projectVexConversationSurface(
@@ -205,31 +248,27 @@ class VexConversationSurfaceProjectionTest {
             )
 
         assertSame(
-            VexConversationSurfaceSendAvailability.HomeUnobserved,
-            homeUnobserved.sendAvailability,
+            VexFamilyConversationSurfaceSendAvailability.HomeUnobserved,
+            projectVexFamilyConversationSendAvailability(
+                homeUnobserved,
+            ),
         )
         assertSame(
-            VexConversationSurfaceSendAvailability
+            VexFamilyConversationSurfaceSendAvailability
                 .AuthenticatedParticipantUnobserved,
-            principalUnobserved.sendAvailability,
+            projectVexFamilyConversationSendAvailability(
+                principalUnobserved,
+            ),
         )
     }
 
-    private fun currentThread():
+    private fun familyThread():
         VexConversationThreadState =
         VexConversationThreadState(
             threadRef =
                 threadRef,
-            spaceRef =
-                spaceRef,
             currentChannelRef =
                 channelRef,
-            currentMembershipGeneration =
-                2L,
-            segmentRefs =
-                listOf(
-                    channelRef,
-                ),
             knownParticipants =
                 listOf(
                     VexConversationParticipant(
@@ -262,18 +301,14 @@ class VexConversationSurfaceProjectionTest {
                     VexConversationMessage(
                         messageRef =
                             VexConversationMessageRef(
-                                "message.fixture.001",
+                                "message.fixture.000",
                             ),
                         threadRef =
                             threadRef,
-                        spaceRef =
-                            spaceRef,
                         channelRef =
                             channelRef,
-                        membershipGeneration =
-                            2L,
                         sequence =
-                            1L,
+                            0L,
                         speakerRef =
                             mayaRef,
                         recipientRefs =
@@ -288,7 +323,25 @@ class VexConversationSurfaceProjectionTest {
                             ),
                         content =
                             "Historical/current group message.",
+                        familyBinding =
+                            VexFamilyConversationMessageBinding(
+                                spaceRef =
+                                    spaceRef,
+                                membershipGeneration =
+                                    2L,
+                            ),
                     ),
+                ),
+            familyBinding =
+                VexFamilyConversationThreadBinding(
+                    spaceRef =
+                        spaceRef,
+                    currentMembershipGeneration =
+                        2L,
+                    segmentRefs =
+                        listOf(
+                            channelRef,
+                        ),
                 ),
         )
 }

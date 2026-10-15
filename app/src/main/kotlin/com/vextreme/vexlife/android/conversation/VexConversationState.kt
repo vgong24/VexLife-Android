@@ -71,7 +71,7 @@ enum class VexConversationParticipantKind {
 }
 
 /**
- * Stable identity needed by Conversation history/current-audience projection.
+ * Stable identity needed by generic Conversation history/current-audience projection.
  *
  * Human-facing display name, avatar, relationship label and Family role are deliberately absent:
  * those belong to their own identity/relationship/Family/presentation owners.
@@ -84,22 +84,38 @@ data class VexConversationParticipant(
 )
 
 /**
- * One immutable Conversation message projection.
+ * Family-bound metadata on one otherwise-generic Conversation message.
  *
- * recipientRefs are the addressed delivery targets admitted by the provider.
- * witnessRefs are the immutable event audience.
- * Android must not collapse those meanings or reconstruct old witnesses from current membership.
+ * Portable service.conversation and Conversation Store do not require Family membership generation
+ * for every message. The Family adapter adds this exact meaning.
+ */
+data class VexFamilyConversationMessageBinding(
+    val spaceRef:
+        VexConversationSpaceRef,
+    val membershipGeneration: Long,
+) {
+    init {
+        require(membershipGeneration >= 0L) {
+            "Family message membershipGeneration must be non-negative"
+        }
+    }
+}
+
+/**
+ * One immutable generic Conversation message projection.
+ *
+ * sequence is zero-based because Conversation Store assigns sequence 0 to the first canonical
+ * message in a channel.
+ *
+ * [familyBinding] remains null for non-Family Conversation.
  */
 data class VexConversationMessage(
     val messageRef:
         VexConversationMessageRef,
     val threadRef:
         VexConversationThreadRef,
-    val spaceRef:
-        VexConversationSpaceRef?,
     val channelRef:
         VexConversationChannelRef,
-    val membershipGeneration: Long,
     val sequence: Long,
     val speakerRef:
         VexConversationParticipantRef,
@@ -108,13 +124,13 @@ data class VexConversationMessage(
     val witnessRefs:
         List<VexConversationParticipantRef>,
     val content: String,
+    val familyBinding:
+        VexFamilyConversationMessageBinding? =
+        null,
 ) {
     init {
-        require(membershipGeneration > 0L) {
-            "message membershipGeneration must be positive"
-        }
-        require(sequence > 0L) {
-            "message sequence must be positive"
+        require(sequence >= 0L) {
+            "message sequence must be non-negative"
         }
         require(content.isNotBlank()) {
             "message content must be non-blank"
@@ -152,52 +168,60 @@ data class VexConversationMessage(
 }
 
 /**
- * Conversation-owned projection of one stable thread across immutable channel segments.
+ * Family-bound currentness/history metadata on an otherwise-generic Conversation thread.
  *
- * Current VexLife Family source already has a canonical cross-generation reader:
+ * Current VexLife family-membership-runtime owns this segment/generation meaning through
+ * readFamilyThreadHistory(...).
+ */
+data class VexFamilyConversationThreadBinding(
+    val spaceRef:
+        VexConversationSpaceRef,
+    val currentMembershipGeneration:
+        Long,
+    val segmentRefs:
+        List<VexConversationChannelRef>,
+) {
+    init {
+        require(currentMembershipGeneration >= 0L) {
+            "Family current membership generation must be non-negative"
+        }
+        require(segmentRefs.isNotEmpty()) {
+            "Family Conversation thread must retain at least one channel segment"
+        }
+        require(
+            segmentRefs
+                .distinct()
+                .size ==
+                segmentRefs.size,
+        ) {
+            "Family Conversation segment refs must be unique"
+        }
+    }
+}
+
+/**
+ * Generic Conversation-owned projection of one current thread.
  *
- * readFamilyThreadHistory(...)
- * -> threadRef
- * -> currentChannelRef
- * -> membershipGeneration
- * -> segmentRefs[]
- * -> messages[]
+ * [familyBinding] is present only for a Family-bound Conversation. Generic/direct Conversation does
+ * not invent Family membership generation or Family channel-segment semantics.
  *
- * [segmentRefs] therefore carries real source meaning. It is ordered from older to newer channel
- * generations and ends at [currentChannelRef].
- *
- * Membership transition events are NOT stored here because the canonical Conversation history reader
- * currently returns channel segments plus messages, not synthetic "joined/left" message events. A
- * future Android presentation may derive a visible segment boundary from exact channel/generation
- * changes or consume an explicit lifecycle projection if one is admitted.
- *
- * [spaceRef] is present for a Family/space-scoped thread and remains null for Conversation shapes
- * that do not belong to such a space.
- *
- * knownParticipants is the identity directory needed to render retained history. It is NOT the
- * current audience. A participant who later leaves may remain known so historical authored messages
- * and witness sets remain attributable.
- *
- * Human-facing thread title/label is deliberately absent. Home reachability,
- * authenticated-device/session truth, Family role, participant display metadata and companion/model
- * availability are also absent because those have different owners.
+ * knownParticipants is the identity directory needed to attribute retained messages. It is NOT the
+ * same thing as current audience.
  */
 data class VexConversationThreadState(
     val threadRef:
         VexConversationThreadRef,
-    val spaceRef:
-        VexConversationSpaceRef?,
     val currentChannelRef:
         VexConversationChannelRef,
-    val currentMembershipGeneration: Long,
-    val segmentRefs:
-        List<VexConversationChannelRef>,
     val knownParticipants:
         List<VexConversationParticipant>,
     val currentAudienceRefs:
         List<VexConversationParticipantRef>,
     val messages:
         List<VexConversationMessage>,
+    val familyBinding:
+        VexFamilyConversationThreadBinding? =
+        null,
 ) {
     private val knownParticipantRefs =
         knownParticipants
@@ -206,26 +230,6 @@ data class VexConversationThreadState(
             }
 
     init {
-        require(currentMembershipGeneration > 0L) {
-            "current membership generation must be positive"
-        }
-        require(segmentRefs.isNotEmpty()) {
-            "conversation thread must retain at least one channel segment"
-        }
-        require(
-            segmentRefs
-                .distinct()
-                .size ==
-                segmentRefs.size,
-        ) {
-            "conversation thread segment refs must be unique"
-        }
-        require(
-            segmentRefs.last() ==
-                currentChannelRef,
-        ) {
-            "current channel must be the newest retained thread segment"
-        }
         require(
             knownParticipantRefs
                 .distinct()
@@ -261,30 +265,21 @@ data class VexConversationThreadState(
             "conversation message refs must be unique"
         }
 
+        familyBinding?.let { binding ->
+            require(
+                binding.segmentRefs.last() ==
+                    currentChannelRef,
+            ) {
+                "Family current channel must be the newest retained thread segment"
+            }
+        }
+
         messages.forEach { message ->
             require(
                 message.threadRef ==
                     threadRef,
             ) {
                 "message must belong to its thread"
-            }
-            require(
-                message.spaceRef ==
-                    spaceRef,
-            ) {
-                "message spaceRef must match its thread scope"
-            }
-            require(
-                message.channelRef in
-                    segmentRefs,
-            ) {
-                "message channel must belong to one retained thread segment"
-            }
-            require(
-                message.membershipGeneration <=
-                    currentMembershipGeneration,
-            ) {
-                "message generation cannot be newer than current thread generation"
             }
             require(
                 message.speakerRef in
@@ -298,6 +293,47 @@ data class VexConversationThreadState(
                 ),
             ) {
                 "historical witnesses must resolve through known participants"
+            }
+
+            when (val messageFamily = message.familyBinding) {
+                null -> {
+                    require(familyBinding == null) {
+                        "Family-bound thread messages require Family message binding"
+                    }
+                    require(
+                        message.channelRef ==
+                            currentChannelRef,
+                    ) {
+                        "generic non-Family thread currently projects only its current channel"
+                    }
+                }
+
+                else -> {
+                    val threadFamily =
+                        requireNotNull(
+                            familyBinding,
+                        ) {
+                            "Family message cannot appear in a non-Family thread"
+                        }
+                    require(
+                        messageFamily.spaceRef ==
+                            threadFamily.spaceRef,
+                    ) {
+                        "Family message spaceRef must match thread Family binding"
+                    }
+                    require(
+                        messageFamily.membershipGeneration <=
+                            threadFamily.currentMembershipGeneration,
+                    ) {
+                        "Family message generation cannot be newer than current Family generation"
+                    }
+                    require(
+                        message.channelRef in
+                            threadFamily.segmentRefs,
+                    ) {
+                        "Family message channel must belong to one retained Family segment"
+                    }
+                }
             }
         }
     }
@@ -313,11 +349,6 @@ data class VexConversationThreadState(
             }
 }
 
-/**
- * Android consumer state for currently known Conversation threads.
- *
- * Thread selection/presentation is intentionally not owned here.
- */
 data class VexConversationState(
     val threads:
         List<VexConversationThreadState> =

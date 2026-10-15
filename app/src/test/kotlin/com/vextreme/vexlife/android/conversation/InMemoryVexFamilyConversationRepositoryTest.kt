@@ -7,7 +7,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class InMemoryVexConversationRepositoryTest {
+class InMemoryVexFamilyConversationRepositoryTest {
     private val victorRef =
         VexConversationParticipantRef(
             "person.fixture.victor",
@@ -32,6 +32,10 @@ class InMemoryVexConversationRepositoryTest {
         VexConversationThreadRef(
             "thread.fixture.family-room",
         )
+    private val channelGenerationZero =
+        VexConversationChannelRef(
+            "channel.fixture.family-room.g0",
+        )
     private val channelGenerationTwo =
         VexConversationChannelRef(
             "channel.fixture.family-room.g2",
@@ -40,6 +44,57 @@ class InMemoryVexConversationRepositoryTest {
         VexConversationChannelRef(
             "channel.fixture.family-room.g3",
         )
+
+    @Test
+    fun firstCanonicalFamilyAppendUsesSequenceZero() =
+        runTest {
+            val repository =
+                repository(
+                    emptyGenerationZero(),
+                )
+            val thread =
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
+
+            assertTrue(
+                repository.send(
+                    requestFor(
+                        thread =
+                            thread,
+                        content =
+                            "First canonical Family message.",
+                        key =
+                            "first-message-zero",
+                    ),
+                ) is
+                    VexFamilyConversationRepositoryResult.Accepted,
+            )
+
+            val appended =
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
+                    .messages
+                    .single()
+
+            assertEquals(
+                0L,
+                appended.sequence,
+            )
+            assertEquals(
+                0L,
+                requireNotNull(
+                    appended.familyBinding,
+                ).membershipGeneration,
+            )
+        }
 
     @Test
     fun repositoryInstancesDoNotShareFixtureState() =
@@ -55,13 +110,12 @@ class InMemoryVexConversationRepositoryTest {
 
             val request =
                 requestFor(
-                    first.state.value
-                        .thread(
-                            threadRef,
-                        )
-                        ?: error(
-                            "fixture thread missing",
-                        ),
+                    requireNotNull(
+                        first.state.value
+                            .thread(
+                                threadRef,
+                            ),
+                    ),
                     content =
                         "Only the first repository should change.",
                     key =
@@ -70,7 +124,7 @@ class InMemoryVexConversationRepositoryTest {
 
             assertTrue(
                 first.send(request) is
-                    VexConversationRepositoryResult.Accepted,
+                    VexFamilyConversationRepositoryResult.Accepted,
             )
 
             assertNotEquals(
@@ -79,12 +133,14 @@ class InMemoryVexConversationRepositoryTest {
             )
             assertEquals(
                 1,
-                second.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?.messages
-                    ?.size,
+                requireNotNull(
+                    second.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
+                    .messages
+                    .size,
             )
         }
 
@@ -96,13 +152,12 @@ class InMemoryVexConversationRepositoryTest {
                     generationTwo(),
                 )
             val thread =
-                repository.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?: error(
-                        "fixture thread missing",
-                    )
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
 
             val result =
                 repository.send(
@@ -118,19 +173,18 @@ class InMemoryVexConversationRepositoryTest {
 
             assertTrue(
                 result is
-                    VexConversationRepositoryResult.Accepted,
+                    VexFamilyConversationRepositoryResult.Accepted,
             )
 
             val appended =
-                repository.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?.messages
-                    ?.last()
-                    ?: error(
-                        "appended message missing",
-                    )
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
+                    .messages
+                    .last()
 
             assertEquals(
                 victorRef,
@@ -160,13 +214,12 @@ class InMemoryVexConversationRepositoryTest {
                     generationTwo(),
                 )
             val draftThread =
-                repository.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?: error(
-                        "fixture thread missing",
-                    )
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
             val staleRequest =
                 requestFor(
                     thread =
@@ -185,8 +238,8 @@ class InMemoryVexConversationRepositoryTest {
                 repository.state.value
 
             assertEquals(
-                VexConversationRepositoryResult.Rejected(
-                    VexConversationRepositoryRejection
+                VexFamilyConversationRepositoryResult.Rejected(
+                    VexFamilyConversationRepositoryRejection
                         .CURRENTNESS_CHANGED,
                 ),
                 repository.send(
@@ -200,20 +253,23 @@ class InMemoryVexConversationRepositoryTest {
             )
 
             val currentThread =
-                repository.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?: error(
-                        "current fixture thread missing",
-                    )
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
+            val family =
+                requireNotNull(
+                    currentThread.familyBinding,
+                )
 
             assertEquals(
                 listOf(
                     channelGenerationTwo,
                     channelGenerationThree,
                 ),
-                currentThread.segmentRefs,
+                family.segmentRefs,
             )
 
             assertTrue(
@@ -227,19 +283,22 @@ class InMemoryVexConversationRepositoryTest {
                             "draft-after-membership-change",
                     ),
                 ) is
-                    VexConversationRepositoryResult.Accepted,
+                    VexFamilyConversationRepositoryResult.Accepted,
             )
 
             val appended =
-                repository.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?.messages
-                    ?.last()
-                    ?: error(
-                        "rebound message missing",
-                    )
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
+                    .messages
+                    .last()
+            val appendedFamily =
+                requireNotNull(
+                    appended.familyBinding,
+                )
 
             assertEquals(
                 channelGenerationThree,
@@ -247,7 +306,7 @@ class InMemoryVexConversationRepositoryTest {
             )
             assertEquals(
                 3L,
-                appended.membershipGeneration,
+                appendedFamily.membershipGeneration,
             )
             assertEquals(
                 listOf(
@@ -277,13 +336,12 @@ class InMemoryVexConversationRepositoryTest {
                     generationTwo(),
                 )
             val thread =
-                repository.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?: error(
-                        "fixture thread missing",
-                    )
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
             val request =
                 requestFor(
                     thread =
@@ -309,12 +367,14 @@ class InMemoryVexConversationRepositoryTest {
             )
             assertEquals(
                 2,
-                repository.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?.messages
-                    ?.size,
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
+                    .messages
+                    .size,
             )
         }
 
@@ -326,13 +386,12 @@ class InMemoryVexConversationRepositoryTest {
                     generationTwo(),
                 )
             val thread =
-                repository.state.value
-                    .thread(
-                        threadRef,
-                    )
-                    ?: error(
-                        "fixture thread missing",
-                    )
+                requireNotNull(
+                    repository.state.value
+                        .thread(
+                            threadRef,
+                        ),
+                )
 
             val first =
                 requestFor(
@@ -351,11 +410,11 @@ class InMemoryVexConversationRepositoryTest {
 
             assertTrue(
                 repository.send(first) is
-                    VexConversationRepositoryResult.Accepted,
+                    VexFamilyConversationRepositoryResult.Accepted,
             )
             assertEquals(
-                VexConversationRepositoryResult.Rejected(
-                    VexConversationRepositoryRejection
+                VexFamilyConversationRepositoryResult.Rejected(
+                    VexFamilyConversationRepositoryRejection
                         .IDEMPOTENCY_CONFLICT,
                 ),
                 repository.send(
@@ -382,6 +441,14 @@ class InMemoryVexConversationRepositoryTest {
         val historical =
             current.messages
                 .single()
+        val family =
+            requireNotNull(
+                current.familyBinding,
+            )
+        val historicalFamily =
+            requireNotNull(
+                historical.familyBinding,
+            )
 
         assertEquals(
             channelGenerationTwo,
@@ -389,7 +456,7 @@ class InMemoryVexConversationRepositoryTest {
         )
         assertEquals(
             2L,
-            historical.membershipGeneration,
+            historicalFamily.membershipGeneration,
         )
         assertEquals(
             mayaRef,
@@ -404,15 +471,15 @@ class InMemoryVexConversationRepositoryTest {
                 channelGenerationTwo,
                 channelGenerationThree,
             ),
-            current.segmentRefs,
+            family.segmentRefs,
         )
     }
 
     private fun repository(
         thread:
             VexConversationThreadState,
-    ): InMemoryVexConversationRepository =
-        InMemoryVexConversationRepository(
+    ): InMemoryVexFamilyConversationRepository =
+        InMemoryVexFamilyConversationRepository(
             initialState =
                 VexConversationState(
                     threads =
@@ -429,17 +496,21 @@ class InMemoryVexConversationRepositoryTest {
             VexConversationThreadState,
         content: String,
         key: String,
-    ): VexConversationSendRequest =
-        VexConversationSendRequest(
+    ): VexFamilyConversationSendRequest {
+        val family =
+            requireNotNull(
+                thread.familyBinding,
+            )
+
+        return VexFamilyConversationSendRequest(
             threadRef =
                 thread.threadRef,
             spaceRef =
-                thread.spaceRef,
+                family.spaceRef,
             expectedChannelRef =
                 thread.currentChannelRef,
             expectedMembershipGeneration =
-                thread
-                    .currentMembershipGeneration,
+                family.currentMembershipGeneration,
             idempotencyKey =
                 VexConversationIdempotencyKey(
                     key,
@@ -447,6 +518,7 @@ class InMemoryVexConversationRepositoryTest {
             content =
                 content,
         )
+    }
 
     private fun knownParticipants():
         List<VexConversationParticipant> =
@@ -477,21 +549,43 @@ class InMemoryVexConversationRepositoryTest {
             ),
         )
 
+    private fun emptyGenerationZero():
+        VexConversationThreadState =
+        VexConversationThreadState(
+            threadRef =
+                threadRef,
+            currentChannelRef =
+                channelGenerationZero,
+            knownParticipants =
+                knownParticipants(),
+            currentAudienceRefs =
+                listOf(
+                    victorRef,
+                    mayaRef,
+                    vexRef,
+                ),
+            messages =
+                emptyList(),
+            familyBinding =
+                VexFamilyConversationThreadBinding(
+                    spaceRef =
+                        spaceRef,
+                    currentMembershipGeneration =
+                        0L,
+                    segmentRefs =
+                        listOf(
+                            channelGenerationZero,
+                        ),
+                ),
+        )
+
     private fun generationTwo():
         VexConversationThreadState =
         VexConversationThreadState(
             threadRef =
                 threadRef,
-            spaceRef =
-                spaceRef,
             currentChannelRef =
                 channelGenerationTwo,
-            currentMembershipGeneration =
-                2L,
-            segmentRefs =
-                listOf(
-                    channelGenerationTwo,
-                ),
             knownParticipants =
                 knownParticipants(),
             currentAudienceRefs =
@@ -505,18 +599,14 @@ class InMemoryVexConversationRepositoryTest {
                     VexConversationMessage(
                         messageRef =
                             VexConversationMessageRef(
-                                "message.fixture.family-room.001",
+                                "message.fixture.family-room.000",
                             ),
                         threadRef =
                             threadRef,
-                        spaceRef =
-                            spaceRef,
                         channelRef =
                             channelGenerationTwo,
-                        membershipGeneration =
-                            2L,
                         sequence =
-                            1L,
+                            0L,
                         speakerRef =
                             mayaRef,
                         recipientRefs =
@@ -531,7 +621,25 @@ class InMemoryVexConversationRepositoryTest {
                             ),
                         content =
                             "Historical message authored before Maya later leaves.",
+                        familyBinding =
+                            VexFamilyConversationMessageBinding(
+                                spaceRef =
+                                    spaceRef,
+                                membershipGeneration =
+                                    2L,
+                            ),
                     ),
+                ),
+            familyBinding =
+                VexFamilyConversationThreadBinding(
+                    spaceRef =
+                        spaceRef,
+                    currentMembershipGeneration =
+                        2L,
+                    segmentRefs =
+                        listOf(
+                            channelGenerationTwo,
+                        ),
                 ),
         )
 
@@ -540,17 +648,8 @@ class InMemoryVexConversationRepositoryTest {
         VexConversationThreadState(
             threadRef =
                 threadRef,
-            spaceRef =
-                spaceRef,
             currentChannelRef =
                 channelGenerationThree,
-            currentMembershipGeneration =
-                3L,
-            segmentRefs =
-                listOf(
-                    channelGenerationTwo,
-                    channelGenerationThree,
-                ),
             knownParticipants =
                 knownParticipants(),
             currentAudienceRefs =
@@ -562,6 +661,18 @@ class InMemoryVexConversationRepositoryTest {
             messages =
                 generationTwo()
                     .messages,
+            familyBinding =
+                VexFamilyConversationThreadBinding(
+                    spaceRef =
+                        spaceRef,
+                    currentMembershipGeneration =
+                        3L,
+                    segmentRefs =
+                        listOf(
+                            channelGenerationTwo,
+                            channelGenerationThree,
+                        ),
+                ),
         )
 }
 

@@ -19,54 +19,41 @@ value class VexConversationIdempotencyKey(
 }
 
 /**
- * Android consumer boundary for portable Conversation state and admitted message requests.
+ * Generic Android read boundary for portable Conversation state.
  *
- * This repository does NOT become the portable Conversation semantic owner. A future Home-backed
- * implementation must consume the accepted Home Bridge / Family / service.conversation contracts and
- * project only the result Android needs.
- *
- * The request deliberately cannot author:
- *
- * - speakerRef / authenticated principal;
- * - recipientRefs for the current Family path;
- * - witnessRefs / current audience authority;
- * - Home/session capability evidence;
- * - model/companion availability.
- *
- * The provider derives those truths from the current channel/authority contract.
+ * This does not imply that every Conversation provider shares one write/currentness contract.
  */
 interface VexConversationRepository {
     val state:
         StateFlow<VexConversationState>
-
-    suspend fun send(
-        request:
-            VexConversationSendRequest,
-    ): VexConversationRepositoryResult
 }
 
 /**
- * Client request bound to the Conversation truth the human saw while composing.
+ * Family-specific writable Conversation boundary aligned to VexLife VF-02C.
  *
- * The shape intentionally aligns with the current VexLife VF-02C Family Conversation bridge:
- *
- * spaceRef
- * channelRef
- * content
- * expectedMembershipGeneration
- * idempotencyKey
- *
- * [threadRef] remains an Android-local routing/current-thread coordinate; a Home-backed adapter does
- * not need to send it to an HTTP owner that already resolves thread identity from the trusted channel.
- *
- * The caller does not supply speaker, recipients, or witnesses. That prevents Android from becoming
- * an authority source merely because it can display participant identities.
+ * Family membership generation and provider-derived Family recipient semantics live here rather than
+ * being imposed on all generic Conversation shapes.
  */
-data class VexConversationSendRequest(
+interface VexFamilyConversationRepository :
+    VexConversationRepository {
+    suspend fun send(
+        request:
+            VexFamilyConversationSendRequest,
+    ): VexFamilyConversationRepositoryResult
+}
+
+/**
+ * Family caller intent aligned to VF-02C.
+ *
+ * The caller supplies routing/content/currentness/idempotency only. It does not author trusted
+ * speaker, Family recipients, witness audience, membership/role, Home/session authority or model
+ * truth.
+ */
+data class VexFamilyConversationSendRequest(
     val threadRef:
         VexConversationThreadRef,
     val spaceRef:
-        VexConversationSpaceRef?,
+        VexConversationSpaceRef,
     val expectedChannelRef:
         VexConversationChannelRef,
     val expectedMembershipGeneration:
@@ -76,39 +63,34 @@ data class VexConversationSendRequest(
     val content: String,
 ) {
     init {
-        require(expectedMembershipGeneration > 0L) {
-            "expected membership generation must be positive"
+        require(expectedMembershipGeneration >= 0L) {
+            "expected Family membership generation must be non-negative"
         }
         require(content.isNotBlank()) {
-            "Conversation Send content must be non-blank"
+            "Family Conversation Send content must be non-blank"
         }
     }
 }
 
-enum class VexConversationRepositoryRejection {
+enum class VexFamilyConversationRepositoryRejection {
     THREAD_UNKNOWN,
+    THREAD_NOT_FAMILY_BOUND,
     CURRENTNESS_CHANGED,
     SPEAKER_NOT_CURRENT,
     ADDRESSING_INVALID,
     IDEMPOTENCY_CONFLICT,
 }
 
-/**
- * Small consumer result until a real Home-backed provider teaches richer delivery/receipt semantics.
- *
- * Accepted means the provider admitted/appended one Conversation message. It does not mean remote
- * mirrors delivered it, a human acknowledged it, or a companion/model attended to it.
- */
-sealed interface VexConversationRepositoryResult {
+sealed interface VexFamilyConversationRepositoryResult {
     data class Accepted(
         val messageRef:
             VexConversationMessageRef,
-    ) : VexConversationRepositoryResult
+    ) : VexFamilyConversationRepositoryResult
 
     data class Rejected(
         val reason:
-            VexConversationRepositoryRejection,
-    ) : VexConversationRepositoryResult
+            VexFamilyConversationRepositoryRejection,
+    ) : VexFamilyConversationRepositoryResult
 }
 
 // [VXG RealForever]
