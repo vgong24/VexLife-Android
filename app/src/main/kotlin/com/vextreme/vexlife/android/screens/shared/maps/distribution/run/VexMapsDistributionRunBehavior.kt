@@ -55,6 +55,13 @@ internal fun vexMapsDistributionRunBehavior():
                 effect =
                     VexMapsDistributionRunEffect.MarkArrived,
             ).admit<VexMapsDistributionRunState.AtStop>()
+
+            on(
+                act =
+                    VexMapsDistributionRunAct.ResetRun,
+                effect =
+                    VexMapsDistributionRunEffect.ClearRun,
+            ).admit<VexMapsDistributionRunState.Empty>()
         }
 
         state<VexMapsDistributionRunState.AtStop> {
@@ -79,6 +86,13 @@ internal fun vexMapsDistributionRunBehavior():
             ) { current ->
                 current.isLastStop
             }.admit<VexMapsDistributionRunState.Completed>()
+
+            on(
+                act =
+                    VexMapsDistributionRunAct.ResetRun,
+                effect =
+                    VexMapsDistributionRunEffect.ClearRun,
+            ).admit<VexMapsDistributionRunState.Empty>()
         }
 
         state<VexMapsDistributionRunState.Completed> {
