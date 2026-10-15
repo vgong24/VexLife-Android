@@ -38,6 +38,7 @@ import com.vextreme.vexlife.android.elements.VexAnchoredOverlay
 import com.vextreme.vexlife.android.elements.VexStableLazyColumn
 import com.vextreme.vexlife.android.elements.VexOverlayPlacement
 import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.conditional
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
@@ -297,25 +298,23 @@ private fun EventRow(
 ) {
     Box(
         modifier =
-            Modifier
+            VexModifier
                 .fillMaxWidth()
-                .then(
-                    if (isAttentionCandidate) {
-                        Modifier.border(
-                            width = 2.dp,
-                            color =
-                                MaterialTheme.colorScheme.primary,
-                            shape =
-                                MaterialTheme.shapes.medium,
-                        )
-                    } else {
-                        Modifier
-                    },
-                )
+                .conditional(
+                    isAttentionCandidate,
+                ) {
+                    border(
+                        width = 2.dp,
+                        color =
+                            MaterialTheme.colorScheme.primary,
+                        shape =
+                            MaterialTheme.shapes.medium,
+                    )
+                }
                 .vex(
-EventsPresentationRefs.row(
-                            event.eventRef,
-),
+                    EventsPresentationRefs.row(
+                        event.eventRef,
+                    ),
                 ),
     ) {
         Card(
@@ -601,11 +600,11 @@ private fun CompactAttentionButton(
                     MaterialTheme.colorScheme.inversePrimary,
             ),
         modifier =
-            Modifier.vex(
-EventsPresentationRefs.attentionAction(
-                        eventRef,
-                        actionRef,
-),
+            VexModifier.vex(
+                EventsPresentationRefs.attentionAction(
+                    eventRef,
+                    actionRef,
+                ),
             ),
     ) {
         Text(
