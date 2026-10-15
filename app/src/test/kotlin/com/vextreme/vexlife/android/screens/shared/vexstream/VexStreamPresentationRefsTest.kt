@@ -42,6 +42,29 @@ class VexStreamPresentationRefsTest {
 
         assertNotEquals(left, right)
     }
+    @Test
+    fun trackActionKeepsStaticActionOwnerAndAddsExactRuntimeTrack() {
+        val trackRef =
+            VexStreamTrackRef(
+                "journey.track.one",
+            )
+
+        val ref =
+            VexStreamPresentationRefs.trackAction(
+                trackRef = trackRef,
+                action = VexStreamMusicScreen.PlayTrack,
+            )
+
+        assertTrue(
+            ref.startsWith(
+                VexStreamMusicScreen.PlayTrack.elementId + ".dynamic.",
+            ),
+        )
+        assertTrue(
+            ref.endsWith(trackRef.value),
+        )
+    }
+
 }
 
 // [VXG RealForever]
