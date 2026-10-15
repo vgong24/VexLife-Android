@@ -524,6 +524,8 @@ private fun VexStreamSearchSheet(
                 ) { track ->
                     VexStreamTrackCard(
                         runtime = runtime,
+                        presentationScope =
+                            VexStreamTrackPresentationScope.Search,
                         state = track,
                         contextTracks = tracks,
                         controller = controller,
@@ -602,6 +604,8 @@ private fun VexStreamSongsPane(
             ) { track ->
                 VexStreamTrackCard(
                     runtime = runtime,
+                    presentationScope =
+                        VexStreamTrackPresentationScope.Songs,
                     state = track,
                     contextTracks = sorted,
                     controller = controller,
@@ -677,6 +681,8 @@ private fun VexStreamDownloadsPane(
             ) { track ->
                 VexStreamTrackCard(
                     runtime = runtime,
+                    presentationScope =
+                        VexStreamTrackPresentationScope.Downloads,
                     state = track,
                     contextTracks = downloaded,
                     controller = controller,
