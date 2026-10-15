@@ -52,7 +52,7 @@ fun <Item> VexStableLazyColumn(
     contentType: (Item) -> Any? = { null },
     requestedVisibleItemRef: String? = null,
     userScrollEnabled: Boolean = true,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     verticalArrangement: Arrangement.Vertical =
         Arrangement.spacedBy(12.dp),
