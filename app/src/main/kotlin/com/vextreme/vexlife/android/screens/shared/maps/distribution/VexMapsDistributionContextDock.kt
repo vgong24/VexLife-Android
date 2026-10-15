@@ -12,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
@@ -67,9 +68,7 @@ internal fun vexMapsDistributionContextDockPage(
                 Modifier.fillMaxWidth(),
             verticalArrangement =
                 Arrangement.spacedBy(
-                    androidx.compose.ui.unit.dp(
-                        6f,
-                    ),
+                    6.dp,
                 ),
         ) {
             Row(
@@ -153,9 +152,7 @@ internal fun vexMapsDistributionContextDockPage(
             Row(
                 horizontalArrangement =
                     Arrangement.spacedBy(
-                        androidx.compose.ui.unit.dp(
-                            8f,
-                        ),
+                        8.dp,
                     ),
             ) {
                 OutlinedButton(
@@ -270,9 +267,7 @@ internal fun vexMapsDistributionContextDockPage(
             Row(
                 horizontalArrangement =
                     Arrangement.spacedBy(
-                        androidx.compose.ui.unit.dp(
-                            8f,
-                        ),
+                        8.dp,
                     ),
             ) {
                 if (
@@ -293,29 +288,6 @@ internal fun vexMapsDistributionContextDockPage(
                             stringResource(
                                 R.string
                                     .vexmaps_distribution_prepare,
-                            ),
-                        )
-                    }
-                }
-
-                if (
-                    runProjection[
-                        VexMapsDistributionRunControl.Start
-                    ].isAvailable
-                ) {
-                    Button(
-                        modifier =
-                            Modifier.vexElement(
-                                VexMapsScreen
-                                    .StartDistributionRun,
-                            ),
-                        onClick =
-                            onStart,
-                    ) {
-                        Text(
-                            stringResource(
-                                R.string
-                                    .vexmaps_distribution_start,
                             ),
                         )
                     }

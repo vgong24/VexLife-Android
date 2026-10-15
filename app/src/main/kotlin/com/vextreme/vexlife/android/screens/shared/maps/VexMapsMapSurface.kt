@@ -40,12 +40,20 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.maps.VexMapsRepository
 import com.vextreme.vexlife.android.data.maps.VexMapsStoredLocation
+import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
+import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionExperience
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.vexMapsDistributionContextDockPage
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
 import com.vextreme.vexlife.android.screens.shared.vexstream.rememberVexStreamContextDockPage
 import java.time.Instant
 import kotlinx.coroutines.launch
@@ -76,11 +84,40 @@ import org.maplibre.android.maps.MapView
 internal fun VexMapsMapSurface(
     runtime: VexRuntime,
     repository: VexMapsRepository,
+    distributionRepository:
+        VexMapsDistributionRepository,
     darkTheme: Boolean,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
+    val distributionExperience =
+        remember {
+            VexMapsDistributionExperience()
+        }
+    var distributionDraft by
+        remember {
+            mutableStateOf(
+                VexMapsDistributionDraft(),
+            )
+        }
+
+    LaunchedEffect(
+        distributionRepository,
+    ) {
+        runCatching {
+            distributionRepository
+                .loadDraft()
+        }.onSuccess { restored ->
+            distributionDraft =
+                restored
+            distributionExperience
+                .observeDraftStopCount(
+                    restored.stops.size,
+                )
+        }
+    }
+
     val navigationState by
         VexMapsNavigationProcess
             .session
@@ -1063,9 +1100,108 @@ internal fun VexMapsMapSurface(
         rememberVexStreamContextDockPage(
             runtime = runtime,
         )
+    val distributionDockPage =
+        vexMapsDistributionContextDockPage(
+            experience =
+                distributionExperience,
+            draft =
+                distributionDraft,
+            onToggleMode = {
+                runtime.activate(
+                    VexMapsScreen
+                        .ToggleDistributionMode,
+                )
+                distributionExperience
+                    .activateMode(
+                        VexMapsDistributionModeControl
+                            .ToggleDistribution,
+                    )
+            },
+            onAddStop = {
+                runtime.activate(
+                    VexMapsScreen
+                        .AddDistributionStop,
+                )
+                runtime.presentation.open(
+                    VexMapsScreen
+                        .OfflinePanel,
+                )
+            },
+            onToggleReturnToStart = {
+                runtime.activate(
+                    VexMapsScreen
+                        .ToggleDistributionReturnToStart,
+                )
+                scope.launch {
+                    runCatching {
+                        distributionRepository
+                            .setReturnToStart(
+                                !distributionDraft
+                                    .returnToStart,
+                            )
+                    }.onSuccess { updated ->
+                        distributionDraft =
+                            updated
+                    }
+                }
+            },
+            onPrepare = {
+                runtime.activate(
+                    VexMapsScreen
+                        .PrepareDistributionRun,
+                )
+                distributionExperience
+                    .activateRun(
+                        VexMapsDistributionRunControl
+                            .Prepare,
+                    )
+            },
+            onStart = {
+                // Start remains intentionally unwired until Distribution x Navigation
+                // convergence proves that a route is prepared for the current draft revision.
+            },
+            onCompleteStop = {
+                runtime.activate(
+                    VexMapsScreen
+                        .CompleteDistributionStop,
+                )
+                distributionExperience
+                    .activateRun(
+                        VexMapsDistributionRunControl
+                            .CompleteStop,
+                    )
+            },
+            onReset = {
+                runtime.activate(
+                    VexMapsScreen
+                        .ResetDistributionRun,
+                )
+                scope.launch {
+                    runCatching {
+                        distributionRepository
+                            .clearDraft()
+                    }.onSuccess { cleared ->
+                        distributionDraft =
+                            cleared
+                        distributionExperience
+                            .activateRun(
+                                VexMapsDistributionRunControl
+                                    .Reset,
+                            )
+                        distributionExperience
+                            .observeDraftStopCount(
+                                0,
+                            )
+                    }
+                }
+            },
+        )
     val contextDockPages =
         buildList {
             vexStreamDockPage?.let(::add)
+            add(
+                distributionDockPage,
+            )
             VexMapsOnlineStyle
                 .entries
                 .map { style ->
@@ -1313,7 +1449,55 @@ internal fun VexMapsMapSurface(
                     }
                 },
                 onPlaceSelected = { place ->
-                    when (mapSelectionTarget) {
+                    if (
+                        distributionExperience
+                            .modeProjection
+                            .state is
+                            VexMapsDistributionModeState.Distribution
+                    ) {
+                        runtime.recordDynamicInteraction(
+                            subjectRef =
+                                "presentation.vexmaps.place-search.result",
+                            action =
+                                "AddedToDistribution",
+                        )
+                        scope.launch {
+                            runCatching {
+                                distributionRepository
+                                    .addStop(
+                                        placeRef =
+                                            place.placeRef,
+                                        name =
+                                            place.name,
+                                        subtitle =
+                                            place.subtitle,
+                                        latitude =
+                                            place.coordinate
+                                                .latitude,
+                                        longitude =
+                                            place.coordinate
+                                                .longitude,
+                                    )
+                            }.onSuccess { updated ->
+                                distributionDraft =
+                                    updated
+                                distributionExperience
+                                    .observeDraftStopCount(
+                                        updated.stops
+                                            .size,
+                                    )
+                                preferredDockPageRef =
+                                    VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
+                                        .value
+                                placeSearchState =
+                                    VexMapsPlaceSearchState
+                                        .Idle
+                                mapAdapter.focusOn(
+                                    place.coordinate,
+                                )
+                            }
+                        }
+                    } else when (mapSelectionTarget) {
                         VexMapsMapSelectionTarget.ORIGIN -> {
                             runtime.recordDynamicInteraction(
                                 subjectRef =
