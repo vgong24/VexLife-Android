@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.behavior.example.playback
 
+import com.vextreme.vexlife.android.behavior.VexBehaviorControlMeaning
 import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -76,16 +77,24 @@ class PlaybackControlProjectionTest {
                 PlaybackControl.PlayPause
             ].act,
         )
+        assertEquals(
+            VexBehaviorControlMeaning.Available(
+                PlaybackAct.Play,
+            ),
+            projection[
+                PlaybackControl.PlayPause
+            ].meaning,
+        )
         assertNull(
             projection[
                 PlaybackControl.FastForward
             ].act,
         )
         assertEquals(
-            false,
+            VexBehaviorControlMeaning.Unavailable,
             projection[
                 PlaybackControl.FastForward
-            ].available,
+            ].meaning,
         )
     }
 

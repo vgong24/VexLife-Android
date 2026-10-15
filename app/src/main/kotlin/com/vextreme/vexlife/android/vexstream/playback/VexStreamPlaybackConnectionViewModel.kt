@@ -14,6 +14,12 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 
+/**
+ * Android configuration-lifetime owner for the concrete Playback Connection.
+ *
+ * This ViewModel is not a generic architecture Host. It exists because Android configuration
+ * recreation needs a real lifetime owner for this Connection.
+ */
 internal class VexStreamPlaybackConnectionViewModel(
     application: Application,
 ) : AndroidViewModel(application) {

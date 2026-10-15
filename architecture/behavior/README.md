@@ -29,17 +29,26 @@ EFFECT
     runtime transformation that should be attempted
 ~~~
 
-Causal reading:
+Core equations:
 
 ~~~text
-observed State
--> Control resolves Act
--> Act selects Effect
--> Effect is admitted for dispatch
--> immediate admitted State
--> provider observation
--> next truthful State
+Control + CURRENT State
+-> Act
+
+CURRENT State + Act
+-> Effect + admitted State
+
+CURRENT State + Controls
+-> Projection
+
+Projection
+-> optional Presentation / Display State
+-> UI
 ~~~
+
+Behavior is the semantic rulebook for lawful relationships among State / Control / Act / Effect.
+A concrete Connection is the reality boundary that observes provider truth, realizes Effects, and
+reconciles the resulting State.
 
 > Act asks. Effect attempts the travel. State tells us what reality answered. Control decides which
 > Act one affordance represents from current truth.
@@ -61,6 +70,10 @@ observed State
    serialization.
 10. **Convergence stays above complete local truths.** Do not cross-multiply independent domains
     into one State family.
+11. **Control meaning is semantic-first.** Prefer `Available(Act)` / `Unavailable`; Boolean
+    availability is derived convenience.
+12. **Every relationship terminates explicitly.** Every `on(...)` must end in `.stay()` or
+    `.admit<State>()`.
 
 ## Durable package pattern
 

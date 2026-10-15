@@ -39,9 +39,13 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * See [vexStreamPlaybackBehavior].
  *
- * Read it as:
+ * Read the full equations as:
  *
- * State + Act -> Effect -> admitted State kind.
+ * Control + CURRENT State -> Act
+ *
+ * CURRENT State + Act -> Effect + admitted State
+ *
+ * CURRENT State + Controls -> Projection
  *
  * ## Who talks to Media3?
  *
@@ -58,7 +62,8 @@ package com.vextreme.vexlife.android.vexstream.playback
  * See [VexStreamPlaybackConnectionViewModel].
  *
  * The ViewModel owns Android configuration lifetime only. MediaSession/Player remain playback truth
- * owners.
+ * owners. There is no generic Host abstraction to learn: this concrete Connection simply uses the
+ * rightful Android lifetime owner it needs.
  *
  * ## How is provider latency reconciled?
  *
@@ -71,8 +76,9 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * See [VexStreamPlaybackControlPresentation] and [present].
  *
- * Presentation maps projected semantic meaning into icon/enabled treatment. It is not another State
- * owner.
+ * Presentation maps projected semantic meaning into icon/enabled treatment. Projected Control
+ * meaning is explicit as Available(Act) / Unavailable; Boolean enabled state is derived convenience.
+ * Presentation is not another State owner.
  *
  * ## What types should normal callers use?
  *

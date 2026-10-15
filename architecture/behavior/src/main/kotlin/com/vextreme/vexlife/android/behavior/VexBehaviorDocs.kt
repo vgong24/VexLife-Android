@@ -19,9 +19,19 @@ package com.vextreme.vexlife.android.behavior
  * - [vexBehaviorBlueprint] — constructs one immutable family-bound Behavior graph.
  * - [VexBehaviorControlBlueprint] — binds one finite Control vocabulary to an exact Behavior.
  *
- * ## Core reading
+ * ## Core equations
  *
- * State -> Control -> Act -> Effect -> admitted State -> provider observation -> State.
+ * Control + CURRENT State -> Act
+ *
+ * CURRENT State + Act -> Effect + admitted State
+ *
+ * CURRENT State + Controls -> Projection
+ *
+ * Projection -> optional Presentation / Display State -> UI
+ *
+ * Behavior is the provider/UI/lifecycle-independent semantic rulebook for these lawful
+ * relationships. A concrete Connection is the adapter/reality boundary that observes and realizes
+ * provider/runtime truth.
  *
  * Long-form family/package construction law:
  * architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md

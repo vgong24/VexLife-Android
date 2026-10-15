@@ -17,6 +17,58 @@ VexStreamPlaybackDocs
 The architecture is ready for human architecture review when a reviewer can understand the four
 pressure shapes below without reconstructing hidden framework ownership.
 
+## Refinement laws
+
+Use the full equations when explaining the architecture:
+
+~~~text
+Control + CURRENT State
+-> Act
+
+CURRENT State + Act
+-> Effect + admitted State
+
+CURRENT State + Controls
+-> Projection
+
+Projection
+-> optional Presentation / Display State
+-> UI
+~~~
+
+Behavior is the semantic rulebook. A concrete Connection is the reality boundary / adapter.
+
+Every relationship must explicitly terminate in:
+
+~~~text
+.stay()
+.admit<NextState>()
+~~~
+
+Control projection is semantic-first:
+
+~~~text
+Available(Act)
+Unavailable
+~~~
+
+with Boolean availability derived only as convenience.
+
+Cross-family reactions must not bypass the target family:
+
+~~~text
+A truth changes
+-> convergence evaluates
+-> bounded Control toward B
+-> B Port re-resolves against CURRENT B State
+-> B Behavior selects B Effect
+~~~
+
+No cross-family Effect bypass.
+
+Sequential semantic causality does not require sequential provider I/O. Provider/fetch/cache work may
+prepare concurrently; semantic truth-changing decisions remain small, current, and owner-bound.
+
 ## 1. Finite behavior — Playback
 
 ~~~text
@@ -216,7 +268,10 @@ A reviewer should be able to answer:
 5. Does VexPort protect activation currentness without claiming async-result currentness?
 6. Do concrete Connections retain their provider/threading/request-gate responsibilities?
 7. Are Family-heavy generics mostly hidden from ordinary UI code?
-8. Is convergence kept above complete local projections rather than cross-multiplied into State?
+8. Does every relationship explicitly terminate in stay() or admit<State>()?
+9. Is Control meaning preserved as Available(Act) / Unavailable before Boolean convenience?
+10. Is convergence kept above complete local projections rather than cross-multiplied into State?
+11. If convergence wants another family to change, does it carry that family's Control rather than bypassing directly to Effect?
 
 If those answers are clear from source, the architecture has reached the intended perceptible review
 threshold even before every future consumer is implemented.

@@ -242,6 +242,33 @@ class VexBehaviorBlueprintTest {
         expected =
             IllegalArgumentException::class,
     )
+    fun relationshipWithoutStayOrAdmitIsRejected() {
+        vexBehaviorBlueprint<
+            QueueFamily,
+            QueueState,
+            QueueAct,
+            QueueEffect
+        >(
+            behaviorRef =
+                "example.queue.incomplete",
+        ) {
+            state<
+                QueueState.Positioned
+            > {
+                on(
+                    act =
+                        QueueAct.Next,
+                    effect =
+                        QueueEffect.Advance,
+                )
+            }
+        }
+    }
+
+    @Test(
+        expected =
+            IllegalArgumentException::class,
+    )
     fun finiteControlVocabularyMustBeCompletelyLinked() {
         queueBlueprint()
             .controls<QueueControl> {
