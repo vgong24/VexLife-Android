@@ -52,6 +52,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ElementActionHandler
@@ -543,8 +544,14 @@ private fun VexStreamLibraryFabActions(
             tracks.isNotEmpty()
     val handler =
         ElementActionHandler { element ->
-            runtime.activate(
-                element,
+            runtime.activateDynamic(
+                element = element,
+                subjectRef =
+                    VexStreamPresentationRefs.trackAction(
+                        trackRef =
+                            state.track.trackRef,
+                        action = element,
+                    ),
             )
             when (element) {
                 VexStreamMusicScreen.PlayAll ->
@@ -1507,7 +1514,9 @@ private fun VexStreamTrackCard(
         }
     val menuOpenHandler =
         ElementActionHandler { element ->
-            runtime.activate(element)
+            handler.activate(
+                element,
+            )
             menuExpanded = true
         }
 
@@ -1566,8 +1575,15 @@ private fun VexStreamTrackCard(
                 horizontal = 8.dp,
                 vertical = 2.dp,
             )
-            .vexElement(
-                VexStreamMusicScreen.PlayTrack,
+            .vex(
+                VexModifier.semantic(
+                    VexStreamPresentationRefs.trackAction(
+                        trackRef =
+                            state.track.trackRef,
+                        action =
+                            VexStreamMusicScreen.PlayTrack,
+                    ),
+                ),
             )
             .clickable(
                 enabled = controller != null,
@@ -1661,6 +1677,15 @@ private fun VexStreamTrackCard(
                 VexIconButton(
                     element = VexStreamMusicScreen.TrackMenu,
                     handler = menuOpenHandler,
+                    vexModifier =
+                        VexModifier.semantic(
+                            VexStreamPresentationRefs.trackAction(
+                                trackRef =
+                                    state.track.trackRef,
+                                action =
+                                    VexStreamMusicScreen.TrackMenu,
+                            ),
+                        ),
                 )
 
                 DropdownMenu(
@@ -1670,16 +1695,19 @@ private fun VexStreamTrackCard(
                     },
                 ) {
                     VexStreamTrackMenuItem(
+                        trackRef = state.track.trackRef,
                         element = VexStreamMusicScreen.PlayTrack,
                         handler = menuHandler,
                         enabled = controller != null,
                     )
                     VexStreamTrackMenuItem(
+                        trackRef = state.track.trackRef,
                         element = VexStreamMusicScreen.PlayTrackNext,
                         handler = menuHandler,
                         enabled = controller != null,
                     )
                     VexStreamTrackMenuItem(
+                        trackRef = state.track.trackRef,
                         element = VexStreamMusicScreen.AddTrackToQueue,
                         handler = menuHandler,
                         enabled = controller != null,
@@ -1689,6 +1717,7 @@ private fun VexStreamTrackCard(
                         when (state.localCopy) {
                             is VexStreamLocalCopyState.Downloaded ->
                                 VexStreamTrackMenuItem(
+                                    trackRef = state.track.trackRef,
                                     element =
                                         VexStreamMusicScreen
                                             .RemoveTrackDownload,
@@ -1701,6 +1730,7 @@ private fun VexStreamTrackCard(
                             else -> {
                                 if (state.hubAvailable) {
                                     VexStreamTrackMenuItem(
+                                        trackRef = state.track.trackRef,
                                         element =
                                             VexStreamMusicScreen
                                                 .DownloadTrack,
@@ -1713,6 +1743,7 @@ private fun VexStreamTrackCard(
 
                     if (state.track.artist.isNotBlank()) {
                         VexStreamTrackMenuItem(
+                            trackRef = state.track.trackRef,
                             element =
                                 VexStreamMusicScreen
                                     .VisitTrackArtist,
@@ -1727,12 +1758,21 @@ private fun VexStreamTrackCard(
 
 @Composable
 private fun VexStreamTrackMenuItem(
+    trackRef: VexStreamTrackRef,
     element: ButtonElement,
     handler: ElementActionHandler,
     enabled: Boolean = true,
 ) {
     DropdownMenuItem(
-        modifier = Modifier.vexElement(element),
+        modifier =
+            Modifier.vex(
+                VexModifier.semantic(
+                    VexStreamPresentationRefs.trackAction(
+                        trackRef = trackRef,
+                        action = element,
+                    ),
+                ),
+            ),
         text = {
             Text(
                 stringResource(
