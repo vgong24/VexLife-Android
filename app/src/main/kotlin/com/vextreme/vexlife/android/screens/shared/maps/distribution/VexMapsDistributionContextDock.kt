@@ -408,7 +408,8 @@ internal fun vexMapsDistributionContextDockPage(
                             stringResource(
                                 R.string
                                     .vexmaps_distribution_retry,
-                        ))
+                            ),
+                        )
                     }
                 }
 

@@ -196,8 +196,6 @@ internal class VexMapsDistributionRunConnection(
                             },
                         source =
                             current.source,
-                        orderedStopRefs =
-                            current.orderedStopRefs,
                     )
                 }
 
@@ -265,6 +263,8 @@ internal class VexMapsDistributionRunConnection(
                             current.planRef,
                         source =
                             current.source,
+                        orderedStopRefs =
+                            current.orderedStopRefs,
                     )
                 }
 

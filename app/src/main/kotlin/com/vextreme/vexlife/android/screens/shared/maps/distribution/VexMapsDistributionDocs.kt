@@ -1,29 +1,30 @@
 package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.context.VexMapsDistributionControlContextRelay
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.execution.VexMapsDistributionNavigationConvergenceRelay
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunConvergenceRelay
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationConvergenceRelay
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeDocs
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionOptimizer
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunDocs
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSession
 
 /**
- * Code-navigation root for VexMaps Distribution.
+ * Code-navigation root for the lived VexMaps Distribution feature.
  *
- * Independent Behavior Experiences remain locally complete:
+ * Read the feature by question:
  *
- * [VexMapsDistributionModeDocs] -- Regular Maps versus Distribution operating context.
- * [VexMapsDistributionRunDocs] -- finite run lifecycle over durable, payload-owned obligations.
+ * - [VexMapsDistributionModeDocs] owns whether Maps is operating as Regular or Distribution.
+ * - [VexMapsDistributionRunDocs] owns the finite human run grammar, including admitted preparation.
+ * - durable Draft/Stop repository source owns the obligations the human entered and their input order.
+ * - [VexMapsDistributionOptimizer] derives one Plan from one exact preparation snapshot.
+ * - [VexMapsDistributionModeRunConvergenceRelay] asks only whether Mode and Run are coherent.
+ * - [VexMapsDistributionNavigationConvergenceRelay] relates Run to one exact expected Navigation leg.
+ * - [VexMapsDistributionSession] owns the process-lifetime lived relationship: current Draft, Plan,
+ *   provider attempts, expected leg, failure/retry truth and bounded Control feedback.
+ * - [VexMapsDistributionExperience] is the UI-facing membrane over that session.
  *
- * [VexMapsDistributionControlContextRelay] fuses their complete projections into a higher-order
- * control context. [VexMapsDistributionNavigationConvergenceRelay] separately relates Run truth to
- * the existing Navigation session. Downward semantic feedback always returns through a target
- * Control rather than bypassing directly to a foreign Effect.
- *
- * Durable draft input order remains source truth. [VexMapsDistributionOptimizer] derives a
- * revision-bound provider-priced Plan without rewriting the Draft. The Plan then feeds one existing
- * Navigation leg at a time; an optional return-to-start is represented as Run truth and completes
- * only after an observed Navigation arrival.
+ * Lower owners remain independently complete. Convergence never executes a foreign Effect; any
+ * downward semantic change re-enters through the target family's Control. Navigation remains the
+ * owner of one actual journey/leg.
  */
-internal object VexMapsDistributionDocs
-
 // [VXG RealForever]
+internal object VexMapsDistributionDocs
