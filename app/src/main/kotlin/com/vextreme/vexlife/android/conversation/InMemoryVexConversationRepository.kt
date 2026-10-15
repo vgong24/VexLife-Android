@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * - it performs no Home, network, filesystem, model, federation, or Family-membership effect.
  *
  * [admittedSpeakerRef] stands in for a provider-authenticated current principal. The caller cannot
- * override speaker or witness identity through [VexConversationSendRequest].
+ * override speaker, recipients, or witness identity through [VexConversationSendRequest].
  */
 class InMemoryVexConversationRepository(
     initialState:
@@ -24,10 +24,23 @@ class InMemoryVexConversationRepository(
     private val admittedSpeakerRef:
         VexConversationParticipantRef,
 ) : VexConversationRepository {
+    private data class IdempotentAppend(
+        val request:
+            VexConversationSendRequest,
+        val messageRef:
+            VexConversationMessageRef,
+    )
+
     private val mutableState =
         MutableStateFlow(
             initialState,
         )
+
+    private val appendByIdempotencyKey =
+        linkedMapOf<
+            VexConversationIdempotencyKey,
+            IdempotentAppend
+        >()
 
     override val state:
         StateFlow<VexConversationState> =
@@ -77,6 +90,8 @@ class InMemoryVexConversationRepository(
                     )
 
         if (
+            request.spaceRef !=
+                thread.spaceRef ||
             request.expectedChannelRef !=
                 thread.currentChannelRef ||
             request.expectedMembershipGeneration !=
@@ -100,13 +115,37 @@ class InMemoryVexConversationRepository(
                 )
         }
 
-        if (
-            admittedSpeakerRef in
-                request.recipientRefs ||
-            !request.recipientRefs.all(
-                thread.currentAudienceRefs::contains,
+        val existing =
+            appendByIdempotencyKey[
+                request.idempotencyKey
+            ]
+
+        if (existing != null) {
+            return if (
+                existing.request ==
+                    request
+            ) {
+                VexConversationRepositoryResult
+                    .Accepted(
+                        messageRef =
+                            existing.messageRef,
+                    )
+            } else {
+                VexConversationRepositoryResult
+                    .Rejected(
+                        VexConversationRepositoryRejection
+                            .IDEMPOTENCY_CONFLICT,
+                    )
+            }
+        }
+
+        val recipients =
+            currentRecipients(
+                thread =
+                    thread,
             )
-        ) {
+
+        if (recipients.isEmpty()) {
             return VexConversationRepositoryResult
                 .Rejected(
                     VexConversationRepositoryRejection
@@ -146,6 +185,8 @@ class InMemoryVexConversationRepository(
                     thread.threadRef,
                 messageRef =
                     messageRef,
+                spaceRef =
+                    thread.spaceRef,
                 channelRef =
                     thread.currentChannelRef,
                 membershipGeneration =
@@ -155,7 +196,7 @@ class InMemoryVexConversationRepository(
                 speakerRef =
                     admittedSpeakerRef,
                 recipientRefs =
-                    request.recipientRefs,
+                    recipients,
                 witnessRefs =
                     thread.currentAudienceRefs,
                 content =
@@ -170,12 +211,52 @@ class InMemoryVexConversationRepository(
             ),
         )
 
+        appendByIdempotencyKey[
+            request.idempotencyKey
+        ] =
+            IdempotentAppend(
+                request =
+                    request,
+                messageRef =
+                    messageRef,
+            )
+
         return VexConversationRepositoryResult
             .Accepted(
                 messageRef =
                     messageRef,
             )
     }
+
+    /**
+     * Current Family bridge derives human recipients from trusted channel audience and keeps
+     * Companion attention separate from ordinary human delivery.
+     *
+     * For a non-space direct channel, the fixture addresses every other current participant so a
+     * direct human<->Companion pressure case can still be represented without inventing Family rules.
+     */
+    private fun currentRecipients(
+        thread:
+            VexConversationThreadState,
+    ): List<VexConversationParticipantRef> =
+        thread.currentAudienceRefs
+            .filter { participantRef ->
+                participantRef !=
+                    admittedSpeakerRef
+            }
+            .filter { participantRef ->
+                if (
+                    thread.spaceRef ==
+                    null
+                ) {
+                    true
+                } else {
+                    thread.participant(
+                        participantRef,
+                    )?.kind ==
+                        VexConversationParticipantKind.Human
+                }
+            }
 }
 
 // [VXG RealForever]

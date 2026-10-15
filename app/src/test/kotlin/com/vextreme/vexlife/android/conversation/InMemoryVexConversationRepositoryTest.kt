@@ -16,9 +16,17 @@ class InMemoryVexConversationRepositoryTest {
         VexConversationParticipantRef(
             "person.fixture.maya",
         )
+    private val alexRef =
+        VexConversationParticipantRef(
+            "person.fixture.alex",
+        )
     private val vexRef =
         VexConversationParticipantRef(
             "companion.fixture.vex",
+        )
+    private val spaceRef =
+        VexConversationSpaceRef(
+            "space.fixture.family-room",
         )
     private val threadRef =
         VexConversationThreadRef(
@@ -54,13 +62,10 @@ class InMemoryVexConversationRepositoryTest {
                         ?: error(
                             "fixture thread missing",
                         ),
-                    recipients =
-                        listOf(
-                            mayaRef,
-                            vexRef,
-                        ),
                     content =
                         "Only the first repository should change.",
+                    key =
+                        "instance-isolation",
                 )
 
             assertTrue(
@@ -87,7 +92,7 @@ class InMemoryVexConversationRepositoryTest {
         }
 
     @Test
-    fun sendBindsProviderSpeakerAndFullWitnessAudienceRatherThanCallerAuthorship() =
+    fun familySendDerivesHumanRecipientsAndFullWitnessAudienceAtProvider() =
         runTest {
             val repository =
                 repository(
@@ -107,12 +112,10 @@ class InMemoryVexConversationRepositoryTest {
                     requestFor(
                         thread =
                             thread,
-                        recipients =
-                            listOf(
-                                vexRef,
-                            ),
                         content =
-                            "Address Vex without turning the addressee into the audience.",
+                            "Family delivery is provider-derived.",
+                        key =
+                            "provider-derived-family-recipients",
                     ),
                 )
 
@@ -139,9 +142,15 @@ class InMemoryVexConversationRepositoryTest {
                 victorRef,
                 appended.speakerRef,
             )
+
+            /*
+             * Current VF-02C Family bridge derives the other HUMAN principals as message recipients.
+             * Family Vex remains part of the immutable channel/event witness truth; AI attention is
+             * a separate downstream concern.
+             */
             assertEquals(
                 listOf(
-                    vexRef,
+                    mayaRef,
                 ),
                 appended.recipientRefs,
             )
@@ -174,13 +183,10 @@ class InMemoryVexConversationRepositoryTest {
                 requestFor(
                     thread =
                         draftThread,
-                    recipients =
-                        listOf(
-                            mayaRef,
-                            vexRef,
-                        ),
                     content =
                         "Dinner is still at seven.",
+                    key =
+                        "draft-before-membership-change",
                 )
 
             /*
@@ -223,12 +229,10 @@ class InMemoryVexConversationRepositoryTest {
                     requestFor(
                         thread =
                             currentThread,
-                        recipients =
-                            listOf(
-                                vexRef,
-                            ),
                         content =
                             staleRequest.content,
+                        key =
+                            "draft-after-membership-change",
                     ),
                 ) is
                     VexConversationRepositoryResult.Accepted,
@@ -258,7 +262,14 @@ class InMemoryVexConversationRepositoryTest {
             )
             assertEquals(
                 listOf(
+                    alexRef,
+                ),
+                appended.recipientRefs,
+            )
+            assertEquals(
+                listOf(
                     victorRef,
+                    alexRef,
                     vexRef,
                 ),
                 appended.witnessRefs,
@@ -266,6 +277,104 @@ class InMemoryVexConversationRepositoryTest {
             assertFalse(
                 mayaRef in
                     appended.witnessRefs,
+            )
+        }
+
+    @Test
+    fun exactIdempotentRetryReturnsSameMessageWithoutDuplicateAppend() =
+        runTest {
+            val repository =
+                repository(
+                    generationTwo(),
+                )
+            val thread =
+                repository.state.value
+                    .thread(
+                        threadRef,
+                    )
+                    ?: error(
+                        "fixture thread missing",
+                    )
+            val request =
+                requestFor(
+                    thread =
+                        thread,
+                    content =
+                        "One canonical message.",
+                    key =
+                        "retry-one",
+                )
+
+            val first =
+                repository.send(
+                    request,
+                )
+            val second =
+                repository.send(
+                    request,
+                )
+
+            assertEquals(
+                first,
+                second,
+            )
+            assertEquals(
+                2,
+                repository.state.value
+                    .thread(
+                        threadRef,
+                    )
+                    ?.timeline
+                    ?.filterIsInstance<
+                        VexConversationTimelineEntry.Message
+                    >()
+                    ?.size,
+            )
+        }
+
+    @Test
+    fun reusedIdempotencyKeyWithDifferentMeaningFailsClosed() =
+        runTest {
+            val repository =
+                repository(
+                    generationTwo(),
+                )
+            val thread =
+                repository.state.value
+                    .thread(
+                        threadRef,
+                    )
+                    ?: error(
+                        "fixture thread missing",
+                    )
+
+            val first =
+                requestFor(
+                    thread =
+                        thread,
+                    content =
+                        "First meaning.",
+                    key =
+                        "conflict-one",
+                )
+            val conflicting =
+                first.copy(
+                    content =
+                        "Different meaning.",
+                )
+
+            assertTrue(
+                repository.send(first) is
+                    VexConversationRepositoryResult.Accepted,
+            )
+            assertEquals(
+                VexConversationRepositoryResult.Rejected(
+                    VexConversationRepositoryRejection
+                        .IDEMPOTENCY_CONFLICT,
+                ),
+                repository.send(
+                    conflicting,
+                ),
             )
         }
 
@@ -328,20 +437,23 @@ class InMemoryVexConversationRepositoryTest {
     private fun requestFor(
         thread:
             VexConversationThreadState,
-        recipients:
-            List<VexConversationParticipantRef>,
         content: String,
+        key: String,
     ): VexConversationSendRequest =
         VexConversationSendRequest(
             threadRef =
                 thread.threadRef,
+            spaceRef =
+                thread.spaceRef,
             expectedChannelRef =
                 thread.currentChannelRef,
             expectedMembershipGeneration =
                 thread
                     .currentMembershipGeneration,
-            recipientRefs =
-                recipients,
+            idempotencyKey =
+                VexConversationIdempotencyKey(
+                    key,
+                ),
             content =
                 content,
         )
@@ -367,6 +479,14 @@ class InMemoryVexConversationRepositoryTest {
             ),
             VexConversationParticipant(
                 participantRef =
+                    alexRef,
+                displayName =
+                    "Alex",
+                kind =
+                    VexConversationParticipantKind.Human,
+            ),
+            VexConversationParticipant(
+                participantRef =
                     vexRef,
                 displayName =
                     "Vex",
@@ -380,6 +500,8 @@ class InMemoryVexConversationRepositoryTest {
         VexConversationThreadState(
             threadRef =
                 threadRef,
+            spaceRef =
+                spaceRef,
             title =
                 "Family Room",
             currentChannelRef =
@@ -405,6 +527,8 @@ class InMemoryVexConversationRepositoryTest {
                             VexConversationMessageRef(
                                 "message.fixture.family-room.001",
                             ),
+                        spaceRef =
+                            spaceRef,
                         channelRef =
                             channelGenerationTwo,
                         membershipGeneration =
@@ -416,7 +540,6 @@ class InMemoryVexConversationRepositoryTest {
                         recipientRefs =
                             listOf(
                                 victorRef,
-                                vexRef,
                             ),
                         witnessRefs =
                             listOf(
@@ -435,6 +558,8 @@ class InMemoryVexConversationRepositoryTest {
         VexConversationThreadState(
             threadRef =
                 threadRef,
+            spaceRef =
+                spaceRef,
             title =
                 "Family Room",
             currentChannelRef =
@@ -446,6 +571,7 @@ class InMemoryVexConversationRepositoryTest {
             currentAudienceRefs =
                 listOf(
                     victorRef,
+                    alexRef,
                     vexRef,
                 ),
             timeline =

@@ -1,6 +1,19 @@
 package com.vextreme.vexlife.android.conversation
 
 @JvmInline
+value class VexConversationSpaceRef(
+    val value: String,
+) {
+    init {
+        require(value.isNotBlank()) {
+            "VexConversationSpaceRef must be non-blank"
+        }
+    }
+
+    override fun toString(): String = value
+}
+
+@JvmInline
 value class VexConversationThreadRef(
     val value: String,
 ) {
@@ -84,9 +97,9 @@ sealed interface VexConversationTimelineEntry {
     /**
      * Immutable Conversation message projection.
      *
-     * recipientRefs are the addressed targets.
+     * recipientRefs are the addressed delivery targets admitted by the provider.
      * witnessRefs are the immutable event audience.
-     * Android must not collapse those meanings.
+     * Android must not collapse those meanings or reconstruct old witnesses from current membership.
      */
     data class Message(
         override val entryRef: String,
@@ -94,6 +107,8 @@ sealed interface VexConversationTimelineEntry {
             VexConversationThreadRef,
         val messageRef:
             VexConversationMessageRef,
+        val spaceRef:
+            VexConversationSpaceRef?,
         val channelRef:
             VexConversationChannelRef,
         val membershipGeneration: Long,
@@ -193,6 +208,9 @@ sealed interface VexConversationTimelineEntry {
 /**
  * Conversation-owned projection of one stable thread.
  *
+ * [spaceRef] is present for a Family/space-scoped channel and remains null for Conversation shapes
+ * that do not belong to such a space.
+ *
  * knownParticipants is the identity directory needed to render retained history. It is NOT the
  * current audience. A participant who later leaves may remain known so historical authored messages
  * and witness sets remain renderable.
@@ -203,6 +221,8 @@ sealed interface VexConversationTimelineEntry {
 data class VexConversationThreadState(
     val threadRef:
         VexConversationThreadRef,
+    val spaceRef:
+        VexConversationSpaceRef?,
     val title: String,
     val currentChannelRef:
         VexConversationChannelRef,
@@ -272,6 +292,12 @@ data class VexConversationThreadState(
 
             when (entry) {
                 is VexConversationTimelineEntry.Message -> {
+                    require(
+                        entry.spaceRef ==
+                            spaceRef,
+                    ) {
+                        "message spaceRef must match its thread scope"
+                    }
                     require(
                         entry.speakerRef in
                             knownParticipantRefs,

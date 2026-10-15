@@ -2,6 +2,22 @@ package com.vextreme.vexlife.android.conversation
 
 import kotlinx.coroutines.flow.StateFlow
 
+@JvmInline
+value class VexConversationIdempotencyKey(
+    val value: String,
+) {
+    init {
+        require(value.isNotBlank()) {
+            "Conversation idempotency key must be non-blank"
+        }
+        require(value.length <= 512) {
+            "Conversation idempotency key must be at most 512 characters"
+        }
+    }
+
+    override fun toString(): String = value
+}
+
 /**
  * Android consumer boundary for portable Conversation state and admitted message requests.
  *
@@ -12,11 +28,12 @@ import kotlinx.coroutines.flow.StateFlow
  * The request deliberately cannot author:
  *
  * - speakerRef / authenticated principal;
+ * - recipientRefs for the current Family path;
  * - witnessRefs / current audience authority;
  * - Home/session capability evidence;
  * - model/companion availability.
  *
- * Those remain provider/server-side current truths.
+ * The provider derives those truths from the current channel/authority contract.
  */
 interface VexConversationRepository {
     val state:
@@ -31,35 +48,36 @@ interface VexConversationRepository {
 /**
  * Client request bound to the Conversation truth the human saw while composing.
  *
- * expectedChannelRef + expectedMembershipGeneration make draft->send currentness explicit. A future
- * real provider revalidates those values against its authoritative current state rather than silently
- * upgrading the request.
+ * The shape intentionally aligns with the current VexLife VF-02C Family Conversation bridge:
+ *
+ * spaceRef
+ * channelRef
+ * content
+ * expectedMembershipGeneration
+ * idempotencyKey
+ *
+ * [threadRef] remains an Android-local routing/current-thread coordinate; a Home-backed adapter does
+ * not need to send it to an HTTP owner that already resolves thread identity from the trusted channel.
+ *
+ * The caller does not supply speaker, recipients, or witnesses. That prevents Android from becoming
+ * an authority source merely because it can display participant identities.
  */
 data class VexConversationSendRequest(
     val threadRef:
         VexConversationThreadRef,
+    val spaceRef:
+        VexConversationSpaceRef?,
     val expectedChannelRef:
         VexConversationChannelRef,
     val expectedMembershipGeneration:
         Long,
-    val recipientRefs:
-        List<VexConversationParticipantRef>,
+    val idempotencyKey:
+        VexConversationIdempotencyKey,
     val content: String,
 ) {
     init {
         require(expectedMembershipGeneration > 0L) {
             "expected membership generation must be positive"
-        }
-        require(recipientRefs.isNotEmpty()) {
-            "Conversation Send requires at least one addressed recipient"
-        }
-        require(
-            recipientRefs
-                .distinct()
-                .size ==
-                recipientRefs.size,
-        ) {
-            "Conversation Send recipient refs must be unique"
         }
         require(content.isNotBlank()) {
             "Conversation Send content must be non-blank"
@@ -72,6 +90,7 @@ enum class VexConversationRepositoryRejection {
     CURRENTNESS_CHANGED,
     SPEAKER_NOT_CURRENT,
     ADDRESSING_INVALID,
+    IDEMPOTENCY_CONFLICT,
 }
 
 /**

@@ -52,6 +52,24 @@ package com.vextreme.vexlife.android.conversation
  * Android consumes those contracts; it does not recreate them merely because it renders the
  * conversation.
  *
+ * ## Current VexLife Family HTTP producer
+ *
+ * Current VexLife main exposes POST /api/v1/family/conversation under VF-02C issue #427.
+ *
+ * APPEND accepts only spaceRef / channelRef / content / expectedMembershipGeneration /
+ * idempotencyKey. Speaker, Family recipients, witness audience and Home authority remain
+ * server-derived.
+ *
+ * Android's repository request is aligned to that authority membrane.
+ *
+ * Two producer predicates remain held:
+ *
+ * - ordinary serve-browser startup currently does not bind resolveFamilyConversationAuthority, so
+ *   production-default Family requests fail closed with FAMILY_SESSION_AUTHORITY_UNAVAILABLE;
+ * - the current bounded HTTP message projection omits canonical witnessRefs, so Android must not
+ *   reconstruct historical audience truth from current membership.
+ *
+
  * ## Identity laws
  *
  * threadRef
@@ -90,8 +108,9 @@ package com.vextreme.vexlife.android.conversation
  * that state.
  *
  * Focused repository proof owns the current draft->membership-change->Send problem. The request binds
- * expected channel + membership generation + recipients; a successor generation rejects the stale
- * request without silently rewriting recipients or appending a message.
+ * expected channel + membership generation + idempotency identity; a successor generation rejects
+ * the stale request without silently upgrading currentness or appending a message. Family recipients
+ * are provider-derived from the trusted current channel rather than authored by Android.
  *
  * No VexExecution test fixture is used because there is no Conversation VexExecution consumer yet.
  * The Test Foundation rule is to test the transformation at its actual owner.
@@ -122,7 +141,9 @@ package com.vextreme.vexlife.android.conversation
  *
  * ## First unresolved architecture pressure
  *
- * Send carries runtime data such as content, recipients and optional reply/context references.
+ * Send carries runtime data such as content, currentness/idempotency identity and future optional
+ * reply/context references. For the current Family provider, recipients are server-derived rather
+ * than caller-authored.
  *
  * Merged PR #82 intentionally holds generic runtime request payload architecture, while VexPort
  * currently activates stable Control identity.

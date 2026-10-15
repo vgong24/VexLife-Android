@@ -164,6 +164,62 @@ The SDK also contains participant-owned friend/group replica comparison and reco
 That is future federation pressure for Android. It does not mean Android currently has a federated
 Conversation transport or replica store.
 
+### Current VexLife Family HTTP producer
+
+Current VexLife main already exposes the model-free Family Conversation HTTP route:
+
+~~~text
+POST /api/v1/family/conversation
+~~~
+
+Current VF-02C source owner:
+
+~~~text
+github.issue.vexlife.427
+~~~
+
+The admitted APPEND intent is deliberately narrow:
+
+~~~text
+spaceRef
+channelRef
+content
+expectedMembershipGeneration
+idempotencyKey
+~~~
+
+Server-side composition then resolves:
+
+~~~text
+authenticated Home session
+-> principal-bound membership / lease / revocation truth
+-> current Family Space membership generation
+-> trusted Family channel
+-> provider-derived human recipients
+-> immutable Conversation append
+~~~
+
+Android must not widen that request with caller-authored speaker, witness, Family membership, or
+recipient authority merely because those identities are visible in the UI.
+
+Two current producer gaps matter for Android:
+
+~~~text
+PRODUCTION SESSION AUTHORITY WIRING
+    core route exists
+    but the ordinary serve-browser bootstrap does not currently bind
+    resolveFamilyConversationAuthority
+    -> production-default route fails closed with FAMILY_SESSION_AUTHORITY_UNAVAILABLE
+
+HISTORICAL AUDIENCE PROJECTION
+    canonical Conversation events preserve witnessRefs
+    current Family HTTP safeMessage response does not expose witnessRefs
+    -> Android cannot truthfully reconstruct historical audience from the current room
+~~~
+
+Android therefore aligns its request contract now but does not invent a working network adapter until
+those producer predicates are resolved by the rightful VexLife owner.
+
 ## Experience sentence
 
 A participant comes to Conversation because they want to continue an addressed relationship with
@@ -539,11 +595,10 @@ A useful request may contain:
 
 ~~~text
 thread/channel identity
+space/currentness identity when applicable
 content
-recipientRefs
-replyToMessageRef?
-contextRangeRefs?
-idempotency/currentness data
+idempotency key
+future reply/context references only when the provider contract earns them
 ~~~
 
 Merged PR #82 deliberately leaves generic runtime request payload architecture unresolved.
@@ -798,8 +853,8 @@ conversation/VexConversationState.kt
 
 conversation/VexConversationRepository.kt
     state
-    send(currentness-bound request)
-    no caller-authored speaker/witness/Home/model authority
+    send(currentness/idempotency-bound request)
+    no caller-authored speaker/recipient/witness/Home/model authority
 
 conversation/InMemoryVexConversationRepository.kt
     instance-based tests/Preview implementation
@@ -817,9 +872,10 @@ The critical pressure case is now explicit:
 
 ~~~text
 human begins draft under:
+    Family space
     channel g2
     membershipGeneration 2
-    recipients Maya + Vex
+    idempotency key K1
 
 provider publishes successor truth:
     Maya left
@@ -829,10 +885,11 @@ provider publishes successor truth:
 old Send request
     -> CURRENTNESS_CHANGED
     -> no message appended
-    -> recipients are not silently rewritten
+    -> request is not silently upgraded to g3
 
 new request formed from current truth
-    -> may address only the current audience
+    -> provider derives the lawful current human recipients
+    -> exact retry uses its idempotency key without duplicate append
 ~~~
 
 This does not yet decide the final Compose interaction for reconfirming a stale draft. It establishes
@@ -1043,10 +1100,19 @@ surface-owner composition
 test/Preview in-memory provider
 ~~~
 
-The next missing predicate is the real Android dependency/lifetime path.
+The next missing predicates are now explicit and split by owner:
 
-Once active shared-path work clears, integrate Conversation through the same repository/session
-composition style already used by VexStream:
+~~~text
+VEXLIFE PRODUCER
+    bind accepted Home Bridge session authority into the production Family Conversation route
+    expose exact historical witness/audience truth needed by Android (witnessRefs or equivalent)
+
+ANDROID APP GRAPH
+    wait for active AppRepositories/Journey path ownership to clear
+~~~
+
+After those producer/currentness predicates and shared-path constraints are resolved, integrate
+Conversation through the same repository/session composition style already used by VexStream:
 
 ~~~text
 AppRepositoryFactory / AppRepositories

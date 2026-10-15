@@ -20,6 +20,10 @@ class VexConversationSurfaceProjectionTest {
         VexConversationParticipantRef(
             "companion.fixture.vex",
         )
+    private val spaceRef =
+        VexConversationSpaceRef(
+            "space.fixture.family-room",
+        )
     private val threadRef =
         VexConversationThreadRef(
             "thread.fixture.family-room",
@@ -216,6 +220,8 @@ class VexConversationSurfaceProjectionTest {
         VexConversationThreadState(
             threadRef =
                 threadRef,
+            spaceRef =
+                spaceRef,
             title =
                 "Family Room",
             currentChannelRef =
@@ -266,6 +272,8 @@ class VexConversationSurfaceProjectionTest {
                             VexConversationMessageRef(
                                 "message.fixture.001",
                             ),
+                        spaceRef =
+                            spaceRef,
                         channelRef =
                             channelRef,
                         membershipGeneration =
@@ -277,7 +285,6 @@ class VexConversationSurfaceProjectionTest {
                         recipientRefs =
                             listOf(
                                 victorRef,
-                                vexRef,
                             ),
                         witnessRefs =
                             listOf(
