@@ -1,28 +1,27 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
+import com.vextreme.vexlife.android.elements.TextRole
+import com.vextreme.vexlife.android.elements.VexAlertDialog
 import com.vextreme.vexlife.android.elements.VexButton
+import com.vextreme.vexlife.android.elements.VexColumn
 import com.vextreme.vexlife.android.elements.VexContainer
 import com.vextreme.vexlife.android.elements.VexElementStyles
-import com.vextreme.vexlife.android.elements.vexElement
+import com.vextreme.vexlife.android.elements.VexModalBottomSheet
+import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
 /**
@@ -40,8 +39,9 @@ internal fun VexStreamConnectionSetup(
 
     VexContainer(
         element = VexStreamMusicScreen.ConnectionSection,
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier =
+            VexModifier
+                .fillMaxWidth()
             .padding(
                 horizontal = 12.dp,
                 vertical = 8.dp,
@@ -50,14 +50,16 @@ internal fun VexStreamConnectionSetup(
     ) {
         when (connection) {
             VexStreamConnectionState.NotPaired -> {
-                Text(
+                VexText(
+                    id = "status",
                     text =
                         stringResource(
                             R.string.vexstream_music_status_not_configured,
                         ),
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(
+                VexText(
+                    id = "intro",
                     text =
                         stringResource(
                             R.string.vexstream_music_intro,
@@ -72,7 +74,8 @@ internal fun VexStreamConnectionSetup(
             }
 
             VexStreamConnectionState.Searching -> {
-                Text(
+                VexText(
+                    id = "status",
                     text =
                         stringResource(
                             R.string.vexstream_music_status_searching,
@@ -82,24 +85,29 @@ internal fun VexStreamConnectionSetup(
             }
 
             is VexStreamConnectionState.ConfirmCode -> {
-                Text(
+                VexText(
+                    id = "display-name",
                     text = connection.displayName,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(
+                VexText(
+                    id = "pairing-title",
                     text =
                         stringResource(
                             R.string.vexstream_music_pairing_code_title,
                         ),
+                    role = TextRole.Body,
                 )
-                Text(
+                VexText(
+                    id = "pairing-code",
                     text =
                         formatPairingCode(
                             connection.pairingCode,
                         ),
                     style = MaterialTheme.typography.headlineLarge,
                 )
-                Text(
+                VexText(
+                    id = "help",
                     text =
                         stringResource(
                             R.string.vexstream_music_pairing_code_help,
@@ -116,24 +124,29 @@ internal fun VexStreamConnectionSetup(
             }
 
             is VexStreamConnectionState.WaitingForDesktopApproval -> {
-                Text(
+                VexText(
+                    id = "display-name",
                     text = connection.displayName,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(
+                VexText(
+                    id = "status",
                     text =
                         stringResource(
                             R.string.vexstream_music_waiting_approval,
                         ),
+                    role = TextRole.Body,
                 )
             }
 
             is VexStreamConnectionState.Failed -> {
-                Text(
+                VexText(
+                    id = "status",
                     text =
                         stringResource(
                             R.string.vexstream_music_pairing_failed,
                         ),
+                    role = TextRole.Body,
                 )
                 VexButton(
                     element = VexStreamMusicScreen.FindNearby,
@@ -157,42 +170,45 @@ internal fun VexStreamConnectionMenuSheet(
     val paired =
         state.connectionState as? VexStreamConnectionState.Paired
 
-    ModalBottomSheet(
-        modifier = Modifier.vexElement(
-            VexStreamMusicScreen.ConnectionMenuSheet,
-        ),
+    VexModalBottomSheet(
+        element = VexStreamMusicScreen.ConnectionMenuSheet,
         onDismissRequest = {
             runtime.dismissPresentation(
                 VexStreamMusicScreen.ConnectionMenuSheet,
             )
         },
-        sheetState = rememberModalBottomSheetState(
-            skipPartiallyExpanded = false,
-        ),
-        dragHandle = {
-            BottomSheetDefaults.DragHandle()
-        },
+        sheetState =
+            rememberModalBottomSheetState(
+                skipPartiallyExpanded = false,
+            ),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        VexColumn(
+            id = "content",
+            modifier =
+                VexModifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 20.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = stringResource(
-                    R.string.vexstream_music_connection_title,
-                ),
+            VexText(
+                id = "title",
+                text =
+                    stringResource(
+                        R.string.vexstream_music_connection_title,
+                    ),
                 style = MaterialTheme.typography.headlineSmall,
             )
 
             paired?.let {
-                Text(
+                VexText(
+                    id = "paired-name",
                     text = it.displayName,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(
+                VexText(
+                    id = "status",
                     text =
                         if (state.hubState is VexStreamHubState.Ready) {
                             stringResource(
@@ -203,7 +219,8 @@ internal fun VexStreamConnectionMenuSheet(
                                 R.string.vexstream_music_status_unreachable,
                             )
                         },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color =
+                        MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -211,26 +228,30 @@ internal fun VexStreamConnectionMenuSheet(
                 VexButton(
                     element = VexStreamMusicScreen.RefreshCatalog,
                     handler = runtime,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        VexModifier.fillMaxWidth(),
                 )
             } else {
                 VexButton(
                     element = VexStreamMusicScreen.Reconnect,
                     handler = runtime,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        VexModifier.fillMaxWidth(),
                 )
             }
 
             VexButton(
                 element = VexStreamMusicScreen.RequestForgetPaired,
                 handler = runtime,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    VexModifier.fillMaxWidth(),
             )
 
             VexButton(
                 element = VexStreamMusicScreen.CloseConnectionMenu,
                 handler = runtime,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    VexModifier.fillMaxWidth(),
             )
         }
     }
@@ -241,27 +262,31 @@ internal fun VexStreamConnectionMenuSheet(
 internal fun VexStreamForgetConfirmationDialog(
     runtime: VexRuntime,
 ) {
-    AlertDialog(
-        modifier = Modifier.vexElement(
-            VexStreamMusicScreen.ForgetConfirmationDialog,
-        ),
+    VexAlertDialog(
+        element = VexStreamMusicScreen.ForgetConfirmationDialog,
         onDismissRequest = {
             runtime.dismissPresentation(
                 VexStreamMusicScreen.ForgetConfirmationDialog,
             )
         },
         title = {
-            Text(
-                stringResource(
-                    R.string.vexstream_music_forget_confirm_title,
-                ),
+            VexText(
+                id = "title",
+                text =
+                    stringResource(
+                        R.string.vexstream_music_forget_confirm_title,
+                    ),
+                style = MaterialTheme.typography.headlineSmall,
             )
         },
         text = {
-            Text(
-                stringResource(
-                    R.string.vexstream_music_forget_confirm_body,
-                ),
+            VexText(
+                id = "body",
+                text =
+                    stringResource(
+                        R.string.vexstream_music_forget_confirm_body,
+                    ),
+                style = MaterialTheme.typography.bodyMedium,
             )
         },
         confirmButton = {
