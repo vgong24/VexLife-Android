@@ -4,6 +4,7 @@ import com.vextreme.vexlife.android.logging.VexLogKind
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
 import com.vextreme.vexlife.android.shell.AppShell
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -126,7 +127,9 @@ class VexExpectedWalkTest {
         val walk = VexExpectedWalk()
         val dynamic =
             dynamicElement(
-                "element.vexstream-music.dynamic.track.17:journey.track.one",
+                VexStreamPresentationRefs.trackRow(
+                    VexStreamJourneyFixtures.TrackOne,
+                ),
             )
 
         walk.start(HomeScreen)
