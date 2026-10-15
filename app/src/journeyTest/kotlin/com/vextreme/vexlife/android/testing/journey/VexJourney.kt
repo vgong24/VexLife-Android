@@ -49,6 +49,7 @@ fun vexJourney(
 
 data class VexDynamicElementRef(
     val elementId: String,
+    val actionTemplate: ActionElement? = null,
 ) {
     init {
         require(elementId.isNotBlank()) {
@@ -59,8 +60,12 @@ data class VexDynamicElementRef(
 
 fun dynamicElement(
     elementId: String,
+    actionTemplate: ActionElement? = null,
 ): VexDynamicElementRef =
-    VexDynamicElementRef(elementId)
+    VexDynamicElementRef(
+        elementId = elementId,
+        actionTemplate = actionTemplate,
+    )
 
 class VexJourneySignal internal constructor(
     val signalRef: String,
