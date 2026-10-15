@@ -80,12 +80,41 @@ internal fun vexMapsDistributionRunBehavior():
                 act =
                     VexMapsDistributionRunAct.CompleteStop,
                 effect =
+                    VexMapsDistributionRunEffect.BeginReturn,
+                conditionName =
+                    "last-stop-completed-return-to-start",
+            ) { current ->
+                current.isLastStop &&
+                    current.returnToStart
+            }.admit<VexMapsDistributionRunState.Returning>()
+
+            on(
+                act =
+                    VexMapsDistributionRunAct.CompleteStop,
+                effect =
                     VexMapsDistributionRunEffect.CompleteRun,
                 conditionName =
-                    "last-stop-completed",
+                    "last-stop-completed-finish-here",
             ) { current ->
-                current.isLastStop
+                current.isLastStop &&
+                    !current.returnToStart
             }.admit<VexMapsDistributionRunState.Completed>()
+
+            on(
+                act =
+                    VexMapsDistributionRunAct.ResetRun,
+                effect =
+                    VexMapsDistributionRunEffect.ClearRun,
+            ).admit<VexMapsDistributionRunState.Empty>()
+        }
+
+        state<VexMapsDistributionRunState.Returning> {
+            on(
+                act =
+                    VexMapsDistributionRunAct.MarkArrival,
+                effect =
+                    VexMapsDistributionRunEffect.CompleteRun,
+            ).admit<VexMapsDistributionRunState.Completed>()
 
             on(
                 act =

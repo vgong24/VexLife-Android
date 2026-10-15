@@ -9,23 +9,22 @@ internal sealed interface VexMapsDistributionRunState :
 
     data class Draft(
         val stopCount: Int,
+        val returnToStart: Boolean,
     ) : VexMapsDistributionRunState {
-        init {
-            require(stopCount > 0)
-        }
+        init { require(stopCount > 0) }
     }
 
     data class Ready(
         val stopCount: Int,
+        val returnToStart: Boolean,
     ) : VexMapsDistributionRunState {
-        init {
-            require(stopCount > 0)
-        }
+        init { require(stopCount > 0) }
     }
 
     data class Running(
         val stopCount: Int,
         val currentStopIndex: Int,
+        val returnToStart: Boolean,
     ) : VexMapsDistributionRunState {
         init {
             require(stopCount > 0)
@@ -36,6 +35,7 @@ internal sealed interface VexMapsDistributionRunState :
     data class AtStop(
         val stopCount: Int,
         val currentStopIndex: Int,
+        val returnToStart: Boolean,
     ) : VexMapsDistributionRunState {
         init {
             require(stopCount > 0)
@@ -48,12 +48,16 @@ internal sealed interface VexMapsDistributionRunState :
                     stopCount - 1
     }
 
+    data class Returning(
+        val stopCount: Int,
+    ) : VexMapsDistributionRunState {
+        init { require(stopCount > 0) }
+    }
+
     data class Completed(
         val stopCount: Int,
     ) : VexMapsDistributionRunState {
-        init {
-            require(stopCount > 0)
-        }
+        init { require(stopCount > 0) }
     }
 }
 
