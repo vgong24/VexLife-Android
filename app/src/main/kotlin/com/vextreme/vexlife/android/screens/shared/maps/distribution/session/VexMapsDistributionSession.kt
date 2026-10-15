@@ -848,6 +848,7 @@ internal class VexMapsDistributionSession(
     private fun invalidatePreparedReality() {
         preparationJob?.cancel()
         legJob?.cancel()
+        navigation.stop()
         activePack =
             null
         clearExpectedLeg()
