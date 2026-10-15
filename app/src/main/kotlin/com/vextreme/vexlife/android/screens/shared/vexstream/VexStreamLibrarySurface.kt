@@ -75,7 +75,9 @@ import com.vextreme.vexlife.android.elements.VexContainer
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.VexIconButton
+import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.elements.VexTextField
+import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
@@ -1597,10 +1599,19 @@ private fun VexStreamTrackCard(
             ),
     ) {
         Row(
-            modifier = Modifier.padding(
-                horizontal = 10.dp,
-                vertical = 8.dp,
-            ),
+            modifier =
+                Modifier
+                    .padding(
+                        horizontal = 10.dp,
+                        vertical = 8.dp,
+                    )
+                    .vex(
+                        VexModifier.semantic(
+                            VexStreamPresentationRefs.trackRow(
+                                state.track.trackRef,
+                            ),
+                        ),
+                    ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
