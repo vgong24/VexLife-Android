@@ -225,6 +225,12 @@ tapDynamic(VexDynamicElementRef)
   -> Compose performClick()
   -> dynamic interaction record
 
+expectVisible(UIElement)
+  -> registered production elementId
+  -> wait for exact Compose node
+  -> assert visibly rendered
+  -> NO semantic interaction record expected
+
 expectVisible(VexDynamicElementRef)
   -> production-formed runtime semantic ref
   -> wait for exact Compose node
