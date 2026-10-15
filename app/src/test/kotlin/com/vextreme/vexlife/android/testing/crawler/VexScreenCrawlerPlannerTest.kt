@@ -133,6 +133,43 @@ class VexScreenCrawlerPlannerTest {
     }
 
     @Test
+    fun runtimeSemanticRefFlowsIntoStableEvidenceIdentity() {
+        val case =
+            VexScreenCrawlerPlanner.plan(
+                vexScreenCrawlerConfig {
+                    journey(
+                        Journeys.vexStream.connectRefreshForget,
+                    )
+                },
+            ).single()
+
+        val runtimeRef =
+            "element.vexstream-music.track.dynamic.17:journey.track.one"
+
+        val identity =
+            case.evidenceIdentity(
+                screenId =
+                    "screen.vexstream-music",
+                stepIndex = 6,
+                stepKind =
+                    "expect-visible",
+                semanticRef =
+                    runtimeRef,
+            )
+
+        assertTrue(
+            identity.evidenceRef
+                .endsWith(
+                    "::expect-visible::$runtimeRef",
+                ),
+        )
+        assertEquals(
+            runtimeRef,
+            identity.semanticRef,
+        )
+    }
+
+    @Test
     fun shardSubsetDoesNotRequireASecondJourneyRegistry() {
         val config = vexScreenCrawlerConfig {
             shards(
