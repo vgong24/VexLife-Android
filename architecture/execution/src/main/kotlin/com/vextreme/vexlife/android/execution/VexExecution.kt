@@ -106,15 +106,19 @@ abstract class VexExecution protected constructor(
      * To observe several independent Flows concurrently, call launchForCollect once per source.
      * The calls become independently addressable sibling Jobs; no second never-ending collect is
      * placed sequentially behind the first.
+     *
+     * Recovery applies only to obtaining/subscribing to the source. If onEach throws while handling
+     * a valid emitted value, the execution becomes FAILED with no automatic resubscription. Feature
+     * and provider effects keep ownership of failure meaning and lawful retry.
      */
     protected fun <Value, Source : Flow<Value>> launchForCollect(
         source: KFunction0<Source>,
-        shouldRestart: Boolean = true,
+        restartOnSourceFailure: Boolean = true,
         onEach: suspend (Value) -> Unit,
     ): VexCoroutineHandle =
         executionRoot.coroutineLauncher.launchForCollect(
             ref = ref(source),
-            shouldRestart = shouldRestart,
+            restartOnSourceFailure = restartOnSourceFailure,
             source = source,
             onEach = onEach,
         )
@@ -122,12 +126,12 @@ abstract class VexExecution protected constructor(
     /** Property-reference form of the same one-source / one-managed-Job collection contract. */
     protected fun <Value, Source : Flow<Value>> launchForCollect(
         source: KProperty0<Source>,
-        shouldRestart: Boolean = true,
+        restartOnSourceFailure: Boolean = true,
         onEach: suspend (Value) -> Unit,
     ): VexCoroutineHandle =
         executionRoot.coroutineLauncher.launchForCollect(
             ref = ref(source),
-            shouldRestart = shouldRestart,
+            restartOnSourceFailure = restartOnSourceFailure,
             source = source::get,
             onEach = onEach,
         )
@@ -136,12 +140,12 @@ abstract class VexExecution protected constructor(
     protected fun <Argument, Value, Source : Flow<Value>> launchForCollect(
         source: KFunction1<Argument, Source>,
         argument: Argument,
-        shouldRestart: Boolean = true,
+        restartOnSourceFailure: Boolean = true,
         onEach: suspend (Value) -> Unit,
     ): VexCoroutineHandle =
         executionRoot.coroutineLauncher.launchForCollect(
             ref = ref(source),
-            shouldRestart = shouldRestart,
+            restartOnSourceFailure = restartOnSourceFailure,
             source = {
                 source(argument)
             },

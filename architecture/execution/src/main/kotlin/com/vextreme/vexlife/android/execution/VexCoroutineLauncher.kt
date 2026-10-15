@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -62,6 +63,18 @@ internal class VexCoroutineLauncher(
     )
 
     /**
+     * Failure originating from obtaining/subscribing to the observed Flow itself.
+     *
+     * Downstream onEach failures are deliberately not wrapped. That lets the managed execution
+     * distinguish observation-lifetime failure from feature/provider effect failure.
+     */
+    private class VexCollectionSourceFailure(
+        val sourceFailure: Throwable,
+    ) : RuntimeException(
+        sourceFailure,
+    )
+
+    /**
      * Active custody only.
      *
      * LinkedHashMap is intentional: exact ID lookup plus deterministic admission/inspection order.
@@ -98,30 +111,72 @@ internal class VexCoroutineLauncher(
     ): VexCoroutineHandle =
         launchManaged(
             ref = ref,
-            restartOnFailure = false,
+            restartRecoverableFailure =
+                false,
             action = action,
         )
 
     /**
      * Foundation-owned Flow collection.
      *
-     * [onEach] only handles values from this source; it is not a child-launch surface. A second
+     * onEach only handles values from this source; it is not a child-launch surface. A second
      * independent Flow must enter through another launchForCollect call so it receives another
      * managed Job rather than waiting behind this collector.
+     *
+     * Recovery is source-only:
+     * - failure while obtaining the Flow or failure emitted by Flow upstream may restart;
+     * - failure thrown by onEach becomes FAILED immediately and never auto-restarts.
+     *
+     * This prevents collection recovery from silently becoming business/provider retry.
      */
     fun <Value> launchForCollect(
         ref: VexCoroutineRef,
-        shouldRestart: Boolean,
+        restartOnSourceFailure: Boolean,
         source: () -> Flow<Value>,
         onEach: suspend (Value) -> Unit,
     ): VexCoroutineHandle =
         launchManaged(
             ref = ref,
-            restartOnFailure = shouldRestart,
+            restartRecoverableFailure =
+                restartOnSourceFailure,
         ) {
-            source().collect { value ->
-                onEach(value)
-            }
+            val observed =
+                try {
+                    source()
+                } catch (
+                    cancelled:
+                        CancellationException,
+                ) {
+                    throw cancelled
+                } catch (
+                    failure:
+                        Throwable,
+                ) {
+                    throw VexCollectionSourceFailure(
+                        failure,
+                    )
+                }
+
+            observed
+                .catch { failure ->
+                    if (
+                        failure is
+                            CancellationException
+                    ) {
+                        throw failure
+                    }
+
+                    throw VexCollectionSourceFailure(
+                        failure,
+                    )
+                }
+                .collect { value ->
+                    /*
+                     * Flow.catch is transparent to downstream failures. If onEach throws, the
+                     * original failure reaches runManagedCoroutine as non-recoverable.
+                     */
+                    onEach(value)
+                }
         }
 
     fun forceStop(
@@ -179,7 +234,7 @@ internal class VexCoroutineLauncher(
 
     private fun launchManaged(
         ref: VexCoroutineRef,
-        restartOnFailure: Boolean,
+        restartRecoverableFailure: Boolean,
         action: suspend () -> Unit,
     ): VexCoroutineHandle {
         val mutableState =
@@ -226,8 +281,8 @@ internal class VexCoroutineLauncher(
                 ) {
                     runManagedCoroutine(
                         ref = ref,
-                        restartOnFailure =
-                            restartOnFailure,
+                        restartRecoverableFailure =
+                            restartRecoverableFailure,
                         mutableState =
                             mutableState,
                         action = action,
@@ -401,7 +456,7 @@ internal class VexCoroutineLauncher(
 
     private suspend fun runManagedCoroutine(
         ref: VexCoroutineRef,
-        restartOnFailure: Boolean,
+        restartRecoverableFailure: Boolean,
         mutableState:
             MutableStateFlow<
                 VexCoroutineState
@@ -464,11 +519,22 @@ internal class VexCoroutineLauncher(
                     failure:
                         Throwable,
                 ) {
-                    if (
-                        !restartOnFailure ||
-                        restartCount >=
-                        maxCollectRestarts
-                    ) {
+                    val sourceFailure =
+                        failure as?
+                            VexCollectionSourceFailure
+
+                    val reportedFailure =
+                        sourceFailure
+                            ?.sourceFailure
+                            ?: failure
+
+                    val canRestart =
+                        restartRecoverableFailure &&
+                            sourceFailure != null &&
+                            restartCount <
+                                maxCollectRestarts
+
+                    if (!canRestart) {
                         publish(
                             mutableState =
                                 mutableState,
@@ -483,10 +549,10 @@ internal class VexCoroutineLauncher(
                                     restartCount =
                                         restartCount,
                                     failureClass =
-                                        failure::class
+                                        reportedFailure::class
                                             .simpleName,
                                     failureMessage =
-                                        failure.message,
+                                        reportedFailure.message,
                                 ),
                         )
                         return
@@ -507,10 +573,10 @@ internal class VexCoroutineLauncher(
                                 restartCount =
                                     restartCount,
                                 failureClass =
-                                    failure::class
+                                    reportedFailure::class
                                         .simpleName,
                                 failureMessage =
-                                    failure.message,
+                                    reportedFailure.message,
                             ),
                     )
 

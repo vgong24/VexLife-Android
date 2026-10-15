@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
  * VexLife session or one Android Service lifetime) and pass that root only to VexExecution
  * subclasses. UI, Experience, Behavior, repository, and ordinary domain classes should not receive
  * the root as a substitute for a CoroutineScope.
+ *
+ * IMPORTANT: own VexExecutionRoot => own its shutdown. This root has an independent SupervisorJob;
+ * retaining it in a ViewModel, Service, or session does not automatically parent cancellation to
+ * that Android owner. The rightful owner must call forceStopAll / joinStopAll at its terminal edge.
  */
 class VexExecutionRoot(
     dispatcher: CoroutineDispatcher = Dispatchers.Default,

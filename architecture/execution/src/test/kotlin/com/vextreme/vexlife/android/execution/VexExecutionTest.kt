@@ -22,6 +22,8 @@ class VexExecutionTest {
         var onceCount = 0
         var argumentTotal = 0
         val collectAttempts = AtomicInteger(0)
+        val sourceCreationAttempts = AtomicInteger(0)
+        val downstreamSourceSubscriptions = AtomicInteger(0)
         val childStarted = CompletableDeferred<Unit>()
         val childStopped = CompletableDeferred<Unit>()
 
@@ -85,6 +87,31 @@ class VexExecutionTest {
                 collectAttempts.incrementAndGet()
                 error("fail into restart delay")
             }
+
+        fun sourceCreationStates(): Flow<Int> {
+            val attempt =
+                sourceCreationAttempts
+                    .incrementAndGet()
+
+            if (attempt == 1) {
+                error(
+                    "source creation failed",
+                )
+            }
+
+            return flow {
+                emit(17)
+                awaitCancellation()
+            }
+        }
+
+        fun downstreamFailureStates(): Flow<Int> =
+            flow {
+                downstreamSourceSubscriptions
+                    .incrementAndGet()
+                emit(19)
+                awaitCancellation()
+            }
     }
 
     private class TestExecution(
@@ -133,8 +160,30 @@ class VexExecutionTest {
         fun observeFailed(): VexCoroutineHandle =
             launchForCollect(
                 source = repository::failedStates,
-                shouldRestart = false,
+                restartOnSourceFailure = false,
             ) {}
+
+        fun observeSourceCreation(
+            values: MutableList<Int>,
+        ): VexCoroutineHandle =
+            launchForCollect(
+                repository::sourceCreationStates,
+            ) { value ->
+                values += value
+            }
+
+        fun observeDownstreamFailure(
+            callbackCount: AtomicInteger,
+        ): VexCoroutineHandle =
+            launchForCollect(
+                repository::downstreamFailureStates,
+            ) {
+                callbackCount
+                    .incrementAndGet()
+                error(
+                    "downstream consumer failed",
+                )
+            }
 
         fun observeRestartable(
             values: MutableList<Int>,
@@ -370,6 +419,114 @@ class VexExecutionTest {
                 handle.joinStop("test complete")
             } finally {
                 root.joinStopAll("test complete")
+            }
+        }
+
+    @Test
+    fun sourceCreationFailureCanRecover() =
+        runBlocking {
+            val root =
+                VexExecutionRoot(
+                    maxCollectRestarts = 2,
+                    collectRestartDelayMillis = 0L,
+                )
+            val repository = TestRepository()
+            val execution = TestExecution(root, repository)
+            val values = mutableListOf<Int>()
+
+            try {
+                val handle =
+                    execution.observeSourceCreation(
+                        values,
+                    )
+
+                withTimeout(2_000L) {
+                    handle.state.first { state ->
+                        state.status ==
+                            VexCoroutineStatus.RUNNING &&
+                            state.attempt == 2
+                    }
+                }
+
+                assertEquals(
+                    2,
+                    repository
+                        .sourceCreationAttempts
+                        .get(),
+                )
+                assertEquals(
+                    listOf(17),
+                    values,
+                )
+                assertEquals(
+                    1,
+                    handle.state.value
+                        .restartCount,
+                )
+
+                handle.joinStop(
+                    "test complete",
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun downstreamOnEachFailureDoesNotAutoRestart() =
+        runBlocking {
+            val root =
+                VexExecutionRoot(
+                    maxCollectRestarts = 5,
+                    collectRestartDelayMillis = 0L,
+                )
+            val repository = TestRepository()
+            val execution = TestExecution(root, repository)
+            val callbackCount =
+                AtomicInteger(0)
+
+            try {
+                val handle =
+                    execution.observeDownstreamFailure(
+                        callbackCount,
+                    )
+
+                withTimeout(2_000L) {
+                    handle.awaitCompletion()
+                }
+
+                assertEquals(
+                    1,
+                    repository
+                        .downstreamSourceSubscriptions
+                        .get(),
+                )
+                assertEquals(
+                    1,
+                    callbackCount.get(),
+                )
+                assertEquals(
+                    VexCoroutineStatus.FAILED,
+                    handle.state.value.status,
+                )
+                assertEquals(
+                    0,
+                    handle.state.value.restartCount,
+                )
+                assertEquals(
+                    "IllegalStateException",
+                    handle.state.value.failureClass,
+                )
+                assertEquals(
+                    "downstream consumer failed",
+                    handle.state.value.failureMessage,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
             }
         }
 
