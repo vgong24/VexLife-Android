@@ -20,6 +20,7 @@ tasks.register("vexVerifyJvm") {
     dependsOn(
         ":app:verifySourceAlignment",
         ":architecture:behavior:test",
+        ":architecture:execution:test",
         ":architecture:elements:test",
         ":architecture:logging:test",
         ":architecture:relay:test",

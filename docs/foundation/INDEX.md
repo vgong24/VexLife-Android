@@ -62,6 +62,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
+| EXECUTION_BRIDGE | VexExecution + source-referenced coroutine ownership | **DRAFT CANDIDATE / ISOLATED KOTLIN PROTOTYPE PASS / REPOSITORY GRADLE PROOF PENDING** | Put coroutine execution behind one compiler-visible meta-pattern with keyed custody, bounded collection recovery, and exact stop/join control | `:architecture:execution:test` + `vexVerifyJvm` + first current-main consumer |
 | BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational behavior blueprint | **ARCHITECTURE REVIEW READY / FIRST VEXSTREAM CONSUMER FORMED / EXECUTION PROOF PENDING** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | `:architecture:behavior:test` + `:app:testDebugUnitTest` + `vexVerifyJvm`; lived Play/Pause proof before stable/merge acceptance |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **ACCEPTED ON MAIN / PR #78 EXACT HOST PROOF PASS** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | extend only when a new proof claim earns another owner/task |
@@ -76,6 +77,35 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F6_DESIGN_LAB | debug/developer component gallery | FIRST PRACTICUM INCLUDED IN F1 | Exercise building blocks and inspect their registered topology without creating another truth map | prove F1 Gallery + AppGraph on device |
 | F7_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F8_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+
+## Execution bridge candidate
+
+Entry:
+[`architecture/execution/README.md`](../../architecture/execution/README.md)
+
+### Intention
+
+A developer should not decide coroutine ownership ad hoc from whichever Screen, repository, Service,
+or callback happens to need asynchronous work. The execution foundation makes that role explicit:
+
+```text
+FeatureExecution : VexExecution
+-> launchOnce(callable)
+-> launchForCollect(flowProvider)
+-> private ordered Job custody
+-> forceStop / joinStop
+```
+
+The actual `VexCoroutineLauncher` remains internal foundation machinery. Source callables supply both
+the executed function and the source-derived runtime ref, avoiding a parallel hand-maintained ID
+catalog. `launchOnce` never silently retries finite operations; sustained Flow collection owns a
+bounded recovery path where requested. Cancellation is terminal and exact root shutdown closes work
+admission before cancelling the supervised tree.
+
+This candidate is intentionally not yet wired through Relay/Maps/VexStream. PR #77 independently
+identified continuous dependency collector death/restart as execution-lifetime work, while current
+main still contains repeated raw `CoroutineScope`/Job ownership in app/runtime surfaces. Those are
+real consumers, but migration follows only after this kernel passes repository-native Gradle proof.
 
 ## Behavior Blueprint experiment
 
