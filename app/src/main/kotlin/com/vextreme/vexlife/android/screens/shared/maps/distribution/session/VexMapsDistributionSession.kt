@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution.session
 
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRouteIdentity
@@ -110,6 +111,8 @@ internal class VexMapsDistributionSession(
         VexMapsDistributionRouting,
     private val navigation:
         VexMapsDistributionNavigationPort,
+    executionRoot:
+        VexExecutionRoot,
     private val scope:
         CoroutineScope,
     private val mode:
@@ -180,6 +183,14 @@ internal class VexMapsDistributionSession(
                 mutableLegAttempt,
         )
 
+    private val execution =
+        VexMapsDistributionExecution(
+            root =
+                executionRoot,
+            session =
+                this,
+        )
+
     val navigationOutputs:
         Flow<VexMapsDistributionNavigationOutput> =
         navigationRelay.outputStates
@@ -207,29 +218,7 @@ internal class VexMapsDistributionSession(
             scope,
         )
 
-        scope.launch {
-            modeRunRelay
-                .outputStates
-                .collect { output ->
-                    output
-                        .requestedModeControl
-                        ?.let { control ->
-                            mode.activate(
-                                control,
-                            )
-                        }
-                }
-        }
-
-        scope.launch {
-            navigationRelay
-                .outputStates
-                .collect { output ->
-                    acceptNavigationOutput(
-                        output,
-                    )
-                }
-        }
+        execution.start()
 
         scope.launch {
             restoreDraft()
@@ -1000,7 +989,27 @@ internal class VexMapsDistributionSession(
                 null
         }
 
-    private fun acceptNavigationOutput(
+    internal fun modeRunOutputsForExecution():
+        Flow<com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunOutput> =
+        modeRunRelay.outputStates
+
+    internal fun navigationOutputsForExecution():
+        Flow<VexMapsDistributionNavigationOutput> =
+        navigationRelay.outputStates
+
+    internal fun acceptModeRunOutput(
+        output:
+            com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunOutput,
+    ) {
+        output.requestedModeControl
+            ?.let { control ->
+                mode.activate(
+                    control,
+                )
+            }
+    }
+
+    internal fun acceptNavigationOutput(
         output:
             VexMapsDistributionNavigationOutput,
     ) {

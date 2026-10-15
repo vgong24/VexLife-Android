@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution.session
 import android.content.Context
 import com.vextreme.vexlife.android.data.maps.distribution.RoomVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationService
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsOfflineRoutingProcess
@@ -97,6 +98,11 @@ internal object VexMapsDistributionProcess {
             navigation =
                 AndroidDistributionNavigation(
                     context.applicationContext,
+                ),
+            executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Main.immediate,
                 ),
             scope =
                 scope,
