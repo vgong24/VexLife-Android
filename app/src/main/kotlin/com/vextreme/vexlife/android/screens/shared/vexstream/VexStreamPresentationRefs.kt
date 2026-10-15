@@ -47,6 +47,48 @@ object VexStreamPresentationRefs {
             placement = "menu",
         )
 
+    const val QueueList =
+        "element.vexstream-music.queue.entries"
+
+    fun queueEntryKey(
+        mediaId: String,
+        occurrence: Int,
+    ): String {
+        require(mediaId.isNotBlank()) {
+            "queue mediaId must not be blank"
+        }
+        require(occurrence >= 1) {
+            "queue occurrence must be >= 1"
+        }
+
+        return "$mediaId#$occurrence"
+    }
+
+    fun queueEntry(
+        stableKey: String,
+    ): String =
+        dynamicRef(
+            ownerRef =
+                "element.vexstream-music.queue.entry",
+            instanceRef = stableKey,
+        )
+
+    fun queueEntryAction(
+        stableKey: String,
+        action: ActionElement,
+    ): String {
+        val uiElement =
+            action as? UIElement
+                ?: error("ActionElement must also be a UIElement")
+
+        return dynamicRef(
+            ownerRef =
+                uiElement.elementId +
+                    ".queue-entry",
+            instanceRef = stableKey,
+        )
+    }
+
     private fun trackAction(
         trackRef: VexStreamTrackRef,
         action: ActionElement,
