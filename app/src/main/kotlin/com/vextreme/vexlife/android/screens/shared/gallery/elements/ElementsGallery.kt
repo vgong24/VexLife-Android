@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.screens.shared.gallery.elements
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.elements.VexElementTree
 import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
