@@ -182,7 +182,7 @@ fun VexIconButton(
             onClick = { handler.activate(element) },
             modifier =
                 semanticRef
-                    ?.let(modifier::vex)
+                    ?.let { ref -> modifier.vex(ref) }
                     ?: modifier.vex(element),
             enabled = enabled,
             content = content,
@@ -192,7 +192,7 @@ fun VexIconButton(
             onClick = { handler.activate(element) },
             modifier =
                 semanticRef
-                    ?.let(modifier::vex)
+                    ?.let { ref -> modifier.vex(ref) }
                     ?: modifier.vex(element),
             enabled = enabled,
             content = content,
