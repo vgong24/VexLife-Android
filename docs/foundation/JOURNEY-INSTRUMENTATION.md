@@ -220,6 +220,23 @@ tap(ActionElement)
   -> production elementId test tag
   -> Compose performClick()
 
+tapDynamic(VexDynamicElementRef)
+  -> production-formed runtime semantic ref
+  -> Compose performClick()
+  -> dynamic interaction record
+
+expectVisible(UIElement)
+  -> registered production elementId
+  -> wait for exact Compose node
+  -> assert visibly rendered
+  -> NO semantic interaction record expected
+
+expectVisible(VexDynamicElementRef)
+  -> production-formed runtime semantic ref
+  -> wait for exact Compose node
+  -> assert visibly rendered
+  -> NO semantic interaction record expected
+
 type(TextFieldElement)
   -> production elementId test tag
   -> Compose text input
@@ -237,6 +254,39 @@ back()
   -> Android Back dispatch
   -> Back semantic record
 ~~~
+
+### Runtime identity is presentation-specific
+
+A dynamic domain object may have one stable domain identity and several simultaneously rendered
+presentation instances. QA must address the rendered instance it actually means.
+
+~~~text
+DOMAIN IDENTITY
+  VexStreamTrackRef("track.one")
+
+PRESENTATION INSTANCE
+  Songs + track.one
+  Search + track.one
+
+QA ADDRESS
+  presentation scope + domain identity + affordance
+~~~
+
+Therefore:
+
+~~~text
+DOMAIN_ID != PRESENTATION_INSTANCE_ID
+COMPOSE_LIST_KEY != COMPLETE_QA_ADDRESS
+VISIBLE_TEXT != STABLE_SELECTOR
+LIST_POSITION != PRODUCT_IDENTITY
+~~~
+
+The feature forms the stable runtime presentation ref in production source; Journey and ScreenCrawler
+consume that ref. Tests must not maintain a second formatter for the same identity.
+
+`expectVisible(...)` proves only that the exact addressed presentation instance is visibly rendered
+under the current test environment. It does not by itself prove domain correctness, action behavior,
+provider success, accessibility compliance, or regulatory acceptance.
 
 The app is hosted with fresh in-memory repositories for every journey.
 

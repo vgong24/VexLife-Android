@@ -42,7 +42,24 @@ class VexJourneyCoverageRecorder : VexJourneyScope {
 
     override fun signal(signal: VexJourneySignal) = Unit
 
-    override fun tapDynamic(element: VexDynamicElementRef) = Unit
+    override fun tapDynamic(element: VexDynamicElementRef) {
+        val template =
+            element.actionTemplate
+                ?: return
+        val uiElement =
+            template as? UIElement
+                ?: error("ActionElement must also be a UIElement")
+
+        actions +=
+            uiElement.elementId
+        recordIntent(
+            template.intent,
+        )
+    }
+
+    override fun expectVisible(element: UIElement) = Unit
+
+    override fun expectVisible(element: VexDynamicElementRef) = Unit
 
     override fun tap(element: ActionElement) {
         val uiElement = element as? UIElement

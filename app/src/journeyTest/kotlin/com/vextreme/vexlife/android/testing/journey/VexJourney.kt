@@ -49,6 +49,7 @@ fun vexJourney(
 
 data class VexDynamicElementRef(
     val elementId: String,
+    val actionTemplate: ActionElement? = null,
 ) {
     init {
         require(elementId.isNotBlank()) {
@@ -59,8 +60,12 @@ data class VexDynamicElementRef(
 
 fun dynamicElement(
     elementId: String,
+    actionTemplate: ActionElement? = null,
 ): VexDynamicElementRef =
-    VexDynamicElementRef(elementId)
+    VexDynamicElementRef(
+        elementId = elementId,
+        actionTemplate = actionTemplate,
+    )
 
 class VexJourneySignal internal constructor(
     val signalRef: String,
@@ -90,6 +95,9 @@ fun journeySignal(
  *
  * [tapDynamic] is for runtime-data identity such as one event row action that cannot be a permanent
  * static registry element. Its element ID must still be production-formed and stable.
+ *
+ * [expectVisible] lets the same production identity act as a QA observation without inventing an
+ * interaction or relying on text/list position.
  */
 interface VexJourneyScope {
     fun start(screen: ScreenElement)
@@ -99,6 +107,20 @@ interface VexJourneyScope {
     fun tap(element: ActionElement)
 
     fun tapDynamic(element: VexDynamicElementRef)
+
+    /**
+     * Observes one statically registered production element and requires it to be visibly rendered.
+     *
+     * This is not an interaction and therefore forms no expected VexLogger record.
+     */
+    fun expectVisible(element: UIElement)
+
+    /**
+     * Observes one production-formed runtime identity and requires it to be visibly rendered.
+     *
+     * This is not an interaction and therefore forms no expected VexLogger record.
+     */
+    fun expectVisible(element: VexDynamicElementRef)
 
     fun type(
         field: TextFieldElement,

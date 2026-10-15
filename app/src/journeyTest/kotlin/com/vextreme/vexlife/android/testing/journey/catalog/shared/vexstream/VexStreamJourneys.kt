@@ -2,12 +2,69 @@ package com.vextreme.vexlife.android.testing.journey
 
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
+import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPresentationScope
 import com.vextreme.vexlife.android.shell.AppShell
 
 object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
+
+    private fun trackRowAction(
+        action: ActionElement,
+    ): VexDynamicElementRef =
+        dynamicElement(
+            elementId =
+                VexStreamPresentationRefs.trackRowAction(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
+                    action = action,
+                ),
+            actionTemplate =
+                action,
+        )
+
+    private fun trackMenuAction(
+        action: ActionElement,
+    ): VexDynamicElementRef =
+        dynamicElement(
+            elementId =
+                VexStreamPresentationRefs.trackMenuAction(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
+                    action = action,
+                ),
+            actionTemplate =
+                action,
+        )
+
+    private fun queueEntryAction(
+        action: ActionElement,
+    ): VexDynamicElementRef {
+        val stableKey =
+            VexStreamPresentationRefs.queueEntryKey(
+                mediaId =
+                    VexStreamJourneyFixtures
+                        .TrackOne
+                        .value,
+                occurrence = 1,
+            )
+
+        return dynamicElement(
+            elementId =
+                VexStreamPresentationRefs.queueEntryAction(
+                    stableKey = stableKey,
+                    action = action,
+                ),
+            actionTemplate = action,
+        )
+    }
 
     private val pairedHubUnavailable =
         journeySignal(
@@ -34,20 +91,69 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.ConfirmPairingCode)
         tap(AppShell.Elements.Back)
         tap(HomeScreen.VexStreamMusic)
+
+        expectVisible(
+            dynamicElement(
+                VexStreamPresentationRefs.trackRow(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
+                ),
+            ),
+        )
+
         tap(VexStreamMusicScreen.ManageConnection)
         tap(VexStreamMusicScreen.RefreshCatalog)
         tap(VexStreamMusicScreen.CloseConnectionMenu)
 
         // Direct song-cell grammar: body is Play; the trailing menu owns secondary actions.
-        tap(VexStreamMusicScreen.PlayTrack)
+        tapDynamic(
+            trackRowAction(
+                VexStreamMusicScreen.PlayTrack,
+            ),
+        )
         tap(VexStreamMusicScreen.ShowQueue)
-        tap(VexStreamMusicScreen.QueuePlay)
+        expectVisible(
+            dynamicElement(
+                VexStreamPresentationRefs.queueEntry(
+                    VexStreamPresentationRefs.queueEntryKey(
+                        mediaId =
+                            VexStreamJourneyFixtures
+                                .TrackOne
+                                .value,
+                        occurrence = 1,
+                    ),
+                ),
+            ),
+        )
+        tapDynamic(
+            queueEntryAction(
+                VexStreamMusicScreen.QueuePlay,
+            ),
+        )
         tap(VexStreamMusicScreen.CloseQueue)
 
-        tap(VexStreamMusicScreen.TrackMenu)
-        tap(VexStreamMusicScreen.PlayTrackNext)
-        tap(VexStreamMusicScreen.TrackMenu)
-        tap(VexStreamMusicScreen.AddTrackToQueue)
+        tapDynamic(
+            trackRowAction(
+                VexStreamMusicScreen.TrackMenu,
+            ),
+        )
+        tapDynamic(
+            trackMenuAction(
+                VexStreamMusicScreen.PlayTrackNext,
+            ),
+        )
+        tapDynamic(
+            trackRowAction(
+                VexStreamMusicScreen.TrackMenu,
+            ),
+        )
+        tapDynamic(
+            trackMenuAction(
+                VexStreamMusicScreen.AddTrackToQueue,
+            ),
+        )
 
         // The one-song fixture now has multiple queue entries, so transport controls are meaningful.
         tap(VexStreamMusicScreen.NextTrack)
@@ -55,12 +161,36 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.TogglePlayback)
         tap(VexStreamMusicScreen.ShuffleQueue)
 
-        tap(VexStreamMusicScreen.TrackMenu)
-        tap(VexStreamMusicScreen.DownloadTrack)
-        tap(VexStreamMusicScreen.TrackMenu)
-        tap(VexStreamMusicScreen.RemoveTrackDownload)
-        tap(VexStreamMusicScreen.TrackMenu)
-        tap(VexStreamMusicScreen.VisitTrackArtist)
+        tapDynamic(
+            trackRowAction(
+                VexStreamMusicScreen.TrackMenu,
+            ),
+        )
+        tapDynamic(
+            trackMenuAction(
+                VexStreamMusicScreen.DownloadTrack,
+            ),
+        )
+        tapDynamic(
+            trackRowAction(
+                VexStreamMusicScreen.TrackMenu,
+            ),
+        )
+        tapDynamic(
+            trackMenuAction(
+                VexStreamMusicScreen.RemoveTrackDownload,
+            ),
+        )
+        tapDynamic(
+            trackRowAction(
+                VexStreamMusicScreen.TrackMenu,
+            ),
+        )
+        tapDynamic(
+            trackMenuAction(
+                VexStreamMusicScreen.VisitTrackArtist,
+            ),
+        )
         tap(VexStreamMusicScreen.CollectionBack)
         tap(VexStreamMusicScreen.SongsTab)
 
@@ -73,9 +203,22 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.CloseQueue)
 
         tap(VexStreamMusicScreen.SearchLibrary)
+        expectVisible(
+            VexStreamMusicScreen.SearchPrompt,
+        )
         type(
             VexStreamMusicScreen.SearchQuery,
             "Journey",
+        )
+        expectVisible(
+            dynamicElement(
+                VexStreamPresentationRefs.trackRow(
+                    scope =
+                        VexStreamTrackPresentationScope.Search,
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
+                ),
+            ),
         )
         tap(VexStreamMusicScreen.CloseSearch)
         tap(VexStreamMusicScreen.AlbumsTab)

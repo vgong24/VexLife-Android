@@ -294,7 +294,10 @@ class VexScreenCrawlerInstrumentedTest(
             val className =
                 VexScreenCrawlerInstrumentedTest::class.java.name
             val packageName =
-                VexScreenCrawlerInstrumentedTest::class.java.packageName
+                className.substringBeforeLast(
+                    delimiter = ".",
+                    missingDelimiterValue = "",
+                )
 
             val classFilter = arguments
                 .getString("class")

@@ -406,17 +406,61 @@ class VexRuntime(
         subjectRef: String,
         action: String = "Clicked",
     ) {
-        require(
-            subjectRef.startsWith("element.") ||
-                subjectRef.startsWith("presentation."),
-        ) {
-            "dynamic interaction ref must be element.* or presentation.*: $subjectRef"
-        }
+        requireDynamicInteractionRef(
+            subjectRef,
+        )
 
         logger.recordInteractionRef(
             subjectRef = subjectRef,
             screenBefore = currentScreen,
             action = action,
+        )
+    }
+
+    /**
+     * Activates one runtime-data instance of a statically registered action.
+     *
+     * The registered [element] remains the authority for Screen ownership and [ElementIntent].
+     * [subjectRef] supplies only the exact runtime instance identity used by diagnostics/tests.
+     * This prevents dynamic rows from either duplicating the static Screen registry or collapsing
+     * several visible instances into one ambiguous interaction record.
+     */
+    fun activateDynamic(
+        element: ActionElement,
+        subjectRef: String,
+    ) {
+        val uiElement =
+            element as? UIElement
+                ?: error("ActionElement must also be a UIElement")
+
+        requireDynamicInteractionRef(
+            subjectRef,
+        )
+        requireActiveSource(
+            uiElement,
+        )
+
+        val before =
+            currentScreen
+        val target =
+            navigationTarget(
+                element.intent,
+            )?.takeIf { screen ->
+                screen.screenId !=
+                    before.screenId
+            }
+
+        logger.recordInteractionRef(
+            subjectRef = subjectRef,
+            screenBefore = before,
+            screenAfter = target,
+            action = "Clicked",
+        )
+
+        applyIntent(
+            intent = element.intent,
+            source = uiElement,
+            submission = null,
         )
     }
 
@@ -556,6 +600,17 @@ class VexRuntime(
      * Shell elements have no Screen owner and remain app-wide. This prevents code from manually
      * activating an off-screen feature element and causing hidden cross-feature state mutation.
      */
+    private fun requireDynamicInteractionRef(
+        subjectRef: String,
+    ) {
+        require(
+            subjectRef.startsWith("element.") ||
+                subjectRef.startsWith("presentation."),
+        ) {
+            "dynamic interaction ref must be element.* or presentation.*: $subjectRef"
+        }
+    }
+
     private fun requireActiveSource(source: UIElement) {
         val registered = registry.element(source.elementId)
         check(registered === source) {

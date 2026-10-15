@@ -168,4 +168,148 @@ class AppBlueprintTest {
         assertEquals(showParent?.elementId, resetParent?.elementId)
         assertTrue(showParent?.elementId?.endsWith("log-history.actions") == true)
     }
+
+    @Test
+    fun galleryModalBlueprintMatchesInheritedVexComposePaths() {
+        assertSame(
+            GalleryScreen.DialogModalTitle,
+            registry.element(
+                GalleryScreen.DialogModalTitle.elementId,
+            ),
+        )
+        assertSame(
+            GalleryScreen.DialogModalBody,
+            registry.element(
+                GalleryScreen.DialogModalBody.elementId,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetContent,
+            registry.element(
+                GalleryScreen.BottomSheetContent.elementId,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetTitle,
+            registry.element(
+                GalleryScreen.BottomSheetTitle.elementId,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetBody,
+            registry.element(
+                GalleryScreen.BottomSheetBody.elementId,
+            ),
+        )
+
+        assertEquals(
+            GalleryScreen.DialogModalSample.elementId +
+                ".title",
+            GalleryScreen.DialogModalTitle.elementId,
+        )
+        assertEquals(
+            GalleryScreen.DialogModalSample.elementId +
+                ".body",
+            GalleryScreen.DialogModalBody.elementId,
+        )
+        assertEquals(
+            GalleryScreen.BottomSheetModalSample.elementId +
+                ".content",
+            GalleryScreen.BottomSheetContent.elementId,
+        )
+        assertEquals(
+            GalleryScreen.BottomSheetContent.elementId +
+                ".title",
+            GalleryScreen.BottomSheetTitle.elementId,
+        )
+        assertEquals(
+            GalleryScreen.BottomSheetContent.elementId +
+                ".body",
+            GalleryScreen.BottomSheetBody.elementId,
+        )
+
+        assertSame(
+            GalleryScreen.DialogModalSample,
+            registry.parentOf(
+                GalleryScreen.DialogModalTitle,
+            ),
+        )
+        assertSame(
+            GalleryScreen.DialogModalSample,
+            registry.parentOf(
+                GalleryScreen.DialogModalBody,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetModalSample,
+            registry.parentOf(
+                GalleryScreen.BottomSheetContent,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetContent,
+            registry.parentOf(
+                GalleryScreen.BottomSheetTitle,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetContent,
+            registry.parentOf(
+                GalleryScreen.BottomSheetBody,
+            ),
+        )
+    }
+
+    @Test
+    fun vexStreamSearchAddsNewParentContinuityWithoutRenamingLegacyIds() {
+        assertSame(
+            VexStreamMusicScreen.SearchSheet,
+            registry.parentOf(
+                VexStreamMusicScreen.SearchContent,
+            ),
+        )
+
+        assertSame(
+            VexStreamMusicScreen.SearchContent,
+            registry.parentOf(
+                VexStreamMusicScreen.SearchPrompt,
+            ),
+        )
+        assertSame(
+            VexStreamMusicScreen.SearchContent,
+            registry.parentOf(
+                VexStreamMusicScreen.SearchNoResults,
+            ),
+        )
+
+        assertSame(
+            VexStreamMusicScreen.SearchContent,
+            registry.parentOf(
+                VexStreamMusicScreen.SearchQuery,
+            ),
+        )
+        assertSame(
+            VexStreamMusicScreen.SearchContent,
+            registry.parentOf(
+                VexStreamMusicScreen.CloseSearch,
+            ),
+        )
+
+        assertTrue(
+            VexStreamMusicScreen.SearchContent.elementId
+                .startsWith(
+                    VexStreamMusicScreen.SearchSheet.elementId + ".",
+                ),
+        )
+
+        assertEquals(
+            "element.vexstream-music.body.library.search",
+            VexStreamMusicScreen.SearchQuery.elementId,
+        )
+        assertEquals(
+            "element.vexstream-music.body.library.search.close",
+            VexStreamMusicScreen.CloseSearch.elementId,
+        )
+    }
+
 }
