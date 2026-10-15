@@ -168,6 +168,62 @@ class VexMapsDistributionNavigationConvergenceRelayTest {
                     ready.request,
                 )
 
+                expected.value =
+                    VexMapsDistributionExpectedLegState.Expected(
+                        VexMapsDistributionExpectedLeg(
+                            planRef =
+                                "old.plan",
+                            target =
+                                VexMapsDistributionLegTarget.Stop(
+                                    "beta",
+                                ),
+                            route =
+                                VexMapsDistributionRouteIdentity(
+                                    "distribution.beta",
+                                    7L,
+                                ),
+                        ),
+                    )
+
+                withTimeout(
+                    1_000L,
+                ) {
+                    relay.outputStates
+                        .first {
+                            it.layer ==
+                                VexMapsDistributionNavigationLayer
+                                    .ForeignNavigation
+                        }
+                }
+
+                expected.value =
+                    VexMapsDistributionExpectedLegState.Expected(
+                        VexMapsDistributionExpectedLeg(
+                            planRef =
+                                "plan.4",
+                            target =
+                                VexMapsDistributionLegTarget.Stop(
+                                    "beta",
+                                ),
+                            route =
+                                VexMapsDistributionRouteIdentity(
+                                    "distribution.beta",
+                                    7L,
+                                ),
+                        ),
+                    )
+
+                withTimeout(
+                    1_000L,
+                ) {
+                    relay.outputStates
+                        .first {
+                            it.layer ==
+                                VexMapsDistributionNavigationLayer
+                                    .ReadyToStart
+                        }
+                }
+
                 navigation.value =
                     navigation.value.copy(
                         routeResult =
@@ -185,14 +241,11 @@ class VexMapsDistributionNavigationConvergenceRelayTest {
                             .first {
                                 it.layer ==
                                     VexMapsDistributionNavigationLayer
-                                        .NeedsLeg
+                                        .ForeignNavigation
                             }
                     }
 
-                assertEquals(
-                    VexMapsDistributionNavigationRequest.PrepareLeg(
-                        "beta",
-                    ),
+                assertNull(
                     mismatch.request,
                 )
             } finally {

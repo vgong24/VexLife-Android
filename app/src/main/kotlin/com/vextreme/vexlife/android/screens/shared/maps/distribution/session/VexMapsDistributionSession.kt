@@ -627,6 +627,13 @@ internal class VexMapsDistributionSession(
     }
 
     fun clearAll() {
+        if (
+            mutableState.value
+                .draftOperationInFlight
+        ) {
+            return
+        }
+
         preparationJob?.cancel()
         legJob?.cancel()
         navigation.dismissArrival()

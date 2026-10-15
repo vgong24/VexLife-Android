@@ -352,6 +352,8 @@ private fun projectDistributionNavigation(
 
         is VexMapsDistributionRunState.Ready ->
             projectExpectedLeg(
+                planRef =
+                    runState.planRef,
                 target =
                     VexMapsDistributionLegTarget.Stop(
                         runState
@@ -370,6 +372,8 @@ private fun projectDistributionNavigation(
 
         is VexMapsDistributionRunState.Running ->
             projectExpectedLeg(
+                planRef =
+                    runState.planRef,
                 target =
                     VexMapsDistributionLegTarget.Stop(
                         runState
@@ -394,6 +398,8 @@ private fun projectDistributionNavigation(
 
         is VexMapsDistributionRunState.Returning ->
             projectExpectedLeg(
+                planRef =
+                    runState.planRef,
                 target =
                     VexMapsDistributionLegTarget
                         .ReturnToStart,
@@ -416,6 +422,7 @@ private fun projectDistributionNavigation(
     }
 
 private fun projectExpectedLeg(
+    planRef: String,
     target:
         VexMapsDistributionLegTarget,
     navigation:
@@ -434,7 +441,9 @@ private fun projectExpectedLeg(
         )
             ?.leg
             ?.takeIf {
-                it.target ==
+                it.planRef ==
+                    planRef &&
+                    it.target ==
                     target
             }
 
@@ -448,14 +457,10 @@ private fun projectExpectedLeg(
         )
     ) {
         if (
-            navigation.phase ==
-                VexNavigationSessionPhase.ACTIVE ||
-            navigation.phase ==
-                VexNavigationSessionPhase.OFF_ROUTE ||
-            navigation.phase ==
-                VexNavigationSessionPhase.LOCATION_HELD ||
-            navigation.phase ==
-                VexNavigationSessionPhase.ARRIVED
+            navigation.phase !=
+                VexNavigationSessionPhase.IDLE &&
+            navigation.routeResult !=
+                null
         ) {
             return VexMapsDistributionNavigationOutput(
                 layer =

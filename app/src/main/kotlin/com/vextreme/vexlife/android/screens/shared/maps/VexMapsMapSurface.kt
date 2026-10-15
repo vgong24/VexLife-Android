@@ -45,7 +45,6 @@ import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
-import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionExperience
@@ -1622,6 +1621,26 @@ internal fun VexMapsMapSurface(
                     )
                 },
                 onImportRegion = {
+                    val distributionRunState =
+                        distributionExperience
+                            .runProjection
+                            .state
+                    if (
+                        distributionModeProjection
+                            .state is
+                            VexMapsDistributionModeState.Distribution &&
+                        (
+                            distributionRunState is
+                                VexMapsDistributionRunState.Running ||
+                                distributionRunState is
+                                VexMapsDistributionRunState.AtStop ||
+                                distributionRunState is
+                                VexMapsDistributionRunState.Returning
+                        )
+                    ) {
+                        return@VexMapsRoutePlannerCard
+                    }
+
                     runtime.activate(
                         VexMapsScreen.ImportRoutingRegion,
                     )
