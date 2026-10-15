@@ -27,8 +27,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run repository-owned local verification
-        run: |
-          ./gradlew             vexVerifyLocal             --no-configuration-cache             --continue             --stacktrace
+        run: ./gradlew vexVerifyLocal --no-configuration-cache --continue --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
