@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.testing.journey
 import com.vextreme.vexlife.android.logging.VexLogKind
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
+import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPresentationScope
@@ -124,7 +125,7 @@ class VexExpectedWalkTest {
     }
 
     @Test
-    fun visibilityAssertionDoesNotInventInteractionHistory() {
+    fun dynamicVisibilityAssertionDoesNotInventInteractionHistory() {
         val walk = VexExpectedWalk()
         val dynamic =
             dynamicElement(
@@ -141,6 +142,28 @@ class VexExpectedWalkTest {
 
         assertEquals(1, walk.records.size)
         assertEquals(VexLogKind.AppOpened, walk.records.single().kind)
+    }
+
+    @Test
+    fun staticVisibilityAssertionDoesNotInventInteractionHistory() {
+        val walk =
+            VexExpectedWalk()
+
+        walk.start(
+            HomeScreen,
+        )
+        walk.expectVisible(
+            GalleryScreen.DialogModalTitle,
+        )
+
+        assertEquals(
+            1,
+            walk.records.size,
+        )
+        assertEquals(
+            VexLogKind.AppOpened,
+            walk.records.single().kind,
+        )
     }
 
     @Test
