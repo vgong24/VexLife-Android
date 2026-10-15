@@ -488,8 +488,18 @@ private fun projectExpectedLeg(
                     legAttempt,
             )
 
-        VexNavigationSessionPhase.READY ->
-            if (humanStartRequired) {
+        VexNavigationSessionPhase.READY -> {
+            val retainedAttempt =
+                projectRetainedLegAttempt(
+                    target =
+                        target,
+                    legAttempt =
+                        legAttempt,
+                )
+
+            if (retainedAttempt != null) {
+                retainedAttempt
+            } else if (humanStartRequired) {
                 VexMapsDistributionNavigationOutput(
                     layer =
                         VexMapsDistributionNavigationLayer
@@ -505,6 +515,7 @@ private fun projectExpectedLeg(
                             .StartPreparedNavigation,
                 )
             }
+        }
 
         VexNavigationSessionPhase.ACTIVE,
         VexNavigationSessionPhase.OFF_ROUTE,
@@ -529,6 +540,47 @@ private fun projectExpectedLeg(
             )
     }
 }
+
+private fun projectRetainedLegAttempt(
+    target:
+        VexMapsDistributionLegTarget,
+    legAttempt:
+        VexMapsDistributionLegAttempt,
+): VexMapsDistributionNavigationOutput? =
+    when (
+        legAttempt
+    ) {
+        is VexMapsDistributionLegAttempt.Preparing ->
+            if (
+                legAttempt.target ==
+                target
+            ) {
+                VexMapsDistributionNavigationOutput(
+                    layer =
+                        VexMapsDistributionNavigationLayer
+                            .PreparingLeg,
+                )
+            } else {
+                null
+            }
+
+        is VexMapsDistributionLegAttempt.Failed ->
+            if (
+                legAttempt.target ==
+                target
+            ) {
+                VexMapsDistributionNavigationOutput(
+                    layer =
+                        VexMapsDistributionNavigationLayer
+                            .LegFailed,
+                )
+            } else {
+                null
+            }
+
+        VexMapsDistributionLegAttempt.Idle ->
+            null
+    }
 
 private fun projectLegNeed(
     target:

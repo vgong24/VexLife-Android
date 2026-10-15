@@ -225,12 +225,9 @@ internal class VexMapsDistributionSession(
             navigationRelay
                 .outputStates
                 .collect { output ->
-                    output.request
-                        ?.let {
-                            realizeNavigationRequest(
-                                it,
-                            )
-                        }
+                    acceptNavigationOutput(
+                        output,
+                    )
                 }
         }
 
@@ -1003,6 +1000,30 @@ internal class VexMapsDistributionSession(
                 null
         }
 
+    private fun acceptNavigationOutput(
+        output:
+            VexMapsDistributionNavigationOutput,
+    ) {
+        if (
+            output.layer ==
+                com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
+                    .VexMapsDistributionNavigationLayer.Navigating &&
+            mutableLegAttempt.value is
+                VexMapsDistributionLegAttempt.Preparing
+        ) {
+            setLegAttempt(
+                VexMapsDistributionLegAttempt.Idle,
+            )
+        }
+
+        output.request
+            ?.let {
+                realizeNavigationRequest(
+                    it,
+                )
+            }
+    }
+
     private fun realizeNavigationRequest(
         request:
             VexMapsDistributionNavigationRequest,
@@ -1022,8 +1043,30 @@ internal class VexMapsDistributionSession(
                     VexMapsDistributionLegTarget.ReturnToStart,
                 )
 
-            VexMapsDistributionNavigationRequest.StartPreparedNavigation ->
-                navigation.startPrepared()
+            VexMapsDistributionNavigationRequest.StartPreparedNavigation -> {
+                val target =
+                    currentLegTargetOrNull()
+                        ?: return
+
+                setLegAttempt(
+                    VexMapsDistributionLegAttempt.Preparing(
+                        target,
+                    ),
+                )
+
+                runCatching {
+                    navigation.startPrepared()
+                }.onFailure { error ->
+                    setLegAttempt(
+                        VexMapsDistributionLegAttempt.Failed(
+                            target =
+                                target,
+                            reason =
+                                error.failureMeaning(),
+                        ),
+                    )
+                }
+            }
 
             is VexMapsDistributionNavigationRequest.RunControl -> {
                 val completingReturn =
