@@ -47,6 +47,9 @@ object VexStreamPresentationRefs {
             placement = "menu",
         )
 
+    const val SearchResultsList =
+        "element.vexstream-music.search.results"
+
     const val QueueList =
         "element.vexstream-music.queue.entries"
 
