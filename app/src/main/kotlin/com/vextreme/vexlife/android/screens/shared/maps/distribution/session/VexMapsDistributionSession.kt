@@ -21,6 +21,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationOutput
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationRequest
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionRouteIdentity
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.vexMapsDistributionNavigationRealizesExpectedLeg
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.CurrentVexMapsDistributionModeExperience
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeExperience
@@ -683,8 +684,11 @@ internal class VexMapsDistributionSession(
         if (
             expected.planRef !=
                 ready.planRef ||
-            !navigation.matches(
-                expected,
+            !vexMapsDistributionNavigationRealizesExpectedLeg(
+                navigation =
+                    navigation.current,
+                expected =
+                    expected,
             ) ||
             navigation.current.phase !=
                 VexNavigationSessionPhase.READY
@@ -1361,8 +1365,11 @@ internal class VexMapsDistributionSession(
 
         if (
             alreadyPrepared != null &&
-            navigation.matches(
-                alreadyPrepared,
+            vexMapsDistributionNavigationRealizesExpectedLeg(
+                navigation =
+                    navigation.current,
+                expected =
+                    alreadyPrepared,
             )
         ) {
             return
@@ -1600,22 +1607,6 @@ internal class VexMapsDistributionSession(
                 ),
         )
     }
-}
-
-private fun VexMapsDistributionNavigationPort.matches(
-    expected:
-        VexMapsDistributionExpectedLeg,
-): Boolean {
-    val route =
-        current
-            .routeResult
-            ?.route
-            ?: return false
-
-    return route.routeRef ==
-        expected.route.routeRef &&
-        route.routeRevision ==
-        expected.route.routeRevision
 }
 
 private fun VexOfflineRouteResult.identity():

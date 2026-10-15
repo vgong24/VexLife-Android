@@ -36,6 +36,13 @@ internal data class VexMapsDistributionRouteIdentity(
     }
 }
 
+/**
+ * Binding from one Distribution Plan target to the exact Navigation route initially admitted for it.
+ *
+ * The stored revision protects initial READY admission. Once that Navigation journey is active,
+ * Navigation may legitimately replace its route during reroute while preserving the stable routeRef;
+ * active-leg continuity is decided by [vexMapsDistributionNavigationRealizesExpectedLeg].
+ */
 internal data class VexMapsDistributionExpectedLeg(
     val planRef: String,
     val target:
@@ -464,7 +471,7 @@ private fun projectExpectedLeg(
 
     if (
         expected == null ||
-        !navigationMatchesExpectedLeg(
+        !vexMapsDistributionNavigationRealizesExpectedLeg(
             navigation =
                 navigation,
             expected =
@@ -699,7 +706,18 @@ private fun needsLeg(
             },
     )
 
-private fun navigationMatchesExpectedLeg(
+/**
+ * Does current Navigation still realize this exact Distribution leg?
+ *
+ * READY is initial admission, so both stable routeRef and exact routeRevision must match.
+ *
+ * After Navigation is active, Navigation owns reroute evolution inside that same journey. Its
+ * accepted reroute path preserves routeRef and advances routeRevision. Distribution therefore keeps
+ * the leg bound when the stable routeRef is unchanged and the active revision is not older than the
+ * one originally admitted. A different routeRef, an older active revision, or IDLE Navigation is
+ * foreign/not-realizing.
+ */
+internal fun vexMapsDistributionNavigationRealizesExpectedLeg(
     navigation:
         VexNavigationSessionState,
     expected:
@@ -711,10 +729,30 @@ private fun navigationMatchesExpectedLeg(
             ?.route
             ?: return false
 
-    return route.routeRef ==
-        expected.route.routeRef &&
-        route.routeRevision ==
-        expected.route.routeRevision
+    if (
+        route.routeRef !=
+        expected.route.routeRef
+    ) {
+        return false
+    }
+
+    return when (
+        navigation.phase
+    ) {
+        VexNavigationSessionPhase.READY ->
+            route.routeRevision ==
+                expected.route.routeRevision
+
+        VexNavigationSessionPhase.ACTIVE,
+        VexNavigationSessionPhase.OFF_ROUTE,
+        VexNavigationSessionPhase.LOCATION_HELD,
+        VexNavigationSessionPhase.ARRIVED ->
+            route.routeRevision >=
+                expected.route.routeRevision
+
+        VexNavigationSessionPhase.IDLE ->
+            false
+    }
 }
 
 // [VXG RealForever]
