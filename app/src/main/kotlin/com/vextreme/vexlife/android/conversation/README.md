@@ -211,10 +211,14 @@ PRODUCTION SESSION AUTHORITY WIRING
     resolveFamilyConversationAuthority
     -> production-default route fails closed with FAMILY_SESSION_AUTHORITY_UNAVAILABLE
 
-HISTORICAL AUDIENCE PROJECTION
-    canonical Conversation events preserve witnessRefs
-    current Family HTTP safeMessage response does not expose witnessRefs
-    -> Android cannot truthfully reconstruct historical audience from the current room
+AUTHENTICATED THREAD-HISTORY PROJECTION
+    canonical family-membership-runtime already owns readFamilyThreadHistory(...)
+    -> validates ordered immutable channel segments across one stable thread
+    -> enforces FROM_JOIN using historical witnessRefs
+    -> returns segmentRefs[] + messages[] + currentChannelRef/current generation
+
+    current VF-02C HTTP READ is narrower/current-channel scoped and safeMessage omits witnessRefs
+    -> Android cannot yet consume the canonical cross-generation history truthfully
 ~~~
 
 Android therefore aligns its request contract now but does not invent a working network adapter until
@@ -306,9 +310,10 @@ VexConversationThreadState
     threadRef
     optional spaceRef
     current channel/generation
+    ordered immutable segmentRefs[]
     known historical participant identities
     current audience
-    timeline
+    immutable messages[]
 ~~~
 
 and deliberately excludes:
@@ -803,6 +808,35 @@ formed. The Screen should retain static semantic identities while runtime messag
 
 ### Timeline
 
+Canonical Family thread history is already segment-based in VexLife:
+
+~~~text
+readFamilyThreadHistory(...)
+-> threadRef
+-> currentChannelRef
+-> membershipGeneration
+-> segmentRefs[]
+-> messages[]
+~~~
+
+Android therefore models immutable messages plus ordered channel segments. It does not manufacture
+join/leave entries inside Conversation history.
+
+A future presentation may render:
+
+~~~text
+message in segment g2
+---- membership/channel generation changed ----
+message in segment g3
+~~~
+
+when that treatment is derivable from exact segment/generation truth or a separately admitted Family
+lifecycle projection.
+
+~~~text
+VISIBLE_MEMBERSHIP_DIVIDER != CONVERSATION_MESSAGE_EVENT
+~~~
+
 VexStableLazyColumn is a strong existing Android primitive for a runtime message feed because it
 supports stable item identity without making visual index into product identity.
 
@@ -884,9 +918,11 @@ consumer contract and tests the currentness problem the architecture review iden
 
 ~~~text
 conversation/VexConversationState.kt
-    typed thread/channel/message/participant refs
+    typed space/thread/channel/message/participant refs
     knownParticipants != currentAudience
+    ordered immutable channel segmentRefs
     immutable message recipient/witness distinction
+    no fabricated membership-transition message events
     Conversation-owned thread state only
 
 conversation/VexConversationRepository.kt
@@ -983,10 +1019,13 @@ WHEN
 
 THEN
     old messages retain their original channel/witness generation
+    ordered segmentRefs preserve the immutable channel generations
     new messages use the successor current channel
 
 EXPERIENCED AS
-    one conversational continuity with a visible membership boundary
+    one conversational continuity
+    with an optional derived presentation boundary between exact segments
+    rather than a fabricated Conversation event
 ~~~
 
 ### Remote Home unavailable
@@ -1143,7 +1182,8 @@ The next missing predicates are now explicit and split by owner:
 ~~~text
 VEXLIFE PRODUCER
     bind accepted Home Bridge session authority into the production Family Conversation route
-    expose exact historical witness/audience truth needed by Android (witnessRefs or equivalent)
+    expose the existing bounded authenticated Family thread-history truth needed by Android
+    (segmentRefs + historical messages with witnessRefs, or an exactly equivalent safe projection)
 
 ANDROID APP GRAPH
     wait for active AppRepositories/Journey path ownership to clear

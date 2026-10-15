@@ -74,9 +74,7 @@ enum class VexConversationParticipantKind {
  * Stable identity needed by Conversation history/current-audience projection.
  *
  * Human-facing display name, avatar, relationship label and Family role are deliberately absent:
- * those belong to their own identity/relationship/Family/presentation owners. The current VexLife
- * Family room bootstrap likewise supplies principal refs and Family companion lineage rather than
- * making Conversation the display-name owner.
+ * those belong to their own identity/relationship/Family/presentation owners.
  */
 data class VexConversationParticipant(
     val participantRef:
@@ -85,142 +83,104 @@ data class VexConversationParticipant(
         VexConversationParticipantKind,
 )
 
-enum class VexConversationMembershipChange {
-    Joined,
-    Left,
-}
-
-sealed interface VexConversationTimelineEntry {
-    val entryRef: String
+/**
+ * One immutable Conversation message projection.
+ *
+ * recipientRefs are the addressed delivery targets admitted by the provider.
+ * witnessRefs are the immutable event audience.
+ * Android must not collapse those meanings or reconstruct old witnesses from current membership.
+ */
+data class VexConversationMessage(
+    val messageRef:
+        VexConversationMessageRef,
     val threadRef:
-        VexConversationThreadRef
-
-    /**
-     * Immutable Conversation message projection.
-     *
-     * recipientRefs are the addressed delivery targets admitted by the provider.
-     * witnessRefs are the immutable event audience.
-     * Android must not collapse those meanings or reconstruct old witnesses from current membership.
-     */
-    data class Message(
-        override val entryRef: String,
-        override val threadRef:
-            VexConversationThreadRef,
-        val messageRef:
-            VexConversationMessageRef,
-        val spaceRef:
-            VexConversationSpaceRef?,
-        val channelRef:
-            VexConversationChannelRef,
-        val membershipGeneration: Long,
-        val sequence: Long,
-        val speakerRef:
-            VexConversationParticipantRef,
-        val recipientRefs:
-            List<VexConversationParticipantRef>,
-        val witnessRefs:
-            List<VexConversationParticipantRef>,
-        val content: String,
-    ) : VexConversationTimelineEntry {
-        init {
-            require(
-                entryRef ==
-                    messageRef.value,
-            ) {
-                "message entryRef must preserve exact messageRef identity"
-            }
-            require(membershipGeneration > 0L) {
-                "message membershipGeneration must be positive"
-            }
-            require(sequence > 0L) {
-                "message sequence must be positive"
-            }
-            require(content.isNotBlank()) {
-                "message content must be non-blank"
-            }
-            require(
-                recipientRefs
-                    .distinct()
-                    .size ==
-                    recipientRefs.size,
-            ) {
-                "message recipient refs must be unique"
-            }
-            require(
-                witnessRefs
-                    .distinct()
-                    .size ==
-                    witnessRefs.size,
-            ) {
-                "message witness refs must be unique"
-            }
-            require(
-                speakerRef in
-                    witnessRefs,
-            ) {
-                "message speaker must belong to immutable event audience"
-            }
-            require(
-                recipientRefs.all(
-                    witnessRefs::contains,
-                ),
-            ) {
-                "addressed recipients must belong to immutable event audience"
-            }
+        VexConversationThreadRef,
+    val spaceRef:
+        VexConversationSpaceRef?,
+    val channelRef:
+        VexConversationChannelRef,
+    val membershipGeneration: Long,
+    val sequence: Long,
+    val speakerRef:
+        VexConversationParticipantRef,
+    val recipientRefs:
+        List<VexConversationParticipantRef>,
+    val witnessRefs:
+        List<VexConversationParticipantRef>,
+    val content: String,
+) {
+    init {
+        require(membershipGeneration > 0L) {
+            "message membershipGeneration must be positive"
         }
-    }
-
-    /**
-     * Human-readable boundary between immutable channel/membership generations in one stable thread.
-     *
-     * This does not mutate Family membership. It is retained Conversation/history projection only.
-     */
-    data class MembershipBoundary(
-        override val entryRef: String,
-        override val threadRef:
-            VexConversationThreadRef,
-        val fromChannelRef:
-            VexConversationChannelRef,
-        val toChannelRef:
-            VexConversationChannelRef,
-        val membershipGeneration: Long,
-        val participantRef:
-            VexConversationParticipantRef,
-        val change:
-            VexConversationMembershipChange,
-    ) : VexConversationTimelineEntry {
-        init {
-            require(entryRef.isNotBlank()) {
-                "membership-boundary entryRef must be non-blank"
-            }
-            require(membershipGeneration > 0L) {
-                "membership-boundary generation must be positive"
-            }
-            require(
-                fromChannelRef !=
-                    toChannelRef,
-            ) {
-                "membership boundary must advance channel identity"
-            }
+        require(sequence > 0L) {
+            "message sequence must be positive"
+        }
+        require(content.isNotBlank()) {
+            "message content must be non-blank"
+        }
+        require(
+            recipientRefs
+                .distinct()
+                .size ==
+                recipientRefs.size,
+        ) {
+            "message recipient refs must be unique"
+        }
+        require(
+            witnessRefs
+                .distinct()
+                .size ==
+                witnessRefs.size,
+        ) {
+            "message witness refs must be unique"
+        }
+        require(
+            speakerRef in
+                witnessRefs,
+        ) {
+            "message speaker must belong to immutable event audience"
+        }
+        require(
+            recipientRefs.all(
+                witnessRefs::contains,
+            ),
+        ) {
+            "addressed recipients must belong to immutable event audience"
         }
     }
 }
 
 /**
- * Conversation-owned projection of one stable thread.
+ * Conversation-owned projection of one stable thread across immutable channel segments.
  *
- * [spaceRef] is present for a Family/space-scoped channel and remains null for Conversation shapes
+ * Current VexLife Family source already has a canonical cross-generation reader:
+ *
+ * readFamilyThreadHistory(...)
+ * -> threadRef
+ * -> currentChannelRef
+ * -> membershipGeneration
+ * -> segmentRefs[]
+ * -> messages[]
+ *
+ * [segmentRefs] therefore carries real source meaning. It is ordered from older to newer channel
+ * generations and ends at [currentChannelRef].
+ *
+ * Membership transition events are NOT stored here because the canonical Conversation history reader
+ * currently returns channel segments plus messages, not synthetic "joined/left" message events. A
+ * future Android presentation may derive a visible segment boundary from exact channel/generation
+ * changes or consume an explicit lifecycle projection if one is admitted.
+ *
+ * [spaceRef] is present for a Family/space-scoped thread and remains null for Conversation shapes
  * that do not belong to such a space.
  *
  * knownParticipants is the identity directory needed to render retained history. It is NOT the
  * current audience. A participant who later leaves may remain known so historical authored messages
  * and witness sets remain attributable.
  *
- * Human-facing thread title/label is deliberately absent. Current provider contracts identify
- * thread/channel/space by stable refs and presentation owners decide how those are named for people.
- *
- * Home reachability, authenticated-device/session truth, Family role, participant display metadata
- * and companion/model availability are deliberately absent because those have different owners.
+ * Human-facing thread title/label is deliberately absent. Home reachability,
+ * authenticated-device/session truth, Family role, participant display metadata and companion/model
+ * availability are also absent because those have different owners.
  */
 data class VexConversationThreadState(
     val threadRef:
@@ -230,12 +190,14 @@ data class VexConversationThreadState(
     val currentChannelRef:
         VexConversationChannelRef,
     val currentMembershipGeneration: Long,
+    val segmentRefs:
+        List<VexConversationChannelRef>,
     val knownParticipants:
         List<VexConversationParticipant>,
     val currentAudienceRefs:
         List<VexConversationParticipantRef>,
-    val timeline:
-        List<VexConversationTimelineEntry>,
+    val messages:
+        List<VexConversationMessage>,
 ) {
     private val knownParticipantRefs =
         knownParticipants
@@ -246,6 +208,23 @@ data class VexConversationThreadState(
     init {
         require(currentMembershipGeneration > 0L) {
             "current membership generation must be positive"
+        }
+        require(segmentRefs.isNotEmpty()) {
+            "conversation thread must retain at least one channel segment"
+        }
+        require(
+            segmentRefs
+                .distinct()
+                .size ==
+                segmentRefs.size,
+        ) {
+            "conversation thread segment refs must be unique"
+        }
+        require(
+            segmentRefs.last() ==
+                currentChannelRef,
+        ) {
+            "current channel must be the newest retained thread segment"
         }
         require(
             knownParticipantRefs
@@ -271,56 +250,54 @@ data class VexConversationThreadState(
             "current audience must resolve through known participants"
         }
         require(
-            timeline
-                .map { entry ->
-                    entry.entryRef
+            messages
+                .map { message ->
+                    message.messageRef
                 }
                 .distinct()
                 .size ==
-                timeline.size,
+                messages.size,
         ) {
-            "conversation timeline entry refs must be unique"
+            "conversation message refs must be unique"
         }
 
-        timeline.forEach { entry ->
+        messages.forEach { message ->
             require(
-                entry.threadRef ==
+                message.threadRef ==
                     threadRef,
             ) {
-                "timeline entry must belong to its thread"
+                "message must belong to its thread"
             }
-
-            when (entry) {
-                is VexConversationTimelineEntry.Message -> {
-                    require(
-                        entry.spaceRef ==
-                            spaceRef,
-                    ) {
-                        "message spaceRef must match its thread scope"
-                    }
-                    require(
-                        entry.speakerRef in
-                            knownParticipantRefs,
-                    ) {
-                        "historical speaker must resolve through known participants"
-                    }
-                    require(
-                        entry.witnessRefs.all(
-                            knownParticipantRefs::contains,
-                        ),
-                    ) {
-                        "historical witnesses must resolve through known participants"
-                    }
-                }
-
-                is VexConversationTimelineEntry.MembershipBoundary -> {
-                    require(
-                        entry.participantRef in
-                            knownParticipantRefs,
-                    ) {
-                        "membership-boundary participant must resolve through known participants"
-                    }
-                }
+            require(
+                message.spaceRef ==
+                    spaceRef,
+            ) {
+                "message spaceRef must match its thread scope"
+            }
+            require(
+                message.channelRef in
+                    segmentRefs,
+            ) {
+                "message channel must belong to one retained thread segment"
+            }
+            require(
+                message.membershipGeneration <=
+                    currentMembershipGeneration,
+            ) {
+                "message generation cannot be newer than current thread generation"
+            }
+            require(
+                message.speakerRef in
+                    knownParticipantRefs,
+            ) {
+                "historical speaker must resolve through known participants"
+            }
+            require(
+                message.witnessRefs.all(
+                    knownParticipantRefs::contains,
+                ),
+            ) {
+                "historical witnesses must resolve through known participants"
             }
         }
     }

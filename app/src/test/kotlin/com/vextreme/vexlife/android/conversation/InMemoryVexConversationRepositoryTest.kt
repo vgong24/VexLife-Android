@@ -83,10 +83,7 @@ class InMemoryVexConversationRepositoryTest {
                     .thread(
                         threadRef,
                     )
-                    ?.timeline
-                    ?.filterIsInstance<
-                        VexConversationTimelineEntry.Message
-                    >()
+                    ?.messages
                     ?.size,
             )
         }
@@ -129,10 +126,7 @@ class InMemoryVexConversationRepositoryTest {
                     .thread(
                         threadRef,
                     )
-                    ?.timeline
-                    ?.filterIsInstance<
-                        VexConversationTimelineEntry.Message
-                    >()
+                    ?.messages
                     ?.last()
                     ?: error(
                         "appended message missing",
@@ -142,12 +136,6 @@ class InMemoryVexConversationRepositoryTest {
                 victorRef,
                 appended.speakerRef,
             )
-
-            /*
-             * Current VF-02C Family bridge derives the other HUMAN principals as message recipients.
-             * Family Vex remains part of the immutable channel/event witness truth; AI attention is
-             * a separate downstream concern.
-             */
             assertEquals(
                 listOf(
                     mayaRef,
@@ -189,10 +177,6 @@ class InMemoryVexConversationRepositoryTest {
                         "draft-before-membership-change",
                 )
 
-            /*
-             * Test-side provider pressure: current Family/Conversation truth advances before the
-             * already-authored request is activated. Product code does not own this mutation API.
-             */
             repository.publishThread(
                 generationThree(),
             )
@@ -224,6 +208,14 @@ class InMemoryVexConversationRepositoryTest {
                         "current fixture thread missing",
                     )
 
+            assertEquals(
+                listOf(
+                    channelGenerationTwo,
+                    channelGenerationThree,
+                ),
+                currentThread.segmentRefs,
+            )
+
             assertTrue(
                 repository.send(
                     requestFor(
@@ -243,10 +235,7 @@ class InMemoryVexConversationRepositoryTest {
                     .thread(
                         threadRef,
                     )
-                    ?.timeline
-                    ?.filterIsInstance<
-                        VexConversationTimelineEntry.Message
-                    >()
+                    ?.messages
                     ?.last()
                     ?: error(
                         "rebound message missing",
@@ -324,10 +313,7 @@ class InMemoryVexConversationRepositoryTest {
                     .thread(
                         threadRef,
                     )
-                    ?.timeline
-                    ?.filterIsInstance<
-                        VexConversationTimelineEntry.Message
-                    >()
+                    ?.messages
                     ?.size,
             )
         }
@@ -394,10 +380,7 @@ class InMemoryVexConversationRepositoryTest {
         )
 
         val historical =
-            current.timeline
-                .filterIsInstance<
-                    VexConversationTimelineEntry.Message
-                >()
+            current.messages
                 .single()
 
         assertEquals(
@@ -415,6 +398,13 @@ class InMemoryVexConversationRepositoryTest {
         assertTrue(
             mayaRef in
                 historical.witnessRefs,
+        )
+        assertEquals(
+            listOf(
+                channelGenerationTwo,
+                channelGenerationThree,
+            ),
+            current.segmentRefs,
         )
     }
 
@@ -498,6 +488,10 @@ class InMemoryVexConversationRepositoryTest {
                 channelGenerationTwo,
             currentMembershipGeneration =
                 2L,
+            segmentRefs =
+                listOf(
+                    channelGenerationTwo,
+                ),
             knownParticipants =
                 knownParticipants(),
             currentAudienceRefs =
@@ -506,17 +500,15 @@ class InMemoryVexConversationRepositoryTest {
                     mayaRef,
                     vexRef,
                 ),
-            timeline =
+            messages =
                 listOf(
-                    VexConversationTimelineEntry.Message(
-                        entryRef =
-                            "message.fixture.family-room.001",
-                        threadRef =
-                            threadRef,
+                    VexConversationMessage(
                         messageRef =
                             VexConversationMessageRef(
                                 "message.fixture.family-room.001",
                             ),
+                        threadRef =
+                            threadRef,
                         spaceRef =
                             spaceRef,
                         channelRef =
@@ -554,6 +546,11 @@ class InMemoryVexConversationRepositoryTest {
                 channelGenerationThree,
             currentMembershipGeneration =
                 3L,
+            segmentRefs =
+                listOf(
+                    channelGenerationTwo,
+                    channelGenerationThree,
+                ),
             knownParticipants =
                 knownParticipants(),
             currentAudienceRefs =
@@ -562,25 +559,9 @@ class InMemoryVexConversationRepositoryTest {
                     alexRef,
                     vexRef,
                 ),
-            timeline =
+            messages =
                 generationTwo()
-                    .timeline +
-                    VexConversationTimelineEntry.MembershipBoundary(
-                        entryRef =
-                            "boundary.fixture.family-room.g3",
-                        threadRef =
-                            threadRef,
-                        fromChannelRef =
-                            channelGenerationTwo,
-                        toChannelRef =
-                            channelGenerationThree,
-                        membershipGeneration =
-                            3L,
-                        participantRef =
-                            mayaRef,
-                        change =
-                            VexConversationMembershipChange.Left,
-                    ),
+                    .messages,
         )
 }
 

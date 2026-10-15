@@ -226,6 +226,10 @@ class VexConversationSurfaceProjectionTest {
                 channelRef,
             currentMembershipGeneration =
                 2L,
+            segmentRefs =
+                listOf(
+                    channelRef,
+                ),
             knownParticipants =
                 listOf(
                     VexConversationParticipant(
@@ -253,17 +257,15 @@ class VexConversationSurfaceProjectionTest {
                     mayaRef,
                     vexRef,
                 ),
-            timeline =
+            messages =
                 listOf(
-                    VexConversationTimelineEntry.Message(
-                        entryRef =
-                            "message.fixture.001",
-                        threadRef =
-                            threadRef,
+                    VexConversationMessage(
                         messageRef =
                             VexConversationMessageRef(
                                 "message.fixture.001",
                             ),
+                        threadRef =
+                            threadRef,
                         spaceRef =
                             spaceRef,
                         channelRef =

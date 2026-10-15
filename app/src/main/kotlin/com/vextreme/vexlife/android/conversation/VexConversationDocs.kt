@@ -66,8 +66,10 @@ package com.vextreme.vexlife.android.conversation
  *
  * - ordinary serve-browser startup currently does not bind resolveFamilyConversationAuthority, so
  *   production-default Family requests fail closed with FAMILY_SESSION_AUTHORITY_UNAVAILABLE;
- * - the current bounded HTTP message projection omits canonical witnessRefs, so Android must not
- *   reconstruct historical audience truth from current membership.
+ * - canonical family-membership-runtime already owns readFamilyThreadHistory(...) across ordered
+ *   channel segments with FROM_JOIN + historical witness enforcement, while the current VF-02C HTTP
+ *   READ remains current-channel scoped and safeMessage omits witnessRefs. Android therefore holds
+ *   the real adapter rather than reconstructing cross-generation history from current membership.
  *
 
  * ## Presentation identity boundary
@@ -78,6 +80,15 @@ package com.vextreme.vexlife.android.conversation
  * human-facing room title. Current VexLife Family producer projections do not grant Conversation
  * those meanings. A future Android presentation owner may compose friendly labels from the rightful
  * identity/relationship/Family/product sources without rewriting Conversation identity.
+ *
+ * ## Thread-history law
+ *
+ * Current VexLife Family source already owns readFamilyThreadHistory(...), which validates immutable
+ * channel segments for one stable thread and returns ordered segmentRefs plus authorized messages.
+ *
+ * Android therefore models segmentRefs + immutable messages. It does not store a synthetic
+ * Joined/Left Conversation event. A future UI may derive a visual generation boundary from exact
+ * segment/currentness truth or consume a separately owned Family lifecycle projection.
  *
  * ## Identity laws
  *

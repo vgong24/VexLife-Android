@@ -50,8 +50,8 @@ class InMemoryVexConversationRepository(
     /**
      * Fixture/provider publication seam.
      *
-     * Tests may use this to represent a new current channel generation arriving from the rightful
-     * owner. Product UI should not call this as a membership mutation.
+     * Tests may use this to represent a new current channel/history projection arriving from the
+     * rightful owner. Product UI should not call this as a membership mutation.
      */
     fun publishThread(
         thread:
@@ -154,10 +154,7 @@ class InMemoryVexConversationRepository(
         }
 
         val nextSequence =
-            thread.timeline
-                .filterIsInstance<
-                    VexConversationTimelineEntry.Message
-                >()
+            thread.messages
                 .maxOfOrNull { message ->
                     message.sequence
                 }
@@ -178,13 +175,11 @@ class InMemoryVexConversationRepository(
             )
 
         val message =
-            VexConversationTimelineEntry.Message(
-                entryRef =
-                    messageRef.value,
-                threadRef =
-                    thread.threadRef,
+            VexConversationMessage(
                 messageRef =
                     messageRef,
+                threadRef =
+                    thread.threadRef,
                 spaceRef =
                     thread.spaceRef,
                 channelRef =
@@ -205,8 +200,8 @@ class InMemoryVexConversationRepository(
 
         publishThread(
             thread.copy(
-                timeline =
-                    thread.timeline +
+                messages =
+                    thread.messages +
                         message,
             ),
         )
