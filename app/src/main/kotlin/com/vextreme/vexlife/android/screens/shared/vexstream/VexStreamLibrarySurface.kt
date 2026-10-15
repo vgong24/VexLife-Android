@@ -65,6 +65,7 @@ import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.VexIconButton
 import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.VexStableLazyColumn
 import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.elements.vexElement
@@ -532,39 +533,43 @@ private fun VexStreamSearchSheet(
                         ),
                 )
             } else {
-                LazyColumn(
+                VexStableLazyColumn(
+                    listRef =
+                        VexStreamPresentationRefs
+                            .SearchResultsList,
+                    items = tracks,
+                    itemRef = {
+                        it.track.trackRef.value
+                    },
+                    contentType = {
+                        "vexstream-track-row"
+                    },
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    items(
-                        items = tracks,
-                        key = {
-                            it.track.trackRef.value
+                    verticalArrangement =
+                        Arrangement.spacedBy(4.dp),
+                ) { track ->
+                    VexStreamTrackCard(
+                        runtime = runtime,
+                        state = track,
+                        contextTracks = tracks,
+                        controller = controller,
+                        resolver = resolver,
+                        onDownload = {
+                            scope.launch {
+                                repository.downloadForOffline(
+                                    track.track.trackRef,
+                                )
+                            }
                         },
-                    ) { track ->
-                        VexStreamTrackCard(
-                            runtime = runtime,
-                            state = track,
-                            contextTracks = tracks,
-                            controller = controller,
-                            resolver = resolver,
-                            onDownload = {
-                                scope.launch {
-                                    repository.downloadForOffline(
-                                        track.track.trackRef,
-                                    )
-                                }
-                            },
-                            onRemoveDownload = {
-                                scope.launch {
-                                    repository.removeOfflineCopy(
-                                        track.track.trackRef,
-                                    )
-                                }
-                            },
-                            onVisitArtist = onVisitArtist,
-                        )
-                    }
+                        onRemoveDownload = {
+                            scope.launch {
+                                repository.removeOfflineCopy(
+                                    track.track.trackRef,
+                                )
+                            }
+                        },
+                        onVisitArtist = onVisitArtist,
+                    )
                 }
             }
 
