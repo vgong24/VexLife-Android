@@ -42,10 +42,10 @@ internal fun VexStreamConnectionSetup(
         modifier =
             VexModifier
                 .fillMaxWidth()
-            .padding(
-                horizontal = 12.dp,
-                vertical = 8.dp,
-            ),
+                .padding(
+                    horizontal = 12.dp,
+                    vertical = 8.dp,
+                ),
         style = VexElementStyles.RaisedSurface,
     ) {
         when (connection) {
@@ -160,7 +160,6 @@ internal fun VexStreamConnectionSetup(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VexStreamConnectionMenuSheet(
@@ -257,7 +256,6 @@ internal fun VexStreamConnectionMenuSheet(
     }
 }
 
-
 @Composable
 internal fun VexStreamForgetConfirmationDialog(
     runtime: VexRuntime,
@@ -303,7 +301,6 @@ internal fun VexStreamForgetConfirmationDialog(
         },
     )
 }
-
 
 private fun formatPairingCode(
     code: String,
