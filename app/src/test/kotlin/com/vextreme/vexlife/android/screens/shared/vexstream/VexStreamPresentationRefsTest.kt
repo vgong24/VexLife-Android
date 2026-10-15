@@ -76,6 +76,70 @@ class VexStreamPresentationRefsTest {
     }
 
     @Test
+    fun queueOccurrenceIdentityIsExplicitAndOpaqueSafe() {
+        val stableKey =
+            VexStreamPresentationRefs.queueEntryKey(
+                mediaId = "catalog:/track#one",
+                occurrence = 2,
+            )
+
+        assertEquals(
+            "catalog:/track#one#2",
+            stableKey,
+        )
+        assertTrue(
+            VexStreamPresentationRefs
+                .queueEntry(stableKey)
+                .endsWith(
+                    stableKey.utf8Hex(),
+                ),
+        )
+    }
+
+    @Test
+    fun queueActionKeepsStaticAuthorityAndExactOccurrence() {
+        val stableKey =
+            VexStreamPresentationRefs.queueEntryKey(
+                mediaId = "journey.track.one",
+                occurrence = 1,
+            )
+        val ref =
+            VexStreamPresentationRefs.queueEntryAction(
+                stableKey = stableKey,
+                action = VexStreamMusicScreen.QueuePlay,
+            )
+
+        assertTrue(
+            ref.startsWith(
+                VexStreamMusicScreen.QueuePlay.elementId +
+                    ".queue-entry.dynamic.utf8hex.",
+            ),
+        )
+        assertTrue(
+            ref.endsWith(
+                stableKey.utf8Hex(),
+            ),
+        )
+    }
+
+    @Test
+    fun invalidQueueOccurrenceFailsClosed() {
+        val failure =
+            runCatching {
+                VexStreamPresentationRefs.queueEntryKey(
+                    mediaId = "journey.track.one",
+                    occurrence = 0,
+                )
+            }.exceptionOrNull()
+
+        requireNotNull(failure)
+        assertTrue(
+            failure.message.orEmpty()
+                .contains("occurrence"),
+        )
+    }
+
+    @Test
     fun rowAndMenuAffordancesRemainDistinctForTheSameTrackAction() {
         val trackRef =
             VexStreamTrackRef(
