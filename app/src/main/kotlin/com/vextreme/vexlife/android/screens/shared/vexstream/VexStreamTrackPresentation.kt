@@ -313,6 +313,8 @@ internal fun VexStreamTrackCard(
                     vexModifier =
                         VexModifier.semantic(
                             VexStreamPresentationRefs.trackRowAction(
+                                scope =
+                                    presentationScope,
                                 trackRef =
                                     state.track.trackRef,
                                 action =
@@ -371,6 +373,8 @@ internal fun VexStreamTrackCard(
                             else -> {
                                 if (state.hubAvailable) {
                                     VexStreamTrackMenuItem(
+                                        presentationScope =
+                                            presentationScope,
                                         trackRef = state.track.trackRef,
                                         element =
                                             VexStreamMusicScreen
@@ -384,6 +388,8 @@ internal fun VexStreamTrackCard(
 
                     if (state.track.artist.isNotBlank()) {
                         VexStreamTrackMenuItem(
+                            presentationScope =
+                                presentationScope,
                             trackRef = state.track.trackRef,
                             element =
                                 VexStreamMusicScreen
