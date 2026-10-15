@@ -11,9 +11,9 @@ import com.vextreme.vexlife.android.elements.UIElement
  * owns which tracks exist. Their QA/inspection identity is therefore derived from the stable domain
  * ref, never title, translated text, visual position, or current sort order.
  *
- * VexStreamTrackRef is intentionally opaque. Prefixing its exact value with its length keeps the
- * formed presentation ref unambiguous without imposing a new character vocabulary on the domain
- * identity.
+ * VexStreamTrackRef is intentionally opaque. Runtime presentation refs encode the UTF-8 bytes as
+ * lowercase hex so arbitrary domain characters cannot become ambiguous Compose/evidence path
+ * delimiters. The domain identity itself remains unchanged.
  */
 object VexStreamPresentationRefs {
     private const val TrackRowPrefix =
@@ -69,7 +69,19 @@ object VexStreamPresentationRefs {
         ownerRef: String,
         instanceRef: String,
     ): String =
-        "$ownerRef.dynamic.${instanceRef.length}:$instanceRef"
+        "$ownerRef.dynamic.utf8hex." +
+            instanceRef
+                .encodeToByteArray()
+                .joinToString(
+                    separator = "",
+                ) { byte ->
+                    byte.toUByte()
+                        .toString(16)
+                        .padStart(
+                            length = 2,
+                            padChar = '0',
+                        )
+                }
 }
 
 // [VXG RealForever]
