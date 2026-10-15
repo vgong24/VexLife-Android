@@ -9,21 +9,22 @@ FEATURE / HOME:
     VexLife Android Conversation
 
 CURRENT STATUS:
-    ANDROID CONSUMER CONTRACT PRESSURE
-    Conversation-owned state + Send request/currentness are now modeled behind one instance-based
-    repository contract with an in-memory tests/Preview implementation
+    ANDROID CONSUMER CONTRACT + PURE SURFACE COMPOSITION
+    Conversation-owned state/currentness remains behind one repository contract; Android surface
+    treatment is now a separate deterministic projection over Conversation + Home/session + Companion
+    owner inputs
 
 PORTABLE SEMANTIC OWNER:
     VexLife service.conversation
 
 ANDROID RESPONSIBILITY:
-    native consumer projection/request boundary + Android realization/proof
+    native consumer projection/request boundary + Android presentation composition/proof
     not a second Conversation semantic owner
 
 CURRENT NEXT EDGE:
-    compose Home / authenticated-principal / Companion truth outside Conversation state
-    -> form the first native surface only after the rightful dependency/lifetime seam is available
-    -> keep AppRepositories/Journey integration held while active shared-path work owns that graph
+    admit the rightful app/session dependency wiring after shared-path ownership clears
+    -> let the real Screen consume VexConversationRepository + surface-owner projections
+    -> then add Compose/Journey proof without inventing a second lifetime or test graph
 ~~~
 
 ## Question
@@ -416,6 +417,105 @@ human journey
 
 TEST SIGNAL != PRODUCT MEMBERSHIP MUTATION
 ~~~
+
+## Pure Android surface composition
+
+The architecture review correctly identified that the earlier broad Conversation projection had
+quietly collapsed several owner truths into one object. Current source keeps those truths separate.
+
+~~~text
+VexConversationThreadState
+    Conversation-owned thread/channel/message/audience projection
+
+authenticatedParticipantRef
+    projection from Home/session identity owner
+
+VexConversationHomeAvailability
+    projection from Home/transport owner
+
+VexConversationCompanionAvailability
+    projection from Companion/runtime owner
+        |
+        v
+projectVexConversationSurface(...)
+        |
+        v
+VexConversationSurfaceProjection
+    deterministic UI-facing composition only
+~~~
+
+This matches the accepted Test / Proof Architecture layer:
+
+~~~text
+semantic/domain outputs
+-> presentation projection
+-> Compose render contract
+~~~
+
+The surface projection is not a state owner, repository, Session, Connection, Relay, or provider.
+
+### Why it is not called Experience
+
+The repository currently has two live meanings of Experience:
+
+~~~text
+draft PR #81
+    Experience = broad human/product orientation root
+
+merged PR #82
+    <Name>Experience = Behavior-local UI membrane
+                       displayState + activate(Control)
+~~~
+
+Conversation does not resolve that repository-wide terminology by fiat.
+
+Until those meanings are reconciled, the source uses the narrower role-closing term:
+
+~~~text
+VexConversationSurfaceProjection
+~~~
+
+### Why it is not a Relay yet
+
+Several changing owner truths may eventually justify a Relay/convergence owner, but there are not yet
+real Android Home/session and Companion source streams admitted in this feature.
+
+Current need is only:
+
+~~~text
+given already-observed owner truths
+-> derive one UI-facing result
+~~~
+
+A pure function is therefore sufficient and cheaper. Promote to maintained convergence only when a
+real consumer must continuously observe independently changing owners.
+
+### Surface Send eligibility is not provider admission
+
+The pure projection may say:
+
+~~~text
+Ready
+HomeUnobserved
+HomeUnavailable
+AuthenticatedParticipantUnobserved
+AuthenticatedParticipantUnknown
+AuthenticatedParticipantNotCurrent
+~~~
+
+This answers only whether the Android surface may truthfully expose Send as eligible.
+
+Even Ready still requires:
+
+~~~text
+VexConversationRepository.send(request)
+-> revalidate expected channel
+-> revalidate membership generation
+-> revalidate addressing/current participant
+-> admit or reject
+~~~
+
+Companion availability is projected separately and does not block human Send eligibility.
 
 ## Behavior formation — do not force the blueprint
 
@@ -933,32 +1033,48 @@ or abstraction. Re-enter the owner/source that is unclear.
 
 ## Next meaningful milestone
 
-Do not make the next commit a collection of UI files.
+The next implementation milestone is no longer another semantic abstraction.
 
-The next milestone must first identify the rightful **surface-composition/lifetime seam** for:
+Current source has now separated:
 
 ~~~text
-Conversation repository state
-+
-authenticated current participant/session
-+
-Home reachability/authority
-+
-Companion availability
--> Android Conversation surface
+Conversation-owned state + Send contract
+surface-owner composition
+test/Preview in-memory provider
 ~~~
 
-That composite view is not Conversation-owned state.
+The next missing predicate is the real Android dependency/lifetime path.
 
-Do not call it a durable Experience until the repository reconciles PR #81's whole-product Experience
-language with merged PR #82's Behavior-local Experience membrane.
+Once active shared-path work clears, integrate Conversation through the same repository/session
+composition style already used by VexStream:
 
-Because active work currently touches AppRepositories / shared runtime paths, production Screen and
-Journey wiring remain held rather than creating a parallel app graph.
+~~~text
+AppRepositoryFactory / AppRepositories
+    -> VexConversationRepository implementation
 
-Once that dependency seam is clear, the native Compose surface can consume the real contract and the
-Journey can inject the same in-memory repository through the canonical test composition, exactly as
-VexStream does.
+VexLifeSession / rightful owner projections
+    -> authenticated participant
+    -> Home reachability/currentness
+    -> Companion availability
+
+TalkToVex / future Conversation Screen
+    -> consumes repository + projectVexConversationSurface(...)
+    -> owns no semantic source lifetime
+~~~
+
+Then add proof in owner order:
+
+~~~text
+repository/domain JVM
+-> surface projection JVM
+-> Compose render contract
+-> Journey using InMemoryVexConversationRepository injected by VexTestEngine
+-> real Home/provider integration
+-> device/lived proof when the claim requires it
+~~~
+
+Do not add a Relay, Behavior Family, generic Experience, durable Android database, or local-sibling
+Home merely to fill the time before that dependency seam is available.
 
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][CONVERSATION][FEATURE-HOME] -->

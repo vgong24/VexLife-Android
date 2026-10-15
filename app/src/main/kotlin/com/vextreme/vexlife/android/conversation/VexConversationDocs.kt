@@ -101,6 +101,25 @@ package com.vextreme.vexlife.android.conversation
  * in-memory repository through test composition and use journeySignal for external provider changes,
  * following VexStream rather than giving product code test-only mutation methods.
  *
+ * ## Current surface composition
+ *
+ * projectVexConversationSurface is the pure Android presentation-projection boundary over:
+ *
+ * - Conversation-owned VexConversationThreadState;
+ * - authenticated participant identity supplied by the Home/session owner;
+ * - VexConversationHomeAvailability supplied by the Home/transport owner;
+ * - VexConversationCompanionAvailability supplied by the Companion/runtime owner.
+ *
+ * It returns VexConversationSurfaceProjection without owning any of those truths.
+ *
+ * The source deliberately does not call this an Experience. Draft PR #81 uses Experience for a broad
+ * product orientation root, while merged PR #82 uses <Name>Experience for a Behavior-local UI
+ * membrane. Conversation preserves that unresolved foundation distinction instead of choosing one
+ * definition implicitly.
+ *
+ * No Relay is added yet: current source only needs deterministic composition of already-observed
+ * owner truth. Maintained convergence must be earned by real independently-changing provider streams.
+ *
  * ## First unresolved architecture pressure
  *
  * Send carries runtime data such as content, recipients and optional reply/context references.
