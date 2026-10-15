@@ -66,12 +66,23 @@ package com.vextreme.vexlife.android.conversation
  *
  * into generic Android Conversation state + explicit Family binding.
  *
- * ## Current holds
+ * ## Current producer status / hold
  *
- * Real Family adapter remains held on:
+ * The VexLife producer chain for authenticated Family conversation is now accepted through:
  *
- * 1. production Family session-authority reconnection;
- * 2. authenticated exposure of the existing Family thread-history projection.
+ * VF-02C bridge
+ * -> durable Family channel binding
+ * -> same-origin server composition
+ * -> real VEX_CORE / Home session-authority reconnection
+ * -> lived Family HTTP APPEND + READ proof.
+ *
+ * The remaining producer hold is narrower: current HTTP READ is current-channel scoped, while the
+ * accepted Family membership runtime already owns cross-generation readFamilyThreadHistory(...)
+ * with ordered segments and historical witness truth.
+ *
+ * A truthful Android Home-backed adapter therefore remains held only until that canonical
+ * cross-generation history is exposed through the authenticated server boundary (or an exactly
+ * equivalent safe projection).
  *
  * Production Screen/Journey integration also remains held while shared Android app/test paths are
  * occupied.

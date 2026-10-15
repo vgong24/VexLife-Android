@@ -475,52 +475,90 @@ No generic Conversation Behavior family is admitted by symmetry.
 
 ## Current real producer
 
-Current Family Conversation owner:
+The VexLife producer chain needed by Android has materially advanced beyond the original #89
+formation snapshot.
+
+Accepted/current producer owners now include:
 
 ~~~text
-VexLife issue #427
-VF-02C Conversation Bridge
+VF-02C model-free Family Conversation bridge
+    accepted
+
+durable canonical Family channel binding
+    accepted
+
+same-origin Family Conversation server
+    accepted
+
+real VEX_CORE -> Family session-authority adapter
+    accepted
+
+#481 lived authority proof
+    REAL_SESSION_AUTHORITY_RECONNECTED_CURRENT
 ~~~
 
-Current route:
+The real lived #481 proof traversed:
 
 ~~~text
+Windows current-user verification
+-> process-local authenticated Home session
+-> fresh bounded security/Home leases
+-> accepted VEX_CORE current projection
+-> accepted Family authority adapter
+-> same-origin Family HTTP APPEND / READ
+~~~
+
+and proved provider-derived speaker identity for Victor, forged browser authority rejection,
+no model invocation, session revocation and bounded cleanup.
+
+Therefore FAMILY_SESSION_AUTHORITY_UNAVAILABLE remains the correct fail-closed response when no
+current authority resolver is available, but missing producer implementation is no longer the
+standing Android blocker.
+
+Current accepted browser surfaces include:
+
+~~~text
+GET  /api/v1/family/bootstrap
 POST /api/v1/family/conversation
+     operation = APPEND | READ | LIST
 ~~~
 
-### Producer predicate 1 — production authority reconnection
+### Remaining producer predicate — authenticated cross-generation Family history
 
-The Family server core requires resolveFamilyConversationAuthority.
-
-Accepted Home Bridge Session Authority and authenticated-session owners already exist, but ordinary
-production startup does not currently reconnect that producer into the Family route.
-
-Default production requests therefore fail closed with:
-
-~~~text
-FAMILY_SESSION_AUTHORITY_UNAVAILABLE
-~~~
-
-Android must not invent another auth/session path.
-
-### Producer predicate 2 — authenticated Family thread history
-
-Canonical:
+Canonical VexLife source already owns:
 
 ~~~text
 readFamilyThreadHistory(...)
+-> spaceRef
+-> threadRef
+-> currentChannelRef
+-> membershipGeneration
+-> principalRef
+-> ordered segmentRefs[]
+-> bounded messages[]
+-> truncated
 ~~~
 
-Current VF-02C HTTP READ remains narrower/current-channel scoped.
+That owner validates current Family membership/current channel, immutable historical channel segments,
+FROM_JOIN visibility and historical witnessRefs.
 
-Android needs a bounded authenticated projection of the existing Family thread-history truth:
+The current authenticated HTTP Conversation READ remains narrower: it resolves the current channel
+and calls readBrowserFamilyConversation(...). The current Family-room browser controller likewise
+loads only that current-channel response.
+
+Android therefore still needs one bounded authenticated projection of the existing canonical
+cross-generation history truth:
 
 ~~~text
 stable threadRef
 current channel/generation
-ordered authorized segmentRefs
-bounded messages with canonical historical witnessRefs
+ordered authorized segmentRefs[]
+bounded historical messages with original channelRef/generation/recipientRefs/witnessRefs
+truncation/currentness truth
 ~~~
+
+This need is routed to the existing server-composition owner (#481) as second-consumer pressure.
+Android does not claim that server path or reconstruct old audiences from current membership.
 
 ## Real adapter composition
 
@@ -567,7 +605,7 @@ knownParticipants can then be formed from current audience plus historical speak
 refs; the exact Family Companion lineage identifies the Companion participant, while Family principal
 refs remain human participants.
 
-Android consumer feedback for this producer need is recorded on issue #427.
+Android consumer feedback for the remaining producer need is recorded on VexLife issue #481.
 
 ## Testing / proof
 
@@ -604,7 +642,8 @@ TalkToVexJourneys, VexRuntime, or VexTestEngine.
 
 Parallel Android work still occupies shared app/runtime/Journey paths.
 
-When those paths and producer predicates clear, use the established VexStream dependency/test shape.
+When the shared Android paths and remaining thread-history producer predicate clear, use the
+established VexStream dependency/test shape.
 
 ## Deliberate holds
 
@@ -612,7 +651,8 @@ When those paths and producer predicates clear, use the established VexStream de
 HELD:
     production Home-backed Family Conversation repository
 WHY:
-    authority reconnection + authenticated thread-history producer remain incomplete
+    live authority/server routing are now accepted, but the authenticated server surface still
+    lacks the canonical cross-generation thread-history projection required by this state model
 
 HELD:
     generic/direct Conversation Send
@@ -662,8 +702,7 @@ A fresh worker should be able to answer:
 Resume when one of these predicates changes:
 
 ~~~text
-VF-02C exposes authenticated Family thread history
-production Family authority resolver is reconnected
+authenticated Family thread history is exposed through the accepted server authority chain
 AppRepositories / Journey shared ownership clears
 Experience vocabulary is reconciled by its owner
 a real non-Family/direct write provider contract appears
