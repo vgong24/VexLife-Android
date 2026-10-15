@@ -168,6 +168,25 @@ class VexTestEngine(
         )
     }
 
+    override fun expectVisible(element: UIElement) {
+        expected.expectVisible(element)
+
+        waitForTaggedNode(
+            elementId = element.elementId,
+            useUnmergedTree = true,
+        )
+        compose.onNodeWithTag(
+            testTag = element.elementId,
+            useUnmergedTree = true,
+        )
+            .assertIsDisplayed()
+        compose.waitForIdle()
+        observe(
+            stepKind = "expect-visible",
+            semanticRef = element.elementId,
+        )
+    }
+
     override fun expectVisible(element: VexDynamicElementRef) {
         expected.expectVisible(element)
 
