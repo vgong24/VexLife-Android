@@ -1,157 +1,293 @@
 package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsTravelMode
+import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationRoute
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionPhase
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.execution.VexMapsDistributionNavigationConvergenceRelay
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.execution.VexMapsDistributionNavigationLayer
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.execution.VexMapsDistributionNavigationRequest
+import com.vextreme.vexlife.android.screens.shared.maps.VexOfflineRouteResult
+import com.vextreme.vexlife.android.screens.shared.maps.VexRouteGeometryPoint
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLeg
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLegState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegAttempt
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegTarget
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationConvergenceRelay
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationLayer
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationRequest
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionRouteIdentity
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunConnection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class VexMapsDistributionNavigationConvergenceRelayTest {
-    private fun readyRun(
-        returnToStart: Boolean = true,
-    ): VexMapsDistributionRunConnection =
+    private fun readyConnection():
+        VexMapsDistributionRunConnection =
         VexMapsDistributionRunConnection()
             .also { connection ->
                 connection.observeDraft(
-                    stopCount = 2,
+                    revision = 4L,
+                    stopRefs =
+                        listOf(
+                            "alpha",
+                            "beta",
+                        ),
                     returnToStart =
-                        returnToStart,
+                        true,
                 )
                 connection.activate(
                     VexMapsDistributionRunControl.Prepare,
                 )
+                val preparing =
+                    connection.currentProjection
+                        .state as
+                        VexMapsDistributionRunState.Preparing
+                connection.preparationSucceeded(
+                    preparationRef =
+                        preparing.preparationRef,
+                    planRef =
+                        "plan.4",
+                    orderedStopRefs =
+                        listOf(
+                            "beta",
+                            "alpha",
+                        ),
+                )
             }
 
-    @Test
-    fun readyRunNeedsFirstLegBeforeHumanStart() {
-        val run =
-            readyRun()
-        val relay =
-            VexMapsDistributionNavigationConvergenceRelay(
-                initialRun =
-                    run.currentProjection,
-                initialNavigation =
-                    VexNavigationSessionState(),
-            )
-
-        assertEquals(
-            VexMapsDistributionNavigationLayer.NeedsLeg,
-            relay.currentOutput.layer,
+    private fun route(
+        routeRef: String,
+        revision: Long,
+    ) =
+        VexOfflineRouteResult(
+            route =
+                VexNavigationRoute(
+                    routeRef =
+                        routeRef,
+                    routeRevision =
+                        revision,
+                    destinationLabel =
+                        "Destination",
+                    totalDistanceMeters =
+                        100,
+                    maneuvers =
+                        emptyList(),
+                ),
+            geometry =
+                listOf(
+                    VexRouteGeometryPoint(
+                        latitude = 0.0,
+                        longitude = 0.0,
+                    ),
+                    VexRouteGeometryPoint(
+                        latitude = 0.0,
+                        longitude = 0.001,
+                    ),
+                ),
+            travelMode =
+                VexMapsTravelMode.DRIVE,
         )
-        assertEquals(
-            VexMapsDistributionNavigationRequest.PrepareLeg(
-                stopIndex = 0,
-            ),
-            relay.currentOutput.request,
-        )
-    }
 
     @Test
-    fun readyNavigationWaitsForHumanStart() {
-        val run =
-            readyRun()
-        val relay =
-            VexMapsDistributionNavigationConvergenceRelay(
-                initialRun =
-                    run.currentProjection,
-                initialNavigation =
+    fun readyNavigationRequiresExactDistributionRouteIdentity() =
+        runBlocking {
+            val run =
+                readyConnection()
+            val navigation =
+                MutableStateFlow(
                     VexNavigationSessionState(
                         phase =
                             VexNavigationSessionPhase.READY,
+                        routeResult =
+                            route(
+                                "distribution.beta",
+                                7L,
+                            ),
                     ),
-            )
+                )
+            val expected =
+                MutableStateFlow<
+                    VexMapsDistributionExpectedLegState
+                >(
+                    VexMapsDistributionExpectedLegState.Expected(
+                        VexMapsDistributionExpectedLeg(
+                            planRef =
+                                "plan.4",
+                            target =
+                                VexMapsDistributionLegTarget.Stop(
+                                    "beta",
+                                ),
+                            route =
+                                VexMapsDistributionRouteIdentity(
+                                    "distribution.beta",
+                                    7L,
+                                ),
+                        ),
+                    ),
+                )
+            val attempts =
+                MutableStateFlow<
+                    VexMapsDistributionLegAttempt
+                >(
+                    VexMapsDistributionLegAttempt.Idle,
+                )
+            val relay =
+                VexMapsDistributionNavigationConvergenceRelay(
+                    runProjections =
+                        run.projections,
+                    navigationStates =
+                        navigation,
+                    expectedLegStates =
+                        expected,
+                    legAttempts =
+                        attempts,
+                )
 
-        assertEquals(
-            VexMapsDistributionNavigationLayer.ReadyToStart,
-            relay.currentOutput.layer,
-        )
-        assertNull(
-            relay.currentOutput.request,
-        )
-    }
+            try {
+                relay.activate(
+                    this,
+                )
 
-    @Test
-    fun runningRunStartsPreparedNavigationThenAdmitsArrivalThroughRunControl() {
-        val run =
-            readyRun()
-                .also { connection ->
-                    connection.activate(
-                        VexMapsDistributionRunControl.Start,
+                val ready =
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        relay.outputStates
+                            .first {
+                                it.layer ==
+                                    VexMapsDistributionNavigationLayer
+                                        .ReadyToStart
+                            }
+                    }
+                assertNull(
+                    ready.request,
+                )
+
+                navigation.value =
+                    navigation.value.copy(
+                        routeResult =
+                            route(
+                                "ordinary.route",
+                                8L,
+                            ),
                     )
-                }
-        val relay =
-            VexMapsDistributionNavigationConvergenceRelay(
-                initialRun =
-                    run.currentProjection,
-                initialNavigation =
-                    VexNavigationSessionState(
-                        phase =
-                            VexNavigationSessionPhase.READY,
+
+                val mismatch =
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        relay.outputStates
+                            .first {
+                                it.layer ==
+                                    VexMapsDistributionNavigationLayer
+                                        .NeedsLeg
+                            }
+                    }
+
+                assertEquals(
+                    VexMapsDistributionNavigationRequest.PrepareLeg(
+                        "beta",
                     ),
-            )
-
-        assertEquals(
-            VexMapsDistributionNavigationRequest.StartPreparedNavigation,
-            relay.currentOutput.request,
-        )
-
-        relay.navigationChanged(
-            VexNavigationSessionState(
-                phase =
-                    VexNavigationSessionPhase.ARRIVED,
-            ),
-        )
-
-        assertEquals(
-            VexMapsDistributionNavigationRequest.RunControl(
-                VexMapsDistributionRunControl.Arrive,
-            ),
-            relay.currentOutput.request,
-        )
-    }
+                    mismatch.request,
+                )
+            } finally {
+                relay.deactivate()
+            }
+        }
 
     @Test
-    fun returningRunRequestsReturnLegThenCompletesFromArrival() {
-        val run =
-            VexMapsDistributionRunConnection(
-                initialState =
-                    VexMapsDistributionRunState.Returning(
-                        stopCount = 2,
-                    ),
-            )
-        val relay =
-            VexMapsDistributionNavigationConvergenceRelay(
-                initialRun =
-                    run.currentProjection,
-                initialNavigation =
+    fun failedLegIsStableUntilAnExplicitRetryChangesAttemptTruth() =
+        runBlocking {
+            val run =
+                readyConnection()
+                    .also {
+                        it.activate(
+                            VexMapsDistributionRunControl.Start,
+                        )
+                    }
+            val target =
+                VexMapsDistributionLegTarget.Stop(
+                    "beta",
+                )
+            val navigation =
+                MutableStateFlow(
                     VexNavigationSessionState(),
-            )
+                )
+            val expected =
+                MutableStateFlow<
+                    VexMapsDistributionExpectedLegState
+                >(
+                    VexMapsDistributionExpectedLegState.None,
+                )
+            val attempts =
+                MutableStateFlow<
+                    VexMapsDistributionLegAttempt
+                >(
+                    VexMapsDistributionLegAttempt.Failed(
+                        target =
+                            target,
+                        reason =
+                            "offline route unavailable",
+                    ),
+                )
+            val relay =
+                VexMapsDistributionNavigationConvergenceRelay(
+                    runProjections =
+                        run.projections,
+                    navigationStates =
+                        navigation,
+                    expectedLegStates =
+                        expected,
+                    legAttempts =
+                        attempts,
+                )
 
-        assertEquals(
-            VexMapsDistributionNavigationRequest.PrepareReturn,
-            relay.currentOutput.request,
-        )
+            try {
+                relay.activate(
+                    this,
+                )
 
-        relay.navigationChanged(
-            VexNavigationSessionState(
-                phase =
-                    VexNavigationSessionPhase.ARRIVED,
-            ),
-        )
+                withTimeout(
+                    1_000L,
+                ) {
+                    relay.outputStates
+                        .first {
+                            it.layer ==
+                                VexMapsDistributionNavigationLayer
+                                    .LegFailed
+                        }
+                }
 
-        assertEquals(
-            VexMapsDistributionNavigationRequest.RunControl(
-                VexMapsDistributionRunControl.Arrive,
-            ),
-            relay.currentOutput.request,
-        )
-    }
+                attempts.value =
+                    VexMapsDistributionLegAttempt.Idle
+
+                val retry =
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        relay.outputStates
+                            .first {
+                                it.layer ==
+                                    VexMapsDistributionNavigationLayer
+                                        .NeedsLeg
+                            }
+                    }
+
+                assertEquals(
+                    VexMapsDistributionNavigationRequest.PrepareLeg(
+                        "beta",
+                    ),
+                    retry.request,
+                )
+            } finally {
+                relay.deactivate()
+            }
+        }
 }
 
 // [VXG RealForever]

@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunAct
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunDraftIdentity
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunEffect
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.vexMapsDistributionRunBehavior
@@ -16,23 +17,92 @@ class VexMapsDistributionRunBehaviorTest {
     private val controls =
         behavior.vexMapsDistributionRunControls()
 
+    private fun source(
+        returnToStart: Boolean,
+    ) =
+        VexMapsDistributionRunDraftIdentity(
+            revision = 9L,
+            stopRefs =
+                listOf(
+                    "alpha",
+                    "beta",
+                    "gamma",
+                ),
+            returnToStart =
+                returnToStart,
+        )
+
+    @Test
+    fun prepareAdmitsPreparingInsteadOfPretendingProviderSuccess() {
+        val resolution =
+            behavior.resolve(
+                current =
+                    VexMapsDistributionRunState.Draft(
+                        source =
+                            source(
+                                returnToStart = true,
+                            ),
+                    ),
+                act =
+                    VexMapsDistributionRunAct.PrepareRun,
+            )
+
+        assertSame(
+            VexMapsDistributionRunEffect.SealDraft,
+            resolution?.effect,
+        )
+        assertEquals(
+            VexMapsDistributionRunState.Preparing::class,
+            resolution?.admittedStateKind,
+        )
+    }
+
     @Test
     fun atStopFlavorChoosesAdvanceFinishOrReturnWithoutTypeExplosion() {
+        val ordered =
+            listOf(
+                "beta",
+                "alpha",
+                "gamma",
+            )
         val moreStops =
             VexMapsDistributionRunState.AtStop(
-                stopCount = 3,
-                currentStopIndex = 1,
-                returnToStart = true,
+                planRef =
+                    "plan.1",
+                source =
+                    source(
+                        returnToStart = true,
+                    ),
+                orderedStopRefs =
+                    ordered,
+                currentStopRef =
+                    "alpha",
             )
         val finishHere =
             VexMapsDistributionRunState.AtStop(
-                stopCount = 3,
-                currentStopIndex = 2,
-                returnToStart = false,
+                planRef =
+                    "plan.2",
+                source =
+                    source(
+                        returnToStart = false,
+                    ),
+                orderedStopRefs =
+                    ordered,
+                currentStopRef =
+                    "gamma",
             )
         val returnHome =
-            finishHere.copy(
-                returnToStart = true,
+            VexMapsDistributionRunState.AtStop(
+                planRef =
+                    "plan.3",
+                source =
+                    source(
+                        returnToStart = true,
+                    ),
+                orderedStopRefs =
+                    ordered,
+                currentStopRef =
+                    "gamma",
             )
 
         assertSame(
@@ -50,6 +120,10 @@ class VexMapsDistributionRunBehaviorTest {
                 act =
                     VexMapsDistributionRunAct.CompleteStop,
             )?.effect,
+        )
+        assertEquals(
+            "gamma",
+            moreStops.nextStopRef,
         )
         assertSame(
             VexMapsDistributionRunEffect.CompleteRun,
@@ -79,7 +153,18 @@ class VexMapsDistributionRunBehaviorTest {
             behavior.resolve(
                 current =
                     VexMapsDistributionRunState.Returning(
-                        stopCount = 3,
+                        planRef =
+                            "plan.return",
+                        source =
+                            source(
+                                returnToStart = true,
+                            ),
+                        orderedStopRefs =
+                            listOf(
+                                "beta",
+                                "alpha",
+                                "gamma",
+                            ),
                     ),
                 act =
                     VexMapsDistributionRunAct.MarkArrival,
