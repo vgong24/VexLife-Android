@@ -165,22 +165,22 @@ val collectSourceAlignmentViolations: () -> List<String> = {
     violations.distinct()
 }
 
+val vexComposeRawImportRoutes =
+    linkedMapOf(
+        "androidx.compose.ui.Modifier" to "VexModifier / Vex-owned component defaults",
+        "androidx.compose.material3.Text" to "VexText",
+        "androidx.compose.foundation.layout.Column" to "VexColumn",
+        "androidx.compose.foundation.layout.Row" to "VexRow",
+        "androidx.compose.foundation.layout.Box" to "VexBox",
+        "androidx.compose.material3.Card" to "VexCard",
+        "androidx.compose.material3.AlertDialog" to "VexAlertDialog",
+        "androidx.compose.material3.ModalBottomSheet" to "VexModalBottomSheet",
+    )
+
 val collectVexComposeMigrationDebt: () -> List<String> = {
     val screenRoot = project.file(
         "src/main/kotlin/com/vextreme/vexlife/android/screens",
     )
-    val rawImports =
-        linkedMapOf(
-            "androidx.compose.ui.Modifier" to "VexModifier / Vex-owned component defaults",
-            "androidx.compose.material3.Text" to "VexText",
-            "androidx.compose.foundation.layout.Column" to "VexColumn",
-            "androidx.compose.foundation.layout.Row" to "VexRow",
-            "androidx.compose.foundation.layout.Box" to "VexBox",
-            "androidx.compose.material3.Card" to "VexCard",
-            "androidx.compose.material3.AlertDialog" to "VexAlertDialog",
-            "androidx.compose.material3.ModalBottomSheet" to "VexModalBottomSheet",
-        )
-
     if (!screenRoot.isDirectory) {
         emptyList()
     } else {
@@ -193,7 +193,7 @@ val collectVexComposeMigrationDebt: () -> List<String> = {
                 }
                 .forEach { file ->
                     val source = file.readText()
-                    rawImports.forEach { (rawImport, vexRoute) ->
+                    vexComposeRawImportRoutes.forEach { (rawImport, vexRoute) ->
                         if (
                             source.contains(
                                 "import $rawImport",
@@ -212,6 +212,45 @@ val collectVexComposeMigrationDebt: () -> List<String> = {
     }
 }
 
+val collectVexComposeEnforcedViolations: () -> List<String> = {
+    val enforcedRoots =
+        listOf(
+            project.file(
+                "src/main/kotlin/com/vextreme/vexlife/android/screens/shared/gallery/elements",
+            ),
+        )
+
+    buildList {
+        enforcedRoots
+            .filter { root ->
+                root.isDirectory
+            }
+            .forEach { root ->
+                root.walkTopDown()
+                    .filter { file ->
+                        file.isFile &&
+                            file.extension == "kt"
+                    }
+                    .forEach { file ->
+                        val source = file.readText()
+                        vexComposeRawImportRoutes.forEach { (rawImport, vexRoute) ->
+                            if (
+                                source.contains(
+                                    "import $rawImport",
+                                )
+                            ) {
+                                add(
+                                    "${file.relativeTo(project.projectDir)} imports $rawImport; " +
+                                        "this migrated Vex Compose area must use $vexRoute",
+                                )
+                            }
+                        }
+                    }
+            }
+    }
+        .distinct()
+        .sorted()
+}
 tasks.register("vexComposeMigrationReport") {
     notCompatibleWithConfigurationCache(
         "Vex Compose migration debt scans Screen source files at execution time.",
@@ -253,11 +292,18 @@ tasks.register("sourceAlignmentReport") {
     description = "Warns when Screen/Preview/Room source conventions drift."
 
     doLast {
-        val violations = collectSourceAlignmentViolations()
-        if (violations.isEmpty()) {
+        val violations =
+            collectSourceAlignmentViolations()
+        val vexComposeViolations =
+            collectVexComposeEnforcedViolations()
+        val allViolations =
+            violations +
+                vexComposeViolations
+
+        if (allViolations.isEmpty()) {
             logger.lifecycle("Source alignment: OK")
         } else {
-            violations.forEach { violation ->
+            allViolations.forEach { violation ->
                 logger.warn("SOURCE ALIGNMENT: $violation")
             }
         }
@@ -272,7 +318,10 @@ tasks.register("verifySourceAlignment") {
     description = "Fails when repository-owned source conventions drift."
 
     doLast {
-        val violations = collectSourceAlignmentViolations()
+        val violations =
+            collectSourceAlignmentViolations() +
+                collectVexComposeEnforcedViolations()
+
         if (violations.isNotEmpty()) {
             throw GradleException(
                 buildString {
@@ -280,7 +329,8 @@ tasks.register("verifySourceAlignment") {
                     violations.forEach { appendLine(" - $it") }
                     appendLine()
                     append(
-                        "Run :app:sourceAlignmentReport for warning-only output.",
+                        "Run :app:sourceAlignmentReport for warning-only output, " +
+                            "or :app:vexComposeMigrationReport for remaining raw Compose debt.",
                     )
                 },
             )
