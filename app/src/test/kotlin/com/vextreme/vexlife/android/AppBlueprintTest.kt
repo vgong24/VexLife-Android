@@ -168,4 +168,61 @@ class AppBlueprintTest {
         assertEquals(showParent?.elementId, resetParent?.elementId)
         assertTrue(showParent?.elementId?.endsWith("log-history.actions") == true)
     }
+
+    @Test
+    fun galleryModalBlueprintMatchesInheritedVexComposePaths() {
+        val dialogTitle =
+            registry.element(
+                GalleryScreen.DialogModalSample.elementId +
+                    ".title",
+            )
+        val dialogBody =
+            registry.element(
+                GalleryScreen.DialogModalSample.elementId +
+                    ".body",
+            )
+        val sheetContent =
+            registry.element(
+                GalleryScreen.BottomSheetModalSample.elementId +
+                    ".content",
+            )
+        val sheetTitle =
+            registry.element(
+                GalleryScreen.BottomSheetModalSample.elementId +
+                    ".content.title",
+            )
+        val sheetBody =
+            registry.element(
+                GalleryScreen.BottomSheetModalSample.elementId +
+                    ".content.body",
+            )
+
+        requireNotNull(dialogTitle)
+        requireNotNull(dialogBody)
+        requireNotNull(sheetContent)
+        requireNotNull(sheetTitle)
+        requireNotNull(sheetBody)
+
+        assertSame(
+            GalleryScreen.DialogModalSample,
+            registry.parentOf(dialogTitle),
+        )
+        assertSame(
+            GalleryScreen.DialogModalSample,
+            registry.parentOf(dialogBody),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetModalSample,
+            registry.parentOf(sheetContent),
+        )
+        assertSame(
+            sheetContent,
+            registry.parentOf(sheetTitle),
+        )
+        assertSame(
+            sheetContent,
+            registry.parentOf(sheetBody),
+        )
+    }
+
 }
