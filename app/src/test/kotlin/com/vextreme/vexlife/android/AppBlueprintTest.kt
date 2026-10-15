@@ -225,4 +225,57 @@ class AppBlueprintTest {
         )
     }
 
+
+    @Test
+    fun vexStreamSearchAddsNewParentContinuityWithoutRenamingLegacyIds() {
+        assertSame(
+            VexStreamMusicScreen.SearchSheet,
+            registry.parentOf(
+                VexStreamMusicScreen.SearchContent,
+            ),
+        )
+
+        assertSame(
+            VexStreamMusicScreen.SearchContent,
+            registry.parentOf(
+                VexStreamMusicScreen.SearchPrompt,
+            ),
+        )
+        assertSame(
+            VexStreamMusicScreen.SearchContent,
+            registry.parentOf(
+                VexStreamMusicScreen.SearchNoResults,
+            ),
+        )
+
+        assertSame(
+            VexStreamMusicScreen.SearchContent,
+            registry.parentOf(
+                VexStreamMusicScreen.SearchQuery,
+            ),
+        )
+        assertSame(
+            VexStreamMusicScreen.SearchContent,
+            registry.parentOf(
+                VexStreamMusicScreen.CloseSearch,
+            ),
+        )
+
+        assertTrue(
+            VexStreamMusicScreen.SearchContent.elementId
+                .startsWith(
+                    VexStreamMusicScreen.SearchSheet.elementId + ".",
+                ),
+        )
+
+        assertEquals(
+            "element.vexstream-music.body.library.search",
+            VexStreamMusicScreen.SearchQuery.elementId,
+        )
+        assertEquals(
+            "element.vexstream-music.body.library.search.close",
+            VexStreamMusicScreen.CloseSearch.elementId,
+        )
+    }
+
 }
