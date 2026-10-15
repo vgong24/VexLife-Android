@@ -1462,59 +1462,78 @@ private fun VexStreamTrackCard(
         mutableStateOf(false)
     }
 
-    val handler =
+    fun realizeTrackAction(
+        element: ActionElement,
+    ) {
+        when (element) {
+            VexStreamMusicScreen.PlayTrack ->
+                controller?.playVexStreamContext(
+                    selected = state,
+                    contextTracks = contextTracks,
+                    resolver = resolver,
+                )
+
+            VexStreamMusicScreen.PlayTrackNext ->
+                controller?.playNextVexStream(
+                    state = state,
+                    resolver = resolver,
+                )
+
+            VexStreamMusicScreen.AddTrackToQueue ->
+                controller?.queueVexStream(
+                    state = state,
+                    resolver = resolver,
+                )
+
+            VexStreamMusicScreen.DownloadTrack ->
+                onDownload()
+
+            VexStreamMusicScreen.RemoveTrackDownload ->
+                onRemoveDownload()
+
+            VexStreamMusicScreen.VisitTrackArtist ->
+                onVisitArtist(
+                    state.track.artist,
+                )
+
+            else -> Unit
+        }
+    }
+
+    val rowHandler =
         ElementActionHandler { element ->
             runtime.activateDynamic(
                 element = element,
                 subjectRef =
-                    VexStreamPresentationRefs.trackAction(
+                    VexStreamPresentationRefs.trackRowAction(
                         trackRef =
                             state.track.trackRef,
                         action = element,
                     ),
             )
-            when (element) {
-                VexStreamMusicScreen.PlayTrack ->
-                    controller?.playVexStreamContext(
-                        selected = state,
-                        contextTracks = contextTracks,
-                        resolver = resolver,
-                    )
-
-                VexStreamMusicScreen.PlayTrackNext ->
-                    controller?.playNextVexStream(
-                        state = state,
-                        resolver = resolver,
-                    )
-
-                VexStreamMusicScreen.AddTrackToQueue ->
-                    controller?.queueVexStream(
-                        state = state,
-                        resolver = resolver,
-                    )
-
-                VexStreamMusicScreen.DownloadTrack ->
-                    onDownload()
-
-                VexStreamMusicScreen.RemoveTrackDownload ->
-                    onRemoveDownload()
-
-                VexStreamMusicScreen.VisitTrackArtist ->
-                    onVisitArtist(
-                        state.track.artist,
-                    )
-
-                else -> Unit
-            }
+            realizeTrackAction(
+                element,
+            )
         }
     val menuHandler =
         ElementActionHandler { element ->
             menuExpanded = false
-            handler.activate(element)
+            runtime.activateDynamic(
+                element = element,
+                subjectRef =
+                    VexStreamPresentationRefs.trackMenuAction(
+                        trackRef =
+                            state.track.trackRef,
+                        action = element,
+                    ),
+            )
+            realizeTrackAction(
+                element,
+            )
         }
     val menuOpenHandler =
         ElementActionHandler { element ->
-            handler.activate(
+            rowHandler.activate(
                 element,
             )
             menuExpanded = true
@@ -1577,7 +1596,7 @@ private fun VexStreamTrackCard(
             )
             .vex(
                 VexModifier.semantic(
-                    VexStreamPresentationRefs.trackAction(
+                    VexStreamPresentationRefs.trackRowAction(
                         trackRef =
                             state.track.trackRef,
                         action =
@@ -1588,7 +1607,7 @@ private fun VexStreamTrackCard(
             .clickable(
                 enabled = controller != null,
             ) {
-                handler.activate(
+                rowHandler.activate(
                     VexStreamMusicScreen.PlayTrack,
                 )
             },
@@ -1679,7 +1698,7 @@ private fun VexStreamTrackCard(
                     handler = menuOpenHandler,
                     vexModifier =
                         VexModifier.semantic(
-                            VexStreamPresentationRefs.trackAction(
+                            VexStreamPresentationRefs.trackRowAction(
                                 trackRef =
                                     state.track.trackRef,
                                 action =
@@ -1767,7 +1786,7 @@ private fun VexStreamTrackMenuItem(
         modifier =
             Modifier.vex(
                 VexModifier.semantic(
-                    VexStreamPresentationRefs.trackAction(
+                    VexStreamPresentationRefs.trackMenuAction(
                         trackRef = trackRef,
                         action = element,
                     ),
