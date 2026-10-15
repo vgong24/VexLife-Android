@@ -42,8 +42,8 @@ CURRENT State + Controls
 -> Projection
 
 Projection
--> optional Presentation / Display State
--> UI
+-> optional feature DisplayState
+-> UI treatment
 ~~~
 
 Behavior is the semantic rulebook for lawful relationships among State / Control / Act / Effect.
@@ -74,6 +74,8 @@ reconciles the resulting State.
     availability is derived convenience.
 12. **Every relationship terminates explicitly.** Every `on(...)` must end in `.stay()` or
     `.admit<State>()`.
+13. **DisplayState is a deterministic view classification, not another truth owner.** Use it only
+    when views would otherwise repeat conditional treatment of an already-derived Projection.
 
 ## Durable package pattern
 

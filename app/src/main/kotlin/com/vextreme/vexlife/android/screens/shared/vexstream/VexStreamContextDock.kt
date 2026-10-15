@@ -30,7 +30,6 @@ import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackProjection
@@ -38,7 +37,8 @@ import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAct
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
+import com.vextreme.vexlife.android.vexstream.playback.toVexStreamPlaybackDisplayState
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -65,10 +65,22 @@ internal fun rememberVexStreamContextDockPage(
         rememberVexStreamPlaybackUiState(
             controller,
         )
+    val displayState =
+        playbackProjection
+            .toVexStreamPlaybackDisplayState()
 
-    if (!playback.hasQueue) {
-        return null
-    }
+    val displayedProjection =
+        when (displayState) {
+            VexStreamPlaybackDisplayState.Unknown,
+            is VexStreamPlaybackDisplayState.Inactive ->
+                return null
+
+            is VexStreamPlaybackDisplayState.Transitioning ->
+                displayState.projection
+
+            is VexStreamPlaybackDisplayState.Active ->
+                displayState.projection
+        }
 
     return VexContextDockPage(
         pageRef =
@@ -83,7 +95,7 @@ internal fun rememberVexStreamContextDockPage(
             playbackConnection =
                 playbackConnection,
             playbackProjection =
-                playbackProjection,
+                displayedProjection,
             expanded = expanded,
         )
     }
@@ -97,7 +109,7 @@ private fun VexStreamContextDockContent(
     playbackConnection:
         VexStreamPlaybackConnection?,
     playbackProjection:
-        VexStreamPlaybackProjection?,
+        VexStreamPlaybackProjection,
     expanded: Boolean,
 ) {
     var scrubFraction by
@@ -116,7 +128,7 @@ private fun VexStreamContextDockContent(
                 Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
             )
     val playPause =
-        playbackProjection?.present(
+        playbackProjection.present(
             VexStreamPlaybackControl.PlayPause,
         )
 
@@ -195,16 +207,14 @@ private fun VexStreamContextDockContent(
             }
             VexStreamDockIconButton(
                 icon =
-                    playPause?.icon
-                        ?: ElementIcon.PlayPause,
+                    playPause.icon,
                 contentDescription =
                     stringResource(
                         R.string
                             .vexstream_music_play_pause,
                     ),
                 enabled =
-                    playPause?.enabled ==
-                        true,
+                    playPause.enabled,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =

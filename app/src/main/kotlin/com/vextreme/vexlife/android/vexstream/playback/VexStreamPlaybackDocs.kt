@@ -72,6 +72,20 @@ package com.vextreme.vexlife.android.vexstream.playback
  * Local admitted intent may be published before Media3 acknowledgement without pretending provider
  * convergence already happened.
  *
+ * ## How does the view know how to treat the arrived Projection?
+ *
+ * See [VexStreamPlaybackDisplayState] and [toVexStreamPlaybackDisplayState].
+ *
+ * The classification is pure and deterministic:
+ *
+ * - no Projection -> Unknown
+ * - NoMedia -> Inactive(projection)
+ * - pending admitted intent -> Transitioning(projection)
+ * - otherwise -> Active(projection)
+ *
+ * This is not another state owner. It replaces repeated view-level if/null gates with one sealed
+ * interpretation of the Projection that already arrived.
+ *
  * ## How does semantic meaning become UI meaning?
  *
  * See [VexStreamPlaybackControlPresentation] and [present].

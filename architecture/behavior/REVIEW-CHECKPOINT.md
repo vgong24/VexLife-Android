@@ -239,6 +239,35 @@ while those aliases preserve the complete Family-bound generics underneath.
 
 A second feature should follow the same pattern before inventing another generic wrapper.
 
+## Display-State pressure
+
+VexStream Playback now demonstrates one feature-local sealed classification of an already-derived
+Projection:
+
+~~~text
+no Projection
+-> Unknown
+
+Projection(NoMedia)
+-> Inactive(projection)
+
+Projection(pending admitted intent)
+-> Transitioning(projection)
+
+ordinary displayable Projection
+-> Active(projection)
+~~~
+
+This is not another owner or state machine. It is the typed result of the same deterministic
+conditionals that previously lived separately in Mini Player and Context Dock.
+
+Current rendering policy intentionally treats Transitioning and Active alike; the sealed distinction
+preserves the condition so a future UI may respond differently without re-deriving semantic truth.
+
+The two current Playback surfaces no longer gate themselves independently through
+`playback.hasQueue` plus nullable Projection fallbacks. They consume the shared display
+classification and receive a non-null Projection in Transitioning/Active cases.
+
 ## Deliberately held
 
 The following are NOT solved by this checkpoint:
@@ -272,6 +301,7 @@ A reviewer should be able to answer:
 9. Is Control meaning preserved as Available(Act) / Unavailable before Boolean convenience?
 10. Is convergence kept above complete local projections rather than cross-multiplied into State?
 11. If convergence wants another family to change, does it carry that family's Control rather than bypassing directly to Effect?
+12. If several views conditionally treat the same arrived Projection, is that condition projected once as a feature-local DisplayState rather than repeated as booleans/null checks?
 
 If those answers are clear from source, the architecture has reached the intended perceptible review
 threshold even before every future consumer is implemented.

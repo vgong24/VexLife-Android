@@ -153,20 +153,51 @@ admitted local request
 
 Extract a dedicated file/type only when the reconciliation logic is large enough to benefit from it.
 
-### Presentation / Display State
+### Display State
 
-Presentation is derived after semantic Projection:
+A feature may wrap an already-derived output in one sealed `DisplayState` when the UI currently
+repeats conditionals to decide how that output should be treated.
+
+This is a **deterministic read classification**, not another truth owner or state machine:
 
 ~~~text
-current State + Controls
--> Projection
--> optional Presentation / Display State
--> UI
+arrived Projection
+-> classify current display condition
+-> DisplayState
+-> UI treatment
 ~~~
 
-If several primitive display flags actually describe one coherent human-facing mode, a feature may earn a sealed `PresentationState` or `DisplayState`.
+VexStream Playback is the first pressure example:
 
-That type remains presentation-owned and is **not** another `VexBehaviorFamily` member.
+~~~text
+no Projection
+-> Unknown
+
+Projection(State.NoMedia)
+-> Inactive(projection)
+
+Projection(pending admitted intent)
+-> Transitioning(projection)
+
+ordinary displayable Projection
+-> Active(projection)
+~~~
+
+The Projection remains the semantic output. DisplayState merely preserves the condition that would
+otherwise be expressed as scattered `if` / `null` / fallback checks in each view.
+
+A view may render two DisplayState cases identically today and differently later. That does not
+change the source truth.
+
+Do not add DisplayState when the UI has no meaningful conditional treatment to preserve, and do not
+promote a generic `VexDisplayState` until repeated real consumers earn the same algebra.
+
+### Presentation
+
+Presentation may still derive visual vocabulary such as icon, enabled treatment, labels, or styling
+from a Projection or DisplayState.
+
+Presentation does not own semantic truth and is not another `VexBehaviorFamily` member.
 
 ### Human-facing aliases
 
@@ -255,8 +286,8 @@ CURRENT State + Controls
 -> Projection
 
 Projection
--> optional Presentation / Display State
--> UI
+-> optional feature DisplayState
+-> UI treatment
 ~~~
 
 State is current context feeding several decisions.
@@ -752,6 +783,7 @@ app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/
 | Connection | [Media3VexStreamPlaybackConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/Media3VexStreamPlaybackConnection.kt) |
 | Lifetime host | [VexStreamPlaybackConnectionViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackConnectionViewModel.kt) |
 | Pending reconciliation | [VexStreamPlaybackPending](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPending.kt) |
+| Display classification | [VexStreamPlaybackDisplayState](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackDisplayState.kt) |
 | Presentation | [VexStreamPlaybackControlPresentation](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPresentation.kt) |
 | Human-facing aliases | [VexStreamPlaybackConnection / Flow / Projection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackTypes.kt) |
 
@@ -776,7 +808,8 @@ A family is healthy when a developer can answer:
 11. What concurrency/currentness guarantees belong to the concrete owner?
 12. Does every on(...) explicitly end in stay() or admit<State>()?
 13. Is Control meaning preserved semantically as Available(Act) / Unavailable before Boolean convenience?
-14. Is this still one behavioral question, or has it earned a sibling family?
+14. If views branch on the arrived Projection, is that condition authored once as a feature-local DisplayState rather than repeated as booleans/null checks?
+15. Is this still one behavioral question, or has it earned a sibling family?
 
 If those answers require reconstructing a hidden switchboard, the package has lost the pattern.
 
