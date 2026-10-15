@@ -10,6 +10,9 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryDao
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryEntity
 import com.vextreme.vexlife.android.data.maps.VexMapsDao
 import com.vextreme.vexlife.android.data.maps.VexMapsStateEntity
+import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDao
+import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraftEntity
+import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionStopEntity
 import com.vextreme.vexlife.android.data.userprofile.UserProfileDao
 import com.vextreme.vexlife.android.data.userprofile.UserProfileEntity
 
@@ -25,14 +28,17 @@ import com.vextreme.vexlife.android.data.userprofile.UserProfileEntity
         LogHistoryEntity::class,
         UserProfileEntity::class,
         VexMapsStateEntity::class,
+        VexMapsDistributionDraftEntity::class,
+        VexMapsDistributionStopEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class VexLifeDatabase : RoomDatabase() {
     abstract fun logHistoryDao(): LogHistoryDao
     abstract fun userProfileDao(): UserProfileDao
     abstract fun vexMapsDao(): VexMapsDao
+    abstract fun vexMapsDistributionDao(): VexMapsDistributionDao
 
     companion object {
         /**
@@ -159,6 +165,57 @@ abstract class VexLifeDatabase : RoomDatabase() {
                 )
             }
         }
+
+        /**
+         * v5 adds durable Distribution obligations as a separate Maps-owned persistence boundary.
+         * Human input order remains source truth; optimized order is intentionally not stored here.
+         */
+        val migration4To5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS vex_maps_distribution_draft (
+                        draft_ref TEXT NOT NULL,
+                        revision INTEGER NOT NULL,
+                        return_to_start INTEGER NOT NULL,
+                        updated_at_epoch_millis INTEGER NOT NULL,
+                        PRIMARY KEY(draft_ref)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS vex_maps_distribution_stop (
+                        stop_ref TEXT NOT NULL,
+                        draft_ref TEXT NOT NULL,
+                        place_ref TEXT,
+                        name TEXT NOT NULL,
+                        subtitle TEXT,
+                        latitude REAL NOT NULL,
+                        longitude REAL NOT NULL,
+                        input_order INTEGER NOT NULL,
+                        PRIMARY KEY(stop_ref),
+                        FOREIGN KEY(draft_ref)
+                            REFERENCES vex_maps_distribution_draft(draft_ref)
+                            ON UPDATE NO ACTION
+                            ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_vex_maps_distribution_stop_draft_ref
+                    ON vex_maps_distribution_stop(draft_ref)
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS index_vex_maps_distribution_stop_draft_ref_input_order
+                    ON vex_maps_distribution_stop(draft_ref, input_order)
+                    """.trimIndent(),
+                )
+            }
+        }
     }
 }
 
@@ -185,6 +242,7 @@ object VexLifeDatabaseFactory {
                     VexLifeDatabase.migration1To2,
                     VexLifeDatabase.migration2To3,
                     VexLifeDatabase.migration3To4,
+                    VexLifeDatabase.migration4To5,
                 )
                 .build()
                 .also { instance = it }

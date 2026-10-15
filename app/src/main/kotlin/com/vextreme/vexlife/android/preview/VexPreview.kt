@@ -16,6 +16,7 @@ import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryFixture
 import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
+import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.userprofile.UserProfileFixture
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
@@ -115,6 +116,7 @@ internal object VexPreviewRepositories {
             logHistory = InMemoryLogHistoryRepository(),
             userProfile = InMemoryUserProfileRepository(),
             vexMaps = InMemoryVexMapsRepository(),
+            vexMapsDistribution = InMemoryVexMapsDistributionRepository(),
             vexStream = InMemoryVexStreamMusicRepository(),
             events = RelayEventsRepository(),
             eventsAttention = RelayEventsAttentionPreferenceRepository(),
