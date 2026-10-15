@@ -334,6 +334,7 @@
     <string name="vexmaps_distribution_state_at_stop">At stop %1$d of %2$d</string>
     <string name="vexmaps_distribution_state_returning">Returning to start</string>
     <string name="vexmaps_distribution_state_complete">Run complete</string>
+    <string name="vexmaps_distribution_draft_failed">Draft update failed: %1$s</string>
     <string name="vexmaps_distribution_preparation_failed">Preparation failed: %1$s</string>
     <string name="vexmaps_distribution_leg_failed">Next leg unavailable: %1$s</string>
     <string name="vexmaps_distribution_retry">Retry</string>

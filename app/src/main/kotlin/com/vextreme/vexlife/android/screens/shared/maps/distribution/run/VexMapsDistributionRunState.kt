@@ -135,8 +135,6 @@ internal sealed interface VexMapsDistributionRunState :
     }
 }
 
-// [VXG RealForever]
-
 private fun requireExecutionOrder(
     source: VexMapsDistributionRunDraftIdentity,
     orderedStopRefs: List<String>,
@@ -147,3 +145,5 @@ private fun requireExecutionOrder(
         "Distribution execution order must contain the exact admitted Draft stop refs"
     }
 }
+
+// [VXG RealForever]

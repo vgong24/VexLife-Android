@@ -74,10 +74,13 @@ internal fun vexMapsDistributionContextDockPage(
         modeProjection.state is
             VexMapsDistributionModeState.Distribution
     val draftEditable =
-        runProjection.state is
-            VexMapsDistributionRunState.Empty ||
-            runProjection.state is
-            VexMapsDistributionRunState.Draft
+        !session.draftOperationInFlight &&
+            (
+                runProjection.state is
+                    VexMapsDistributionRunState.Empty ||
+                    runProjection.state is
+                    VexMapsDistributionRunState.Draft
+            )
     val canStart =
         runProjection[
             VexMapsDistributionRunControl.Start
@@ -375,6 +378,18 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
             }
+
+            session
+                .draftFailure
+                ?.let { reason ->
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_distribution_draft_failed,
+                            reason,
+                        ),
+                    )
+                }
 
             session
                 .preparationFailure

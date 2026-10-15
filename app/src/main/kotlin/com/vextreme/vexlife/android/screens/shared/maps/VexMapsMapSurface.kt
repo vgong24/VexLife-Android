@@ -50,7 +50,6 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionExperience
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.vexMapsDistributionContextDockPage
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationLayer
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
@@ -1126,7 +1125,9 @@ internal fun VexMapsMapSurface(
             experience =
                 distributionExperience,
             canPrepare =
-                regionPack != null &&
+                !distributionSessionState
+                    .draftOperationInFlight &&
+                    regionPack != null &&
                     routeOrigin != null &&
                     distributionSessionState
                         .draft

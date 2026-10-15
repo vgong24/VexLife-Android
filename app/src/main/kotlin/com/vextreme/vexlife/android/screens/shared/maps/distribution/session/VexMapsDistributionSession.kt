@@ -76,6 +76,12 @@ internal data class VexMapsDistributionSessionState(
     val draft:
         VexMapsDistributionDraft =
         VexMapsDistributionDraft(),
+    val draftOperationInFlight:
+        Boolean =
+        true,
+    val draftFailure:
+        String? =
+        null,
     val plan:
         VexMapsDistributionPlan? =
         null,
@@ -247,7 +253,7 @@ internal class VexMapsDistributionSession(
         latitude: Double,
         longitude: Double,
     ) {
-        if (!draftEditable()) {
+        if (!beginDraftOperation()) {
             return
         }
 
@@ -266,8 +272,14 @@ internal class VexMapsDistributionSession(
                         longitude,
                 )
             }.onSuccess {
-                publishDraft(
-                    it,
+                finishDraftOperation(
+                    draft =
+                        it,
+                )
+            }.onFailure {
+                finishDraftOperation(
+                    error =
+                        it,
                 )
             }
         }
@@ -276,7 +288,7 @@ internal class VexMapsDistributionSession(
     fun removeStop(
         stopRef: String,
     ) {
-        if (!draftEditable()) {
+        if (!beginDraftOperation()) {
             return
         }
 
@@ -286,8 +298,14 @@ internal class VexMapsDistributionSession(
                     stopRef,
                 )
             }.onSuccess {
-                publishDraft(
-                    it,
+                finishDraftOperation(
+                    draft =
+                        it,
+                )
+            }.onFailure {
+                finishDraftOperation(
+                    error =
+                        it,
                 )
             }
         }
@@ -296,7 +314,7 @@ internal class VexMapsDistributionSession(
     fun setReturnToStart(
         enabled: Boolean,
     ) {
-        if (!draftEditable()) {
+        if (!beginDraftOperation()) {
             return
         }
 
@@ -306,8 +324,14 @@ internal class VexMapsDistributionSession(
                     enabled,
                 )
             }.onSuccess {
-                publishDraft(
-                    it,
+                finishDraftOperation(
+                    draft =
+                        it,
+                )
+            }.onFailure {
+                finishDraftOperation(
+                    error =
+                        it,
                 )
             }
         }
@@ -319,6 +343,8 @@ internal class VexMapsDistributionSession(
         pack: VexMapsRegionPack,
     ) {
         if (
+            mutableState.value
+                .draftOperationInFlight ||
             !run.currentProjection[
                 VexMapsDistributionRunControl.Prepare
             ].isAvailable
@@ -617,12 +643,27 @@ internal class VexMapsDistributionSession(
             )
         }
 
+        mutableState.value =
+            mutableState.value
+                .copy(
+                    draftOperationInFlight =
+                        true,
+                    draftFailure =
+                        null,
+                )
+
         scope.launch {
             runCatching {
                 repository.clearDraft()
             }.onSuccess {
-                publishDraft(
-                    it,
+                finishDraftOperation(
+                    draft =
+                        it,
+                )
+            }.onFailure {
+                finishDraftOperation(
+                    error =
+                        it,
                 )
             }
         }
@@ -632,8 +673,14 @@ internal class VexMapsDistributionSession(
         runCatching {
             repository.loadDraft()
         }.onSuccess {
-            publishDraft(
-                it,
+            finishDraftOperation(
+                draft =
+                    it,
+            )
+        }.onFailure {
+            finishDraftOperation(
+                error =
+                    it,
             )
         }
     }
@@ -664,23 +711,71 @@ internal class VexMapsDistributionSession(
                     .copy(
                         draft =
                             draft,
+                        plan =
+                            null,
+                        preparationFailure =
+                            null,
                     )
         }
     }
 
     private fun draftEditable():
         Boolean =
-        when (
-            run.currentProjection
-                .state
-        ) {
-            VexMapsDistributionRunState.Empty,
-            is VexMapsDistributionRunState.Draft ->
-                true
+        !mutableState.value
+            .draftOperationInFlight &&
+            when (
+                run.currentProjection
+                    .state
+            ) {
+                VexMapsDistributionRunState.Empty,
+                is VexMapsDistributionRunState.Draft ->
+                    true
 
-            else ->
-                false
+                else ->
+                    false
+            }
+
+    private fun beginDraftOperation():
+        Boolean {
+        if (!draftEditable()) {
+            return false
         }
+
+        mutableState.value =
+            mutableState.value
+                .copy(
+                    draftOperationInFlight =
+                        true,
+                    draftFailure =
+                        null,
+                )
+        return true
+    }
+
+    private fun finishDraftOperation(
+        draft:
+            VexMapsDistributionDraft? =
+            null,
+        error:
+            Throwable? =
+            null,
+    ) {
+        if (draft != null) {
+            publishDraft(
+                draft,
+            )
+        }
+
+        mutableState.value =
+            mutableState.value
+                .copy(
+                    draftOperationInFlight =
+                        false,
+                    draftFailure =
+                        error
+                            ?.failureMeaning(),
+                )
+    }
 
     private fun publishSession(
         plan:
