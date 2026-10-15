@@ -6,6 +6,7 @@ import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPresentationScope
 import com.vextreme.vexlife.android.shell.AppShell
 
 object VexStreamJourneys : VexJourneyShard {
@@ -17,6 +18,8 @@ object VexStreamJourneys : VexJourneyShard {
         dynamicElement(
             elementId =
                 VexStreamPresentationRefs.trackRowAction(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
                     trackRef =
                         VexStreamJourneyFixtures.TrackOne,
                     action = action,
@@ -31,6 +34,8 @@ object VexStreamJourneys : VexJourneyShard {
         dynamicElement(
             elementId =
                 VexStreamPresentationRefs.trackMenuAction(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
                     trackRef =
                         VexStreamJourneyFixtures.TrackOne,
                     action = action,
@@ -90,7 +95,10 @@ object VexStreamJourneys : VexJourneyShard {
         expectVisible(
             dynamicElement(
                 VexStreamPresentationRefs.trackRow(
-                    VexStreamJourneyFixtures.TrackOne,
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
                 ),
             ),
         )
