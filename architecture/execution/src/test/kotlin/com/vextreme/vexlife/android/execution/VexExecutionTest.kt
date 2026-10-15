@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.execution
 
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -256,7 +257,7 @@ class VexExecutionTest {
             val root = VexExecutionRoot()
             val repository = TestRepository()
             val execution = TestExecution(root, repository)
-            val values = mutableListOf<Int>()
+            val values = CopyOnWriteArrayList<Int>()
 
             try {
                 val handle = execution.observeStates(values)
@@ -292,7 +293,7 @@ class VexExecutionTest {
             val root = VexExecutionRoot()
             val repository = TestRepository()
             val execution = TestExecution(root, repository)
-            val values = mutableListOf<Int>()
+            val values = CopyOnWriteArrayList<Int>()
 
             try {
                 val handle =
@@ -350,7 +351,7 @@ class VexExecutionTest {
                 )
             val repository = TestRepository()
             val execution = TestExecution(root, repository)
-            val values = mutableListOf<Int>()
+            val values = CopyOnWriteArrayList<Int>()
 
             try {
                 val healthy = execution.observeSecondary(values)
@@ -389,7 +390,7 @@ class VexExecutionTest {
                 )
             val repository = TestRepository()
             val execution = TestExecution(root, repository)
-            val values = mutableListOf<Int>()
+            val values = CopyOnWriteArrayList<Int>()
 
             try {
                 val handle = execution.observeRestartable(values)
@@ -400,13 +401,22 @@ class VexExecutionTest {
                             VexCoroutineStatus.RUNNING &&
                             state.attempt == 2
                     }
+
+                    /*
+                     * RUNNING means the recovered attempt has started; it does not mean the emitted
+                     * value has already crossed the downstream consumer boundary. Wait for the
+                     * observable effect this assertion actually claims rather than racing on status.
+                     */
+                    while (!values.contains(11)) {
+                        kotlinx.coroutines.yield()
+                    }
                 }
 
                 assertEquals(
                     2,
                     repository.collectAttempts.get(),
                 )
-                assertEquals(listOf(11), values)
+                assertEquals(listOf(11), values.toList())
                 assertEquals(
                     2,
                     handle.state.value.attempt,
@@ -432,7 +442,7 @@ class VexExecutionTest {
                 )
             val repository = TestRepository()
             val execution = TestExecution(root, repository)
-            val values = mutableListOf<Int>()
+            val values = CopyOnWriteArrayList<Int>()
 
             try {
                 val handle =
@@ -446,6 +456,10 @@ class VexExecutionTest {
                             VexCoroutineStatus.RUNNING &&
                             state.attempt == 2
                     }
+
+                    while (!values.contains(17)) {
+                        kotlinx.coroutines.yield()
+                    }
                 }
 
                 assertEquals(
@@ -456,7 +470,7 @@ class VexExecutionTest {
                 )
                 assertEquals(
                     listOf(17),
-                    values,
+                    values.toList(),
                 )
                 assertEquals(
                     1,
@@ -579,7 +593,7 @@ class VexExecutionTest {
             val root = VexExecutionRoot()
             val repository = TestRepository()
             val execution = TestExecution(root, repository)
-            val values = mutableListOf<Int>()
+            val values = CopyOnWriteArrayList<Int>()
 
             try {
                 val first =
@@ -611,7 +625,7 @@ class VexExecutionTest {
             val root = VexExecutionRoot()
             val repository = TestRepository()
             val execution = TestExecution(root, repository)
-            val values = mutableListOf<Int>()
+            val values = CopyOnWriteArrayList<Int>()
 
             try {
                 val first =
@@ -674,7 +688,7 @@ class VexExecutionTest {
             val root = VexExecutionRoot()
             val repository = TestRepository()
             val execution = TestExecution(root, repository)
-            val values = mutableListOf<Int>()
+            val values = CopyOnWriteArrayList<Int>()
 
             val running =
                 execution.observeStates(values)
