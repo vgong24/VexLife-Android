@@ -22,7 +22,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
@@ -38,6 +37,9 @@ import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
 import com.vextreme.vexlife.android.elements.VexAnchoredOverlay
 import com.vextreme.vexlife.android.elements.VexStableLazyColumn
 import com.vextreme.vexlife.android.elements.VexOverlayPlacement
+import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.conditional
+import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -296,22 +298,20 @@ private fun EventRow(
 ) {
     Box(
         modifier =
-            Modifier
+            VexModifier
                 .fillMaxWidth()
-                .then(
-                    if (isAttentionCandidate) {
-                        Modifier.border(
-                            width = 2.dp,
-                            color =
-                                MaterialTheme.colorScheme.primary,
-                            shape =
-                                MaterialTheme.shapes.medium,
-                        )
-                    } else {
-                        Modifier
-                    },
-                )
-                .testTag(
+                .conditional(
+                    isAttentionCandidate,
+                ) {
+                    border(
+                        width = 2.dp,
+                        color =
+                            MaterialTheme.colorScheme.primary,
+                        shape =
+                            MaterialTheme.shapes.medium,
+                    )
+                }
+                .vex(
                     EventsPresentationRefs.row(
                         event.eventRef,
                     ),
@@ -600,7 +600,7 @@ private fun CompactAttentionButton(
                     MaterialTheme.colorScheme.inversePrimary,
             ),
         modifier =
-            Modifier.testTag(
+            VexModifier.vex(
                 EventsPresentationRefs.attentionAction(
                     eventRef,
                     actionRef,

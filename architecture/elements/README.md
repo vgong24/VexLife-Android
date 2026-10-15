@@ -74,6 +74,144 @@ though their product effects are intentionally small.
 The rule remains need-based: static one-off text/layout nodes do not become named fields merely
 because tests exist.
 
+## Vex Compose — inherited presentation continuity
+
+The Blueprint DSL already forms nested semantic identity from structure:
+
+~~~text
+scrollableColumn("body")
+  -> card("preview")
+      -> text("title")
+
+element.<screen>.body.preview.title
+~~~
+
+Custom Compose must follow the same law. Product presentation should not fall back to isolated raw
+Compose primitives whose identity, styling and QA hooks depend on each caller remembering them.
+
+### VexModifier is the Compose root
+
+`VexModifier` is a real Compose `Modifier`:
+
+~~~kotlin
+VexModifier
+    .fillMaxWidth()
+    .padding(8.dp)
+    .clickable { ... }
+~~~
+
+It is not a parallel modifier value/configuration object. It is the Vex-owned architectural entry
+point into the ordinary Compose modifier chain.
+
+Registered/static identity may be attached with:
+
+~~~kotlin
+VexModifier.vex(SomeScreen.Save)
+~~~
+
+An already-formed runtime presentation ref may be attached with:
+
+~~~kotlin
+VexModifier.vex(runtimePresentationRef)
+~~~
+
+Raw Compose `testTag(...)` realization stays inside the Elements foundation.
+
+### Nested Vex Compose scope
+
+A custom renderer enters one semantic parent:
+
+~~~kotlin
+VexComposeScope(parent = SomeScreen.Panel) {
+    VexColumn("search") {
+        VexText(
+            id = "title",
+            text = title,
+            role = TextRole.Title,
+        )
+    }
+}
+~~~
+
+The child declarations are local. The full addresses are inherited:
+
+~~~text
+SomeScreen.Panel
+  element.some-screen.body.panel
+
+VexColumn("search")
+  element.some-screen.body.panel.search
+
+VexText("title")
+  element.some-screen.body.panel.search.title
+~~~
+
+The Blueprint DSL and Vex Compose use the same path-normalization function. A slash/whitespace/path
+rule therefore cannot silently mean one thing in registration and another in custom rendering.
+
+A Vex primitive rendered without a Vex parent fails closed instead of inventing a detached ID.
+
+### Current sanctioned core
+
+The first earned custom primitives are deliberately small:
+
+~~~text
+VexModifier
+VexComposeScope
+VexText
+VexColumn
+VexRow
+VexBox
+VexCard
+~~~
+
+Existing registered cells such as `VexButton`, `VexIconButton`, `VexTextField`,
+`VexScrollableColumn` and the generic `VexElementTree` remain part of the same Elements
+foundation. Static container cells now also provide their registered element as the inherited parent
+for nested Vex Compose content.
+
+Do not create one-for-one wrappers for every Compose API merely for naming symmetry. Add a Vex
+primitive when it carries recurring architectural meaning: inherited identity, semantic styling,
+interaction ownership, QA/evidence hooks, or another repeated cross-feature contract.
+
+### Gallery is the live Vex Compose catalog
+
+Gallery is the first visual practicum for this foundation. Its custom modal realizations now enter
+through their registered modal element and use nested Vex primitives whose IDs match the same nested
+paths declared in the Gallery Blueprint.
+
+This makes Gallery the place to inspect and pressure new sanctioned Vex Compose habits before they
+spread through product Screens.
+
+### Migration visibility
+
+During the POC/migration period, raw Compose use under product Screen source is visible through:
+
+~~~bash
+./gradlew :app:vexComposeMigrationReport
+~~~
+
+This is intentionally warning-only while Gallery and VexStream prove the sanctioned vocabulary.
+Promote it to a hard source-alignment gate only after the rightful Vex replacement exists; the report
+must not force authors to invent meaningless wrappers merely to satisfy a regex.
+
+### Migration law
+
+~~~text
+raw product Compose
+-> identify the semantic parent/question
+-> enter VexModifier / VexComposeScope
+-> use sanctioned Vex primitives
+-> preserve provider/platform mechanics underneath
+~~~
+
+Vex does not replace Compose. Compose remains the Android rendering engine. Vex supplies the
+architectural lattice that keeps product presentation discoverable, addressable and consistently
+instrumentable.
+
+Dynamic product data remains dynamic and must not be registered as fake static Screen elements merely
+to make it testable.
+
 ## Repository shape
 
 ~~~text

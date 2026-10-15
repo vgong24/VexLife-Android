@@ -1,0 +1,265 @@
+package com.vextreme.vexlife.android.screens.shared.vexstream
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Slider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.elements.ElementActionHandler
+import com.vextreme.vexlife.android.elements.VexContainer
+import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.VexIconButton
+import com.vextreme.vexlife.android.elements.vexElement
+import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.playback.present
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
+
+/**
+ * Mini-player presentation for the accepted VexStream Playback Experience.
+ *
+ * This layer projects current Playback Experience/read truth into Compose controls. Media3 remains
+ * visible only for transport operations that have not yet earned a Behavior/Experience boundary.
+ */
+@Composable
+internal fun VexStreamMiniPlayer(
+    controller: androidx.media3.session.MediaController?,
+    playbackExperience:
+        VexStreamPlaybackExperience,
+    runtime: VexRuntime,
+    shuffleSelected: Boolean,
+    onShuffle: () -> Unit,
+) {
+    val playback =
+        playbackExperience
+            .displayState
+            .playback
+
+    val handler =
+        ElementActionHandler { element ->
+            runtime.activate(
+                element,
+            )
+            when (element) {
+                VexStreamMusicScreen.PreviousTrack ->
+                    controller?.seekToPreviousMediaItem()
+
+                VexStreamMusicScreen.TogglePlayback ->
+                    playbackExperience
+                        .activate(
+                            VexStreamPlaybackControl.PlayPause,
+                        )
+
+                VexStreamMusicScreen.NextTrack ->
+                    controller?.seekToNextMediaItem()
+
+                VexStreamMusicScreen.ShuffleQueue ->
+                    onShuffle()
+
+                else -> Unit
+            }
+        }
+    val playbackProjection =
+        requireNotNull(
+            playbackExperience
+                .displayState
+                .projection,
+        )
+    val playPause =
+        playbackProjection.present(
+            VexStreamPlaybackControl.PlayPause,
+        )
+    val queuePosition =
+        playback.currentIndex
+            .takeIf { it >= 0 }
+            ?.let { index ->
+                (index + 1).toString() +
+                    "/" +
+                    playback.queueMediaIds.size
+            }
+    var scrubFraction by remember(
+        playback.currentMediaId,
+    ) {
+        mutableStateOf<Float?>(null)
+    }
+    val displayedProgress =
+        scrubFraction
+            ?: playback.progressFraction
+    val displayedPositionMs =
+        scrubFraction
+            ?.let { fraction ->
+                vexStreamSeekPositionMs(
+                    fraction = fraction,
+                    durationMs = playback.durationMs,
+                )
+            }
+            ?: playback.currentPositionMs
+    val canSeek =
+        controller != null &&
+            playback.durationMs > 0L &&
+            controller.isCommandAvailable(
+                androidx.media3.common.Player
+                    .COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+            )
+
+    VexContainer(
+        element = VexStreamMusicScreen.PlayerSection,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        style = VexElementStyles.RaisedSurface,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text =
+                        playback.currentTitle.ifBlank {
+                            stringResource(
+                                R.string.vexstream_music_now_playing,
+                            )
+                        },
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (playback.currentArtist.isNotBlank()) {
+                    Text(
+                        text = playback.currentArtist,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            queuePosition?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        Slider(
+            value = displayedProgress,
+            onValueChange = { value ->
+                scrubFraction = value
+            },
+            onValueChangeFinished = {
+                val targetFraction =
+                    scrubFraction
+                if (
+                    targetFraction != null &&
+                    canSeek
+                ) {
+                    val targetPositionMs =
+                        vexStreamSeekPositionMs(
+                            fraction = targetFraction,
+                            durationMs = playback.durationMs,
+                        )
+                    scrubFraction = null
+                    runtime.activate(
+                        VexStreamMusicScreen.SeekPlayback,
+                    )
+                    controller?.seekTo(
+                        targetPositionMs,
+                    )
+                } else {
+                    scrubFraction = null
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .vexElement(
+                    VexStreamMusicScreen.SeekPlayback,
+                ),
+            enabled = canSeek,
+            valueRange = 0f..1f,
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text =
+                    formatVexStreamPlaybackTime(
+                        displayedPositionMs,
+                    ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text =
+                    if (playback.durationMs > 0L) {
+                        formatVexStreamPlaybackTime(
+                            playback.durationMs,
+                        )
+                    } else {
+                        "--:--"
+                    },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            VexIconButton(
+                element = VexStreamMusicScreen.PreviousTrack,
+                handler = handler,
+                enabled =
+                    controller?.hasPreviousMediaItem() == true,
+            )
+            VexIconButton(
+                element = VexStreamMusicScreen.TogglePlayback,
+                handler = handler,
+                enabled =
+                    playPause.enabled,
+                iconOverride =
+                    playPause.icon,
+            )
+            VexIconButton(
+                element = VexStreamMusicScreen.NextTrack,
+                handler = handler,
+                enabled =
+                    controller?.hasNextMediaItem() == true,
+            )
+            VexIconButton(
+                element = VexStreamMusicScreen.ShuffleQueue,
+                handler = handler,
+                enabled = controller != null,
+                selected = shuffleSelected,
+            )
+            VexIconButton(
+                element = VexStreamMusicScreen.ShowQueue,
+                handler = runtime,
+            )
+        }
+    }
+}
+
+// [VXG RealForever]

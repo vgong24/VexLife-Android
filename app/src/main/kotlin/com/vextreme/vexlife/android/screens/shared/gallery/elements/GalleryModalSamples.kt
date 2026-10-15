@@ -1,34 +1,30 @@
 package com.vextreme.vexlife.android.screens.shared.gallery.elements
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.elements.TextRole
+import com.vextreme.vexlife.android.elements.VexAlertDialog
 import com.vextreme.vexlife.android.elements.VexButton
-import com.vextreme.vexlife.android.elements.vexElement
+import com.vextreme.vexlife.android.elements.VexColumn
+import com.vextreme.vexlife.android.elements.VexModalBottomSheet
+import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 
 /**
- * Gallery realizations of the two modal presentation styles preserved by the foundation.
+ * Gallery realizations of the two modal presentation styles preserved by the Vex Compose foundation.
  *
- * Their semantic identities/open state live in GalleryScreen + VexRuntime.presentation. This file
- * only demonstrates the Android-native realization differences.
- *
- * The AlertDialog example deliberately preserves the centered-dialog pattern that Log History used
- * before Log History graduated to a draggable bottom sheet.
+ * Entering a Vex modal automatically establishes its registered element as the inherited semantic
+ * parent. Nested cells therefore declare only local IDs while preserving the same full paths as the
+ * GalleryScreen Blueprint.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,20 +32,37 @@ internal fun GalleryModalSamples(
     runtime: VexRuntime,
 ) {
     if (runtime.presentation.isOpen(GalleryScreen.DialogModalSample)) {
-        AlertDialog(
-            modifier = Modifier.vexElement(GalleryScreen.DialogModalSample),
+        VexAlertDialog(
+            element = GalleryScreen.DialogModalSample,
             onDismissRequest = {
-                runtime.dismissPresentation(GalleryScreen.DialogModalSample)
+                runtime.dismissPresentation(
+                    GalleryScreen.DialogModalSample,
+                )
             },
             title = {
-                Text(stringResource(R.string.gallery_dialog_sample_title))
+                VexText(
+                    id = "title",
+                    text =
+                        stringResource(
+                            R.string.gallery_dialog_sample_title,
+                        ),
+                    role = TextRole.Title,
+                )
             },
             text = {
-                Text(stringResource(R.string.gallery_dialog_sample_body))
+                VexText(
+                    id = "body",
+                    text =
+                        stringResource(
+                            R.string.gallery_dialog_sample_body,
+                        ),
+                    role = TextRole.Supporting,
+                )
             },
             confirmButton = {
                 VexButton(
-                    element = GalleryScreen.CloseDialogModalSample,
+                    element =
+                        GalleryScreen.CloseDialogModalSample,
                     handler = runtime,
                 )
             },
@@ -57,39 +70,62 @@ internal fun GalleryModalSamples(
     }
 
     if (runtime.presentation.isOpen(GalleryScreen.BottomSheetModalSample)) {
-        ModalBottomSheet(
-            modifier = Modifier
-                .fillMaxHeight()
-                .vexElement(GalleryScreen.BottomSheetModalSample),
+        VexModalBottomSheet(
+            element = GalleryScreen.BottomSheetModalSample,
+            modifier =
+                VexModifier.fillMaxHeight(),
             onDismissRequest = {
-                runtime.dismissPresentation(GalleryScreen.BottomSheetModalSample)
+                runtime.dismissPresentation(
+                    GalleryScreen.BottomSheetModalSample,
+                )
             },
-            sheetState = rememberModalBottomSheetState(
-                skipPartiallyExpanded = false,
-            ),
-            dragHandle = {
-                BottomSheetDefaults.DragHandle()
-            },
+            sheetState =
+                rememberModalBottomSheetState(
+                    skipPartiallyExpanded = false,
+                ),
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 20.dp),
+            VexColumn(
+                id = "content",
+                modifier =
+                    VexModifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 20.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.gallery_sheet_sample_title),
-                    style = MaterialTheme.typography.headlineMedium,
+                VexText(
+                    id = "title",
+                    text =
+                        stringResource(
+                            R.string.gallery_sheet_sample_title,
+                        ),
+                    role = TextRole.Title,
                 )
-                Text(
-                    text = stringResource(R.string.gallery_sheet_sample_body),
-                    modifier = Modifier.padding(vertical = 12.dp),
-                )
-                VexButton(
-                    element = GalleryScreen.CloseBottomSheetModalSample,
-                    handler = runtime,
+                VexText(
+                    id = "body",
+                    text =
+                        stringResource(
+                            R.string.gallery_sheet_sample_body,
+                        ),
+                    modifier =
+                        VexModifier.padding(
+                            vertical = 12.dp,
+                        ),
+                    role = TextRole.Supporting,
                 )
             }
+
+            VexButton(
+                element =
+                    GalleryScreen.CloseBottomSheetModalSample,
+                handler = runtime,
+                modifier =
+                    VexModifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 20.dp),
+            )
         }
     }
 }
+
+// [VXG RealForever]

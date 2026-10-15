@@ -48,12 +48,88 @@ tasks.register("vexVerifyLocal") {
  * Android Gradle Plugin owns target discovery and adb/instrumentation mechanics; Android Studio is
  * only an optional human UI over this same execution path.
  */
+val verifyVexDeviceResults =
+    tasks.register("verifyVexDeviceResults") {
+        notCompatibleWithConfigurationCache(
+            "Reads Android connected-test XML emitted by the device execution task.",
+        )
+        group = "verification"
+        description =
+            "Fail closed when connected Android execution produces no instrumentation tests."
+
+        dependsOn(":app:connectedDebugAndroidTest")
+
+        doLast {
+            val resultRoot =
+                rootProject.file(
+                    "app/build/outputs/androidTest-results/connected/debug",
+                )
+            val xmlFiles =
+                resultRoot
+                    .takeIf { it.isDirectory }
+                    ?.walkTopDown()
+                    ?.filter { file ->
+                        file.isFile &&
+                            file.extension.equals(
+                                "xml",
+                                ignoreCase = true,
+                            )
+                    }
+                    ?.toList()
+                    .orEmpty()
+
+            val executedTests =
+                xmlFiles.sumOf { file ->
+                    val document =
+                        javax.xml.parsers.DocumentBuilderFactory
+                            .newInstance()
+                            .newDocumentBuilder()
+                            .parse(file)
+                    document.documentElement
+                        .getAttribute("tests")
+                        .toIntOrNull()
+                        ?: 0
+                }
+
+            if (executedTests <= 0) {
+                throw GradleException(
+                    buildString {
+                        appendLine(
+                            "Connected Android proof produced zero instrumentation tests.",
+                        )
+                        appendLine(
+                            "resultRoot=${resultRoot.relativeTo(rootProject.projectDir)}",
+                        )
+                        appendLine(
+                            "xmlFiles=${xmlFiles.size}",
+                        )
+                        append(
+                            "A successful connectedDebugAndroidTest task is not accepted as " +
+                                "device proof unless at least one test actually executed.",
+                        )
+                    },
+                )
+            }
+
+            logger.lifecycle(
+                "Vex connected Android proof: ${executedTests} instrumentation tests executed.",
+            )
+        }
+    }
+
+/**
+ * Canonical connected-Android Journey/instrumentation proof.
+ *
+ * Android Gradle Plugin owns target discovery and adb/instrumentation mechanics; Android Studio is
+ * only an optional human UI over this same execution path. The result gate also fails closed when
+ * AGP reports task success but the connected result set contains zero tests.
+ */
 tasks.register("vexVerifyDevice") {
     group = "verification"
     description =
-        "Run the baseline connected Android instrumentation/Journey suite."
+        "Run and require a non-empty baseline connected Android instrumentation/Journey suite."
 
-    dependsOn(":app:connectedDebugAndroidTest")
+    dependsOn(verifyVexDeviceResults)
 }
 
 /**

@@ -11,6 +11,7 @@ import com.vextreme.vexlife.android.elements.ElementPlacement
 import com.vextreme.vexlife.android.elements.ScreenRegistration
 import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.VexElementTree
+import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -123,7 +124,7 @@ abstract class AppScreenBlueprint(
             placement = content,
             registry = runtime.registry,
             handler = runtime,
-            modifier = Modifier.fillMaxSize(),
+            modifier = VexModifier.fillMaxSize(),
             selectedChild = runtime.presentation::selected,
         )
     }

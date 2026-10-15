@@ -1,9 +1,12 @@
 package com.vextreme.vexlife.android.testing.crawler
 
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPresentationScope
 import com.vextreme.vexlife.android.testing.journey.JourneyDomain
 import com.vextreme.vexlife.android.testing.journey.Journeys
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
+import com.vextreme.vexlife.android.testing.journey.VexStreamJourneyFixtures
 import com.vextreme.vexlife.android.testing.journey.journeyFor
 import com.vextreme.vexlife.android.testing.journey.shardFor
 import org.junit.Assert.assertEquals
@@ -129,6 +132,48 @@ class VexScreenCrawlerPlannerTest {
                 "step-002::tap::" +
                 UserProfileScreen.Save.elementId,
             evidenceRefs.single(),
+        )
+    }
+
+    @Test
+    fun runtimeSemanticRefFlowsIntoStableEvidenceIdentity() {
+        val case =
+            VexScreenCrawlerPlanner.plan(
+                vexScreenCrawlerConfig {
+                    journey(
+                        Journeys.vexStream.connectRefreshForget,
+                    )
+                },
+            ).single()
+
+        val runtimeRef =
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures.TrackOne,
+            )
+
+        val identity =
+            case.evidenceIdentity(
+                screenId =
+                    "screen.vexstream-music",
+                stepIndex = 6,
+                stepKind =
+                    "expect-visible",
+                semanticRef =
+                    runtimeRef,
+            )
+
+        assertTrue(
+            identity.evidenceRef
+                .endsWith(
+                    "::expect-visible::$runtimeRef",
+                ),
+        )
+        assertEquals(
+            runtimeRef,
+            identity.semanticRef,
         )
     }
 
