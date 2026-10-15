@@ -5,189 +5,138 @@ package com.vextreme.vexlife.android.conversation
  *
  * Search this symbol when asking:
  *
- * "What is Android Conversation trying to become, and which owners already exist?"
+ * "How does Android Conversation fit together?"
  *
  * This object is documentation/navigation only. It owns no Conversation state, persistence,
- * authority, model runtime, transport, Behavior family, or coroutine execution.
- *
- * ## Start with meaning
+ * authority, transport, model runtime, Behavior family, or coroutine execution.
  *
  * Long-form feature home:
  *
  * app/src/main/kotlin/com/vextreme/vexlife/android/conversation/README.md
  *
- * The current foundation deliberately forms the human/owner grammar before product code.
+ * ## What is Conversation-owned Android state?
  *
- * ## Android architecture to reuse
+ * Start at [VexConversationState] and [VexConversationThreadState].
  *
- * Merged PR #82 owns the accepted Vex Behavior grammar:
+ * Important identity types:
  *
- * State / Control / Act / Effect
+ * - [VexConversationSpaceRef]
+ * - [VexConversationThreadRef]
+ * - [VexConversationChannelRef]
+ * - [VexConversationMessageRef]
+ * - [VexConversationParticipantRef]
  *
- * A Vex Behavior Family is compile-time kinship only. It is NOT Vex Family membership or social
- * context.
+ * Thread history is ordered immutable channel segments plus [VexConversationMessage] values.
  *
- * Merged PR #87 owns VexExecution coroutine custody. VexExecution owns execution mechanics, not
- * Conversation authority, message idempotency, business retry, or model behavior.
+ * [VexConversationThreadState.segmentRefs] follows the canonical VexLife
+ * family-membership-runtime thread-history shape. Android does not invent Joined/Left Conversation
+ * message events.
  *
- * ## Portable Conversation owners
+ * ## What is the provider boundary?
  *
- * Current VexLife source owns:
+ * See [VexConversationRepository].
  *
- * Home Bridge
- *     authenticated principal/device-session authority
+ * Test/Preview provider:
  *
- * Family Space
- *     membership / role / generation / history policy
+ * [InMemoryVexConversationRepository]
  *
- * service.conversation
- *     channel / message / context meaning
+ * That in-memory implementation follows the established VexStream pattern:
  *
- * Conversation Store
- *     durable immutable ledger inside the rightful Vex Home
+ * - same consumer contract;
+ * - one explicit instance per scenario;
+ * - state-only external/provider truth;
+ * - no Home/network/filesystem/model/federation/Family-membership effect.
  *
- * Companion runtimes
- *     optional AI participation, separate from ordinary human message persistence
+ * ## What may Android send?
  *
- * Android consumes those contracts; it does not recreate them merely because it renders the
- * conversation.
+ * See [VexConversationSendRequest].
  *
- * ## Current VexLife Family HTTP producer
+ * Current Family Send is aligned to VexLife VF-02C:
  *
- * Current VexLife main exposes POST /api/v1/family/conversation under VF-02C issue #427.
+ * space/channel currentness + content + idempotency identity.
  *
- * APPEND accepts only spaceRef / channelRef / content / expectedMembershipGeneration /
- * idempotencyKey. Speaker, Family recipients, witness audience and Home authority remain
- * server-derived.
+ * Android does not author trusted speaker, Family recipients, witness audience, membership, role,
+ * Home/session capability, or model truth.
  *
- * Android's repository request is aligned to that authority membrane.
+ * ## How is currentness protected?
  *
- * Two producer predicates remain held:
+ * [VexConversationSendRequest.expectedChannelRef] and
+ * [VexConversationSendRequest.expectedMembershipGeneration] bind the request to the Conversation
+ * truth observed during composition.
  *
- * - ordinary serve-browser startup currently does not bind resolveFamilyConversationAuthority, so
- *   production-default Family requests fail closed with FAMILY_SESSION_AUTHORITY_UNAVAILABLE;
- * - canonical family-membership-runtime already owns readFamilyThreadHistory(...) across ordered
- *   channel segments with FROM_JOIN + historical witness enforcement, while the current VF-02C HTTP
- *   READ remains current-channel scoped and safeMessage omits witnessRefs. Android therefore holds
- *   the real adapter rather than reconstructing cross-generation history from current membership.
+ * A successor Family generation is rejected rather than silently upgrading the request.
  *
-
- * ## Presentation identity boundary
+ * [VexConversationIdempotencyKey] preserves exact retry identity.
  *
- * Conversation state keeps stable participant/thread/channel/space identity and participant kind.
+ * ## What does the UI eventually consume?
  *
- * It deliberately does not own displayName, avatar, relationship label, Family role, or a
- * human-facing room title. Current VexLife Family producer projections do not grant Conversation
- * those meanings. A future Android presentation owner may compose friendly labels from the rightful
- * identity/relationship/Family/product sources without rewriting Conversation identity.
+ * See [projectVexConversationSurface] and [VexConversationSurfaceProjection].
  *
- * ## Thread-history law
+ * The pure presentation projection combines already-owned inputs:
  *
- * Current VexLife Family source already owns readFamilyThreadHistory(...), which validates immutable
- * channel segments for one stable thread and returns ordered segmentRefs plus authorized messages.
+ * Conversation thread
+ * + authenticated participant
+ * + Home availability
+ * + Companion availability
+ * -> Android surface projection
  *
- * Android therefore models segmentRefs + immutable messages. It does not store a synthetic
- * Joined/Left Conversation event. A future UI may derive a visual generation boundary from exact
- * segment/currentness truth or consume a separately owned Family lifecycle projection.
+ * It owns no source truth or effects.
  *
- * ## Identity laws
+ * Companion unavailability does not imply ordinary human Conversation is unavailable.
  *
- * threadRef
- *     stable conversational continuity
+ * ## Why is it not called Experience?
  *
- * channelRef
- *     one immutable audience/currentness generation
+ * The repository currently has two meanings:
  *
- * messageRef
- *     one immutable message event
+ * - draft PR #81: broad human/product Experience root;
+ * - merged PR #82: Behavior-local <Name>Experience UI membrane.
  *
- * recipientRefs
- *     addressed targets
+ * Conversation does not choose between those foundation meanings locally.
  *
- * witnessRefs
- *     immutable event audience snapshot
+ * ## What does Conversation NOT own?
  *
- * Addressing a subset inside a group channel does not create a private audience.
+ * Home Bridge / authenticated session:
+ * current human principal + device/session authority.
  *
- * ## Talk to Vex
+ * Family Space / membership runtime:
+ * membership, role, generation, history policy and successor channel lifecycle.
  *
- * The existing TalkToVexScreen is one current entry/destination. It must not hard-code the feature
- * into a one-human / one-AI ontology because current portable Conversation source already supports
- * multi-human Family channels and distinct AI participation.
+ * Conversation Store:
+ * durable immutable Home ledger.
  *
- * ## Current Android consumer contract
+ * Companion runtime:
+ * optional AI participation.
  *
- * [VexConversationRepository] is the Android-facing contract for Conversation-owned state and Send.
+ * Identity / Relationships / product presentation:
+ * friendly display names, avatars and relationship labels.
  *
- * [InMemoryVexConversationRepository] is an instance-based state-only implementation for tests and
- * Preview. It mirrors the established VexStream pattern; every scenario constructs its own instance.
- * It is not a singleton, service, production Connection, Home, membership owner, or model runtime.
+ * ## Current real producer
  *
- * [VexConversationState] contains Conversation-owned thread/channel/message/audience projection only.
- * Home reachability, authenticated principal/session truth, and companion availability stay outside
- * that state.
+ * VexLife VF-02C issue #427 owns the model-free Family Conversation bridge.
  *
- * Focused repository proof owns the current draft->membership-change->Send problem. The request binds
- * expected channel + membership generation + idempotency identity; a successor generation rejects
- * the stale request without silently upgrading currentness or appending a message. Family recipients
- * are provider-derived from the trusted current channel rather than authored by Android.
+ * Current route:
  *
- * No VexExecution test fixture is used because there is no Conversation VexExecution consumer yet.
- * The Test Foundation rule is to test the transformation at its actual owner.
+ * POST /api/v1/family/conversation
  *
- * Production Screen/Journey integration remains held until the shared AppRepositories/runtime graph
- * can be entered without colliding with active work. When admitted, Journey should inject the same
- * in-memory repository through test composition and use journeySignal for external provider changes,
- * following VexStream rather than giving product code test-only mutation methods.
+ * The Android network adapter remains held on two producer predicates:
  *
- * ## Current surface composition
+ * 1. production Family authority resolver reconnection;
+ * 2. bounded authenticated exposure of the existing cross-generation
+ *    readFamilyThreadHistory(...) truth (ordered segment refs + messages with historical witnesses).
  *
- * projectVexConversationSurface is the pure Android presentation-projection boundary over:
+ * ## Testing
  *
- * - Conversation-owned VexConversationThreadState;
- * - authenticated participant identity supplied by the Home/session owner;
- * - VexConversationHomeAvailability supplied by the Home/transport owner;
- * - VexConversationCompanionAvailability supplied by the Companion/runtime owner.
+ * Current tests belong at:
  *
- * It returns VexConversationSurfaceProjection without owning any of those truths.
+ * - [InMemoryVexConversationRepositoryTest] for repository/currentness/idempotency/history laws;
+ * - [VexConversationSurfaceProjectionTest] for deterministic presentation composition.
  *
- * The source deliberately does not call this an Experience. Draft PR #81 uses Experience for a broad
- * product orientation root, while merged PR #82 uses <Name>Experience for a Behavior-local UI
- * membrane. Conversation preserves that unresolved foundation distinction instead of choosing one
- * definition implicitly.
+ * No VexExecution test fixture is used because Conversation has no VexExecution consumer yet.
  *
- * No Relay is added yet: current source only needs deterministic composition of already-observed
- * owner truth. Maintained convergence must be earned by real independently-changing provider streams.
+ * Production Screen/Journey integration is also held until the canonical app/test graph can inject
+ * the repository without colliding with active shared-path work.
  *
- * ## First unresolved architecture pressure
- *
- * Send carries runtime data such as content, currentness/idempotency identity and future optional
- * reply/context references. For the current Family provider, recipients are server-derived rather
- * than caller-authored.
- *
- * Merged PR #82 intentionally holds generic runtime request payload architecture, while VexPort
- * currently activates stable Control identity.
- *
- * Do not force private message content into Control identity, a static UI element, generic
- * diagnostics, or Effect merely to make the existing generic API fit.
- *
- * The first real vertical slice must pressure and explain that boundary before a production
- * Conversation Behavior family is named.
- *
- * ## Private diagnostics
- *
- * Current VexRuntime form submission diagnostics can serialize submitted field values.
- *
- * Conversation text must not enter generic diagnostic history by default. The real Send boundary
- * must preserve semantic observability without copying private message content into unrelated logs.
- *
- * ## Federation
- *
- * Portable SDK source already contains participant-owned friend/group replica comparison and
- * reconciliation semantics. Android does not yet claim a federated Conversation transport or local
- * replica store from that fact.
- *
- * Read the feature home before adding source.
+ * Read the feature home before widening source.
  */
 @Suppress("unused")
 internal object VexConversationDocs
