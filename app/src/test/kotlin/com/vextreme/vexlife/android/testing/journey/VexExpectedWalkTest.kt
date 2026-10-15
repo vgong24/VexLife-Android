@@ -121,4 +121,19 @@ class VexExpectedWalkTest {
         )
     }
 
+    @Test
+    fun visibilityAssertionDoesNotInventInteractionHistory() {
+        val walk = VexExpectedWalk()
+        val dynamic =
+            dynamicElement(
+                "element.vexstream-music.dynamic.track.17:journey.track.one",
+            )
+
+        walk.start(HomeScreen)
+        walk.expectVisible(dynamic)
+
+        assertEquals(1, walk.records.size)
+        assertEquals(VexLogKind.AppOpened, walk.records.single().kind)
+    }
+
 }
