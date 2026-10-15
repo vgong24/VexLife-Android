@@ -20,6 +20,7 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPlan
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
 
@@ -40,6 +41,10 @@ internal fun vexMapsDistributionContextDockPage(
         VexMapsDistributionExperience,
     draft:
         VexMapsDistributionDraft,
+    plan:
+        VexMapsDistributionPlan?,
+    canPrepare: Boolean,
+    canStart: Boolean,
     onToggleMode: () -> Unit,
     onAddStop: () -> Unit,
     onToggleReturnToStart: () -> Unit,
@@ -146,6 +151,47 @@ internal fun vexMapsDistributionContextDockPage(
                                 stop.name,
                             ),
                         )
+                    }
+
+                plan
+                    ?.takeIf {
+                        it.isCurrentFor(
+                            draft,
+                        )
+                    }
+                    ?.let { currentPlan ->
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_distribution_plan_eta,
+                                (
+                                    currentPlan
+                                        .estimatedDurationSeconds +
+                                        59L
+                                ) / 60L,
+                            ),
+                        )
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_distribution_optimized_order,
+                            ),
+                        )
+                        currentPlan
+                            .orderedStops
+                            .forEachIndexed {
+                                index,
+                                stop,
+                                ->
+                                Text(
+                                    stringResource(
+                                        R.string
+                                            .vexmaps_distribution_stop_line,
+                                        index + 1,
+                                        stop.name,
+                                    ),
+                                )
+                            }
                     }
             }
 
@@ -283,11 +329,38 @@ internal fun vexMapsDistributionContextDockPage(
                             ),
                         onClick =
                             onPrepare,
+                        enabled =
+                            canPrepare,
                     ) {
                         Text(
                             stringResource(
                                 R.string
                                     .vexmaps_distribution_prepare,
+                            ),
+                        )
+                    }
+                }
+
+                if (
+                    runProjection[
+                        VexMapsDistributionRunControl.Start
+                    ].isAvailable
+                ) {
+                    Button(
+                        modifier =
+                            Modifier.vexElement(
+                                VexMapsScreen
+                                    .StartDistributionRun,
+                            ),
+                        onClick =
+                            onStart,
+                        enabled =
+                            canStart,
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string
+                                    .vexmaps_distribution_start,
                             ),
                         )
                     }

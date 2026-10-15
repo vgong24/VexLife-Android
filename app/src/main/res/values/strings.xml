@@ -330,4 +330,6 @@
     <string name="vexmaps_distribution_state_running">Driving stop %1$d of %2$d</string>
     <string name="vexmaps_distribution_state_at_stop">At stop %1$d of %2$d</string>
     <string name="vexmaps_distribution_state_complete">Run complete</string>
+    <string name="vexmaps_distribution_plan_eta">Optimized travel estimate: ~%1$d min</string>
+    <string name="vexmaps_distribution_optimized_order">Optimized order</string>
 </resources>
