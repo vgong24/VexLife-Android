@@ -1,206 +1,129 @@
 package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.context.VexMapsDistributionControlContext
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.context.VexMapsDistributionControlContextRelay
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.context.VexMapsDistributionControlRequest
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.CurrentVexMapsDistributionModeExperience
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeExperience
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsTravelMode
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationOutput
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.CurrentVexMapsDistributionRunExperience
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunExperience
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunProjection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSession
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSessionState
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Feature-local membrane composing complete lower Experiences plus their relational Control Context.
+ * UI-facing membrane over one process-lifetime Distribution session.
  *
- * The feedback loop is circular at the system level but not at the ownership level:
- *
- * lower truth -> convergence -> target Control -> target Behavior -> new lower truth -> convergence
- *
- * Feedback occurs only after Relay reduction has completed, so the Relay never recursively sends
- * from its reducer. Lower Experiences remain private so callers cannot bypass this membrane and make
- * the higher-order Context stale accidentally.
+ * Compose reads projections here and sends human actions here. Session/provider/convergence mechanics
+ * remain behind the membrane instead of being reconstructed by VexMapsMapSurface.
  */
 internal class VexMapsDistributionExperience(
-    private val mode:
-        VexMapsDistributionModeExperience =
-        CurrentVexMapsDistributionModeExperience(),
-    private val run:
-        VexMapsDistributionRunExperience =
-        CurrentVexMapsDistributionRunExperience(),
+    private val session:
+        VexMapsDistributionSession,
 ) {
-    private val controlContextRelay =
-        VexMapsDistributionControlContextRelay(
-            initialMode =
-                mode.currentProjection,
-            initialRun =
-                run.currentProjection,
-        )
-
-    val modeProjection:
-        VexMapsDistributionModeProjection
+    val states:
+        StateFlow<VexMapsDistributionSessionState>
         get() =
-            mode.currentProjection
+            session.states
 
     val modeProjections:
         StateFlow<VexMapsDistributionModeProjection>
         get() =
-            mode.projections
-
-    val runProjection:
-        VexMapsDistributionRunProjection
-        get() =
-            run.currentProjection
+            session.modeProjections
 
     val runProjections:
         StateFlow<VexMapsDistributionRunProjection>
         get() =
-            run.projections
+            session.runProjections
 
-    val controlContext:
-        VexMapsDistributionControlContext
+    val modeProjection:
+        VexMapsDistributionModeProjection
         get() =
-            controlContextRelay.currentOutput
+            session.currentMode
 
-    fun activateMode(
-        control:
-            VexMapsDistributionModeControl,
-    ) {
-        mode.activate(
-            control,
+    val runProjection:
+        VexMapsDistributionRunProjection
+        get() =
+            session.currentRun
+
+    val navigationOutputs:
+        Flow<VexMapsDistributionNavigationOutput>
+        get() =
+            session.navigationOutputs
+
+    val currentNavigation:
+        VexMapsDistributionNavigationOutput
+        get() =
+            session.currentNavigation
+
+    fun toggleMode() =
+        session.toggleMode()
+
+    fun addStop(
+        placeRef: String?,
+        name: String,
+        subtitle: String?,
+        latitude: Double,
+        longitude: Double,
+    ) =
+        session.addStop(
+            placeRef =
+                placeRef,
+            name =
+                name,
+            subtitle =
+                subtitle,
+            latitude =
+                latitude,
+            longitude =
+                longitude,
         )
-        controlContextRelay.modeChanged(
-            mode.currentProjection,
+
+    fun removeStop(
+        stopRef: String,
+    ) =
+        session.removeStop(
+            stopRef,
         )
-        settleFeedback()
-    }
 
-    fun activateRun(
-        control:
-            VexMapsDistributionRunControl,
-    ) {
-        run.activate(
-            control,
+    fun setReturnToStart(
+        enabled: Boolean,
+    ) =
+        session.setReturnToStart(
+            enabled,
         )
-        controlContextRelay.runChanged(
-            run.currentProjection,
+
+    fun prepare(
+        origin: VexMapCoordinate,
+        travelMode: VexMapsTravelMode,
+        pack: VexMapsRegionPack,
+    ) =
+        session.prepare(
+            origin =
+                origin,
+            travelMode =
+                travelMode,
+            pack =
+                pack,
         )
-        settleFeedback()
-    }
 
-    fun observeDraft(
-        stopCount: Int,
-        returnToStart: Boolean,
-    ): Boolean {
-        val admitted =
-            run.observeDraft(
-                stopCount = stopCount,
-                returnToStart = returnToStart,
-            )
+    fun planningInputChanged() =
+        session.planningInputChanged()
 
-        if (!admitted) {
-            return false
-        }
+    fun startPreparedRun() =
+        session.startPreparedRun()
 
-        controlContextRelay.runChanged(
-            run.currentProjection,
-        )
-        settleFeedback()
-        return true
-    }
+    fun completeCurrentStop() =
+        session.completeCurrentStop()
 
-    /**
-     * Settle relational feedback through target Controls only.
-     *
-     * The current feature graph is finite. Repeating the same complete feedback key therefore means
-     * the graph has formed a semantic cycle rather than made progress, and fails closed without an
-     * arbitrary pass-count policy.
-     */
-    private fun settleFeedback() {
-        val visited =
-            mutableSetOf<
-                DistributionFeedbackKey
-            >()
+    fun retryFailedLeg() =
+        session.retryFailedLeg()
 
-        while (true) {
-            val requested =
-                controlContext
-                    .requestedControl
-                    ?: return
+    fun cancelExecutionPreservingDraft() =
+        session.cancelExecutionPreservingDraft()
 
-            val key =
-                DistributionFeedbackKey(
-                    modeState =
-                        mode.currentProjection.state,
-                    runState =
-                        run.currentProjection.state,
-                    request =
-                        requested,
-                )
-
-            check(
-                visited.add(
-                    key,
-                ),
-            ) {
-                "Distribution Control Context entered a non-settling semantic feedback cycle: $key"
-            }
-
-            when (
-                requested
-            ) {
-                is VexMapsDistributionControlRequest.Mode -> {
-                    val before =
-                        mode.currentProjection
-
-                    mode.activate(
-                        requested.control,
-                    )
-
-                    val after =
-                        mode.currentProjection
-
-                    check(after != before) {
-                        "Distribution Control Context requested a Mode Control that made no semantic progress"
-                    }
-
-                    controlContextRelay.modeChanged(
-                        after,
-                    )
-                }
-
-                is VexMapsDistributionControlRequest.Run -> {
-                    val before =
-                        run.currentProjection
-
-                    run.activate(
-                        requested.control,
-                    )
-
-                    val after =
-                        run.currentProjection
-
-                    check(after != before) {
-                        "Distribution Control Context requested a Run Control that made no semantic progress"
-                    }
-
-                    controlContextRelay.runChanged(
-                        after,
-                    )
-                }
-            }
-        }
-    }
+    fun clearAll() =
+        session.clearAll()
 }
-
-private data class DistributionFeedbackKey(
-    val modeState: Any,
-    val runState: Any,
-    val request:
-        VexMapsDistributionControlRequest,
-)
 
 // [VXG RealForever]
