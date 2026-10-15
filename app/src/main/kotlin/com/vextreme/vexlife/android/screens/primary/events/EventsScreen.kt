@@ -313,11 +313,9 @@ private fun EventRow(
                     },
                 )
                 .vex(
-                    VexModifier.semantic(
-                        EventsPresentationRefs.row(
-                            event.eventRef,
-                        ),
-                    ),
+EventsPresentationRefs.row(
+                            event.eventRef,,
+),
                 ),
     ) {
         Card(
@@ -604,12 +602,10 @@ private fun CompactAttentionButton(
             ),
         modifier =
             Modifier.vex(
-                VexModifier.semantic(
-                    EventsPresentationRefs.attentionAction(
+EventsPresentationRefs.attentionAction(
                         eventRef,
-                        actionRef,
-                    ),
-                ),
+                        actionRef,,
+),
             ),
     ) {
         Text(
