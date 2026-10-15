@@ -11,6 +11,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.Current
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunExperience
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunProjection
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Feature-local membrane composing complete lower Experiences plus their relational Control Context.
@@ -44,10 +45,20 @@ internal class VexMapsDistributionExperience(
         get() =
             mode.currentProjection
 
+    val modeProjections:
+        StateFlow<VexMapsDistributionModeProjection>
+        get() =
+            mode.projections
+
     val runProjection:
         VexMapsDistributionRunProjection
         get() =
             run.currentProjection
+
+    val runProjections:
+        StateFlow<VexMapsDistributionRunProjection>
+        get() =
+            run.projections
 
     val controlContext:
         VexMapsDistributionControlContext

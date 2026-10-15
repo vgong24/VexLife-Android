@@ -310,4 +310,24 @@
     <string name="graph_shared_shell">Shared shell elements</string>
     <string name="graph_no_items">None registered at this layer.</string>
     <string name="graph_back">Up one graph layer</string>
+
+    <string name="vexmaps_distribution_title">Distribution</string>
+    <string name="vexmaps_distribution_regular_body">Build an unordered stop list, then let VexMaps manage the run.</string>
+    <string name="vexmaps_distribution_mode_enter">Start Distribution</string>
+    <string name="vexmaps_distribution_mode_regular">Regular Maps</string>
+    <string name="vexmaps_distribution_add_stop">Add stop</string>
+    <string name="vexmaps_distribution_stop_count">%1$d stops</string>
+    <string name="vexmaps_distribution_stop_line">%1$d. %2$s</string>
+    <string name="vexmaps_distribution_return_on">Return to start: On</string>
+    <string name="vexmaps_distribution_return_off">Return to start: Off</string>
+    <string name="vexmaps_distribution_prepare">Prepare run</string>
+    <string name="vexmaps_distribution_start">Start run</string>
+    <string name="vexmaps_distribution_delivered">Delivered</string>
+    <string name="vexmaps_distribution_clear">Clear run</string>
+    <string name="vexmaps_distribution_state_empty">No stops yet.</string>
+    <string name="vexmaps_distribution_state_draft">Drafting stops</string>
+    <string name="vexmaps_distribution_state_ready">Run ready</string>
+    <string name="vexmaps_distribution_state_running">Driving stop %1$d of %2$d</string>
+    <string name="vexmaps_distribution_state_at_stop">At stop %1$d of %2$d</string>
+    <string name="vexmaps_distribution_state_complete">Run complete</string>
 </resources>

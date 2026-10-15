@@ -173,6 +173,52 @@ object VexMapsScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val ToggleDistributionMode = buttonRef(
+        id = "body.distribution.mode.toggle",
+        labelRes = R.string.vexmaps_distribution_title,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val AddDistributionStop = buttonRef(
+        id = "body.distribution.stop.add",
+        labelRes = R.string.vexmaps_distribution_add_stop,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val ToggleDistributionReturnToStart = buttonRef(
+        id = "body.distribution.return.toggle",
+        labelRes = R.string.vexmaps_distribution_return_on,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val PrepareDistributionRun = buttonRef(
+        id = "body.distribution.run.prepare",
+        labelRes = R.string.vexmaps_distribution_prepare,
+        intent = localEffect(),
+    )
+
+    val StartDistributionRun = buttonRef(
+        id = "body.distribution.run.start",
+        labelRes = R.string.vexmaps_distribution_start,
+        intent = localEffect(),
+    )
+
+    val CompleteDistributionStop = buttonRef(
+        id = "body.distribution.run.complete-stop",
+        labelRes = R.string.vexmaps_distribution_delivered,
+        intent = localEffect(),
+    )
+
+    val ResetDistributionRun = buttonRef(
+        id = "body.distribution.run.reset",
+        labelRes = R.string.vexmaps_distribution_clear,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
     val EditRoute = buttonRef(
         id = "body.navigation.edit-route",
         labelRes = R.string.vexmaps_navigation_edit_route,
@@ -258,6 +304,16 @@ object VexMapsScreen : AppScreenBlueprint(
                 button(PlanRoute)
             }
 
+            column("distribution") {
+                button(ToggleDistributionMode)
+                button(AddDistributionStop)
+                button(ToggleDistributionReturnToStart)
+                button(PrepareDistributionRun)
+                button(StartDistributionRun)
+                button(CompleteDistributionStop)
+                button(ResetDistributionRun)
+            }
+
             column("navigation") {
                 button(EditRoute)
                 button(StartNavigation)
@@ -297,6 +353,8 @@ object VexMapsScreen : AppScreenBlueprint(
         VexMapsMapSurface(
             runtime = runtime,
             repository = repositories.vexMaps,
+            distributionRepository =
+                repositories.vexMapsDistribution,
             darkTheme = darkTheme,
         )
     }
