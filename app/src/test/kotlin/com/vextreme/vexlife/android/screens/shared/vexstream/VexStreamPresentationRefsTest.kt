@@ -50,7 +50,7 @@ class VexStreamPresentationRefsTest {
             )
 
         val ref =
-            VexStreamPresentationRefs.trackAction(
+            VexStreamPresentationRefs.trackRowAction(
                 trackRef = trackRef,
                 action = VexStreamMusicScreen.PlayTrack,
             )
@@ -62,6 +62,37 @@ class VexStreamPresentationRefsTest {
         )
         assertTrue(
             ref.endsWith(trackRef.value),
+        )
+    }
+
+    @Test
+    fun rowAndMenuAffordancesRemainDistinctForTheSameTrackAction() {
+        val trackRef =
+            VexStreamTrackRef(
+                "journey.track.one",
+            )
+
+        val row =
+            VexStreamPresentationRefs.trackRowAction(
+                trackRef = trackRef,
+                action = VexStreamMusicScreen.PlayTrack,
+            )
+        val menu =
+            VexStreamPresentationRefs.trackMenuAction(
+                trackRef = trackRef,
+                action = VexStreamMusicScreen.PlayTrack,
+            )
+
+        assertNotEquals(row, menu)
+        assertTrue(
+            row.startsWith(
+                VexStreamMusicScreen.PlayTrack.elementId + ".row.dynamic.",
+            ),
+        )
+        assertTrue(
+            menu.startsWith(
+                VexStreamMusicScreen.PlayTrack.elementId + ".menu.dynamic.",
+            ),
         )
     }
 
