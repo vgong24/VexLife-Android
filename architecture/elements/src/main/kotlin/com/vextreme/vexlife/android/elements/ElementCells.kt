@@ -122,6 +122,10 @@ fun VexIconButton(
     enabled: Boolean = true,
     selected: Boolean = false,
     iconOverride: ElementIcon? = null,
+    vexModifier: VexModifier =
+        VexModifier.element(
+            element,
+        ),
 ) {
     val label = stringResource(requireNotNull(element.labelRes))
     val content: @Composable () -> Unit = {
@@ -138,14 +142,14 @@ fun VexIconButton(
     if (selected) {
         FilledTonalIconButton(
             onClick = { handler.activate(element) },
-            modifier = modifier.vexElement(element),
+            modifier = modifier.vex(vexModifier),
             enabled = enabled,
             content = content,
         )
     } else {
         IconButton(
             onClick = { handler.activate(element) },
-            modifier = modifier.vexElement(element),
+            modifier = modifier.vex(vexModifier),
             enabled = enabled,
             content = content,
         )
