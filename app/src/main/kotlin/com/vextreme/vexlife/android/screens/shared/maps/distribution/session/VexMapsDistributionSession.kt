@@ -111,7 +111,7 @@ internal class VexMapsDistributionSession(
         VexMapsDistributionRouting,
     private val navigation:
         VexMapsDistributionNavigationPort,
-    executionRoot:
+    private val executionRoot:
         VexExecutionRoot,
     private val scope:
         CoroutineScope,
@@ -223,6 +223,14 @@ internal class VexMapsDistributionSession(
         scope.launch {
             restoreDraft()
         }
+    }
+
+    internal suspend fun shutdown() {
+        executionRoot.joinStopAll(
+            "VexMaps Distribution session shut down",
+        )
+        modeRunRelay.deactivate()
+        navigationRelay.deactivate()
     }
 
     fun toggleMode() {

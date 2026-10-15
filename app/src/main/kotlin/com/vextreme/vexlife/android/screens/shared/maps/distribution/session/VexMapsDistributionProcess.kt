@@ -196,12 +196,25 @@ private class AndroidDistributionNavigation(
     }
 
     override fun stop() {
-        VexMapsNavigationService
-            .stop(
-                context,
-            )
+        val serviceFailure =
+            runCatching {
+                VexMapsNavigationService
+                    .stop(
+                        context,
+                    )
+            }.exceptionOrNull()
+
+        /*
+         * Distribution convergence is driven by NavigationSession truth. Even if Android rejects the
+         * best-effort service stop request, clear process-local Navigation truth so the old route
+         * cannot remain a foreign ARRIVED/READY leg and block lawful recovery.
+         */
         VexMapsNavigationProcess
             .stop()
+
+        if (serviceFailure != null) {
+            throw serviceFailure
+        }
     }
 
     override fun dismissArrival() {
