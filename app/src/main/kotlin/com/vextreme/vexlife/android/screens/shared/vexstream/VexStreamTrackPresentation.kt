@@ -210,7 +210,7 @@ VexStreamPresentationRefs.trackRowAction(
                         trackRef =
                             state.track.trackRef,
                         action =
-                            VexStreamMusicScreen.PlayTrack,,
+                            VexStreamMusicScreen.PlayTrack,
 ),
             )
             .clickable(
@@ -240,7 +240,7 @@ VexStreamPresentationRefs.trackRow(
                                 scope =
                                     presentationScope,
                                 trackRef =
-                                    state.track.trackRef,,
+                                    state.track.trackRef,
 ),
                     ),
             verticalAlignment = Alignment.CenterVertically,
@@ -313,7 +313,7 @@ VexStreamPresentationRefs.trackRowAction(
                                 trackRef =
                                     state.track.trackRef,
                                 action =
-                                    VexStreamMusicScreen.TrackMenu,,
+                                    VexStreamMusicScreen.TrackMenu,
                         ),
                 )
 
@@ -412,7 +412,7 @@ VexStreamPresentationRefs.trackMenuAction(
                         scope =
                             presentationScope,
                         trackRef = trackRef,
-                        action = element,,
+                        action = element,
 ),
             ),
         text = {
