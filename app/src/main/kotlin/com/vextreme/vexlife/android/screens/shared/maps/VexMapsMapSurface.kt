@@ -1573,10 +1573,44 @@ internal fun VexMapsMapSurface(
                 startPreparedDistributionNavigation()
 
             is VexMapsDistributionNavigationRequest.RunControl -> {
+                val completingReturn =
+                    request.control ==
+                        VexMapsDistributionRunControl.Arrive &&
+                        distributionExperience
+                            .runProjection
+                            .state is
+                        VexMapsDistributionRunState.Returning
+
                 distributionExperience
                     .activateRun(
                         request.control,
                     )
+
+                if (
+                    completingReturn &&
+                    distributionExperience
+                        .runProjection
+                        .state is
+                    VexMapsDistributionRunState.Completed
+                ) {
+                    VexMapsNavigationService
+                        .dismissArrivalNotification(
+                            context,
+                        )
+                    VexMapsNavigationService
+                        .stop(
+                            context,
+                        )
+                    VexMapsNavigationProcess
+                        .stop()
+                    distributionNavigationRelay
+                        .navigationChanged(
+                            VexMapsNavigationProcess
+                                .session
+                                .current,
+                        )
+                }
+
                 distributionNavigationRelay
                     .runChanged(
                         distributionExperience
