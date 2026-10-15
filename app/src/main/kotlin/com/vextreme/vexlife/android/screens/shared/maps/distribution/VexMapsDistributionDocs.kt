@@ -5,6 +5,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeDocs
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionOptimizer
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunDocs
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionExecution
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSession
 
 /**
@@ -20,7 +21,11 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.Vex
  * - [VexMapsDistributionNavigationConvergenceRelay] relates Run to one exact expected Navigation leg.
  * - [VexMapsDistributionSession] owns the process-lifetime lived relationship: current Draft, Plan,
  *   provider attempts, expected leg, failure/retry truth and bounded Control feedback.
- * - [VexMapsDistributionExperience] is the UI-facing membrane over that session.
+ * - [VexMapsDistributionExecution] owns only maintained coroutine custody for convergence-output
+ *   observation under the accepted VexExecution foundation. It owns no Distribution meaning.
+ * - finite preparation/leg work remains Session-owned in this generation; migrate it only when
+ *   replacement/cancellation semantics are proven as a real VexExecution consumer need.
+ * - [VexMapsDistributionExperience] is the UI-facing membrane over the Session.
  *
  * Lower owners remain independently complete. Convergence never executes a foreign Effect; any
  * downward semantic change re-enters through the target family's Control. Navigation remains the
