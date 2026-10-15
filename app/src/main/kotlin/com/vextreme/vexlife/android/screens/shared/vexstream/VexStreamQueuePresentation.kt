@@ -15,12 +15,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -43,8 +41,12 @@ import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexButton
+import com.vextreme.vexlife.android.elements.VexColumn
 import com.vextreme.vexlife.android.elements.VexIconButton
+import com.vextreme.vexlife.android.elements.VexModalBottomSheet
 import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.VexRow
+import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -183,31 +185,29 @@ internal fun VexStreamQueueSheet(
             }
         }
 
-    ModalBottomSheet(
-        modifier = Modifier
-            .fillMaxHeight()
-            .vexElement(
-                VexStreamMusicScreen.QueueSheet,
-            ),
+    VexModalBottomSheet(
+        element = VexStreamMusicScreen.QueueSheet,
+        modifier =
+            VexModifier.fillMaxHeight(),
         onDismissRequest = {
             runtime.dismissPresentation(
                 VexStreamMusicScreen.QueueSheet,
             )
         },
         sheetState = sheetState,
-        dragHandle = {
-            BottomSheetDefaults.DragHandle()
-        },
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
+        VexColumn(
+            id = "content",
+            modifier =
+                VexModifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
+            VexText(
+                id = "title",
                 text =
                     stringResource(
                         R.string.vexstream_music_queue,
@@ -215,7 +215,8 @@ internal fun VexStreamQueueSheet(
                 style = MaterialTheme.typography.headlineSmall,
             )
 
-            Row(
+            VexRow(
+                id = "actions",
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 VexIconButton(
@@ -241,7 +242,8 @@ internal fun VexStreamQueueSheet(
 
             HorizontalDivider()
 
-            Text(
+            VexText(
+                id = "reorder-hint",
                 text =
                     stringResource(
                         R.string.vexstream_music_queue_reorder_hint,
@@ -251,12 +253,13 @@ internal fun VexStreamQueueSheet(
             )
 
             if (playback.queueMediaIds.isEmpty()) {
-                Text(
+                VexText(
+                    id = "empty",
                     text =
                         stringResource(
                             R.string.vexstream_music_queue_empty,
                         ),
-                    modifier = Modifier.padding(
+                    modifier = VexModifier.padding(
                         vertical = 20.dp,
                     ),
                 )
@@ -571,7 +574,7 @@ VexStreamPresentationRefs
             VexButton(
                 element = VexStreamMusicScreen.CloseQueue,
                 handler = handler,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = VexModifier.fillMaxWidth(),
             )
         }
     }
