@@ -161,7 +161,11 @@ Family message
     familyBinding != null
 ~~~
 
-Family membership generation is non-negative, matching the producer contract.
+Canonical Family Space creation starts membershipGeneration at 1 and membership transitions advance
+from there. Android Family bindings therefore require a positive generation.
+
+Lower-level Family validators are broader and accept non-negative values, but that permissive
+validation is not treated as current canonical Family producer behavior.
 
 ## Generic Conversation thread
 
@@ -347,16 +351,33 @@ send old request
     -> no silent upgrade
 ~~~
 
-Exact retry:
+Exact retry identity follows VF-02C's producer scope:
 
 ~~~text
-same idempotency key + same request meaning
+spaceRef
++ channelRef
++ authenticated principalRef
++ idempotencyKey
+-> deterministic message identity
+~~~
+
+Therefore:
+
+~~~text
+same space + same channel + same principal + same key + same meaning
     -> same accepted message
     -> no duplicate append
 
-same key + changed request meaning
+same scoped identity + changed meaning
     -> IDEMPOTENCY_CONFLICT
+
+same key reused in a different lawful successor channel
+    -> different message identity
+    -> independently admissible if current
 ~~~
+
+Message sequence is channel-local, so the first canonical message in both g2 and g3 may be sequence 0
+while their messageRefs remain distinct.
 
 ## In-memory Family provider
 
@@ -559,8 +580,11 @@ VexConversationStateTest
     no invented Family generation
 
 InMemoryVexFamilyConversationRepositoryTest
+    canonical Family generation starts at 1 while first message sequence starts at 0
+    VF-02C-scoped deterministic message identity
+    same-key retry survives repository reconstruction from current state
+    same key across successor channels yields distinct sequence-0 messages / refs
     Family provider currentness/idempotency
-    first canonical Family sequence zero
     provider-derived recipients
     historical Family segments/witnesses
     independent repository instances

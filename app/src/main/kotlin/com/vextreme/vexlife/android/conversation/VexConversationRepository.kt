@@ -63,8 +63,8 @@ data class VexFamilyConversationSendRequest(
     val content: String,
 ) {
     init {
-        require(expectedMembershipGeneration >= 0L) {
-            "expected Family membership generation must be non-negative"
+        require(expectedMembershipGeneration > 0L) {
+            "expected canonical Family membership generation must be positive"
         }
         require(content.isNotBlank()) {
             "Family Conversation Send content must be non-blank"

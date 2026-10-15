@@ -30,6 +30,13 @@ package com.vextreme.vexlife.android.conversation
  *
  * [InMemoryVexFamilyConversationRepository]
  *
+ * Canonical Family Space generation begins at 1; message sequence is independently zero-based.
+ *
+ * VF-02C message retry identity is scoped by spaceRef + channelRef + authenticated principalRef +
+ * idempotencyKey. The in-memory Family provider mirrors that semantic scope and resolves retries from
+ * deterministic message identity already present in current Conversation state rather than a
+ * process-local idempotency map.
+ *
  * The Family caller supplies routing/content/currentness/idempotency only. Trusted speaker,
  * recipients, witnesses, membership/role, Home authority and model truth remain provider-owned.
  *

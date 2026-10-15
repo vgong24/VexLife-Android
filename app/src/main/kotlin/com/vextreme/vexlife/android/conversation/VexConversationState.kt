@@ -95,8 +95,8 @@ data class VexFamilyConversationMessageBinding(
     val membershipGeneration: Long,
 ) {
     init {
-        require(membershipGeneration >= 0L) {
-            "Family message membershipGeneration must be non-negative"
+        require(membershipGeneration > 0L) {
+            "canonical Family message membershipGeneration must be positive"
         }
     }
 }
@@ -182,8 +182,8 @@ data class VexFamilyConversationThreadBinding(
         List<VexConversationChannelRef>,
 ) {
     init {
-        require(currentMembershipGeneration >= 0L) {
-            "Family current membership generation must be non-negative"
+        require(currentMembershipGeneration > 0L) {
+            "canonical Family current membership generation must be positive"
         }
         require(segmentRefs.isNotEmpty()) {
             "Family Conversation thread must retain at least one channel segment"
