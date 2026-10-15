@@ -130,8 +130,9 @@ launchForCollect(session::states) { state ->
 The callable is both the source reference and the thing Vex invokes. A callable is never passed only
 as a decorative label while unrelated work runs in a second lambda.
 
-`launchOnce` never automatically retries. `launchForCollect` may use the root's bounded collector
-recovery policy after unexpected failure; intentional cancellation never restarts.
+`launchOnce` never automatically retries. `launchForCollect` may use the root's bounded recovery only
+for source/subscription failure. A failure thrown while consuming a valid emitted value becomes
+`FAILED` with no automatic resubscription. Intentional cancellation never restarts.
 
 ## Source-derived execution identity
 
@@ -159,6 +160,43 @@ operation a distinct semantic source name instead of inventing an invisible runt
 Concurrent instances of the same parameterized callable are deliberately held until a real consumer
 earns an instance-identity rule.
 
+## Collection recovery boundary
+
+Collection recovery is deliberately narrower than "anything inside the collector failed":
+
+```text
+source() throws
+OR
+Flow upstream throws
+-> eligible for bounded source recovery
+
+onEach(value) throws
+-> FAILED
+-> restartCount unchanged
+-> no automatic resubscription
+```
+
+This prevents VexExecution from silently becoming a business/provider retry engine. A consumer may
+perform an effect after receiving a valid value; if that effect fails, the feature/Connection/Session
+owns what that failure means and whether Retry is lawful.
+
+Resubscription may replay source values. A StateFlow, for example, immediately emits its current
+value to a new collector. Consumers that perform non-idempotent effects therefore need explicit
+admission/currentness and should opt out of source recovery when replay would be unsafe.
+
+## Root lifetime custody
+
+```text
+own VexExecutionRoot
+-> own its shutdown
+```
+
+`VexExecutionRoot` currently owns an independent `SupervisorJob`. Merely retaining the root inside a
+ViewModel, Service, or session does not parent its cancellation to that Android lifetime. The owner
+must call `forceStopAll` / `joinStopAll` at its real terminal boundary.
+
+A real production consumer should prove that custody before the foundation considers parent-Job
+convenience or any lifecycle adapter.
 ## Control
 
 ```text
@@ -192,7 +230,7 @@ the active Job leaves custody.
 ## Ownership laws
 
 - one root `SupervisorJob` isolates sibling executions;
-- one named managed Job remains stable across collector recovery attempts;
+- one named managed Job remains stable across source-recovery attempts;
 - nested structured work remains a descendant of that managed Job;
 - `forceStop` / `joinStop` suppress restart because cancellation is terminal;
 - root shutdown closes admission before cancelling the complete tree;
@@ -378,7 +416,8 @@ still makes the underlying architecture obvious.
 
 `VexExecutionTest` protects the inherited PR #3 execution laws plus the new public-language rules:
 source-derived refs, one-shot invocation, typed arguments, Flow-owned collection, sibling isolation,
-bounded recovery, force-stop suppression, `joinStop` teardown proof, duplicate rejection, ordered
-registry exposure, defensive registry state, and post-shutdown admission rejection.
+source-only bounded recovery, downstream-consumer failure without auto-restart, force-stop suppression,
+`joinStop` teardown proof, duplicate rejection, ordered registry exposure, defensive registry state,
+and post-shutdown admission rejection.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
