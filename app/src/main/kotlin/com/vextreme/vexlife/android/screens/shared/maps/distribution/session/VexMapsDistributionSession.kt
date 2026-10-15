@@ -467,6 +467,8 @@ internal class VexMapsDistributionSession(
                     run.preparationFailed(
                         preparation.preparationRef,
                     )
+                    activePack =
+                        null
                     clearExpectedLeg()
                     navigation.stop()
                     publishSession(
@@ -656,12 +658,7 @@ internal class VexMapsDistributionSession(
                     draft.returnToStart,
             )
 
-        if (
-            admitted ||
-            run.currentProjection
-                .state !is
-                VexMapsDistributionRunState.Draft
-        ) {
+        if (admitted) {
             mutableState.value =
                 mutableState.value
                     .copy(
