@@ -44,6 +44,8 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexIconButton
+import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
@@ -71,7 +73,11 @@ private fun vexStreamQueueEntries(
             (occurrences[mediaId] ?: 0) + 1
         occurrences[mediaId] = occurrence
         VexStreamQueueEntry(
-            stableKey = "$mediaId#$occurrence",
+            stableKey =
+                VexStreamPresentationRefs.queueEntryKey(
+                    mediaId = mediaId,
+                    occurrence = occurrence,
+                ),
             mediaId = mediaId,
         )
     }
@@ -117,9 +123,23 @@ internal fun VexStreamQueueSheet(
     }
 
     fun finishQueueDrag() {
-        if (dragMoved) {
-            runtime.activate(
-                VexStreamMusicScreen.QueueReorder,
+        val completedKey =
+            draggedKey
+        if (
+            dragMoved &&
+            completedKey != null
+        ) {
+            runtime.activateDynamic(
+                element =
+                    VexStreamMusicScreen.QueueReorder,
+                subjectRef =
+                    VexStreamPresentationRefs
+                        .queueEntryAction(
+                            stableKey = completedKey,
+                            action =
+                                VexStreamMusicScreen
+                                    .QueueReorder,
+                        ),
             )
         }
         draggedKey = null
@@ -243,7 +263,15 @@ internal fun VexStreamQueueSheet(
             } else {
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .vex(
+                                VexModifier.semantic(
+                                    VexStreamPresentationRefs
+                                        .QueueList,
+                                ),
+                            ),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     itemsIndexed(
@@ -297,6 +325,14 @@ internal fun VexStreamQueueSheet(
                                 )
                                 .padding(
                                     vertical = 9.dp,
+                                )
+                                .vex(
+                                    VexModifier.semantic(
+                                        VexStreamPresentationRefs
+                                            .queueEntry(
+                                                entry.stableKey,
+                                            ),
+                                    ),
                                 ),
                             horizontalArrangement =
                                 Arrangement.spacedBy(
@@ -308,14 +344,33 @@ internal fun VexStreamQueueSheet(
                             Row(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .vexElement(
-                                        VexStreamMusicScreen.QueuePlay,
+                                    .vex(
+                                        VexModifier.semantic(
+                                            VexStreamPresentationRefs
+                                                .queueEntryAction(
+                                                    stableKey =
+                                                        entry.stableKey,
+                                                    action =
+                                                        VexStreamMusicScreen
+                                                            .QueuePlay,
+                                                ),
+                                        ),
                                     )
                                     .clickable(
                                         enabled = queuePlayEnabled,
                                     ) {
-                                        runtime.activate(
-                                            VexStreamMusicScreen.QueuePlay,
+                                        runtime.activateDynamic(
+                                            element =
+                                                VexStreamMusicScreen.QueuePlay,
+                                            subjectRef =
+                                                VexStreamPresentationRefs
+                                                    .queueEntryAction(
+                                                        stableKey =
+                                                            entry.stableKey,
+                                                        action =
+                                                            VexStreamMusicScreen
+                                                                .QueuePlay,
+                                                    ),
                                         )
                                         if (
                                             latestIndex !=
@@ -400,8 +455,17 @@ internal fun VexStreamQueueSheet(
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .vexElement(
-                                        VexStreamMusicScreen.QueueReorder,
+                                    .vex(
+                                        VexModifier.semantic(
+                                            VexStreamPresentationRefs
+                                                .queueEntryAction(
+                                                    stableKey =
+                                                        entry.stableKey,
+                                                    action =
+                                                        VexStreamMusicScreen
+                                                            .QueueReorder,
+                                                ),
+                                        ),
                                     )
                                     .pointerInput(
                                         entry.stableKey,
