@@ -20,5 +20,6 @@ rootProject.name = "VexLife-Android"
 include(":app")
 include(":architecture:behavior")
 include(":architecture:elements")
+include(":architecture:execution")
 include(":architecture:logging")
 include(":architecture:relay")
