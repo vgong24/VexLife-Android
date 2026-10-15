@@ -143,35 +143,66 @@ that truly owns a sustained Flow observation.
 
 ## Deterministic feature-test pattern
 
-The production test seam is the dispatcher supplied to `VexExecutionRoot`. A feature test may use
-the standard coroutine test scheduler directly:
+The execution module exposes reusable **test fixtures** for downstream feature tests. The fixture
+owns only the universal mechanics that would otherwise be repeated in every class:
 
-```kotlin
-runTest {
-    val root =
-        VexExecutionRoot(
-            dispatcher =
-                StandardTestDispatcher(
-                    testScheduler,
-                ),
-        )
-
-    val execution =
-        MyFeatureExecution(
-            root = root,
-            repository = fakeRepository,
-        )
-
-    execution.start()
-    runCurrent()
-
-    advanceTimeBy(1_000L)
-    runCurrent()
-}
+```text
+fresh TestCoroutineScheduler per test
+-> StandardTestDispatcher
+-> VexExecutionRoot
+-> scenario executes
+-> cancel execution tree
+-> advance cancelled cleanup
+-> join tree before the next test
 ```
 
-This keeps scheduling authority with `kotlinx-coroutines-test` instead of inventing a second Vex
-clock/scheduler abstraction merely for tests.
+Typical feature-test shape:
+
+```kotlin
+@get:Rule
+val vexExecution =
+    VexExecutionTestRule()
+
+private lateinit var repository:
+    InMemoryThingRepository
+
+private lateinit var execution:
+    ThingExecution
+
+@Before
+fun setUp() {
+    repository =
+        InMemoryThingRepository()
+
+    execution =
+        ThingExecution(
+            root = vexExecution.root,
+            repository = repository,
+        )
+}
+
+@Test
+fun example() =
+    vexExecution.runTest {
+        execution.doThing()
+        runCurrent()
+
+        // scenario-specific assertions
+    }
+```
+
+The split is intentional:
+
+- the reusable rule owns scheduler/root creation and guaranteed teardown;
+- the feature's `@Before` visibly owns how the real class-under-test is assembled;
+- individual tests own only scenario arrangement, causes, scheduling boundaries, and assertions;
+- feature-specific `@After` is needed only for resources that intentionally live outside the
+  VexExecution tree.
+
+Teardown never advances an active tree "until idle." It first closes/cancels the Vex execution root,
+then advances the already-cancelled virtual scheduler so structured cleanup can finish, and finally
+joins the tree. This prevents one test's collector/restart job from leaking into the next test while
+also avoiding a cleanup strategy that could hide the leak by simply letting it keep running.
 
 Canonical consumer-style example:
 
@@ -179,15 +210,14 @@ Canonical consumer-style example:
 src/test/.../execution/usage/VexExecutionVirtualTimeUsageTest.kt
 ```
 
-It deliberately lives outside the foundation package and uses only public VexExecution APIs. It
-proves:
+It deliberately builds its repository and real `VexExecution` in `@Before`, then proves:
 - two independent `launchForCollect` calls begin as concurrent sibling Jobs;
 - bounded restart delay can be advanced without real sleeping;
-- `joinStop` remains suspended until structured cleanup really finishes.
+- `joinStop` remains incomplete until structured cleanup really finishes.
 
-Do not extract another shared test harness until multiple real feature consumers repeat enough setup
-to justify one; the existing dispatcher seam plus standard TestScope is currently the smaller
-truthful solution.
+Do not extract feature-specific scenario builders merely to shorten tests. Promote a feature-owned
+fixture/fake only when repeated data/provider setup becomes a real burden and the extracted helper
+still makes the underlying architecture obvious.
 
 ## Proof
 

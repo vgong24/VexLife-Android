@@ -4,37 +4,55 @@ import com.vextreme.vexlife.android.execution.VexCoroutineHandle
 import com.vextreme.vexlife.android.execution.VexCoroutineStatus
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.execution.testing.VexExecutionTestRule
 import java.util.concurrent.atomic.AtomicInteger
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 /**
  * Consumer-side execution test blueprint.
  *
- * This test deliberately lives outside the foundation package and uses only the public VexExecution
- * surface plus kotlinx-coroutines-test. Feature tests should follow this shape when they need to
- * prove scheduling, races, cancellation, or recovery without sleeping on real wall-clock time.
- *
- * The important seam is VexExecutionRoot(dispatcher = StandardTestDispatcher(testScheduler)):
- * every managed Job then runs on the test scheduler, so restart delays and structured cleanup can be
- * advanced deterministically with runCurrent()/advanceTimeBy().
+ * The reusable rule owns scheduler/root setup and guaranteed teardown. This class deliberately owns
+ * its feature-like dependency construction in [setUp] so a developer can see the real pieces under
+ * test without command-clicking through a hidden "buildFeature()" scenario framework.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class VexExecutionVirtualTimeUsageTest {
+    @get:Rule
+    val vexExecution =
+        VexExecutionTestRule(
+            maxCollectRestarts = 1,
+            collectRestartDelayMillis =
+                1_000L,
+        )
+
+    private lateinit var repository:
+        ExampleRepository
+
+    private lateinit var execution:
+        ExampleFeatureExecution
+
+    @Before
+    fun setUp() {
+        repository =
+            ExampleRepository()
+
+        execution =
+            ExampleFeatureExecution(
+                root = vexExecution.root,
+                repository = repository,
+            )
+    }
+
     private class ExampleRepository {
         val restartAttempts =
             AtomicInteger(0)
@@ -53,8 +71,11 @@ class VexExecutionVirtualTimeUsageTest {
 
         fun restartableStates(): Flow<Int> =
             flow {
-                restartAttempts.incrementAndGet()
-                error("restartable collector failed")
+                restartAttempts
+                    .incrementAndGet()
+                error(
+                    "restartable collector failed",
+                )
             }
 
         suspend fun operationWithCleanup() {
@@ -62,12 +83,16 @@ class VexExecutionVirtualTimeUsageTest {
                 awaitCancellation()
             } finally {
                 /*
-                 * Simulate teardown that really must finish before a replacement operation starts.
-                 * NonCancellable is intentional for this test fixture; production cleanup should use
-                 * it only when the concrete resource contract genuinely requires bounded teardown.
+                 * Simulate teardown that must finish before replacement work may start.
+                 * NonCancellable is intentional in this test fake only to prove joinStop waits
+                 * through a resource cleanup boundary.
                  */
-                withContext(NonCancellable) {
-                    delay(1_000L)
+                withContext(
+                    NonCancellable,
+                ) {
+                    delay(
+                        1_000L,
+                    )
                 }
             }
         }
@@ -75,7 +100,8 @@ class VexExecutionVirtualTimeUsageTest {
 
     private class ExampleFeatureExecution(
         root: VexExecutionRoot,
-        private val repository: ExampleRepository,
+        private val repository:
+            ExampleRepository,
     ) : VexExecution(root) {
         fun observePrimary(
             values: MutableList<Int>,
@@ -95,34 +121,23 @@ class VexExecutionVirtualTimeUsageTest {
                 values += value
             }
 
-        fun observeRestartable(): VexCoroutineHandle =
+        fun observeRestartable():
+            VexCoroutineHandle =
             launchForCollect(
                 repository::restartableStates,
             ) {}
 
-        fun runCleanupOperation(): VexCoroutineHandle =
+        fun runCleanupOperation():
+            VexCoroutineHandle =
             launchOnce(
-                repository::operationWithCleanup,
+                repository::
+                    operationWithCleanup,
             )
     }
 
     @Test
     fun independentFlowSourcesStartAsConcurrentSiblingJobs() =
-        runTest {
-            val root =
-                VexExecutionRoot(
-                    dispatcher =
-                        StandardTestDispatcher(
-                            testScheduler,
-                        ),
-                )
-            val repository =
-                ExampleRepository()
-            val execution =
-                ExampleFeatureExecution(
-                    root = root,
-                    repository = repository,
-                )
+        vexExecution.runTest {
             val primary =
                 mutableListOf<Int>()
             val secondary =
@@ -138,9 +153,9 @@ class VexExecutionVirtualTimeUsageTest {
                 )
 
             /*
-             * Both managed Jobs were admitted before the scheduler runs either one.
-             * runCurrent() executes all work ready at this virtual instant, proving the second
-             * collector is not sequenced behind the first never-ending collect.
+             * Both managed Jobs are admitted before the scheduler runs either one. runCurrent()
+             * therefore proves the second collector is not sequenced behind the first forever
+             * collection.
              */
             runCurrent()
 
@@ -160,124 +175,108 @@ class VexExecutionVirtualTimeUsageTest {
                 VexCoroutineStatus.RUNNING,
                 second.state.value.status,
             )
-
-            first.joinStop("test complete")
-            second.joinStop("test complete")
-            root.joinStopAll("test complete")
         }
 
     @Test
-    fun restartDelayCanBeProvedWithoutWaitingForWallClockTime() =
-        runTest {
-            val root =
-                VexExecutionRoot(
-                    dispatcher =
-                        StandardTestDispatcher(
-                            testScheduler,
-                        ),
-                    maxCollectRestarts = 1,
-                    collectRestartDelayMillis =
-                        1_000L,
-                )
-            val repository =
-                ExampleRepository()
-            val execution =
-                ExampleFeatureExecution(
-                    root = root,
-                    repository = repository,
-                )
-
+    fun restartDelayCanBeProvedWithoutWallClockWaiting() =
+        vexExecution.runTest {
             val handle =
-                execution.observeRestartable()
+                execution
+                    .observeRestartable()
 
             runCurrent()
 
             assertEquals(
                 1,
-                repository.restartAttempts.get(),
+                repository
+                    .restartAttempts
+                    .get(),
             )
             assertEquals(
-                VexCoroutineStatus.RESTARTING,
+                VexCoroutineStatus
+                    .RESTARTING,
                 handle.state.value.status,
             )
 
-            advanceTimeBy(999L)
+            advanceTimeBy(
+                999L,
+            )
             runCurrent()
 
             assertEquals(
                 1,
-                repository.restartAttempts.get(),
+                repository
+                    .restartAttempts
+                    .get(),
             )
 
-            advanceTimeBy(1L)
+            advanceTimeBy(
+                1L,
+            )
             runCurrent()
 
             assertEquals(
                 2,
-                repository.restartAttempts.get(),
+                repository
+                    .restartAttempts
+                    .get(),
             )
             assertEquals(
                 VexCoroutineStatus.FAILED,
                 handle.state.value.status,
             )
-
-            root.joinStopAll("test complete")
         }
 
     @Test
     fun joinStopWaitsUntilStructuredCleanupActuallyFinishes() =
-        runTest {
-            val root =
-                VexExecutionRoot(
-                    dispatcher =
-                        StandardTestDispatcher(
-                            testScheduler,
-                        ),
-                )
-            val execution =
-                ExampleFeatureExecution(
-                    root = root,
-                    repository =
-                        ExampleRepository(),
-                )
-
+        vexExecution.runTest {
             val handle =
-                execution.runCleanupOperation()
+                execution
+                    .runCleanupOperation()
 
             runCurrent()
 
-            val stop =
-                async {
-                    handle.joinStop(
-                        "replace operation",
-                    )
-                }
+            /*
+             * Start joinStop as a separately scheduled test action so the test can inspect the
+             * interval while cleanup is still pending.
+             */
+            var stopCompleted = false
+            kotlinx.coroutines.CoroutineScope(
+                kotlinx.coroutines.currentCoroutineContext(),
+            ).launch {
+                handle.joinStop(
+                    "replace operation",
+                )
+                stopCompleted = true
+            }
 
             runCurrent()
 
             assertFalse(
-                stop.isCompleted,
+                stopCompleted,
             )
 
-            advanceTimeBy(999L)
+            advanceTimeBy(
+                999L,
+            )
             runCurrent()
 
             assertFalse(
-                stop.isCompleted,
+                stopCompleted,
             )
 
-            advanceTimeBy(1L)
+            advanceTimeBy(
+                1L,
+            )
             runCurrent()
 
             assertTrue(
-                stop.await(),
+                stopCompleted,
             )
             assertEquals(
                 VexCoroutineStatus.CANCELLED,
                 handle.state.value.status,
             )
-
-            root.joinStopAll("test complete")
         }
 }
 
