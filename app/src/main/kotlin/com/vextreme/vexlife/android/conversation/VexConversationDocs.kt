@@ -77,6 +77,30 @@ package com.vextreme.vexlife.android.conversation
  * into a one-human / one-AI ontology because current portable Conversation source already supports
  * multi-human Family channels and distinct AI participation.
  *
+ * ## Current Android consumer contract
+ *
+ * [VexConversationRepository] is the Android-facing contract for Conversation-owned state and Send.
+ *
+ * [InMemoryVexConversationRepository] is an instance-based state-only implementation for tests and
+ * Preview. It mirrors the established VexStream pattern; every scenario constructs its own instance.
+ * It is not a singleton, service, production Connection, Home, membership owner, or model runtime.
+ *
+ * [VexConversationState] contains Conversation-owned thread/channel/message/audience projection only.
+ * Home reachability, authenticated principal/session truth, and companion availability stay outside
+ * that state.
+ *
+ * Focused repository proof owns the current draft->membership-change->Send problem. The request binds
+ * expected channel + membership generation + recipients; a successor generation rejects the stale
+ * request without silently rewriting recipients or appending a message.
+ *
+ * No VexExecution test fixture is used because there is no Conversation VexExecution consumer yet.
+ * The Test Foundation rule is to test the transformation at its actual owner.
+ *
+ * Production Screen/Journey integration remains held until the shared AppRepositories/runtime graph
+ * can be entered without colliding with active work. When admitted, Journey should inject the same
+ * in-memory repository through test composition and use journeySignal for external provider changes,
+ * following VexStream rather than giving product code test-only mutation methods.
+ *
  * ## First unresolved architecture pressure
  *
  * Send carries runtime data such as content, recipients and optional reply/context references.

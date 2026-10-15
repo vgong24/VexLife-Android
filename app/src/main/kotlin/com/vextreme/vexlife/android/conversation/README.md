@@ -9,23 +9,21 @@ FEATURE / HOME:
     VexLife Android Conversation
 
 CURRENT STATUS:
-    FOUNDATION CANDIDATE
-    no Conversation runtime/provider/storage implementation is claimed by this milestone
+    ANDROID CONSUMER CONTRACT PRESSURE
+    Conversation-owned state + Send request/currentness are now modeled behind one instance-based
+    repository contract with an in-memory tests/Preview implementation
 
 PORTABLE SEMANTIC OWNER:
     VexLife service.conversation
 
 ANDROID RESPONSIBILITY:
-    native participant surface + Android realization/proof
+    native consumer projection/request boundary + Android realization/proof
     not a second Conversation semantic owner
 
 CURRENT NEXT EDGE:
-    one synthetic, group-ready Android vertical slice that pressures:
-      runtime message payloads
-      private diagnostic handling
-      current channel/authority revalidation
-      dynamic message identity
-    before a production Behavior family is named
+    compose Home / authenticated-principal / Companion truth outside Conversation state
+    -> form the first native surface only after the rightful dependency/lifetime seam is available
+    -> keep AppRepositories/Journey integration held while active shared-path work owns that graph
 ~~~
 
 ## Question
@@ -348,6 +346,77 @@ would make source ambiguous beside the Vex Family product domain.
 
 Naming must let a new human or AI know which meaning is intended without reconstructing history.
 
+## VexStream consumer/test pattern applied
+
+The first implementation pressure now follows the existing VexStream construction lesson rather than
+inventing a synthetic feature owner.
+
+~~~text
+VexStreamMusicRepository
+    production-facing Android consumer contract
+
+InMemoryVexStreamMusicRepository
+    one instance per test/Preview
+    same contract
+    state-only fake provider
+
+Paired / Loopback implementations
+    real provider boundaries
+
+Screen / Journey
+    receive the repository through app/test composition
+~~~
+
+Conversation now mirrors that shape only where the meaning is already earned:
+
+~~~text
+VexConversationRepository
+    Android consumer contract for Conversation-owned state + Send request
+
+InMemoryVexConversationRepository
+    one instance per test/Preview
+    same contract
+    no Home/network/filesystem/model/federation/Family-membership effects
+
+VexConversationState
+    Conversation-owned threads/channel/message/audience projection only
+
+Home reachability
+authenticated principal/session
+Companion/model availability
+    deliberately NOT fields in VexConversationState
+~~~
+
+The in-memory repository's `publishThread(...)` method is test/provider pressure, analogous to an
+in-memory provider publishing new source truth. Product UI must not call it as a membership command.
+
+Tests construct the repository explicitly. There is no singleton/global fixture.
+
+The focused repository tests use ordinary `runTest` because no VexExecution consumer exists yet.
+Using `VexExecutionTestRule` before Conversation has a real execution bridge would test the wrong
+owner and violate the Test Foundation rule:
+
+~~~text
+TEST THE TRANSFORMATION AT ITS OWNER
+~~~
+
+Journey integration is intentionally held until Conversation can enter the real app repository graph
+without colliding with active shared-path work. When admitted, Journey should follow the VexStream
+pattern:
+
+~~~text
+VexTestEngine
+    owns an InMemoryVexConversationRepository instance
+
+journeySignal(...)
+    publishes external/provider currentness changes to that instance
+
+human journey
+    uses only real Screen controls
+
+TEST SIGNAL != PRODUCT MEMBERSHIP MUTATION
+~~~
+
 ## Behavior formation — do not force the blueprint
 
 PR #82 does not require every feature to manufacture one Behavior family. It says to split by an
@@ -615,35 +684,62 @@ model retry
 A downstream consumer failure must not become invisible Flow resubscription that replays a
 non-idempotent message send.
 
-## First vertical slice
+## First implementation pressure — current source
 
-The first implementation milestone should be deliberately synthetic and group-ready.
-
-It should pressure the architecture with at least:
-
-~~~text
-one direct Companion thread
-one multi-participant thread containing humans + a Vex companion
-stable threadRef/channelRef/messageRef identity
-immutable speaker/recipient/witness projection
-one membership-generation boundary in fixture history
-a private local composer draft
-Home available / unavailable treatment
-AI available / unavailable independently of human chat
-~~~
-
-The slice should not claim:
+The first source milestone is deliberately below the Compose/product surface. It establishes the
+consumer contract and tests the currentness problem the architecture review identified.
 
 ~~~text
-real Home transport
-real durable Android Conversation database
-real federation
-real remote human delivery
-real model invocation
-real Family membership mutation
+conversation/VexConversationState.kt
+    typed thread/channel/message/participant refs
+    knownParticipants != currentAudience
+    immutable message recipient/witness distinction
+    Conversation-owned thread state only
+
+conversation/VexConversationRepository.kt
+    state
+    send(currentness-bound request)
+    no caller-authored speaker/witness/Home/model authority
+
+conversation/InMemoryVexConversationRepository.kt
+    instance-based tests/Preview implementation
+    same repository contract
+    external provider-truth publication seam
+
+InMemoryVexConversationRepositoryTest
+    repository instances are isolated
+    provider binds speaker + full witness audience
+    generation changes between draft and Send reject stale requests
+    removed participants remain known for historical authorship
 ~~~
 
-Synthetic proof must remain labeled synthetic.
+The critical pressure case is now explicit:
+
+~~~text
+human begins draft under:
+    channel g2
+    membershipGeneration 2
+    recipients Maya + Vex
+
+provider publishes successor truth:
+    Maya left
+    channel g3
+    membershipGeneration 3
+
+old Send request
+    -> CURRENTNESS_CHANGED
+    -> no message appended
+    -> recipients are not silently rewritten
+
+new request formed from current truth
+    -> may address only the current audience
+~~~
+
+This does not yet decide the final Compose interaction for reconfirming a stale draft. It establishes
+the consumer/provider contract the UI must respect.
+
+A production Conversation Behavior family, Experience, Connection, Home transport, and UI lifecycle
+owner remain held.
 
 ## Acceptance walks to earn before real integration
 
@@ -837,18 +933,32 @@ or abstraction. Re-enter the owner/source that is unclear.
 
 ## Next meaningful milestone
 
-Do not split the next work into file-shaped commits.
+Do not make the next commit a collection of UI files.
 
-The next commit should represent one architectural/product milestone:
+The next milestone must first identify the rightful **surface-composition/lifetime seam** for:
 
-> Form one synthetic, group-ready Android Conversation vertical slice that makes the timeline,
-> composer, current audience and Home/AI availability perceivable, while pressure-testing private
-> Send payload handling against the accepted Behavior/VexRuntime boundaries.
+~~~text
+Conversation repository state
++
+authenticated current participant/session
++
+Home reachability/authority
++
+Companion availability
+-> Android Conversation surface
+~~~
 
-That milestone should include the source + focused proof needed to explain the result as one coherent
-change.
+That composite view is not Conversation-owned state.
 
-Do not widen into real transport, model invocation, federation, or durable Android storage merely to
-make the first surface look complete.
+Do not call it a durable Experience until the repository reconciles PR #81's whole-product Experience
+language with merged PR #82's Behavior-local Experience membrane.
+
+Because active work currently touches AppRepositories / shared runtime paths, production Screen and
+Journey wiring remain held rather than creating a parallel app graph.
+
+Once that dependency seam is clear, the native Compose surface can consume the real contract and the
+Journey can inject the same in-memory repository through the canonical test composition, exactly as
+VexStream does.
+
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][CONVERSATION][FEATURE-HOME] -->
