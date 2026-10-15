@@ -18,8 +18,22 @@ internal interface VexMapsDistributionRunExperience {
     )
 
     fun observeDraft(
-        stopCount: Int,
+        revision: Long,
+        stopRefs: List<String>,
         returnToStart: Boolean,
+    ): Boolean
+
+    fun preparationSucceeded(
+        preparationRef: String,
+        planRef: String,
+    ): Boolean
+
+    fun preparationFailed(
+        preparationRef: String,
+    ): Boolean
+
+    fun invalidateReadyPlan(
+        planRef: String,
     ): Boolean
 }
 
@@ -48,12 +62,42 @@ internal class CurrentVexMapsDistributionRunExperience(
     }
 
     override fun observeDraft(
-        stopCount: Int,
+        revision: Long,
+        stopRefs: List<String>,
         returnToStart: Boolean,
     ): Boolean =
         connection.observeDraft(
-            stopCount = stopCount,
-            returnToStart = returnToStart,
+            revision =
+                revision,
+            stopRefs =
+                stopRefs,
+            returnToStart =
+                returnToStart,
+        )
+
+    override fun preparationSucceeded(
+        preparationRef: String,
+        planRef: String,
+    ): Boolean =
+        connection.preparationSucceeded(
+            preparationRef =
+                preparationRef,
+            planRef =
+                planRef,
+        )
+
+    override fun preparationFailed(
+        preparationRef: String,
+    ): Boolean =
+        connection.preparationFailed(
+            preparationRef,
+        )
+
+    override fun invalidateReadyPlan(
+        planRef: String,
+    ): Boolean =
+        connection.invalidateReadyPlan(
+            planRef,
         )
 }
 

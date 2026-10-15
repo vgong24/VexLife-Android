@@ -22,8 +22,17 @@ internal fun vexMapsDistributionRunBehavior():
                     VexMapsDistributionRunAct.PrepareRun,
                 effect =
                     VexMapsDistributionRunEffect.SealDraft,
-            ).admit<VexMapsDistributionRunState.Ready>()
+            ).admit<VexMapsDistributionRunState.Preparing>()
 
+            on(
+                act =
+                    VexMapsDistributionRunAct.ResetRun,
+                effect =
+                    VexMapsDistributionRunEffect.ClearRun,
+            ).admit<VexMapsDistributionRunState.Empty>()
+        }
+
+        state<VexMapsDistributionRunState.Preparing> {
             on(
                 act =
                     VexMapsDistributionRunAct.ResetRun,
@@ -85,7 +94,7 @@ internal fun vexMapsDistributionRunBehavior():
                     "last-stop-completed-return-to-start",
             ) { current ->
                 current.isLastStop &&
-                    current.returnToStart
+                    current.source.returnToStart
             }.admit<VexMapsDistributionRunState.Returning>()
 
             on(
@@ -97,7 +106,7 @@ internal fun vexMapsDistributionRunBehavior():
                     "last-stop-completed-finish-here",
             ) { current ->
                 current.isLastStop &&
-                    !current.returnToStart
+                    !current.source.returnToStart
             }.admit<VexMapsDistributionRunState.Completed>()
 
             on(
