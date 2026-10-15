@@ -76,6 +76,7 @@ internal class VexMapsDistributionRunConnection(
     fun preparationSucceeded(
         preparationRef: String,
         planRef: String,
+        orderedStopRefs: List<String>,
     ): Boolean {
         val current =
             state as?
@@ -95,6 +96,8 @@ internal class VexMapsDistributionRunConnection(
                     planRef,
                 source =
                     current.source,
+                orderedStopRefs =
+                    orderedStopRefs.toList(),
             ),
         )
         return true
@@ -193,6 +196,8 @@ internal class VexMapsDistributionRunConnection(
                             },
                         source =
                             current.source,
+                        orderedStopRefs =
+                            current.orderedStopRefs,
                     )
                 }
 
@@ -206,9 +211,10 @@ internal class VexMapsDistributionRunConnection(
                             current.planRef,
                         source =
                             current.source,
+                        orderedStopRefs =
+                            current.orderedStopRefs,
                         currentStopRef =
-                            current.source
-                                .stopRefs
+                            current.orderedStopRefs
                                 .first(),
                     )
                 }
@@ -223,6 +229,8 @@ internal class VexMapsDistributionRunConnection(
                             current.planRef,
                         source =
                             current.source,
+                        orderedStopRefs =
+                            current.orderedStopRefs,
                         currentStopRef =
                             current.currentStopRef,
                     )
@@ -238,6 +246,8 @@ internal class VexMapsDistributionRunConnection(
                             current.planRef,
                         source =
                             current.source,
+                        orderedStopRefs =
+                            current.orderedStopRefs,
                         currentStopRef =
                             requireNotNull(
                                 current.nextStopRef,
@@ -259,31 +269,35 @@ internal class VexMapsDistributionRunConnection(
                 }
 
                 VexMapsDistributionRunEffect.CompleteRun -> {
-                    val currentPlanAndSource =
-                        when (
-                            val current =
-                                state
-                        ) {
-                            is VexMapsDistributionRunState.AtStop ->
-                                current.planRef to
-                                    current.source
+                    val current =
+                        state
 
-                            is VexMapsDistributionRunState.Returning ->
-                                current.planRef to
-                                    current.source
+                    when (current) {
+                        is VexMapsDistributionRunState.AtStop ->
+                            VexMapsDistributionRunState.Completed(
+                                planRef =
+                                    current.planRef,
+                                source =
+                                    current.source,
+                                orderedStopRefs =
+                                    current.orderedStopRefs,
+                            )
 
-                            else ->
-                                error(
-                                    "CompleteRun is not lawful from $current",
-                                )
-                        }
+                        is VexMapsDistributionRunState.Returning ->
+                            VexMapsDistributionRunState.Completed(
+                                planRef =
+                                    current.planRef,
+                                source =
+                                    current.source,
+                                orderedStopRefs =
+                                    current.orderedStopRefs,
+                            )
 
-                    VexMapsDistributionRunState.Completed(
-                        planRef =
-                            currentPlanAndSource.first,
-                        source =
-                            currentPlanAndSource.second,
-                    )
+                        else ->
+                            error(
+                                "CompleteRun is not lawful from $current",
+                            )
+                    }
                 }
 
                 VexMapsDistributionRunEffect.ClearRun ->

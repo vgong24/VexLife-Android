@@ -26,6 +26,7 @@ internal interface VexMapsDistributionRunExperience {
     fun preparationSucceeded(
         preparationRef: String,
         planRef: String,
+        orderedStopRefs: List<String>,
     ): Boolean
 
     fun preparationFailed(
@@ -78,12 +79,15 @@ internal class CurrentVexMapsDistributionRunExperience(
     override fun preparationSucceeded(
         preparationRef: String,
         planRef: String,
+        orderedStopRefs: List<String>,
     ): Boolean =
         connection.preparationSucceeded(
             preparationRef =
                 preparationRef,
             planRef =
                 planRef,
+            orderedStopRefs =
+                orderedStopRefs,
         )
 
     override fun preparationFailed(

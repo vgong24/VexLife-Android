@@ -42,9 +42,14 @@ internal sealed interface VexMapsDistributionRunState :
         val planRef: String,
         val source:
             VexMapsDistributionRunDraftIdentity,
+        val orderedStopRefs: List<String>,
     ) : VexMapsDistributionRunState {
         init {
             require(planRef.isNotBlank())
+            requireExecutionOrder(
+                source,
+                orderedStopRefs,
+            )
         }
     }
 
@@ -52,11 +57,16 @@ internal sealed interface VexMapsDistributionRunState :
         val planRef: String,
         val source:
             VexMapsDistributionRunDraftIdentity,
+        val orderedStopRefs: List<String>,
         val currentStopRef: String,
     ) : VexMapsDistributionRunState {
         init {
             require(planRef.isNotBlank())
-            require(currentStopRef in source.stopRefs)
+            requireExecutionOrder(
+                source,
+                orderedStopRefs,
+            )
+            require(currentStopRef in orderedStopRefs)
         }
     }
 
@@ -64,25 +74,30 @@ internal sealed interface VexMapsDistributionRunState :
         val planRef: String,
         val source:
             VexMapsDistributionRunDraftIdentity,
+        val orderedStopRefs: List<String>,
         val currentStopRef: String,
     ) : VexMapsDistributionRunState {
         init {
             require(planRef.isNotBlank())
-            require(currentStopRef in source.stopRefs)
+            requireExecutionOrder(
+                source,
+                orderedStopRefs,
+            )
+            require(currentStopRef in orderedStopRefs)
         }
 
         val isLastStop: Boolean
             get() =
                 currentStopRef ==
-                    source.stopRefs.last()
+                    orderedStopRefs.last()
 
         val nextStopRef: String?
             get() {
                 val index =
-                    source.stopRefs.indexOf(
+                    orderedStopRefs.indexOf(
                         currentStopRef,
                     )
-                return source.stopRefs
+                return orderedStopRefs
                     .getOrNull(
                         index + 1,
                     )
@@ -93,9 +108,14 @@ internal sealed interface VexMapsDistributionRunState :
         val planRef: String,
         val source:
             VexMapsDistributionRunDraftIdentity,
+        val orderedStopRefs: List<String>,
     ) : VexMapsDistributionRunState {
         init {
             require(planRef.isNotBlank())
+            requireExecutionOrder(
+                source,
+                orderedStopRefs,
+            )
         }
     }
 
@@ -103,11 +123,28 @@ internal sealed interface VexMapsDistributionRunState :
         val planRef: String,
         val source:
             VexMapsDistributionRunDraftIdentity,
+        val orderedStopRefs: List<String>,
     ) : VexMapsDistributionRunState {
         init {
             require(planRef.isNotBlank())
+            requireExecutionOrder(
+                source,
+                orderedStopRefs,
+            )
         }
     }
 }
 
 // [VXG RealForever]
+
+
+private fun requireExecutionOrder(
+    source: VexMapsDistributionRunDraftIdentity,
+    orderedStopRefs: List<String>,
+) {
+    require(orderedStopRefs.isNotEmpty())
+    require(orderedStopRefs.distinct().size == orderedStopRefs.size)
+    require(orderedStopRefs.toSet() == source.stopRefs.toSet()) {
+        "Distribution execution order must contain the exact admitted Draft stop refs"
+    }
+}
