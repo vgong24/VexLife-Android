@@ -70,19 +70,20 @@ enum class VexConversationParticipantKind {
     Companion,
 }
 
+/**
+ * Stable identity needed by Conversation history/current-audience projection.
+ *
+ * Human-facing display name, avatar, relationship label and Family role are deliberately absent:
+ * those belong to their own identity/relationship/Family/presentation owners. The current VexLife
+ * Family room bootstrap likewise supplies principal refs and Family companion lineage rather than
+ * making Conversation the display-name owner.
+ */
 data class VexConversationParticipant(
     val participantRef:
         VexConversationParticipantRef,
-    val displayName: String,
     val kind:
         VexConversationParticipantKind,
-) {
-    init {
-        require(displayName.isNotBlank()) {
-            "conversation participant displayName must be non-blank"
-        }
-    }
-}
+)
 
 enum class VexConversationMembershipChange {
     Joined,
@@ -213,17 +214,19 @@ sealed interface VexConversationTimelineEntry {
  *
  * knownParticipants is the identity directory needed to render retained history. It is NOT the
  * current audience. A participant who later leaves may remain known so historical authored messages
- * and witness sets remain renderable.
+ * and witness sets remain attributable.
  *
- * Home reachability, authenticated-device/session truth, and companion/model availability are
- * deliberately absent because those have different owners.
+ * Human-facing thread title/label is deliberately absent. Current provider contracts identify
+ * thread/channel/space by stable refs and presentation owners decide how those are named for people.
+ *
+ * Home reachability, authenticated-device/session truth, Family role, participant display metadata
+ * and companion/model availability are deliberately absent because those have different owners.
  */
 data class VexConversationThreadState(
     val threadRef:
         VexConversationThreadRef,
     val spaceRef:
         VexConversationSpaceRef?,
-    val title: String,
     val currentChannelRef:
         VexConversationChannelRef,
     val currentMembershipGeneration: Long,
@@ -241,9 +244,6 @@ data class VexConversationThreadState(
             }
 
     init {
-        require(title.isNotBlank()) {
-            "conversation title must be non-blank"
-        }
         require(currentMembershipGeneration > 0L) {
             "current membership generation must be positive"
         }

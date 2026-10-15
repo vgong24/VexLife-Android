@@ -289,6 +289,44 @@ WHAT DO THEY SEE?:
     Android timeline/composer/current audience/currentness/failure projections
 ~~~
 
+## Presentation identity is not Conversation authority
+
+Current VexLife Family producer truth gives Android stable principal/channel/thread/space identities,
+membership generation, Family role/currentness and companion lineage. It does not make Conversation
+the owner of friendly display names or a decorative room title.
+
+Current Android source therefore keeps:
+
+~~~text
+VexConversationParticipant
+    participantRef
+    Human | Companion kind
+
+VexConversationThreadState
+    threadRef
+    optional spaceRef
+    current channel/generation
+    known historical participant identities
+    current audience
+    timeline
+~~~
+
+and deliberately excludes:
+
+~~~text
+displayName
+avatar
+relationship label
+Family role
+human-facing room title
+~~~
+
+Those may later enter the Android surface from their rightful identity/relationship/Family/product
+projection owner.
+
+A UI may fall back to a stable ref for debugging or a localized generic label when no friendly label
+is available. It must not fabricate a display label and then promote it into Conversation identity.
+
 ## Identity grammar
 
 Do not collapse these identities:

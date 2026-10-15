@@ -222,8 +222,6 @@ class VexConversationSurfaceProjectionTest {
                 threadRef,
             spaceRef =
                 spaceRef,
-            title =
-                "Family Room",
             currentChannelRef =
                 channelRef,
             currentMembershipGeneration =
@@ -233,24 +231,18 @@ class VexConversationSurfaceProjectionTest {
                     VexConversationParticipant(
                         participantRef =
                             victorRef,
-                        displayName =
-                            "Victor",
                         kind =
                             VexConversationParticipantKind.Human,
                     ),
                     VexConversationParticipant(
                         participantRef =
                             mayaRef,
-                        displayName =
-                            "Maya",
                         kind =
                             VexConversationParticipantKind.Human,
                     ),
                     VexConversationParticipant(
                         participantRef =
                             vexRef,
-                        displayName =
-                            "Vex",
                         kind =
                             VexConversationParticipantKind.Companion,
                     ),

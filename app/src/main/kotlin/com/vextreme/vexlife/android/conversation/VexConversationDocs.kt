@@ -70,6 +70,15 @@ package com.vextreme.vexlife.android.conversation
  *   reconstruct historical audience truth from current membership.
  *
 
+ * ## Presentation identity boundary
+ *
+ * Conversation state keeps stable participant/thread/channel/space identity and participant kind.
+ *
+ * It deliberately does not own displayName, avatar, relationship label, Family role, or a
+ * human-facing room title. Current VexLife Family producer projections do not grant Conversation
+ * those meanings. A future Android presentation owner may compose friendly labels from the rightful
+ * identity/relationship/Family/product sources without rewriting Conversation identity.
+ *
  * ## Identity laws
  *
  * threadRef

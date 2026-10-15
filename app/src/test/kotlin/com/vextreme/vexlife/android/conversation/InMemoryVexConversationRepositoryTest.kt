@@ -464,32 +464,24 @@ class InMemoryVexConversationRepositoryTest {
             VexConversationParticipant(
                 participantRef =
                     victorRef,
-                displayName =
-                    "Victor",
                 kind =
                     VexConversationParticipantKind.Human,
             ),
             VexConversationParticipant(
                 participantRef =
                     mayaRef,
-                displayName =
-                    "Maya",
                 kind =
                     VexConversationParticipantKind.Human,
             ),
             VexConversationParticipant(
                 participantRef =
                     alexRef,
-                displayName =
-                    "Alex",
                 kind =
                     VexConversationParticipantKind.Human,
             ),
             VexConversationParticipant(
                 participantRef =
                     vexRef,
-                displayName =
-                    "Vex",
                 kind =
                     VexConversationParticipantKind.Companion,
             ),
@@ -502,8 +494,6 @@ class InMemoryVexConversationRepositoryTest {
                 threadRef,
             spaceRef =
                 spaceRef,
-            title =
-                "Family Room",
             currentChannelRef =
                 channelGenerationTwo,
             currentMembershipGeneration =
@@ -560,8 +550,6 @@ class InMemoryVexConversationRepositoryTest {
                 threadRef,
             spaceRef =
                 spaceRef,
-            title =
-                "Family Room",
             currentChannelRef =
                 channelGenerationThree,
             currentMembershipGeneration =
