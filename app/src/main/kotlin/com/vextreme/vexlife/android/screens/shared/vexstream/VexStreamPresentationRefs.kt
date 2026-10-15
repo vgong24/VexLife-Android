@@ -48,7 +48,7 @@ internal value class VexStreamTrackPresentationScope private constructor(
  * characters cannot become ambiguous Compose/evidence path delimiters. Domain identity itself is
  * not rewritten.
  */
-object VexStreamPresentationRefs {
+internal object VexStreamPresentationRefs {
     private const val TrackRowPrefix =
         "element.vexstream-music.track"
 
