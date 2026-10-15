@@ -5,17 +5,65 @@ import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionSt
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsTravelMode
 
-internal data class VexMapsDistributionPlan(
-    val sourceDraftRevision: Long,
+/**
+ * Exact immutable inputs admitted when the human asks Distribution to prepare a run.
+ *
+ * This is intentionally feature-local rather than a generic request-currentness envelope.
+ */
+internal data class VexMapsDistributionPreparationSnapshot(
+    val preparationRef: String,
+    val draftRevision: Long,
+    val stopRefs: List<String>,
+    val returnToStart: Boolean,
     val origin: VexMapCoordinate,
+    val travelMode: VexMapsTravelMode,
+    val regionPackIdentity: String,
+) {
+    init {
+        require(preparationRef.isNotBlank())
+        require(draftRevision >= 0L)
+        require(stopRefs.isNotEmpty())
+        require(stopRefs.all { it.isNotBlank() })
+        require(stopRefs.distinct().size == stopRefs.size)
+        require(regionPackIdentity.isNotBlank())
+    }
+
+    fun matches(
+        draft: VexMapsDistributionDraft,
+        origin: VexMapCoordinate,
+        travelMode: VexMapsTravelMode,
+        regionPackIdentity: String,
+    ): Boolean =
+        draftRevision ==
+            draft.revision &&
+            stopRefs ==
+            draft.stops
+                .sortedBy {
+                    it.inputOrder
+                }
+                .map {
+                    it.stopRef
+                } &&
+            returnToStart ==
+                draft.returnToStart &&
+            this.origin ==
+                origin &&
+            this.travelMode ==
+                travelMode &&
+            this.regionPackIdentity ==
+                regionPackIdentity
+}
+
+internal data class VexMapsDistributionPlan(
+    val planRef: String,
+    val preparation:
+        VexMapsDistributionPreparationSnapshot,
     val orderedStops:
         List<VexMapsDistributionStop>,
-    val returnToStart: Boolean,
-    val travelMode: VexMapsTravelMode,
     val estimatedDurationSeconds: Long,
 ) {
     init {
-        require(sourceDraftRevision >= 0L)
+        require(planRef.isNotBlank())
         require(orderedStops.isNotEmpty())
         require(estimatedDurationSeconds > 0L)
         require(
@@ -27,26 +75,54 @@ internal data class VexMapsDistributionPlan(
                 .size ==
                 orderedStops.size,
         )
-    }
-
-    fun isCurrentFor(
-        draft:
-            VexMapsDistributionDraft,
-    ): Boolean =
-        sourceDraftRevision ==
-            draft.revision &&
+        require(
             orderedStops
                 .map {
                     it.stopRef
                 }
                 .toSet() ==
-            draft.stops
-                .map {
-                    it.stopRef
-                }
-                .toSet() &&
-            returnToStart ==
-                draft.returnToStart
+            preparation
+                .stopRefs
+                .toSet(),
+        )
+    }
+
+    val origin: VexMapCoordinate
+        get() =
+            preparation.origin
+
+    val returnToStart: Boolean
+        get() =
+            preparation.returnToStart
+
+    val travelMode: VexMapsTravelMode
+        get() =
+            preparation.travelMode
+
+    val sourceDraftRevision: Long
+        get() =
+            preparation.draftRevision
+
+    fun isCurrentFor(
+        draft:
+            VexMapsDistributionDraft,
+        origin:
+            VexMapCoordinate,
+        travelMode:
+            VexMapsTravelMode,
+        regionPackIdentity:
+            String,
+    ): Boolean =
+        preparation.matches(
+            draft =
+                draft,
+            origin =
+                origin,
+            travelMode =
+                travelMode,
+            regionPackIdentity =
+                regionPackIdentity,
+        )
 }
 
 internal data class VexMapsDistributionLegCost(

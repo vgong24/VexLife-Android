@@ -3,10 +3,9 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution.planning
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionStop
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
-import com.vextreme.vexlife.android.screens.shared.maps.VexMapsTravelMode
 
 /**
- * Travel-time optimizer for one immutable Distribution draft snapshot.
+ * Travel-time optimizer for one immutable Distribution preparation snapshot.
  *
  * The optimizer intentionally does not mutate Draft truth. It uses provider-derived pairwise travel
  * times, caches them for this optimization attempt, builds a nearest-neighbor seed, then repeatedly
@@ -20,13 +19,32 @@ internal class VexMapsDistributionOptimizer(
     suspend fun optimize(
         draft:
             VexMapsDistributionDraft,
-        origin:
-            VexMapCoordinate,
-        travelMode:
-            VexMapsTravelMode,
+        preparation:
+            VexMapsDistributionPreparationSnapshot,
     ): VexMapsDistributionPlan {
-        require(draft.stops.isNotEmpty()) {
-            "Distribution optimization requires at least one stop"
+        require(
+            preparation.draftRevision ==
+                draft.revision,
+        ) {
+            "Distribution preparation revision does not match Draft"
+        }
+        require(
+            preparation.stopRefs ==
+                draft.stops
+                    .sortedBy {
+                        it.inputOrder
+                    }
+                    .map {
+                        it.stopRef
+                    },
+        ) {
+            "Distribution preparation stop identity does not match Draft"
+        }
+        require(
+            preparation.returnToStart ==
+                draft.returnToStart,
+        ) {
+            "Distribution preparation return policy does not match Draft"
         }
 
         val cache =
@@ -43,15 +61,14 @@ internal class VexMapsDistributionOptimizer(
                 LegKey(
                     from = from,
                     to = to,
-                    travelMode =
-                        travelMode,
                 ),
             ) {
                 costProvider.cost(
                     from = from,
                     to = to,
                     travelMode =
-                        travelMode,
+                        preparation
+                            .travelMode,
                 )
             }
 
@@ -61,7 +78,7 @@ internal class VexMapsDistributionOptimizer(
         ): Long {
             var total = 0L
             var previous =
-                origin
+                preparation.origin
 
             order.forEach { stop ->
                 val coordinate =
@@ -75,11 +92,14 @@ internal class VexMapsDistributionOptimizer(
                     coordinate
             }
 
-            if (draft.returnToStart) {
+            if (
+                preparation
+                    .returnToStart
+            ) {
                 total +=
                     cost(
                         previous,
-                        origin,
+                        preparation.origin,
                     ).durationSeconds
             }
 
@@ -97,7 +117,7 @@ internal class VexMapsDistributionOptimizer(
                 VexMapsDistributionStop
             >()
         var current =
-            origin
+            preparation.origin
 
         while (remaining.isNotEmpty()) {
             var bestIndex = 0
@@ -201,16 +221,14 @@ internal class VexMapsDistributionOptimizer(
         }
 
         return VexMapsDistributionPlan(
-            sourceDraftRevision =
-                draft.revision,
-            origin =
-                origin,
+            planRef =
+                "vexmaps.distribution.plan." +
+                    preparation
+                        .preparationRef,
+            preparation =
+                preparation,
             orderedStops =
                 best,
-            returnToStart =
-                draft.returnToStart,
-            travelMode =
-                travelMode,
             estimatedDurationSeconds =
                 bestDuration,
         )
@@ -220,7 +238,6 @@ internal class VexMapsDistributionOptimizer(
 private data class LegKey(
     val from: VexMapCoordinate,
     val to: VexMapCoordinate,
-    val travelMode: VexMapsTravelMode,
 )
 
 private fun VexMapsDistributionStop.coordinate():
