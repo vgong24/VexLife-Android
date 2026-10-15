@@ -204,7 +204,7 @@ class VexExecutionTest {
     }
 
     @Test
-    fun launchOnceInvokesReferencedSuspendFunctionExactlyOnce() =
+    fun launchOnceInvokesReferencedSuspendFunctionExactlyOnce(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot(
@@ -233,7 +233,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun launchOnceKeepsOneArgumentInvocationTypeSafe() =
+    fun launchOnceKeepsOneArgumentInvocationTypeSafe(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
@@ -251,7 +251,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun launchForCollectInvokesProviderAndOwnsCollection() =
+    fun launchForCollectInvokesProviderAndOwnsCollection(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
@@ -287,7 +287,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun launchForCollectAcceptsFlowPropertyReference() =
+    fun launchForCollectAcceptsFlowPropertyReference(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
@@ -312,7 +312,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun joinStopWaitsForStructuredDescendantsToFinish() =
+    fun joinStopWaitsForStructuredDescendantsToFinish(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
@@ -342,7 +342,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun failedExecutionDoesNotCancelSiblingExecution() =
+    fun failedExecutionDoesNotCancelSiblingExecution(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot(
@@ -380,7 +380,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun launchForCollectCanRecoverWithBoundedRestart() =
+    fun launchForCollectCanRecoverWithBoundedRestart(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot(
@@ -423,7 +423,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun sourceCreationFailureCanRecover() =
+    fun sourceCreationFailureCanRecover(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot(
@@ -475,7 +475,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun downstreamOnEachFailureDoesNotAutoRestart() =
+    fun downstreamOnEachFailureDoesNotAutoRestart(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot(
@@ -531,7 +531,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun forceStopDuringRestartDelaySuppressesRestart() =
+    fun forceStopDuringRestartDelaySuppressesRestart(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot(
@@ -574,7 +574,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun duplicateActiveSourceRefFailsClosed() =
+    fun duplicateActiveSourceRefFailsClosed(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
@@ -606,7 +606,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun registryPreservesAdmissionOrderAndRejectsExternalMutation() =
+    fun registryPreservesAdmissionOrderAndRejectsExternalMutation(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
@@ -669,7 +669,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun rootShutdownClosesAdmissionBeforeCancellation() =
+    fun rootShutdownClosesAdmissionBeforeCancellation(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
