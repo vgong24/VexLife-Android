@@ -175,6 +175,38 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
+    fun dynamicIdentityCannotBypassRegisteredScreenOwnership() {
+        val runtime =
+            runtime()
+
+        val failure =
+            runCatching {
+                runtime.activateDynamic(
+                    element =
+                        UserProfileScreen.Save,
+                    subjectRef =
+                        "element.user-profile.dynamic.save.example",
+                )
+            }.exceptionOrNull()
+
+        requireNotNull(
+            failure,
+        )
+        assertTrue(
+            failure.message.orEmpty()
+                .contains(
+                    UserProfileScreen.screenId,
+                ),
+        )
+        assertTrue(
+            failure.message.orEmpty()
+                .contains(
+                    HomeScreen.screenId,
+                ),
+        )
+    }
+
+    @Test
     fun offScreenOwnedElementCannotBeActivatedDirectly() {
         val runtime = runtime()
 
