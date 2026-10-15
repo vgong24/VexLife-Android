@@ -957,48 +957,49 @@ class VexMapsDistributionSessionTest {
         }
     }
 
-    private fun routeResult(
-        request:
-            VexOfflineRouteRequest,
-    ): VexOfflineRouteResult =
-        VexOfflineRouteResult(
-            route =
-                VexNavigationRoute(
-                    routeRef =
-                        request.routeRef,
-                    routeRevision =
-                        request.routeRevision,
-                    destinationLabel =
-                        request.destinationLabel,
-                    totalDistanceMeters =
-                        100,
-                    maneuvers =
-                        emptyList(),
-                ),
-            geometry =
-                listOf(
-                    VexRouteGeometryPoint(
-                        latitude =
-                            request.origin
-                                .latitude,
-                        longitude =
-                            request.origin
-                                .longitude,
-                    ),
-                    VexRouteGeometryPoint(
-                        latitude =
-                            request.destination
-                                .latitude,
-                        longitude =
-                            request.destination
-                                .longitude,
-                    ),
-                ),
-            travelMode =
-                request.travelMode,
-            estimatedDurationSeconds =
-                60,
-        )
 }
+
+private fun routeResult(
+    request:
+        VexOfflineRouteRequest,
+): VexOfflineRouteResult =
+    VexOfflineRouteResult(
+        route =
+            VexNavigationRoute(
+                routeRef =
+                    request.routeRef,
+                routeRevision =
+                    request.routeRevision,
+                destinationLabel =
+                    request.destinationLabel,
+                totalDistanceMeters =
+                    100,
+                maneuvers =
+                    emptyList(),
+            ),
+        geometry =
+            listOf(
+                VexRouteGeometryPoint(
+                    latitude =
+                        request.origin
+                            .latitude,
+                    longitude =
+                        request.origin
+                            .longitude,
+                ),
+                VexRouteGeometryPoint(
+                    latitude =
+                        request.destination
+                            .latitude,
+                    longitude =
+                        request.destination
+                            .longitude,
+                ),
+            ),
+        travelMode =
+            request.travelMode,
+        estimatedDurationSeconds =
+            60,
+    )
 
 // [VXG RealForever]
