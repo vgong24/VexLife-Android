@@ -21,6 +21,11 @@ import kotlinx.coroutines.launch
  *
  * Feature code never receives this type directly. [VexExecution] is the application-facing
  * architectural role; this class owns the Kotlin coroutine mechanics underneath that role.
+ *
+ * This engine does not place several Flow collectors sequentially inside one hidden coroutine.
+ * Every [launchForCollect] invocation enters [launchManaged] independently, gets its own registered
+ * Job, and owns exactly one Flow collection. Independent observations therefore run as sibling
+ * managed Jobs and may be stopped by their own source-derived refs.
  */
 internal class VexCoroutineLauncher(
     dispatcher: CoroutineDispatcher,
@@ -97,6 +102,13 @@ internal class VexCoroutineLauncher(
             action = action,
         )
 
+    /**
+     * Foundation-owned Flow collection.
+     *
+     * [onEach] only handles values from this source; it is not a child-launch surface. A second
+     * independent Flow must enter through another launchForCollect call so it receives another
+     * managed Job rather than waiting behind this collector.
+     */
     fun <Value> launchForCollect(
         ref: VexCoroutineRef,
         shouldRestart: Boolean,

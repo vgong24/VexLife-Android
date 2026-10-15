@@ -26,6 +26,14 @@ import kotlinx.coroutines.flow.Flow
  *   -> derives the runtime ref from this Execution + "states"
  *   -> invokes states()
  *   -> owns the resulting Flow collection
+ *
+ * Execution-shape rule:
+ * - [launchOnce] is for one finite suspend operation;
+ * - each [launchForCollect] call owns exactly one Flow collector and therefore one managed Job;
+ * - several independent Flow sources use several launchForCollect calls, producing sibling Jobs
+ *   that collect concurrently;
+ * - do not hide raw Flow.collect or raw coroutine launch inside launchOnce to recreate execution
+ *   topology outside this boundary.
  */
 abstract class VexExecution protected constructor(
     private val executionRoot: VexExecutionRoot,
@@ -38,6 +46,13 @@ abstract class VexExecution protected constructor(
                     "VexExecution requires a named source class",
                 )
 
+    /**
+     * Runs one already-defined finite suspend operation under Vex execution custody.
+     *
+     * If one human/product intention requires several ordered suspend calls, compose those calls
+     * inside the referenced suspend function and launch that operation once. Do not use launchOnce
+     * as a container for sustained Flow collection.
+     */
     protected fun <Result> launchOnce(
         action: KSuspendFunction0<Result>,
     ): VexCoroutineHandle =
@@ -71,6 +86,21 @@ abstract class VexExecution protected constructor(
             )
         }
 
+    /**
+     * Starts one maintained Flow observation.
+     *
+     * One invocation means:
+     *
+     * VexExecution
+     * -> one registered managed Job
+     * -> invoke [source]
+     * -> collect that one Flow
+     * -> deliver each value to [onEach]
+     *
+     * To observe several independent Flows concurrently, call launchForCollect once per source.
+     * The calls become independently addressable sibling Jobs; no second never-ending collect is
+     * placed sequentially behind the first.
+     */
     protected fun <Value, Source : Flow<Value>> launchForCollect(
         source: KFunction0<Source>,
         shouldRestart: Boolean = true,
@@ -83,6 +113,7 @@ abstract class VexExecution protected constructor(
             onEach = onEach,
         )
 
+    /** Property-reference form of the same one-source / one-managed-Job collection contract. */
     protected fun <Value, Source : Flow<Value>> launchForCollect(
         source: KProperty0<Source>,
         shouldRestart: Boolean = true,
@@ -95,6 +126,7 @@ abstract class VexExecution protected constructor(
             onEach = onEach,
         )
 
+    /** Argument-bearing form of the same one-source / one-managed-Job collection contract. */
     protected fun <Argument, Value, Source : Flow<Value>> launchForCollect(
         source: KFunction1<Argument, Source>,
         argument: Argument,
