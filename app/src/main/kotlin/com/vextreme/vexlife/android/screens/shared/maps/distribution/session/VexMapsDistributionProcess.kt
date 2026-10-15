@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.maps.distribution.session
 
 import android.content.Context
+import com.vextreme.vexlife.android.data.maps.distribution.RoomVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationProcess
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsNavigationService
@@ -34,7 +35,11 @@ internal object VexMapsDistributionProcess {
             SupervisorJob() +
                 Dispatchers.Main.immediate,
         )
-    private val sessions =
+    private var productionSession:
+        VexMapsDistributionSession? =
+        null
+
+    private val isolatedSessions =
         IdentityHashMap<
             VexMapsDistributionRepository,
             VexMapsDistributionSession
@@ -46,28 +51,56 @@ internal object VexMapsDistributionProcess {
             VexMapsDistributionRepository,
     ): VexMapsDistributionSession =
         synchronized(lock) {
-            sessions[
-                repository
-            ] ?: VexMapsDistributionSession(
-                repository =
-                    repository,
-                routing =
-                    AndroidDistributionRouting(
-                        context.applicationContext,
-                    ),
-                navigation =
-                    AndroidDistributionNavigation(
-                        context.applicationContext,
-                    ),
-                scope =
-                    scope,
-            ).also {
-                sessions[
+            if (
+                repository is
+                RoomVexMapsDistributionRepository
+            ) {
+                productionSession
+                    ?: newSession(
+                        context =
+                            context,
+                        repository =
+                            repository,
+                    ).also {
+                        productionSession =
+                            it
+                    }
+            } else {
+                isolatedSessions[
                     repository
-                ] =
-                    it
+                ] ?: newSession(
+                    context =
+                        context,
+                    repository =
+                        repository,
+                ).also {
+                    isolatedSessions[
+                        repository
+                    ] =
+                        it
+                }
             }
         }
+
+    private fun newSession(
+        context: Context,
+        repository:
+            VexMapsDistributionRepository,
+    ): VexMapsDistributionSession =
+        VexMapsDistributionSession(
+            repository =
+                repository,
+            routing =
+                AndroidDistributionRouting(
+                    context.applicationContext,
+                ),
+            navigation =
+                AndroidDistributionNavigation(
+                    context.applicationContext,
+                ),
+            scope =
+                scope,
+        )
 }
 
 private class AndroidDistributionRouting(
