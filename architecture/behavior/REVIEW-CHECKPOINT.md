@@ -268,6 +268,34 @@ The two current Playback surfaces no longer gate themselves independently throug
 `playback.hasQueue` plus nullable Projection fallbacks. They consume the shared display
 classification and receive a non-null Projection in Transitioning/Active cases.
 
+## Experience membrane pressure
+
+The two current Playback views now depend on one UI-facing feature membrane:
+
+~~~text
+VexStreamPlaybackExperience
+    displayState
+    activate(Control)
+~~~
+
+Internally the Experience contains the wiring that Compose previously assembled itself:
+
+~~~text
+Connection / VexPortFlow
+-> Projection
++ provider-derived Playback read data
+-> DisplayState
+~~~
+
+Context Dock and Mini Player therefore receive one Playback behavior/display interface rather than
+separate Connection + Projection plumbing.
+
+The raw MediaController remains visible only for transport operations that this PR deliberately
+holds outside the Play/Pause Behavior slice (Previous / Next / Seek / Shuffle / queue mechanics).
+That remaining provider escape is explicit debt, not hidden inside the Experience.
+
+No generic `VexExperience` type is admitted yet.
+
 ## Deliberately held
 
 The following are NOT solved by this checkpoint:

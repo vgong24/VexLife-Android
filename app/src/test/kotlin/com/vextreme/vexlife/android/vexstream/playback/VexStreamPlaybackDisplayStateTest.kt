@@ -1,7 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
 import org.junit.Test
 
 class VexStreamPlaybackDisplayStateTest {
@@ -12,13 +11,27 @@ class VexStreamPlaybackDisplayStateTest {
         behavior
             .vexStreamPlaybackControls()
 
+    private val playback =
+        VexStreamPlaybackReadState(
+            currentMediaId =
+                "media.test",
+            currentTitle =
+                "Test Track",
+        )
+
     @Test
     fun missingProjectionIsUnknown() {
-        assertSame(
+        assertEquals(
             VexStreamPlaybackDisplayState
-                .Unknown,
+                .Unknown(
+                    playback =
+                        playback,
+                ),
             (null as VexStreamPlaybackProjection?)
-                .toVexStreamPlaybackDisplayState(),
+                .toVexStreamPlaybackDisplayState(
+                    playback =
+                        playback,
+                ),
         )
     }
 
@@ -33,10 +46,16 @@ class VexStreamPlaybackDisplayStateTest {
         assertEquals(
             VexStreamPlaybackDisplayState
                 .Inactive(
-                    projection,
+                    projection =
+                        projection,
+                    playback =
+                        playback,
                 ),
             projection
-                .toVexStreamPlaybackDisplayState(),
+                .toVexStreamPlaybackDisplayState(
+                    playback =
+                        playback,
+                ),
         )
     }
 
@@ -59,10 +78,16 @@ class VexStreamPlaybackDisplayStateTest {
         assertEquals(
             VexStreamPlaybackDisplayState
                 .Transitioning(
-                    projection,
+                    projection =
+                        projection,
+                    playback =
+                        playback,
                 ),
             projection
-                .toVexStreamPlaybackDisplayState(),
+                .toVexStreamPlaybackDisplayState(
+                    playback =
+                        playback,
+                ),
         )
     }
 
@@ -80,10 +105,16 @@ class VexStreamPlaybackDisplayStateTest {
         assertEquals(
             VexStreamPlaybackDisplayState
                 .Transitioning(
-                    projection,
+                    projection =
+                        projection,
+                    playback =
+                        playback,
                 ),
             projection
-                .toVexStreamPlaybackDisplayState(),
+                .toVexStreamPlaybackDisplayState(
+                    playback =
+                        playback,
+                ),
         )
     }
 
@@ -105,10 +136,16 @@ class VexStreamPlaybackDisplayStateTest {
         assertEquals(
             VexStreamPlaybackDisplayState
                 .Active(
-                    projection,
+                    projection =
+                        projection,
+                    playback =
+                        playback,
                 ),
             projection
-                .toVexStreamPlaybackDisplayState(),
+                .toVexStreamPlaybackDisplayState(
+                    playback =
+                        playback,
+                ),
         )
     }
 
@@ -125,10 +162,16 @@ class VexStreamPlaybackDisplayStateTest {
         assertEquals(
             VexStreamPlaybackDisplayState
                 .Active(
-                    projection,
+                    projection =
+                        projection,
+                    playback =
+                        playback,
                 ),
             projection
-                .toVexStreamPlaybackDisplayState(),
+                .toVexStreamPlaybackDisplayState(
+                    playback =
+                        playback,
+                ),
         )
     }
 }

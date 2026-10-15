@@ -8,7 +8,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -102,31 +101,6 @@ internal fun rememberVexStreamMediaController():
         viewModel()
 
     return owner.controller
-}
-
-@Composable
-internal fun rememberVexStreamPlaybackConnection():
-    VexStreamPlaybackConnectionFlow? {
-    val owner:
-        VexStreamPlaybackConnectionViewModel =
-        viewModel()
-
-    return owner.connection
-}
-
-@Composable
-internal fun rememberVexStreamPlaybackProjection(
-    connection:
-        VexStreamPlaybackConnectionFlow?,
-): VexStreamPlaybackProjection? {
-    val projections =
-        connection?.projections
-            ?: return null
-
-    val current by
-        projections.collectAsStateWithLifecycle()
-
-    return current
 }
 
 // [VXG RealForever]

@@ -30,15 +30,12 @@ import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackConnection
-import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackProjection
-import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackProjection
 import com.vextreme.vexlife.android.vexstream.playback.present
-import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
-import com.vextreme.vexlife.android.vexstream.playback.toVexStreamPlaybackDisplayState
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -55,32 +52,20 @@ internal fun rememberVexStreamContextDockPage(
 ): VexContextDockPage? {
     val controller =
         rememberVexStreamMediaController()
-    val playbackConnection =
-        rememberVexStreamPlaybackConnection()
-    val playbackProjection =
-        rememberVexStreamPlaybackProjection(
-            playbackConnection,
-        )
-    val playback by
-        rememberVexStreamPlaybackUiState(
-            controller,
-        )
-    val displayState =
-        playbackProjection
-            .toVexStreamPlaybackDisplayState()
+    val playbackExperience =
+        rememberVexStreamPlaybackExperience()
+    when (
+        playbackExperience
+            .displayState
+    ) {
+        is VexStreamPlaybackDisplayState.Unknown,
+        is VexStreamPlaybackDisplayState.Inactive ->
+            return null
 
-    val displayedProjection =
-        when (displayState) {
-            VexStreamPlaybackDisplayState.Unknown,
-            is VexStreamPlaybackDisplayState.Inactive ->
-                return null
-
-            is VexStreamPlaybackDisplayState.Transitioning ->
-                displayState.projection
-
-            is VexStreamPlaybackDisplayState.Active ->
-                displayState.projection
-        }
+        is VexStreamPlaybackDisplayState.Transitioning,
+        is VexStreamPlaybackDisplayState.Active ->
+            Unit
+    }
 
     return VexContextDockPage(
         pageRef =
@@ -91,11 +76,8 @@ internal fun rememberVexStreamContextDockPage(
         VexStreamContextDockContent(
             runtime = runtime,
             controller = controller,
-            playback = playback,
-            playbackConnection =
-                playbackConnection,
-            playbackProjection =
-                displayedProjection,
+            playbackExperience =
+                playbackExperience,
             expanded = expanded,
         )
     }
@@ -105,13 +87,15 @@ internal fun rememberVexStreamContextDockPage(
 private fun VexStreamContextDockContent(
     runtime: VexRuntime,
     controller: MediaController?,
-    playback: VexStreamPlaybackUiState,
-    playbackConnection:
-        VexStreamPlaybackConnection?,
-    playbackProjection:
-        VexStreamPlaybackProjection,
+    playbackExperience:
+        VexStreamPlaybackExperience,
     expanded: Boolean,
 ) {
+    val playback =
+        playbackExperience
+            .displayState
+            .playback
+
     var scrubFraction by
         remember(
             playback.currentMediaId,
@@ -127,6 +111,12 @@ private fun VexStreamContextDockContent(
             controller.isCommandAvailable(
                 Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
             )
+    val playbackProjection =
+        requireNotNull(
+            playbackExperience
+                .displayState
+                .projection,
+        )
     val playPause =
         playbackProjection.present(
             VexStreamPlaybackControl.PlayPause,
@@ -220,8 +210,8 @@ private fun VexStreamContextDockContent(
                     subjectRef =
                         "presentation.context-dock.vexstream.play-pause",
                 )
-                playbackConnection
-                    ?.activate(
+                playbackExperience
+                    .activate(
                         VexStreamPlaybackControl.PlayPause,
                     )
             }

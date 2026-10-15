@@ -11,6 +11,22 @@ package com.vextreme.vexlife.android.vexstream.playback
  * This class is documentation/navigation only. It owns no playback state, provider, lifecycle, or
  * semantic behavior.
  *
+ * ## What should Compose depend on?
+ *
+ * Start at [VexStreamPlaybackExperience].
+ *
+ * [rememberVexStreamPlaybackExperience] is the UI-facing membrane:
+ *
+ * - [VexStreamPlaybackExperience.displayState] supplies the final view-facing output.
+ * - [VexStreamPlaybackExperience.activate] carries [VexStreamPlaybackControl] back into the
+ *   internal Port.
+ *
+ * Compose should not assemble Connection + VexPortFlow + Projection + DisplayState itself.
+ *
+ * The Experience internally observes [Media3VexStreamPlaybackConnection], derives
+ * [VexStreamPlaybackProjection], combines provider-derived [VexStreamPlaybackReadState], and
+ * classifies [VexStreamPlaybackDisplayState].
+ *
  * ## What can Playback truthfully be?
  *
  * Start at [VexStreamPlaybackState].
@@ -64,6 +80,10 @@ package com.vextreme.vexlife.android.vexstream.playback
  * The ViewModel owns Android configuration lifetime only. MediaSession/Player remain playback truth
  * owners. There is no generic Host abstraction to learn: this concrete Connection simply uses the
  * rightful Android lifetime owner it needs.
+ *
+ * The raw MediaController remains an explicit temporary UI escape for Previous / Next / Seek /
+ * Shuffle and other transport work that this PR intentionally has not migrated into Behavior.
+ * Do not hide that held debt inside the Experience merely to make the membrane look cleaner.
  *
  * ## How is provider latency reconciled?
  *

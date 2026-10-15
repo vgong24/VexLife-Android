@@ -1,40 +1,60 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
 /**
- * View-facing classification of the already-derived Playback Projection.
+ * View-facing classification of the already-derived Playback output.
  *
  * This is not another truth owner or Behavior-family member. It gives the UI one deterministic,
- * sealed answer for how the arrived semantic Projection should be treated.
+ * sealed answer for how the arrived semantic Projection + provider read data should be treated.
  *
  * Active means "the Playback display is currently active", not "media is currently playing".
  */
 internal sealed interface VexStreamPlaybackDisplayState {
-    data object Unknown :
-        VexStreamPlaybackDisplayState
+    val projection:
+        VexStreamPlaybackProjection?
+
+    val playback:
+        VexStreamPlaybackReadState
+
+    data class Unknown(
+        override val playback:
+            VexStreamPlaybackReadState =
+            VexStreamPlaybackReadState.Empty,
+    ) :
+        VexStreamPlaybackDisplayState {
+        override val projection:
+            VexStreamPlaybackProjection? =
+            null
+    }
 
     data class Inactive(
-        val projection:
+        override val projection:
             VexStreamPlaybackProjection,
+        override val playback:
+            VexStreamPlaybackReadState,
     ) :
         VexStreamPlaybackDisplayState
 
     data class Transitioning(
-        val projection:
+        override val projection:
             VexStreamPlaybackProjection,
+        override val playback:
+            VexStreamPlaybackReadState,
     ) :
         VexStreamPlaybackDisplayState
 
     data class Active(
-        val projection:
+        override val projection:
             VexStreamPlaybackProjection,
+        override val playback:
+            VexStreamPlaybackReadState,
     ) :
         VexStreamPlaybackDisplayState
 }
 
 /**
- * Classify one arrived semantic Projection for view treatment.
+ * Classify one arrived Playback output for view treatment.
  *
- * The classification is derived only from truth already present in the Projection:
+ * The classification is derived only from current truth already available to the Experience:
  *
  * null projection -> Unknown
  * NoMedia -> Inactive
@@ -42,7 +62,10 @@ internal sealed interface VexStreamPlaybackDisplayState {
  * otherwise -> Active
  */
 internal fun VexStreamPlaybackProjection?
-    .toVexStreamPlaybackDisplayState():
+    .toVexStreamPlaybackDisplayState(
+        playback:
+            VexStreamPlaybackReadState,
+    ):
     VexStreamPlaybackDisplayState =
     when (
         val current =
@@ -50,7 +73,10 @@ internal fun VexStreamPlaybackProjection?
     ) {
         null ->
             VexStreamPlaybackDisplayState
-                .Unknown
+                .Unknown(
+                    playback =
+                        playback,
+                )
 
         else ->
             when (
@@ -62,6 +88,8 @@ internal fun VexStreamPlaybackProjection?
                         .Inactive(
                             projection =
                                 current,
+                            playback =
+                                playback,
                         )
 
                 is VexStreamPlaybackState.Media ->
@@ -72,12 +100,16 @@ internal fun VexStreamPlaybackProjection?
                             .Transitioning(
                                 projection =
                                     current,
+                                playback =
+                                    playback,
                             )
                     } else {
                         VexStreamPlaybackDisplayState
                             .Active(
                                 projection =
                                     current,
+                                playback =
+                                    playback,
                             )
                     }
 
@@ -89,12 +121,16 @@ internal fun VexStreamPlaybackProjection?
                             .Transitioning(
                                 projection =
                                     current,
+                                playback =
+                                    playback,
                             )
                     } else {
                         VexStreamPlaybackDisplayState
                             .Active(
                                 projection =
                                     current,
+                                playback =
+                                    playback,
                             )
                     }
             }

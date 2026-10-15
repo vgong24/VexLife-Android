@@ -199,6 +199,68 @@ from a Projection or DisplayState.
 
 Presentation does not own semantic truth and is not another `VexBehaviorFamily` member.
 
+### Experience membrane
+
+If Compose repeatedly assembles the same Behavior plumbing:
+
+~~~text
+Connection / VexPortFlow
+Projection observation
+DisplayState classification
+Control activation
+~~~
+
+earn one feature-local `<Name>Experience` membrane:
+
+~~~text
+<Name>Experience
+    displayState
+    activate(Control)
+~~~
+
+The Experience owns **composition of the read/write boundary**, not semantic truth.
+
+Internally:
+
+~~~text
+provider/runtime
+    ↓
+Connection / VexPortFlow
+    ↓
+Projection
+    + provider-derived read data when needed
+    ↓
+DisplayState
+    ↑
+Experience
+    ↓ activate(Control)
+VexPort
+~~~
+
+Compose should depend on the Experience instead of knowing how Connection, PortFlow, Projection and
+DisplayState are assembled.
+
+This keeps screens scalable when several independent experiences coexist:
+
+~~~kotlin
+val playback =
+    rememberVexStreamPlaybackExperience()
+
+// later, only when independently earned:
+val maps =
+    rememberVexMapsLocationExperience()
+
+val calls =
+    rememberVexCallsExperience()
+~~~
+
+Do not hide unrelated provider operations inside the Experience merely to make the membrane look
+perfect. If Previous / Next / Seek / Queue are still explicitly outside the admitted Behavior slice,
+their remaining provider path should stay visible until that semantic seam is earned.
+
+Do not mint a generic `VexExperience<T>` from one feature. Let a second real Experience prove the
+common type equation first.
+
 ### Human-facing aliases
 
 Use feature-local aliases when foundation generics are correct but too noisy for ordinary feature/Compose code.
@@ -783,6 +845,8 @@ app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/
 | Connection | [Media3VexStreamPlaybackConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/Media3VexStreamPlaybackConnection.kt) |
 | Lifetime host | [VexStreamPlaybackConnectionViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackConnectionViewModel.kt) |
 | Pending reconciliation | [VexStreamPlaybackPending](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPending.kt) |
+| UI membrane | [VexStreamPlaybackExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackExperience.kt) |
+| Provider read data | [VexStreamPlaybackReadState](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackReadState.kt) |
 | Display classification | [VexStreamPlaybackDisplayState](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackDisplayState.kt) |
 | Presentation | [VexStreamPlaybackControlPresentation](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPresentation.kt) |
 | Human-facing aliases | [VexStreamPlaybackConnection / Flow / Projection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackTypes.kt) |
@@ -809,7 +873,9 @@ A family is healthy when a developer can answer:
 12. Does every on(...) explicitly end in stay() or admit<State>()?
 13. Is Control meaning preserved semantically as Available(Act) / Unavailable before Boolean convenience?
 14. If views branch on the arrived Projection, is that condition authored once as a feature-local DisplayState rather than repeated as booleans/null checks?
-15. Is this still one behavioral question, or has it earned a sibling family?
+15. If Compose assembles Port + Projection + DisplayState repeatedly, has the feature earned one <Name>Experience membrane?
+16. Does that Experience expose only the admitted behavior/display surface rather than hiding unrelated provider debt?
+17. Is this still one behavioral question, or has it earned a sibling family?
 
 If those answers require reconstructing a hidden switchboard, the package has lost the pattern.
 

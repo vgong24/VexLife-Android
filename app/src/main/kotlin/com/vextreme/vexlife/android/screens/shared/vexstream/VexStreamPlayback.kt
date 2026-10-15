@@ -2,15 +2,6 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
@@ -19,7 +10,6 @@ import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
-import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 /**
@@ -87,102 +77,6 @@ internal class VexStreamPlaybackSourceResolver(
             .setClippingConfiguration(clipping)
             .build()
     }
-}
-
-internal data class VexStreamPlaybackUiState(
-    val currentMediaId: String? = null,
-    val currentTitle: String = "",
-    val currentArtist: String = "",
-    val repeatMode: Int = Player.REPEAT_MODE_OFF,
-    val queueMediaIds: List<String> = emptyList(),
-    val currentIndex: Int = -1,
-    val currentPositionMs: Long = 0L,
-    val durationMs: Long = 0L,
-    val bufferedPositionMs: Long = 0L,
-) {
-    val hasQueue: Boolean
-        get() = queueMediaIds.isNotEmpty()
-
-    val repeatEnabled: Boolean
-        get() = repeatMode != Player.REPEAT_MODE_OFF
-
-    val progressFraction: Float
-        get() =
-            if (durationMs > 0L) {
-                (currentPositionMs.toFloat() / durationMs.toFloat())
-                    .coerceIn(0f, 1f)
-            } else {
-                0f
-            }
-
-    val bufferedFraction: Float
-        get() =
-            if (durationMs > 0L) {
-                (bufferedPositionMs.toFloat() / durationMs.toFloat())
-                    .coerceIn(0f, 1f)
-            } else {
-                0f
-            }
-
-    companion object {
-        val Empty = VexStreamPlaybackUiState()
-    }
-}
-
-@Composable
-internal fun rememberVexStreamPlaybackUiState(
-    controller: MediaController?,
-): State<VexStreamPlaybackUiState> {
-    val projected =
-        remember(controller) {
-            mutableStateOf(
-                controller?.toVexStreamUiState()
-                    ?: VexStreamPlaybackUiState.Empty,
-            )
-        }
-
-    DisposableEffect(controller) {
-        if (controller == null) {
-            projected.value = VexStreamPlaybackUiState.Empty
-            return@DisposableEffect onDispose {}
-        }
-
-        val listener =
-            object : Player.Listener {
-                override fun onEvents(
-                    player: Player,
-                    events: Player.Events,
-                ) {
-                    projected.value = player.toVexStreamUiState()
-                }
-            }
-
-        controller.addListener(listener)
-        projected.value = controller.toVexStreamUiState()
-
-        onDispose {
-            controller.removeListener(listener)
-        }
-    }
-
-    LaunchedEffect(controller) {
-        if (controller == null) {
-            return@LaunchedEffect
-        }
-
-        while (true) {
-            projected.value = controller.toVexStreamUiState()
-            delay(
-                if (controller.isPlaying) {
-                    250L
-                } else {
-                    1_000L
-                },
-            )
-        }
-    }
-
-    return projected
 }
 
 internal fun MediaController.playVexStreamContext(
@@ -429,67 +323,6 @@ internal fun MediaController.toggleVexStreamRepeatAll() {
         } else {
             Player.REPEAT_MODE_OFF
         }
-}
-
-private fun Player.toVexStreamUiState(): VexStreamPlaybackUiState {
-    val current =
-        currentMediaItem
-
-    val durationMs =
-        duration.takeIf {
-            it != C.TIME_UNSET && it > 0L
-        } ?: 0L
-    val positionMs =
-        currentPosition
-            .coerceAtLeast(0L)
-            .let {
-                if (durationMs > 0L) {
-                    it.coerceAtMost(durationMs)
-                } else {
-                    it
-                }
-            }
-    val bufferedMs =
-        bufferedPosition
-            .coerceAtLeast(0L)
-            .let {
-                if (durationMs > 0L) {
-                    it.coerceAtMost(durationMs)
-                } else {
-                    it
-                }
-            }
-
-    return VexStreamPlaybackUiState(
-        currentMediaId = current?.mediaId,
-        currentTitle =
-            current
-                ?.mediaMetadata
-                ?.title
-                ?.toString()
-                .orEmpty(),
-        currentArtist =
-            current
-                ?.mediaMetadata
-                ?.artist
-                ?.toString()
-                .orEmpty(),
-        repeatMode = repeatMode,
-        queueMediaIds =
-            (0 until mediaItemCount)
-                .map { index ->
-                    getMediaItemAt(index).mediaId
-                },
-        currentIndex =
-            if (mediaItemCount > 0) {
-                currentMediaItemIndex
-            } else {
-                -1
-            },
-        currentPositionMs = positionMs,
-        durationMs = durationMs,
-        bufferedPositionMs = bufferedMs,
-    )
 }
 
 internal fun vexStreamSeekPositionMs(

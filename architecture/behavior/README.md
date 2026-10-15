@@ -114,6 +114,34 @@ VexStreamPlaybackDocs
 
 from there.
 
+## Experience membrane
+
+When Compose repeatedly needs the same Behavior plumbing, the feature may expose one local
+`<Name>Experience` boundary:
+
+~~~text
+<Name>Experience
+    displayState
+    activate(Control)
+~~~
+
+The Experience observes the internal Port/Projection and supplies the final DisplayState. It does
+not own semantic truth.
+
+VexStream Playback is the first example:
+
+~~~text
+VexStreamPlaybackExperience
+    -> VexStreamPlaybackDisplayState
+    -> activate(VexStreamPlaybackControl)
+~~~
+
+Mini Player and Context Dock no longer assemble Playback Connection + Projection + DisplayState
+themselves.
+
+A generic `VexExperience` abstraction remains held until a second real feature proves the same
+surface.
+
 ## Deliberately held
 
 The current kernel does not claim generic solutions for:
