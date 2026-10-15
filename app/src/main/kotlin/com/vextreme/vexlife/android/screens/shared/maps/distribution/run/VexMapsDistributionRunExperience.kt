@@ -17,8 +17,9 @@ internal interface VexMapsDistributionRunExperience {
             VexMapsDistributionRunControl,
     )
 
-    fun observeDraftStopCount(
+    fun observeDraft(
         stopCount: Int,
+        returnToStart: Boolean,
     ): Boolean
 }
 
@@ -46,11 +47,13 @@ internal class CurrentVexMapsDistributionRunExperience(
         )
     }
 
-    override fun observeDraftStopCount(
+    override fun observeDraft(
         stopCount: Int,
+        returnToStart: Boolean,
     ): Boolean =
-        connection.observeDraftStopCount(
-            stopCount,
+        connection.observeDraft(
+            stopCount = stopCount,
+            returnToStart = returnToStart,
         )
 }
 

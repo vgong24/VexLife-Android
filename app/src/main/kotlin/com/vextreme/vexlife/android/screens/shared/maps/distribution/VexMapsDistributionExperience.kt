@@ -91,12 +91,14 @@ internal class VexMapsDistributionExperience(
         settleFeedback()
     }
 
-    fun observeDraftStopCount(
+    fun observeDraft(
         stopCount: Int,
+        returnToStart: Boolean,
     ): Boolean {
         val admitted =
-            run.observeDraftStopCount(
-                stopCount,
+            run.observeDraft(
+                stopCount = stopCount,
+                returnToStart = returnToStart,
             )
 
         if (!admitted) {

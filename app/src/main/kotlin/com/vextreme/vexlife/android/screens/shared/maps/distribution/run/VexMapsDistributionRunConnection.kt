@@ -4,13 +4,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * Reality boundary for the finite Distribution Run family.
- *
- * Dynamic stop payload editing remains outside VexPort. [observeDraftStopCount] is the explicit seam
- * through which a future durable draft owner can publish payload-derived truth without pretending
- * AddStop(address) is a payload-free Control.
- */
 internal class VexMapsDistributionRunConnection(
     initialState:
         VexMapsDistributionRunState =
@@ -18,13 +11,10 @@ internal class VexMapsDistributionRunConnection(
 ) : VexMapsDistributionRunConnectionFlow {
     private val behavior =
         vexMapsDistributionRunBehavior()
-
     private val controls =
         behavior.vexMapsDistributionRunControls()
-
     private var state =
         initialState
-
     private val mutableProjections =
         MutableStateFlow(
             controls.projection(
@@ -36,20 +26,14 @@ internal class VexMapsDistributionRunConnection(
         StateFlow<VexMapsDistributionRunProjection> =
         mutableProjections.asStateFlow()
 
-    /**
-     * Publish the current durable draft cardinality.
-     *
-     * Returns false while an executing/completed run owns its admitted stop set.
-     */
-    fun observeDraftStopCount(
+    fun observeDraft(
         stopCount: Int,
+        returnToStart: Boolean,
     ): Boolean {
         require(stopCount >= 0)
 
         val admitted =
-            when (
-                state
-            ) {
+            when (state) {
                 VexMapsDistributionRunState.Empty,
                 is VexMapsDistributionRunState.Draft,
                 is VexMapsDistributionRunState.Ready ->
@@ -58,24 +42,23 @@ internal class VexMapsDistributionRunConnection(
                     } else {
                         VexMapsDistributionRunState.Draft(
                             stopCount = stopCount,
+                            returnToStart = returnToStart,
                         )
                     }
 
                 is VexMapsDistributionRunState.Running,
                 is VexMapsDistributionRunState.AtStop,
+                is VexMapsDistributionRunState.Returning,
                 is VexMapsDistributionRunState.Completed ->
                     return false
             }
 
-        observe(
-            admitted,
-        )
+        observe(admitted)
         return true
     }
 
     override fun activate(
-        control:
-            VexMapsDistributionRunControl,
+        control: VexMapsDistributionRunControl,
     ) {
         val act =
             controls.resolve(
@@ -83,75 +66,76 @@ internal class VexMapsDistributionRunConnection(
                 control = control,
             )?.act
                 ?: return
-
         val resolution =
             behavior.resolve(
                 current = state,
                 act = act,
-            )
-                ?: return
+            ) ?: return
 
         val admitted =
-            when (
-                resolution.effect
-            ) {
+            when (resolution.effect) {
                 VexMapsDistributionRunEffect.SealDraft -> {
                     val current =
-                        state as
-                            VexMapsDistributionRunState.Draft
-
+                        state as VexMapsDistributionRunState.Draft
                     VexMapsDistributionRunState.Ready(
-                        stopCount =
-                            current.stopCount,
+                        stopCount = current.stopCount,
+                        returnToStart = current.returnToStart,
                     )
                 }
 
                 VexMapsDistributionRunEffect.BeginRun -> {
                     val current =
-                        state as
-                            VexMapsDistributionRunState.Ready
-
+                        state as VexMapsDistributionRunState.Ready
                     VexMapsDistributionRunState.Running(
-                        stopCount =
-                            current.stopCount,
+                        stopCount = current.stopCount,
                         currentStopIndex = 0,
+                        returnToStart = current.returnToStart,
                     )
                 }
 
                 VexMapsDistributionRunEffect.MarkArrived -> {
                     val current =
-                        state as
-                            VexMapsDistributionRunState.Running
-
+                        state as VexMapsDistributionRunState.Running
                     VexMapsDistributionRunState.AtStop(
-                        stopCount =
-                            current.stopCount,
-                        currentStopIndex =
-                            current.currentStopIndex,
+                        stopCount = current.stopCount,
+                        currentStopIndex = current.currentStopIndex,
+                        returnToStart = current.returnToStart,
                     )
                 }
 
                 VexMapsDistributionRunEffect.AdvanceToNextStop -> {
                     val current =
-                        state as
-                            VexMapsDistributionRunState.AtStop
-
+                        state as VexMapsDistributionRunState.AtStop
                     VexMapsDistributionRunState.Running(
-                        stopCount =
-                            current.stopCount,
-                        currentStopIndex =
-                            current.currentStopIndex + 1,
+                        stopCount = current.stopCount,
+                        currentStopIndex = current.currentStopIndex + 1,
+                        returnToStart = current.returnToStart,
+                    )
+                }
+
+                VexMapsDistributionRunEffect.BeginReturn -> {
+                    val current =
+                        state as VexMapsDistributionRunState.AtStop
+                    VexMapsDistributionRunState.Returning(
+                        stopCount = current.stopCount,
                     )
                 }
 
                 VexMapsDistributionRunEffect.CompleteRun -> {
-                    val current =
-                        state as
-                            VexMapsDistributionRunState.AtStop
+                    val stopCount =
+                        when (val current = state) {
+                            is VexMapsDistributionRunState.AtStop ->
+                                current.stopCount
+                            is VexMapsDistributionRunState.Returning ->
+                                current.stopCount
+                            else ->
+                                error(
+                                    "CompleteRun is not lawful from $current",
+                                )
+                        }
 
                     VexMapsDistributionRunState.Completed(
-                        stopCount =
-                            current.stopCount,
+                        stopCount = stopCount,
                     )
                 }
 
@@ -161,22 +145,15 @@ internal class VexMapsDistributionRunConnection(
 
         check(
             resolution.admittedStateKind
-                .isInstance(
-                    admitted,
-                ),
+                .isInstance(admitted),
         )
-
-        observe(
-            admitted,
-        )
+        observe(admitted)
     }
 
     private fun observe(
-        admitted:
-            VexMapsDistributionRunState,
+        admitted: VexMapsDistributionRunState,
     ) {
-        state =
-            admitted
+        state = admitted
         mutableProjections.value =
             controls.projection(
                 admitted,
