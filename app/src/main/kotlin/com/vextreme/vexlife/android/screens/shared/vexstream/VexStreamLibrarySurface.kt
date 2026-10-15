@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -43,8 +42,12 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.VexButton
+import com.vextreme.vexlife.android.elements.VexColumn
+import com.vextreme.vexlife.android.elements.VexModalBottomSheet
+import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexStableLazyColumn
+import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
@@ -456,31 +459,30 @@ private fun VexStreamSearchSheet(
 ) {
     val scope = rememberCoroutineScope()
 
-    ModalBottomSheet(
-        modifier = Modifier
-            .fillMaxHeight()
-            .vexElement(
-                VexStreamMusicScreen.SearchSheet,
-            ),
+    VexModalBottomSheet(
+        element = VexStreamMusicScreen.SearchSheet,
+        modifier =
+            VexModifier.fillMaxHeight(),
         onDismissRequest = {
             runtime.dismissPresentation(
                 VexStreamMusicScreen.SearchSheet,
             )
         },
-        sheetState = rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
-        ),
-        dragHandle = {
-            BottomSheetDefaults.DragHandle()
-        },
+        sheetState =
+            rememberModalBottomSheetState(
+                skipPartiallyExpanded = true,
+            ),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        VexColumn(
+            id = "content",
+            modifier =
+                VexModifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(8.dp),
         ) {
             VexTextField(
                 element = VexStreamMusicScreen.SearchQuery,
@@ -489,21 +491,20 @@ private fun VexStreamSearchSheet(
             )
 
             if (query.isBlank()) {
-                Text(
-                    text =
-                        stringResource(
-                            R.string.vexstream_music_search,
+                VexText(
+                    element = VexStreamMusicScreen.SearchPrompt,
+                    modifier =
+                        VexModifier.padding(
+                            vertical = 20.dp,
                         ),
-                    modifier = Modifier.padding(
-                        vertical = 20.dp,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else if (tracks.isEmpty()) {
-                VexStreamEmptyMessage(
-                    text =
-                        stringResource(
-                            R.string.vexstream_music_no_search_results,
+                VexText(
+                    element =
+                        VexStreamMusicScreen.SearchNoResults,
+                    modifier =
+                        VexModifier.padding(
+                            vertical = 20.dp,
                         ),
                 )
             } else {
@@ -518,7 +519,8 @@ private fun VexStreamSearchSheet(
                     contentType = {
                         "vexstream-track-row"
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        VexModifier.weight(1f),
                     verticalArrangement =
                         Arrangement.spacedBy(4.dp),
                 ) { track ->
@@ -552,7 +554,8 @@ private fun VexStreamSearchSheet(
             VexButton(
                 element = VexStreamMusicScreen.CloseSearch,
                 handler = runtime,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    VexModifier.fillMaxWidth(),
             )
         }
     }
