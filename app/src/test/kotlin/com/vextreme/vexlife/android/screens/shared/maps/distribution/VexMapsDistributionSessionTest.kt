@@ -722,6 +722,7 @@ class VexMapsDistributionSessionTest {
                                 VexMapsDistributionLegAttempt.Idle
                         }
                 }
+                Unit
             } finally {
                 session.shutdown()
                 owner.cancelAndJoin()
