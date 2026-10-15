@@ -341,6 +341,7 @@ private fun VexStreamCollectionBrowserPane(
                 } else {
                     VexStreamCollectionDetail(
                         runtime = runtime,
+                        collectionKey = selected.key,
                         title = selected.title,
                         tracks = selected.tracks,
                         controller = controller,
@@ -357,6 +358,7 @@ private fun VexStreamCollectionBrowserPane(
 @Composable
 private fun VexStreamCollectionDetail(
     runtime: VexRuntime,
+    collectionKey: String,
     title: String,
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
@@ -414,6 +416,10 @@ private fun VexStreamCollectionDetail(
         ) { track ->
             VexStreamTrackCard(
                 runtime = runtime,
+                presentationScope =
+                    VexStreamTrackPresentationScope.collection(
+                        collectionKey,
+                    ),
                 state = track,
                 contextTracks = tracks,
                 controller = controller,
