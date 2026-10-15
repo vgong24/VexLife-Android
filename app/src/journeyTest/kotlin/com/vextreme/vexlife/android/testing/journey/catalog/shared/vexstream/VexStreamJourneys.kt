@@ -203,9 +203,22 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.CloseQueue)
 
         tap(VexStreamMusicScreen.SearchLibrary)
+        expectVisible(
+            VexStreamMusicScreen.SearchPrompt,
+        )
         type(
             VexStreamMusicScreen.SearchQuery,
             "Journey",
+        )
+        expectVisible(
+            dynamicElement(
+                VexStreamPresentationRefs.trackRow(
+                    scope =
+                        VexStreamTrackPresentationScope.Search,
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
+                ),
+            ),
         )
         tap(VexStreamMusicScreen.CloseSearch)
         tap(VexStreamMusicScreen.AlbumsTab)
