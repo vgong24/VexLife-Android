@@ -57,6 +57,8 @@ class VexJourneyCoverageRecorder : VexJourneyScope {
         )
     }
 
+    override fun expectVisible(element: UIElement) = Unit
+
     override fun expectVisible(element: VexDynamicElementRef) = Unit
 
     override fun tap(element: ActionElement) {
