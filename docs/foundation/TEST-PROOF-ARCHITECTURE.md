@@ -216,11 +216,14 @@ Connected Journey/device proof remains separate because it owns a different exec
 ./gradlew vexVerifyDevice
 ~~~
 
-That task delegates to `:app:connectedDebugAndroidTest`. Android Studio is not required: Android
-Gradle Plugin discovers the connected emulator/physical device and drives the instrumentation/adb
-path. ADB remains useful for device discovery, install/launch, Logcat and native/device diagnostics,
-but ScreenCrawler screenshot retrieval stays on AndroidX PlatformTestStorage rather than raw
-filesystem pulls.
+That task delegates to `:app:connectedDebugAndroidTest`, then verifies the connected result set
+is non-empty. A Gradle task that exits successfully while Android reports zero executed
+instrumentation tests is **not** accepted as device proof.
+
+Android Studio is not required: Android Gradle Plugin discovers the connected emulator/physical
+device and drives the instrumentation/adb path. ADB remains useful for device discovery,
+install/launch, Logcat and native/device diagnostics, but ScreenCrawler screenshot retrieval stays
+on AndroidX PlatformTestStorage rather than raw filesystem pulls.
 
 ScreenCrawler remains opt-in; see `SCREEN-CRAWLER-EVIDENCE.md`.
 
