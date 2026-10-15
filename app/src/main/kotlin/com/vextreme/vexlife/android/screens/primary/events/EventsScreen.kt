@@ -314,7 +314,7 @@ private fun EventRow(
                 )
                 .vex(
 EventsPresentationRefs.row(
-                            event.eventRef,,
+                            event.eventRef,
 ),
                 ),
     ) {
@@ -604,7 +604,7 @@ private fun CompactAttentionButton(
             Modifier.vex(
 EventsPresentationRefs.attentionAction(
                         eventRef,
-                        actionRef,,
+                        actionRef,
 ),
             ),
     ) {
