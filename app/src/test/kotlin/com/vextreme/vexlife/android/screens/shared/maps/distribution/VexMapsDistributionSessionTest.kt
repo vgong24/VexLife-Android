@@ -882,6 +882,18 @@ class VexMapsDistributionSessionTest {
                         ready.state as
                             VexMapsDistributionRunState.Ready
                     ).planRef
+                val admittedPlan =
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        session.states
+                            .first {
+                                it.plan
+                                    ?.planRef ==
+                                    planRef
+                            }
+                            .plan
+                    }
 
                 session.startPreparedRun()
 
@@ -911,8 +923,7 @@ class VexMapsDistributionSessionTest {
                 )
                 assertEquals(
                     origin,
-                    session.states.value
-                        .plan
+                    admittedPlan
                         ?.origin,
                 )
             } finally {
@@ -1128,6 +1139,17 @@ class VexMapsDistributionSessionTest {
                     VexNavigationSessionPhase.IDLE,
                     navigation.current.phase,
                 )
+                val cleanupAttempt =
+                    session.states.value
+                        .legAttempt as
+                        VexMapsDistributionLegAttempt.Failed
+                assertEquals(
+                    VexMapsDistributionLegFailureStage.PreviousLegCleanup,
+                    cleanupAttempt.stage,
+                )
+                assertNull(
+                    cleanupAttempt.target,
+                )
                 assertTrue(
                     executionRoot
                         .executions
@@ -1137,6 +1159,139 @@ class VexMapsDistributionSessionTest {
                             it.status ==
                                 VexCoroutineStatus.FAILED
                         },
+                )
+            } finally {
+                session.shutdown()
+                owner.cancelAndJoin()
+            }
+        }
+
+    @Test
+    fun finalStopWithoutReturnRetainsCleanupFailureWithoutInventingNextTarget() =
+        runBlocking {
+            val repository =
+                InMemoryVexMapsDistributionRepository(
+                    initialDraft().copy(
+                        returnToStart =
+                            false,
+                    ),
+                )
+            val navigation =
+                FakeNavigation()
+            val owner =
+                SupervisorJob(
+                    coroutineContext[
+                        Job
+                    ],
+                )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
+            val session =
+                VexMapsDistributionSession(
+                    repository =
+                        repository,
+                    routing =
+                        FakeRouting(
+                            CompletableDeferred(
+                                Unit,
+                            ),
+                        ),
+                    navigation =
+                        navigation,
+                    executionRoot =
+                        executionRoot,
+                    relayScope =
+                        CoroutineScope(
+                            coroutineContext +
+                                owner,
+                        ),
+                )
+
+            try {
+                awaitDraft(
+                    session,
+                )
+                prepareAndStart(
+                    session =
+                        session,
+                    navigation =
+                        navigation,
+                )
+
+                repeat(
+                    2,
+                ) { index ->
+                    navigation.arrive()
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        session.runProjections
+                            .first {
+                                it.state is
+                                    VexMapsDistributionRunState.AtStop
+                            }
+                    }
+
+                    if (index == 1) {
+                        navigation.failNextDismiss =
+                            true
+                    }
+
+                    session.completeCurrentStop()
+
+                    if (index == 0) {
+                        withTimeout(
+                            1_000L,
+                        ) {
+                            navigation.states
+                                .first {
+                                    it.phase ==
+                                        VexNavigationSessionPhase.ACTIVE
+                                }
+                        }
+                    }
+                }
+
+                val failed =
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        session.states
+                            .first {
+                                session.currentRun
+                                    .state is
+                                    VexMapsDistributionRunState.Completed &&
+                                    it.legAttempt is
+                                    VexMapsDistributionLegAttempt.Failed
+                            }
+                    }
+                val cleanup =
+                    failed.legAttempt as
+                        VexMapsDistributionLegAttempt.Failed
+
+                assertEquals(
+                    VexMapsDistributionLegFailureStage.PreviousLegCleanup,
+                    cleanup.stage,
+                )
+                assertNull(
+                    cleanup.target,
+                )
+                assertEquals(
+                    VexNavigationSessionPhase.IDLE,
+                    navigation.current.phase,
+                )
+
+                navigation.failNextDismiss =
+                    false
+                session.retryFailedLeg()
+
+                assertEquals(
+                    VexMapsDistributionLegAttempt.Idle,
+                    session.states.value
+                        .legAttempt,
                 )
             } finally {
                 session.shutdown()

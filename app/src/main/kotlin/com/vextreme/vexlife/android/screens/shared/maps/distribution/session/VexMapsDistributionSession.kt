@@ -706,6 +706,17 @@ internal class VexMapsDistributionSession(
             return
         }
 
+        val nextTarget =
+            nextLegTargetAfterCurrentStop()
+
+        setLegAttempt(
+            VexMapsDistributionLegAttempt
+                .CleaningUpPreviousLeg(
+                    nextTarget =
+                        nextTarget,
+                ),
+        )
+
         run.activate(
             VexMapsDistributionRunControl.CompleteStop,
         )
@@ -715,13 +726,7 @@ internal class VexMapsDistributionSession(
 
         clearExpectedLeg()
 
-        val nextTarget =
-            currentLegTargetOrNull()
-
-        if (
-            cleanupFailure != null &&
-            nextTarget != null
-        ) {
+        if (cleanupFailure != null) {
             setLegAttempt(
                 VexMapsDistributionLegAttempt.Failed(
                     stage =
@@ -741,10 +746,39 @@ internal class VexMapsDistributionSession(
     }
 
     fun retryFailedLeg() {
+        val failed =
+            mutableLegAttempt.value as?
+                VexMapsDistributionLegAttempt.Failed
+                ?: return
+
         if (
-            mutableLegAttempt.value !is
-            VexMapsDistributionLegAttempt.Failed
+            failed.stage ==
+            VexMapsDistributionLegFailureStage
+                .PreviousLegCleanup
         ) {
+            setLegAttempt(
+                VexMapsDistributionLegAttempt
+                    .CleaningUpPreviousLeg(
+                        nextTarget =
+                            failed.target,
+                    ),
+            )
+
+            val cleanupFailure =
+                cleanupArrivedNavigation()
+
+            if (cleanupFailure != null) {
+                setLegAttempt(
+                    failed.copy(
+                        reason =
+                            cleanupFailure,
+                    ),
+                )
+            } else {
+                setLegAttempt(
+                    VexMapsDistributionLegAttempt.Idle,
+                )
+            }
             return
         }
 
@@ -1071,6 +1105,27 @@ internal class VexMapsDistributionSession(
         }
     }
 
+    private fun nextLegTargetAfterCurrentStop():
+        VexMapsDistributionLegTarget? {
+        val state =
+            run.currentProjection
+                .state as?
+                VexMapsDistributionRunState.AtStop
+                ?: return null
+
+        return state.nextStopRef
+            ?.let {
+                VexMapsDistributionLegTarget.Stop(
+                    it,
+                )
+            }
+            ?: if (state.source.returnToStart) {
+                VexMapsDistributionLegTarget.ReturnToStart
+            } else {
+                null
+            }
+    }
+
     private fun currentLegTargetOrNull():
         VexMapsDistributionLegTarget? =
         when (
@@ -1194,6 +1249,16 @@ internal class VexMapsDistributionSession(
                             .state is
                         VexMapsDistributionRunState.Returning
 
+                if (completingReturn) {
+                    setLegAttempt(
+                        VexMapsDistributionLegAttempt
+                            .CleaningUpPreviousLeg(
+                                nextTarget =
+                                    null,
+                            ),
+                    )
+                }
+
                 run.activate(
                     request.control,
                 )
@@ -1213,8 +1278,24 @@ internal class VexMapsDistributionSession(
                      * Navigation truth even when the best-effort service-stop request fails.
                      * Arrival-notification dismissal is an independent cleanup effect.
                      */
-                    cleanupArrivedNavigation()
+                    val cleanupFailure =
+                        cleanupArrivedNavigation()
                     clearExpectedLeg()
+                    setLegAttempt(
+                        if (cleanupFailure != null) {
+                            VexMapsDistributionLegAttempt.Failed(
+                                stage =
+                                    VexMapsDistributionLegFailureStage
+                                        .PreviousLegCleanup,
+                                target =
+                                    null,
+                                reason =
+                                    cleanupFailure,
+                            )
+                        } else {
+                            VexMapsDistributionLegAttempt.Idle
+                        },
+                    )
                 }
             }
         }

@@ -69,6 +69,12 @@ internal sealed interface VexMapsDistributionLegAttempt {
     data object Idle :
         VexMapsDistributionLegAttempt
 
+    data class CleaningUpPreviousLeg(
+        val nextTarget:
+            VexMapsDistributionLegTarget?,
+    ) :
+        VexMapsDistributionLegAttempt
+
     data class Preparing(
         val target:
             VexMapsDistributionLegTarget,
@@ -79,7 +85,7 @@ internal sealed interface VexMapsDistributionLegAttempt {
         val stage:
             VexMapsDistributionLegFailureStage,
         val target:
-            VexMapsDistributionLegTarget,
+            VexMapsDistributionLegTarget?,
         val reason: String,
     ) :
         VexMapsDistributionLegAttempt {
@@ -121,6 +127,7 @@ internal enum class VexMapsDistributionNavigationLayer {
     Drafting,
     PreparingRun,
     NeedsLeg,
+    CleaningUpPreviousLeg,
     PreparingLeg,
     LegFailed,
     ReadyToStart,
@@ -558,6 +565,20 @@ private fun projectRetainedLegAttempt(
     when (
         legAttempt
     ) {
+        is VexMapsDistributionLegAttempt.CleaningUpPreviousLeg ->
+            if (
+                legAttempt.nextTarget ==
+                target
+            ) {
+                VexMapsDistributionNavigationOutput(
+                    layer =
+                        VexMapsDistributionNavigationLayer
+                            .CleaningUpPreviousLeg,
+                )
+            } else {
+                null
+            }
+
         is VexMapsDistributionLegAttempt.Preparing ->
             if (
                 legAttempt.target ==
@@ -599,6 +620,22 @@ private fun projectLegNeed(
     when (
         legAttempt
     ) {
+        is VexMapsDistributionLegAttempt.CleaningUpPreviousLeg ->
+            if (
+                legAttempt.nextTarget ==
+                target
+            ) {
+                VexMapsDistributionNavigationOutput(
+                    layer =
+                        VexMapsDistributionNavigationLayer
+                            .CleaningUpPreviousLeg,
+                )
+            } else {
+                needsLeg(
+                    target,
+                )
+            }
+
         is VexMapsDistributionLegAttempt.Preparing ->
             if (
                 legAttempt.target ==
