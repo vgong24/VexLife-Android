@@ -14,12 +14,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 
 /**
  * Vex-authored text for custom Compose presentation.
  *
  * [id] is local to the inherited Vex Compose parent. The full semantic ref is formed automatically.
+ * [role] owns the ordinary Vex typography default; [style] is an explicit product-preserving
+ * override when a real consumer already has a more specific Compose text style.
  */
 @Composable
 fun VexText(
@@ -27,6 +30,7 @@ fun VexText(
     text: String,
     modifier: Modifier = VexModifier,
     role: TextRole = TextRole.Body,
+    style: TextStyle? = null,
     color: Color = Color.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
@@ -44,19 +48,20 @@ fun VexText(
             ),
         color = color,
         style =
-            when (role) {
-                TextRole.Title ->
-                    MaterialTheme.typography.headlineMedium
+            style
+                ?: when (role) {
+                    TextRole.Title ->
+                        MaterialTheme.typography.headlineMedium
 
-                TextRole.Body ->
-                    MaterialTheme.typography.bodyLarge
+                    TextRole.Body ->
+                        MaterialTheme.typography.bodyLarge
 
-                TextRole.Supporting ->
-                    MaterialTheme.typography.bodyMedium
+                    TextRole.Supporting ->
+                        MaterialTheme.typography.bodyMedium
 
-                TextRole.Label ->
-                    MaterialTheme.typography.labelSmall
-            },
+                    TextRole.Label ->
+                        MaterialTheme.typography.labelSmall
+                },
         maxLines = maxLines,
         overflow = overflow,
     )
