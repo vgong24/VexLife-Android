@@ -25,7 +25,14 @@ class VexStreamPresentationRefsTest {
 
         assertEquals(first, second)
         assertTrue(
-            first.contains(trackRef.value),
+            first.startsWith(
+                "element.vexstream-music.track.dynamic.utf8hex.",
+            ),
+        )
+        assertTrue(
+            first.endsWith(
+                trackRef.value.utf8Hex(),
+            ),
         )
     }
 
@@ -57,11 +64,14 @@ class VexStreamPresentationRefsTest {
 
         assertTrue(
             ref.startsWith(
-                VexStreamMusicScreen.PlayTrack.elementId + ".dynamic.",
+                VexStreamMusicScreen.PlayTrack.elementId +
+                    ".row.dynamic.utf8hex.",
             ),
         )
         assertTrue(
-            ref.endsWith(trackRef.value),
+            ref.endsWith(
+                trackRef.value.utf8Hex(),
+            ),
         )
     }
 
@@ -96,6 +106,18 @@ class VexStreamPresentationRefsTest {
         )
     }
 
+    private fun String.utf8Hex(): String =
+        encodeToByteArray()
+            .joinToString(
+                separator = "",
+            ) { byte ->
+                byte.toUByte()
+                    .toString(16)
+                    .padStart(
+                        length = 2,
+                        padChar = '0',
+                    )
+            }
 }
 
 // [VXG RealForever]
