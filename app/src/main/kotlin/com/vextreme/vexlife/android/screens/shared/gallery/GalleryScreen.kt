@@ -65,6 +65,34 @@ object GalleryScreen : AppScreenBlueprint(
         id = "page.content.elements.modal-samples.bottom-sheet",
     )
 
+    val DialogModalTitle = textRef(
+        id = "page.content.elements.modal-samples.dialog.title",
+        textRes = R.string.gallery_dialog_sample_title,
+        role = TextRole.Title,
+    )
+
+    val DialogModalBody = textRef(
+        id = "page.content.elements.modal-samples.dialog.body",
+        textRes = R.string.gallery_dialog_sample_body,
+        role = TextRole.Supporting,
+    )
+
+    val BottomSheetContent = columnRef(
+        "page.content.elements.modal-samples.bottom-sheet.content",
+    )
+
+    val BottomSheetTitle = textRef(
+        id = "page.content.elements.modal-samples.bottom-sheet.content.title",
+        textRes = R.string.gallery_sheet_sample_title,
+        role = TextRole.Title,
+    )
+
+    val BottomSheetBody = textRef(
+        id = "page.content.elements.modal-samples.bottom-sheet.content.body",
+        textRes = R.string.gallery_sheet_sample_body,
+        role = TextRole.Supporting,
+    )
+
     /*
      * These sample actions are named because semantic journeys now address production actions by
      * their real element objects. Their IDs intentionally match the former inline DSL-generated IDs.
@@ -178,30 +206,14 @@ object GalleryScreen : AppScreenBlueprint(
                             button(ShowBottomSheetModalSample)
                         }
                         dialog(DialogModalSample) {
-                            text(
-                                id = "title",
-                                textRes = R.string.gallery_dialog_sample_title,
-                                role = TextRole.Title,
-                            )
-                            text(
-                                id = "body",
-                                textRes = R.string.gallery_dialog_sample_body,
-                                role = TextRole.Supporting,
-                            )
+                            text(DialogModalTitle)
+                            text(DialogModalBody)
                             button(CloseDialogModalSample)
                         }
                         modalBottomSheet(BottomSheetModalSample) {
-                            column("content") {
-                                text(
-                                    id = "title",
-                                    textRes = R.string.gallery_sheet_sample_title,
-                                    role = TextRole.Title,
-                                )
-                                text(
-                                    id = "body",
-                                    textRes = R.string.gallery_sheet_sample_body,
-                                    role = TextRole.Supporting,
-                                )
+                            column(BottomSheetContent) {
+                                text(BottomSheetTitle)
+                                text(BottomSheetBody)
                             }
                             button(CloseBottomSheetModalSample)
                         }
