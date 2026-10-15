@@ -27,16 +27,40 @@ object VexStreamPresentationRefs {
             instanceRef = trackRef.value,
         )
 
-    fun trackAction(
+    fun trackRowAction(
         trackRef: VexStreamTrackRef,
         action: ActionElement,
+    ): String =
+        trackAction(
+            trackRef = trackRef,
+            action = action,
+            placement = "row",
+        )
+
+    fun trackMenuAction(
+        trackRef: VexStreamTrackRef,
+        action: ActionElement,
+    ): String =
+        trackAction(
+            trackRef = trackRef,
+            action = action,
+            placement = "menu",
+        )
+
+    private fun trackAction(
+        trackRef: VexStreamTrackRef,
+        action: ActionElement,
+        placement: String,
     ): String {
         val uiElement =
             action as? UIElement
                 ?: error("ActionElement must also be a UIElement")
 
         return dynamicRef(
-            ownerRef = uiElement.elementId,
+            ownerRef =
+                uiElement.elementId +
+                    "." +
+                    placement,
             instanceRef = trackRef.value,
         )
     }
