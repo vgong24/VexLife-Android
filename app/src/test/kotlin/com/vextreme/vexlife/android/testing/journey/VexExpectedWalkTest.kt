@@ -136,4 +136,37 @@ class VexExpectedWalkTest {
         assertEquals(VexLogKind.AppOpened, walk.records.single().kind)
     }
 
+    @Test
+    fun dynamicActionUsesRuntimeSubjectWhileInterpretingStaticIntent() {
+        val walk =
+            VexExpectedWalk()
+        val dynamicRef =
+            "element.shell.dynamic.debug-menu.example"
+
+        walk.start(
+            HomeScreen,
+        )
+        walk.tapDynamic(
+            dynamicElement(
+                elementId =
+                    dynamicRef,
+                actionTemplate =
+                    AppShell.Elements.DebugMenu,
+            ),
+        )
+
+        assertEquals(
+            DebugMenuScreen.screenId,
+            walk.currentScreen.screenId,
+        )
+        assertEquals(
+            dynamicRef,
+            walk.records.last().subjectRef,
+        )
+        assertEquals(
+            DebugMenuScreen.screenId,
+            walk.records.last().screenAfterId,
+        )
+    }
+
 }
