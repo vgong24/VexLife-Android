@@ -4,66 +4,59 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 
 /**
- * Vex-owned semantic modifier description for Android Compose realization.
+ * Vex-owned root for Compose modifier chains.
  *
- * Feature code names semantic identity; this boundary decides how that identity is projected into
- * Compose inspection/testing today. Keeping that projection here means a future addition such as
- * richer semantics, diagnostics, evidence metadata, or accessibility-oriented inspection can be
- * applied consistently without rediscovering the modifier pattern in every Screen/feature.
+ * Product presentation starts from VexModifier instead of the bare Compose Modifier companion so
+ * Vex-wide modifier policy has one visible architectural entry point. VexModifier remains a real
+ * Compose [Modifier], so the complete Compose modifier ecosystem continues to work normally:
  *
- * [element] is for statically registered [UIElement] identity.
- * [semantic] is for stable runtime-data identity (for example one event row or one track action)
- * that must remain addressable without pretending dynamic product data belongs in the static
- * Screen registry.
+ * VexModifier
+ *     .fillMaxWidth()
+ *     .padding(...)
+ *     .clickable(...)
+ *
+ * Semantic identity is attached through [vex]. Future shared inspection/accessibility/evidence
+ * behavior can evolve at this boundary without creating a second modifier system.
  */
-data class VexModifier private constructor(
-    val testTag: String,
-) {
-    init {
-        require(testTag.isNotBlank()) {
-            "VexModifier testTag must not be blank"
-        }
-    }
-
-    companion object {
-        fun element(element: UIElement): VexModifier =
-            VexModifier(
-                testTag = element.elementId,
-            )
-
-        fun semantic(semanticRef: String): VexModifier =
-            VexModifier(
-                testTag = semanticRef,
-            )
-    }
-}
+object VexModifier : Modifier by Modifier
 
 /**
- * Applies one Vex semantic modifier projection to an ordinary Compose [Modifier].
- *
- * testTag is deliberately an implementation detail of this one boundary rather than a convention
- * every feature repeats directly.
+ * Attaches one statically registered Vex element identity to this Compose modifier chain.
  */
 fun Modifier.vex(
-    vexModifier: VexModifier,
+    element: UIElement,
 ): Modifier =
-    testTag(
-        vexModifier.testTag,
+    vex(
+        element.elementId,
     )
 
 /**
- * Compatibility/convenience path for statically registered Elements.
+ * Attaches one already-formed Vex semantic/presentation identity to this Compose modifier chain.
  *
- * Existing cells can keep saying .vexElement(element) while all Compose test-tag realization is
- * owned by [VexModifier].
+ * Feature code should normally obtain [semanticRef] from its rightful identity owner (registered
+ * UIElement, feature PresentationRefs, or inherited Vex Compose parent scope) rather than forming
+ * ad-hoc strings at the call site.
+ */
+fun Modifier.vex(
+    semanticRef: String,
+): Modifier {
+    require(semanticRef.isNotBlank()) {
+        "Vex semantic ref must not be blank"
+    }
+
+    return testTag(
+        semanticRef,
+    )
+}
+
+/**
+ * Compatibility/convenience spelling for existing static Element cells.
  */
 fun Modifier.vexElement(
     element: UIElement,
 ): Modifier =
     vex(
-        VexModifier.element(
-            element,
-        ),
+        element,
     )
 
 // [VXG RealForever]
