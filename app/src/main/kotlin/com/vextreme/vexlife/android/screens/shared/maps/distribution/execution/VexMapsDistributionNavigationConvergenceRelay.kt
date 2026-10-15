@@ -46,6 +46,9 @@ internal sealed interface VexMapsDistributionNavigationRequest {
     ) :
         VexMapsDistributionNavigationRequest
 
+    data object PrepareReturn :
+        VexMapsDistributionNavigationRequest
+
     data object StartPreparedNavigation :
         VexMapsDistributionNavigationRequest
 
@@ -298,6 +301,53 @@ private fun projectDistributionNavigation(
                     VexMapsDistributionNavigationLayer
                         .AtStop,
             )
+
+        is VexMapsDistributionRunState.Returning ->
+            when (
+                navigation.phase
+            ) {
+                VexNavigationSessionPhase.IDLE ->
+                    VexMapsDistributionNavigationOutput(
+                        layer =
+                            VexMapsDistributionNavigationLayer
+                                .NeedsLeg,
+                        request =
+                            VexMapsDistributionNavigationRequest
+                                .PrepareReturn,
+                    )
+
+                VexNavigationSessionPhase.READY ->
+                    VexMapsDistributionNavigationOutput(
+                        layer =
+                            VexMapsDistributionNavigationLayer
+                                .ReadyToStart,
+                        request =
+                            VexMapsDistributionNavigationRequest
+                                .StartPreparedNavigation,
+                    )
+
+                VexNavigationSessionPhase.ACTIVE,
+                VexNavigationSessionPhase.OFF_ROUTE,
+                VexNavigationSessionPhase.LOCATION_HELD ->
+                    VexMapsDistributionNavigationOutput(
+                        layer =
+                            VexMapsDistributionNavigationLayer
+                                .Navigating,
+                    )
+
+                VexNavigationSessionPhase.ARRIVED ->
+                    VexMapsDistributionNavigationOutput(
+                        layer =
+                            VexMapsDistributionNavigationLayer
+                                .Complete,
+                        request =
+                            VexMapsDistributionNavigationRequest
+                                .RunControl(
+                                    VexMapsDistributionRunControl
+                                        .Arrive,
+                                ),
+                    )
+            }
 
         is VexMapsDistributionRunState.Completed ->
             VexMapsDistributionNavigationOutput(
