@@ -127,8 +127,11 @@ internal fun VexMapsMapSurface(
             distributionPlan =
                 null
             distributionExperience
-                .observeDraftStopCount(
-                    restored.stops.size,
+                .observeDraft(
+                    stopCount =
+                        restored.stops.size,
+                    returnToStart =
+                        restored.returnToStart,
                 )
         }
     }
@@ -1402,10 +1405,14 @@ internal fun VexMapsMapSurface(
                     .Reset,
             )
         distributionExperience
-            .observeDraftStopCount(
-                distributionDraft
-                    .stops
-                    .size,
+            .observeDraft(
+                stopCount =
+                    distributionDraft
+                        .stops
+                        .size,
+                returnToStart =
+                    distributionDraft
+                        .returnToStart,
             )
         distributionNavigationRelay
             .runChanged(
@@ -1464,6 +1471,100 @@ internal fun VexMapsMapSurface(
                             pack =
                                 pack,
                         )
+                    }
+                }
+            }
+
+            VexMapsDistributionNavigationRequest.PrepareReturn -> {
+                val plan =
+                    distributionPlan
+                        ?.takeIf {
+                            it.isCurrentFor(
+                                distributionDraft,
+                            )
+                        }
+                        ?: return@LaunchedEffect
+                val pack =
+                    regionPack
+                        ?: return@LaunchedEffect
+
+                readCurrentPreciseLocation {
+                    val origin =
+                        currentLocation
+                            ?.let { location ->
+                                VexMapCoordinate(
+                                    latitude =
+                                        location.latitude,
+                                    longitude =
+                                        location.longitude,
+                                )
+                            }
+                            ?: return@readCurrentPreciseLocation
+
+                    scope.launch {
+                        val generation =
+                            distributionLegRequestGate
+                                .begin()
+                        val route =
+                            runCatching {
+                                VexMapsOfflineRoutingProcess
+                                    .planner
+                                    .route(
+                                        context =
+                                            context,
+                                        pack =
+                                            pack,
+                                        request =
+                                            VexOfflineRouteRequest(
+                                                routeRef =
+                                                    "route.vexmaps.distribution.return." +
+                                                        plan.sourceDraftRevision,
+                                                routeRevision =
+                                                    VexMapsRouteIdentity
+                                                        .nextRevision(),
+                                                origin =
+                                                    origin,
+                                                destination =
+                                                    plan.origin,
+                                                destinationLabel =
+                                                    context.getString(
+                                                        R.string
+                                                            .vexmaps_distribution_return_destination,
+                                                    ),
+                                                travelMode =
+                                                    plan.travelMode,
+                                            ),
+                                    )
+                            }.getOrNull()
+                                ?: return@launch
+
+                        if (
+                            !distributionLegRequestGate
+                                .accepts(
+                                    generation,
+                                ) ||
+                            distributionPlan !=
+                                plan ||
+                            !plan.isCurrentFor(
+                                distributionDraft,
+                            )
+                        ) {
+                            return@launch
+                        }
+
+                        VexMapsNavigationProcess
+                            .prepare(
+                                routeResult =
+                                    route,
+                                routingPack =
+                                    pack,
+                            )
+                        distributionNavigationRelay
+                            .navigationChanged(
+                                VexMapsNavigationProcess
+                                    .session
+                                    .current,
+                            )
                     }
                 }
             }
@@ -1553,6 +1654,18 @@ internal fun VexMapsMapSurface(
                     }.onSuccess { updated ->
                         distributionDraft =
                             updated
+                        distributionExperience
+                            .observeDraft(
+                                stopCount =
+                                    updated.stops.size,
+                                returnToStart =
+                                    updated.returnToStart,
+                            )
+                        distributionNavigationRelay
+                            .runChanged(
+                                distributionExperience
+                                    .runProjection,
+                            )
                     }
                 }
             },
@@ -1587,6 +1700,10 @@ internal fun VexMapsMapSurface(
 
                 VexMapsNavigationService
                     .dismissArrivalNotification(
+                        context,
+                    )
+                VexMapsNavigationService
+                    .stop(
                         context,
                     )
                 VexMapsNavigationProcess
@@ -1645,8 +1762,10 @@ internal fun VexMapsMapSurface(
                                     .Reset,
                             )
                         distributionExperience
-                            .observeDraftStopCount(
-                                0,
+                            .observeDraft(
+                                stopCount = 0,
+                                returnToStart =
+                                    cleared.returnToStart,
                             )
                         distributionNavigationRelay
                             .runChanged(
@@ -1948,9 +2067,11 @@ internal fun VexMapsMapSurface(
                                 distributionDraft =
                                     updated
                                 distributionExperience
-                                    .observeDraftStopCount(
-                                        updated.stops
-                                            .size,
+                                    .observeDraft(
+                                        stopCount =
+                                            updated.stops.size,
+                                        returnToStart =
+                                            updated.returnToStart,
                                     )
                                 preferredDockPageRef =
                                     VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
