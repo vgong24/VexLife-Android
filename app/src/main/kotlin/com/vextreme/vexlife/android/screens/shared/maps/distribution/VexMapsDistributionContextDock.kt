@@ -47,6 +47,7 @@ internal fun vexMapsDistributionContextDockPage(
     canStart: Boolean,
     onToggleMode: () -> Unit,
     onAddStop: () -> Unit,
+    onRemoveStop: (String) -> Unit,
     onToggleReturnToStart: () -> Unit,
     onPrepare: () -> Unit,
     onStart: () -> Unit,
@@ -63,6 +64,11 @@ internal fun vexMapsDistributionContextDockPage(
     val distributionActive =
         modeProjection.state is
             VexMapsDistributionModeState.Distribution
+    val draftEditable =
+        runProjection.state is
+            VexMapsDistributionRunState.Empty ||
+            runProjection.state is
+            VexMapsDistributionRunState.Draft
 
     return VexContextDockPage(
         pageRef =
@@ -143,14 +149,37 @@ internal fun vexMapsDistributionContextDockPage(
                         index,
                         stop,
                         ->
-                        Text(
-                            stringResource(
-                                R.string
-                                    .vexmaps_distribution_stop_line,
-                                index + 1,
-                                stop.name,
-                            ),
-                        )
+                        Row(
+                            modifier =
+                                Modifier.fillMaxWidth(),
+                            horizontalArrangement =
+                                Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string
+                                        .vexmaps_distribution_stop_line,
+                                    index + 1,
+                                    stop.name,
+                                ),
+                            )
+                            if (draftEditable) {
+                                OutlinedButton(
+                                    onClick = {
+                                        onRemoveStop(
+                                            stop.stopRef,
+                                        )
+                                    },
+                                ) {
+                                    Text(
+                                        stringResource(
+                                            R.string
+                                                .vexmaps_distribution_remove_stop,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
                     }
 
                 plan
@@ -210,10 +239,7 @@ internal fun vexMapsDistributionContextDockPage(
                     onClick =
                         onAddStop,
                     enabled =
-                        runProjection.state is
-                            VexMapsDistributionRunState.Empty ||
-                            runProjection.state is
-                            VexMapsDistributionRunState.Draft,
+                        draftEditable,
                 ) {
                     Text(
                         stringResource(
@@ -232,10 +258,7 @@ internal fun vexMapsDistributionContextDockPage(
                     onClick =
                         onToggleReturnToStart,
                     enabled =
-                        runProjection.state is
-                            VexMapsDistributionRunState.Empty ||
-                            runProjection.state is
-                            VexMapsDistributionRunState.Draft,
+                        draftEditable,
                 ) {
                     Text(
                         stringResource(

@@ -1633,6 +1633,44 @@ internal fun VexMapsMapSurface(
                         .OfflinePanel,
                 )
             },
+            onRemoveStop = { stopRef ->
+                runtime.recordDynamicInteraction(
+                    subjectRef =
+                        "presentation.vexmaps.distribution.stop." +
+                            stopRef,
+                    action =
+                        "Removed",
+                )
+                distributionPlanRequestGate
+                    .invalidate()
+                distributionLegRequestGate
+                    .invalidate()
+                distributionPlan =
+                    null
+                scope.launch {
+                    runCatching {
+                        distributionRepository
+                            .removeStop(
+                                stopRef,
+                            )
+                    }.onSuccess { updated ->
+                        distributionDraft =
+                            updated
+                        distributionExperience
+                            .observeDraft(
+                                stopCount =
+                                    updated.stops.size,
+                                returnToStart =
+                                    updated.returnToStart,
+                            )
+                        distributionNavigationRelay
+                            .runChanged(
+                                distributionExperience
+                                    .runProjection,
+                            )
+                    }
+                }
+            },
             onToggleReturnToStart = {
                 runtime.activate(
                     VexMapsScreen

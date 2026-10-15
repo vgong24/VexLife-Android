@@ -316,6 +316,7 @@
     <string name="vexmaps_distribution_mode_enter">Start Distribution</string>
     <string name="vexmaps_distribution_mode_regular">Regular Maps</string>
     <string name="vexmaps_distribution_add_stop">Add stop</string>
+    <string name="vexmaps_distribution_remove_stop">Remove</string>
     <string name="vexmaps_distribution_stop_count">%1$d stops</string>
     <string name="vexmaps_distribution_stop_line">%1$d. %2$s</string>
     <string name="vexmaps_distribution_return_on">Return to start: On</string>
