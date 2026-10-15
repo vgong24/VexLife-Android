@@ -209,7 +209,18 @@ internal fun VexStreamTrackCard(
             trackRef = state.track.trackRef,
             action = VexStreamMusicScreen.PlayTrack,
         )
+    val menuPresentationRef =
+        VexStreamPresentationRefs.trackRowAction(
+            scope = presentationScope,
+            trackRef = state.track.trackRef,
+            action = VexStreamMusicScreen.TrackMenu,
+        )
 
+    /*
+     * Runtime-data identity becomes the semantic parent exactly once. Nested Vex Compose cells can
+     * now name only their local role while the existing row/action refs remain byte-stable for
+     * Journey, logging and diagnostics.
+     */
     VexComposeScope(
         parentRef = trackPresentationRef,
     ) {
@@ -239,6 +250,10 @@ internal fun VexStreamTrackCard(
                             .surface,
                 ),
         ) {
+            /*
+             * This Row intentionally keeps the exact full runtime row ref rather than inventing an
+             * appended local ID. The inherited scope beneath it owns the new nested addresses.
+             */
             Row(
                 modifier =
                     VexModifier
@@ -249,168 +264,167 @@ internal fun VexStreamTrackCard(
                         .vex(
                             trackPresentationRef,
                         ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Surface(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement =
+                    Arrangement.spacedBy(10.dp),
+            ) {
+                Surface(
                     modifier =
                         VexModifier.size(54.dp),
-                shape = MaterialTheme.shapes.medium,
-                color =
-                    MaterialTheme
-                        .colorScheme
-                        .surfaceContainerHigh,
-            ) {
-                VexBox(
-                    id = "artwork",
-                    contentAlignment = Alignment.Center,
+                    shape = MaterialTheme.shapes.medium,
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .surfaceContainerHigh,
                 ) {
-                    VexIcon(
-                        icon = ElementIcon.Music,
-                        contentDescription = null,
-                    )
+                    VexBox(
+                        id = "artwork",
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        VexIcon(
+                            icon = ElementIcon.Music,
+                            contentDescription = null,
+                        )
+                    }
                 }
-            }
 
-            VexColumn(
-                id = "copy",
-                modifier =
-                    VexModifier.weight(1f),
-                verticalArrangement =
-                    Arrangement.spacedBy(2.dp),
-            ) {
-                VexText(
-                    id = "title",
-                    text = state.track.title,
-                    style =
-                        MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                if (secondaryText.isNotBlank()) {
+                VexColumn(
+                    id = "copy",
+                    modifier =
+                        VexModifier.weight(1f),
+                    verticalArrangement =
+                        Arrangement.spacedBy(2.dp),
+                ) {
                     VexText(
-                        id = "secondary",
-                        text = secondaryText,
-                        role = TextRole.Supporting,
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurfaceVariant,
+                        id = "title",
+                        text = state.track.title,
+                        style =
+                            MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                }
 
-                compactStatus?.let {
-                    VexText(
-                        id = "status",
-                        text = it,
-                        role = TextRole.Label,
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            Box {
-                VexIconButton(
-                    element = VexStreamMusicScreen.TrackMenu,
-                    handler = menuOpenHandler,
-                    semanticRef =
-VexStreamPresentationRefs.trackRowAction(
-                                scope =
-                                    presentationScope,
-                                trackRef =
-                                    state.track.trackRef,
-                                action =
-                                    VexStreamMusicScreen.TrackMenu,
-                        ),
-                )
-
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = {
-                        menuExpanded = false
-                    },
-                ) {
-                    VexStreamTrackMenuItem(
-                        presentationScope =
-                            presentationScope,
-                        trackRef = state.track.trackRef,
-                        element = VexStreamMusicScreen.PlayTrack,
-                        handler = menuHandler,
-                        enabled = controller != null,
-                    )
-                    VexStreamTrackMenuItem(
-                        presentationScope =
-                            presentationScope,
-                        trackRef = state.track.trackRef,
-                        element = VexStreamMusicScreen.PlayTrackNext,
-                        handler = menuHandler,
-                        enabled = controller != null,
-                    )
-                    VexStreamTrackMenuItem(
-                        presentationScope =
-                            presentationScope,
-                        trackRef = state.track.trackRef,
-                        element = VexStreamMusicScreen.AddTrackToQueue,
-                        handler = menuHandler,
-                        enabled = controller != null,
-                    )
-
-                    if (showDownloadAction) {
-                        when (state.localCopy) {
-                            is VexStreamLocalCopyState.Downloaded ->
-                                VexStreamTrackMenuItem(
-                                    presentationScope =
-                                        presentationScope,
-                                    trackRef = state.track.trackRef,
-                                    element =
-                                        VexStreamMusicScreen
-                                            .RemoveTrackDownload,
-                                    handler = menuHandler,
-                                )
-
-                            is VexStreamLocalCopyState.Downloading ->
-                                Unit
-
-                            else -> {
-                                if (state.hubAvailable) {
-                                    VexStreamTrackMenuItem(
-                                        presentationScope =
-                                            presentationScope,
-                                        trackRef = state.track.trackRef,
-                                        element =
-                                            VexStreamMusicScreen
-                                                .DownloadTrack,
-                                        handler = menuHandler,
-                                    )
-                                }
-                            }
-                        }
+                    if (secondaryText.isNotBlank()) {
+                        VexText(
+                            id = "secondary",
+                            text = secondaryText,
+                            role = TextRole.Supporting,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
 
-                    if (state.track.artist.isNotBlank()) {
+                    compactStatus?.let { status ->
+                        VexText(
+                            id = "status",
+                            text = status,
+                            role = TextRole.Label,
+                            color =
+                                MaterialTheme
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                VexBox(
+                    id = "menu",
+                ) {
+                    VexIconButton(
+                        element = VexStreamMusicScreen.TrackMenu,
+                        handler = menuOpenHandler,
+                        semanticRef = menuPresentationRef,
+                    )
+
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = {
+                            menuExpanded = false
+                        },
+                    ) {
+                        VexStreamTrackMenuItem(
+                            presentationScope =
+                                presentationScope,
+                            trackRef = state.track.trackRef,
+                            element = VexStreamMusicScreen.PlayTrack,
+                            handler = menuHandler,
+                            enabled = controller != null,
+                        )
+                        VexStreamTrackMenuItem(
+                            presentationScope =
+                                presentationScope,
+                            trackRef = state.track.trackRef,
+                            element = VexStreamMusicScreen.PlayTrackNext,
+                            handler = menuHandler,
+                            enabled = controller != null,
+                        )
                         VexStreamTrackMenuItem(
                             presentationScope =
                                 presentationScope,
                             trackRef = state.track.trackRef,
                             element =
-                                VexStreamMusicScreen
-                                    .VisitTrackArtist,
+                                VexStreamMusicScreen.AddTrackToQueue,
                             handler = menuHandler,
+                            enabled = controller != null,
                         )
+
+                        if (showDownloadAction) {
+                            when (state.localCopy) {
+                                is VexStreamLocalCopyState.Downloaded ->
+                                    VexStreamTrackMenuItem(
+                                        presentationScope =
+                                            presentationScope,
+                                        trackRef =
+                                            state.track.trackRef,
+                                        element =
+                                            VexStreamMusicScreen
+                                                .RemoveTrackDownload,
+                                        handler = menuHandler,
+                                    )
+
+                                is VexStreamLocalCopyState.Downloading ->
+                                    Unit
+
+                                else -> {
+                                    if (state.hubAvailable) {
+                                        VexStreamTrackMenuItem(
+                                            presentationScope =
+                                                presentationScope,
+                                            trackRef =
+                                                state.track.trackRef,
+                                            element =
+                                                VexStreamMusicScreen
+                                                    .DownloadTrack,
+                                            handler = menuHandler,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (state.track.artist.isNotBlank()) {
+                            VexStreamTrackMenuItem(
+                                presentationScope =
+                                    presentationScope,
+                                trackRef = state.track.trackRef,
+                                element =
+                                    VexStreamMusicScreen
+                                        .VisitTrackArtist,
+                                handler = menuHandler,
+                            )
+                        }
                     }
                 }
             }
         }
     }
-    }
+}
 
 @Composable
 private fun VexStreamTrackMenuItem(
