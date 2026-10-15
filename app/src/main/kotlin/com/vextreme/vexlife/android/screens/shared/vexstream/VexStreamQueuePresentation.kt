@@ -268,7 +268,7 @@ internal fun VexStreamQueueSheet(
                             .weight(1f)
                             .vex(
 VexStreamPresentationRefs
-                                        .QueueList,,
+                                        .QueueList,
 ),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
@@ -327,7 +327,7 @@ VexStreamPresentationRefs
                                 .vex(
 VexStreamPresentationRefs
                                             .queueEntry(
-                                                entry.stableKey,,
+                                                entry.stableKey,
 ),
                                 ),
                             horizontalArrangement =
@@ -347,7 +347,7 @@ VexStreamPresentationRefs
                                                         entry.stableKey,
                                                     action =
                                                         VexStreamMusicScreen
-                                                            .QueuePlay,,
+                                                            .QueuePlay,
 ),
                                     )
                                     .clickable(
@@ -456,7 +456,7 @@ VexStreamPresentationRefs
                                                         entry.stableKey,
                                                     action =
                                                         VexStreamMusicScreen
-                                                            .QueueReorder,,
+                                                            .QueueReorder,
 ),
                                     )
                                     .pointerInput(
