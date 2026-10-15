@@ -171,60 +171,94 @@ class AppBlueprintTest {
 
     @Test
     fun galleryModalBlueprintMatchesInheritedVexComposePaths() {
-        val dialogTitle =
+        assertSame(
+            GalleryScreen.DialogModalTitle,
             registry.element(
-                GalleryScreen.DialogModalSample.elementId +
-                    ".title",
-            )
-        val dialogBody =
+                GalleryScreen.DialogModalTitle.elementId,
+            ),
+        )
+        assertSame(
+            GalleryScreen.DialogModalBody,
             registry.element(
-                GalleryScreen.DialogModalSample.elementId +
-                    ".body",
-            )
-        val sheetContent =
+                GalleryScreen.DialogModalBody.elementId,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetContent,
             registry.element(
-                GalleryScreen.BottomSheetModalSample.elementId +
-                    ".content",
-            )
-        val sheetTitle =
+                GalleryScreen.BottomSheetContent.elementId,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetTitle,
             registry.element(
-                GalleryScreen.BottomSheetModalSample.elementId +
-                    ".content.title",
-            )
-        val sheetBody =
+                GalleryScreen.BottomSheetTitle.elementId,
+            ),
+        )
+        assertSame(
+            GalleryScreen.BottomSheetBody,
             registry.element(
-                GalleryScreen.BottomSheetModalSample.elementId +
-                    ".content.body",
-            )
+                GalleryScreen.BottomSheetBody.elementId,
+            ),
+        )
 
-        requireNotNull(dialogTitle)
-        requireNotNull(dialogBody)
-        requireNotNull(sheetContent)
-        requireNotNull(sheetTitle)
-        requireNotNull(sheetBody)
+        assertEquals(
+            GalleryScreen.DialogModalSample.elementId +
+                ".title",
+            GalleryScreen.DialogModalTitle.elementId,
+        )
+        assertEquals(
+            GalleryScreen.DialogModalSample.elementId +
+                ".body",
+            GalleryScreen.DialogModalBody.elementId,
+        )
+        assertEquals(
+            GalleryScreen.BottomSheetModalSample.elementId +
+                ".content",
+            GalleryScreen.BottomSheetContent.elementId,
+        )
+        assertEquals(
+            GalleryScreen.BottomSheetContent.elementId +
+                ".title",
+            GalleryScreen.BottomSheetTitle.elementId,
+        )
+        assertEquals(
+            GalleryScreen.BottomSheetContent.elementId +
+                ".body",
+            GalleryScreen.BottomSheetBody.elementId,
+        )
 
         assertSame(
             GalleryScreen.DialogModalSample,
-            registry.parentOf(dialogTitle),
+            registry.parentOf(
+                GalleryScreen.DialogModalTitle,
+            ),
         )
         assertSame(
             GalleryScreen.DialogModalSample,
-            registry.parentOf(dialogBody),
+            registry.parentOf(
+                GalleryScreen.DialogModalBody,
+            ),
         )
         assertSame(
             GalleryScreen.BottomSheetModalSample,
-            registry.parentOf(sheetContent),
+            registry.parentOf(
+                GalleryScreen.BottomSheetContent,
+            ),
         )
         assertSame(
-            sheetContent,
-            registry.parentOf(sheetTitle),
+            GalleryScreen.BottomSheetContent,
+            registry.parentOf(
+                GalleryScreen.BottomSheetTitle,
+            ),
         )
         assertSame(
-            sheetContent,
-            registry.parentOf(sheetBody),
+            GalleryScreen.BottomSheetContent,
+            registry.parentOf(
+                GalleryScreen.BottomSheetBody,
+            ),
         )
     }
-
 
     @Test
     fun vexStreamSearchAddsNewParentContinuityWithoutRenamingLegacyIds() {
