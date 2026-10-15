@@ -44,6 +44,8 @@ class VexJourneyCoverageRecorder : VexJourneyScope {
 
     override fun tapDynamic(element: VexDynamicElementRef) = Unit
 
+    override fun expectVisible(element: VexDynamicElementRef) = Unit
+
     override fun tap(element: ActionElement) {
         val uiElement = element as? UIElement
             ?: error("ActionElement must also be a UIElement")
