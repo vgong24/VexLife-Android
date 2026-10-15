@@ -50,6 +50,13 @@ object VexStreamPresentationRefs {
     const val QueueList =
         "element.vexstream-music.queue.entries"
 
+    /*
+     * Media3 currently projects queue media IDs, not a stronger durable queue-item identity.
+     * occurrence therefore names one exact CURRENT presentation occurrence when the same media ID
+     * appears more than once. It is deliberately not claimed stable across arbitrary queue rebuilds
+     * or reorders. If the provider later exposes a durable item ref, that stronger identity should
+     * replace this presentation coordinate.
+     */
     fun queueEntryKey(
         mediaId: String,
         occurrence: Int,
