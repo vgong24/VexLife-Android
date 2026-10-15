@@ -111,6 +111,10 @@ class VexExpectedWalk : VexJourneyScope {
         }
     }
 
+    override fun expectVisible(element: UIElement) {
+        requireStarted()
+    }
+
     override fun expectVisible(element: VexDynamicElementRef) {
         requireStarted()
     }
