@@ -22,7 +22,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
@@ -38,6 +37,8 @@ import com.vextreme.vexlife.android.data.events.VexExternalEventSourceSnapshot
 import com.vextreme.vexlife.android.elements.VexAnchoredOverlay
 import com.vextreme.vexlife.android.elements.VexStableLazyColumn
 import com.vextreme.vexlife.android.elements.VexOverlayPlacement
+import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
@@ -311,9 +312,11 @@ private fun EventRow(
                         Modifier
                     },
                 )
-                .testTag(
-                    EventsPresentationRefs.row(
-                        event.eventRef,
+                .vex(
+                    VexModifier.semantic(
+                        EventsPresentationRefs.row(
+                            event.eventRef,
+                        ),
                     ),
                 ),
     ) {
@@ -600,10 +603,12 @@ private fun CompactAttentionButton(
                     MaterialTheme.colorScheme.inversePrimary,
             ),
         modifier =
-            Modifier.testTag(
-                EventsPresentationRefs.attentionAction(
-                    eventRef,
-                    actionRef,
+            Modifier.vex(
+                VexModifier.semantic(
+                    EventsPresentationRefs.attentionAction(
+                        eventRef,
+                        actionRef,
+                    ),
                 ),
             ),
     ) {
