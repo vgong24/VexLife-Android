@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
+import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.UIElement
 
 /**
@@ -28,12 +29,17 @@ object VexStreamPresentationRefs {
 
     fun trackAction(
         trackRef: VexStreamTrackRef,
-        action: UIElement,
-    ): String =
-        dynamicRef(
-            ownerRef = action.elementId,
+        action: ActionElement,
+    ): String {
+        val uiElement =
+            action as? UIElement
+                ?: error("ActionElement must also be a UIElement")
+
+        return dynamicRef(
+            ownerRef = uiElement.elementId,
             instanceRef = trackRef.value,
         )
+    }
 
     private fun dynamicRef(
         ownerRef: String,
