@@ -23,30 +23,29 @@ class VexMapsDistributionExperienceTest {
         )
 
         assertTrue(
-            experience.observeDraftStopCount(
-                3,
+            experience.observeDraft(
+                stopCount = 3,
+                returnToStart = true,
             ),
         )
 
         assertEquals(
             VexMapsDistributionModeState.Distribution,
-            experience.modeProjection
-                .state,
+            experience.modeProjection.state,
         )
         assertEquals(
             VexMapsDistributionRunState.Draft(
                 stopCount = 3,
+                returnToStart = true,
             ),
-            experience.runProjection
-                .state,
+            experience.runProjection.state,
         )
         assertEquals(
             VexMapsDistributionControlLayer.DistributionDraft,
             experience.controlContext.layer,
         )
         assertNull(
-            experience.controlContext
-                .requestedControl,
+            experience.controlContext.requestedControl,
         )
     }
 
@@ -55,18 +54,17 @@ class VexMapsDistributionExperienceTest {
         val experience =
             VexMapsDistributionExperience()
 
-        experience.observeDraftStopCount(
-            2,
+        experience.observeDraft(
+            stopCount = 2,
+            returnToStart = true,
         )
-
         experience.activateMode(
             VexMapsDistributionModeControl.ToggleDistribution,
         )
 
         assertEquals(
             VexMapsDistributionModeState.Distribution,
-            experience.modeProjection
-                .state,
+            experience.modeProjection.state,
         )
         assertEquals(
             VexMapsDistributionControlLayer.DistributionDraft,
@@ -79,8 +77,9 @@ class VexMapsDistributionExperienceTest {
         val experience =
             VexMapsDistributionExperience()
 
-        experience.observeDraftStopCount(
-            2,
+        experience.observeDraft(
+            stopCount = 2,
+            returnToStart = true,
         )
         experience.activateRun(
             VexMapsDistributionRunControl.Reset,
@@ -91,8 +90,7 @@ class VexMapsDistributionExperienceTest {
 
         assertEquals(
             VexMapsDistributionModeState.Regular,
-            experience.modeProjection
-                .state,
+            experience.modeProjection.state,
         )
         assertEquals(
             VexMapsDistributionControlLayer.Regular,
@@ -105,8 +103,9 @@ class VexMapsDistributionExperienceTest {
         val experience =
             VexMapsDistributionExperience()
 
-        experience.observeDraftStopCount(
-            2,
+        experience.observeDraft(
+            stopCount = 2,
+            returnToStart = true,
         )
         experience.activateRun(
             VexMapsDistributionRunControl.Prepare,
@@ -116,8 +115,9 @@ class VexMapsDistributionExperienceTest {
         )
 
         assertFalse(
-            experience.observeDraftStopCount(
-                5,
+            experience.observeDraft(
+                stopCount = 5,
+                returnToStart = false,
             ),
         )
         assertTrue(

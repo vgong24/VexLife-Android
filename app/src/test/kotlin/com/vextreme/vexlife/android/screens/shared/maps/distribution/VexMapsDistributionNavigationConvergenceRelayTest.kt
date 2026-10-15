@@ -7,21 +7,24 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.execution.V
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.execution.VexMapsDistributionNavigationRequest
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunConnection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class VexMapsDistributionNavigationConvergenceRelayTest {
-    private fun readyRun():
-        VexMapsDistributionRunConnection =
+    private fun readyRun(
+        returnToStart: Boolean = true,
+    ): VexMapsDistributionRunConnection =
         VexMapsDistributionRunConnection()
             .also { connection ->
-                connection.observeDraftStopCount(
-                    2,
+                connection.observeDraft(
+                    stopCount = 2,
+                    returnToStart =
+                        returnToStart,
                 )
                 connection.activate(
-                    VexMapsDistributionRunControl
-                        .Prepare,
+                    VexMapsDistributionRunControl.Prepare,
                 )
             }
 
@@ -60,8 +63,7 @@ class VexMapsDistributionNavigationConvergenceRelayTest {
                 initialNavigation =
                     VexNavigationSessionState(
                         phase =
-                            VexNavigationSessionPhase
-                                .READY,
+                            VexNavigationSessionPhase.READY,
                     ),
             )
 
@@ -80,8 +82,7 @@ class VexMapsDistributionNavigationConvergenceRelayTest {
             readyRun()
                 .also { connection ->
                     connection.activate(
-                        VexMapsDistributionRunControl
-                            .Start,
+                        VexMapsDistributionRunControl.Start,
                     )
                 }
         val relay =
@@ -91,29 +92,62 @@ class VexMapsDistributionNavigationConvergenceRelayTest {
                 initialNavigation =
                     VexNavigationSessionState(
                         phase =
-                            VexNavigationSessionPhase
-                                .READY,
+                            VexNavigationSessionPhase.READY,
                     ),
             )
 
         assertEquals(
-            VexMapsDistributionNavigationRequest
-                .StartPreparedNavigation,
+            VexMapsDistributionNavigationRequest.StartPreparedNavigation,
             relay.currentOutput.request,
         )
 
         relay.navigationChanged(
             VexNavigationSessionState(
                 phase =
-                    VexNavigationSessionPhase
-                        .ARRIVED,
+                    VexNavigationSessionPhase.ARRIVED,
             ),
         )
 
         assertEquals(
             VexMapsDistributionNavigationRequest.RunControl(
-                VexMapsDistributionRunControl
-                    .Arrive,
+                VexMapsDistributionRunControl.Arrive,
+            ),
+            relay.currentOutput.request,
+        )
+    }
+
+    @Test
+    fun returningRunRequestsReturnLegThenCompletesFromArrival() {
+        val run =
+            VexMapsDistributionRunConnection(
+                initialState =
+                    VexMapsDistributionRunState.Returning(
+                        stopCount = 2,
+                    ),
+            )
+        val relay =
+            VexMapsDistributionNavigationConvergenceRelay(
+                initialRun =
+                    run.currentProjection,
+                initialNavigation =
+                    VexNavigationSessionState(),
+            )
+
+        assertEquals(
+            VexMapsDistributionNavigationRequest.PrepareReturn,
+            relay.currentOutput.request,
+        )
+
+        relay.navigationChanged(
+            VexNavigationSessionState(
+                phase =
+                    VexNavigationSessionPhase.ARRIVED,
+            ),
+        )
+
+        assertEquals(
+            VexMapsDistributionNavigationRequest.RunControl(
+                VexMapsDistributionRunControl.Arrive,
             ),
             relay.currentOutput.request,
         )
