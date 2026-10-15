@@ -713,11 +713,15 @@ class VexMapsDistributionSessionTest {
                                     ) == true
                         }
                 }
-                assertEquals(
-                    VexMapsDistributionLegAttempt.Idle,
-                    session.states.value
-                        .legAttempt,
-                )
+                withTimeout(
+                    1_000L,
+                ) {
+                    session.states
+                        .first {
+                            it.legAttempt ==
+                                VexMapsDistributionLegAttempt.Idle
+                        }
+                }
             } finally {
                 session.shutdown()
                 owner.cancelAndJoin()

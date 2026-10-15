@@ -1306,8 +1306,8 @@ internal class VexMapsDistributionSession(
             VexMapsDistributionLegTarget,
     ) {
         if (
-            mutableLegAttempt.value is
-            VexMapsDistributionLegAttempt.Preparing
+            mutableLegAttempt.value !is
+            VexMapsDistributionLegAttempt.Idle
         ) {
             return
         }
@@ -1342,6 +1342,28 @@ internal class VexMapsDistributionSession(
         if (
             runPlanRef !=
             plan.planRef
+        ) {
+            return
+        }
+
+        val alreadyPrepared =
+            (
+                mutableExpectedLeg.value as?
+                    VexMapsDistributionExpectedLegState.Expected
+            )
+                ?.leg
+                ?.takeIf {
+                    it.planRef ==
+                        plan.planRef &&
+                        it.target ==
+                        target
+                }
+
+        if (
+            alreadyPrepared != null &&
+            navigation.matches(
+                alreadyPrepared,
+            )
         ) {
             return
         }
