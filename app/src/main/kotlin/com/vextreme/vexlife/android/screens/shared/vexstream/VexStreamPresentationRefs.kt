@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
+import com.vextreme.vexlife.android.elements.UIElement
 
 /**
  * Stable runtime presentation addresses for dynamic VexStream data.
@@ -20,7 +21,25 @@ object VexStreamPresentationRefs {
     fun trackRow(
         trackRef: VexStreamTrackRef,
     ): String =
-        "$TrackRowPrefix.${trackRef.value.length}:${trackRef.value}"
+        dynamicRef(
+            ownerRef = TrackRowPrefix,
+            instanceRef = trackRef.value,
+        )
+
+    fun trackAction(
+        trackRef: VexStreamTrackRef,
+        action: UIElement,
+    ): String =
+        dynamicRef(
+            ownerRef = action.elementId,
+            instanceRef = trackRef.value,
+        )
+
+    private fun dynamicRef(
+        ownerRef: String,
+        instanceRef: String,
+    ): String =
+        "$ownerRef.dynamic.${instanceRef.length}:$instanceRef"
 }
 
 // [VXG RealForever]
