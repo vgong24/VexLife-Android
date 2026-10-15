@@ -1,26 +1,26 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Slider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.elements.ElementActionHandler
+import com.vextreme.vexlife.android.elements.VexColumn
 import com.vextreme.vexlife.android.elements.VexContainer
+import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.VexRow
+import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.VexIconButton
 import com.vextreme.vexlife.android.elements.vexElement
@@ -118,19 +118,22 @@ internal fun VexStreamMiniPlayer(
 
     VexContainer(
         element = VexStreamMusicScreen.PlayerSection,
-        modifier = Modifier
+        modifier = VexModifier
             .fillMaxWidth()
             .padding(8.dp),
         style = VexElementStyles.RaisedSurface,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+        VexRow(
+            id = "summary",
+            modifier = VexModifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
+            VexColumn(
+                id = "metadata",
+                modifier = VexModifier.weight(1f),
             ) {
-                Text(
+                VexText(
+                    id = "title",
                     text =
                         playback.currentTitle.ifBlank {
                             stringResource(
@@ -142,7 +145,8 @@ internal fun VexStreamMiniPlayer(
                     overflow = TextOverflow.Ellipsis,
                 )
                 if (playback.currentArtist.isNotBlank()) {
-                    Text(
+                    VexText(
+                        id = "artist",
                         text = playback.currentArtist,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -153,7 +157,8 @@ internal fun VexStreamMiniPlayer(
             }
 
             queuePosition?.let {
-                Text(
+                VexText(
+                    id = "queue-position",
                     text = it,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -189,7 +194,7 @@ internal fun VexStreamMiniPlayer(
                     scrubFraction = null
                 }
             },
-            modifier = Modifier
+            modifier = VexModifier
                 .fillMaxWidth()
                 .vexElement(
                     VexStreamMusicScreen.SeekPlayback,
@@ -198,11 +203,13 @@ internal fun VexStreamMiniPlayer(
             valueRange = 0f..1f,
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+        VexRow(
+            id = "timeline",
+            modifier = VexModifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
+            VexText(
+                id = "position",
                 text =
                     formatVexStreamPlaybackTime(
                         displayedPositionMs,
@@ -210,7 +217,8 @@ internal fun VexStreamMiniPlayer(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(
+            VexText(
+                id = "duration",
                 text =
                     if (playback.durationMs > 0L) {
                         formatVexStreamPlaybackTime(
@@ -224,8 +232,9 @@ internal fun VexStreamMiniPlayer(
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+        VexRow(
+            id = "controls",
+            modifier = VexModifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             VexIconButton(
