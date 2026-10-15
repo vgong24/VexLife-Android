@@ -62,7 +62,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
-| VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **DRAFT POC / GALLERY CONSUMER FORMED / VEXSTREAM MIGRATION HELD UNTIL KERNEL PROOF** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | `:architecture:elements:test` + Gallery render/Journey + VexStream POC migration + `vexVerifyLocal` |
+| VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **ACCEPTED ON MAIN / PR #88 / A013 LOCAL + PHYSICAL DEVICE PASS / ADVISORY MIGRATION ACTIVE** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | migrate one real consumer at a time; preserve exact runtime identities; keep raw-Compose findings advisory until replacements are earned |
 | EXECUTION_BRIDGE | VexExecution + source-referenced coroutine ownership | **DRAFT CANDIDATE / ISOLATED KOTLIN PROTOTYPE PASS / REPOSITORY GRADLE PROOF PENDING** | Put coroutine execution behind one compiler-visible meta-pattern with keyed custody, bounded collection recovery, and exact stop/join control | `:architecture:execution:test` + `vexVerifyJvm` + first current-main consumer |
 | BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational behavior blueprint | **ARCHITECTURE REVIEW READY / FIRST VEXSTREAM CONSUMER FORMED / EXECUTION PROOF PENDING** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | `:architecture:behavior:test` + `:app:testDebugUnitTest` + `vexVerifyJvm`; lived Play/Pause proof before stable/merge acceptance |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
@@ -79,7 +79,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F7_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F8_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
 
-## Vex Compose candidate
+## Vex Compose foundation
 
 Entry:
 [`architecture/elements/README.md`](../../architecture/elements/README.md)
@@ -103,8 +103,25 @@ ScreenBlueprint parent path
 extensions remain available underneath it while Vex-owned semantic identity/inspection behavior has
 one visible front door.
 
-Gallery is the first visual practicum. VexStream Android remains the first larger custom-screen POC,
-but additional VexStream refactoring is held until this kernel is proved and understandable.
+Gallery is the first visual practicum. VexStream Search is the first larger product consumer: it
+enters through the registered Search sheet, preserves historical stable field/action IDs, and uses
+runtime track presentation refs without turning dynamic catalog data into fake static elements.
+
+Acceptance checkpoint:
+
+~~~text
+PR #88
+merge = 222c10206685946f7225f801a9e62e0beabcf74e
+tree = a68fe2eebaa2bdfbc0503648aee77ca6ddeb7577
+
+A013
+vexVerifyLocal = PASS
+physical connected Android = PASS
+instrumentation tests executed = 10
+~~~
+
+Further migration is consumer-driven. Raw Compose findings remain advisory while real product
+surfaces teach which additional Vex forms are actually worth preserving.
 
 ## Execution bridge candidate
 
