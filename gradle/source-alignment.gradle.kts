@@ -165,6 +165,86 @@ val collectSourceAlignmentViolations: () -> List<String> = {
     violations.distinct()
 }
 
+val collectVexComposeMigrationDebt: () -> List<String> = {
+    val screenRoot = project.file(
+        "src/main/kotlin/com/vextreme/vexlife/android/screens",
+    )
+    val rawImports =
+        linkedMapOf(
+            "androidx.compose.ui.Modifier" to "VexModifier / Vex-owned component defaults",
+            "androidx.compose.material3.Text" to "VexText",
+            "androidx.compose.foundation.layout.Column" to "VexColumn",
+            "androidx.compose.foundation.layout.Row" to "VexRow",
+            "androidx.compose.foundation.layout.Box" to "VexBox",
+            "androidx.compose.material3.Card" to "VexCard",
+            "androidx.compose.material3.AlertDialog" to "VexAlertDialog",
+            "androidx.compose.material3.ModalBottomSheet" to "VexModalBottomSheet",
+        )
+
+    if (!screenRoot.isDirectory) {
+        emptyList()
+    } else {
+        buildList {
+            screenRoot
+                .walkTopDown()
+                .filter { file ->
+                    file.isFile &&
+                        file.extension == "kt"
+                }
+                .forEach { file ->
+                    val source = file.readText()
+                    rawImports.forEach { (rawImport, vexRoute) ->
+                        if (
+                            source.contains(
+                                "import $rawImport",
+                            )
+                        ) {
+                            add(
+                                "${file.relativeTo(project.projectDir)} imports $rawImport; " +
+                                    "Vex Compose migration route: $vexRoute",
+                            )
+                        }
+                    }
+                }
+        }
+            .distinct()
+            .sorted()
+    }
+}
+
+tasks.register("vexComposeMigrationReport") {
+    notCompatibleWithConfigurationCache(
+        "Vex Compose migration debt scans Screen source files at execution time.",
+    )
+    group = "verification"
+    description =
+        "Reports raw Compose primitives still bypassing the emerging Vex Compose front door."
+
+    doLast {
+        val debt =
+            collectVexComposeMigrationDebt()
+
+        if (debt.isEmpty()) {
+            logger.lifecycle(
+                "Vex Compose migration debt: none detected in Screen source.",
+            )
+        } else {
+            logger.lifecycle(
+                "Vex Compose migration debt (${debt.size} raw import sites):",
+            )
+            debt.forEach { finding ->
+                logger.lifecycle(
+                    " - $finding",
+                )
+            }
+            logger.lifecycle(
+                "Warning-only while Gallery/VexStream prove the Vex Compose vocabulary; " +
+                    "do not promote this to a hard gate until the migration route is complete.",
+            )
+        }
+    }
+}
+
 tasks.register("sourceAlignmentReport") {
     notCompatibleWithConfigurationCache(
         "Source alignment scans repository files through script-local closures at execution time.",
