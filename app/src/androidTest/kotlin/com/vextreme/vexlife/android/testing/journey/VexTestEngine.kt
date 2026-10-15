@@ -30,7 +30,6 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylist
 import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylistRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ScreenElement
@@ -429,9 +428,7 @@ private fun vexStreamJourneyRepository(): InMemoryVexStreamMusicRepository {
     val track =
         VexStreamTrack(
             trackRef =
-                VexStreamTrackRef(
-                    "journey.track.one",
-                ),
+                VexStreamJourneyFixtures.TrackOne,
             mediaSha256 =
                 VexStreamMediaSha256(
                     "1111111111111111111111111111111111111111111111111111111111111111",
