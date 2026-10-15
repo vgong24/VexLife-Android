@@ -178,9 +178,31 @@ object GalleryScreen : AppScreenBlueprint(
                             button(ShowBottomSheetModalSample)
                         }
                         dialog(DialogModalSample) {
+                            text(
+                                id = "title",
+                                textRes = R.string.gallery_dialog_sample_title,
+                                role = TextRole.Title,
+                            )
+                            text(
+                                id = "body",
+                                textRes = R.string.gallery_dialog_sample_body,
+                                role = TextRole.Supporting,
+                            )
                             button(CloseDialogModalSample)
                         }
                         modalBottomSheet(BottomSheetModalSample) {
+                            column("content") {
+                                text(
+                                    id = "title",
+                                    textRes = R.string.gallery_sheet_sample_title,
+                                    role = TextRole.Title,
+                                )
+                                text(
+                                    id = "body",
+                                    textRes = R.string.gallery_sheet_sample_body,
+                                    role = TextRole.Supporting,
+                                )
+                            }
                             button(CloseBottomSheetModalSample)
                         }
                     }
