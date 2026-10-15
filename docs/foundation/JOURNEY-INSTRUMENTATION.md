@@ -220,6 +220,17 @@ tap(ActionElement)
   -> production elementId test tag
   -> Compose performClick()
 
+tapDynamic(VexDynamicElementRef)
+  -> production-formed runtime semantic ref
+  -> Compose performClick()
+  -> dynamic interaction record
+
+expectVisible(VexDynamicElementRef)
+  -> production-formed runtime semantic ref
+  -> wait for exact Compose node
+  -> assert visibly rendered
+  -> NO semantic interaction record expected
+
 type(TextFieldElement)
   -> production elementId test tag
   -> Compose text input
