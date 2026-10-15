@@ -544,14 +544,8 @@ private fun VexStreamLibraryFabActions(
             tracks.isNotEmpty()
     val handler =
         ElementActionHandler { element ->
-            runtime.activateDynamic(
-                element = element,
-                subjectRef =
-                    VexStreamPresentationRefs.trackAction(
-                        trackRef =
-                            state.track.trackRef,
-                        action = element,
-                    ),
+            runtime.activate(
+                element,
             )
             when (element) {
                 VexStreamMusicScreen.PlayAll ->
@@ -1470,8 +1464,14 @@ private fun VexStreamTrackCard(
 
     val handler =
         ElementActionHandler { element ->
-            runtime.activate(
-                element,
+            runtime.activateDynamic(
+                element = element,
+                subjectRef =
+                    VexStreamPresentationRefs.trackAction(
+                        trackRef =
+                            state.track.trackRef,
+                        action = element,
+                    ),
             )
             when (element) {
                 VexStreamMusicScreen.PlayTrack ->
