@@ -183,6 +183,18 @@ paths declared in the Gallery Blueprint.
 This makes Gallery the place to inspect and pressure new sanctioned Vex Compose habits before they
 spread through product Screens.
 
+### Migration visibility
+
+During the POC/migration period, raw Compose use under product Screen source is visible through:
+
+~~~bash
+./gradlew :app:vexComposeMigrationReport
+~~~
+
+This is intentionally warning-only while Gallery and VexStream prove the sanctioned vocabulary.
+Promote it to a hard source-alignment gate only after the rightful Vex replacement exists; the report
+must not force authors to invent meaningless wrappers merely to satisfy a regex.
+
 ### Migration law
 
 ~~~text
