@@ -359,14 +359,6 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        preparationJob?.cancel()
-        legJob?.cancel()
-        navigation.stop()
-        clearExpectedLeg()
-        setLegAttempt(
-            VexMapsDistributionLegAttempt.Idle,
-        )
-
         run.activate(
             VexMapsDistributionRunControl.Prepare,
         )
@@ -376,6 +368,32 @@ internal class VexMapsDistributionSession(
                 .state as?
                 VexMapsDistributionRunState.Preparing
                 ?: return
+
+        preparationJob?.cancel()
+        legJob?.cancel()
+        clearExpectedLeg()
+        setLegAttempt(
+            VexMapsDistributionLegAttempt.Idle,
+        )
+
+        val cleanupFailure =
+            runCatching {
+                navigation.stop()
+            }.exceptionOrNull()
+
+        if (cleanupFailure != null) {
+            run.preparationFailed(
+                preparing.preparationRef,
+            )
+            publishSession(
+                plan =
+                    null,
+                preparationFailure =
+                    cleanupFailure
+                        .failureMeaning(),
+            )
+            return
+        }
 
         val preparation =
             VexMapsDistributionPreparationSnapshot(
@@ -513,6 +531,31 @@ internal class VexMapsDistributionSession(
      * Transient Compose restoration/default values are not preparation truth and must not use this
      * method. Once a run is executing, its admitted Plan remains sealed.
      */
+    fun canReplaceRoutingRegion():
+        Boolean =
+        when (
+            run.currentProjection
+                .state
+        ) {
+            is VexMapsDistributionRunState.Running,
+            is VexMapsDistributionRunState.AtStop,
+            is VexMapsDistributionRunState.Returning ->
+                false
+
+            else ->
+                true
+        }
+
+    fun routingRegionReplacementRequested():
+        Boolean {
+        if (!canReplaceRoutingRegion()) {
+            return false
+        }
+
+        planningInputChanged()
+        return true
+    }
+
     fun planningInputChanged() {
         when (
             val state =
@@ -579,16 +622,39 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        navigation.dismissArrival()
-        navigation.stop()
-        clearExpectedLeg()
-        setLegAttempt(
-            VexMapsDistributionLegAttempt.Idle,
-        )
-
         run.activate(
             VexMapsDistributionRunControl.CompleteStop,
         )
+
+        val cleanupFailure =
+            runCatching {
+                navigation.dismissArrival()
+                navigation.stop()
+            }.exceptionOrNull()
+
+        clearExpectedLeg()
+
+        val nextTarget =
+            currentLegTargetOrNull()
+
+        if (
+            cleanupFailure != null &&
+            nextTarget != null
+        ) {
+            setLegAttempt(
+                VexMapsDistributionLegAttempt.Failed(
+                    target =
+                        nextTarget,
+                    reason =
+                        cleanupFailure
+                            .failureMeaning(),
+                ),
+            )
+        } else {
+            setLegAttempt(
+                VexMapsDistributionLegAttempt.Idle,
+            )
+        }
     }
 
     fun retryFailedLeg() {
@@ -607,8 +673,6 @@ internal class VexMapsDistributionSession(
     fun cancelExecutionPreservingDraft() {
         preparationJob?.cancel()
         legJob?.cancel()
-        navigation.stop()
-        invalidatePreparedReality()
 
         if (
             run.currentProjection[
@@ -619,6 +683,8 @@ internal class VexMapsDistributionSession(
                 VexMapsDistributionRunControl.Reset,
             )
         }
+
+        invalidatePreparedReality()
 
         publishDraft(
             mutableState.value
@@ -634,19 +700,32 @@ internal class VexMapsDistributionSession(
             return
         }
 
+        val retainedDraft =
+            mutableState.value
+                .draft
+
         preparationJob?.cancel()
         legJob?.cancel()
-        navigation.dismissArrival()
-        navigation.stop()
-        invalidatePreparedReality()
+
+        val currentRunState =
+            run.currentProjection
+                .state
 
         if (
+            currentRunState !is
+                VexMapsDistributionRunState.Empty &&
+            currentRunState !is
+                VexMapsDistributionRunState.Draft &&
             run.currentProjection[
                 VexMapsDistributionRunControl.Reset
             ].isAvailable
         ) {
             run.activate(
                 VexMapsDistributionRunControl.Reset,
+            )
+            invalidatePreparedReality()
+            publishDraft(
+                retainedDraft,
             )
         }
 
@@ -855,7 +934,9 @@ internal class VexMapsDistributionSession(
     private fun invalidatePreparedReality() {
         preparationJob?.cancel()
         legJob?.cancel()
-        navigation.stop()
+        runCatching {
+            navigation.stop()
+        }
         activePack =
             null
         clearExpectedLeg()
@@ -897,6 +978,30 @@ internal class VexMapsDistributionSession(
             )
         }
     }
+
+    private fun currentLegTargetOrNull():
+        VexMapsDistributionLegTarget? =
+        when (
+            val state =
+                run.currentProjection
+                    .state
+        ) {
+            is VexMapsDistributionRunState.Ready ->
+                VexMapsDistributionLegTarget.Stop(
+                    state.orderedStopRefs.first(),
+                )
+
+            is VexMapsDistributionRunState.Running ->
+                VexMapsDistributionLegTarget.Stop(
+                    state.currentStopRef,
+                )
+
+            is VexMapsDistributionRunState.Returning ->
+                VexMapsDistributionLegTarget.ReturnToStart
+
+            else ->
+                null
+        }
 
     private fun realizeNavigationRequest(
         request:

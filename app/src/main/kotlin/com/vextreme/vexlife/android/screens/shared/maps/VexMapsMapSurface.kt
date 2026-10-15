@@ -752,6 +752,13 @@ internal fun VexMapsMapSurface(
                 return@rememberLauncherForActivityResult
             }
 
+            if (
+                !distributionExperience
+                    .routingRegionReplacementRequested()
+            ) {
+                return@rememberLauncherForActivityResult
+            }
+
             runtime.recordDynamicInteraction(
                 subjectRef =
                     "presentation.vexmaps.region.import",
@@ -764,8 +771,6 @@ internal fun VexMapsMapSurface(
                 runCatching {
                     regionStore.import(uri)
                 }.onSuccess { imported ->
-                    distributionExperience
-                        .planningInputChanged()
                     regionPack = imported
                     planningState =
                         VexMapsPlanningState.Idle
@@ -1216,6 +1221,10 @@ internal fun VexMapsMapSurface(
                     .completeCurrentStop()
             },
             onRetryLeg = {
+                runtime.activate(
+                    VexMapsScreen
+                        .RetryDistributionLeg,
+                )
                 distributionExperience
                     .retryFailedLeg()
             },
@@ -1621,22 +1630,9 @@ internal fun VexMapsMapSurface(
                     )
                 },
                 onImportRegion = {
-                    val distributionRunState =
-                        distributionExperience
-                            .runProjection
-                            .state
                     if (
-                        distributionModeProjection
-                            .state is
-                            VexMapsDistributionModeState.Distribution &&
-                        (
-                            distributionRunState is
-                                VexMapsDistributionRunState.Running ||
-                                distributionRunState is
-                                VexMapsDistributionRunState.AtStop ||
-                                distributionRunState is
-                                VexMapsDistributionRunState.Returning
-                        )
+                        !distributionExperience
+                            .canReplaceRoutingRegion()
                     ) {
                         return@VexMapsRoutePlannerCard
                     }

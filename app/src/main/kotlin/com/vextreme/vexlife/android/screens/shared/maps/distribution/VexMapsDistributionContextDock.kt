@@ -416,6 +416,11 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
                     Button(
+                        modifier =
+                            Modifier.vexElement(
+                                VexMapsScreen
+                                    .RetryDistributionLeg,
+                            ),
                         onClick =
                             onRetryLeg,
                     ) {

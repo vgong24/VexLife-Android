@@ -107,6 +107,14 @@ internal class VexMapsDistributionExperience(
                 pack,
         )
 
+    fun canReplaceRoutingRegion():
+        Boolean =
+        session.canReplaceRoutingRegion()
+
+    fun routingRegionReplacementRequested():
+        Boolean =
+        session.routingRegionReplacementRequested()
+
     fun planningInputChanged() =
         session.planningInputChanged()
 

@@ -212,6 +212,12 @@ object VexMapsScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val RetryDistributionLeg = buttonRef(
+        id = "body.distribution.run.retry-leg",
+        labelRes = R.string.vexmaps_distribution_retry,
+        intent = localEffect(),
+    )
+
     val ResetDistributionRun = buttonRef(
         id = "body.distribution.run.reset",
         labelRes = R.string.vexmaps_distribution_clear,
@@ -311,6 +317,7 @@ object VexMapsScreen : AppScreenBlueprint(
                 button(PrepareDistributionRun)
                 button(StartDistributionRun)
                 button(CompleteDistributionStop)
+                button(RetryDistributionLeg)
                 button(ResetDistributionRun)
             }
 
