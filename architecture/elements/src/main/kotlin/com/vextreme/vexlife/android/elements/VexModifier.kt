@@ -50,6 +50,25 @@ fun Modifier.vex(
 }
 
 /**
+ * Applies one modifier transformation only when its condition is true.
+ *
+ * This keeps common conditional styling inside the same chain:
+ *
+ * VexModifier
+ *     .fillMaxWidth()
+ *     .conditional(selected) { border(...) }
+ */
+inline fun Modifier.conditional(
+    condition: Boolean,
+    transform: Modifier.() -> Modifier,
+): Modifier =
+    if (condition) {
+        transform()
+    } else {
+        this
+    }
+
+/**
  * Compatibility/convenience spelling for existing static Element cells.
  */
 fun Modifier.vexElement(
