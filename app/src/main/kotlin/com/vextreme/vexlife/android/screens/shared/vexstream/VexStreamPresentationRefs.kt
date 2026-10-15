@@ -17,7 +17,7 @@ import com.vextreme.vexlife.android.elements.UIElement
  */
 object VexStreamPresentationRefs {
     private const val TrackRowPrefix =
-        "element.vexstream-music.dynamic.track"
+        "element.vexstream-music.track"
 
     fun trackRow(
         trackRef: VexStreamTrackRef,
