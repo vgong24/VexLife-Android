@@ -179,7 +179,7 @@ class VexExecutionTestScope internal constructor(
     private val testScope: TestScope,
 ) {
     val currentTimeMillis: Long
-        get() = testScope.currentTime
+        get() = testScope.testScheduler.currentTime
 
     fun runCurrent() {
         testScope.runCurrent()
