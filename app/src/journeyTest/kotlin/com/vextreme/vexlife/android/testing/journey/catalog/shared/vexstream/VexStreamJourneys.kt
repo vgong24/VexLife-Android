@@ -4,6 +4,7 @@ import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicReposit
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
 import com.vextreme.vexlife.android.shell.AppShell
 
 object VexStreamJourneys : VexJourneyShard {
@@ -34,6 +35,15 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.ConfirmPairingCode)
         tap(AppShell.Elements.Back)
         tap(HomeScreen.VexStreamMusic)
+
+        expectVisible(
+            dynamicElement(
+                VexStreamPresentationRefs.trackRow(
+                    VexStreamJourneyFixtures.TrackOne,
+                ),
+            ),
+        )
+
         tap(VexStreamMusicScreen.ManageConnection)
         tap(VexStreamMusicScreen.RefreshCatalog)
         tap(VexStreamMusicScreen.CloseConnectionMenu)
