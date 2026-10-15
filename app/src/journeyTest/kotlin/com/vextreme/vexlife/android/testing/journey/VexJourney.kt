@@ -109,6 +109,13 @@ interface VexJourneyScope {
     fun tapDynamic(element: VexDynamicElementRef)
 
     /**
+     * Observes one statically registered production element and requires it to be visibly rendered.
+     *
+     * This is not an interaction and therefore forms no expected VexLogger record.
+     */
+    fun expectVisible(element: UIElement)
+
+    /**
      * Observes one production-formed runtime identity and requires it to be visibly rendered.
      *
      * This is not an interaction and therefore forms no expected VexLogger record.
