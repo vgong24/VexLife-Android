@@ -79,53 +79,82 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 
 ## Behavior Blueprint experiment
 
-Canonical detail: [`architecture/behavior/README.md`](../../architecture/behavior/README.md)  
-Review checkpoint: [`architecture/behavior/REVIEW-CHECKPOINT.md`](../../architecture/behavior/REVIEW-CHECKPOINT.md)
+Entry:
+[`architecture/behavior/README.md`](../../architecture/behavior/README.md)
 
-This candidate starts independently from accepted main and keeps PR #81 as a comparison point rather
-than inheriting its source.
+Canonical family/package construction pattern:
+[`architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md`](../../architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md)
 
-The experiment mirrors an existing repository idea:
+Review checkpoint:
+[`architecture/behavior/REVIEW-CHECKPOINT.md`](../../architecture/behavior/REVIEW-CHECKPOINT.md)
+
+Code-navigation roots:
 
 ~~~text
-ScreenBlueprint
-    source nesting ~= spatial containment
-
-VexBehaviorBlueprint
-    source relationships ~= behavior relationships
+VexBehaviorDocs
+VexStreamPlaybackDocs
 ~~~
 
-Feature-owned State / Control / Act / Effect vocabularies now share one F-bounded VexBehaviorFamily coordinate, making both role swaps and cross-family combinations compiler-invalid. State carries observed truth (including data/flavor); Effect carries the attempted transformation and never claims the resulting truth. Each State
-block declares what Acts have meaning from that current truth, their provider-facing Effects, and
-the immediate admitted State kind. Provider observation may later produce another truthful State kind. The blueprint is a constructed immutable graph, not a singleton or runtime
-state owner. Incoming / outgoing neighborhoods, current available Acts, and completely linked Control meaning are derived from
-relationships authored once. One immutable BehaviorProjection packages current State + every Control's resolved Act
-for UI/test/convergence consumers without exposing Effect execution. VexPort standardizes the two-way boundary as currentProjection + activate(Control); VexPortFlow optionally adds a StateFlow of projections. The first Media3 connection implementing VexPortFlow also proves synchronous intent emission: admitted local requests publish pending semantic State before provider dispatch, and delayed observations reconcile without erasing the newer intent.
+The candidate preserves one human-readable four-move grammar:
 
-The first app wiring is now admitted narrowly for VexStream Play/Pause: Mini Player and Context Dock consume one retained VexPortFlow projection rather than independently deriving Play/Pause from Media3. Their shared Play/Pause icon/enabled meaning is also derived once in a feature-local presentation mapper rather than repeated in each Composable. The kernel now has a transport-neutral BehaviorProjection. Current VexStream inspection found the next seam at the retained MediaController projection: one semantic Playback client/projection must observe Media3 truth, publish the shared Projection, re-resolve Controls at invocation time, and realize Effects before Mini Player / Context Dock migrate, otherwise behavior would become Compose-owned. Provider execution, ScreenBlueprint binding, parameterized request payloads, and Android/device proof remain held.
+~~~text
+State
+-> Control resolves Act
+-> Act selects Effect
+-> immediate admitted State
+-> provider observation
+-> next truthful State
+~~~
 
-VexMaps pressure review adds four explicit compatibility boundaries without expanding the grammar: same State-kind + same Act may use mutually-exclusive conditional relationships; relationship destination means immediate semantic admission rather than guaranteed provider outcome; VexPort re-resolution protects stale meaning at activation but does not replace async generation/revision gates; and concrete Connections retain their own concurrency/serialization guarantees. Feature-local type aliases should hide Family-heavy generics from ordinary Compose source.
+Feature-owned State / Control / Act / Effect vocabularies share one F-bounded
+`VexBehaviorFamily` coordinate, making both role swaps and cross-family combinations
+compiler-invalid.
 
-### First VexStream consumer
+`VexBehaviorProjection` carries current State plus resolved Control meaning without exposing
+Effect execution.
 
-The experiment now has one production-shaped Android slice:
+`VexPort` standardizes the two-way semantic boundary as:
+
+~~~text
+currentProjection
+activate(Control)
+~~~
+
+and `VexPortFlow` adds a current `StateFlow` projection when observation over time is required.
+
+The first production-shaped consumer is VexStream Play/Pause:
 
 ~~~text
 MediaSession / Player
     -> Media3VexStreamPlaybackConnection
-    -> VexBehaviorProjection
+    -> VexStreamPlaybackProjection
     -> Mini Player + Context Dock
 
 Control activation
-    -> latest semantic State
+    -> current semantic State
     -> Act
     -> Effect
     -> MediaController
 ~~~
 
-The ViewModel retaining that connection is a configuration-lifetime mechanism only. Playback truth
-remains MediaSession/Player-owned. Queue/seek/shuffle/repeat are explicitly not migrated by this
-slice.
+The Connection preserves synchronous admitted intent without pretending provider convergence. Its
+ViewModel is an Android lifetime host only.
+
+VexMaps pressure establishes four compatibility boundaries without adding new semantic nouns:
+
+- same State-kind + same Act may use mutually-exclusive conditional relationships;
+- relationship admission is immediate semantic topology, not guaranteed final provider outcome;
+- VexPort re-resolution protects stale meaning at activation but does not replace async
+  generation/revision/result-admission gates;
+- concrete Connections retain their provider-specific concurrency/serialization guarantees.
+
+The package construction law is fractal: a sibling Behavior family is earned when the **behavioral
+question itself splits**, not merely when files become large. The canonical split criteria and the
+VexStream Playback mapping live in the family/package blueprint above.
+
+Runtime request payloads, generic UIElement binding, heterogeneous convergence envelopes, generic
+concurrency, generic async failure grammar, and full VexStream queue/seek/shuffle/repeat migration
+remain deliberately held until real consumers earn them.
 
 ## F1 — UI Blueprint / Home Practicum
 

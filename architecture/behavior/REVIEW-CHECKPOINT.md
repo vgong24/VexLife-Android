@@ -4,6 +4,16 @@
 
 This document is the shortest review entry for PR #82.
 
+Construction pattern:
+[`VEX-BEHAVIOR-FAMILY-BLUEPRINT.md`](VEX-BEHAVIOR-FAMILY-BLUEPRINT.md)
+
+Code-navigation roots:
+
+~~~text
+VexBehaviorDocs
+VexStreamPlaybackDocs
+~~~
+
 The architecture is ready for human architecture review when a reviewer can understand the four
 pressure shapes below without reconstructing hidden framework ownership.
 
@@ -34,6 +44,8 @@ The graph is authored from current State outward and supports both forward resol
 Control projection.
 
 The real VexStream Play/Pause consumer demonstrates the same grammar against Media3.
+
+In IDE/code navigation, start at `VexStreamPlaybackDocs` rather than reconstructing the package from filenames.
 
 ## 2. Data-flavor behavior — same State kind + same Act
 
