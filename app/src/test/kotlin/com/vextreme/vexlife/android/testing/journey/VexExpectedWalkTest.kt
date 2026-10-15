@@ -3,7 +3,10 @@ package com.vextreme.vexlife.android.testing.journey
 import com.vextreme.vexlife.android.logging.VexLogKind
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
+import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPresentationScope
 import com.vextreme.vexlife.android.shell.AppShell
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -118,6 +121,81 @@ class VexExpectedWalkTest {
                 screenAfterId = null,
             ),
             walk.records.last(),
+        )
+    }
+
+    @Test
+    fun dynamicVisibilityAssertionDoesNotInventInteractionHistory() {
+        val walk = VexExpectedWalk()
+        val dynamic =
+            dynamicElement(
+                VexStreamPresentationRefs.trackRow(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
+                ),
+            )
+
+        walk.start(HomeScreen)
+        walk.expectVisible(dynamic)
+
+        assertEquals(1, walk.records.size)
+        assertEquals(VexLogKind.AppOpened, walk.records.single().kind)
+    }
+
+    @Test
+    fun staticVisibilityAssertionDoesNotInventInteractionHistory() {
+        val walk =
+            VexExpectedWalk()
+
+        walk.start(
+            HomeScreen,
+        )
+        walk.expectVisible(
+            GalleryScreen.DialogModalTitle,
+        )
+
+        assertEquals(
+            1,
+            walk.records.size,
+        )
+        assertEquals(
+            VexLogKind.AppOpened,
+            walk.records.single().kind,
+        )
+    }
+
+    @Test
+    fun dynamicActionUsesRuntimeSubjectWhileInterpretingStaticIntent() {
+        val walk =
+            VexExpectedWalk()
+        val dynamicRef =
+            "element.shell.dynamic.debug-menu.example"
+
+        walk.start(
+            HomeScreen,
+        )
+        walk.tapDynamic(
+            dynamicElement(
+                elementId =
+                    dynamicRef,
+                actionTemplate =
+                    AppShell.Elements.DebugMenu,
+            ),
+        )
+
+        assertEquals(
+            DebugMenuScreen.screenId,
+            walk.currentScreen.screenId,
+        )
+        assertEquals(
+            dynamicRef,
+            walk.records.last().subjectRef,
+        )
+        assertEquals(
+            DebugMenuScreen.screenId,
+            walk.records.last().screenAfterId,
         )
     }
 

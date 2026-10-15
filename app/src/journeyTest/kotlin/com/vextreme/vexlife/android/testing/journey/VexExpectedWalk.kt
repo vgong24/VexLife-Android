@@ -74,13 +74,49 @@ class VexExpectedWalk : VexJourneyScope {
     override fun tapDynamic(element: VexDynamicElementRef) {
         requireStarted()
 
+        val before =
+            currentScreen
+        val intent =
+            element.actionTemplate
+                ?.intent
+        val target =
+            intent
+                ?.let(::navigationTarget)
+                ?.takeIf { screen ->
+                    screen.screenId !=
+                        before.screenId
+                }
+
         expected += VexExpectedRecord(
             kind = VexLogKind.Interaction,
             subjectRef = element.elementId,
             action = "Clicked",
-            screenBeforeId = currentScreen.screenId,
-            screenAfterId = null,
+            screenBeforeId = before.screenId,
+            screenAfterId = target?.screenId,
         )
+
+        if (intent != null) {
+            applyIntent(
+                intent,
+            )
+
+            if (
+                invokes(
+                    intent,
+                    AppActions.ClearLogHistory.actionId,
+                )
+            ) {
+                expected.clear()
+            }
+        }
+    }
+
+    override fun expectVisible(element: UIElement) {
+        requireStarted()
+    }
+
+    override fun expectVisible(element: VexDynamicElementRef) {
+        requireStarted()
     }
 
     override fun tap(element: ActionElement) {

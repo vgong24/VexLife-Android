@@ -26,10 +26,10 @@ abstract class ScreenBlueprint(
     screenKey: String,
     @StringRes titleRes: Int,
 ) : ScreenElement(
-    screenId = "screen." + normalizePath(screenKey),
+    screenId = "screen." + normalizeVexElementPath(screenKey),
     titleRes = titleRes,
 ) {
-    private val elementPrefix = "element." + normalizePath(screenKey)
+    private val elementPrefix = "element." + normalizeVexElementPath(screenKey)
 
     abstract val content: ElementPlacement
 
@@ -87,6 +87,19 @@ abstract class ScreenBlueprint(
         readOnly = readOnly,
     )
 
+    protected fun textRef(
+        id: String,
+        @StringRes textRes: Int,
+        role: TextRole = TextRole.Body,
+        style: ElementStyleKey = VexElementStyles.Default,
+    ): TextElement =
+        TextElement(
+            elementId = elementId(id),
+            textRes = textRes,
+            role = role,
+            style = style,
+        )
+
     protected fun columnRef(id: String): ColumnElement =
         ColumnElement(elementId(id))
 
@@ -116,7 +129,7 @@ abstract class ScreenBlueprint(
     }
 
     internal fun elementId(relativePath: String): String {
-        val normalized = normalizePath(relativePath)
+        val normalized = normalizeVexElementPath(relativePath)
         require(normalized.isNotBlank()) { "screen element path must not be blank" }
         return "$elementPrefix.$normalized"
     }
@@ -173,6 +186,14 @@ class ScreenLayoutScope internal constructor(
         element: TextFieldElement,
         style: ElementStyleKey? = null,
     ) = place(element, style)
+
+    fun text(
+        element: TextElement,
+        style: ElementStyleKey? = null,
+    ) = place(
+        element,
+        style,
+    )
 
     fun text(
         id: String,
@@ -373,16 +394,10 @@ class ScreenLayoutScope internal constructor(
     }
 
     private fun childPath(id: String): String =
-        listOf(relativePath, normalizePath(id))
+        listOf(relativePath, normalizeVexElementPath(id))
             .filter { it.isNotBlank() }
             .joinToString(".")
 
     private fun relativeFromElement(element: UIElement): String =
         screen.relativePath(element)
 }
-
-private fun normalizePath(value: String): String =
-    value.trim()
-        .replace('/', '.')
-        .replace(Regex("\\s+"), "-")
-        .trim('.')

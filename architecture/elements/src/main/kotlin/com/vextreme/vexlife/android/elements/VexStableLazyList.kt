@@ -12,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -34,8 +33,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
  * - item meaning, actions, row layout, repositories, ordering policy, and presentation eligibility
  *   remain with the feature that supplied [items] and [itemContent].
  *
- * The first real consumer is Events. A future Messaging/Maps/etc. surface may reuse this only when
- * it has the same repeated-identity problem; this is not a generic domain-list abstraction.
+ * Real consumers now include Events (visibility/anchored-attention pressure) and VexStream Search
+ * (runtime track identity/QA addressing). Their different domain meaning is evidence that the shared
+ * concern is stable repeated-item mechanics rather than an Events-specific list abstraction.
  *
  * Useful torture conditions for a caller:
  *
@@ -52,7 +52,7 @@ fun <Item> VexStableLazyColumn(
     contentType: (Item) -> Any? = { null },
     requestedVisibleItemRef: String? = null,
     userScrollEnabled: Boolean = true,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     verticalArrangement: Arrangement.Vertical =
         Arrangement.spacedBy(12.dp),
@@ -118,7 +118,9 @@ fun <Item> VexStableLazyColumn(
     LazyColumn(
         state = listState,
         modifier =
-            modifier.testTag(listRef),
+            modifier.vex(
+listRef,
+),
         contentPadding = contentPadding,
         verticalArrangement = verticalArrangement,
         userScrollEnabled = userScrollEnabled,

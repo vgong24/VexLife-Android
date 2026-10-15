@@ -56,7 +56,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
@@ -64,13 +63,52 @@ fun interface ElementActionHandler {
     fun activate(element: ActionElement)
 }
 
-fun Modifier.vexElement(element: UIElement): Modifier = testTag(element.elementId)
+/**
+ * Registered TextElement realization through the Vex Compose front door.
+ */
+@Composable
+fun VexText(
+    element: TextElement,
+    modifier: Modifier = VexModifier,
+) {
+    Text(
+        text = stringResource(element.textRes),
+        modifier =
+            modifier.vex(
+                element,
+            ),
+        style =
+            when (element.role) {
+                TextRole.Title ->
+                    MaterialTheme.typography.headlineMedium
+
+                TextRole.Body ->
+                    MaterialTheme.typography.bodyLarge
+
+                TextRole.Supporting ->
+                    MaterialTheme.typography.bodyMedium
+
+                TextRole.Label ->
+                    MaterialTheme.typography.labelSmall
+            },
+        color =
+            when (element.role) {
+                TextRole.Supporting,
+                TextRole.Label,
+                ->
+                    MaterialTheme.colorScheme.onSurfaceVariant
+
+                else ->
+                    MaterialTheme.colorScheme.onSurface
+            },
+    )
+}
 
 @Composable
 fun VexButton(
     element: ButtonElement,
     handler: ElementActionHandler,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     style: ElementStyleKey = element.style,
     enabled: Boolean = true,
 ) {
@@ -121,10 +159,11 @@ fun VexButton(
 fun VexIconButton(
     element: ButtonElement,
     handler: ElementActionHandler,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     enabled: Boolean = true,
     selected: Boolean = false,
     iconOverride: ElementIcon? = null,
+    semanticRef: String? = null,
 ) {
     val label = stringResource(requireNotNull(element.labelRes))
     val content: @Composable () -> Unit = {
@@ -141,14 +180,20 @@ fun VexIconButton(
     if (selected) {
         FilledTonalIconButton(
             onClick = { handler.activate(element) },
-            modifier = modifier.vexElement(element),
+            modifier =
+                semanticRef
+                    ?.let { ref -> modifier.vex(ref) }
+                    ?: modifier.vex(element),
             enabled = enabled,
             content = content,
         )
     } else {
         IconButton(
             onClick = { handler.activate(element) },
-            modifier = modifier.vexElement(element),
+            modifier =
+                semanticRef
+                    ?.let { ref -> modifier.vex(ref) }
+                    ?: modifier.vex(element),
             enabled = enabled,
             content = content,
         )
@@ -159,7 +204,7 @@ fun VexIconButton(
 fun VexActionFab(
     element: ButtonElement,
     handler: ElementActionHandler,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     enabled: Boolean = true,
 ) {
     val label = stringResource(requireNotNull(element.labelRes))
@@ -184,7 +229,7 @@ fun VexActionFab(
 fun VexFab(
     element: FabElement,
     handler: ElementActionHandler,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     style: ElementStyleKey = element.style,
 ) {
     val label = stringResource(requireNotNull(element.labelRes))
@@ -212,7 +257,7 @@ fun VexToggleRow(
     element: ToggleElement,
     checked: Boolean,
     handler: ElementActionHandler,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -242,7 +287,7 @@ fun VexTextField(
     element: TextFieldElement,
     value: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
 ) {
     OutlinedTextField(
         value = value,
@@ -261,7 +306,7 @@ fun VexTextField(
 @Composable
 fun VexContainer(
     element: UIElement,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     style: ElementStyleKey = element.style,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -277,17 +322,23 @@ fun VexContainer(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = VexModifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            content = content,
-        )
+        ) {
+            val columnScope = this
+            VexComposeScope(
+                parent = element,
+            ) {
+                columnScope.content()
+            }
+        }
     }
 }
 
 @Composable
 fun VexRow(
     element: RowElement,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(12.dp),
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -296,14 +347,20 @@ fun VexRow(
             .fillMaxWidth()
             .vexElement(element),
         horizontalArrangement = horizontalArrangement,
-        content = content,
-    )
+    ) {
+        val rowScope = this
+        VexComposeScope(
+            parent = element,
+        ) {
+            rowScope.content()
+        }
+    }
 }
 
 @Composable
 fun VexColumn(
     element: ColumnElement,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(12.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -312,14 +369,20 @@ fun VexColumn(
             .fillMaxWidth()
             .vexElement(element),
         verticalArrangement = verticalArrangement,
-        content = content,
-    )
+    ) {
+        val columnScope = this
+        VexComposeScope(
+            parent = element,
+        ) {
+            columnScope.content()
+        }
+    }
 }
 
 @Composable
 fun VexScrollableColumn(
     element: ScrollableColumnElement,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -329,8 +392,14 @@ fun VexScrollableColumn(
             .vexElement(element)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        content = content,
-    )
+    ) {
+        val columnScope = this
+        VexComposeScope(
+            parent = element,
+        ) {
+            columnScope.content()
+        }
+    }
 }
 
 /**
@@ -374,7 +443,7 @@ fun VexElementTree(
     placement: ElementPlacement,
     registry: UIBlueprintRegistry,
     handler: ElementActionHandler,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
     toggleChecked: (ToggleElement) -> Boolean = { false },
     textFieldValue: (TextFieldElement) -> String = { "" },
     onTextFieldValueChange: (TextFieldElement, String) -> Unit = { _, _ -> },
@@ -515,21 +584,9 @@ fun VexElementTree(
             modifier = modifier,
         )
 
-        is TextElement -> Text(
-            text = stringResource(element.textRes),
-            modifier = modifier.vexElement(element),
-            style = when (element.role) {
-                TextRole.Title -> MaterialTheme.typography.headlineMedium
-                TextRole.Body -> MaterialTheme.typography.bodyLarge
-                TextRole.Supporting -> MaterialTheme.typography.bodyMedium
-                TextRole.Label -> MaterialTheme.typography.labelSmall
-            },
-            color = when (element.role) {
-                TextRole.Supporting,
-                TextRole.Label,
-                -> MaterialTheme.colorScheme.onSurfaceVariant
-                else -> MaterialTheme.colorScheme.onSurface
-            },
+        is TextElement -> VexText(
+            element = element,
+            modifier = modifier,
         )
 
         is ImageElement -> Unit

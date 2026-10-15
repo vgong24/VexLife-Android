@@ -165,6 +165,155 @@ val collectSourceAlignmentViolations: () -> List<String> = {
     violations.distinct()
 }
 
+val vexComposeRawImportRoutes =
+    linkedMapOf(
+        "androidx.compose.material3.Text" to "VexText",
+        "androidx.compose.foundation.layout.Column" to "VexColumn",
+        "androidx.compose.foundation.layout.Row" to "VexRow",
+        "androidx.compose.foundation.layout.Box" to "VexBox",
+        "androidx.compose.material3.Card" to "VexCard",
+        "androidx.compose.material3.AlertDialog" to "VexAlertDialog",
+        "androidx.compose.material3.ModalBottomSheet" to "VexModalBottomSheet",
+    )
+
+val vexComposeBareModifierRoot =
+    Regex(
+        """(?m)(?:^|[=(,]\s*)Modifier(?:\.|\s*(?:$|[,)]))""",
+    )
+
+val collectVexComposeMigrationDebt: () -> List<String> = {
+    val screenRoot = project.file(
+        "src/main/kotlin/com/vextreme/vexlife/android/screens",
+    )
+    if (!screenRoot.isDirectory) {
+        emptyList()
+    } else {
+        buildList {
+            screenRoot
+                .walkTopDown()
+                .filter { file ->
+                    file.isFile &&
+                        file.extension == "kt"
+                }
+                .forEach { file ->
+                    val source = file.readText()
+                    vexComposeRawImportRoutes.forEach { (rawImport, vexRoute) ->
+                        if (
+                            source.contains(
+                                "import $rawImport",
+                            )
+                        ) {
+                            add(
+                                "${file.relativeTo(project.projectDir)} imports $rawImport; " +
+                                    "Vex Compose migration route: $vexRoute",
+                            )
+                        }
+                    }
+                    if (
+                        source.contains(
+                            "import androidx.compose.ui.Modifier",
+                        ) &&
+                        vexComposeBareModifierRoot.containsMatchIn(
+                            source,
+                        )
+                    ) {
+                        add(
+                            "${file.relativeTo(project.projectDir)} starts one or more Compose chains " +
+                                "from bare Modifier; Vex Compose migration route: VexModifier",
+                        )
+                    }
+                }
+        }
+            .distinct()
+            .sorted()
+    }
+}
+
+val collectVexComposeMigratedRegressionWarnings: () -> List<String> = {
+    val enforcedRoots =
+        listOf(
+            project.file(
+                "src/main/kotlin/com/vextreme/vexlife/android/screens/shared/gallery/elements",
+            ),
+        )
+
+    buildList {
+        enforcedRoots
+            .filter { root ->
+                root.isDirectory
+            }
+            .forEach { root ->
+                root.walkTopDown()
+                    .filter { file ->
+                        file.isFile &&
+                            file.extension == "kt"
+                    }
+                    .forEach { file ->
+                        val source = file.readText()
+                        vexComposeRawImportRoutes.forEach { (rawImport, vexRoute) ->
+                            if (
+                                source.contains(
+                                    "import $rawImport",
+                                )
+                            ) {
+                                add(
+                                    "${file.relativeTo(project.projectDir)} imports $rawImport; " +
+                                        "this migrated Vex Compose area must use $vexRoute",
+                                )
+                            }
+                        }
+                        if (
+                            source.contains(
+                                "import androidx.compose.ui.Modifier",
+                            ) &&
+                            vexComposeBareModifierRoot.containsMatchIn(
+                                source,
+                            )
+                        ) {
+                            add(
+                                "${file.relativeTo(project.projectDir)} starts one or more Compose chains " +
+                                    "from bare Modifier; migrated Vex Compose route: VexModifier",
+                            )
+                        }
+                    }
+            }
+    }
+        .distinct()
+        .sorted()
+}
+tasks.register("vexComposeMigrationReport") {
+    notCompatibleWithConfigurationCache(
+        "Vex Compose migration debt scans Screen source files at execution time.",
+    )
+    group = "verification"
+    description =
+        "Reports advisory raw Compose migration debt and migrated-area regressions."
+
+    doLast {
+        val debt =
+            collectVexComposeMigrationDebt()
+
+        if (debt.isEmpty()) {
+            logger.lifecycle(
+                "Vex Compose migration debt: none detected in Screen source.",
+            )
+        } else {
+            logger.lifecycle(
+                "Vex Compose migration debt (${debt.size} raw import sites):",
+            )
+            debt.forEach { finding ->
+                logger.lifecycle(
+                    " - $finding",
+                )
+            }
+            logger.lifecycle(
+                "Advisory only while Gallery/VexStream prove the Vex Compose vocabulary; " +
+                    "this task and Vex Compose migration findings do not block verification.",
+            )
+        }
+    }
+}
+
 tasks.register("sourceAlignmentReport") {
     notCompatibleWithConfigurationCache(
         "Source alignment scans repository files through script-local closures at execution time.",
@@ -173,13 +322,21 @@ tasks.register("sourceAlignmentReport") {
     description = "Warns when Screen/Preview/Room source conventions drift."
 
     doLast {
-        val violations = collectSourceAlignmentViolations()
+        val violations =
+            collectSourceAlignmentViolations()
+        val vexComposeWarnings =
+            collectVexComposeMigratedRegressionWarnings()
+
         if (violations.isEmpty()) {
             logger.lifecycle("Source alignment: OK")
         } else {
             violations.forEach { violation ->
                 logger.warn("SOURCE ALIGNMENT: $violation")
             }
+        }
+
+        vexComposeWarnings.forEach { warning ->
+            logger.warn("VEX COMPOSE MIGRATION: $warning")
         }
     }
 }
@@ -192,7 +349,9 @@ tasks.register("verifySourceAlignment") {
     description = "Fails when repository-owned source conventions drift."
 
     doLast {
-        val violations = collectSourceAlignmentViolations()
+        val violations =
+            collectSourceAlignmentViolations()
+
         if (violations.isNotEmpty()) {
             throw GradleException(
                 buildString {
@@ -200,7 +359,9 @@ tasks.register("verifySourceAlignment") {
                     violations.forEach { appendLine(" - $it") }
                     appendLine()
                     append(
-                        "Run :app:sourceAlignmentReport for warning-only output.",
+                        "Run :app:sourceAlignmentReport for warning-only output. " +
+                            "Vex Compose migration debt remains advisory via " +
+                            ":app:vexComposeMigrationReport.",
                     )
                 },
             )

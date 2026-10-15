@@ -73,6 +73,22 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         id = "body.library.search-sheet",
     )
 
+    val SearchContent = columnRef(
+        "body.library.search-sheet.content",
+    )
+
+    val SearchPrompt = textRef(
+        id = "body.library.search-sheet.content.prompt",
+        textRes = R.string.vexstream_music_search,
+        role = TextRole.Supporting,
+    )
+
+    val SearchNoResults = textRef(
+        id = "body.library.search-sheet.content.no-results",
+        textRes = R.string.vexstream_music_no_search_results,
+        role = TextRole.Supporting,
+    )
+
     val ConnectionMenuSheet = modalBottomSheetRef(
         id = "body.connection.menu",
     )
@@ -460,8 +476,12 @@ object VexStreamMusicScreen : AppScreenBlueprint(
             }
 
             modalBottomSheet(SearchSheet) {
-                textField(SearchQuery)
-                button(CloseSearch)
+                column(SearchContent) {
+                    textField(SearchQuery)
+                    text(SearchPrompt)
+                    text(SearchNoResults)
+                    button(CloseSearch)
+                }
             }
 
             modalBottomSheet(ConnectionMenuSheet) {
