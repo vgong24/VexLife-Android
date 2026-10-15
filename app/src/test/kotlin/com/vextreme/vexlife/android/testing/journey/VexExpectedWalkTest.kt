@@ -129,7 +129,10 @@ class VexExpectedWalkTest {
         val dynamic =
             dynamicElement(
                 VexStreamPresentationRefs.trackRow(
-                    VexStreamJourneyFixtures.TrackOne,
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
                 ),
             )
 
