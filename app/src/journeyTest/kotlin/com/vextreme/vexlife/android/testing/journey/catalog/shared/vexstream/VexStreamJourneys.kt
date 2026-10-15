@@ -11,12 +11,26 @@ import com.vextreme.vexlife.android.shell.AppShell
 object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
 
-    private fun trackAction(
+    private fun trackRowAction(
         action: ActionElement,
     ): VexDynamicElementRef =
         dynamicElement(
             elementId =
-                VexStreamPresentationRefs.trackAction(
+                VexStreamPresentationRefs.trackRowAction(
+                    trackRef =
+                        VexStreamJourneyFixtures.TrackOne,
+                    action = action,
+                ),
+            actionTemplate =
+                action,
+        )
+
+    private fun trackMenuAction(
+        action: ActionElement,
+    ): VexDynamicElementRef =
+        dynamicElement(
+            elementId =
+                VexStreamPresentationRefs.trackMenuAction(
                     trackRef =
                         VexStreamJourneyFixtures.TrackOne,
                     action = action,
@@ -65,7 +79,7 @@ object VexStreamJourneys : VexJourneyShard {
 
         // Direct song-cell grammar: body is Play; the trailing menu owns secondary actions.
         tapDynamic(
-            trackAction(
+            trackRowAction(
                 VexStreamMusicScreen.PlayTrack,
             ),
         )
@@ -74,22 +88,22 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.CloseQueue)
 
         tapDynamic(
-            trackAction(
+            trackRowAction(
                 VexStreamMusicScreen.TrackMenu,
             ),
         )
         tapDynamic(
-            trackAction(
+            trackMenuAction(
                 VexStreamMusicScreen.PlayTrackNext,
             ),
         )
         tapDynamic(
-            trackAction(
+            trackRowAction(
                 VexStreamMusicScreen.TrackMenu,
             ),
         )
         tapDynamic(
-            trackAction(
+            trackMenuAction(
                 VexStreamMusicScreen.AddTrackToQueue,
             ),
         )
@@ -101,32 +115,32 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.ShuffleQueue)
 
         tapDynamic(
-            trackAction(
+            trackRowAction(
                 VexStreamMusicScreen.TrackMenu,
             ),
         )
         tapDynamic(
-            trackAction(
+            trackMenuAction(
                 VexStreamMusicScreen.DownloadTrack,
             ),
         )
         tapDynamic(
-            trackAction(
+            trackRowAction(
                 VexStreamMusicScreen.TrackMenu,
             ),
         )
         tapDynamic(
-            trackAction(
+            trackMenuAction(
                 VexStreamMusicScreen.RemoveTrackDownload,
             ),
         )
         tapDynamic(
-            trackAction(
+            trackRowAction(
                 VexStreamMusicScreen.TrackMenu,
             ),
         )
         tapDynamic(
-            trackAction(
+            trackMenuAction(
                 VexStreamMusicScreen.VisitTrackArtist,
             ),
         )
