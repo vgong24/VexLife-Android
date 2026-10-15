@@ -2,8 +2,6 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,9 +31,14 @@ import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ElementIcon
+import com.vextreme.vexlife.android.elements.TextRole
+import com.vextreme.vexlife.android.elements.VexBox
+import com.vextreme.vexlife.android.elements.VexColumn
+import com.vextreme.vexlife.android.elements.VexComposeScope
 import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.VexIconButton
 import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
@@ -196,65 +198,71 @@ internal fun VexStreamTrackCard(
                 null
         }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = 8.dp,
-                vertical = 2.dp,
-            )
-            .vex(
-VexStreamPresentationRefs.trackRowAction(
-                        scope =
-                            presentationScope,
-                        trackRef =
-                            state.track.trackRef,
-                        action =
-                            VexStreamMusicScreen.PlayTrack,
-),
-            )
-            .clickable(
-                enabled = controller != null,
-            ) {
-                rowHandler.activate(
-                    VexStreamMusicScreen.PlayTrack,
-                )
-            },
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    MaterialTheme
-                        .colorScheme
-                        .surface,
-            ),
+    val trackPresentationRef =
+        VexStreamPresentationRefs.trackRow(
+            scope = presentationScope,
+            trackRef = state.track.trackRef,
+        )
+    val playPresentationRef =
+        VexStreamPresentationRefs.trackRowAction(
+            scope = presentationScope,
+            trackRef = state.track.trackRef,
+            action = VexStreamMusicScreen.PlayTrack,
+        )
+
+    VexComposeScope(
+        parentRef = trackPresentationRef,
     ) {
-        Row(
+        Card(
             modifier =
-                Modifier
+                VexModifier
+                    .fillMaxWidth()
                     .padding(
-                        horizontal = 10.dp,
-                        vertical = 8.dp,
+                        horizontal = 8.dp,
+                        vertical = 2.dp,
                     )
                     .vex(
-VexStreamPresentationRefs.trackRow(
-                                scope =
-                                    presentationScope,
-                                trackRef =
-                                    state.track.trackRef,
-),
-                    ),
+                        playPresentationRef,
+                    )
+                    .clickable(
+                        enabled = controller != null,
+                    ) {
+                        rowHandler.activate(
+                            VexStreamMusicScreen.PlayTrack,
+                        )
+                    },
+            colors =
+                CardDefaults.cardColors(
+                    containerColor =
+                        MaterialTheme
+                            .colorScheme
+                            .surface,
+                ),
+        ) {
+            Row(
+                modifier =
+                    VexModifier
+                        .padding(
+                            horizontal = 10.dp,
+                            vertical = 8.dp,
+                        )
+                        .vex(
+                            trackPresentationRef,
+                        ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Surface(
-                modifier = Modifier.size(54.dp),
+                    modifier =
+                        VexModifier.size(54.dp),
                 shape = MaterialTheme.shapes.medium,
                 color =
                     MaterialTheme
                         .colorScheme
                         .surfaceContainerHigh,
             ) {
-                Box(
+                VexBox(
+                    id = "artwork",
                     contentAlignment = Alignment.Center,
                 ) {
                     VexIcon(
@@ -264,21 +272,27 @@ VexStreamPresentationRefs.trackRow(
                 }
             }
 
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+            VexColumn(
+                id = "copy",
+                modifier =
+                    VexModifier.weight(1f),
+                verticalArrangement =
+                    Arrangement.spacedBy(2.dp),
             ) {
-                Text(
+                VexText(
+                    id = "title",
                     text = state.track.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style =
+                        MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
 
                 if (secondaryText.isNotBlank()) {
-                    Text(
+                    VexText(
+                        id = "secondary",
                         text = secondaryText,
-                        style = MaterialTheme.typography.bodyMedium,
+                        role = TextRole.Supporting,
                         color =
                             MaterialTheme
                                 .colorScheme
@@ -289,9 +303,10 @@ VexStreamPresentationRefs.trackRow(
                 }
 
                 compactStatus?.let {
-                    Text(
+                    VexText(
+                        id = "status",
                         text = it,
-                        style = MaterialTheme.typography.labelSmall,
+                        role = TextRole.Label,
                         color =
                             MaterialTheme
                                 .colorScheme
@@ -395,7 +410,7 @@ VexStreamPresentationRefs.trackRowAction(
             }
         }
     }
-}
+    }
 
 @Composable
 private fun VexStreamTrackMenuItem(
@@ -407,7 +422,7 @@ private fun VexStreamTrackMenuItem(
 ) {
     DropdownMenuItem(
         modifier =
-            Modifier.vex(
+            VexModifier.vex(
 VexStreamPresentationRefs.trackMenuAction(
                         scope =
                             presentationScope,
