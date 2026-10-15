@@ -80,6 +80,12 @@ import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.playback.present
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
 import kotlinx.coroutines.launch
 
 /**
@@ -103,7 +109,19 @@ internal fun VexStreamLibrarySurface(
         } else {
             rememberVexStreamMediaController()
         }
-    val playback by rememberVexStreamPlaybackUiState(controller)
+    val playbackExperience =
+        if (inspectionMode) {
+            null
+        } else {
+            rememberVexStreamPlaybackExperience()
+        }
+    val playbackDisplayState =
+        playbackExperience
+            ?.displayState
+            ?: VexStreamPlaybackDisplayState.Unknown()
+    val playback =
+        playbackDisplayState
+            .playback
     val resolver =
         remember(context.filesDir) {
             VexStreamPlaybackSourceResolver(
@@ -180,16 +198,45 @@ internal fun VexStreamLibrarySurface(
 
     Scaffold(
         bottomBar = {
-            if (playback.hasQueue) {
-                VexStreamMiniPlayer(
-                    playback = playback,
-                    controller = controller,
-                    runtime = runtime,
-                    shuffleSelected = queueShuffleSelected,
-                    onShuffle = {
-                        toggleQueueShuffleSelection()
-                    },
-                )
+            when (
+                val displayState =
+                    playbackDisplayState
+            ) {
+                is VexStreamPlaybackDisplayState.Unknown,
+                is VexStreamPlaybackDisplayState.Inactive ->
+                    Unit
+
+                is VexStreamPlaybackDisplayState.Transitioning -> {
+                    VexStreamMiniPlayer(
+                        controller = controller,
+                        playbackExperience =
+                            requireNotNull(
+                                playbackExperience,
+                            ),
+                        runtime = runtime,
+                        shuffleSelected =
+                            queueShuffleSelected,
+                        onShuffle = {
+                            toggleQueueShuffleSelection()
+                        },
+                    )
+                }
+
+                is VexStreamPlaybackDisplayState.Active -> {
+                    VexStreamMiniPlayer(
+                        controller = controller,
+                        playbackExperience =
+                            requireNotNull(
+                                playbackExperience,
+                            ),
+                        runtime = runtime,
+                        shuffleSelected =
+                            queueShuffleSelected,
+                        onShuffle = {
+                            toggleQueueShuffleSelection()
+                        },
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -1712,12 +1759,18 @@ private fun VexStreamTrackMenuItem(
 
 @Composable
 private fun VexStreamMiniPlayer(
-    playback: VexStreamPlaybackUiState,
     controller: androidx.media3.session.MediaController?,
+    playbackExperience:
+        VexStreamPlaybackExperience,
     runtime: VexRuntime,
     shuffleSelected: Boolean,
     onShuffle: () -> Unit,
 ) {
+    val playback =
+        playbackExperience
+            .displayState
+            .playback
+
     val handler =
         ElementActionHandler { element ->
             runtime.activate(
@@ -1728,7 +1781,10 @@ private fun VexStreamMiniPlayer(
                     controller?.seekToPreviousMediaItem()
 
                 VexStreamMusicScreen.TogglePlayback ->
-                    controller?.toggleVexStreamPlayback()
+                    playbackExperience
+                        .activate(
+                            VexStreamPlaybackControl.PlayPause,
+                        )
 
                 VexStreamMusicScreen.NextTrack ->
                     controller?.seekToNextMediaItem()
@@ -1739,6 +1795,16 @@ private fun VexStreamMiniPlayer(
                 else -> Unit
             }
         }
+    val playbackProjection =
+        requireNotNull(
+            playbackExperience
+                .displayState
+                .projection,
+        )
+    val playPause =
+        playbackProjection.present(
+            VexStreamPlaybackControl.PlayPause,
+        )
     val queuePosition =
         playback.currentIndex
             .takeIf { it >= 0 }
@@ -1893,13 +1959,10 @@ private fun VexStreamMiniPlayer(
             VexIconButton(
                 element = VexStreamMusicScreen.TogglePlayback,
                 handler = handler,
-                enabled = controller != null,
+                enabled =
+                    playPause.enabled,
                 iconOverride =
-                    if (playback.isPlaying) {
-                        ElementIcon.Pause
-                    } else {
-                        ElementIcon.Play
-                    },
+                    playPause.icon,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.NextTrack,

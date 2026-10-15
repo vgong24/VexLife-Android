@@ -62,6 +62,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
+| BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational behavior blueprint | **ARCHITECTURE REVIEW READY / FIRST VEXSTREAM CONSUMER FORMED / EXECUTION PROOF PENDING** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | `:architecture:behavior:test` + `:app:testDebugUnitTest` + `vexVerifyJvm`; lived Play/Pause proof before stable/merge acceptance |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **ACCEPTED ON MAIN / PR #78 EXACT HOST PROOF PASS** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | extend only when a new proof claim earns another owner/task |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
@@ -75,6 +76,102 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F6_DESIGN_LAB | debug/developer component gallery | FIRST PRACTICUM INCLUDED IN F1 | Exercise building blocks and inspect their registered topology without creating another truth map | prove F1 Gallery + AppGraph on device |
 | F7_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F8_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+
+## Behavior Blueprint experiment
+
+Entry:
+[`architecture/behavior/README.md`](../../architecture/behavior/README.md)
+
+Canonical family/package construction pattern:
+[`architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md`](../../architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md)
+
+Review checkpoint:
+[`architecture/behavior/REVIEW-CHECKPOINT.md`](../../architecture/behavior/REVIEW-CHECKPOINT.md)
+
+Code-navigation roots:
+
+~~~text
+VexBehaviorDocs
+VexStreamPlaybackDocs
+~~~
+
+The candidate preserves one human-readable four-move vocabulary with explicit semantic equations:
+
+~~~text
+Control + CURRENT State
+-> Act
+
+CURRENT State + Act
+-> Effect + admitted State
+
+CURRENT State + Controls
+-> Projection
+
+Projection
+-> optional Presentation / Display State
+-> UI
+~~~
+
+Feature-owned State / Control / Act / Effect vocabularies share one F-bounded
+`VexBehaviorFamily` coordinate, making both role swaps and cross-family combinations
+compiler-invalid.
+
+`VexBehaviorProjection` carries current State plus resolved Control meaning without exposing
+Effect execution.
+
+`VexPort` standardizes the two-way semantic boundary as:
+
+~~~text
+currentProjection
+activate(Control)
+~~~
+
+and `VexPortFlow` adds a current `StateFlow` projection when observation over time is required.
+
+The first production-shaped consumer is VexStream Play/Pause:
+
+~~~text
+MediaSession / Player
+    -> Media3VexStreamPlaybackConnection
+    -> VexStreamPlaybackProjection
+    -> Mini Player + Context Dock
+
+Control activation
+    -> current semantic State
+    -> Act
+    -> Effect
+    -> MediaController
+~~~
+
+The Connection preserves synchronous admitted intent without pretending provider convergence. Its
+ViewModel is an Android lifetime host only.
+
+Control meaning is semantic-first as `Available(Act)` / `Unavailable`; Boolean availability is
+derived convenience. Every authored `on(...)` must explicitly terminate in `.stay()` or
+`.admit<State>()`, so incomplete relationships cannot silently disappear during construction.
+
+Behavior is the provider/UI/lifecycle-independent semantic rulebook. A concrete Connection is the
+reality boundary/adapter; it must identify its provider/runtime, rightful lifetime owner,
+currentness gates, and concurrency guarantees without requiring a generic Host abstraction.
+
+Cross-family reactions remain convergence-based: convergence may request another family through
+that family's Control/Port, but must not bypass directly to a foreign Effect.
+
+VexMaps pressure establishes four compatibility boundaries without adding new semantic nouns:
+
+- same State-kind + same Act may use mutually-exclusive conditional relationships;
+- relationship admission is immediate semantic topology, not guaranteed final provider outcome;
+- VexPort re-resolution protects stale meaning at activation but does not replace async
+  generation/revision/result-admission gates;
+- concrete Connections retain their provider-specific concurrency/serialization guarantees.
+
+The package construction law is fractal: a sibling Behavior family is earned when the **behavioral
+question itself splits**, not merely when files become large. The canonical split criteria and the
+VexStream Playback mapping live in the family/package blueprint above.
+
+Runtime request payloads, generic UIElement binding, heterogeneous convergence envelopes, generic
+concurrency, generic async failure grammar, and full VexStream queue/seek/shuffle/repeat migration
+remain deliberately held until real consumers earn them.
 
 ## F1 — UI Blueprint / Home Practicum
 

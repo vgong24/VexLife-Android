@@ -1,17 +1,18 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import kotlin.random.Random
 
-class VexStreamPlaybackUiStateTest {
+class VexStreamPlaybackReadStateTest {
 
     @Test
     fun progressProjectionClampsToThePlayableTimeline() {
         assertEquals(
             0.25f,
-            VexStreamPlaybackUiState(
+            VexStreamPlaybackReadState(
                 currentPositionMs = 30_000L,
                 durationMs = 120_000L,
             ).progressFraction,
@@ -20,7 +21,7 @@ class VexStreamPlaybackUiStateTest {
 
         assertEquals(
             1.0f,
-            VexStreamPlaybackUiState(
+            VexStreamPlaybackReadState(
                 currentPositionMs = 150_000L,
                 durationMs = 120_000L,
             ).progressFraction,
@@ -29,7 +30,7 @@ class VexStreamPlaybackUiStateTest {
 
         assertEquals(
             0.0f,
-            VexStreamPlaybackUiState(
+            VexStreamPlaybackReadState(
                 currentPositionMs = 30_000L,
                 durationMs = 0L,
             ).progressFraction,

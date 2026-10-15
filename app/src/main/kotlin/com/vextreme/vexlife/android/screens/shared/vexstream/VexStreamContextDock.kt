@@ -30,6 +30,12 @@ import com.vextreme.vexlife.android.elements.VexIcon
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.playback.present
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -46,13 +52,19 @@ internal fun rememberVexStreamContextDockPage(
 ): VexContextDockPage? {
     val controller =
         rememberVexStreamMediaController()
-    val playback by
-        rememberVexStreamPlaybackUiState(
-            controller,
-        )
+    val playbackExperience =
+        rememberVexStreamPlaybackExperience()
+    when (
+        playbackExperience
+            .displayState
+    ) {
+        is VexStreamPlaybackDisplayState.Unknown,
+        is VexStreamPlaybackDisplayState.Inactive ->
+            return null
 
-    if (!playback.hasQueue) {
-        return null
+        is VexStreamPlaybackDisplayState.Transitioning,
+        is VexStreamPlaybackDisplayState.Active ->
+            Unit
     }
 
     return VexContextDockPage(
@@ -64,7 +76,8 @@ internal fun rememberVexStreamContextDockPage(
         VexStreamContextDockContent(
             runtime = runtime,
             controller = controller,
-            playback = playback,
+            playbackExperience =
+                playbackExperience,
             expanded = expanded,
         )
     }
@@ -74,9 +87,15 @@ internal fun rememberVexStreamContextDockPage(
 private fun VexStreamContextDockContent(
     runtime: VexRuntime,
     controller: MediaController?,
-    playback: VexStreamPlaybackUiState,
+    playbackExperience:
+        VexStreamPlaybackExperience,
     expanded: Boolean,
 ) {
+    val playback =
+        playbackExperience
+            .displayState
+            .playback
+
     var scrubFraction by
         remember(
             playback.currentMediaId,
@@ -92,6 +111,16 @@ private fun VexStreamContextDockContent(
             controller.isCommandAvailable(
                 Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
             )
+    val playbackProjection =
+        requireNotNull(
+            playbackExperience
+                .displayState
+                .projection,
+        )
+    val playPause =
+        playbackProjection.present(
+            VexStreamPlaybackControl.PlayPause,
+        )
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -168,24 +197,23 @@ private fun VexStreamContextDockContent(
             }
             VexStreamDockIconButton(
                 icon =
-                    if (playback.isPlaying) {
-                        ElementIcon.Pause
-                    } else {
-                        ElementIcon.Play
-                    },
+                    playPause.icon,
                 contentDescription =
                     stringResource(
                         R.string
                             .vexstream_music_play_pause,
                     ),
-                enabled = controller != null,
+                enabled =
+                    playPause.enabled,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =
                         "presentation.context-dock.vexstream.play-pause",
                 )
-                controller
-                    ?.toggleVexStreamPlayback()
+                playbackExperience
+                    .activate(
+                        VexStreamPlaybackControl.PlayPause,
+                    )
             }
             VexStreamDockIconButton(
                 icon = ElementIcon.Next,

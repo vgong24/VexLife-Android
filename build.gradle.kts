@@ -9,6 +9,7 @@ plugins {
 
 dependencies {
     kover(project(":app"))
+    kover(project(":architecture:behavior"))
     kover(project(":architecture:elements"))
     kover(project(":architecture:logging"))
     kover(project(":architecture:relay"))
