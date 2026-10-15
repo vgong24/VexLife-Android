@@ -713,6 +713,11 @@ class VexMapsDistributionSessionTest {
                                     ) == true
                         }
                 }
+                assertEquals(
+                    VexMapsDistributionLegAttempt.Idle,
+                    session.states.value
+                        .legAttempt,
+                )
             } finally {
                 session.shutdown()
                 owner.cancelAndJoin()
