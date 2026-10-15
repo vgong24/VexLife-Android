@@ -4,6 +4,7 @@ import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistri
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionStop
+import com.vextreme.vexlife.android.execution.VexCoroutineStatus
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
@@ -594,6 +595,143 @@ class VexMapsDistributionSessionTest {
         }
 
     @Test
+    fun terminalReturnCleanupFailureDoesNotKillNavigationConvergenceExecution() =
+        runBlocking {
+            val repository =
+                InMemoryVexMapsDistributionRepository(
+                    initialDraft(),
+                )
+            val navigation =
+                FakeNavigation()
+            val owner =
+                SupervisorJob(
+                    coroutineContext[
+                        Job
+                    ],
+                )
+            val executionRoot =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Unconfined,
+                )
+            val session =
+                VexMapsDistributionSession(
+                    repository =
+                        repository,
+                    routing =
+                        FakeRouting(
+                            CompletableDeferred(
+                                Unit,
+                            ),
+                        ),
+                    navigation =
+                        navigation,
+                    executionRoot =
+                        executionRoot,
+                    scope =
+                        CoroutineScope(
+                            coroutineContext +
+                                owner,
+                        ),
+                )
+
+            try {
+                awaitDraft(
+                    session,
+                )
+                prepareAndStart(
+                    session =
+                        session,
+                    navigation =
+                        navigation,
+                )
+
+                navigation.arrive()
+                withTimeout(
+                    1_000L,
+                ) {
+                    session.runProjections
+                        .first {
+                            it.state is
+                                VexMapsDistributionRunState.AtStop
+                        }
+                }
+
+                session.completeCurrentStop()
+                withTimeout(
+                    1_000L,
+                ) {
+                    navigation.states
+                        .first {
+                            it.phase ==
+                                VexNavigationSessionPhase.ACTIVE
+                        }
+                }
+
+                navigation.arrive()
+                withTimeout(
+                    1_000L,
+                ) {
+                    session.runProjections
+                        .first {
+                            it.state is
+                                VexMapsDistributionRunState.AtStop
+                        }
+                }
+
+                session.completeCurrentStop()
+                withTimeout(
+                    1_000L,
+                ) {
+                    navigation.states
+                        .first {
+                            it.phase ==
+                                VexNavigationSessionPhase.ACTIVE
+                        }
+                }
+
+                navigation.remainingStopFailures =
+                    1
+                navigation.remainingDismissFailures =
+                    1
+                navigation.arrive()
+
+                withTimeout(
+                    1_000L,
+                ) {
+                    session.states
+                        .first {
+                            session.currentRun
+                                .state is
+                                VexMapsDistributionRunState.Completed &&
+                                it.expectedLeg is
+                                VexMapsDistributionExpectedLegState.None
+                        }
+                }
+
+                assertEquals(
+                    VexNavigationSessionPhase.IDLE,
+                    navigation.current.phase,
+                )
+                assertTrue(
+                    executionRoot
+                        .executions
+                        .value
+                        .values
+                        .none {
+                            it.status ==
+                                VexCoroutineStatus.FAILED
+                        },
+                )
+            } finally {
+                executionRoot.joinStopAll(
+                    "Distribution session test complete",
+                )
+                owner.cancelAndJoin()
+            }
+        }
+
+    @Test
     fun routingRegionReplacementInvalidatesPreparedRealityButNotActiveRun() =
         runBlocking {
             val repository =
@@ -823,6 +961,12 @@ class VexMapsDistributionSessionTest {
         var remainingStartFailures:
             Int =
             0,
+        var remainingStopFailures:
+            Int =
+            0,
+        var remainingDismissFailures:
+            Int =
+            0,
     ) :
         VexMapsDistributionNavigationPort {
         private val mutableStates =
@@ -881,10 +1025,31 @@ class VexMapsDistributionSessionTest {
         override fun stop() {
             mutableStates.value =
                 VexNavigationSessionState()
+
+            if (
+                remainingStopFailures >
+                0
+            ) {
+                remainingStopFailures -=
+                    1
+                error(
+                    "synthetic navigation stop failure",
+                )
+            }
         }
 
-        override fun dismissArrival() =
-            Unit
+        override fun dismissArrival() {
+            if (
+                remainingDismissFailures >
+                0
+            ) {
+                remainingDismissFailures -=
+                    1
+                error(
+                    "synthetic arrival dismissal failure",
+                )
+            }
+        }
 
         fun arrive() {
             mutableStates.value =

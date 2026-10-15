@@ -1103,8 +1103,21 @@ internal class VexMapsDistributionSession(
                         .state is
                     VexMapsDistributionRunState.Completed
                 ) {
-                    navigation.dismissArrival()
-                    navigation.stop()
+                    /*
+                     * Run is already semantically complete. Terminal Android cleanup must not
+                     * escape through VexExecution's onEach boundary and permanently kill the
+                     * maintained Navigation convergence collector.
+                     *
+                     * Stop first: the production Navigation adapter clears process-local
+                     * Navigation truth even when the best-effort service-stop request fails.
+                     * Arrival-notification dismissal is an independent cleanup effect.
+                     */
+                    runCatching {
+                        navigation.stop()
+                    }
+                    runCatching {
+                        navigation.dismissArrival()
+                    }
                     clearExpectedLeg()
                 }
             }
