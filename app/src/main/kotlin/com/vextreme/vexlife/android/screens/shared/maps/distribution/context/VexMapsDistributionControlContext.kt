@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution.context
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
 import com.vextreme.vexlife.android.relay.VexInputState
@@ -11,8 +12,8 @@ import com.vextreme.vexlife.android.relay.VexOutputState
 /**
  * Higher-order context formed from complete lower Experience projections.
  *
- * This is the feature-local "muscle" over two independent "tissues". It derives relational meaning
- * but does not acquire either family's State or Effect ownership.
+ * This is the feature-local "muscle" over independently-owned "tissues". It derives relational
+ * meaning but does not acquire either family's State or Effect ownership.
  */
 internal data class VexMapsDistributionControlContextInputState(
     val mode:
@@ -50,17 +51,35 @@ internal enum class VexMapsDistributionControlLayer {
 }
 
 /**
+ * A bounded request from higher-order relational truth toward one lower Experience.
+ *
+ * Carrying Control rather than Effect preserves the target family's right to re-resolve meaning from
+ * its CURRENT State before anything is attempted.
+ */
+internal sealed interface VexMapsDistributionControlRequest {
+    data class Mode(
+        val control:
+            VexMapsDistributionModeControl,
+    ) : VexMapsDistributionControlRequest
+
+    data class Run(
+        val control:
+            VexMapsDistributionRunControl,
+    ) : VexMapsDistributionControlRequest
+}
+
+/**
  * Relational answer exposed by the Distribution Control Context.
  *
- * [requestedModeControl] is a bounded request back toward the Mode family. A separate feedback
- * boundary must activate that Control through the Mode Experience; this output never carries or
+ * [requestedControl] is a bounded request back toward a lower Experience. A separate feedback
+ * boundary activates that Control through the target Experience; this output never carries or
  * executes a foreign Effect.
  */
 internal data class VexMapsDistributionControlContext(
     val layer:
         VexMapsDistributionControlLayer,
-    val requestedModeControl:
-        VexMapsDistributionModeControl? =
+    val requestedControl:
+        VexMapsDistributionControlRequest? =
         null,
 ) :
     VexOutputState<VexMapsDistributionControlContext> {
@@ -101,9 +120,11 @@ internal fun projectVexMapsDistributionControlContext(
             layer =
                 VexMapsDistributionControlLayer
                     .ReconcilingDistributionMode,
-            requestedModeControl =
-                VexMapsDistributionModeControl
-                    .ToggleDistribution,
+            requestedControl =
+                VexMapsDistributionControlRequest.Mode(
+                    VexMapsDistributionModeControl
+                        .ToggleDistribution,
+                ),
         )
     }
 

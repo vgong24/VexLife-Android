@@ -2,29 +2,32 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.context.VexMapsDistributionControlContext
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.context.VexMapsDistributionControlContextRelay
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.context.VexMapsDistributionControlRequest
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.CurrentVexMapsDistributionModeExperience
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeExperience
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.CurrentVexMapsDistributionRunExperience
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunExperience
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunProjection
 
 /**
- * Feature-local membrane composing two complete lower Experiences plus their relational Control
- * Context.
+ * Feature-local membrane composing complete lower Experiences plus their relational Control Context.
  *
  * The feedback loop is circular at the system level but not at the ownership level:
  *
  * lower truth -> convergence -> target Control -> target Behavior -> new lower truth -> convergence
  *
  * Feedback occurs only after Relay reduction has completed, so the Relay never recursively sends
- * from its reducer.
+ * from its reducer. Lower Experiences remain private so callers cannot bypass this membrane and make
+ * the higher-order Context stale accidentally.
  */
 internal class VexMapsDistributionExperience(
-    internal val mode:
+    private val mode:
         VexMapsDistributionModeExperience =
         CurrentVexMapsDistributionModeExperience(),
-    internal val run:
+    private val run:
         VexMapsDistributionRunExperience =
         CurrentVexMapsDistributionRunExperience(),
 ) {
@@ -35,6 +38,16 @@ internal class VexMapsDistributionExperience(
             initialRun =
                 run.currentProjection,
         )
+
+    val modeProjection:
+        VexMapsDistributionModeProjection
+        get() =
+            mode.currentProjection
+
+    val runProjection:
+        VexMapsDistributionRunProjection
+        get() =
+            run.currentProjection
 
     val controlContext:
         VexMapsDistributionControlContext
@@ -87,45 +100,94 @@ internal class VexMapsDistributionExperience(
     }
 
     /**
-     * Resolve higher-order requests one family at a time.
+     * Settle relational feedback through target Controls only.
      *
-     * Four passes is deliberately more than the current one-hop Mode reconciliation requires while
-     * still failing closed if future relationships accidentally form a non-settling cycle.
+     * The current feature graph is finite. Repeating the same complete feedback key therefore means
+     * the graph has formed a semantic cycle rather than made progress, and fails closed without an
+     * arbitrary pass-count policy.
      */
     private fun settleFeedback() {
-        repeat(MAX_FEEDBACK_PASSES) {
+        val visited =
+            mutableSetOf<
+                DistributionFeedbackKey
+            >()
+
+        while (true) {
             val requested =
                 controlContext
-                    .requestedModeControl
+                    .requestedControl
                     ?: return
 
-            val before =
-                mode.currentProjection
+            val key =
+                DistributionFeedbackKey(
+                    modeState =
+                        mode.currentProjection.state,
+                    runState =
+                        run.currentProjection.state,
+                    request =
+                        requested,
+                )
 
-            mode.activate(
-                requested,
-            )
-
-            val after =
-                mode.currentProjection
-
-            check(after != before) {
-                "Distribution Control Context requested a Mode Control that made no semantic progress"
+            check(
+                visited.add(
+                    key,
+                ),
+            ) {
+                "Distribution Control Context entered a non-settling semantic feedback cycle: $key"
             }
 
-            controlContextRelay.modeChanged(
-                after,
-            )
-        }
+            when (
+                requested
+            ) {
+                is VexMapsDistributionControlRequest.Mode -> {
+                    val before =
+                        mode.currentProjection
 
-        error(
-            "Distribution Control Context did not settle within " +
-                "$MAX_FEEDBACK_PASSES feedback passes",
-        )
+                    mode.activate(
+                        requested.control,
+                    )
+
+                    val after =
+                        mode.currentProjection
+
+                    check(after != before) {
+                        "Distribution Control Context requested a Mode Control that made no semantic progress"
+                    }
+
+                    controlContextRelay.modeChanged(
+                        after,
+                    )
+                }
+
+                is VexMapsDistributionControlRequest.Run -> {
+                    val before =
+                        run.currentProjection
+
+                    run.activate(
+                        requested.control,
+                    )
+
+                    val after =
+                        run.currentProjection
+
+                    check(after != before) {
+                        "Distribution Control Context requested a Run Control that made no semantic progress"
+                    }
+
+                    controlContextRelay.runChanged(
+                        after,
+                    )
+                }
+            }
+        }
     }
 }
 
-private const val MAX_FEEDBACK_PASSES =
-    4
+private data class DistributionFeedbackKey(
+    val modeState: Any,
+    val runState: Any,
+    val request:
+        VexMapsDistributionControlRequest,
+)
 
 // [VXG RealForever]

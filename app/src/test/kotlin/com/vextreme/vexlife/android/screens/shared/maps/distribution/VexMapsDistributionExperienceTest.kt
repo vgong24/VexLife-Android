@@ -30,16 +30,14 @@ class VexMapsDistributionExperienceTest {
 
         assertEquals(
             VexMapsDistributionModeState.Distribution,
-            experience.mode
-                .currentProjection
+            experience.modeProjection
                 .state,
         )
         assertEquals(
             VexMapsDistributionRunState.Draft(
                 stopCount = 3,
             ),
-            experience.run
-                .currentProjection
+            experience.runProjection
                 .state,
         )
         assertEquals(
@@ -48,7 +46,7 @@ class VexMapsDistributionExperienceTest {
         )
         assertNull(
             experience.controlContext
-                .requestedModeControl,
+                .requestedControl,
         )
     }
 
@@ -67,8 +65,7 @@ class VexMapsDistributionExperienceTest {
 
         assertEquals(
             VexMapsDistributionModeState.Distribution,
-            experience.mode
-                .currentProjection
+            experience.modeProjection
                 .state,
         )
         assertEquals(
@@ -94,8 +91,7 @@ class VexMapsDistributionExperienceTest {
 
         assertEquals(
             VexMapsDistributionModeState.Regular,
-            experience.mode
-                .currentProjection
+            experience.modeProjection
                 .state,
         )
         assertEquals(
@@ -125,7 +121,7 @@ class VexMapsDistributionExperienceTest {
             ),
         )
         assertTrue(
-            experience.run.currentProjection.state is
+            experience.runProjection.state is
                 VexMapsDistributionRunState.Running,
         )
     }
