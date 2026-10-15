@@ -16,11 +16,13 @@ class VexStreamPresentationRefsTest {
 
         val first =
             VexStreamPresentationRefs.trackRow(
-                trackRef,
+                scope = VexStreamTrackPresentationScope.Songs,
+                trackRef = trackRef,
             )
         val second =
             VexStreamPresentationRefs.trackRow(
-                trackRef,
+                scope = VexStreamTrackPresentationScope.Songs,
+                trackRef = trackRef,
             )
 
         assertEquals(first, second)
@@ -37,14 +39,40 @@ class VexStreamPresentationRefsTest {
     }
 
     @Test
+    fun sameTrackInDifferentPresentationScopesHasDifferentAddress() {
+        val trackRef =
+            VexStreamTrackRef(
+                "journey.track.one",
+            )
+
+        val songs =
+            VexStreamPresentationRefs.trackRow(
+                scope = VexStreamTrackPresentationScope.Songs,
+                trackRef = trackRef,
+            )
+        val search =
+            VexStreamPresentationRefs.trackRow(
+                scope = VexStreamTrackPresentationScope.Search,
+                trackRef = trackRef,
+            )
+
+        assertNotEquals(
+            songs,
+            search,
+        )
+    }
+
+    @Test
     fun differentOpaqueTrackRefsCannotCollapseToOneRowAddress() {
         val left =
             VexStreamPresentationRefs.trackRow(
-                VexStreamTrackRef("a:1:b"),
+                scope = VexStreamTrackPresentationScope.Songs,
+                trackRef = VexStreamTrackRef("a:1:b"),
             )
         val right =
             VexStreamPresentationRefs.trackRow(
-                VexStreamTrackRef("a"),
+                scope = VexStreamTrackPresentationScope.Songs,
+                trackRef = VexStreamTrackRef("a"),
             )
 
         assertNotEquals(left, right)
@@ -58,6 +86,7 @@ class VexStreamPresentationRefsTest {
 
         val ref =
             VexStreamPresentationRefs.trackRowAction(
+                scope = VexStreamTrackPresentationScope.Songs,
                 trackRef = trackRef,
                 action = VexStreamMusicScreen.PlayTrack,
             )
@@ -148,11 +177,13 @@ class VexStreamPresentationRefsTest {
 
         val row =
             VexStreamPresentationRefs.trackRowAction(
+                scope = VexStreamTrackPresentationScope.Songs,
                 trackRef = trackRef,
                 action = VexStreamMusicScreen.PlayTrack,
             )
         val menu =
             VexStreamPresentationRefs.trackMenuAction(
+                scope = VexStreamTrackPresentationScope.Songs,
                 trackRef = trackRef,
                 action = VexStreamMusicScreen.PlayTrack,
             )
