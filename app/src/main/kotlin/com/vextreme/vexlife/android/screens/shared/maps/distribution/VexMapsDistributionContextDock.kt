@@ -301,6 +301,14 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
 
+                is VexMapsDistributionRunState.Returning ->
+                    Text(
+                        stringResource(
+                            R.string
+                                .vexmaps_distribution_state_returning,
+                        ),
+                    )
+
                 is VexMapsDistributionRunState.Completed ->
                     Text(
                         stringResource(

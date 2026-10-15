@@ -320,6 +320,7 @@
     <string name="vexmaps_distribution_stop_line">%1$d. %2$s</string>
     <string name="vexmaps_distribution_return_on">Return to start: On</string>
     <string name="vexmaps_distribution_return_off">Return to start: Off</string>
+    <string name="vexmaps_distribution_return_destination">Starting point</string>
     <string name="vexmaps_distribution_prepare">Prepare run</string>
     <string name="vexmaps_distribution_start">Start run</string>
     <string name="vexmaps_distribution_delivered">Delivered</string>
@@ -329,6 +330,7 @@
     <string name="vexmaps_distribution_state_ready">Run ready</string>
     <string name="vexmaps_distribution_state_running">Driving stop %1$d of %2$d</string>
     <string name="vexmaps_distribution_state_at_stop">At stop %1$d of %2$d</string>
+    <string name="vexmaps_distribution_state_returning">Returning to start</string>
     <string name="vexmaps_distribution_state_complete">Run complete</string>
     <string name="vexmaps_distribution_plan_eta">Optimized travel estimate: ~%1$d min</string>
     <string name="vexmaps_distribution_optimized_order">Optimized order</string>
