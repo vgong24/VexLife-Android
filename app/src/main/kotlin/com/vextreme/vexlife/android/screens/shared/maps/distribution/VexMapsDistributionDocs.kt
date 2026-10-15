@@ -26,5 +26,6 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.Vex
  * downward semantic change re-enters through the target family's Control. Navigation remains the
  * owner of one actual journey/leg.
  */
-// [VXG RealForever]
 internal object VexMapsDistributionDocs
+
+// [VXG RealForever]
