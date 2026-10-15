@@ -267,11 +267,9 @@ internal fun VexStreamQueueSheet(
                         Modifier
                             .weight(1f)
                             .vex(
-                                VexModifier.semantic(
-                                    VexStreamPresentationRefs
-                                        .QueueList,
-                                ),
-                            ),
+VexStreamPresentationRefs
+                                        .QueueList,,
+),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     itemsIndexed(
@@ -327,12 +325,10 @@ internal fun VexStreamQueueSheet(
                                     vertical = 9.dp,
                                 )
                                 .vex(
-                                    VexModifier.semantic(
-                                        VexStreamPresentationRefs
+VexStreamPresentationRefs
                                             .queueEntry(
-                                                entry.stableKey,
-                                            ),
-                                    ),
+                                                entry.stableKey,,
+),
                                 ),
                             horizontalArrangement =
                                 Arrangement.spacedBy(
@@ -345,16 +341,14 @@ internal fun VexStreamQueueSheet(
                                 modifier = Modifier
                                     .weight(1f)
                                     .vex(
-                                        VexModifier.semantic(
-                                            VexStreamPresentationRefs
+VexStreamPresentationRefs
                                                 .queueEntryAction(
                                                     stableKey =
                                                         entry.stableKey,
                                                     action =
                                                         VexStreamMusicScreen
-                                                            .QueuePlay,
-                                                ),
-                                        ),
+                                                            .QueuePlay,,
+),
                                     )
                                     .clickable(
                                         enabled = queuePlayEnabled,
@@ -456,16 +450,14 @@ internal fun VexStreamQueueSheet(
                                 modifier = Modifier
                                     .size(44.dp)
                                     .vex(
-                                        VexModifier.semantic(
-                                            VexStreamPresentationRefs
+VexStreamPresentationRefs
                                                 .queueEntryAction(
                                                     stableKey =
                                                         entry.stableKey,
                                                     action =
                                                         VexStreamMusicScreen
-                                                            .QueueReorder,
-                                                ),
-                                        ),
+                                                            .QueueReorder,,
+),
                                     )
                                     .pointerInput(
                                         entry.stableKey,
