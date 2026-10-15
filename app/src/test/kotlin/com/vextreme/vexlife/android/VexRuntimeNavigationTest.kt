@@ -126,6 +126,55 @@ class VexRuntimeNavigationTest {
     }
 
     @Test
+    fun dynamicActivationKeepsRegisteredIntentButLogsRuntimeIdentity() {
+        val logger =
+            VexLogger()
+        val runtime =
+            runtime(
+                logger = logger,
+            )
+
+        runtime.activate(
+            AppShell.Elements.Gallery,
+        )
+
+        val dynamicRef =
+            "element.gallery.dynamic.app-graph.example"
+
+        runtime.activateDynamic(
+            element =
+                GalleryScreen.AppGraphTab,
+            subjectRef =
+                dynamicRef,
+        )
+
+        assertSame(
+            GalleryScreen.AppGraphPanel,
+            runtime.presentation.selected(
+                GalleryScreen.Content,
+            ),
+        )
+
+        val record =
+            logger.history.value.last()
+        assertEquals(
+            dynamicRef,
+            record.subjectRef,
+        )
+        assertEquals(
+            "Clicked",
+            record.action,
+        )
+        assertEquals(
+            GalleryScreen.screenId,
+            record.screenBeforeId,
+        )
+        assertNull(
+            record.screenAfterId,
+        )
+    }
+
+    @Test
     fun offScreenOwnedElementCannotBeActivatedDirectly() {
         val runtime = runtime()
 
