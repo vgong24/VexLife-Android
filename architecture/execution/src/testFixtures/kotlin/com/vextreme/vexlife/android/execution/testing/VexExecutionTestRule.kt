@@ -16,6 +16,11 @@ import org.junit.rules.ExternalResource
 /**
  * Reusable per-test host for feature code that consumes VexExecution.
  *
+ * WHY THIS EXISTS:
+ * ordinary coroutine tests tend to repeat scheduler/dispatcher/root setup and rely on each author to
+ * remember cancellation/join cleanup. One missed cleanup can leave a collector or restart loop alive
+ * and make a later test fail for the wrong reason. This rule makes that lifecycle one reusable law.
+ *
  * The rule owns only universal execution-test mechanics:
  * - one fresh virtual-time scheduler;
  * - one StandardTestDispatcher;
@@ -156,6 +161,17 @@ class VexExecutionTestRule(
  * These names intentionally stay close to kotlinx-coroutines-test so developers can transfer their
  * normal coroutine-testing knowledge. The fixture removes setup/cleanup repetition; it does not hide
  * the scheduling boundaries a race test is trying to prove.
+ *
+ * Scheduling meaning:
+ * - runCurrent(): progress all work that is runnable at the current virtual timestamp, then return
+ *   without advancing time. This is the preferred "show me the current concurrency boundary" tool.
+ * - advanceTimeBy(...): move virtual time only when elapsed time is part of the behavior being proved.
+ * - advanceUntilIdle(): drain all scheduled work; useful for completion-oriented tests, but avoid it
+ *   when an intermediate race state is the actual claim because it can skip directly to the end.
+ *
+ * The point is to remove guessed sleeps/time margins from tests. A test should not say "advance 100ms
+ * so the coroutine probably started"; it should run currently-runnable work, inspect reality, and
+ * advance time only when a real timer/backoff/timeout contract requires it.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class VexExecutionTestScope internal constructor(

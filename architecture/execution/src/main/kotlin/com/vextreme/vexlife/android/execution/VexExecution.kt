@@ -12,6 +12,12 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Mandatory meta-pattern for Vex-owned coroutine execution.
  *
+ * WHY THIS EXISTS:
+ * Kotlin's raw launch/collect APIs correctly expose general coroutine freedom, but application code
+ * then has to repeatedly decide ownership, containment, restart, keyed cancellation, and whether two
+ * long-running collectors are actually concurrent. VexExecution centralizes those mechanics so a
+ * feature author can focus on the semantic operation while the execution topology remains inspectable.
+ *
  * A class that needs managed coroutine capability must make that architectural role explicit by
  * extending [VexExecution]. Ordinary UI, Experience, Behavior, repository, and domain classes do
  * not receive [VexCoroutineLauncher]; that implementation remains internal to this module.

@@ -25,6 +25,80 @@ FeatureExecution : VexExecution
     -> joinStop(callable)
 ```
 
+## Why this evolved from ordinary coroutine usage
+
+This foundation is not a rejection of Kotlin coroutines. It is a response to repeated application-level
+failure modes that appear when every feature is free to reconstruct coroutine ownership itself.
+
+```text
+TRADITIONAL / LOCAL CHOICE
+    scope.launch { ... }
+
+PRESSURE OBSERVED
+    Which scope owns this?
+    Who can stop it?
+    Does cancellation suppress restart?
+    Is the Job retained anywhere?
+    Can a sibling failure kill unrelated work?
+    Can this work outlive the Screen/Service/session that created it?
+
+VEX RESPONSE
+    VexExecution
+    -> one sanctioned execution boundary
+    -> named/keyed Job custody
+    -> forceStop / joinStop
+    -> supervised sibling ownership
+```
+
+The same evolution applies to Flow collection:
+
+```text
+TRADITIONAL
+    launch {
+        flowA.collect { ... }
+        flowB.collect { ... }
+    }
+
+FAILURE
+    flowA may never complete
+    -> flowB never begins
+
+VEX
+    launchForCollect(flowA) { ... }
+    launchForCollect(flowB) { ... }
+
+RESULT
+    one managed Job per Flow source
+    -> concurrent sibling collectors
+    -> independently addressable lifetime
+```
+
+And to finite work:
+
+```text
+TRADITIONAL
+    scope.launch {
+        callA()
+        callB()
+        callC()
+    }
+
+QUESTION
+    Are A/B/C three independent executions,
+    or one semantic operation implemented by three suspend calls?
+
+VEX
+    define one suspend operation when they are one intention
+    -> launchOnce(operationReference)
+
+RESULT
+    execution topology follows meaning rather than incidental call count
+```
+
+The architecture therefore removes repeated coroutine-lifetime decisions while leaving domain meaning
+visible. Behavior, Relay, Connection/provider, repository, Compose, and WorkManager keep their own
+rightful responsibilities.
+
 ## Public authoring language
 
 Finite suspend work:
@@ -140,6 +214,87 @@ the active Job leaves custody.
 Use Relay when several changing truths must converge. Use `launchOnce` when one already-defined
 semantic operation should execute once. Use `launchForCollect` only in an execution/runtime bridge
 that truly owns a sustained Flow observation.
+
+## Why the test fixture exists
+
+The test fixture follows the same rule as the Journey infrastructure: feature tests should declare the
+meaningful scenario, while shared infrastructure owns mechanics that would otherwise be copied and
+forgotten.
+
+```text
+TRADITIONAL TEST SETUP
+    runTest
+    + TestCoroutineScheduler
+    + StandardTestDispatcher
+    + VexExecutionRoot
+    + try/finally
+    + cancel/join cleanup
+
+REPEATED RISK
+    one test forgets cleanup
+    -> collector/restart Job survives
+    -> later test fails for the wrong reason
+
+VEX TEST FIXTURE
+    VexExecutionTestRule
+    -> fresh scheduler/root before every test
+    -> cancellation-first teardown after every test
+    -> complete join before the next test begins
+```
+
+Feature construction intentionally remains in the concrete test's `@Before`. Hiding repository,
+provider/fake, and real `VexExecution` construction behind a generic feature builder would shorten
+the file while making the architecture harder for a new human or AI to perceive.
+
+### Virtual-time decision map
+
+Use the smallest scheduler action that matches the claim:
+
+```text
+runCurrent()
+    run everything ready at the CURRENT virtual timestamp
+    do not move time
+    use this to inspect an intermediate concurrency boundary
+
+advanceTimeBy(n)
+    move virtual time by n
+    use this only when passage of time is itself part of the contract
+    (restart backoff, timeout, delayed cleanup, etc.)
+
+advanceUntilIdle()
+    keep advancing/running until no work is scheduled
+    useful for "finish whatever can finish"
+    avoid it when the test needs to inspect an in-between race state
+```
+
+This avoids the traditional flaky pattern of advancing arbitrary real/fake milliseconds merely to
+"give the coroutine time to run." A race test instead follows:
+
+```text
+CAUSE
+-> runCurrent()
+-> OBSERVE
+
+RELEASE EXTERNAL GATE / CHANGE INPUT
+-> runCurrent()
+-> OBSERVE
+
+ADVANCE TIME
+only when time itself is the behavior under test
+```
+
+Teardown is deliberately different from scenario progression:
+
+```text
+WRONG TEARDOWN
+    advanceUntilIdle() on a still-active tree
+    -> may let leaked/restarting work continue until it happens to settle
+
+VEX TEARDOWN
+    close/cancel first
+    -> advance only cancelled cleanup
+    -> join complete tree
+```
 
 ## Deterministic feature-test pattern
 
