@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import android.app.KeyguardManager
+import android.os.PowerManager
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.DeviceConfigurationOverride
@@ -38,6 +40,7 @@ import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.ui.VexLifeApp
 import com.vextreme.vexlife.android.ui.VexLifeSession
 import androidx.test.espresso.Espresso
+import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -107,6 +110,8 @@ class VexTestEngine(
         activeSession = session
 
         try {
+            requireConnectedDeviceReadyForCompose()
+
             compose.setContent {
                 environment.Host {
                     VexLifeApp(session = session)
@@ -349,6 +354,39 @@ class VexTestEngine(
         // If histories match but the wait primitive failed for another reason, preserve that failure.
         if (waitFailure != null) {
             throw waitFailure
+        }
+    }
+
+    /**
+     * Connected Compose proof requires a visible interactive host.
+     *
+     * A secure keyguard cannot be bypassed by instrumentation. Fail immediately with the real
+     * environment predicate instead of waiting for every Journey to time out with an empty
+     * semantics tree.
+     */
+    private fun requireConnectedDeviceReadyForCompose() {
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        val power =
+            context.getSystemService(
+                PowerManager::class.java,
+            )
+        val keyguard =
+            context.getSystemService(
+                KeyguardManager::class.java,
+            )
+
+        check(
+            power?.isInteractive != false,
+        ) {
+            "Vex Journey connected-device proof requires the device screen to be awake"
+        }
+        check(
+            keyguard?.isKeyguardLocked != true,
+        ) {
+            "Vex Journey connected-device proof requires the device to be unlocked"
         }
     }
 
