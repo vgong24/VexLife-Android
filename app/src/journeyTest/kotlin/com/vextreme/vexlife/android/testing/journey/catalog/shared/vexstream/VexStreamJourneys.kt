@@ -39,6 +39,28 @@ object VexStreamJourneys : VexJourneyShard {
                 action,
         )
 
+    private fun queueEntryAction(
+        action: ActionElement,
+    ): VexDynamicElementRef {
+        val stableKey =
+            VexStreamPresentationRefs.queueEntryKey(
+                mediaId =
+                    VexStreamJourneyFixtures
+                        .TrackOne
+                        .value,
+                occurrence = 1,
+            )
+
+        return dynamicElement(
+            elementId =
+                VexStreamPresentationRefs.queueEntryAction(
+                    stableKey = stableKey,
+                    action = action,
+                ),
+            actionTemplate = action,
+        )
+    }
+
     private val pairedHubUnavailable =
         journeySignal(
             signalRef = "signal.vexstream.paired-hub-unavailable",
@@ -84,7 +106,24 @@ object VexStreamJourneys : VexJourneyShard {
             ),
         )
         tap(VexStreamMusicScreen.ShowQueue)
-        tap(VexStreamMusicScreen.QueuePlay)
+        expectVisible(
+            dynamicElement(
+                VexStreamPresentationRefs.queueEntry(
+                    VexStreamPresentationRefs.queueEntryKey(
+                        mediaId =
+                            VexStreamJourneyFixtures
+                                .TrackOne
+                                .value,
+                        occurrence = 1,
+                    ),
+                ),
+            ),
+        )
+        tapDynamic(
+            queueEntryAction(
+                VexStreamMusicScreen.QueuePlay,
+            ),
+        )
         tap(VexStreamMusicScreen.CloseQueue)
 
         tapDynamic(
