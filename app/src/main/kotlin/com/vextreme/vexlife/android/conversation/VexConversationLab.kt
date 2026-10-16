@@ -5,123 +5,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Stable synthetic identities used only by the Conversation Lab.
- *
- * Human-facing labels stay here rather than moving into [VexConversationParticipant]. The generic
- * Conversation model keeps stable identity/kind only; a real product identity owner can replace
- * these lab labels later without changing Conversation truth.
- */
-internal data class VexConversationLabIdentity(
-    val participant: VexConversationParticipant,
-    val displayName: String,
-)
-
-internal object VexConversationLabFixture {
-    val Victor =
-        VexConversationLabIdentity(
-            participant =
-                VexConversationParticipant(
-                    participantRef =
-                        VexConversationParticipantRef(
-                            "person.debug.victor",
-                        ),
-                    kind =
-                        VexConversationParticipantKind.Human,
-                ),
-            displayName = "Victor",
-        )
-
-    val Maya =
-        VexConversationLabIdentity(
-            participant =
-                VexConversationParticipant(
-                    participantRef =
-                        VexConversationParticipantRef(
-                            "person.debug.maya",
-                        ),
-                    kind =
-                        VexConversationParticipantKind.Human,
-                ),
-            displayName = "Maya",
-        )
-
-    val Alex =
-        VexConversationLabIdentity(
-            participant =
-                VexConversationParticipant(
-                    participantRef =
-                        VexConversationParticipantRef(
-                            "person.debug.alex",
-                        ),
-                    kind =
-                        VexConversationParticipantKind.Human,
-                ),
-            displayName = "Alex",
-        )
-
-    val Vex =
-        VexConversationLabIdentity(
-            participant =
-                VexConversationParticipant(
-                    participantRef =
-                        VexConversationParticipantRef(
-                            "companion.debug.vex",
-                        ),
-                    kind =
-                        VexConversationParticipantKind.Companion,
-                ),
-            displayName = "Vex",
-        )
-
-    val all: List<VexConversationLabIdentity> =
-        listOf(
-            Victor,
-            Maya,
-            Alex,
-            Vex,
-        )
-
-    val spaceRef =
-        VexConversationSpaceRef(
-            "space.debug.family",
-        )
-
-    val threadRef =
-        VexConversationThreadRef(
-            "thread.debug.family",
-        )
-
-    fun channelRef(
-        membershipGeneration: Long,
-    ): VexConversationChannelRef {
-        require(membershipGeneration > 0L)
-
-        return VexConversationChannelRef(
-            "channel.debug.family.g$membershipGeneration",
-        )
-    }
-
-    fun identity(
-        participantRef:
-            VexConversationParticipantRef,
-    ): VexConversationLabIdentity? =
-        all.firstOrNull { identity ->
-            identity.participant.participantRef ==
-                participantRef
-        }
-
-    fun requireIdentity(
-        participantRef:
-            VexConversationParticipantRef,
-    ): VexConversationLabIdentity =
-        requireNotNull(
-            identity(participantRef),
-        ) {
-            "unknown Conversation Lab participant: $participantRef"
-        }
-}
-
-/**
  * Developer-only conditions that surround Conversation truth.
  *
  * Home/Companion availability are presentation/provider inputs already modeled outside
@@ -261,6 +144,62 @@ internal class VexConversationLab(
                 autoMirror = enabled,
             )
         }
+    }
+
+    /**
+     * Parses the developer-only remote-speech shorthand already defined by Conversation design.
+     *
+     * Ordinary composer text must not be routed here. This method is only the Lab-side meaning of
+     * an explicitly selected debug injection such as `[Maya]{test message}`.
+     */
+    fun publishRemoteInput(
+        input: String,
+    ): VexConversationMessage {
+        val value =
+            input.trim()
+        val closeBracket =
+            value.indexOf(']')
+
+        require(
+            value.startsWith("[") &&
+                closeBracket > 1 &&
+                closeBracket + 1 < value.length &&
+                value[closeBracket + 1] == '{' &&
+                value.endsWith("}"),
+        ) {
+            "Conversation Lab remote input must use [Speaker]{message} syntax"
+        }
+
+        val speakerLabel =
+            value.substring(
+                startIndex = 1,
+                endIndex = closeBracket,
+            ).trim()
+        val content =
+            value.substring(
+                startIndex = closeBracket + 2,
+                endIndex = value.lastIndex,
+            )
+
+        val identity =
+            requireNotNull(
+                VexConversationLabFixture
+                    .all
+                    .singleOrNull { candidate ->
+                        candidate.displayName ==
+                            speakerLabel
+                    },
+            ) {
+                "unknown Conversation Lab speaker label: $speakerLabel"
+            }
+
+        return publishRemoteMessage(
+            content = content,
+            speakerRef =
+                identity
+                    .participant
+                    .participantRef,
+        )
     }
 
     fun selectRemoteSpeaker(
