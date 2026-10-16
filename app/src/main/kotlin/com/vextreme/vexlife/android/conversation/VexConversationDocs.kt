@@ -108,9 +108,9 @@ package com.vextreme.vexlife.android.conversation
  * cross-generation history is exposed through the authenticated server boundary (or an exactly
  * equivalent safe projection).
  *
- * Feature-local Lab and room rendering are now under PR #99. Registered production Screen,
- * app-session repository wiring, Debug Menu doorway and Journey integration remain separate shared
- * composition effects until their exact paths are safely reconciled.
+ * Feature-local Lab and room rendering are accepted on main through PR #99. Registered production
+ * Screen, app-session repository wiring, Debug Menu doorway and Journey integration remain separate
+ * shared composition effects until their exact paths are safely reconciled.
  *
  * No generic/direct Send contract is claimed yet.
  */
