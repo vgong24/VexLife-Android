@@ -2,108 +2,89 @@
 
 [VXG RealForever]
 
-## Human question
+## Purpose
 
-> How should Test / Proof record an intermittent, unexplained, or near-miss proof event so a retry,
-> time, or future feature cannot make it look falsely new?
+This is the Test / Proof Foundation's incident-recording contract.
 
-This file is the **incident-recording contract and navigation surface**.
+Use it when asking:
 
-It does not contain the full history of every incident.
+> Have we seen this proof failure or reliability symptom before, even if a retry later passed?
+
+It owns:
+- when an incident should exist;
+- status vocabulary;
+- recurrence rules;
+- a small navigation index.
+
+It does **not** own each incident's full chronology. Those live in:
+
+`test-proof-incidents/TF-INCIDENT-*.md`
 
 Current proof architecture remains in:
 
 `TEST-PROOF-ARCHITECTURE.md`
 
-Individual incident histories live in:
+## Why the split is semantic
 
-`test-proof-incidents/`
-
-## Why this is split
-
-Two questions already have independent lifecycles:
+Two questions have independent lifecycles:
 
 ~~~text
-QUESTION A — INCIDENT GRAMMAR
-    When should an incident exist?
-    What statuses mean?
-    What counts as recurrence?
-    Where should a fresh worker look?
+INCIDENT CONTRACT
+    How do incidents work?
 
-QUESTION B — ONE INCIDENT
-    What exactly happened?
-    Which executions observed it?
-    What evidence accumulated?
-    What was hardened?
-    What remains unknown?
+INCIDENT RECORD
+    What happened in this one lineage?
 ~~~
 
-Therefore:
+Do not wait for file size to force that distinction.
 
-~~~text
-TEST-PROOF-INCIDENTS.md
-    small current contract
-    vocabulary
-    recurrence law
-    navigation index
+## When to create an incident
 
-test-proof-incidents/TF-INCIDENT-*.md
-    one independently evolving incident history
-~~~
+Create one when losing the event would materially damage future reasoning, especially when:
 
-The split is semantic, not based on line count.
+- a failure is intermittent or unexplained;
+- unchanged source passes on retry;
+- proof plumbing lost or weakened evidence;
+- a platform/deprecation signal exposes a plausible systemic reliability risk;
+- a future recurrence could otherwise look falsely new.
 
-## What earns an incident
-
-Create an incident when at least one is true:
-
-- a proof failure is intermittent or unexplained;
-- the same exact source passes on retry but the first red still matters;
-- a proof-system weakness caused evidence to be lost or misclassified;
-- a warning/deprecation reveals a plausible systemic reliability risk worth tracking;
-- a recurrence would otherwise look falsely new months later;
-- preventive hardening is justified even though historical root cause is still unknown.
-
-Do **not** create an incident for every ordinary deterministic failing test.
+Do not create one for every ordinary deterministic failing test.
 
 ## Two independent state axes
-
-Do not make one status imply both root-cause knowledge and hardening lifecycle.
 
 ### Failure status
 
 ~~~text
 OPEN_UNEXPLAINED
-    the observed failure/symptom has no established root cause
+    symptom observed; root cause not established
 
 EXPLAINED
-    failure root cause is established
+    root cause established
 
 CLOSED_FIXED
-    established repository-owned root cause was repaired
-    and closure evidence is complete
+    repository-owned cause repaired and closure proof complete
 
 CLOSED_EXTERNAL
-    established external/provider/host cause;
-    repository source was not the owner
+    external/provider/host cause established
 ~~~
 
 ### Hardening state
 
 ~~~text
 NONE
-    no systemic hardening formed
+    no systemic hardening exists
 
 CANDIDATE
-    hardening source exists but is not yet accepted/current
+    hardening source exists but is not accepted/current
 
 PROVED_NOT_LANDED
-    exact hardening candidate has adequate proof
-    but is not yet accepted on main
+    exact hardening candidate is proven but not on main
 
 LANDED
     hardening is accepted/current on main
 ~~~
+
+These axes intentionally do not collapse.
 
 Example:
 
@@ -115,7 +96,7 @@ observabilityGapRootCause = KNOWN
 hardeningState = CANDIDATE
 ~~~
 
-That is not contradictory. We may know why evidence disappeared without knowing why the test failed.
+Knowing why evidence disappeared does not mean we know why the test failed.
 
 ## Incident versus occurrence
 
@@ -127,38 +108,26 @@ OCCURRENCE
     one observed execution relevant to that incident
 ~~~
 
-One incident may accumulate multiple occurrences.
+Same proof task is **not** enough to mean same incident.
 
-But:
-
-~~~text
-same Gradle task
-!= same incident
-~~~
-
-Treat a future failure as a likely recurrence only when:
+A future event is a likely recurrence only when:
 
 ~~~text
-same or compatible owner
+compatible owner
 +
 materially matching failure signature
 +
-compatible execution circumstances
+compatible circumstances
 -> likely recurrence
 ~~~
 
-If those do not materially agree, create a separate incident rather than turning one record into
-"Android tests are sometimes weird."
+Otherwise create a separate incident.
 
-No generic fingerprint engine is earned yet. Human-readable evidence is sufficient.
+No generic fingerprint engine is earned yet.
 
-## Individual incident file shape
+## Incident file shape
 
-Each incident file has two layers.
-
-### Current synthesis
-
-Keep this small and immediately readable:
+Keep a small current synthesis at the top:
 
 ~~~text
 incidentRef
@@ -174,27 +143,15 @@ hardeningState
 recurrenceRule
 ~~~
 
-### Historical evidence
+Then preserve meaningful observations chronologically.
 
-Append meaningful observations chronologically:
+Finish with current interpretation:
+- what is known;
+- what is unknown;
+- what was hardened;
+- what evidence would reclassify/close the incident.
 
-~~~text
-OBSERVATIONS
-
-<date / occurrence>
-    exact observed facts
-    candidate/device/provider coordinates
-    what passed/failed
-    what evidence existed
-
-CURRENT INTERPRETATION
-    what we know
-    what we explicitly do not know
-    what was hardened
-    what evidence would explain/close/reclassify the incident
-~~~
-
-Do not rewrite older observations to match later understanding.
+Older observations are evidence. Do not rewrite them to fit later understanding.
 
 ## Retry law
 
@@ -208,22 +165,20 @@ retry PASS
     "this proof substrate previously exhibited an intermittent failure"
 ~~~
 
-A retry is another observation, not a time machine.
+A retry is another occurrence, not a time machine.
 
 ## Current incident index
 
 ### TF-INCIDENT-2026-10-16-001
 
-**Connected Android suite failed once, then passed unchanged; original failing testcase was lost.**
-
-Current synthesis:
+Connected Android suite failed once, then passed unchanged; the original failing testcase was lost.
 
 ~~~text
 failureStatus = OPEN_UNEXPLAINED
 failureRootCause = UNKNOWN
 
 observabilityGapRootCause =
-    connectedDebugAndroidTest failure prevented downstream result inspection
+    failed connected task prevented downstream result inspection
 
 hardeningCandidate = PR #100
 hardeningState = CANDIDATE
@@ -235,14 +190,13 @@ Record:
 
 ## DesignHistory relationship
 
-Test / Proof owns operational incident currentness.
+Test / Proof owns operational incident truth.
 
-VexLife DesignHistory owns the reusable continuity pressure:
-
+VexLife DesignHistory owns the reusable continuity lesson:
 - current synthesis versus historical evidence;
 - preserve early debt signals;
-- do not centralize every domain's operational history;
-- grow owner-local record structure when the semantic question splits.
+- keep records beside the rightful owner;
+- split when the semantic question splits.
 
 A global IntegrityHistory registry is not earned.
 
