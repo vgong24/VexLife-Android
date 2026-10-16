@@ -12,7 +12,10 @@ Current state:
 
 ~~~text
 foundation = TERMINAL_ACCEPTED_CURRENT on Android main
-production Screen wiring = HELD
+feature-owned Conversation Lab controller = ACCEPTED ON MAIN / PR #99
+generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
+Conversation Convergence + Lab availability overrides = ACCEPTED ON MAIN / PR #104
+production Screen / app-session wiring = HELD on shared composition paths
 real Home adapter = HELD on authenticated cross-generation history exposure
 ~~~
 
@@ -75,12 +78,16 @@ conversation/
 ├── VexConversationRepository.kt
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
+├── VexConversationConvergenceRelay.kt
+├── VexConversationLabFixture.kt
+├── VexConversationLab.kt
 ├── VexConversationDocs.kt
 ├── README.md
 └── design/
     ├── README.md
     └── records/
-        └── 2026-10-15-001-visible-conversation-lab.md
+        ├── 2026-10-15-001-visible-conversation-lab.md
+        └── 2026-10-16-002-live-truth-lab-perturbations.md
 ~~~
 
 Tests:
@@ -89,6 +96,8 @@ Tests:
 VexConversationStateTest
 InMemoryVexFamilyConversationRepositoryTest
 VexConversationSurfaceProjectionTest
+VexConversationConvergenceRelayTest
+VexConversationLabTest
 ~~~
 
 ## Generic Conversation identity
@@ -421,6 +430,113 @@ It is not a product membership mutation API.
 
 The admitted speaker is provider fixture input. The request cannot override it.
 
+## First visible Conversation Lab construction
+
+PR #99 is the accepted first implementation consumer of the visible-Conversation design.
+
+Feature-owned synthetic conditions:
+
+~~~text
+VexConversationLab
+    deterministic Family-room seed/reset
+    add/remove participant -> successor Family generation/channel
+    remote provider-authored speech
+    [Speaker]{message} debug injection resolves only known fixture labels
+    optional mirror only after an accepted Victor Send
+    explicit Home / Companion availability overrides outside Conversation state
+~~~
+
+Product-shaped rendering:
+
+~~~text
+screens/shared/conversation/VexConversationRoom.kt
+    generic Conversation projection/rendering only
+    stable dynamic message identity = messageRef
+    human labels supplied by presentation/identity owner
+    optional developer-environment label
+    no second room-state model
+    generic room does NOT choose Family Send semantics
+    owning Screen supplies the durable composer/control content
+
+screens/shared/conversation/VexConversationRoomPreview.kt
+    Lab + Family-specific visual pressure only
+    local raw composer is explicitly not the production action contract
+~~~
+
+The room renderer is intentionally not a registered app Screen yet. A real Screen needs the same
+app/session-owned Conversation repository instance to cross the existing render bridge. Current
+shared app/data composition paths are being changed by other active Android work, so PR #99 keeps
+that exact integration effect held instead of constructing a Compose-owned repository or Debug
+singleton.
+
+~~~text
+FEATURE_LOCAL_CONSTRUCTION != APP_GRAPH_INTEGRATION
+VISIBLE_COMPONENT != REGISTERED_PRODUCTION_SCREEN
+~~~
+
+## Convergence of observed truth and Lab overrides
+
+Conversation now reuses the accepted Compound Relay foundation for the question:
+
+> When Conversation truth, authenticated-participant truth, Home/Companion observations and
+> developer Lab overrides change independently, what do they mean together right now?
+
+~~~text
+Conversation repository -----\
+authenticated participant ----\
+Home availability ------------+-> VexConversationConvergenceRelay.processStates(...)
+Companion availability -------/
+Conversation Lab ------------/
+                                      |
+                                      v
+                           effective current facts
+                                      |
+                                      v
+                         VexConversationSurfaceProjection
+~~~
+
+The responsibilities are intentionally distinct:
+
+~~~text
+repository/provider
+    owns admitted Conversation truth
+
+Lab
+    owns explicit developer perturbations
+    and synthetic-provider controls
+
+Convergence Relay
+    owns override precedence + retained current relationship
+
+Surface Projection
+    maps already-effective facts into UI-facing shape
+~~~
+
+~~~text
+CONVERGENCE != PROJECTION
+SOURCE_BINDING != LAB_PERTURBATION
+LAB_OVERRIDE != REPOSITORY_TRUTH
+~~~
+
+Availability overrides do not mutate `VexConversationState`. If a real observation changes while an
+override is active, clearing the override reveals that latest observation rather than restoring an old
+snapshot.
+
+Synthetic provider truth remains on the normal ingress path:
+
+~~~text
+Lab remote message
+-> InMemoryVexFamilyConversationRepository.publishThread(...)
+-> Conversation state changes
+-> Convergence observes repository truth
+~~~
+
+The Relay does not manufacture messages, Family generations or provider admission.
+
+Developer/debug surfaces may use Convergence provenance to explain whether an effective availability
+is `OBSERVED`, `LAB_OVERRIDE` or `UNOBSERVED` without adding debug flags to Conversation domain
+objects.
+
 ## Generic/direct Conversation is represented, not overclaimed
 
 Current generic state can represent a direct human <-> Companion Conversation:
@@ -661,13 +777,19 @@ No VexExecutionTestRule is used because no Conversation VexExecution consumer ex
 
 ## Production app integration held
 
-PR #89 deliberately does not modify AppRepositories, VexLifeSession, TalkToVexScreen,
-TalkToVexJourneys, VexRuntime, or VexTestEngine.
+The accepted Conversation foundation deliberately did not modify AppRepositories, VexLifeSession,
+TalkToVexScreen, TalkToVexJourneys, VexRuntime, or VexTestEngine.
 
-Parallel Android work still occupies shared app/runtime/Journey paths.
+PR #99 landed the feature-local Lab / fixture / generic-room / Preview slice. The current
+feature-local Convergence refinement keeps the same discipline: it reuses VexCompoundRelay and does
+not claim shared app/session/Debug ownership.
 
-When the shared Android paths and remaining thread-history producer predicate clear, use the
-established VexStream dependency/test shape.
+Shared app/data, Debug Menu and Journey integration remain separate. Parallel Android work still changes some of
+those composition paths.
+
+When the exact shared paths reconcile, integrate one app/session-owned Conversation repository and
+the Debug Menu doorway through the established Screen/action-registration shape. Do not replay the
+feature locally through a second repository just to avoid coordination.
 
 ## Deliberate holds
 
@@ -684,9 +806,16 @@ WHY:
     no real direct write provider contract has been consumed
 
 HELD:
-    production Screen / Compose wiring
+    production Screen / app-session wiring
 WHY:
-    real dependency graph/shared paths remain occupied
+    feature-local lab/room construction exists, but shared app/data composition must be reconciled
+    before one repository instance can reach the registered Screen render bridge
+
+HELD:
+    Debug Menu Conversation Lab doorway
+WHY:
+    feature-specific lab semantics now exist; shared Debug/AppAction composition remains a separate
+    integration seam and must not absorb those semantics
 
 HELD:
     Journey integration
@@ -723,11 +852,20 @@ A fresh worker should be able to answer:
 
 ## Next edge
 
-Resume when one of these predicates changes:
+Current implementation edge:
+
+~~~text
+prove the feature-local Conversation Convergence / Lab-override refinement
+-> reconcile app/session repository ownership
+-> register one real Conversation Screen over the same Convergence output
+-> connect Debug Menu doorway to feature-owned Lab controls
+-> add Journey/device proof only for the visible controls actually admitted
+~~~
+
+Independent future predicates remain:
 
 ~~~text
 authenticated Family thread history is exposed through the accepted server authority chain
-AppRepositories / Journey shared ownership clears
 Experience vocabulary is reconciled by its owner
 a real non-Family/direct write provider contract appears
 ~~~
