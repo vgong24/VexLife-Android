@@ -50,6 +50,8 @@ import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 
 /**
  * Queue presentation neighborhood for VexStream.
@@ -94,6 +96,13 @@ internal fun VexStreamQueueSheet(
     shuffleSelected: Boolean,
     onShuffle: () -> Unit,
 ) {
+    val queueExperience =
+        rememberVexStreamQueueExperience(
+            controller,
+        )
+    val queueProjection =
+        queueExperience.projection
+
     val tracksByRef =
         remember(state.tracks) {
             state.tracks.associateBy {
@@ -174,7 +183,9 @@ internal fun VexStreamQueueSheet(
                     runtime.activate(
                         element,
                     )
-                    controller?.clearMediaItems()
+                    queueExperience.activate(
+                        VexStreamQueueControl.Clear,
+                    )
                 }
 
                 else ->
@@ -234,8 +245,11 @@ internal fun VexStreamQueueSheet(
                     element = VexStreamMusicScreen.ClearQueue,
                     handler = handler,
                     enabled =
-                        controller != null &&
-                            playback.hasQueue,
+                        queueProjection
+                            ?.get(
+                                VexStreamQueueControl.Clear,
+                            )
+                            ?.isAvailable == true,
                 )
             }
 

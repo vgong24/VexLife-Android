@@ -13,12 +13,13 @@ class VexStreamQueueBehaviorTest {
         behavior.vexStreamQueueControls()
 
     @Test
-    fun emptyQueueMakesNeighborControlsUnavailable() {
+    fun emptyQueueMakesQueueControlsUnavailable() {
         val state =
             vexStreamQueueState(
                 mediaItemCount = 0,
                 previousAvailable = true,
                 nextAvailable = true,
+                clearAvailable = true,
             )
 
         assertSame(
@@ -26,28 +27,30 @@ class VexStreamQueueBehaviorTest {
             state,
         )
         assertFalse(
-            controls.projection(
-                state,
-            )[
+            controls.projection(state)[
                 VexStreamQueueControl.Previous
             ].isAvailable,
         )
         assertFalse(
-            controls.projection(
-                state,
-            )[
+            controls.projection(state)[
                 VexStreamQueueControl.Next
+            ].isAvailable,
+        )
+        assertFalse(
+            controls.projection(state)[
+                VexStreamQueueControl.Clear
             ].isAvailable,
         )
     }
 
     @Test
-    fun nonEmptyQueueProjectsPreviousAndNextIndependently() {
+    fun nonEmptyQueueProjectsControlsIndependently() {
         val state =
             vexStreamQueueState(
                 mediaItemCount = 3,
                 previousAvailable = false,
                 nextAvailable = true,
+                clearAvailable = true,
             )
 
         assertTrue(
@@ -55,28 +58,31 @@ class VexStreamQueueBehaviorTest {
                 VexStreamQueueState.NonEmpty,
         )
         assertFalse(
-            controls.projection(
-                state,
-            )[
+            controls.projection(state)[
                 VexStreamQueueControl.Previous
             ].isAvailable,
         )
         assertSame(
             VexStreamQueueAct.Next,
-            controls.projection(
-                state,
-            )[
+            controls.projection(state)[
                 VexStreamQueueControl.Next
+            ].act,
+        )
+        assertSame(
+            VexStreamQueueAct.Clear,
+            controls.projection(state)[
+                VexStreamQueueControl.Clear
             ].act,
         )
     }
 
     @Test
-    fun queueActsResolveToNeighborEffectsWithoutChangingStateKind() {
+    fun neighborActsStillResolveToNeighborEffectsWithoutChangingStateKind() {
         val state =
             VexStreamQueueState.NonEmpty(
                 previousAvailable = true,
                 nextAvailable = true,
+                clearAvailable = true,
             )
 
         val previous =
@@ -107,6 +113,32 @@ class VexStreamQueueBehaviorTest {
         assertSame(
             VexStreamQueueState.NonEmpty::class,
             next?.admittedStateKind,
+        )
+    }
+
+    @Test
+    fun clearAttemptsProviderMutationWithoutClaimingEmptyBeforeObservation() {
+        val state =
+            VexStreamQueueState.NonEmpty(
+                previousAvailable = true,
+                nextAvailable = true,
+                clearAvailable = true,
+            )
+
+        val clear =
+            behavior.resolve(
+                current = state,
+                act =
+                    VexStreamQueueAct.Clear,
+            )
+
+        assertSame(
+            VexStreamQueueEffect.ClearQueue,
+            clear?.effect,
+        )
+        assertSame(
+            VexStreamQueueState.NonEmpty::class,
+            clear?.admittedStateKind,
         )
     }
 }
