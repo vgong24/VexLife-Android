@@ -68,7 +68,9 @@ package com.vextreme.vexlife.android.conversation
  *
  * The Lab publishes synthetic external truth through the existing in-memory provider seam. It does
  * not perform Victor's product Send or become another Conversation state owner. The room renderer
- * consumes [VexConversationSurfaceProjection] directly and adds no parallel room-state model.
+ * consumes [VexConversationSurfaceProjection] directly and adds no parallel room-state model. It
+ * also does not choose Family Send semantics; the future registered Screen supplies its durable
+ * composer/Send controls and action contract.
  *
  * ## Real Family producer
  *
