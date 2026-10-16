@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.vexstream.queue
 import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -224,6 +225,62 @@ class VexStreamQueueBehaviorTest {
                     3,
                     4,
                 ),
+        )
+    }
+
+    @Test
+    fun shuffleCanReorderTheWholeQueueBeforePlaybackStarts() {
+        val natural =
+            (0 until 5).toList()
+        val shuffled =
+            vexStreamQueueShuffleTargetOrder(
+                itemCount = natural.size,
+                currentIndex = -1,
+                random = Random(11),
+            )
+
+        assertEquals(
+            natural.toSet(),
+            shuffled.toSet(),
+        )
+        assertNotEquals(
+            natural,
+            shuffled,
+        )
+    }
+
+    @Test
+    fun largeQueueShuffleKeepsPrefixAndFormsOneCompleteFuturePermutation() {
+        val itemCount = 640
+        val currentIndex = 19
+        val natural =
+            (0 until itemCount).toList()
+        val shuffled =
+            vexStreamQueueShuffleTargetOrder(
+                itemCount = itemCount,
+                currentIndex = currentIndex,
+                random = Random(24),
+            )
+
+        assertEquals(
+            natural.take(
+                currentIndex + 1,
+            ),
+            shuffled.take(
+                currentIndex + 1,
+            ),
+        )
+        assertEquals(
+            natural.toSet(),
+            shuffled.toSet(),
+        )
+        assertNotEquals(
+            natural.drop(
+                currentIndex + 1,
+            ),
+            shuffled.drop(
+                currentIndex + 1,
+            ),
         )
     }
 
