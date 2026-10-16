@@ -2,7 +2,7 @@
 
 [VXG RealForever]
 
-Last meaningfully updated: **2026-10-15T23:41-07:00**  
+Last meaningfully updated: **2026-10-16**  
 Current design record: `records/2026-10-15-001-feature-lab-pattern.md`
 
 ## Current intention
@@ -67,14 +67,58 @@ Synthetic event controls publish Events conditions and exercise normal Events ow
 
 ### Conversation
 
-Planned first feature-lab consumer of the refined pattern.
+Conversation is now an accepted feature-local consumer of the pattern.
 
-Debug Menu should expose high-level controls such as seed/reset/add participant/currentness/provider
-availability, but Conversation owns what those controls mean and how state is formed.
+Accepted source owns:
+~~~text
+VexConversationLab
+    synthetic-provider controls
+    explicit Home / Companion availability overrides
 
-Conversation's current scenario design lives at:
+VexConversationHybridRelay
+    one mixed-provenance current relationship
+    observed-vs-Lab provenance
+~~~
+
+The production Debug Menu doorway is still intentionally **not wired** because the shared Debug /
+AppAction / app-session paths are under active ownership elsewhere.
+
+When that doorway is admitted, Debug should expose high-level controls into the existing
+Conversation-owned Lab/Hybrid relationship. It must not recreate Conversation state, override
+precedence, or provider simulation inside Debug.
+
+Conversation current design lives at:
 
 `../../../../conversation/design/README.md`
+
+## Hybrid-aware developer controls
+
+Conversation added a useful distinction to the original feature-lab pattern:
+
+~~~text
+synthetic provider condition
+    changes provider/repository truth through normal ingress
+
+Lab override
+    changes one effective surrounding observation
+    without rewriting repository truth
+
+Hybrid Relay
+    reconciles observed + overridden facts once
+~~~
+
+Debug Menu should not need to implement that precedence itself.
+
+A future reusable Debug connective contract may be earned if several features expose compatible
+feature-owned Hybrid/Lab capabilities. That contract is **not** admitted yet.
+
+~~~text
+DEBUG HOSTS CONTROLS
+!=
+DEBUG OWNS HYBRID SEMANTICS
+~~~
+
+Do not add a global Lab/Hybrid registry merely because Conversation now has one Hybrid Relay.
 
 ## Rule for adding another lab
 
