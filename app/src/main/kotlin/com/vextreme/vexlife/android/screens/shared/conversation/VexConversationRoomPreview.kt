@@ -15,7 +15,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.conversation.InMemoryVexFamilyConversationRepository
+import com.vextreme.vexlife.android.conversation.VexConversationCompanionAvailability
 import com.vextreme.vexlife.android.conversation.VexConversationConvergenceRelay
+import com.vextreme.vexlife.android.conversation.VexConversationHomeAvailability
 import com.vextreme.vexlife.android.conversation.VexConversationLab
 import com.vextreme.vexlife.android.conversation.VexConversationLabFixture
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationSurfaceSendAvailability
@@ -89,9 +91,7 @@ private fun VexConversationRoomPreview() {
                         .participantRef,
                 )
                 relay.homeAvailabilityObserved(
-                    com.vextreme.vexlife.android.conversation
-                        .VexConversationHomeAvailability
-                        .Available,
+                    VexConversationHomeAvailability.Available,
                 )
                 relay.companionAvailabilityObserved(
                     mapOf(
@@ -99,9 +99,7 @@ private fun VexConversationRoomPreview() {
                             .Vex
                             .participant
                             .participantRef to
-                            com.vextreme.vexlife.android.conversation
-                                .VexConversationCompanionAvailability
-                                .Available,
+                            VexConversationCompanionAvailability.Available,
                     ),
                 )
             }
