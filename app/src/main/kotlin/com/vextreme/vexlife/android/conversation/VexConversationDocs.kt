@@ -56,6 +56,20 @@ package com.vextreme.vexlife.android.conversation
  *
  * A generic direct Conversation does not silently gain Family Send semantics.
  *
+ * ## Conversation Lab / room presentation
+ *
+ * Feature-owned synthetic-provider conditions:
+ *
+ * [VexConversationLab]
+ *
+ * Product-shaped room renderer:
+ *
+ * app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/conversation/VexConversationRoom.kt
+ *
+ * The Lab publishes synthetic external truth through the existing in-memory provider seam. It does
+ * not perform Victor's product Send or become another Conversation state owner. The room renderer
+ * consumes [VexConversationSurfaceProjection] directly and adds no parallel room-state model.
+ *
  * ## Real Family producer
  *
  * VexLife VF-02C issue #427 owns the current model-free Family Conversation bridge.
@@ -88,8 +102,9 @@ package com.vextreme.vexlife.android.conversation
  * cross-generation history is exposed through the authenticated server boundary (or an exactly
  * equivalent safe projection).
  *
- * Production Screen/Journey integration also remains held while shared Android app/test paths are
- * occupied.
+ * Feature-local Lab and room rendering are now under PR #99. Registered production Screen,
+ * app-session repository wiring, Debug Menu doorway and Journey integration remain separate shared
+ * composition effects until their exact paths are safely reconciled.
  *
  * No generic/direct Send contract is claimed yet.
  */
