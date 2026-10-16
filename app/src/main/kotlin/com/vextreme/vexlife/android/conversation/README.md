@@ -451,6 +451,8 @@ screens/shared/conversation/VexConversationRoom.kt
     human labels supplied by presentation/identity owner
     optional developer-environment label
     no second room-state model
+    generic room does NOT choose Family Send semantics
+    owning Screen supplies the durable composer/control content
 ~~~
 
 The room renderer is intentionally not a registered app Screen yet. A real Screen needs the same
