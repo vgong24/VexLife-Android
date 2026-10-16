@@ -24,7 +24,14 @@ import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
+import com.vextreme.vexlife.android.elements.ScrollableColumnElement
 import com.vextreme.vexlife.android.elements.VexButton
+import com.vextreme.vexlife.android.elements.VexColumn
+import com.vextreme.vexlife.android.elements.VexComposeScope
+import com.vextreme.vexlife.android.elements.VexModifier
+import com.vextreme.vexlife.android.elements.VexRow
+import com.vextreme.vexlife.android.elements.VexText
+import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -98,6 +105,7 @@ internal fun VexStreamAlbumsPane(
 
     VexStreamCollectionBrowserPane(
         runtime = runtime,
+        panel = VexStreamMusicScreen.AlbumsPanel,
         rows = rows,
         emptyText =
             stringResource(
@@ -154,6 +162,7 @@ internal fun VexStreamArtistsPane(
 
     VexStreamCollectionBrowserPane(
         runtime = runtime,
+        panel = VexStreamMusicScreen.ArtistsPanel,
         rows = rows,
         emptyText =
             stringResource(
@@ -212,6 +221,7 @@ internal fun VexStreamPlaylistsPane(
 
     VexStreamCollectionBrowserPane(
         runtime = runtime,
+        panel = VexStreamMusicScreen.PlaylistsPanel,
         rows = rows,
         emptyText =
             stringResource(
@@ -227,6 +237,7 @@ internal fun VexStreamPlaylistsPane(
 @Composable
 private fun VexStreamCollectionBrowserPane(
     runtime: VexRuntime,
+    panel: ScrollableColumnElement,
     rows: List<VexStreamCollectionRow>,
     emptyText: String,
     navigationLabel: String,
@@ -274,81 +285,88 @@ private fun VexStreamCollectionBrowserPane(
         }
     }
 
-    NavigationTrailContent(
-        trail = trail,
-        modifier = Modifier.fillMaxSize(),
-        label = navigationLabel,
-    ) { route ->
-        when (route) {
-            VexStreamCollectionRoute.Index -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement =
-                        Arrangement.spacedBy(
-                            8.dp,
-                        ),
-                ) {
-                    item(
-                        key = "collection-tabs",
+    VexComposeScope(
+        parent = panel,
+    ) {
+        NavigationTrailContent(
+            trail = trail,
+            modifier =
+                VexModifier
+                    .fillMaxSize()
+                    .vex(panel),
+            label = navigationLabel,
+        ) { route ->
+            when (route) {
+                VexStreamCollectionRoute.Index -> {
+                    LazyColumn(
+                        modifier = VexModifier.fillMaxSize(),
+                        verticalArrangement =
+                            Arrangement.spacedBy(
+                                8.dp,
+                            ),
                     ) {
-                        VexStreamLibraryTabs(
-                            runtime = runtime,
-                        )
-                    }
-
-                    if (rows.isEmpty()) {
                         item(
-                            key = "collection-empty",
+                            key = "collection-tabs",
                         ) {
-                            VexStreamEmptyMessage(
-                                text = emptyText,
+                            VexStreamLibraryTabs(
+                                runtime = runtime,
                             )
                         }
-                    } else {
-                        items(
-                            items = rows,
-                            key = {
-                                it.key
-                            },
-                        ) { row ->
-                            VexStreamCollectionCard(
-                                title = row.title,
-                                subtitle = row.subtitle,
-                                tracks = row.tracks,
-                                onOpen = {
-                                    trail.push(
-                                        VexStreamCollectionRoute.Detail(
-                                            key = row.key,
-                                        ),
-                                    )
+
+                        if (rows.isEmpty()) {
+                            item(
+                                key = "collection-empty",
+                            ) {
+                                VexStreamEmptyMessage(
+                                    text = emptyText,
+                                )
+                            }
+                        } else {
+                            items(
+                                items = rows,
+                                key = {
+                                    it.key
                                 },
-                            )
+                            ) { row ->
+                                VexStreamCollectionCard(
+                                    title = row.title,
+                                    subtitle = row.subtitle,
+                                    tracks = row.tracks,
+                                    onOpen = {
+                                        trail.push(
+                                            VexStreamCollectionRoute.Detail(
+                                                key = row.key,
+                                            ),
+                                        )
+                                    },
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            is VexStreamCollectionRoute.Detail -> {
-                val selected =
-                    rows.firstOrNull {
-                        it.key == route.key
+                is VexStreamCollectionRoute.Detail -> {
+                    val selected =
+                        rows.firstOrNull {
+                            it.key == route.key
+                        }
+
+                    if (selected == null) {
+                        VexStreamEmptyMessage(
+                            text = emptyText,
+                        )
+                    } else {
+                        VexStreamCollectionDetail(
+                            runtime = runtime,
+                            collectionKey = selected.key,
+                            title = selected.title,
+                            tracks = selected.tracks,
+                            controller = controller,
+                            resolver = resolver,
+                            onBack = trail::goBack,
+                            onVisitArtist = onVisitArtist,
+                        )
                     }
-
-                if (selected == null) {
-                    VexStreamEmptyMessage(
-                        text = emptyText,
-                    )
-                } else {
-                    VexStreamCollectionDetail(
-                        runtime = runtime,
-                        collectionKey = selected.key,
-                        title = selected.title,
-                        tracks = selected.tracks,
-                        controller = controller,
-                        resolver = resolver,
-                        onBack = trail::goBack,
-                        onVisitArtist = onVisitArtist,
-                    )
                 }
             }
         }
@@ -367,14 +385,15 @@ private fun VexStreamCollectionDetail(
     onVisitArtist: (String) -> Unit,
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = VexModifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item(
             key = "collection-header",
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
+            VexColumn(
+                id = "detail-header",
+                modifier = VexModifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 VexButton(
@@ -389,11 +408,13 @@ private fun VexStreamCollectionDetail(
                             onBack()
                         },
                 )
-                Text(
+                VexText(
+                    id = "title",
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
                 )
-                Text(
+                VexText(
+                    id = "track-count",
                     text =
                         stringResource(
                             R.string.vexstream_music_track_count,
@@ -478,7 +499,7 @@ private fun VexStreamCollectionActions(
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = VexModifier,
 ) {
     val canPlay =
         controller != null &&
@@ -506,7 +527,8 @@ private fun VexStreamCollectionActions(
             }
         }
 
-    Row(
+    VexRow(
+        id = "actions",
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
