@@ -59,6 +59,10 @@ internal class Media3VexStreamQueueConnection(
                 controller
                     .seekToNextMediaItem()
 
+            VexStreamQueueEffect.ShuffleFuture ->
+                controller
+                    .shuffleVexStreamFutureQueue()
+
             VexStreamQueueEffect.ClearQueue ->
                 controller
                     .clearMediaItems()
@@ -83,6 +87,18 @@ private fun Player.toVexStreamQueueState():
                     .COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
             ) &&
                 hasNextMediaItem(),
+        shuffleAvailable =
+            vexStreamQueueShuffleAvailable(
+                mediaItemCount =
+                    mediaItemCount,
+                currentIndex =
+                    currentMediaItemIndex,
+                canChangeMediaItems =
+                    isCommandAvailable(
+                        Player
+                            .COMMAND_CHANGE_MEDIA_ITEMS,
+                    ),
+            ),
         clearAvailable =
             isCommandAvailable(
                 Player
@@ -94,6 +110,7 @@ internal fun vexStreamQueueState(
     mediaItemCount: Int,
     previousAvailable: Boolean,
     nextAvailable: Boolean,
+    shuffleAvailable: Boolean,
     clearAvailable: Boolean,
 ): VexStreamQueueState {
     require(
@@ -113,6 +130,8 @@ internal fun vexStreamQueueState(
             previousAvailable,
         nextAvailable =
             nextAvailable,
+        shuffleAvailable =
+            shuffleAvailable,
         clearAvailable =
             clearAvailable,
     )

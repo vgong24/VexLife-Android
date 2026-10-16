@@ -161,6 +161,13 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.TogglePlayback)
         tap(VexStreamMusicScreen.ShuffleQueue)
 
+        // Queue-sheet Shuffle asks the same one-shot Queue question. Exercise it while the
+        // three-occurrence fixture still has two future items; the later one-song collection does
+        // not truthfully make this Control available.
+        tap(VexStreamMusicScreen.ShowQueue)
+        tap(VexStreamMusicScreen.QueueShuffle)
+        tap(VexStreamMusicScreen.CloseQueue)
+
         tapDynamic(
             trackRowAction(
                 VexStreamMusicScreen.TrackMenu,
@@ -197,7 +204,6 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.PlayAll)
         tap(VexStreamMusicScreen.ShuffleAll)
         tap(VexStreamMusicScreen.ShowQueue)
-        tap(VexStreamMusicScreen.QueueShuffle)
         tap(VexStreamMusicScreen.ToggleRepeat)
         tap(VexStreamMusicScreen.ClearQueue)
         tap(VexStreamMusicScreen.CloseQueue)

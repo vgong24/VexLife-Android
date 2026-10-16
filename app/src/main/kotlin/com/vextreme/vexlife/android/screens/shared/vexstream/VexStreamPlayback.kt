@@ -10,7 +10,7 @@ import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
-import kotlin.random.Random
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleTargetOrder
 
 /**
  * Resolves product-level track availability into one Media3 item.
@@ -216,104 +216,6 @@ internal fun vexStreamQueueAdjacentMoveTarget(
 
         else -> null
     }
-}
-
-/**
- * Forms one visible queue shuffle without enabling Media3's persistent shuffle traversal.
- *
- * Already-played items and the current item stay fixed. Only the future queue is randomized.
- * If randomness produces the same order, rotate once so an explicit reshuffle is perceptible when
- * at least two future items exist.
- */
-internal fun vexStreamQueueShuffleTargetOrder(
-    itemCount: Int,
-    currentIndex: Int,
-    random: Random = Random.Default,
-): List<Int> {
-    if (itemCount <= 0) {
-        return emptyList()
-    }
-
-    val lockedThrough =
-        currentIndex.coerceIn(
-            -1,
-            itemCount - 1,
-        )
-    val prefix =
-        if (lockedThrough >= 0) {
-            (0..lockedThrough).toList()
-        } else {
-            emptyList()
-        }
-    val future =
-        ((lockedThrough + 1) until itemCount)
-            .toList()
-
-    if (future.size <= 1) {
-        return prefix + future
-    }
-
-    val randomized = future.shuffled(random)
-    val changed =
-        if (randomized == future) {
-            randomized.drop(1) + randomized.first()
-        } else {
-            randomized
-        }
-
-    return prefix + changed
-}
-
-internal fun MediaController.shuffleVexStreamQueue(): Boolean {
-    val count = mediaItemCount
-    if (
-        count <= 1 ||
-        !isCommandAvailable(
-            Player.COMMAND_CHANGE_MEDIA_ITEMS,
-        )
-    ) {
-        return false
-    }
-
-    val currentIndex =
-        currentMediaItemIndex
-            .coerceIn(
-                -1,
-                count - 1,
-            )
-    val futureStart =
-        (currentIndex + 1)
-            .coerceIn(
-                0,
-                count,
-            )
-    val futureCount =
-        count - futureStart
-    if (futureCount <= 1) {
-        return false
-    }
-
-    val targetOrder =
-        vexStreamQueueShuffleTargetOrder(
-            itemCount = count,
-            currentIndex = currentIndex,
-        )
-    val shuffledFuture =
-        targetOrder
-            .drop(futureStart)
-            .map(::getMediaItemAt)
-
-    shuffleModeEnabled = false
-
-    // One playlist mutation keeps large queues responsive. The previous implementation emitted one
-    // moveMediaItem command per shuffled position, which caused hundreds of MediaSession timeline
-    // updates and recompositions for large libraries.
-    replaceMediaItems(
-        futureStart,
-        count,
-        shuffledFuture,
-    )
-    return true
 }
 
 internal fun MediaController.toggleVexStreamRepeatAll() {
