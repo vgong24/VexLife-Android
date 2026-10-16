@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.screens.shared.conversation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.weight
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
