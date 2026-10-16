@@ -6,7 +6,7 @@ Feature ref: `feature.vexlife.conversation`
 Current human name: **Conversation**  
 Historical/search name: **VexConversation**  
 Last meaningfully updated: **2026-10-16**  
-Current design record: `records/2026-10-16-002-live-truth-lab-perturbations.md`
+Current design record: `records/2026-10-16-003-name-ontology-hybrid-relay.md`
 
 ## Role of this file
 
@@ -86,6 +86,30 @@ The Debug Menu must never directly paint fake chat bubbles.
 ~~~text
 DEBUG_SIMULATION != PRODUCT_PRESENTATION_SHORTCUT
 ~~~
+
+## Name Ontology — Hybrid
+
+Current code names the mixed-provenance relationship:
+
+~~~text
+VexConversationHybridRelay
+~~~
+
+Cold-reading showed that `VexConversationConvergenceRelay` sounded broader than its actual ownership,
+while `VexConversationSurfaceHybridRelay` sounded narrower than the facts it reconciles.
+
+Conversation currently has one earned Hybrid relationship, so no extra <Thing> stem is introduced.
+If a second independent Hybrid relationship is ever earned, apply the same cold-read exercise and add
+the question stem then.
+
+~~~text
+HYBRID != MOCK
+HYBRID != DEBUG
+HYBRID IS-A SPECIALIZED CONVERGENCE RELATIONSHIP
+~~~
+
+See:
+`records/2026-10-16-003-name-ontology-hybrid-relay.md`
 
 ## Live, simulated and mixed development
 
