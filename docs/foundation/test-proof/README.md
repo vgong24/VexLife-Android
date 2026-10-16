@@ -254,8 +254,12 @@ Connected Journey/device proof remains separate because it owns a different exec
 ./gradlew vexVerifyDevice
 ~~~
 
-That task delegates to `:app:connectedDebugAndroidTest` and always finalizes into
-`verifyVexDeviceResults`. The result inspector therefore runs after both PASS and FAIL: it writes
+That task depends only on `:app:connectedDebugAndroidTest`. The connected task itself
+`finalizedBy(verifyVexDeviceResults)`, so result inspection is scheduled through Gradle's
+failure-safe finalizer relationship rather than as an ordinary aggregate dependency.
+
+That distinction matters: ordinary tasks that depend on a failed task are skipped, while a finalizer
+still runs after the finalized task fails. The inspector therefore forms
 `build/vex/test-foundation/device-result-summary.txt`, reports exact failing test class/name/message
 when JUnit XML exists, and still fails closed when a successful Android task produced zero tests.
 

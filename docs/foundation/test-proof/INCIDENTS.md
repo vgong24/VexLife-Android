@@ -185,6 +185,15 @@ hardeningRef =
     merge 3300af257c2ad54f3677e1e8b92cafce32212bf1
 
 hardeningState = LANDED
+
+observedHardeningGap =
+    vexVerifyDevice also declared verifyVexDeviceResults as an ordinary dependency;
+    a real connected failure skipped the inspector despite the finalizer relationship
+
+followUpHardeningRef =
+    current repair PR / branch VXG-101626-test-proof-device-finalizer-graph-repair
+
+followUpHardeningState = CANDIDATE
 ~~~
 
 Record:
