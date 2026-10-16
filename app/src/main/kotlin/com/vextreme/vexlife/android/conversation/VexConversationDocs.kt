@@ -7,6 +7,10 @@ package com.vextreme.vexlife.android.conversation
  *
  * app/src/main/kotlin/com/vextreme/vexlife/android/conversation/README.md
  *
+ * Current experiential design:
+ *
+ * app/src/main/kotlin/com/vextreme/vexlife/android/conversation/design/README.md
+ *
  * ## Generic Conversation
  *
  * Start at [VexConversationState], [VexConversationThreadState], [VexConversationMessage] and
@@ -90,6 +94,20 @@ package com.vextreme.vexlife.android.conversation
  * No generic/direct Send contract is claimed yet.
  */
 @Suppress("unused")
-internal object VexConversationDocs
+internal object VexConversationDocs {
+    /**
+     * Stable semantic identity for this feature.
+     *
+     * The human/product/package name may evolve; this ref is intentionally not derived from that
+     * spelling so design records and source history remain searchable across a rename.
+     */
+    const val FEATURE_REF: String = "feature.vexlife.conversation"
+
+    const val CURRENT_FEATURE_NAME: String = "Conversation"
+
+    val historicalSearchNames: List<String> = listOf(
+        "VexConversation",
+    )
+}
 
 // [VXG RealForever]
