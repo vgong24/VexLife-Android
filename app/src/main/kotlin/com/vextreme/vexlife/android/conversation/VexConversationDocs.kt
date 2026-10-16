@@ -56,16 +56,17 @@ package com.vextreme.vexlife.android.conversation
  *
  * A generic direct Conversation does not silently gain Family Send semantics.
  *
- * ## Convergence
+ * ## Hybrid
  *
- * Independently changing Conversation/runtime/Lab facts reconcile in:
+ * Independently changing Conversation/runtime/Lab facts form one mixed-provenance relationship in:
  *
- * [VexConversationConvergenceRelay]
+ * [VexConversationHybridRelay]
  *
  * Read its `dependencies()`, public observation methods, `processStates()`, then `outputStates`
  * to see the current relationship.
  *
- * The Relay owns which Home/Companion facts are effective when Lab overrides exist. The existing
+ * Hybrid is a specialized Compound convergence role: the Relay owns which Home/Companion facts are
+ * effective when Lab overrides exist while canonical ownership and provenance remain intact. The existing
  * [projectVexConversationSurface] function remains a pure projection over already-effective facts;
  * it does not interpret Lab controls.
  *
@@ -75,8 +76,8 @@ package com.vextreme.vexlife.android.conversation
  * LAB_OVERRIDE != REPOSITORY_TRUTH
  * ~~~
  *
- * Synthetic provider messages still enter through [VexConversationRepository] before Convergence
- * can observe them. Convergence never manufactures Conversation messages or Family currentness.
+ * Synthetic provider messages still enter through [VexConversationRepository] before Hybrid can
+ * observe them. Hybrid never manufactures Conversation messages or Family currentness.
  *
  * ## Conversation Lab / room presentation
  *
@@ -94,7 +95,7 @@ package com.vextreme.vexlife.android.conversation
  *
  * The Lab publishes synthetic external truth through the existing in-memory provider seam and may
  * also hold explicit Home/Companion availability overrides. Those overrides do not rewrite
- * Conversation repository truth; [VexConversationConvergenceRelay] reconciles them with current
+ * Conversation repository truth; [VexConversationHybridRelay] reconciles them with current
  * observations.
  *
  * The Lab does not perform Victor's product Send or become another Conversation state owner. The
@@ -134,9 +135,10 @@ package com.vextreme.vexlife.android.conversation
  * cross-generation history is exposed through the authenticated server boundary (or an exactly
  * equivalent safe projection).
  *
- * Feature-local Lab and room rendering are accepted on main through PR #99. Conversation
- * Convergence and explicit Lab availability overrides are accepted on main through PR #104.
- * Registered production Screen, app-session repository wiring, Debug Menu doorway and Journey
+ * Feature-local Lab and room rendering are accepted on main through PR #99. Mixed-provenance
+ * Conversation behavior and explicit Lab availability overrides are accepted through PR #104.
+ * Hybrid Name Ontology / code vocabulary is accepted through PR #107. Registered production
+ * Screen, app-session repository wiring, Debug Menu doorway and Journey
  * integration remain separate shared composition effects until their exact paths are safely
  * reconciled.
  *

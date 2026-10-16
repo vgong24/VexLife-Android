@@ -6,7 +6,7 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class VexConversationConvergenceRelayTest {
+class VexConversationHybridRelayTest {
     private val victorRef =
         VexConversationLabFixture
             .Victor
@@ -57,11 +57,11 @@ class VexConversationConvergenceRelayTest {
             ).companionAvailability,
         )
         assertSame(
-            VexConversationInputProvenance.OBSERVED,
+            VexConversationHybridInputProvenance.OBSERVED,
             output.homeAvailabilityProvenance,
         )
         assertSame(
-            VexConversationInputProvenance.OBSERVED,
+            VexConversationHybridInputProvenance.OBSERVED,
             output
                 .companionAvailabilityProvenanceByParticipantRef[
                     vexRef
@@ -122,11 +122,11 @@ class VexConversationConvergenceRelayTest {
             ).companionAvailability,
         )
         assertSame(
-            VexConversationInputProvenance.LAB_OVERRIDE,
+            VexConversationHybridInputProvenance.LAB_OVERRIDE,
             output.homeAvailabilityProvenance,
         )
         assertSame(
-            VexConversationInputProvenance.LAB_OVERRIDE,
+            VexConversationHybridInputProvenance.LAB_OVERRIDE,
             output
                 .companionAvailabilityProvenanceByParticipantRef[
                     vexRef
@@ -215,11 +215,11 @@ class VexConversationConvergenceRelayTest {
             ).companionAvailability,
         )
         assertSame(
-            VexConversationInputProvenance.UNOBSERVED,
+            VexConversationHybridInputProvenance.UNOBSERVED,
             output.homeAvailabilityProvenance,
         )
         assertSame(
-            VexConversationInputProvenance.OBSERVED,
+            VexConversationHybridInputProvenance.OBSERVED,
             output
                 .companionAvailabilityProvenanceByParticipantRef[
                     vexRef
@@ -308,8 +308,8 @@ class VexConversationConvergenceRelayTest {
             VexConversationHomeAvailability,
         companionAvailability:
             VexConversationCompanionAvailability,
-    ): VexConversationConvergenceRelay =
-        VexConversationConvergenceRelay()
+    ): VexConversationHybridRelay =
+        VexConversationHybridRelay()
             .also { relay ->
                 relay.selectThread(
                     VexConversationLabFixture.threadRef,

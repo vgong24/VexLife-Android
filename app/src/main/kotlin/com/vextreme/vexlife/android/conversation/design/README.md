@@ -6,7 +6,7 @@ Feature ref: `feature.vexlife.conversation`
 Current human name: **Conversation**  
 Historical/search name: **VexConversation**  
 Last meaningfully updated: **2026-10-16**  
-Current design record: `records/2026-10-16-002-live-truth-lab-perturbations.md`
+Current design record: `records/2026-10-16-003-name-ontology-hybrid-relay.md`
 
 ## Role of this file
 
@@ -87,6 +87,30 @@ The Debug Menu must never directly paint fake chat bubbles.
 DEBUG_SIMULATION != PRODUCT_PRESENTATION_SHORTCUT
 ~~~
 
+## Name Ontology — Hybrid
+
+Current code names the mixed-provenance relationship:
+
+~~~text
+VexConversationHybridRelay
+~~~
+
+Cold-reading showed that `VexConversationConvergenceRelay` sounded broader than its actual ownership,
+while `VexConversationSurfaceHybridRelay` sounded narrower than the facts it reconciles.
+
+Conversation currently has one earned Hybrid relationship, so no extra <Thing> stem is introduced.
+If a second independent Hybrid relationship is ever earned, apply the same cold-read exercise and add
+the question stem then.
+
+~~~text
+HYBRID != MOCK
+HYBRID != DEBUG
+HYBRID IS-A SPECIALIZED CONVERGENCE RELATIONSHIP
+~~~
+
+See:
+`records/2026-10-16-003-name-ontology-hybrid-relay.md`
+
 ## Live, simulated and mixed development
 
 The Lab now distinguishes **where canonical feature truth comes from** from **which surrounding
@@ -128,7 +152,7 @@ Current Conversation relationship:
 ~~~text
 Conversation repository -----\
 authenticated participant ----\
-Home availability ------------+-> VexConversationConvergenceRelay
+Home availability ------------+-> VexConversationHybridRelay
 Companion availability -------/
 Conversation Lab ------------/
                                       |
@@ -156,10 +180,10 @@ Synthetic provider events remain different:
 [Maya]{test message}
 -> synthetic provider publication
 -> Conversation repository
--> Convergence observes the repository change
+-> Hybrid observes the repository change
 ~~~
 
-The Convergence Relay does not manufacture messages or provider admission.
+The Hybrid Relay does not manufacture messages or provider admission.
 
 ## Feature surfaces
 
@@ -266,7 +290,7 @@ Provider-simulation controls publish simulated provider truth through the same f
 repository/state boundary.
 
 Availability overrides remain separate Lab facts and are reconciled only by
-`VexConversationConvergenceRelay`. They do not mutate Conversation repository truth or create a
+`VexConversationHybridRelay`. They do not mutate Conversation repository truth or create a
 second screen-local truth model.
 
 ## Debug-only message injection
@@ -401,7 +425,7 @@ VexConversationRepository
 + VexConversationLab overrides
         |
         v
-VexConversationConvergenceRelay
+VexConversationHybridRelay
         |
         v
 VexConversationSurfaceProjection
@@ -416,7 +440,7 @@ Provider simulation stays on the normal provider/repository side:
 VexConversationLab synthetic provider actions
 -> InMemoryVexFamilyConversationRepository
 -> Conversation state
--> VexConversationConvergenceRelay observes the result
+-> VexConversationHybridRelay observes the result
 ~~~
 
 The shared production slice still requires:
@@ -437,7 +461,7 @@ NO_PARALLEL_OVERRIDE_REDUCER
 ~~~
 
 Later, source binding may move from the in-memory provider to a Home-backed Family adapter without
-changing the Convergence/room relationship.
+changing the Hybrid/room relationship.
 
 The product surface should not require conceptual replacement when the real provider arrives.
 
