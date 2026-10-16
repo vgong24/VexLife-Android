@@ -393,7 +393,7 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                     }
 
                 assertEquals(
-                    VexMapsDeliveryRouteNavigationLayer.AtStop,
+                    VexMapsDeliveryRouteNavigationLayer.AtDelivery,
                     arrived.layer,
                 )
 

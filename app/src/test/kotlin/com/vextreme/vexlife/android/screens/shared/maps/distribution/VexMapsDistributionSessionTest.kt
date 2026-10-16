@@ -455,7 +455,7 @@ class VexMapsDistributionSessionTest {
                     routing.routeCalls,
                 )
                 assertEquals(
-                    VexMapsDeliveryRouteNavigationLayer.AtStop,
+                    VexMapsDeliveryRouteNavigationLayer.AtDelivery,
                     session.currentNavigation.layer,
                 )
             } finally {
