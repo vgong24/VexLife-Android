@@ -8,18 +8,38 @@
 > becoming a second Conversation owner, Home, Family-membership authority, model runtime, or history
 > store?
 
-Current draft:
+Current state:
 
 ~~~text
-VexLife-Android PR #89
+foundation = TERMINAL_ACCEPTED_CURRENT on Android main
 production Screen wiring = HELD
-real Home adapter = HELD
+real Home adapter = HELD on authenticated cross-generation history exposure
 ~~~
 
 Code-navigation root:
 
 ~~~text
 VexConversationDocs
+~~~
+
+Stable feature identity:
+
+~~~text
+featureRef = feature.vexlife.conversation
+currentName = Conversation
+historical/search names = VexConversation
+~~~
+
+Current experiential design:
+
+~~~text
+design/README.md
+~~~
+
+Meaningful design refinements:
+
+~~~text
+design/records/
 ~~~
 
 ## The boundary now
@@ -56,7 +76,11 @@ conversation/
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
 ├── VexConversationDocs.kt
-└── README.md
+├── README.md
+└── design/
+    ├── README.md
+    └── records/
+        └── 2026-10-15-001-visible-conversation-lab.md
 ~~~
 
 Tests:

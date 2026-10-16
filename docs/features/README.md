@@ -77,6 +77,65 @@ Include only what is materially useful:
 
 Do not create empty sections for ceremony.
 
+## Stable feature identity and continuity growth
+
+A feature's current human name and package path may evolve. Its durable identity should not need to.
+
+When rename continuity matters, keep one stable feature ref at a code-local navigation anchor:
+
+~~~text
+featureRef
+    stable semantic identity
+    survives human/package renames
+
+currentName
+    current human-facing/source-navigation name
+
+historicalNames
+    old names/search aliases retained so prior discussions and source remain discoverable
+~~~
+
+Do not create a repository-wide runtime feature registry merely to satisfy documentation. A
+feature-local code anchor is enough until multiple real consumers need one shared machine-readable
+contract.
+
+A feature home may grow fractally when continuity pressure earns it:
+
+~~~text
+feature/
+├── README.md
+├── Vex<Feature>Docs.kt
+└── design/
+    ├── README.md
+    └── records/
+        ├── YYYY-MM-DD-NNN-meaningful-refinement.md
+        └── ...
+~~~
+
+Meaning:
+
+~~~text
+feature README
+    what is true in source now
+
+design/README
+    what we currently intend to build / experience next
+
+design/records/*
+    dated meaningful design conversations/refinements
+    preserved provenance, not competing current authority
+~~~
+
+Append one record for one meaningful design refinement, not one record for every chat turn. Keep the
+current design small by synthesizing accepted/current reasoning into design/README.md and linking the
+records that explain how it got there.
+
+Older records remain useful historical evidence. If implementation or the current design has
+advanced, the current source + feature README + design/README.md outrank stale record prose.
+
+Small features do not need this package merely for symmetry. Add layers only when losing the design
+trajectory would make a successor reconstruct intent from chats, issues, or commit archaeology.
+
 ## Package placement
 
 The source tree should first help someone locate the **human part of the feature**.
