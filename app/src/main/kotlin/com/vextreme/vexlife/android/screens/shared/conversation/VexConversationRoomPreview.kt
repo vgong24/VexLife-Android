@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,10 +15,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.conversation.InMemoryVexFamilyConversationRepository
+import com.vextreme.vexlife.android.conversation.VexConversationConvergenceRelay
 import com.vextreme.vexlife.android.conversation.VexConversationLab
 import com.vextreme.vexlife.android.conversation.VexConversationLabFixture
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationSurfaceSendAvailability
-import com.vextreme.vexlife.android.conversation.projectVexConversationSurface
 import com.vextreme.vexlife.android.conversation.projectVexFamilyConversationSendAvailability
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexComposeScope
@@ -26,6 +27,7 @@ import com.vextreme.vexlife.android.elements.VexRow
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import kotlinx.coroutines.awaitCancellation
 
 /**
  * Lived-design preview for the feature-owned Conversation Lab.
@@ -66,34 +68,66 @@ private fun VexConversationRoomPreview() {
                 )
             }
         }
-    val conversationState by
-        repository.state.collectAsState()
-    val labState by
-        lab.state.collectAsState()
-    val thread =
-        conversationState.thread(
-            VexConversationLabFixture.threadRef,
-        )
-            ?: return
-    val projection =
-        projectVexConversationSurface(
-            thread = thread,
-            authenticatedParticipantRef =
-                VexConversationLabFixture
-                    .Victor
-                    .participant
-                    .participantRef,
-            homeAvailability =
-                labState.homeAvailability,
-            companionAvailabilityByParticipantRef =
-                mapOf(
+    val convergenceRelay =
+        remember(
+            repository,
+            lab,
+        ) {
+            VexConversationConvergenceRelay(
+                conversationRepository =
+                    repository,
+                conversationLab =
+                    lab,
+            ).also { relay ->
+                relay.selectThread(
+                    VexConversationLabFixture.threadRef,
+                )
+                relay.authenticatedParticipantObserved(
                     VexConversationLabFixture
-                        .Vex
+                        .Victor
                         .participant
-                        .participantRef to
-                        labState.companionAvailability,
-                ),
-        )
+                        .participantRef,
+                )
+                relay.homeAvailabilityObserved(
+                    com.vextreme.vexlife.android.conversation
+                        .VexConversationHomeAvailability
+                        .Available,
+                )
+                relay.companionAvailabilityObserved(
+                    mapOf(
+                        VexConversationLabFixture
+                            .Vex
+                            .participant
+                            .participantRef to
+                            com.vextreme.vexlife.android.conversation
+                                .VexConversationCompanionAvailability
+                                .Available,
+                    ),
+                )
+            }
+        }
+
+    LaunchedEffect(
+        convergenceRelay,
+    ) {
+        convergenceRelay.activate(this)
+        try {
+            awaitCancellation()
+        } finally {
+            convergenceRelay.deactivate()
+        }
+    }
+
+    val convergence by
+        convergenceRelay
+            .outputStates
+            .collectAsState(
+                initial =
+                    convergenceRelay.currentOutput,
+            )
+    val projection =
+        convergence.surface
+            ?: return
     val labels =
         remember {
             VexConversationLabFixture
