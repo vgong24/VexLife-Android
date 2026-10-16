@@ -10,6 +10,7 @@ enum class VexStreamQueueControl :
     > {
     Previous,
     Next,
+    Shuffle,
     Clear,
 }
 
@@ -34,6 +35,10 @@ internal fun VexBehaviorBlueprint<
         control(
             VexStreamQueueControl.Next,
             VexStreamQueueAct.Next,
+        )
+        control(
+            VexStreamQueueControl.Shuffle,
+            VexStreamQueueAct.Shuffle,
         )
         control(
             VexStreamQueueControl.Clear,

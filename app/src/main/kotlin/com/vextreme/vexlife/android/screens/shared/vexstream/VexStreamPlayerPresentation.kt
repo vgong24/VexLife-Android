@@ -43,8 +43,6 @@ internal fun VexStreamMiniPlayer(
     playbackExperience:
         VexStreamPlaybackExperience,
     runtime: VexRuntime,
-    shuffleSelected: Boolean,
-    onShuffle: () -> Unit,
 ) {
     val playback =
         playbackExperience
@@ -80,7 +78,9 @@ internal fun VexStreamMiniPlayer(
                     )
 
                 VexStreamMusicScreen.ShuffleQueue ->
-                    onShuffle()
+                    queueExperience.activate(
+                        VexStreamQueueControl.Shuffle,
+                    )
 
                 else -> Unit
             }
@@ -280,8 +280,12 @@ internal fun VexStreamMiniPlayer(
             VexIconButton(
                 element = VexStreamMusicScreen.ShuffleQueue,
                 handler = handler,
-                enabled = controller != null,
-                selected = shuffleSelected,
+                enabled =
+                    queueProjection
+                        ?.get(
+                            VexStreamQueueControl.Shuffle,
+                        )
+                        ?.isAvailable == true,
             )
             VexIconButton(
                 element = VexStreamMusicScreen.ShowQueue,
