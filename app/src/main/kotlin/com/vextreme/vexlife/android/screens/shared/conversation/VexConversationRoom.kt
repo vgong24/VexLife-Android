@@ -270,12 +270,6 @@ private fun ConversationComposer(
         "$semanticRootRef.composer"
     val sendRef =
         "$semanticRootRef.composer.send"
-    val composerModifier =
-        VexModifier
-            .weight(1f)
-            .vex(
-                composerRef,
-            )
 
     VexRow(
         id = "composer-row",
@@ -287,6 +281,13 @@ private fun ConversationComposer(
                 8.dp,
             ),
     ) {
+        val composerModifier =
+            VexModifier
+                .weight(1f)
+                .vex(
+                    composerRef,
+                )
+
         VexComposeScope(
             parentRef = composerRef,
         ) {
