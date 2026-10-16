@@ -366,7 +366,7 @@ private fun VexConversationRoomPreview() {
                         .Vex
                         .participant
                         .participantRef to
-                        VexConversationCompanionAvailability.Available,
+                        labState.companionAvailability,
                 ),
         )
     val labels =
