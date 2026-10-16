@@ -16,7 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.conversation.InMemoryVexFamilyConversationRepository
 import com.vextreme.vexlife.android.conversation.VexConversationCompanionAvailability
-import com.vextreme.vexlife.android.conversation.VexConversationConvergenceRelay
+import com.vextreme.vexlife.android.conversation.VexConversationHybridRelay
 import com.vextreme.vexlife.android.conversation.VexConversationHomeAvailability
 import com.vextreme.vexlife.android.conversation.VexConversationLab
 import com.vextreme.vexlife.android.conversation.VexConversationLabFixture
@@ -75,7 +75,7 @@ private fun VexConversationRoomPreview() {
             repository,
             lab,
         ) {
-            VexConversationConvergenceRelay(
+            VexConversationHybridRelay(
                 conversationRepository =
                     repository,
                 conversationLab =
