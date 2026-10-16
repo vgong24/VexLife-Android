@@ -25,14 +25,7 @@ internal data class VexConversationLabState(
         VexConversationLabFixture.Maya
             .participant
             .participantRef,
-    val scenarioRef: String = "scenario.conversation.lab.unseeded",
-) {
-    init {
-        require(scenarioRef.isNotBlank()) {
-            "Conversation Lab scenarioRef must be non-blank"
-        }
-    }
-}
+)
 
 /**
  * Feature-owned synthetic-provider controller for lived Conversation development.
@@ -86,8 +79,6 @@ internal class VexConversationLab(
         mutableState.value =
             VexConversationLabState(
                 simulationEnabled = true,
-                scenarioRef =
-                    "scenario.conversation.lab.c02.family-room",
             )
 
         return thread
@@ -96,13 +87,6 @@ internal class VexConversationLab(
     fun resetFamilyRoom():
         VexConversationThreadState =
         seedFamilyRoom()
-            .also {
-                mutableState.value =
-                    mutableState.value.copy(
-                        scenarioRef =
-                            "scenario.conversation.lab.c16.reset-reseed",
-                    )
-            }
 
     fun setSimulationEnabled(
         enabled: Boolean,
@@ -259,8 +243,6 @@ internal class VexConversationLab(
         return publishSuccessorGeneration(
             current = current,
             currentAudienceRefs = nextAudience,
-            scenarioRef =
-                "scenario.conversation.lab.c03.add-participant",
         )
     }
 
@@ -301,8 +283,6 @@ internal class VexConversationLab(
         return publishSuccessorGeneration(
             current = current,
             currentAudienceRefs = nextAudience,
-            scenarioRef =
-                "scenario.conversation.lab.c08.remove-participant",
         )
     }
 
@@ -321,8 +301,6 @@ internal class VexConversationLab(
             current = current,
             currentAudienceRefs =
                 current.currentAudienceRefs,
-            scenarioRef =
-                "scenario.conversation.lab.c09.generation-boundary",
         )
     }
 
@@ -475,13 +453,6 @@ internal class VexConversationLab(
             ),
         )
 
-        updateLabState {
-            copy(
-                scenarioRef =
-                    "scenario.conversation.lab.c04.remote-speech",
-            )
-        }
-
         return message
     }
 
@@ -504,13 +475,6 @@ internal class VexConversationLab(
                     "You said: \"${content.trim()}\"",
             )
 
-        updateLabState {
-            copy(
-                scenarioRef =
-                    "scenario.conversation.lab.c06.mirror-response",
-            )
-        }
-
         return message
     }
 
@@ -532,7 +496,6 @@ internal class VexConversationLab(
             VexConversationThreadState,
         currentAudienceRefs:
             List<VexConversationParticipantRef>,
-        scenarioRef: String,
     ): VexConversationThreadState {
         val family =
             requireNotNull(
@@ -564,12 +527,6 @@ internal class VexConversationLab(
             )
 
         repository.publishThread(next)
-
-        updateLabState {
-            copy(
-                scenarioRef = scenarioRef,
-            )
-        }
 
         return next
     }
