@@ -56,6 +56,28 @@ package com.vextreme.vexlife.android.conversation
  *
  * A generic direct Conversation does not silently gain Family Send semantics.
  *
+ * ## Convergence
+ *
+ * Independently changing Conversation/runtime/Lab facts reconcile in:
+ *
+ * [VexConversationConvergenceRelay]
+ *
+ * Read its `dependencies()`, public observation methods, `processStates()`, then `outputStates`
+ * to see the current relationship.
+ *
+ * The Relay owns which Home/Companion facts are effective when Lab overrides exist. The existing
+ * [projectVexConversationSurface] function remains a pure projection over already-effective facts;
+ * it does not interpret Lab controls.
+ *
+ * ~~~text
+ * CONVERGENCE != PROJECTION
+ * SOURCE_BINDING != LAB_PERTURBATION
+ * LAB_OVERRIDE != REPOSITORY_TRUTH
+ * ~~~
+ *
+ * Synthetic provider messages still enter through [VexConversationRepository] before Convergence
+ * can observe them. Convergence never manufactures Conversation messages or Family currentness.
+ *
  * ## Conversation Lab / room presentation
  *
  * Feature-owned synthetic-provider conditions:
@@ -70,10 +92,14 @@ package com.vextreme.vexlife.android.conversation
  *
  * app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/conversation/VexConversationRoomPreview.kt
  *
- * The Lab publishes synthetic external truth through the existing in-memory provider seam. It does
- * not perform Victor's product Send or become another Conversation state owner. The room renderer
- * consumes [VexConversationSurfaceProjection] directly and adds no parallel room-state model. It
- * also does not choose Family Send semantics; the future registered Screen supplies its durable
+ * The Lab publishes synthetic external truth through the existing in-memory provider seam and may
+ * also hold explicit Home/Companion availability overrides. Those overrides do not rewrite
+ * Conversation repository truth; [VexConversationConvergenceRelay] reconciles them with current
+ * observations.
+ *
+ * The Lab does not perform Victor's product Send or become another Conversation state owner. The
+ * room renderer consumes [VexConversationSurfaceProjection] and adds no parallel room-state model.
+ * It also does not choose Family Send semantics; the future registered Screen supplies its durable
  * composer/Send controls and action contract.
  *
  * ## Real Family producer
