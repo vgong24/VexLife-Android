@@ -378,8 +378,12 @@ project(":app")
 /**
  * Canonical connected-Android Journey/instrumentation proof.
  *
- * The instrumentation task and result inspector are both explicit dependencies. The inspector is
- * also the instrumentation finalizer so diagnostics still form when the connected test task fails.
+ * This lifecycle task depends only on connectedDebugAndroidTest.
+ *
+ * verifyVexDeviceResults is attached to the connected task exclusively through finalizedBy above.
+ * Do not also declare the inspector as an ordinary dependency here: after a connected-test failure,
+ * Gradle skips ordinary dependents but still executes finalizers. Keeping one relationship preserves
+ * failure diagnostics on the exact aggregate command consumers actually run.
  */
 tasks.register("vexVerifyDevice") {
     group = "verification"
@@ -388,7 +392,6 @@ tasks.register("vexVerifyDevice") {
 
     dependsOn(
         ":app:connectedDebugAndroidTest",
-        verifyVexDeviceResults,
     )
 }
 
