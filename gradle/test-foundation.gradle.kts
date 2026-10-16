@@ -2,7 +2,7 @@ import org.gradle.api.tasks.bundling.Zip
 
 // [VXG RealForever]
 //
-// Repository-owned execution surface for docs/foundation/TEST-PROOF-ARCHITECTURE.md.
+// Repository-owned execution surface for docs/foundation/test-proof/README.md.
 // Keep the root build file small; this script owns only test/proof orchestration and evidence
 // collection, never feature semantics.
 
@@ -47,7 +47,25 @@ tasks.register("vexVerifyLocal") {
  *
  * Android Gradle Plugin owns target discovery and adb/instrumentation mechanics; Android Studio is
  * only an optional human UI over this same execution path.
+ *
+ * Result inspection is a finalizer of connectedDebugAndroidTest rather than only a downstream
+ * dependency. That distinction is intentional: when instrumentation fails, the diagnostic reader
+ * still runs and preserves the exact failing testcase identity instead of collapsing the proof to
+ * "There were failing tests."
  */
+val connectedDeviceResultRoot =
+    rootProject.file(
+        "app/build/outputs/androidTest-results/connected/debug",
+    )
+val connectedDeviceReportRoot =
+    rootProject.file(
+        "app/build/reports/androidTests/connected/debug",
+    )
+val connectedDeviceSummary =
+    layout.buildDirectory.file(
+        "vex/test-foundation/device-result-summary.txt",
+    )
+
 val verifyVexDeviceResults =
     tasks.register("verifyVexDeviceResults") {
         notCompatibleWithConfigurationCache(
@@ -55,17 +73,24 @@ val verifyVexDeviceResults =
         )
         group = "verification"
         description =
-            "Fail closed when connected Android execution produces no instrumentation tests."
+            "Report exact connected Android test results and fail closed on empty/hidden failures."
 
-        dependsOn(":app:connectedDebugAndroidTest")
+        mustRunAfter(":app:connectedDebugAndroidTest")
 
         doLast {
-            val resultRoot =
-                rootProject.file(
-                    "app/build/outputs/androidTest-results/connected/debug",
-                )
+            val connectedTask =
+                project(":app")
+                    .tasks
+                    .findByName(
+                        "connectedDebugAndroidTest",
+                    )
+            val connectedFailure =
+                connectedTask
+                    ?.state
+                    ?.failure
+
             val xmlFiles =
-                resultRoot
+                connectedDeviceResultRoot
                     .takeIf { it.isDirectory }
                     ?.walkTopDown()
                     ?.filter { file ->
@@ -75,61 +100,296 @@ val verifyVexDeviceResults =
                                 ignoreCase = true,
                             )
                     }
+                    ?.sortedBy { file ->
+                        file.relativeTo(
+                            connectedDeviceResultRoot,
+                        ).path
+                    }
                     ?.toList()
                     .orEmpty()
 
-            val executedTests =
-                xmlFiles.sumOf { file ->
-                    val document =
-                        javax.xml.parsers.DocumentBuilderFactory
-                            .newInstance()
-                            .newDocumentBuilder()
-                            .parse(file)
-                    document.documentElement
-                        .getAttribute("tests")
-                        .toIntOrNull()
-                        ?: 0
+            var executedTests = 0
+            var skippedTests = 0
+            val failedTests =
+                mutableListOf<String>()
+
+            xmlFiles.forEach { file ->
+                val document =
+                    javax.xml.parsers.DocumentBuilderFactory
+                        .newInstance()
+                        .newDocumentBuilder()
+                        .parse(file)
+                val testCases =
+                    document.getElementsByTagName(
+                        "testcase",
+                    )
+
+                executedTests +=
+                    testCases.length
+
+                for (
+                    index in
+                    0 until testCases.length
+                ) {
+                    val testCase =
+                        testCases.item(index)
+                            as? org.w3c.dom.Element
+                            ?: continue
+                    var failureElement:
+                        org.w3c.dom.Element? =
+                        null
+                    var skipped = false
+
+                    val children =
+                        testCase.childNodes
+                    for (
+                        childIndex in
+                        0 until children.length
+                    ) {
+                        val child =
+                            children.item(childIndex)
+                                as? org.w3c.dom.Element
+                                ?: continue
+                        when (
+                            child.tagName
+                        ) {
+                            "failure",
+                            "error",
+                            ->
+                                if (
+                                    failureElement == null
+                                ) {
+                                    failureElement =
+                                        child
+                                }
+
+                            "skipped" ->
+                                skipped = true
+                        }
+                    }
+
+                    if (skipped) {
+                        skippedTests += 1
+                    }
+
+                    failureElement?.let { failure ->
+                        val className =
+                            testCase
+                                .getAttribute(
+                                    "classname",
+                                )
+                                .ifBlank {
+                                    "UNKNOWN_CLASS"
+                                }
+                        val testName =
+                            testCase
+                                .getAttribute(
+                                    "name",
+                                )
+                                .ifBlank {
+                                    "UNKNOWN_TEST"
+                                }
+                        val failureType =
+                            failure
+                                .getAttribute(
+                                    "type",
+                                )
+                                .ifBlank {
+                                    failure.tagName
+                                }
+                        val failureMessage =
+                            failure
+                                .getAttribute(
+                                    "message",
+                                )
+                                .ifBlank {
+                                    failure.textContent
+                                }
+                                .trim()
+                                .take(4_000)
+
+                        failedTests +=
+                            buildString {
+                                append(
+                                    className,
+                                )
+                                append("#")
+                                append(
+                                    testName,
+                                )
+                                append(" type=")
+                                append(
+                                    failureType,
+                                )
+                                if (
+                                    failureMessage.isNotBlank()
+                                ) {
+                                    appendLine()
+                                    append(
+                                        failureMessage,
+                                    )
+                                }
+                            }
+                    }
+                }
+            }
+
+            val summary =
+                buildString {
+                    appendLine(
+                        "[VXG RealForever]",
+                    )
+                    appendLine(
+                        "proofRef=vexlife.device-result-summary/v1",
+                    )
+                    appendLine(
+                        "connectedTaskFailed=" +
+                            (connectedFailure != null),
+                    )
+                    appendLine(
+                        "resultRoot=" +
+                            connectedDeviceResultRoot
+                                .relativeTo(
+                                    rootProject.projectDir,
+                                ),
+                    )
+                    appendLine(
+                        "xmlFiles=" +
+                            xmlFiles.size,
+                    )
+                    appendLine(
+                        "executedTests=" +
+                            executedTests,
+                    )
+                    appendLine(
+                        "skippedTests=" +
+                            skippedTests,
+                    )
+                    appendLine(
+                        "failedTests=" +
+                            failedTests.size,
+                    )
+                    failedTests
+                        .forEachIndexed {
+                                index,
+                                failure,
+                            ->
+                            appendLine(
+                                "failure[$index]<<EOF",
+                            )
+                            appendLine(
+                                failure,
+                            )
+                            appendLine(
+                                "EOF",
+                            )
+                        }
                 }
 
-            if (executedTests <= 0) {
-                throw GradleException(
-                    buildString {
-                        appendLine(
-                            "Connected Android proof produced zero instrumentation tests.",
-                        )
-                        appendLine(
-                            "resultRoot=${resultRoot.relativeTo(rootProject.projectDir)}",
-                        )
-                        appendLine(
-                            "xmlFiles=${xmlFiles.size}",
-                        )
-                        append(
-                            "A successful connectedDebugAndroidTest task is not accepted as " +
-                                "device proof unless at least one test actually executed.",
-                        )
-                    },
+            val summaryFile =
+                connectedDeviceSummary
+                    .get()
+                    .asFile
+            summaryFile
+                .parentFile
+                .mkdirs()
+            summaryFile.writeText(
+                summary,
+            )
+
+            logger.lifecycle(
+                summary.trimEnd(),
+            )
+
+            failedTests.forEach { failure ->
+                logger.error(
+                    "Vex connected Android test failure:\n$failure",
                 )
             }
 
-            logger.lifecycle(
-                "Vex connected Android proof: ${executedTests} instrumentation tests executed.",
+            if (
+                connectedFailure == null &&
+                executedTests <= 0
+            ) {
+                throw GradleException(
+                    "Connected Android proof produced zero instrumentation tests. " +
+                        "See " +
+                        summaryFile.relativeTo(
+                            rootProject.projectDir,
+                        ),
+                )
+            }
+
+            if (
+                connectedFailure == null &&
+                failedTests.isNotEmpty()
+            ) {
+                throw GradleException(
+                    "Connected Android task returned success but result XML contains " +
+                        failedTests.size +
+                        " failing test(s). See " +
+                        summaryFile.relativeTo(
+                            rootProject.projectDir,
+                        ),
+                )
+            }
+
+            if (
+                connectedFailure != null &&
+                xmlFiles.isEmpty()
+            ) {
+                logger.error(
+                    "Connected Android execution failed before any JUnit XML was retained. " +
+                        "Original Gradle failure remains authoritative; " +
+                        "resultRoot=" +
+                        connectedDeviceResultRoot.relativeTo(
+                            rootProject.projectDir,
+                        ),
+                )
+            }
+        }
+    }
+
+project(":app")
+    .tasks
+    .matching { task ->
+        task.name ==
+            "connectedDebugAndroidTest"
+    }
+    .configureEach {
+        doFirst {
+            rootProject.delete(
+                connectedDeviceResultRoot,
+            )
+            rootProject.delete(
+                connectedDeviceReportRoot,
+            )
+            rootProject.delete(
+                connectedDeviceSummary
+                    .get()
+                    .asFile,
             )
         }
+        finalizedBy(
+            verifyVexDeviceResults,
+        )
     }
 
 /**
  * Canonical connected-Android Journey/instrumentation proof.
  *
- * Android Gradle Plugin owns target discovery and adb/instrumentation mechanics; Android Studio is
- * only an optional human UI over this same execution path. The result gate also fails closed when
- * AGP reports task success but the connected result set contains zero tests.
+ * The instrumentation task and result inspector are both explicit dependencies. The inspector is
+ * also the instrumentation finalizer so diagnostics still form when the connected test task fails.
  */
 tasks.register("vexVerifyDevice") {
     group = "verification"
     description =
-        "Run and require a non-empty baseline connected Android instrumentation/Journey suite."
+        "Run a non-empty connected Android suite and preserve exact failure diagnostics."
 
-    dependsOn(verifyVexDeviceResults)
+    dependsOn(
+        ":app:connectedDebugAndroidTest",
+        verifyVexDeviceResults,
+    )
 }
 
 /**
@@ -316,6 +576,25 @@ val vexTestFoundationProofBundle =
             ),
         ) {
             into("tests/app-jvm")
+        }
+        from(
+            connectedDeviceSummary,
+        ) {
+            into("tests/android-connected")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "app/build/outputs/androidTest-results/connected/debug",
+            ),
+        ) {
+            into("tests/android-connected/xml")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "app/build/reports/androidTests/connected/debug",
+            ),
+        ) {
+            into("tests/android-connected/report")
         }
         from(
             layout.projectDirectory.dir(

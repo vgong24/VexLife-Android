@@ -1,6 +1,22 @@
-# Test / Proof Architecture
+# Test / Proof Foundation
 
 [VXG RealForever]
+
+This directory is the single documentation doorway for the Test / Proof Foundation.
+
+~~~text
+test-proof/
+├── README.md
+│   current proof architecture
+├── INCIDENTS.md
+│   incident grammar / recurrence law / index
+└── incidents/
+    └── TF-INCIDENT-*.md
+        one independently evolving incident history
+~~~
+
+The repository-wide atlas is `../INDEX.md`. Do not add another Test Proof peer document directly
+under `docs/foundation/` when the meaning belongs inside this package.
 
 ## The question
 
@@ -167,6 +183,28 @@ pixel-diff authority.
 Its stable scenario/configuration/evidence identity is a candidate for promotion only when a second
 real visual-evidence consumer needs the same meaning.
 
+## Flakiness is evidence, not something a retry erases
+
+An intermittent proof failure remains part of repository knowledge even when the exact candidate
+passes on retry.
+
+Record recurring/intermittent proof incidents in
+[INCIDENTS.md](INCIDENTS.md).
+
+The distinction is:
+
+~~~text
+retry PASS
+    clears "this exact candidate is currently proven broken"
+
+retry PASS
+    does NOT clear "this proof foundation has exhibited an intermittent failure"
+~~~
+
+An incident stays visible until evidence establishes a root cause and disposition. This protects
+future features from assuming a foundation symptom is newly introduced merely because the previous
+occurrence was months earlier.
+
 ### Native / lived proof
 
 Use instrumentation/device/provider execution where the claim is inherently native:
@@ -216,9 +254,14 @@ Connected Journey/device proof remains separate because it owns a different exec
 ./gradlew vexVerifyDevice
 ~~~
 
-That task delegates to `:app:connectedDebugAndroidTest`, then verifies the connected result set
-is non-empty. A Gradle task that exits successfully while Android reports zero executed
-instrumentation tests is **not** accepted as device proof.
+That task delegates to `:app:connectedDebugAndroidTest` and always finalizes into
+`verifyVexDeviceResults`. The result inspector therefore runs after both PASS and FAIL: it writes
+`build/vex/test-foundation/device-result-summary.txt`, reports exact failing test class/name/message
+when JUnit XML exists, and still fails closed when a successful Android task produced zero tests.
+
+A retry PASS does **not** erase an earlier intermittent failure. Durable recurrence history lives in
+[INCIDENTS.md](INCIDENTS.md); use it to distinguish a first occurrence from a
+known unresolved/intermittent proof symptom.
 
 Android Studio is not required: Android Gradle Plugin discovers the connected emulator/physical
 device and drives the instrumentation/adb path. ADB remains useful for device discovery,
@@ -288,6 +331,8 @@ build/vex/test-foundation/VexLife-Test-Foundation-Proof.zip
 with whatever evidence the run produced:
 - aggregate Kover reports;
 - app + architecture JVM test result XML;
+- connected Android JUnit XML + HTML report when formed;
+- `device-result-summary.txt` with exact failing testcase identity when available;
 - Journey coverage diagnostics;
 - screenshot validation report;
 - generated screenshot reference candidates;
