@@ -132,11 +132,10 @@ class VexConversationRoomRenderTest {
                 "$ROOM_REF.composer.send",
             )
 
-        composer
-            .performTextClearance()
-            .performTextInput(
-                "Are you coming?",
-            )
+        composer.performTextClearance()
+        composer.performTextInput(
+            "Are you coming?",
+        )
         send
             .assertIsEnabled()
             .performClick()
