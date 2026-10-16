@@ -312,7 +312,7 @@
     <string name="graph_back">Up one graph layer</string>
 
     <string name="vexmaps_distribution_title">Distribution</string>
-    <string name="vexmaps_distribution_regular_body">Build an unordered stop list, then let VexMaps manage the run.</string>
+    <string name="vexmaps_distribution_regular_body">Build a list of delivery stops, then let VexMaps optimize the delivery route.</string>
     <string name="vexmaps_distribution_mode_enter">Start Distribution</string>
     <string name="vexmaps_distribution_mode_regular">Regular Maps</string>
     <string name="vexmaps_distribution_add_stop">Add stop</string>
@@ -322,18 +322,18 @@
     <string name="vexmaps_distribution_return_on">Return to start: On</string>
     <string name="vexmaps_distribution_return_off">Return to start: Off</string>
     <string name="vexmaps_distribution_return_destination">Starting point</string>
-    <string name="vexmaps_distribution_prepare">Prepare run</string>
-    <string name="vexmaps_distribution_start">Start run</string>
+    <string name="vexmaps_distribution_prepare">Prepare delivery route</string>
+    <string name="vexmaps_distribution_start">Start delivery route</string>
     <string name="vexmaps_distribution_delivered">Delivered</string>
-    <string name="vexmaps_distribution_clear">Clear run</string>
+    <string name="vexmaps_distribution_clear">Clear delivery route</string>
     <string name="vexmaps_distribution_state_empty">No stops yet.</string>
     <string name="vexmaps_distribution_state_draft">Drafting stops</string>
-    <string name="vexmaps_distribution_state_preparing">Preparing run…</string>
-    <string name="vexmaps_distribution_state_ready">Run ready</string>
-    <string name="vexmaps_distribution_state_running">Driving stop %1$d of %2$d</string>
-    <string name="vexmaps_distribution_state_at_stop">At stop %1$d of %2$d</string>
-    <string name="vexmaps_distribution_state_returning">Returning to start</string>
-    <string name="vexmaps_distribution_state_complete">Run complete</string>
+    <string name="vexmaps_distribution_state_preparing">Preparing delivery route…</string>
+    <string name="vexmaps_distribution_state_ready">Delivery route ready</string>
+    <string name="vexmaps_distribution_state_delivering">Driving to delivery %1$d of %2$d</string>
+    <string name="vexmaps_distribution_state_at_delivery">At delivery %1$d of %2$d</string>
+    <string name="vexmaps_distribution_state_returning_to_start">Returning to start</string>
+    <string name="vexmaps_distribution_state_complete">Delivery route complete</string>
     <string name="vexmaps_distribution_draft_failed">Draft update failed: %1$s</string>
     <string name="vexmaps_distribution_preparation_failed">Preparation failed: %1$s</string>
     <string name="vexmaps_distribution_leg_failed">Next leg unavailable: %1$s</string>

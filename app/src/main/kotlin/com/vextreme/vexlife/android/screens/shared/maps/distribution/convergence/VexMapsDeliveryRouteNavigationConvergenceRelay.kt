@@ -7,26 +7,26 @@ import com.vextreme.vexlife.android.relay.VexOutputState
 import com.vextreme.vexlife.android.relay.vexDependencies
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionPhase
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunProjection
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteControl
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteProjection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import kotlinx.coroutines.flow.StateFlow
 
-internal sealed interface VexMapsDistributionLegTarget {
+internal sealed interface VexMapsDeliveryRouteLegTarget {
     data class Stop(
         val stopRef: String,
     ) :
-        VexMapsDistributionLegTarget {
+        VexMapsDeliveryRouteLegTarget {
         init {
             require(stopRef.isNotBlank())
         }
     }
 
     data object ReturnToStart :
-        VexMapsDistributionLegTarget
+        VexMapsDeliveryRouteLegTarget
 }
 
-internal data class VexMapsDistributionRouteIdentity(
+internal data class VexMapsDeliveryRouteNavigationRouteIdentity(
     val routeRef: String,
     val routeRevision: Long,
 ) {
@@ -41,168 +41,168 @@ internal data class VexMapsDistributionRouteIdentity(
  *
  * The stored revision protects initial READY admission. Once that Navigation journey is active,
  * Navigation may legitimately replace its route during reroute while preserving the stable routeRef;
- * active-leg continuity is decided by [vexMapsDistributionNavigationRealizesExpectedLeg].
+ * active-leg continuity is decided by [vexMapsDeliveryRouteNavigationRealizesExpectedLeg].
  */
-internal data class VexMapsDistributionExpectedLeg(
+internal data class VexMapsDeliveryRouteExpectedLeg(
     val planRef: String,
     val target:
-        VexMapsDistributionLegTarget,
+        VexMapsDeliveryRouteLegTarget,
     val route:
-        VexMapsDistributionRouteIdentity,
+        VexMapsDeliveryRouteNavigationRouteIdentity,
 ) {
     init {
         require(planRef.isNotBlank())
     }
 }
 
-internal sealed interface VexMapsDistributionExpectedLegState {
+internal sealed interface VexMapsDeliveryRouteExpectedLegState {
     data object None :
-        VexMapsDistributionExpectedLegState
+        VexMapsDeliveryRouteExpectedLegState
 
     data class Expected(
         val leg:
-            VexMapsDistributionExpectedLeg,
+            VexMapsDeliveryRouteExpectedLeg,
     ) :
-        VexMapsDistributionExpectedLegState
+        VexMapsDeliveryRouteExpectedLegState
 }
 
-internal enum class VexMapsDistributionLegFailureStage {
+internal enum class VexMapsDeliveryRouteLegFailureStage {
     RoutePreparation,
     NavigationStart,
     PreviousLegCleanup,
 }
 
-internal sealed interface VexMapsDistributionLegAttempt {
+internal sealed interface VexMapsDeliveryRouteLegAttempt {
     data object Idle :
-        VexMapsDistributionLegAttempt
+        VexMapsDeliveryRouteLegAttempt
 
     data class CleaningUpPreviousLeg(
         val nextTarget:
-            VexMapsDistributionLegTarget?,
+            VexMapsDeliveryRouteLegTarget?,
     ) :
-        VexMapsDistributionLegAttempt
+        VexMapsDeliveryRouteLegAttempt
 
     data class Preparing(
         val target:
-            VexMapsDistributionLegTarget,
+            VexMapsDeliveryRouteLegTarget,
     ) :
-        VexMapsDistributionLegAttempt
+        VexMapsDeliveryRouteLegAttempt
 
     data class Failed(
         val stage:
-            VexMapsDistributionLegFailureStage,
+            VexMapsDeliveryRouteLegFailureStage,
         val target:
-            VexMapsDistributionLegTarget?,
+            VexMapsDeliveryRouteLegTarget?,
         val reason: String,
     ) :
-        VexMapsDistributionLegAttempt {
+        VexMapsDeliveryRouteLegAttempt {
         init {
             require(reason.isNotBlank())
         }
     }
 }
 
-internal data class VexMapsDistributionNavigationInputState(
-    val run:
-        VexMapsDistributionRunProjection? =
+internal data class VexMapsDeliveryRouteNavigationInputState(
+    val deliveryRoute:
+        VexMapsDeliveryRouteProjection? =
         null,
     val navigation:
         VexNavigationSessionState? =
         null,
     val expectedLeg:
-        VexMapsDistributionExpectedLegState? =
+        VexMapsDeliveryRouteExpectedLegState? =
         null,
     val legAttempt:
-        VexMapsDistributionLegAttempt? =
+        VexMapsDeliveryRouteLegAttempt? =
         null,
 ) :
-    VexInputState<VexMapsDistributionNavigationInputState> {
+    VexInputState<VexMapsDeliveryRouteNavigationInputState> {
     override fun deepCopy():
-        VexMapsDistributionNavigationInputState =
+        VexMapsDeliveryRouteNavigationInputState =
         copy(
-            run =
-                run?.copy(
+            deliveryRoute =
+                deliveryRoute?.copy(
                     controls =
-                        run.controls.toMap(),
+                        deliveryRoute.controls.toMap(),
                 ),
             navigation =
                 navigation?.copy(),
         )
 }
 
-internal enum class VexMapsDistributionNavigationLayer {
+internal enum class VexMapsDeliveryRouteNavigationLayer {
     Drafting,
-    PreparingRun,
+    PreparingRoute,
     NeedsLeg,
     CleaningUpPreviousLeg,
     PreparingLeg,
     LegFailed,
     ReadyToStart,
     Navigating,
-    AtStop,
+    AtDelivery,
     ForeignNavigation,
     Complete,
 }
 
-internal sealed interface VexMapsDistributionNavigationRequest {
+internal sealed interface VexMapsDeliveryRouteNavigationRequest {
     data class PrepareLeg(
         val stopRef: String,
     ) :
-        VexMapsDistributionNavigationRequest
+        VexMapsDeliveryRouteNavigationRequest
 
     data object PrepareReturn :
-        VexMapsDistributionNavigationRequest
+        VexMapsDeliveryRouteNavigationRequest
 
     data object StartPreparedNavigation :
-        VexMapsDistributionNavigationRequest
+        VexMapsDeliveryRouteNavigationRequest
 
-    data class RunControl(
+    data class DeliveryRouteControl(
         val control:
-            VexMapsDistributionRunControl,
+            VexMapsDeliveryRouteControl,
     ) :
-        VexMapsDistributionNavigationRequest
+        VexMapsDeliveryRouteNavigationRequest
 }
 
-internal data class VexMapsDistributionNavigationOutput(
+internal data class VexMapsDeliveryRouteNavigationOutput(
     val layer:
-        VexMapsDistributionNavigationLayer,
+        VexMapsDeliveryRouteNavigationLayer,
     val request:
-        VexMapsDistributionNavigationRequest? =
+        VexMapsDeliveryRouteNavigationRequest? =
         null,
 ) :
-    VexOutputState<VexMapsDistributionNavigationOutput> {
+    VexOutputState<VexMapsDeliveryRouteNavigationOutput> {
     override fun deepCopy():
-        VexMapsDistributionNavigationOutput =
+        VexMapsDeliveryRouteNavigationOutput =
         copy()
 }
 
 /**
- * Pure relationship among complete Run truth, Navigation truth and the Distribution session's
+ * Pure relationship among complete Delivery Route truth, Navigation truth and the Distribution session's
  * expected-leg/attempt facts.
  *
  * A Navigation phase is never treated as sufficient identity. READY/ACTIVE/ARRIVED only mean
  * Distribution when the concrete routeRef + routeRevision matches the expected Distribution leg.
  */
-internal class VexMapsDistributionNavigationConvergenceRelay(
-    private val runProjections:
-        StateFlow<VexMapsDistributionRunProjection>,
+internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
+    private val deliveryRouteProjections:
+        StateFlow<VexMapsDeliveryRouteProjection>,
     private val navigationStates:
         StateFlow<VexNavigationSessionState>,
     private val expectedLegStates:
-        StateFlow<VexMapsDistributionExpectedLegState>,
+        StateFlow<VexMapsDeliveryRouteExpectedLegState>,
     private val legAttempts:
-        StateFlow<VexMapsDistributionLegAttempt>,
+        StateFlow<VexMapsDeliveryRouteLegAttempt>,
 ) :
     VexCompoundRelay<
-        VexMapsDistributionNavigationInputState,
-        VexMapsDistributionNavigationOutput
+        VexMapsDeliveryRouteNavigationInputState,
+        VexMapsDeliveryRouteNavigationOutput
     >(
         relayRef =
             "vexmaps.distribution.navigation",
         initialInputState =
-            VexMapsDistributionNavigationInputState(
-                run =
-                    runProjections.value,
+            VexMapsDeliveryRouteNavigationInputState(
+                deliveryRoute =
+                    deliveryRouteProjections.value,
                 navigation =
                     navigationStates.value,
                 expectedLeg =
@@ -211,9 +211,9 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
                     legAttempts.value,
             ),
         initialOutputState =
-            projectDistributionNavigation(
-                run =
-                    runProjections.value,
+            projectDeliveryRouteNavigation(
+                deliveryRoute =
+                    deliveryRouteProjections.value,
                 navigation =
                     navigationStates.value,
                 expectedLeg =
@@ -224,16 +224,16 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
     ) {
     override fun dependencies() =
         vexDependencies<
-            VexMapsDistributionNavigationInputState
+            VexMapsDeliveryRouteNavigationInputState
         > {
             observe(
                 dependencyRef =
-                    "run",
+                    "delivery-route",
                 flow =
-                    runProjections,
+                    deliveryRouteProjections,
             ) { projection ->
-                VexMapsDistributionNavigationInputState(
-                    run =
+                VexMapsDeliveryRouteNavigationInputState(
+                    deliveryRoute =
                         projection,
                 )
             }
@@ -244,7 +244,7 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
                 flow =
                     navigationStates,
             ) { state ->
-                VexMapsDistributionNavigationInputState(
+                VexMapsDeliveryRouteNavigationInputState(
                     navigation =
                         state,
                 )
@@ -256,7 +256,7 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
                 flow =
                     expectedLegStates,
             ) { state ->
-                VexMapsDistributionNavigationInputState(
+                VexMapsDeliveryRouteNavigationInputState(
                     expectedLeg =
                         state,
                 )
@@ -268,7 +268,7 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
                 flow =
                     legAttempts,
             ) { attempt ->
-                VexMapsDistributionNavigationInputState(
+                VexMapsDeliveryRouteNavigationInputState(
                     legAttempt =
                         attempt,
                 )
@@ -277,24 +277,24 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
 
     override fun processStates(
         inputState:
-            VexMapsDistributionNavigationInputState,
+            VexMapsDeliveryRouteNavigationInputState,
         currentState:
             VexCompoundState<
-                VexMapsDistributionNavigationInputState,
-                VexMapsDistributionNavigationOutput
+                VexMapsDeliveryRouteNavigationInputState,
+                VexMapsDeliveryRouteNavigationOutput
             >,
     ):
         VexCompoundState<
-            VexMapsDistributionNavigationInputState,
-            VexMapsDistributionNavigationOutput
+            VexMapsDeliveryRouteNavigationInputState,
+            VexMapsDeliveryRouteNavigationOutput
         > {
         val previous =
             currentState.inputState
         val coherent =
-            VexMapsDistributionNavigationInputState(
-                run =
-                    inputState.run
-                        ?: previous.run,
+            VexMapsDeliveryRouteNavigationInputState(
+                deliveryRoute =
+                    inputState.deliveryRoute
+                        ?: previous.deliveryRoute,
                 navigation =
                     inputState.navigation
                         ?: previous.navigation,
@@ -306,8 +306,8 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
                         ?: previous.legAttempt,
             )
 
-        val run =
-            coherent.run
+        val deliveryRoute =
+            coherent.deliveryRoute
                 ?: return currentState.copy(
                     inputState =
                         coherent,
@@ -320,18 +320,18 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
                 )
         val expectedLeg =
             coherent.expectedLeg
-                ?: VexMapsDistributionExpectedLegState.None
+                ?: VexMapsDeliveryRouteExpectedLegState.None
         val legAttempt =
             coherent.legAttempt
-                ?: VexMapsDistributionLegAttempt.Idle
+                ?: VexMapsDeliveryRouteLegAttempt.Idle
 
         return currentState.copy(
             inputState =
                 coherent,
             outputState =
-                projectDistributionNavigation(
-                    run =
-                        run,
+                projectDeliveryRouteNavigation(
+                    deliveryRoute =
+                        deliveryRoute,
                     navigation =
                         navigation,
                     expectedLeg =
@@ -343,42 +343,42 @@ internal class VexMapsDistributionNavigationConvergenceRelay(
     }
 }
 
-private fun projectDistributionNavigation(
-    run:
-        VexMapsDistributionRunProjection,
+private fun projectDeliveryRouteNavigation(
+    deliveryRoute:
+        VexMapsDeliveryRouteProjection,
     navigation:
         VexNavigationSessionState,
     expectedLeg:
-        VexMapsDistributionExpectedLegState,
+        VexMapsDeliveryRouteExpectedLegState,
     legAttempt:
-        VexMapsDistributionLegAttempt,
-): VexMapsDistributionNavigationOutput =
+        VexMapsDeliveryRouteLegAttempt,
+): VexMapsDeliveryRouteNavigationOutput =
     when (
-        val runState =
-            run.state
+        val deliveryRouteState =
+            deliveryRoute.state
     ) {
-        VexMapsDistributionRunState.Empty,
-        is VexMapsDistributionRunState.Draft ->
-            VexMapsDistributionNavigationOutput(
+        VexMapsDeliveryRouteState.Empty,
+        is VexMapsDeliveryRouteState.Draft ->
+            VexMapsDeliveryRouteNavigationOutput(
                 layer =
-                    VexMapsDistributionNavigationLayer
+                    VexMapsDeliveryRouteNavigationLayer
                         .Drafting,
             )
 
-        is VexMapsDistributionRunState.Preparing ->
-            VexMapsDistributionNavigationOutput(
+        is VexMapsDeliveryRouteState.Preparing ->
+            VexMapsDeliveryRouteNavigationOutput(
                 layer =
-                    VexMapsDistributionNavigationLayer
-                        .PreparingRun,
+                    VexMapsDeliveryRouteNavigationLayer
+                        .PreparingRoute,
             )
 
-        is VexMapsDistributionRunState.Ready ->
+        is VexMapsDeliveryRouteState.Ready ->
             projectExpectedLeg(
                 planRef =
-                    runState.planRef,
+                    deliveryRouteState.planRef,
                 target =
-                    VexMapsDistributionLegTarget.Stop(
-                        runState
+                    VexMapsDeliveryRouteLegTarget.Stop(
+                        deliveryRouteState
                             .orderedStopRefs
                             .first(),
                     ),
@@ -392,13 +392,13 @@ private fun projectDistributionNavigation(
                     true,
             )
 
-        is VexMapsDistributionRunState.Running ->
+        is VexMapsDeliveryRouteState.Delivering ->
             projectExpectedLeg(
                 planRef =
-                    runState.planRef,
+                    deliveryRouteState.planRef,
                 target =
-                    VexMapsDistributionLegTarget.Stop(
-                        runState
+                    VexMapsDeliveryRouteLegTarget.Stop(
+                        deliveryRouteState
                             .currentStopRef,
                     ),
                 navigation =
@@ -411,19 +411,19 @@ private fun projectDistributionNavigation(
                     false,
             )
 
-        is VexMapsDistributionRunState.AtStop ->
-            VexMapsDistributionNavigationOutput(
+        is VexMapsDeliveryRouteState.AtDelivery ->
+            VexMapsDeliveryRouteNavigationOutput(
                 layer =
-                    VexMapsDistributionNavigationLayer
-                        .AtStop,
+                    VexMapsDeliveryRouteNavigationLayer
+                        .AtDelivery,
             )
 
-        is VexMapsDistributionRunState.Returning ->
+        is VexMapsDeliveryRouteState.ReturningToStart ->
             projectExpectedLeg(
                 planRef =
-                    runState.planRef,
+                    deliveryRouteState.planRef,
                 target =
-                    VexMapsDistributionLegTarget
+                    VexMapsDeliveryRouteLegTarget
                         .ReturnToStart,
                 navigation =
                     navigation,
@@ -435,10 +435,10 @@ private fun projectDistributionNavigation(
                     false,
             )
 
-        is VexMapsDistributionRunState.Completed ->
-            VexMapsDistributionNavigationOutput(
+        is VexMapsDeliveryRouteState.Completed ->
+            VexMapsDeliveryRouteNavigationOutput(
                 layer =
-                    VexMapsDistributionNavigationLayer
+                    VexMapsDeliveryRouteNavigationLayer
                         .Complete,
             )
     }
@@ -446,20 +446,20 @@ private fun projectDistributionNavigation(
 private fun projectExpectedLeg(
     planRef: String,
     target:
-        VexMapsDistributionLegTarget,
+        VexMapsDeliveryRouteLegTarget,
     navigation:
         VexNavigationSessionState,
     expectedLeg:
-        VexMapsDistributionExpectedLegState,
+        VexMapsDeliveryRouteExpectedLegState,
     legAttempt:
-        VexMapsDistributionLegAttempt,
+        VexMapsDeliveryRouteLegAttempt,
     humanStartRequired:
         Boolean,
-): VexMapsDistributionNavigationOutput {
+): VexMapsDeliveryRouteNavigationOutput {
     val expected =
         (
             expectedLeg as?
-                VexMapsDistributionExpectedLegState.Expected
+                VexMapsDeliveryRouteExpectedLegState.Expected
         )
             ?.leg
             ?.takeIf {
@@ -471,7 +471,7 @@ private fun projectExpectedLeg(
 
     if (
         expected == null ||
-        !vexMapsDistributionNavigationRealizesExpectedLeg(
+        !vexMapsDeliveryRouteNavigationRealizesExpectedLeg(
             navigation =
                 navigation,
             expected =
@@ -484,9 +484,9 @@ private fun projectExpectedLeg(
             navigation.routeResult !=
                 null
         ) {
-            return VexMapsDistributionNavigationOutput(
+            return VexMapsDeliveryRouteNavigationOutput(
                 layer =
-                    VexMapsDistributionNavigationLayer
+                    VexMapsDeliveryRouteNavigationLayer
                         .ForeignNavigation,
             )
         }
@@ -522,18 +522,18 @@ private fun projectExpectedLeg(
             if (retainedAttempt != null) {
                 retainedAttempt
             } else if (humanStartRequired) {
-                VexMapsDistributionNavigationOutput(
+                VexMapsDeliveryRouteNavigationOutput(
                     layer =
-                        VexMapsDistributionNavigationLayer
+                        VexMapsDeliveryRouteNavigationLayer
                             .ReadyToStart,
                 )
             } else {
-                VexMapsDistributionNavigationOutput(
+                VexMapsDeliveryRouteNavigationOutput(
                     layer =
-                        VexMapsDistributionNavigationLayer
+                        VexMapsDeliveryRouteNavigationLayer
                             .ReadyToStart,
                     request =
-                        VexMapsDistributionNavigationRequest
+                        VexMapsDeliveryRouteNavigationRequest
                             .StartPreparedNavigation,
                 )
             }
@@ -542,21 +542,21 @@ private fun projectExpectedLeg(
         VexNavigationSessionPhase.ACTIVE,
         VexNavigationSessionPhase.OFF_ROUTE,
         VexNavigationSessionPhase.LOCATION_HELD ->
-            VexMapsDistributionNavigationOutput(
+            VexMapsDeliveryRouteNavigationOutput(
                 layer =
-                    VexMapsDistributionNavigationLayer
+                    VexMapsDeliveryRouteNavigationLayer
                         .Navigating,
             )
 
         VexNavigationSessionPhase.ARRIVED ->
-            VexMapsDistributionNavigationOutput(
+            VexMapsDeliveryRouteNavigationOutput(
                 layer =
-                    VexMapsDistributionNavigationLayer
-                        .AtStop,
+                    VexMapsDeliveryRouteNavigationLayer
+                        .AtDelivery,
                 request =
-                    VexMapsDistributionNavigationRequest
-                        .RunControl(
-                            VexMapsDistributionRunControl
+                    VexMapsDeliveryRouteNavigationRequest
+                        .DeliveryRouteControl(
+                            VexMapsDeliveryRouteControl
                                 .Arrive,
                         ),
             )
@@ -565,76 +565,76 @@ private fun projectExpectedLeg(
 
 private fun projectRetainedLegAttempt(
     target:
-        VexMapsDistributionLegTarget,
+        VexMapsDeliveryRouteLegTarget,
     legAttempt:
-        VexMapsDistributionLegAttempt,
-): VexMapsDistributionNavigationOutput? =
+        VexMapsDeliveryRouteLegAttempt,
+): VexMapsDeliveryRouteNavigationOutput? =
     when (
         legAttempt
     ) {
-        is VexMapsDistributionLegAttempt.CleaningUpPreviousLeg ->
+        is VexMapsDeliveryRouteLegAttempt.CleaningUpPreviousLeg ->
             if (
                 legAttempt.nextTarget ==
                 target
             ) {
-                VexMapsDistributionNavigationOutput(
+                VexMapsDeliveryRouteNavigationOutput(
                     layer =
-                        VexMapsDistributionNavigationLayer
+                        VexMapsDeliveryRouteNavigationLayer
                             .CleaningUpPreviousLeg,
                 )
             } else {
                 null
             }
 
-        is VexMapsDistributionLegAttempt.Preparing ->
+        is VexMapsDeliveryRouteLegAttempt.Preparing ->
             if (
                 legAttempt.target ==
                 target
             ) {
-                VexMapsDistributionNavigationOutput(
+                VexMapsDeliveryRouteNavigationOutput(
                     layer =
-                        VexMapsDistributionNavigationLayer
+                        VexMapsDeliveryRouteNavigationLayer
                             .PreparingLeg,
                 )
             } else {
                 null
             }
 
-        is VexMapsDistributionLegAttempt.Failed ->
+        is VexMapsDeliveryRouteLegAttempt.Failed ->
             if (
                 legAttempt.target ==
                 target
             ) {
-                VexMapsDistributionNavigationOutput(
+                VexMapsDeliveryRouteNavigationOutput(
                     layer =
-                        VexMapsDistributionNavigationLayer
+                        VexMapsDeliveryRouteNavigationLayer
                             .LegFailed,
                 )
             } else {
                 null
             }
 
-        VexMapsDistributionLegAttempt.Idle ->
+        VexMapsDeliveryRouteLegAttempt.Idle ->
             null
     }
 
 private fun projectLegNeed(
     target:
-        VexMapsDistributionLegTarget,
+        VexMapsDeliveryRouteLegTarget,
     legAttempt:
-        VexMapsDistributionLegAttempt,
-): VexMapsDistributionNavigationOutput =
+        VexMapsDeliveryRouteLegAttempt,
+): VexMapsDeliveryRouteNavigationOutput =
     when (
         legAttempt
     ) {
-        is VexMapsDistributionLegAttempt.CleaningUpPreviousLeg ->
+        is VexMapsDeliveryRouteLegAttempt.CleaningUpPreviousLeg ->
             if (
                 legAttempt.nextTarget ==
                 target
             ) {
-                VexMapsDistributionNavigationOutput(
+                VexMapsDeliveryRouteNavigationOutput(
                     layer =
-                        VexMapsDistributionNavigationLayer
+                        VexMapsDeliveryRouteNavigationLayer
                             .CleaningUpPreviousLeg,
                 )
             } else {
@@ -643,14 +643,14 @@ private fun projectLegNeed(
                 )
             }
 
-        is VexMapsDistributionLegAttempt.Preparing ->
+        is VexMapsDeliveryRouteLegAttempt.Preparing ->
             if (
                 legAttempt.target ==
                 target
             ) {
-                VexMapsDistributionNavigationOutput(
+                VexMapsDeliveryRouteNavigationOutput(
                     layer =
-                        VexMapsDistributionNavigationLayer
+                        VexMapsDeliveryRouteNavigationLayer
                             .PreparingLeg,
                 )
             } else {
@@ -659,14 +659,14 @@ private fun projectLegNeed(
                 )
             }
 
-        is VexMapsDistributionLegAttempt.Failed ->
+        is VexMapsDeliveryRouteLegAttempt.Failed ->
             if (
                 legAttempt.target ==
                 target
             ) {
-                VexMapsDistributionNavigationOutput(
+                VexMapsDeliveryRouteNavigationOutput(
                     layer =
-                        VexMapsDistributionNavigationLayer
+                        VexMapsDeliveryRouteNavigationLayer
                             .LegFailed,
                 )
             } else {
@@ -675,7 +675,7 @@ private fun projectLegNeed(
                 )
             }
 
-        VexMapsDistributionLegAttempt.Idle ->
+        VexMapsDeliveryRouteLegAttempt.Idle ->
             needsLeg(
                 target,
             )
@@ -683,25 +683,25 @@ private fun projectLegNeed(
 
 private fun needsLeg(
     target:
-        VexMapsDistributionLegTarget,
-): VexMapsDistributionNavigationOutput =
-    VexMapsDistributionNavigationOutput(
+        VexMapsDeliveryRouteLegTarget,
+): VexMapsDeliveryRouteNavigationOutput =
+    VexMapsDeliveryRouteNavigationOutput(
         layer =
-            VexMapsDistributionNavigationLayer
+            VexMapsDeliveryRouteNavigationLayer
                 .NeedsLeg,
         request =
             when (
                 target
             ) {
-                is VexMapsDistributionLegTarget.Stop ->
-                    VexMapsDistributionNavigationRequest
+                is VexMapsDeliveryRouteLegTarget.Stop ->
+                    VexMapsDeliveryRouteNavigationRequest
                         .PrepareLeg(
                             stopRef =
                                 target.stopRef,
                         )
 
-                VexMapsDistributionLegTarget.ReturnToStart ->
-                    VexMapsDistributionNavigationRequest
+                VexMapsDeliveryRouteLegTarget.ReturnToStart ->
+                    VexMapsDeliveryRouteNavigationRequest
                         .PrepareReturn
             },
     )
@@ -717,11 +717,11 @@ private fun needsLeg(
  * one originally admitted. A different routeRef, an older active revision, or IDLE Navigation is
  * foreign/not-realizing.
  */
-internal fun vexMapsDistributionNavigationRealizesExpectedLeg(
+internal fun vexMapsDeliveryRouteNavigationRealizesExpectedLeg(
     navigation:
         VexNavigationSessionState,
     expected:
-        VexMapsDistributionExpectedLeg,
+        VexMapsDeliveryRouteExpectedLeg,
 ): Boolean {
     val route =
         navigation

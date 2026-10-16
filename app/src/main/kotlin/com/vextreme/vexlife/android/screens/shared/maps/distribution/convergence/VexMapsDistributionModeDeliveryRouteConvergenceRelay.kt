@@ -8,91 +8,91 @@ import com.vextreme.vexlife.android.relay.vexDependencies
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunProjection
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteProjection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import kotlinx.coroutines.flow.StateFlow
 
-internal data class VexMapsDistributionModeRunInputState(
+internal data class VexMapsDistributionModeDeliveryRouteInputState(
     val mode:
         VexMapsDistributionModeProjection? =
         null,
-    val run:
-        VexMapsDistributionRunProjection? =
+    val deliveryRoute:
+        VexMapsDeliveryRouteProjection? =
         null,
 ) :
-    VexInputState<VexMapsDistributionModeRunInputState> {
+    VexInputState<VexMapsDistributionModeDeliveryRouteInputState> {
     override fun deepCopy():
-        VexMapsDistributionModeRunInputState =
+        VexMapsDistributionModeDeliveryRouteInputState =
         copy(
             mode =
                 mode?.copy(
                     controls =
                         mode.controls.toMap(),
                 ),
-            run =
-                run?.copy(
+            deliveryRoute =
+                deliveryRoute?.copy(
                     controls =
-                        run.controls.toMap(),
+                        deliveryRoute.controls.toMap(),
                 ),
         )
 }
 
-internal enum class VexMapsDistributionModeRunCoherence {
+internal enum class VexMapsDistributionModeDeliveryRouteCoherence {
     Coherent,
     NeedsDistributionMode,
 }
 
-internal data class VexMapsDistributionModeRunOutput(
+internal data class VexMapsDistributionModeDeliveryRouteOutput(
     val coherence:
-        VexMapsDistributionModeRunCoherence,
+        VexMapsDistributionModeDeliveryRouteCoherence,
     val requestedModeControl:
         VexMapsDistributionModeControl? =
         null,
 ) :
-    VexOutputState<VexMapsDistributionModeRunOutput> {
+    VexOutputState<VexMapsDistributionModeDeliveryRouteOutput> {
     override fun deepCopy():
-        VexMapsDistributionModeRunOutput =
+        VexMapsDistributionModeDeliveryRouteOutput =
         copy()
 }
 
 /**
  * One higher-order question:
  *
- * Is the independently-owned Maps Mode coherent with the independently-owned Distribution Run?
+ * Is the independently-owned Maps Mode coherent with the independently-owned Delivery Route?
  *
- * This Relay deliberately does not restate Run phase. A Run-state addition should require a change
- * here only when it changes the Mode/Run relationship itself.
+ * This Relay deliberately does not restate Delivery Route phase. A Delivery-Route-state addition should require a change
+ * here only when it changes the Mode/Delivery Route relationship itself.
  */
-internal class VexMapsDistributionModeRunConvergenceRelay(
+internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
     private val modeProjections:
         StateFlow<VexMapsDistributionModeProjection>,
-    private val runProjections:
-        StateFlow<VexMapsDistributionRunProjection>,
+    private val deliveryRouteProjections:
+        StateFlow<VexMapsDeliveryRouteProjection>,
 ) :
     VexCompoundRelay<
-        VexMapsDistributionModeRunInputState,
-        VexMapsDistributionModeRunOutput
+        VexMapsDistributionModeDeliveryRouteInputState,
+        VexMapsDistributionModeDeliveryRouteOutput
     >(
         relayRef =
-            "vexmaps.distribution.mode-run",
+            "vexmaps.distribution.mode-delivery-route",
         initialInputState =
-            VexMapsDistributionModeRunInputState(
+            VexMapsDistributionModeDeliveryRouteInputState(
                 mode =
                     modeProjections.value,
-                run =
-                    runProjections.value,
+                deliveryRoute =
+                    deliveryRouteProjections.value,
             ),
         initialOutputState =
-            projectModeRun(
+            projectModeDeliveryRoute(
                 mode =
                     modeProjections.value,
-                run =
-                    runProjections.value,
+                deliveryRoute =
+                    deliveryRouteProjections.value,
             ),
     ) {
     override fun dependencies() =
         vexDependencies<
-            VexMapsDistributionModeRunInputState
+            VexMapsDistributionModeDeliveryRouteInputState
         > {
             observe(
                 dependencyRef =
@@ -100,7 +100,7 @@ internal class VexMapsDistributionModeRunConvergenceRelay(
                 flow =
                     modeProjections,
             ) { projection ->
-                VexMapsDistributionModeRunInputState(
+                VexMapsDistributionModeDeliveryRouteInputState(
                     mode =
                         projection,
                 )
@@ -108,12 +108,12 @@ internal class VexMapsDistributionModeRunConvergenceRelay(
 
             observe(
                 dependencyRef =
-                    "run",
+                    "delivery-route",
                 flow =
-                    runProjections,
+                    deliveryRouteProjections,
             ) { projection ->
-                VexMapsDistributionModeRunInputState(
-                    run =
+                VexMapsDistributionModeDeliveryRouteInputState(
+                    deliveryRoute =
                         projection,
                 )
             }
@@ -121,27 +121,27 @@ internal class VexMapsDistributionModeRunConvergenceRelay(
 
     override fun processStates(
         inputState:
-            VexMapsDistributionModeRunInputState,
+            VexMapsDistributionModeDeliveryRouteInputState,
         currentState:
             VexCompoundState<
-                VexMapsDistributionModeRunInputState,
-                VexMapsDistributionModeRunOutput
+                VexMapsDistributionModeDeliveryRouteInputState,
+                VexMapsDistributionModeDeliveryRouteOutput
             >,
     ):
         VexCompoundState<
-            VexMapsDistributionModeRunInputState,
-            VexMapsDistributionModeRunOutput
+            VexMapsDistributionModeDeliveryRouteInputState,
+            VexMapsDistributionModeDeliveryRouteOutput
         > {
         val previous =
             currentState.inputState
         val coherent =
-            VexMapsDistributionModeRunInputState(
+            VexMapsDistributionModeDeliveryRouteInputState(
                 mode =
                     inputState.mode
                         ?: previous.mode,
-                run =
-                    inputState.run
-                        ?: previous.run,
+                deliveryRoute =
+                    inputState.deliveryRoute
+                        ?: previous.deliveryRoute,
             )
         val mode =
             coherent.mode
@@ -149,8 +149,8 @@ internal class VexMapsDistributionModeRunConvergenceRelay(
                     inputState =
                         coherent,
                 )
-        val run =
-            coherent.run
+        val deliveryRoute =
+            coherent.deliveryRoute
                 ?: return currentState.copy(
                     inputState =
                         coherent,
@@ -160,43 +160,43 @@ internal class VexMapsDistributionModeRunConvergenceRelay(
             inputState =
                 coherent,
             outputState =
-                projectModeRun(
+                projectModeDeliveryRoute(
                     mode =
                         mode,
-                    run =
-                        run,
+                    deliveryRoute =
+                        deliveryRoute,
                 ),
         )
     }
 }
 
-private fun projectModeRun(
+private fun projectModeDeliveryRoute(
     mode:
         VexMapsDistributionModeProjection,
-    run:
-        VexMapsDistributionRunProjection,
-): VexMapsDistributionModeRunOutput {
-    val hasDistributionTruth =
-        run.state !is
-            VexMapsDistributionRunState.Empty
+    deliveryRoute:
+        VexMapsDeliveryRouteProjection,
+): VexMapsDistributionModeDeliveryRouteOutput {
+    val hasDeliveryRouteTruth =
+        deliveryRoute.state !is
+            VexMapsDeliveryRouteState.Empty
 
     return if (
-        hasDistributionTruth &&
+        hasDeliveryRouteTruth &&
         mode.state is
             VexMapsDistributionModeState.Regular
     ) {
-        VexMapsDistributionModeRunOutput(
+        VexMapsDistributionModeDeliveryRouteOutput(
             coherence =
-                VexMapsDistributionModeRunCoherence
+                VexMapsDistributionModeDeliveryRouteCoherence
                     .NeedsDistributionMode,
             requestedModeControl =
                 VexMapsDistributionModeControl
                     .UseDistribution,
         )
     } else {
-        VexMapsDistributionModeRunOutput(
+        VexMapsDistributionModeDeliveryRouteOutput(
             coherence =
-                VexMapsDistributionModeRunCoherence
+                VexMapsDistributionModeDeliveryRouteCoherence
                     .Coherent,
         )
     }

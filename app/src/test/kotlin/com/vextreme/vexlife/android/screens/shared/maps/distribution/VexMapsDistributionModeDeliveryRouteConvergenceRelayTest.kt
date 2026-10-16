@@ -1,11 +1,11 @@
 package com.vextreme.vexlife.android.screens.shared.maps.distribution
 
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunCoherence
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunConvergenceRelay
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteCoherence
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteConvergenceRelay
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeConnection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunConnection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteConnection
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -13,20 +13,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class VexMapsDistributionModeRunConvergenceRelayTest {
+class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
     @Test
     fun nonEmptyRunRequestsOnlyModeReconciliationThenBecomesCoherent() =
         runBlocking {
             val mode =
                 VexMapsDistributionModeConnection()
-            val run =
-                VexMapsDistributionRunConnection()
+            val deliveryRoute =
+                VexMapsDeliveryRouteConnection()
             val relay =
-                VexMapsDistributionModeRunConvergenceRelay(
+                VexMapsDistributionModeDeliveryRouteConvergenceRelay(
                     modeProjections =
                         mode.projections,
-                    runProjections =
-                        run.projections,
+                    deliveryRouteProjections =
+                        deliveryRoute.projections,
                 )
 
             try {
@@ -51,7 +51,7 @@ class VexMapsDistributionModeRunConvergenceRelayTest {
                         relay.outputStates
                             .first {
                                 it.coherence ==
-                                    VexMapsDistributionModeRunCoherence
+                                    VexMapsDistributionModeDeliveryRouteCoherence
                                         .NeedsDistributionMode
                             }
                     }
@@ -88,7 +88,7 @@ class VexMapsDistributionModeRunConvergenceRelayTest {
                         relay.outputStates
                             .first {
                                 it.coherence ==
-                                    VexMapsDistributionModeRunCoherence
+                                    VexMapsDistributionModeDeliveryRouteCoherence
                                         .Coherent
                             }
                     }

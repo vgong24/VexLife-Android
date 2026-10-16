@@ -11,28 +11,26 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionPhas
 import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionState
 import com.vextreme.vexlife.android.screens.shared.maps.VexOfflineRouteRequest
 import com.vextreme.vexlife.android.screens.shared.maps.VexOfflineRouteResult
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLeg
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLegState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegAttempt
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegFailureStage
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegTarget
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunConvergenceRelay
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationConvergenceRelay
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationOutput
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationRequest
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionRouteIdentity
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.vexMapsDistributionNavigationRealizesExpectedLeg
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.CurrentVexMapsDistributionModeExperience
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteExpectedLeg
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteExpectedLegState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegAttempt
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegFailureStage
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegTarget
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteConvergenceRelay
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationConvergenceRelay
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationOutput
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRequest
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRouteIdentity
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.vexMapsDeliveryRouteNavigationRealizesExpectedLeg
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeConnection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeExperience
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPlan
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPreparationSnapshot
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.CurrentVexMapsDistributionRunExperience
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunExperience
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunProjection
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteConnection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteControl
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteProjection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -93,11 +91,11 @@ internal data class VexMapsDistributionSessionState(
         String? =
         null,
     val legAttempt:
-        VexMapsDistributionLegAttempt =
-        VexMapsDistributionLegAttempt.Idle,
+        VexMapsDeliveryRouteLegAttempt =
+        VexMapsDeliveryRouteLegAttempt.Idle,
     val expectedLeg:
-        VexMapsDistributionExpectedLegState =
-        VexMapsDistributionExpectedLegState.None,
+        VexMapsDeliveryRouteExpectedLegState =
+        VexMapsDeliveryRouteExpectedLegState.None,
 )
 
 internal data class VexMapsDistributionAddStopWork(
@@ -119,7 +117,7 @@ internal data class VexMapsDistributionPreparationWork(
 
 internal data class VexMapsDistributionLegWork(
     val target:
-        VexMapsDistributionLegTarget,
+        VexMapsDeliveryRouteLegTarget,
     val plan:
         VexMapsDistributionPlan,
     val pack:
@@ -129,9 +127,9 @@ internal data class VexMapsDistributionLegWork(
 /**
  * Process-lifetime owner of one lived Distribution session.
  *
- * Repository, Mode, Run, Optimizer and Navigation remain independent owners. This class owns their
+ * Repository, Distribution Mode, Delivery Route, Optimizer and Navigation remain independent owners. This class owns their
  * active relationship: the admitted preparation snapshot, derived Plan, expected Navigation leg,
- * async attempt/failure state and the bounded Control feedback needed to advance the run.
+ * async attempt/failure state and the bounded Control feedback needed to advance the delivery route.
  */
 internal class VexMapsDistributionSession(
     private val repository:
@@ -145,23 +143,23 @@ internal class VexMapsDistributionSession(
     private val relayScope:
         CoroutineScope,
     private val mode:
-        VexMapsDistributionModeExperience =
-        CurrentVexMapsDistributionModeExperience(),
-    private val run:
-        VexMapsDistributionRunExperience =
-        CurrentVexMapsDistributionRunExperience(),
+        VexMapsDistributionModeConnection =
+        VexMapsDistributionModeConnection(),
+    private val deliveryRoute:
+        VexMapsDeliveryRouteConnection =
+        VexMapsDeliveryRouteConnection(),
 ) {
     private val mutableExpectedLeg =
         MutableStateFlow<
-            VexMapsDistributionExpectedLegState
+            VexMapsDeliveryRouteExpectedLegState
         >(
-            VexMapsDistributionExpectedLegState.None,
+            VexMapsDeliveryRouteExpectedLegState.None,
         )
     private val mutableLegAttempt =
         MutableStateFlow<
-            VexMapsDistributionLegAttempt
+            VexMapsDeliveryRouteLegAttempt
         >(
-            VexMapsDistributionLegAttempt.Idle,
+            VexMapsDeliveryRouteLegAttempt.Idle,
         )
     private val mutableState =
         MutableStateFlow(
@@ -177,33 +175,33 @@ internal class VexMapsDistributionSession(
         get() =
             mode.projections
 
-    val runProjections:
-        StateFlow<VexMapsDistributionRunProjection>
+    val deliveryRouteProjections:
+        StateFlow<VexMapsDeliveryRouteProjection>
         get() =
-            run.projections
+            deliveryRoute.projections
 
     val currentMode:
         VexMapsDistributionModeProjection
         get() =
             mode.currentProjection
 
-    val currentRun:
-        VexMapsDistributionRunProjection
+    val currentDeliveryRoute:
+        VexMapsDeliveryRouteProjection
         get() =
-            run.currentProjection
+            deliveryRoute.currentProjection
 
-    private val modeRunRelay =
-        VexMapsDistributionModeRunConvergenceRelay(
+    private val modeDeliveryRouteRelay =
+        VexMapsDistributionModeDeliveryRouteConvergenceRelay(
             modeProjections =
                 mode.projections,
-            runProjections =
-                run.projections,
+            deliveryRouteProjections =
+                deliveryRoute.projections,
         )
 
     private val navigationRelay =
-        VexMapsDistributionNavigationConvergenceRelay(
-            runProjections =
-                run.projections,
+        VexMapsDeliveryRouteNavigationConvergenceRelay(
+            deliveryRouteProjections =
+                deliveryRoute.projections,
             navigationStates =
                 navigation.states,
             expectedLegStates =
@@ -221,11 +219,11 @@ internal class VexMapsDistributionSession(
         )
 
     val navigationOutputs:
-        Flow<VexMapsDistributionNavigationOutput> =
+        Flow<VexMapsDeliveryRouteNavigationOutput> =
         navigationRelay.outputStates
 
     val currentNavigation:
-        VexMapsDistributionNavigationOutput
+        VexMapsDeliveryRouteNavigationOutput
         get() =
             navigationRelay.currentOutput
 
@@ -234,7 +232,7 @@ internal class VexMapsDistributionSession(
         null
 
     init {
-        modeRunRelay.activate(
+        modeDeliveryRouteRelay.activate(
             relayScope,
         )
         navigationRelay.activate(
@@ -247,7 +245,7 @@ internal class VexMapsDistributionSession(
 
     internal suspend fun shutdown() {
         execution.shutdown()
-        modeRunRelay.deactivate()
+        modeDeliveryRouteRelay.deactivate()
         navigationRelay.deactivate()
     }
 
@@ -379,7 +377,7 @@ internal class VexMapsDistributionSession(
         }
     }
 
-    fun prepare(
+    fun prepareDeliveryRoute(
         origin: VexMapCoordinate,
         travelMode: VexMapsTravelMode,
         pack: VexMapsRegionPack,
@@ -387,8 +385,8 @@ internal class VexMapsDistributionSession(
         if (
             mutableState.value
                 .draftOperationInFlight ||
-            !run.currentProjection[
-                VexMapsDistributionRunControl.Prepare
+            !deliveryRoute.currentProjection[
+                VexMapsDeliveryRouteControl.Prepare
             ].isAvailable
         ) {
             return
@@ -401,21 +399,21 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        run.activate(
-            VexMapsDistributionRunControl.Prepare,
+        deliveryRoute.activate(
+            VexMapsDeliveryRouteControl.Prepare,
         )
 
         val preparing =
-            run.currentProjection
+            deliveryRoute.currentProjection
                 .state as?
-                VexMapsDistributionRunState.Preparing
+                VexMapsDeliveryRouteState.Preparing
                 ?: return
 
         execution.cancelPreparation()
         execution.cancelLeg()
         clearExpectedLeg()
         setLegAttempt(
-            VexMapsDistributionLegAttempt.Idle,
+            VexMapsDeliveryRouteLegAttempt.Idle,
         )
 
         val cleanupFailure =
@@ -424,7 +422,7 @@ internal class VexMapsDistributionSession(
             }.exceptionOrNull()
 
         if (cleanupFailure != null) {
-            run.preparationFailed(
+            deliveryRoute.preparationFailed(
                 preparing.preparationRef,
             )
             publishSession(
@@ -531,11 +529,11 @@ internal class VexMapsDistributionSession(
                     pack,
             )
             setExpectedLeg(
-                VexMapsDistributionExpectedLeg(
+                VexMapsDeliveryRouteExpectedLeg(
                     planRef =
                         plan.planRef,
                     target =
-                        VexMapsDistributionLegTarget
+                        VexMapsDeliveryRouteLegTarget
                             .Stop(
                                 firstStopRef,
                             ),
@@ -545,7 +543,7 @@ internal class VexMapsDistributionSession(
             )
 
             if (
-                !run.preparationSucceeded(
+                !deliveryRoute.preparationSucceeded(
                     preparationRef =
                         preparation.preparationRef,
                     planRef =
@@ -577,7 +575,7 @@ internal class VexMapsDistributionSession(
             error:
                 Throwable,
         ) {
-            run.preparationFailed(
+            deliveryRoute.preparationFailed(
                 preparation.preparationRef,
             )
             activePack =
@@ -605,17 +603,17 @@ internal class VexMapsDistributionSession(
      * Call only for a real human change to a material preparation input.
      *
      * Transient Compose restoration/default values are not preparation truth and must not use this
-     * method. Once a run is executing, its admitted Plan remains sealed.
+     * method. Once a delivery route is executing, its admitted Plan remains sealed.
      */
     fun canReplaceRoutingRegion():
         Boolean =
         when (
-            run.currentProjection
+            deliveryRoute.currentProjection
                 .state
         ) {
-            is VexMapsDistributionRunState.Running,
-            is VexMapsDistributionRunState.AtStop,
-            is VexMapsDistributionRunState.Returning ->
+            is VexMapsDeliveryRouteState.Delivering,
+            is VexMapsDeliveryRouteState.AtDelivery,
+            is VexMapsDeliveryRouteState.ReturningToStart ->
                 false
 
             else ->
@@ -640,19 +638,19 @@ internal class VexMapsDistributionSession(
     fun humanPlanningInputChanged() {
         when (
             val state =
-                run.currentProjection
+                deliveryRoute.currentProjection
                     .state
         ) {
-            is VexMapsDistributionRunState.Preparing -> {
+            is VexMapsDeliveryRouteState.Preparing -> {
                 execution.cancelPreparation()
-                run.preparationFailed(
+                deliveryRoute.preparationFailed(
                     state.preparationRef,
                 )
                 invalidatePreparedReality()
             }
 
-            is VexMapsDistributionRunState.Ready -> {
-                run.invalidateReadyPlan(
+            is VexMapsDeliveryRouteState.Ready -> {
+                deliveryRoute.invalidateReadyPlan(
                     state.planRef,
                 )
                 invalidatePreparedReality()
@@ -667,16 +665,16 @@ internal class VexMapsDistributionSession(
      * Starts the exact Ready Plan. Its preparation origin is sealed; the fresh precise-location read
      * performed by VexMapsMapSurface is Navigation start preflight, not a new Distribution origin.
      */
-    fun startPreparedRun() {
+    fun startPreparedDeliveryRoute() {
         val ready =
-            run.currentProjection
+            deliveryRoute.currentProjection
                 .state as?
-                VexMapsDistributionRunState.Ready
+                VexMapsDeliveryRouteState.Ready
                 ?: return
         val expected =
             (
                 mutableExpectedLeg.value as?
-                    VexMapsDistributionExpectedLegState.Expected
+                    VexMapsDeliveryRouteExpectedLegState.Expected
             )
                 ?.leg
                 ?: return
@@ -684,7 +682,7 @@ internal class VexMapsDistributionSession(
         if (
             expected.planRef !=
                 ready.planRef ||
-            !vexMapsDistributionNavigationRealizesExpectedLeg(
+            !vexMapsDeliveryRouteNavigationRealizesExpectedLeg(
                 navigation =
                     navigation.current,
                 expected =
@@ -696,33 +694,33 @@ internal class VexMapsDistributionSession(
             return
         }
 
-        run.activate(
-            VexMapsDistributionRunControl.Start,
+        deliveryRoute.activate(
+            VexMapsDeliveryRouteControl.Start,
         )
     }
 
-    fun completeCurrentStop() {
+    fun markCurrentDeliveryComplete() {
         if (
-            !run.currentProjection[
-                VexMapsDistributionRunControl.CompleteStop
+            !deliveryRoute.currentProjection[
+                VexMapsDeliveryRouteControl.MarkDelivered
             ].isAvailable
         ) {
             return
         }
 
         val nextTarget =
-            nextLegTargetAfterCurrentStop()
+            nextLegTargetAfterCurrentDelivery()
 
         setLegAttempt(
-            VexMapsDistributionLegAttempt
+            VexMapsDeliveryRouteLegAttempt
                 .CleaningUpPreviousLeg(
                     nextTarget =
                         nextTarget,
                 ),
         )
 
-        run.activate(
-            VexMapsDistributionRunControl.CompleteStop,
+        deliveryRoute.activate(
+            VexMapsDeliveryRouteControl.MarkDelivered,
         )
 
         val cleanupFailure =
@@ -732,9 +730,9 @@ internal class VexMapsDistributionSession(
 
         if (cleanupFailure != null) {
             setLegAttempt(
-                VexMapsDistributionLegAttempt.Failed(
+                VexMapsDeliveryRouteLegAttempt.Failed(
                     stage =
-                        VexMapsDistributionLegFailureStage
+                        VexMapsDeliveryRouteLegFailureStage
                             .PreviousLegCleanup,
                     target =
                         nextTarget,
@@ -744,7 +742,7 @@ internal class VexMapsDistributionSession(
             )
         } else {
             setLegAttempt(
-                VexMapsDistributionLegAttempt.Idle,
+                VexMapsDeliveryRouteLegAttempt.Idle,
             )
         }
     }
@@ -752,16 +750,16 @@ internal class VexMapsDistributionSession(
     fun retryFailedLeg() {
         val failed =
             mutableLegAttempt.value as?
-                VexMapsDistributionLegAttempt.Failed
+                VexMapsDeliveryRouteLegAttempt.Failed
                 ?: return
 
         if (
             failed.stage ==
-            VexMapsDistributionLegFailureStage
+            VexMapsDeliveryRouteLegFailureStage
                 .PreviousLegCleanup
         ) {
             setLegAttempt(
-                VexMapsDistributionLegAttempt
+                VexMapsDeliveryRouteLegAttempt
                     .CleaningUpPreviousLeg(
                         nextTarget =
                             failed.target,
@@ -780,25 +778,25 @@ internal class VexMapsDistributionSession(
                 )
             } else {
                 setLegAttempt(
-                    VexMapsDistributionLegAttempt.Idle,
+                    VexMapsDeliveryRouteLegAttempt.Idle,
                 )
             }
             return
         }
 
         setLegAttempt(
-            VexMapsDistributionLegAttempt.Idle,
+            VexMapsDeliveryRouteLegAttempt.Idle,
         )
     }
 
-    fun cancelExecutionPreservingDraft() {
+    fun cancelDeliveryRoutePreservingDraft() {
         if (
-            run.currentProjection[
-                VexMapsDistributionRunControl.Reset
+            deliveryRoute.currentProjection[
+                VexMapsDeliveryRouteControl.Clear
             ].isAvailable
         ) {
-            run.activate(
-                VexMapsDistributionRunControl.Reset,
+            deliveryRoute.activate(
+                VexMapsDeliveryRouteControl.Clear,
             )
         }
 
@@ -810,7 +808,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    fun clearAll() {
+    fun clearDeliveryRoute() {
         if (
             mutableState.value
                 .draftOperationInFlight
@@ -825,21 +823,21 @@ internal class VexMapsDistributionSession(
         execution.cancelPreparation()
         execution.cancelLeg()
 
-        val currentRunState =
-            run.currentProjection
+        val currentDeliveryRouteState =
+            deliveryRoute.currentProjection
                 .state
 
         if (
-            currentRunState !is
-                VexMapsDistributionRunState.Empty &&
-            currentRunState !is
-                VexMapsDistributionRunState.Draft &&
-            run.currentProjection[
-                VexMapsDistributionRunControl.Reset
+            currentDeliveryRouteState !is
+                VexMapsDeliveryRouteState.Empty &&
+            currentDeliveryRouteState !is
+                VexMapsDeliveryRouteState.Draft &&
+            deliveryRoute.currentProjection[
+                VexMapsDeliveryRouteControl.Clear
             ].isAvailable
         ) {
-            run.activate(
-                VexMapsDistributionRunControl.Reset,
+            deliveryRoute.activate(
+                VexMapsDeliveryRouteControl.Clear,
             )
             invalidatePreparedReality()
             publishDraft(
@@ -896,7 +894,7 @@ internal class VexMapsDistributionSession(
             VexMapsDistributionDraft,
     ) {
         val admitted =
-            run.observeDraft(
+            deliveryRoute.observeDraft(
                 revision =
                     draft.revision,
                 stopRefs =
@@ -932,11 +930,11 @@ internal class VexMapsDistributionSession(
         !mutableState.value
             .draftOperationInFlight &&
             when (
-                run.currentProjection
+                deliveryRoute.currentProjection
                     .state
             ) {
-                VexMapsDistributionRunState.Empty,
-                is VexMapsDistributionRunState.Draft ->
+                VexMapsDeliveryRouteState.Empty,
+                is VexMapsDeliveryRouteState.Draft ->
                     true
 
                 else ->
@@ -1013,10 +1011,10 @@ internal class VexMapsDistributionSession(
 
     private fun setExpectedLeg(
         expected:
-            VexMapsDistributionExpectedLeg,
+            VexMapsDeliveryRouteExpectedLeg,
     ) {
         mutableExpectedLeg.value =
-            VexMapsDistributionExpectedLegState
+            VexMapsDeliveryRouteExpectedLegState
                 .Expected(
                     expected,
                 )
@@ -1032,7 +1030,7 @@ internal class VexMapsDistributionSession(
 
     private fun clearExpectedLeg() {
         mutableExpectedLeg.value =
-            VexMapsDistributionExpectedLegState.None
+            VexMapsDeliveryRouteExpectedLegState.None
         publishSession(
             plan =
                 mutableState.value
@@ -1045,7 +1043,7 @@ internal class VexMapsDistributionSession(
 
     private fun setLegAttempt(
         attempt:
-            VexMapsDistributionLegAttempt,
+            VexMapsDeliveryRouteLegAttempt,
     ) {
         mutableLegAttempt.value =
             attempt
@@ -1069,7 +1067,7 @@ internal class VexMapsDistributionSession(
             null
         clearExpectedLeg()
         setLegAttempt(
-            VexMapsDistributionLegAttempt.Idle,
+            VexMapsDeliveryRouteLegAttempt.Idle,
         )
         publishSession(
             plan =
@@ -1086,9 +1084,9 @@ internal class VexMapsDistributionSession(
             VexMapsDistributionPreparationSnapshot,
     ) {
         val current =
-            run.currentProjection
+            deliveryRoute.currentProjection
                 .state as?
-                VexMapsDistributionRunState.Preparing
+                VexMapsDeliveryRouteState.Preparing
                 ?: throw CancellationException(
                     "Distribution preparation is no longer admitted",
                 )
@@ -1109,62 +1107,62 @@ internal class VexMapsDistributionSession(
         }
     }
 
-    private fun nextLegTargetAfterCurrentStop():
-        VexMapsDistributionLegTarget? {
+    private fun nextLegTargetAfterCurrentDelivery():
+        VexMapsDeliveryRouteLegTarget? {
         val state =
-            run.currentProjection
+            deliveryRoute.currentProjection
                 .state as?
-                VexMapsDistributionRunState.AtStop
+                VexMapsDeliveryRouteState.AtDelivery
                 ?: return null
 
         return state.nextStopRef
             ?.let {
-                VexMapsDistributionLegTarget.Stop(
+                VexMapsDeliveryRouteLegTarget.Stop(
                     it,
                 )
             }
             ?: if (state.source.returnToStart) {
-                VexMapsDistributionLegTarget.ReturnToStart
+                VexMapsDeliveryRouteLegTarget.ReturnToStart
             } else {
                 null
             }
     }
 
     private fun currentLegTargetOrNull():
-        VexMapsDistributionLegTarget? =
+        VexMapsDeliveryRouteLegTarget? =
         when (
             val state =
-                run.currentProjection
+                deliveryRoute.currentProjection
                     .state
         ) {
-            is VexMapsDistributionRunState.Ready ->
-                VexMapsDistributionLegTarget.Stop(
+            is VexMapsDeliveryRouteState.Ready ->
+                VexMapsDeliveryRouteLegTarget.Stop(
                     state.orderedStopRefs.first(),
                 )
 
-            is VexMapsDistributionRunState.Running ->
-                VexMapsDistributionLegTarget.Stop(
+            is VexMapsDeliveryRouteState.Delivering ->
+                VexMapsDeliveryRouteLegTarget.Stop(
                     state.currentStopRef,
                 )
 
-            is VexMapsDistributionRunState.Returning ->
-                VexMapsDistributionLegTarget.ReturnToStart
+            is VexMapsDeliveryRouteState.ReturningToStart ->
+                VexMapsDeliveryRouteLegTarget.ReturnToStart
 
             else ->
                 null
         }
 
-    internal fun modeRunOutputsForExecution():
-        Flow<com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunOutput> =
-        modeRunRelay.outputStates
+    internal fun modeDeliveryRouteOutputsForExecution():
+        Flow<com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteOutput> =
+        modeDeliveryRouteRelay.outputStates
 
     internal fun navigationOutputsForExecution():
-        Flow<VexMapsDistributionNavigationOutput> =
+        Flow<VexMapsDeliveryRouteNavigationOutput> =
         navigationRelay.outputStates
 
-    internal fun acceptModeRunOutput(
+    internal fun acceptModeDeliveryRouteOutput(
         output:
-            com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeRunOutput,
+            com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteOutput,
     ) {
         output.requestedModeControl
             ?.let { control ->
@@ -1176,17 +1174,17 @@ internal class VexMapsDistributionSession(
 
     internal fun acceptNavigationOutput(
         output:
-            VexMapsDistributionNavigationOutput,
+            VexMapsDeliveryRouteNavigationOutput,
     ) {
         if (
             output.layer ==
                 com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
-                    .VexMapsDistributionNavigationLayer.Navigating &&
+                    .VexMapsDeliveryRouteNavigationLayer.Navigating &&
             mutableLegAttempt.value is
-                VexMapsDistributionLegAttempt.Preparing
+                VexMapsDeliveryRouteLegAttempt.Preparing
         ) {
             setLegAttempt(
-                VexMapsDistributionLegAttempt.Idle,
+                VexMapsDeliveryRouteLegAttempt.Idle,
             )
         }
 
@@ -1200,30 +1198,30 @@ internal class VexMapsDistributionSession(
 
     private fun realizeNavigationRequest(
         request:
-            VexMapsDistributionNavigationRequest,
+            VexMapsDeliveryRouteNavigationRequest,
     ) {
         when (
             request
         ) {
-            is VexMapsDistributionNavigationRequest.PrepareLeg ->
+            is VexMapsDeliveryRouteNavigationRequest.PrepareLeg ->
                 prepareLeg(
-                    VexMapsDistributionLegTarget.Stop(
+                    VexMapsDeliveryRouteLegTarget.Stop(
                         request.stopRef,
                     ),
                 )
 
-            VexMapsDistributionNavigationRequest.PrepareReturn ->
+            VexMapsDeliveryRouteNavigationRequest.PrepareReturn ->
                 prepareLeg(
-                    VexMapsDistributionLegTarget.ReturnToStart,
+                    VexMapsDeliveryRouteLegTarget.ReturnToStart,
                 )
 
-            VexMapsDistributionNavigationRequest.StartPreparedNavigation -> {
+            VexMapsDeliveryRouteNavigationRequest.StartPreparedNavigation -> {
                 val target =
                     currentLegTargetOrNull()
                         ?: return
 
                 setLegAttempt(
-                    VexMapsDistributionLegAttempt.Preparing(
+                    VexMapsDeliveryRouteLegAttempt.Preparing(
                         target,
                     ),
                 )
@@ -1232,9 +1230,9 @@ internal class VexMapsDistributionSession(
                     navigation.startPrepared()
                 }.onFailure { error ->
                     setLegAttempt(
-                        VexMapsDistributionLegAttempt.Failed(
+                        VexMapsDeliveryRouteLegAttempt.Failed(
                             stage =
-                                VexMapsDistributionLegFailureStage
+                                VexMapsDeliveryRouteLegFailureStage
                                     .NavigationStart,
                             target =
                                 target,
@@ -1245,17 +1243,17 @@ internal class VexMapsDistributionSession(
                 }
             }
 
-            is VexMapsDistributionNavigationRequest.RunControl -> {
+            is VexMapsDeliveryRouteNavigationRequest.DeliveryRouteControl -> {
                 val completingReturn =
                     request.control ==
-                        VexMapsDistributionRunControl.Arrive &&
-                        run.currentProjection
+                        VexMapsDeliveryRouteControl.Arrive &&
+                        deliveryRoute.currentProjection
                             .state is
-                        VexMapsDistributionRunState.Returning
+                        VexMapsDeliveryRouteState.ReturningToStart
 
                 if (completingReturn) {
                     setLegAttempt(
-                        VexMapsDistributionLegAttempt
+                        VexMapsDeliveryRouteLegAttempt
                             .CleaningUpPreviousLeg(
                                 nextTarget =
                                     null,
@@ -1263,18 +1261,18 @@ internal class VexMapsDistributionSession(
                     )
                 }
 
-                run.activate(
+                deliveryRoute.activate(
                     request.control,
                 )
 
                 if (
                     completingReturn &&
-                    run.currentProjection
+                    deliveryRoute.currentProjection
                         .state is
-                    VexMapsDistributionRunState.Completed
+                    VexMapsDeliveryRouteState.Completed
                 ) {
                     /*
-                     * Run is already semantically complete. Terminal Android cleanup must not
+                     * The Delivery Route is already semantically complete. Terminal Android cleanup must not
                      * escape through VexExecution's onEach boundary and permanently kill the
                      * maintained Navigation convergence collector.
                      *
@@ -1287,9 +1285,9 @@ internal class VexMapsDistributionSession(
                     clearExpectedLeg()
                     setLegAttempt(
                         if (cleanupFailure != null) {
-                            VexMapsDistributionLegAttempt.Failed(
+                            VexMapsDeliveryRouteLegAttempt.Failed(
                                 stage =
-                                    VexMapsDistributionLegFailureStage
+                                    VexMapsDeliveryRouteLegFailureStage
                                         .PreviousLegCleanup,
                                 target =
                                     null,
@@ -1297,7 +1295,7 @@ internal class VexMapsDistributionSession(
                                     cleanupFailure,
                             )
                         } else {
-                            VexMapsDistributionLegAttempt.Idle
+                            VexMapsDeliveryRouteLegAttempt.Idle
                         },
                     )
                 }
@@ -1307,11 +1305,11 @@ internal class VexMapsDistributionSession(
 
     private fun prepareLeg(
         target:
-            VexMapsDistributionLegTarget,
+            VexMapsDeliveryRouteLegTarget,
     ) {
         if (
             mutableLegAttempt.value !is
-            VexMapsDistributionLegAttempt.Idle
+            VexMapsDeliveryRouteLegAttempt.Idle
         ) {
             return
         }
@@ -1324,19 +1322,19 @@ internal class VexMapsDistributionSession(
             activePack
                 ?: return
 
-        val runPlanRef =
+        val deliveryRoutePlanRef =
             when (
                 val current =
-                    run.currentProjection
+                    deliveryRoute.currentProjection
                         .state
             ) {
-                is VexMapsDistributionRunState.Ready ->
+                is VexMapsDeliveryRouteState.Ready ->
                     current.planRef
 
-                is VexMapsDistributionRunState.Running ->
+                is VexMapsDeliveryRouteState.Delivering ->
                     current.planRef
 
-                is VexMapsDistributionRunState.Returning ->
+                is VexMapsDeliveryRouteState.ReturningToStart ->
                     current.planRef
 
                 else ->
@@ -1344,7 +1342,7 @@ internal class VexMapsDistributionSession(
             }
 
         if (
-            runPlanRef !=
+            deliveryRoutePlanRef !=
             plan.planRef
         ) {
             return
@@ -1353,7 +1351,7 @@ internal class VexMapsDistributionSession(
         val alreadyPrepared =
             (
                 mutableExpectedLeg.value as?
-                    VexMapsDistributionExpectedLegState.Expected
+                    VexMapsDeliveryRouteExpectedLegState.Expected
             )
                 ?.leg
                 ?.takeIf {
@@ -1365,7 +1363,7 @@ internal class VexMapsDistributionSession(
 
         if (
             alreadyPrepared != null &&
-            vexMapsDistributionNavigationRealizesExpectedLeg(
+            vexMapsDeliveryRouteNavigationRealizesExpectedLeg(
                 navigation =
                     navigation.current,
                 expected =
@@ -1376,7 +1374,7 @@ internal class VexMapsDistributionSession(
         }
 
         setLegAttempt(
-            VexMapsDistributionLegAttempt.Preparing(
+            VexMapsDeliveryRouteLegAttempt.Preparing(
                 target,
             ),
         )
@@ -1410,7 +1408,7 @@ internal class VexMapsDistributionSession(
                 when (
                     target
                 ) {
-                    is VexMapsDistributionLegTarget.Stop ->
+                    is VexMapsDeliveryRouteLegTarget.Stop ->
                         routeToStop(
                             plan =
                                 plan,
@@ -1420,7 +1418,7 @@ internal class VexMapsDistributionSession(
                                 pack,
                         )
 
-                    VexMapsDistributionLegTarget.ReturnToStart ->
+                    VexMapsDeliveryRouteLegTarget.ReturnToStart ->
                         routeReturn(
                             plan =
                                 plan,
@@ -1445,7 +1443,7 @@ internal class VexMapsDistributionSession(
                     pack,
             )
             setExpectedLeg(
-                VexMapsDistributionExpectedLeg(
+                VexMapsDeliveryRouteExpectedLeg(
                     planRef =
                         plan.planRef,
                     target =
@@ -1455,7 +1453,7 @@ internal class VexMapsDistributionSession(
                 ),
             )
             setLegAttempt(
-                VexMapsDistributionLegAttempt.Idle,
+                VexMapsDeliveryRouteLegAttempt.Idle,
             )
         } catch (
             cancelled:
@@ -1467,9 +1465,9 @@ internal class VexMapsDistributionSession(
                 Throwable,
         ) {
             setLegAttempt(
-                VexMapsDistributionLegAttempt.Failed(
+                VexMapsDeliveryRouteLegAttempt.Failed(
                     stage =
-                        VexMapsDistributionLegFailureStage
+                        VexMapsDeliveryRouteLegFailureStage
                             .RoutePreparation,
                     target =
                         target,
@@ -1610,8 +1608,8 @@ internal class VexMapsDistributionSession(
 }
 
 private fun VexOfflineRouteResult.identity():
-    VexMapsDistributionRouteIdentity =
-    VexMapsDistributionRouteIdentity(
+    VexMapsDeliveryRouteNavigationRouteIdentity =
+    VexMapsDeliveryRouteNavigationRouteIdentity(
         routeRef =
             route.routeRef,
         routeRevision =

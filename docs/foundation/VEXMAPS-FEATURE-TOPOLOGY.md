@@ -192,6 +192,62 @@ future product decision can define when historical context is too stale or impre
 full durable viewport (zoom/bearing/tilt) would require a separate persistence/migration decision and
 is not smuggled into the existing location columns.
 
+
+## VexMaps Distribution and Delivery Route
+
+Feature home:
+
+`app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/maps/distribution/README.md`
+
+VexMaps Distribution adds a second scale beneath the broader Maps Screen without transferring
+Navigation ownership:
+
+~~~text
+Distribution Mode
+    is Maps operating in the Distribution context?
+
+durable Distribution Draft
+    which delivery stops did the human enter, in what input order, with what return policy?
+
+Preparation snapshot
+    which exact Draft revision + origin + travel mode + routing region is being prepared?
+
+Plan
+    what route order is recommended for that exact snapshot?
+
+Delivery Route
+    what is truthfully happening while those deliveries are carried out?
+
+Navigation
+    what exact journey/route is the Navigation owner realizing?
+~~~
+
+The important separation is:
+
+~~~text
+DISTRIBUTION_MODE != DELIVERY_ROUTE
+DRAFT != PLAN
+PLAN != DELIVERY_ROUTE_STATE
+DELIVERY_ROUTE_STATE != NAVIGATION_STATE
+~~~
+
+The process-lifetime `VexMapsDistributionSession` owns the active relationship/currentness among
+those owners. `VexMapsDistributionExecution` owns coroutine custody only.
+
+Relationship owners remain explicit:
+
+~~~text
+VexMapsDistributionModeDeliveryRouteConvergenceRelay
+    Distribution Mode + Delivery Route -> coherence / bounded Mode Control request
+
+VexMapsDeliveryRouteNavigationConvergenceRelay
+    Delivery Route + Navigation + expected leg/attempt facts
+    -> exact relationship / bounded request
+~~~
+
+Naming history and the cold-reader exercise that produced the current `Delivery Route` vocabulary
+are preserved under the searchable tag `[Name Ontology]` in the feature-local design record.
+
 ## Still intentionally unresolved
 
 This topology pass does not silently settle behavioral questions that need their own proof:

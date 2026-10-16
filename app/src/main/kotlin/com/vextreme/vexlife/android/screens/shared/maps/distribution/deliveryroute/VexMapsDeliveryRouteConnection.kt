@@ -1,18 +1,18 @@
-package com.vextreme.vexlife.android.screens.shared.maps.distribution.run
+package com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-internal class VexMapsDistributionRunConnection(
+internal class VexMapsDeliveryRouteConnection(
     initialState:
-        VexMapsDistributionRunState =
-        VexMapsDistributionRunState.Empty,
-) : VexMapsDistributionRunConnectionFlow {
+        VexMapsDeliveryRouteState =
+        VexMapsDeliveryRouteState.Empty,
+) : VexMapsDeliveryRouteConnectionFlow {
     private val behavior =
-        vexMapsDistributionRunBehavior()
+        vexMapsDeliveryRouteBehavior()
     private val controls =
-        behavior.vexMapsDistributionRunControls()
+        behavior.vexMapsDeliveryRouteControls()
 
     private var nextPreparationGeneration =
         0L
@@ -27,7 +27,7 @@ internal class VexMapsDistributionRunConnection(
         )
 
     override val projections:
-        StateFlow<VexMapsDistributionRunProjection> =
+        StateFlow<VexMapsDeliveryRouteProjection> =
         mutableProjections.asStateFlow()
 
     fun observeDraft(
@@ -40,14 +40,14 @@ internal class VexMapsDistributionRunConnection(
 
         val admitted =
             when (state) {
-                VexMapsDistributionRunState.Empty,
-                is VexMapsDistributionRunState.Draft ->
+                VexMapsDeliveryRouteState.Empty,
+                is VexMapsDeliveryRouteState.Draft ->
                     if (stopRefs.isEmpty()) {
-                        VexMapsDistributionRunState.Empty
+                        VexMapsDeliveryRouteState.Empty
                     } else {
-                        VexMapsDistributionRunState.Draft(
+                        VexMapsDeliveryRouteState.Draft(
                             source =
-                                VexMapsDistributionRunDraftIdentity(
+                                VexMapsDeliveryRouteDraftIdentity(
                                     revision =
                                         revision,
                                     stopRefs =
@@ -58,12 +58,12 @@ internal class VexMapsDistributionRunConnection(
                         )
                     }
 
-                is VexMapsDistributionRunState.Preparing,
-                is VexMapsDistributionRunState.Ready,
-                is VexMapsDistributionRunState.Running,
-                is VexMapsDistributionRunState.AtStop,
-                is VexMapsDistributionRunState.Returning,
-                is VexMapsDistributionRunState.Completed ->
+                is VexMapsDeliveryRouteState.Preparing,
+                is VexMapsDeliveryRouteState.Ready,
+                is VexMapsDeliveryRouteState.Delivering,
+                is VexMapsDeliveryRouteState.AtDelivery,
+                is VexMapsDeliveryRouteState.ReturningToStart,
+                is VexMapsDeliveryRouteState.Completed ->
                     return false
             }
 
@@ -80,7 +80,7 @@ internal class VexMapsDistributionRunConnection(
     ): Boolean {
         val current =
             state as?
-                VexMapsDistributionRunState.Preparing
+                VexMapsDeliveryRouteState.Preparing
                 ?: return false
 
         if (
@@ -91,7 +91,7 @@ internal class VexMapsDistributionRunConnection(
         }
 
         observe(
-            VexMapsDistributionRunState.Ready(
+            VexMapsDeliveryRouteState.Ready(
                 planRef =
                     planRef,
                 source =
@@ -108,7 +108,7 @@ internal class VexMapsDistributionRunConnection(
     ): Boolean {
         val current =
             state as?
-                VexMapsDistributionRunState.Preparing
+                VexMapsDeliveryRouteState.Preparing
                 ?: return false
 
         if (
@@ -119,7 +119,7 @@ internal class VexMapsDistributionRunConnection(
         }
 
         observe(
-            VexMapsDistributionRunState.Draft(
+            VexMapsDeliveryRouteState.Draft(
                 source =
                     current.source,
             ),
@@ -132,7 +132,7 @@ internal class VexMapsDistributionRunConnection(
     ): Boolean {
         val current =
             state as?
-                VexMapsDistributionRunState.Ready
+                VexMapsDeliveryRouteState.Ready
                 ?: return false
 
         if (
@@ -143,7 +143,7 @@ internal class VexMapsDistributionRunConnection(
         }
 
         observe(
-            VexMapsDistributionRunState.Draft(
+            VexMapsDeliveryRouteState.Draft(
                 source =
                     current.source,
             ),
@@ -153,7 +153,7 @@ internal class VexMapsDistributionRunConnection(
 
     override fun activate(
         control:
-            VexMapsDistributionRunControl,
+            VexMapsDeliveryRouteControl,
     ) {
         val act =
             controls.resolve(
@@ -172,15 +172,15 @@ internal class VexMapsDistributionRunConnection(
             when (
                 resolution.effect
             ) {
-                VexMapsDistributionRunEffect.SealDraft -> {
+                VexMapsDeliveryRouteEffect.BeginPreparation -> {
                     val current =
                         state as
-                            VexMapsDistributionRunState.Draft
+                            VexMapsDeliveryRouteState.Draft
 
                     nextPreparationGeneration +=
                         1L
 
-                    VexMapsDistributionRunState.Preparing(
+                    VexMapsDeliveryRouteState.Preparing(
                         preparationRef =
                             buildString {
                                 append(
@@ -199,12 +199,12 @@ internal class VexMapsDistributionRunConnection(
                     )
                 }
 
-                VexMapsDistributionRunEffect.BeginRun -> {
+                VexMapsDeliveryRouteEffect.BeginDeliveryRoute -> {
                     val current =
                         state as
-                            VexMapsDistributionRunState.Ready
+                            VexMapsDeliveryRouteState.Ready
 
-                    VexMapsDistributionRunState.Running(
+                    VexMapsDeliveryRouteState.Delivering(
                         planRef =
                             current.planRef,
                         source =
@@ -217,12 +217,12 @@ internal class VexMapsDistributionRunConnection(
                     )
                 }
 
-                VexMapsDistributionRunEffect.MarkArrived -> {
+                VexMapsDeliveryRouteEffect.RecordDeliveryArrival -> {
                     val current =
                         state as
-                            VexMapsDistributionRunState.Running
+                            VexMapsDeliveryRouteState.Delivering
 
-                    VexMapsDistributionRunState.AtStop(
+                    VexMapsDeliveryRouteState.AtDelivery(
                         planRef =
                             current.planRef,
                         source =
@@ -234,12 +234,12 @@ internal class VexMapsDistributionRunConnection(
                     )
                 }
 
-                VexMapsDistributionRunEffect.AdvanceToNextStop -> {
+                VexMapsDeliveryRouteEffect.AdvanceToNextDelivery -> {
                     val current =
                         state as
-                            VexMapsDistributionRunState.AtStop
+                            VexMapsDeliveryRouteState.AtDelivery
 
-                    VexMapsDistributionRunState.Running(
+                    VexMapsDeliveryRouteState.Delivering(
                         planRef =
                             current.planRef,
                         source =
@@ -253,12 +253,12 @@ internal class VexMapsDistributionRunConnection(
                     )
                 }
 
-                VexMapsDistributionRunEffect.BeginReturn -> {
+                VexMapsDeliveryRouteEffect.BeginReturnToStart -> {
                     val current =
                         state as
-                            VexMapsDistributionRunState.AtStop
+                            VexMapsDeliveryRouteState.AtDelivery
 
-                    VexMapsDistributionRunState.Returning(
+                    VexMapsDeliveryRouteState.ReturningToStart(
                         planRef =
                             current.planRef,
                         source =
@@ -268,13 +268,13 @@ internal class VexMapsDistributionRunConnection(
                     )
                 }
 
-                VexMapsDistributionRunEffect.CompleteRun -> {
+                VexMapsDeliveryRouteEffect.CompleteDeliveryRoute -> {
                     val current =
                         state
 
                     when (current) {
-                        is VexMapsDistributionRunState.AtStop ->
-                            VexMapsDistributionRunState.Completed(
+                        is VexMapsDeliveryRouteState.AtDelivery ->
+                            VexMapsDeliveryRouteState.Completed(
                                 planRef =
                                     current.planRef,
                                 source =
@@ -283,8 +283,8 @@ internal class VexMapsDistributionRunConnection(
                                     current.orderedStopRefs,
                             )
 
-                        is VexMapsDistributionRunState.Returning ->
-                            VexMapsDistributionRunState.Completed(
+                        is VexMapsDeliveryRouteState.ReturningToStart ->
+                            VexMapsDeliveryRouteState.Completed(
                                 planRef =
                                     current.planRef,
                                 source =
@@ -295,13 +295,13 @@ internal class VexMapsDistributionRunConnection(
 
                         else ->
                             error(
-                                "CompleteRun is not lawful from $current",
+                                "CompleteDeliveryRoute is not lawful from $current",
                             )
                     }
                 }
 
-                VexMapsDistributionRunEffect.ClearRun ->
-                    VexMapsDistributionRunState.Empty
+                VexMapsDeliveryRouteEffect.ClearDeliveryRoute ->
+                    VexMapsDeliveryRouteState.Empty
             }
 
         check(
@@ -318,7 +318,7 @@ internal class VexMapsDistributionRunConnection(
 
     private fun observe(
         admitted:
-            VexMapsDistributionRunState,
+            VexMapsDeliveryRouteState,
     ) {
         state =
             admitted

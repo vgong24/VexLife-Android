@@ -4,9 +4,9 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 
 /**
- * Managed coroutine custody for one Distribution session.
+ * Managed coroutine custody for one VexMaps Distribution session.
  *
- * Session owns Distribution meaning, currentness, provider result meaning and retry law. This class
+ * Session owns Distribution/Delivery Route meaning, currentness, provider result meaning and retry law. This class
  * owns only execution mechanics: maintained convergence observation plus finite draft/preparation/
  * leg operations through the accepted VexExecution foundation.
  */
@@ -22,9 +22,9 @@ internal class VexMapsDistributionExecution(
     fun start() {
         launchForCollect(
             source =
-                session::modeRunOutputsForExecution,
+                session::modeDeliveryRouteOutputsForExecution,
         ) { output ->
-            session.acceptModeRunOutput(
+            session.acceptModeDeliveryRouteOutput(
                 output,
             )
         }

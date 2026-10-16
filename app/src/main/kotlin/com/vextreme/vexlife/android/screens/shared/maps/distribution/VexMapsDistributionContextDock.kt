@@ -18,11 +18,11 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegAttempt
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationLayer
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegAttempt
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationLayer
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunControl
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteControl
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 
 internal val VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF =
     VexContextDockPageRef(
@@ -32,38 +32,38 @@ internal val VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF =
 /**
  * Distribution's feature-owned projection into the host-owned Context Dock.
  *
- * The Dock owns paging/expansion only. The Distribution Experience owns the lived session membrane;
- * lower Mode/Run families and durable Draft custody remain independently owned behind it.
+ * The Dock owns paging/expansion only. The Distribution UI boundary exposes the lived session without owning its truth;
+ * the Distribution Mode and Delivery Route families and durable Draft custody remain independently owned behind it.
  */
 @Composable
 internal fun vexMapsDistributionContextDockPage(
-    experience:
-        VexMapsDistributionExperience,
+    ui:
+        VexMapsDistributionUi,
     canPrepare: Boolean,
     onToggleMode: () -> Unit,
     onAddStop: () -> Unit,
     onRemoveStop: (String) -> Unit,
     onToggleReturnToStart: () -> Unit,
-    onPrepare: () -> Unit,
-    onStart: () -> Unit,
-    onCompleteStop: () -> Unit,
-    onRetryLeg: () -> Unit,
-    onReset: () -> Unit,
+    onPrepareDeliveryRoute: () -> Unit,
+    onStartDeliveryRoute: () -> Unit,
+    onMarkDelivered: () -> Unit,
+    onRetryDeliveryLeg: () -> Unit,
+    onClearDeliveryRoute: () -> Unit,
 ): VexContextDockPage {
     val session by
-        experience.states
+        ui.states
             .collectAsState()
     val modeProjection by
-        experience.modeProjections
+        ui.modeProjections
             .collectAsState()
-    val runProjection by
-        experience.runProjections
+    val deliveryRouteProjection by
+        ui.deliveryRouteProjections
             .collectAsState()
     val navigation by
-        experience.navigationOutputs
+        ui.navigationOutputs
             .collectAsState(
                 initial =
-                    experience.currentNavigation,
+                    ui.currentNavigation,
             )
 
     val draft =
@@ -76,17 +76,17 @@ internal fun vexMapsDistributionContextDockPage(
     val draftEditable =
         !session.draftOperationInFlight &&
             (
-                runProjection.state is
-                    VexMapsDistributionRunState.Empty ||
-                    runProjection.state is
-                    VexMapsDistributionRunState.Draft
+                deliveryRouteProjection.state is
+                    VexMapsDeliveryRouteState.Empty ||
+                    deliveryRouteProjection.state is
+                    VexMapsDeliveryRouteState.Draft
             )
     val canStart =
-        runProjection[
-            VexMapsDistributionRunControl.Start
+        deliveryRouteProjection[
+            VexMapsDeliveryRouteControl.Start
         ].isAvailable &&
             navigation.layer ==
-            VexMapsDistributionNavigationLayer
+            VexMapsDeliveryRouteNavigationLayer
                 .ReadyToStart
 
     return VexContextDockPage(
@@ -292,9 +292,9 @@ internal fun vexMapsDistributionContextDockPage(
 
             when (
                 val state =
-                    runProjection.state
+                    deliveryRouteProjection.state
             ) {
-                VexMapsDistributionRunState.Empty ->
+                VexMapsDeliveryRouteState.Empty ->
                     Text(
                         stringResource(
                             R.string
@@ -302,7 +302,7 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
 
-                is VexMapsDistributionRunState.Draft ->
+                is VexMapsDeliveryRouteState.Draft ->
                     Text(
                         stringResource(
                             R.string
@@ -310,7 +310,7 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
 
-                is VexMapsDistributionRunState.Preparing ->
+                is VexMapsDeliveryRouteState.Preparing ->
                     Text(
                         stringResource(
                             R.string
@@ -318,7 +318,7 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
 
-                is VexMapsDistributionRunState.Ready ->
+                is VexMapsDeliveryRouteState.Ready ->
                     Text(
                         stringResource(
                             R.string
@@ -326,7 +326,7 @@ internal fun vexMapsDistributionContextDockPage(
                         ),
                     )
 
-                is VexMapsDistributionRunState.Running -> {
+                is VexMapsDeliveryRouteState.Delivering -> {
                     val index =
                         state.orderedStopRefs
                             .indexOf(
@@ -336,7 +336,7 @@ internal fun vexMapsDistributionContextDockPage(
                     Text(
                         stringResource(
                             R.string
-                                .vexmaps_distribution_state_running,
+                                .vexmaps_distribution_state_delivering,
                             index,
                             state.orderedStopRefs
                                 .size,
@@ -344,7 +344,7 @@ internal fun vexMapsDistributionContextDockPage(
                     )
                 }
 
-                is VexMapsDistributionRunState.AtStop -> {
+                is VexMapsDeliveryRouteState.AtDelivery -> {
                     val index =
                         state.orderedStopRefs
                             .indexOf(
@@ -354,7 +354,7 @@ internal fun vexMapsDistributionContextDockPage(
                     Text(
                         stringResource(
                             R.string
-                                .vexmaps_distribution_state_at_stop,
+                                .vexmaps_distribution_state_at_delivery,
                             index,
                             state.orderedStopRefs
                                 .size,
@@ -362,15 +362,15 @@ internal fun vexMapsDistributionContextDockPage(
                     )
                 }
 
-                is VexMapsDistributionRunState.Returning ->
+                is VexMapsDeliveryRouteState.ReturningToStartToStart ->
                     Text(
                         stringResource(
                             R.string
-                                .vexmaps_distribution_state_returning,
+                                .vexmaps_distribution_state_returning_to_start,
                         ),
                     )
 
-                is VexMapsDistributionRunState.Completed ->
+                is VexMapsDeliveryRouteState.Completed ->
                     Text(
                         stringResource(
                             R.string
@@ -405,7 +405,7 @@ internal fun vexMapsDistributionContextDockPage(
 
             (
                 session.legAttempt as?
-                    VexMapsDistributionLegAttempt.Failed
+                    VexMapsDeliveryRouteLegAttempt.Failed
             )
                 ?.let { failed ->
                     Text(
@@ -419,10 +419,10 @@ internal fun vexMapsDistributionContextDockPage(
                         modifier =
                             Modifier.vexElement(
                                 VexMapsScreen
-                                    .RetryDistributionLeg,
+                                    .RetryDeliveryLeg,
                             ),
                         onClick =
-                            onRetryLeg,
+                            onRetryDeliveryLeg,
                     ) {
                         Text(
                             stringResource(
@@ -440,18 +440,18 @@ internal fun vexMapsDistributionContextDockPage(
                     ),
             ) {
                 if (
-                    runProjection[
-                        VexMapsDistributionRunControl.Prepare
+                    deliveryRouteProjection[
+                        VexMapsDeliveryRouteControl.Prepare
                     ].isAvailable
                 ) {
                     Button(
                         modifier =
                             Modifier.vexElement(
                                 VexMapsScreen
-                                    .PrepareDistributionRun,
+                                    .PrepareDeliveryRoute,
                             ),
                         onClick =
-                            onPrepare,
+                            onPrepareDeliveryRoute,
                         enabled =
                             canPrepare,
                     ) {
@@ -465,18 +465,18 @@ internal fun vexMapsDistributionContextDockPage(
                 }
 
                 if (
-                    runProjection[
-                        VexMapsDistributionRunControl.Start
+                    deliveryRouteProjection[
+                        VexMapsDeliveryRouteControl.Start
                     ].isAvailable
                 ) {
                     Button(
                         modifier =
                             Modifier.vexElement(
                                 VexMapsScreen
-                                    .StartDistributionRun,
+                                    .StartDeliveryRoute,
                             ),
                         onClick =
-                            onStart,
+                            onStartDeliveryRoute,
                         enabled =
                             canStart,
                     ) {
@@ -490,18 +490,18 @@ internal fun vexMapsDistributionContextDockPage(
                 }
 
                 if (
-                    runProjection[
-                        VexMapsDistributionRunControl.CompleteStop
+                    deliveryRouteProjection[
+                        VexMapsDeliveryRouteControl.MarkDelivered
                     ].isAvailable
                 ) {
                     Button(
                         modifier =
                             Modifier.vexElement(
                                 VexMapsScreen
-                                    .CompleteDistributionStop,
+                                    .MarkDeliveryComplete,
                             ),
                         onClick =
-                            onCompleteStop,
+                            onMarkDelivered,
                     ) {
                         Text(
                             stringResource(
@@ -513,18 +513,18 @@ internal fun vexMapsDistributionContextDockPage(
                 }
 
                 if (
-                    runProjection[
-                        VexMapsDistributionRunControl.Reset
+                    deliveryRouteProjection[
+                        VexMapsDeliveryRouteControl.Clear
                     ].isAvailable
                 ) {
                     OutlinedButton(
                         modifier =
                             Modifier.vexElement(
                                 VexMapsScreen
-                                    .ResetDistributionRun,
+                                    .ClearDeliveryRoute,
                             ),
                         onClick =
-                            onReset,
+                            onClearDeliveryRoute,
                     ) {
                         Text(
                             stringResource(

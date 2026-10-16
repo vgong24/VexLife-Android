@@ -15,15 +15,15 @@ import com.vextreme.vexlife.android.screens.shared.maps.VexNavigationSessionStat
 import com.vextreme.vexlife.android.screens.shared.maps.VexOfflineRouteRequest
 import com.vextreme.vexlife.android.screens.shared.maps.VexOfflineRouteResult
 import com.vextreme.vexlife.android.screens.shared.maps.VexRouteGeometryPoint
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionExpectedLegState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegAttempt
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegFailureStage
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionLegTarget
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationLayer
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteExpectedLegState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegAttempt
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegFailureStage
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegTarget
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationLayer
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPlan
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPreparationSnapshot
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionNavigationPort
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionRouting
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSession
@@ -145,7 +145,7 @@ class VexMapsDistributionSessionTest {
                     session,
                 )
 
-                session.prepare(
+                session.prepareDeliveryRoute(
                     origin =
                         origin,
                     travelMode =
@@ -155,9 +155,9 @@ class VexMapsDistributionSessionTest {
                 )
 
                 assertTrue(
-                    session.currentRun
+                    session.currentDeliveryRoute
                         .state is
-                        VexMapsDistributionRunState.Preparing,
+                        VexMapsDeliveryRouteState.Preparing,
                 )
 
                 session.addStop(
@@ -186,13 +186,13 @@ class VexMapsDistributionSessionTest {
                     )
 
                 val experienceAfterRecreation =
-                    VexMapsDistributionExperience(
+                    VexMapsDistributionUi(
                         session,
                     )
                 assertEquals(
                     ready.state,
                     experienceAfterRecreation
-                        .runProjection
+                        .deliveryRouteProjection
                         .state,
                 )
                 assertEquals(
@@ -284,16 +284,16 @@ class VexMapsDistributionSessionTest {
                 withTimeout(
                     1_000L,
                 ) {
-                    session.runProjections
+                    session.deliveryRouteProjections
                         .first {
                             it.state is
-                                VexMapsDistributionRunState.AtStop
+                                VexMapsDeliveryRouteState.AtDelivery
                         }
                 }
 
                 routing.remainingRouteFailures =
                     1
-                session.completeCurrentStop()
+                session.markCurrentDeliveryComplete()
 
                 val failed =
                     withTimeout(
@@ -302,19 +302,19 @@ class VexMapsDistributionSessionTest {
                         session.states
                             .first {
                                 it.legAttempt is
-                                    VexMapsDistributionLegAttempt.Failed
+                                    VexMapsDeliveryRouteLegAttempt.Failed
                             }
                     }
 
                 val failedAttempt =
                     failed.legAttempt as
-                        VexMapsDistributionLegAttempt.Failed
+                        VexMapsDeliveryRouteLegAttempt.Failed
                 assertEquals(
-                    VexMapsDistributionLegFailureStage.RoutePreparation,
+                    VexMapsDeliveryRouteLegFailureStage.RoutePreparation,
                     failedAttempt.stage,
                 )
                 assertEquals(
-                    VexMapsDistributionLegTarget.Stop(
+                    VexMapsDeliveryRouteLegTarget.Stop(
                         "alpha",
                     ),
                     failedAttempt.target,
@@ -339,14 +339,14 @@ class VexMapsDistributionSessionTest {
                 }
 
                 assertEquals(
-                    VexMapsDistributionLegAttempt.Idle,
+                    VexMapsDeliveryRouteLegAttempt.Idle,
                     session.states.value
                         .legAttempt,
                 )
                 assertTrue(
                     session.states.value
                         .expectedLeg is
-                        VexMapsDistributionExpectedLegState.Expected,
+                        VexMapsDeliveryRouteExpectedLegState.Expected,
                 )
             } finally {
                 session.shutdown()
@@ -443,10 +443,10 @@ class VexMapsDistributionSessionTest {
                 withTimeout(
                     1_000L,
                 ) {
-                    session.runProjections
+                    session.deliveryRouteProjections
                         .first {
                             it.state is
-                                VexMapsDistributionRunState.AtStop
+                                VexMapsDeliveryRouteState.AtDelivery
                         }
                 }
 
@@ -455,7 +455,7 @@ class VexMapsDistributionSessionTest {
                     routing.routeCalls,
                 )
                 assertEquals(
-                    VexMapsDistributionNavigationLayer.AtStop,
+                    VexMapsDeliveryRouteNavigationLayer.AtStop,
                     session.currentNavigation.layer,
                 )
             } finally {
@@ -515,7 +515,7 @@ class VexMapsDistributionSessionTest {
                     session,
                 )
 
-                session.prepare(
+                session.prepareDeliveryRoute(
                     origin =
                         origin,
                     travelMode =
@@ -535,7 +535,7 @@ class VexMapsDistributionSessionTest {
                             ?.routeRef,
                     )
 
-                session.startPreparedRun()
+                session.startPreparedDeliveryRoute()
 
                 val failed =
                     withTimeout(
@@ -544,14 +544,14 @@ class VexMapsDistributionSessionTest {
                         session.states
                             .first {
                                 it.legAttempt is
-                                    VexMapsDistributionLegAttempt.Failed
+                                    VexMapsDeliveryRouteLegAttempt.Failed
                             }
                     }
 
                 assertTrue(
-                    session.currentRun
+                    session.currentDeliveryRoute
                         .state is
-                        VexMapsDistributionRunState.Running,
+                        VexMapsDeliveryRouteState.Delivering,
                 )
                 assertEquals(
                     VexNavigationSessionPhase.READY,
@@ -559,13 +559,13 @@ class VexMapsDistributionSessionTest {
                 )
                 assertNotNull(
                     failed.expectedLeg as?
-                        VexMapsDistributionExpectedLegState.Expected,
+                        VexMapsDeliveryRouteExpectedLegState.Expected,
                 )
                 assertEquals(
-                    VexMapsDistributionLegFailureStage.NavigationStart,
+                    VexMapsDeliveryRouteLegFailureStage.NavigationStart,
                     (
                         failed.legAttempt as
-                            VexMapsDistributionLegAttempt.Failed
+                            VexMapsDeliveryRouteLegAttempt.Failed
                     ).stage,
                 )
 
@@ -589,7 +589,7 @@ class VexMapsDistributionSessionTest {
                         ?.routeRef,
                 )
                 assertEquals(
-                    VexMapsDistributionLegAttempt.Idle,
+                    VexMapsDeliveryRouteLegAttempt.Idle,
                     session.states.value
                         .legAttempt,
                 )
@@ -645,7 +645,7 @@ class VexMapsDistributionSessionTest {
                     session,
                 )
 
-                session.clearAll()
+                session.clearDeliveryRoute()
 
                 val failed =
                     withTimeout(
@@ -671,9 +671,9 @@ class VexMapsDistributionSessionTest {
                         },
                 )
                 assertTrue(
-                    session.currentRun
+                    session.currentDeliveryRoute
                         .state is
-                        VexMapsDistributionRunState.Draft,
+                        VexMapsDeliveryRouteState.Draft,
                 )
                 assertEquals(
                     2,
@@ -685,15 +685,15 @@ class VexMapsDistributionSessionTest {
 
                 repository.failClear =
                     false
-                session.clearAll()
+                session.clearDeliveryRoute()
 
                 withTimeout(
                     1_000L,
                 ) {
-                    session.runProjections
+                    session.deliveryRouteProjections
                         .first {
                             it.state is
-                                VexMapsDistributionRunState.Empty
+                                VexMapsDeliveryRouteState.Empty
                         }
                 }
 
@@ -767,16 +767,16 @@ class VexMapsDistributionSessionTest {
                 withTimeout(
                     1_000L,
                 ) {
-                    session.runProjections
+                    session.deliveryRouteProjections
                         .first {
                             it.state is
-                                VexMapsDistributionRunState.AtStop
+                                VexMapsDeliveryRouteState.AtDelivery
                         }
                 }
 
                 navigation.failNextDismiss =
                     true
-                session.completeCurrentStop()
+                session.markCurrentDeliveryComplete()
 
                 val failed =
                     withTimeout(
@@ -785,19 +785,19 @@ class VexMapsDistributionSessionTest {
                         session.states
                             .first {
                                 it.legAttempt is
-                                    VexMapsDistributionLegAttempt.Failed
+                                    VexMapsDeliveryRouteLegAttempt.Failed
                             }
                     }
                 val failedAttempt =
                     failed.legAttempt as
-                        VexMapsDistributionLegAttempt.Failed
+                        VexMapsDeliveryRouteLegAttempt.Failed
 
                 assertEquals(
-                    VexMapsDistributionLegFailureStage.PreviousLegCleanup,
+                    VexMapsDeliveryRouteLegFailureStage.PreviousLegCleanup,
                     failedAttempt.stage,
                 )
                 assertEquals(
-                    VexMapsDistributionLegTarget.Stop(
+                    VexMapsDeliveryRouteLegTarget.Stop(
                         "alpha",
                     ),
                     failedAttempt.target,
@@ -830,7 +830,7 @@ class VexMapsDistributionSessionTest {
                     session.states
                         .first {
                             it.legAttempt ==
-                                VexMapsDistributionLegAttempt.Idle
+                                VexMapsDeliveryRouteLegAttempt.Idle
                         }
                 }
                 Unit
@@ -895,7 +895,7 @@ class VexMapsDistributionSessionTest {
                     session,
                 )
 
-                session.prepare(
+                session.prepareDeliveryRoute(
                     origin =
                         origin,
                     travelMode =
@@ -920,9 +920,9 @@ class VexMapsDistributionSessionTest {
                     failed.preparationCleanupFailure,
                 )
                 assertTrue(
-                    session.currentRun
+                    session.currentDeliveryRoute
                         .state is
-                        VexMapsDistributionRunState.Draft,
+                        VexMapsDeliveryRouteState.Draft,
                 )
                 assertEquals(
                     VexNavigationSessionPhase.IDLE,
@@ -981,7 +981,7 @@ class VexMapsDistributionSessionTest {
                 awaitDraft(
                     session,
                 )
-                session.prepare(
+                session.prepareDeliveryRoute(
                     origin =
                         origin,
                     travelMode =
@@ -996,7 +996,7 @@ class VexMapsDistributionSessionTest {
                 val planRef =
                     (
                         ready.state as
-                            VexMapsDistributionRunState.Ready
+                            VexMapsDeliveryRouteState.Ready
                     ).planRef
                 val admittedPlan =
                     withTimeout(
@@ -1011,7 +1011,7 @@ class VexMapsDistributionSessionTest {
                             .plan
                     }
 
-                session.startPreparedRun()
+                session.startPreparedDeliveryRoute()
 
                 withTimeout(
                     1_000L,
@@ -1095,7 +1095,7 @@ class VexMapsDistributionSessionTest {
                 awaitDraft(
                     session,
                 )
-                session.prepare(
+                session.prepareDeliveryRoute(
                     origin =
                         origin,
                     travelMode =
@@ -1105,9 +1105,9 @@ class VexMapsDistributionSessionTest {
                 )
 
                 assertTrue(
-                    session.currentRun
+                    session.currentDeliveryRoute
                         .state is
-                        VexMapsDistributionRunState.Preparing,
+                        VexMapsDeliveryRouteState.Preparing,
                 )
 
                 session.shutdown()
@@ -1192,14 +1192,14 @@ class VexMapsDistributionSessionTest {
                 withTimeout(
                     1_000L,
                 ) {
-                    session.runProjections
+                    session.deliveryRouteProjections
                         .first {
                             it.state is
-                                VexMapsDistributionRunState.AtStop
+                                VexMapsDeliveryRouteState.AtDelivery
                         }
                 }
 
-                session.completeCurrentStop()
+                session.markCurrentDeliveryComplete()
                 withTimeout(
                     1_000L,
                 ) {
@@ -1214,14 +1214,14 @@ class VexMapsDistributionSessionTest {
                 withTimeout(
                     1_000L,
                 ) {
-                    session.runProjections
+                    session.deliveryRouteProjections
                         .first {
                             it.state is
-                                VexMapsDistributionRunState.AtStop
+                                VexMapsDeliveryRouteState.AtDelivery
                         }
                 }
 
-                session.completeCurrentStop()
+                session.markCurrentDeliveryComplete()
                 withTimeout(
                     1_000L,
                 ) {
@@ -1243,11 +1243,11 @@ class VexMapsDistributionSessionTest {
                 ) {
                     session.states
                         .first {
-                            session.currentRun
+                            session.currentDeliveryRoute
                                 .state is
-                                VexMapsDistributionRunState.Completed &&
+                                VexMapsDeliveryRouteState.Completed &&
                                 it.expectedLeg is
-                                VexMapsDistributionExpectedLegState.None
+                                VexMapsDeliveryRouteExpectedLegState.None
                         }
                 }
 
@@ -1258,9 +1258,9 @@ class VexMapsDistributionSessionTest {
                 val cleanupAttempt =
                     session.states.value
                         .legAttempt as
-                        VexMapsDistributionLegAttempt.Failed
+                        VexMapsDeliveryRouteLegAttempt.Failed
                 assertEquals(
-                    VexMapsDistributionLegFailureStage.PreviousLegCleanup,
+                    VexMapsDeliveryRouteLegFailureStage.PreviousLegCleanup,
                     cleanupAttempt.stage,
                 )
                 assertNull(
@@ -1344,10 +1344,10 @@ class VexMapsDistributionSessionTest {
                     withTimeout(
                         1_000L,
                     ) {
-                        session.runProjections
+                        session.deliveryRouteProjections
                             .first {
                                 it.state is
-                                    VexMapsDistributionRunState.AtStop
+                                    VexMapsDeliveryRouteState.AtDelivery
                             }
                     }
 
@@ -1356,7 +1356,7 @@ class VexMapsDistributionSessionTest {
                             true
                     }
 
-                    session.completeCurrentStop()
+                    session.markCurrentDeliveryComplete()
 
                     if (index == 0) {
                         withTimeout(
@@ -1377,19 +1377,19 @@ class VexMapsDistributionSessionTest {
                     ) {
                         session.states
                             .first {
-                                session.currentRun
+                                session.currentDeliveryRoute
                                     .state is
-                                    VexMapsDistributionRunState.Completed &&
+                                    VexMapsDeliveryRouteState.Completed &&
                                     it.legAttempt is
-                                    VexMapsDistributionLegAttempt.Failed
+                                    VexMapsDeliveryRouteLegAttempt.Failed
                             }
                     }
                 val cleanup =
                     failed.legAttempt as
-                        VexMapsDistributionLegAttempt.Failed
+                        VexMapsDeliveryRouteLegAttempt.Failed
 
                 assertEquals(
-                    VexMapsDistributionLegFailureStage.PreviousLegCleanup,
+                    VexMapsDeliveryRouteLegFailureStage.PreviousLegCleanup,
                     cleanup.stage,
                 )
                 assertNull(
@@ -1405,7 +1405,7 @@ class VexMapsDistributionSessionTest {
                 session.retryFailedLeg()
 
                 assertEquals(
-                    VexMapsDistributionLegAttempt.Idle,
+                    VexMapsDeliveryRouteLegAttempt.Idle,
                     session.states.value
                         .legAttempt,
                 )
@@ -1461,7 +1461,7 @@ class VexMapsDistributionSessionTest {
                     session,
                 )
 
-                session.prepare(
+                session.prepareDeliveryRoute(
                     origin =
                         origin,
                     travelMode =
@@ -1502,9 +1502,9 @@ class VexMapsDistributionSessionTest {
                     session.routingRegionReplacementRequested(),
                 )
                 assertTrue(
-                    session.currentRun
+                    session.currentDeliveryRoute
                         .state is
-                        VexMapsDistributionRunState.Running,
+                        VexMapsDeliveryRouteState.Delivering,
                 )
                 assertNotNull(
                     session.states.value
@@ -1523,10 +1523,10 @@ class VexMapsDistributionSessionTest {
         withTimeout(
             1_000L,
         ) {
-            session.runProjections
+            session.deliveryRouteProjections
                 .first {
                     it.state is
-                        VexMapsDistributionRunState.Draft
+                        VexMapsDeliveryRouteState.Draft
                 }
         }
         withTimeout(
@@ -1547,10 +1547,10 @@ class VexMapsDistributionSessionTest {
         withTimeout(
             1_000L,
         ) {
-            session.runProjections
+            session.deliveryRouteProjections
                 .first {
                     it.state is
-                        VexMapsDistributionRunState.Ready
+                        VexMapsDeliveryRouteState.Ready
                 }
         }
 
@@ -1560,7 +1560,7 @@ class VexMapsDistributionSessionTest {
         navigation:
             FakeNavigation,
     ) {
-        session.prepare(
+        session.prepareDeliveryRoute(
             origin =
                 origin,
             travelMode =
@@ -1571,7 +1571,7 @@ class VexMapsDistributionSessionTest {
         awaitReady(
             session,
         )
-        session.startPreparedRun()
+        session.startPreparedDeliveryRoute()
 
         withTimeout(
             1_000L,

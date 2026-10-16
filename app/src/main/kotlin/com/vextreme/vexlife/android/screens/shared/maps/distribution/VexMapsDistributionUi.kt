@@ -3,21 +3,21 @@ package com.vextreme.vexlife.android.screens.shared.maps.distribution
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsTravelMode
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationOutput
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationOutput
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeProjection
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunProjection
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteProjection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSession
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionSessionState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * UI-facing membrane over one process-lifetime Distribution session.
+ * UI-facing boundary over one process-lifetime Distribution session.
  *
  * Compose reads projections here and sends human actions here. Session/provider/convergence mechanics
- * remain behind the membrane instead of being reconstructed by VexMapsMapSurface.
+ * remain behind this boundary instead of being reconstructed by VexMapsMapSurface.
  */
-internal class VexMapsDistributionExperience(
+internal class VexMapsDistributionUi(
     private val session:
         VexMapsDistributionSession,
 ) {
@@ -31,28 +31,28 @@ internal class VexMapsDistributionExperience(
         get() =
             session.modeProjections
 
-    val runProjections:
-        StateFlow<VexMapsDistributionRunProjection>
+    val deliveryRouteProjections:
+        StateFlow<VexMapsDeliveryRouteProjection>
         get() =
-            session.runProjections
+            session.deliveryRouteProjections
 
     val modeProjection:
         VexMapsDistributionModeProjection
         get() =
             session.currentMode
 
-    val runProjection:
-        VexMapsDistributionRunProjection
+    val deliveryRouteProjection:
+        VexMapsDeliveryRouteProjection
         get() =
-            session.currentRun
+            session.currentDeliveryRoute
 
     val navigationOutputs:
-        Flow<VexMapsDistributionNavigationOutput>
+        Flow<VexMapsDeliveryRouteNavigationOutput>
         get() =
             session.navigationOutputs
 
     val currentNavigation:
-        VexMapsDistributionNavigationOutput
+        VexMapsDeliveryRouteNavigationOutput
         get() =
             session.currentNavigation
 
@@ -93,12 +93,12 @@ internal class VexMapsDistributionExperience(
             enabled,
         )
 
-    fun prepare(
+    fun prepareDeliveryRoute(
         origin: VexMapCoordinate,
         travelMode: VexMapsTravelMode,
         pack: VexMapsRegionPack,
     ) =
-        session.prepare(
+        session.prepareDeliveryRoute(
             origin =
                 origin,
             travelMode =
@@ -118,20 +118,20 @@ internal class VexMapsDistributionExperience(
     fun humanPlanningInputChanged() =
         session.humanPlanningInputChanged()
 
-    fun startPreparedRun() =
-        session.startPreparedRun()
+    fun startPreparedDeliveryRoute() =
+        session.startPreparedDeliveryRoute()
 
-    fun completeCurrentStop() =
-        session.completeCurrentStop()
+    fun markCurrentDeliveryComplete() =
+        session.markCurrentDeliveryComplete()
 
     fun retryFailedLeg() =
         session.retryFailedLeg()
 
-    fun cancelExecutionPreservingDraft() =
-        session.cancelExecutionPreservingDraft()
+    fun cancelDeliveryRoutePreservingDraft() =
+        session.cancelDeliveryRoutePreservingDraft()
 
-    fun clearAll() =
-        session.clearAll()
+    fun clearDeliveryRoute() =
+        session.clearDeliveryRoute()
 }
 
 // [VXG RealForever]

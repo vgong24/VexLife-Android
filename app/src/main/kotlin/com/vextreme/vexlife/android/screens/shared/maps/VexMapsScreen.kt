@@ -194,32 +194,32 @@ object VexMapsScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
-    val PrepareDistributionRun = buttonRef(
-        id = "body.distribution.run.prepare",
+    val PrepareDeliveryRoute = buttonRef(
+        id = "body.distribution.delivery-route.prepare",
         labelRes = R.string.vexmaps_distribution_prepare,
         intent = localEffect(),
     )
 
-    val StartDistributionRun = buttonRef(
-        id = "body.distribution.run.start",
+    val StartDeliveryRoute = buttonRef(
+        id = "body.distribution.delivery-route.start",
         labelRes = R.string.vexmaps_distribution_start,
         intent = localEffect(),
     )
 
-    val CompleteDistributionStop = buttonRef(
-        id = "body.distribution.run.complete-stop",
+    val MarkDeliveryComplete = buttonRef(
+        id = "body.distribution.delivery-route.mark-delivered",
         labelRes = R.string.vexmaps_distribution_delivered,
         intent = localEffect(),
     )
 
-    val RetryDistributionLeg = buttonRef(
-        id = "body.distribution.run.retry-leg",
+    val RetryDeliveryLeg = buttonRef(
+        id = "body.distribution.delivery-route.retry-leg",
         labelRes = R.string.vexmaps_distribution_retry,
         intent = localEffect(),
     )
 
-    val ResetDistributionRun = buttonRef(
-        id = "body.distribution.run.reset",
+    val ClearDeliveryRoute = buttonRef(
+        id = "body.distribution.delivery-route.clear",
         labelRes = R.string.vexmaps_distribution_clear,
         style = VexElementStyles.SecondaryAction,
         intent = localEffect(),
@@ -314,11 +314,11 @@ object VexMapsScreen : AppScreenBlueprint(
                 button(ToggleDistributionMode)
                 button(AddDistributionStop)
                 button(ToggleDistributionReturnToStart)
-                button(PrepareDistributionRun)
-                button(StartDistributionRun)
-                button(CompleteDistributionStop)
-                button(RetryDistributionLeg)
-                button(ResetDistributionRun)
+                button(PrepareDeliveryRoute)
+                button(StartDeliveryRoute)
+                button(MarkDeliveryComplete)
+                button(RetryDeliveryLeg)
+                button(ClearDeliveryRoute)
             }
 
             column("navigation") {

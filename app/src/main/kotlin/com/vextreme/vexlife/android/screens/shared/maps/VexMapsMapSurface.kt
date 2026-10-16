@@ -47,11 +47,11 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionExperience
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionUi
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.vexMapsDistributionContextDockPage
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionNavigationLayer
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationLayer
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.run.VexMapsDistributionRunState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionProcess
 import com.vextreme.vexlife.android.screens.shared.vexstream.rememberVexStreamContextDockPage
 import java.time.Instant
@@ -103,16 +103,16 @@ internal fun VexMapsMapSurface(
                         distributionRepository,
                 )
         }
-    val distributionExperience =
+    val distributionUi =
         remember(
             distributionSession,
         ) {
-            VexMapsDistributionExperience(
+            VexMapsDistributionUi(
                 distributionSession,
             )
         }
     val distributionSessionState by
-        distributionExperience
+        distributionUi
             .states
             .collectAsState()
     val navigationState by
@@ -125,19 +125,19 @@ internal fun VexMapsMapSurface(
             .visualLocations
             .collectAsState()
     val distributionModeProjection by
-        distributionExperience
+        distributionUi
             .modeProjections
             .collectAsState()
     val distributionRunProjection by
-        distributionExperience
-            .runProjections
+        distributionUi
+            .deliveryRouteProjections
             .collectAsState()
     val distributionNavigation by
-        distributionExperience
+        distributionUi
             .navigationOutputs
             .collectAsState(
                 initial =
-                    distributionExperience
+                    distributionUi
                         .currentNavigation,
             )
 
@@ -324,7 +324,7 @@ internal fun VexMapsMapSurface(
         coordinate: VexMapCoordinate?,
     ) {
         routeRequestGate.invalidate()
-        distributionExperience
+        distributionUi
             .humanPlanningInputChanged()
         selectedOriginLatitude =
             coordinate?.latitude
@@ -433,7 +433,7 @@ internal fun VexMapsMapSurface(
         mode: VexMapsTravelMode,
     ) {
         routeRequestGate.invalidate()
-        distributionExperience
+        distributionUi
             .humanPlanningInputChanged()
         travelModeName =
             mode.name
@@ -759,7 +759,7 @@ internal fun VexMapsMapSurface(
             }
 
             if (
-                !distributionExperience
+                !distributionUi
                     .routingRegionReplacementRequested()
             ) {
                 return@rememberLauncherForActivityResult
@@ -1132,8 +1132,8 @@ internal fun VexMapsMapSurface(
         )
     val distributionDockPage =
         vexMapsDistributionContextDockPage(
-            experience =
-                distributionExperience,
+            ui =
+                distributionUi,
             canPrepare =
                 !distributionSessionState
                     .draftOperationInFlight &&
@@ -1148,7 +1148,7 @@ internal fun VexMapsMapSurface(
                     VexMapsScreen
                         .ToggleDistributionMode,
                 )
-                distributionExperience
+                distributionUi
                     .toggleMode()
             },
             onAddStop = {
@@ -1169,7 +1169,7 @@ internal fun VexMapsMapSurface(
                     action =
                         "Removed",
                 )
-                distributionExperience
+                distributionUi
                     .removeStop(
                         stopRef,
                     )
@@ -1179,14 +1179,14 @@ internal fun VexMapsMapSurface(
                     VexMapsScreen
                         .ToggleDistributionReturnToStart,
                 )
-                distributionExperience
+                distributionUi
                     .setReturnToStart(
                         !distributionSessionState
                             .draft
                             .returnToStart,
                     )
             },
-            onPrepare = {
+            onPrepareDeliveryRoute = {
                 val pack =
                     regionPack
                         ?: return@vexMapsDistributionContextDockPage
@@ -1196,10 +1196,10 @@ internal fun VexMapsMapSurface(
 
                 runtime.activate(
                     VexMapsScreen
-                        .PrepareDistributionRun,
+                        .PrepareDeliveryRoute,
                 )
-                distributionExperience
-                    .prepare(
+                distributionUi
+                    .prepareDeliveryRoute(
                         origin =
                             origin,
                         travelMode =
@@ -1208,39 +1208,39 @@ internal fun VexMapsMapSurface(
                             pack,
                     )
             },
-            onStart = {
+            onStartDeliveryRoute = {
                 runtime.activate(
                     VexMapsScreen
-                        .StartDistributionRun,
+                        .StartDeliveryRoute,
                 )
                 readCurrentPreciseLocation {
-                    distributionExperience
-                        .startPreparedRun()
+                    distributionUi
+                        .startPreparedDeliveryRoute()
                 }
             },
-            onCompleteStop = {
+            onMarkDelivered = {
                 runtime.activate(
                     VexMapsScreen
-                        .CompleteDistributionStop,
+                        .MarkDeliveryComplete,
                 )
-                distributionExperience
-                    .completeCurrentStop()
+                distributionUi
+                    .markCurrentDeliveryComplete()
             },
-            onRetryLeg = {
+            onRetryDeliveryLeg = {
                 runtime.activate(
                     VexMapsScreen
-                        .RetryDistributionLeg,
+                        .RetryDeliveryLeg,
                 )
-                distributionExperience
+                distributionUi
                     .retryFailedLeg()
             },
-            onReset = {
+            onClearDeliveryRoute = {
                 runtime.activate(
                     VexMapsScreen
-                        .ResetDistributionRun,
+                        .ClearDeliveryRoute,
                 )
-                distributionExperience
-                    .clearAll()
+                distributionUi
+                    .clearDeliveryRoute()
             },
         )
     val contextDockPages =
@@ -1501,15 +1501,15 @@ internal fun VexMapsMapSurface(
                             .state is
                             VexMapsDistributionModeState.Distribution
                     ) {
-                        val currentRunState =
-                            distributionExperience
-                                .runProjection
+                        val currentDeliveryRouteState =
+                            distributionUi
+                                .deliveryRouteProjection
                                 .state
                         if (
-                            currentRunState !is
-                                VexMapsDistributionRunState.Empty &&
-                            currentRunState !is
-                                VexMapsDistributionRunState.Draft
+                            currentDeliveryRouteState !is
+                                VexMapsDeliveryRouteState.Empty &&
+                            currentDeliveryRouteState !is
+                                VexMapsDeliveryRouteState.Draft
                         ) {
                             return@VexMapsRoutePlannerCard
                         }
@@ -1520,7 +1520,7 @@ internal fun VexMapsMapSurface(
                             action =
                                 "AddedToDistribution",
                         )
-                        distributionExperience
+                        distributionUi
                             .addStop(
                                 placeRef =
                                     place.placeRef,
@@ -1637,7 +1637,7 @@ internal fun VexMapsMapSurface(
                 },
                 onImportRegion = {
                     if (
-                        !distributionExperience
+                        !distributionUi
                             .canReplaceRoutingRegion()
                     ) {
                         return@VexMapsRoutePlannerCard
@@ -1768,8 +1768,8 @@ internal fun VexMapsMapSurface(
                             VexMapsDistributionModeState
                                 .Distribution
                     ) {
-                        distributionExperience
-                            .cancelExecutionPreservingDraft()
+                        distributionUi
+                            .cancelDeliveryRoutePreservingDraft()
                     } else {
                         VexMapsNavigationProcess
                             .stop()
@@ -1785,19 +1785,19 @@ internal fun VexMapsMapSurface(
                         if (
                             distributionRunProjection
                                 .state is
-                                VexMapsDistributionRunState.Ready &&
+                                VexMapsDeliveryRouteState.Ready &&
                             distributionNavigation
                                 .layer ==
-                                VexMapsDistributionNavigationLayer
+                                VexMapsDeliveryRouteNavigationLayer
                                     .ReadyToStart
                         ) {
                             runtime.activate(
                                 VexMapsScreen
-                                    .StartDistributionRun,
+                                    .StartDeliveryRoute,
                             )
                             readCurrentPreciseLocation {
-                                distributionExperience
-                                    .startPreparedRun()
+                                distributionUi
+                                    .startPreparedDeliveryRoute()
                             }
                         }
                     } else {
@@ -1852,8 +1852,8 @@ internal fun VexMapsMapSurface(
                             VexMapsDistributionModeState
                                 .Distribution
                     ) {
-                        distributionExperience
-                            .cancelExecutionPreservingDraft()
+                        distributionUi
+                            .cancelDeliveryRoutePreservingDraft()
                     } else {
                         VexMapsNavigationService
                             .stop(context)
@@ -1869,14 +1869,14 @@ internal fun VexMapsMapSurface(
                         if (
                             distributionRunProjection
                                 .state is
-                                VexMapsDistributionRunState.AtStop
+                                VexMapsDeliveryRouteState.AtDelivery
                         ) {
                             runtime.activate(
                                 VexMapsScreen
-                                    .CompleteDistributionStop,
+                                    .MarkDeliveryComplete,
                             )
-                            distributionExperience
-                                .completeCurrentStop()
+                            distributionUi
+                                .markCurrentDeliveryComplete()
                         }
                     } else {
                         runtime.activate(

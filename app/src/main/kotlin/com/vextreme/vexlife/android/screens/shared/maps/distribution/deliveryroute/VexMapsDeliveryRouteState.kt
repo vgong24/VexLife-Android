@@ -1,8 +1,8 @@
-package com.vextreme.vexlife.android.screens.shared.maps.distribution.run
+package com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute
 
 import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
 
-internal data class VexMapsDistributionRunDraftIdentity(
+internal data class VexMapsDeliveryRouteDraftIdentity(
     val revision: Long,
     val stopRefs: List<String>,
     val returnToStart: Boolean,
@@ -18,21 +18,21 @@ internal data class VexMapsDistributionRunDraftIdentity(
         get() = stopRefs.size
 }
 
-internal sealed interface VexMapsDistributionRunState :
-    VexBehaviorFamily.State<VexMapsDistributionRunFamily> {
+internal sealed interface VexMapsDeliveryRouteState :
+    VexBehaviorFamily.State<VexMapsDeliveryRouteFamily> {
     data object Empty :
-        VexMapsDistributionRunState
+        VexMapsDeliveryRouteState
 
     data class Draft(
         val source:
-            VexMapsDistributionRunDraftIdentity,
-    ) : VexMapsDistributionRunState
+            VexMapsDeliveryRouteDraftIdentity,
+    ) : VexMapsDeliveryRouteState
 
     data class Preparing(
         val preparationRef: String,
         val source:
-            VexMapsDistributionRunDraftIdentity,
-    ) : VexMapsDistributionRunState {
+            VexMapsDeliveryRouteDraftIdentity,
+    ) : VexMapsDeliveryRouteState {
         init {
             require(preparationRef.isNotBlank())
         }
@@ -41,9 +41,9 @@ internal sealed interface VexMapsDistributionRunState :
     data class Ready(
         val planRef: String,
         val source:
-            VexMapsDistributionRunDraftIdentity,
+            VexMapsDeliveryRouteDraftIdentity,
         val orderedStopRefs: List<String>,
-    ) : VexMapsDistributionRunState {
+    ) : VexMapsDeliveryRouteState {
         init {
             require(planRef.isNotBlank())
             requireExecutionOrder(
@@ -53,13 +53,13 @@ internal sealed interface VexMapsDistributionRunState :
         }
     }
 
-    data class Running(
+    data class Delivering(
         val planRef: String,
         val source:
-            VexMapsDistributionRunDraftIdentity,
+            VexMapsDeliveryRouteDraftIdentity,
         val orderedStopRefs: List<String>,
         val currentStopRef: String,
-    ) : VexMapsDistributionRunState {
+    ) : VexMapsDeliveryRouteState {
         init {
             require(planRef.isNotBlank())
             requireExecutionOrder(
@@ -70,13 +70,13 @@ internal sealed interface VexMapsDistributionRunState :
         }
     }
 
-    data class AtStop(
+    data class AtDelivery(
         val planRef: String,
         val source:
-            VexMapsDistributionRunDraftIdentity,
+            VexMapsDeliveryRouteDraftIdentity,
         val orderedStopRefs: List<String>,
         val currentStopRef: String,
-    ) : VexMapsDistributionRunState {
+    ) : VexMapsDeliveryRouteState {
         init {
             require(planRef.isNotBlank())
             requireExecutionOrder(
@@ -104,12 +104,12 @@ internal sealed interface VexMapsDistributionRunState :
             }
     }
 
-    data class Returning(
+    data class ReturningToStart(
         val planRef: String,
         val source:
-            VexMapsDistributionRunDraftIdentity,
+            VexMapsDeliveryRouteDraftIdentity,
         val orderedStopRefs: List<String>,
-    ) : VexMapsDistributionRunState {
+    ) : VexMapsDeliveryRouteState {
         init {
             require(planRef.isNotBlank())
             requireExecutionOrder(
@@ -122,9 +122,9 @@ internal sealed interface VexMapsDistributionRunState :
     data class Completed(
         val planRef: String,
         val source:
-            VexMapsDistributionRunDraftIdentity,
+            VexMapsDeliveryRouteDraftIdentity,
         val orderedStopRefs: List<String>,
-    ) : VexMapsDistributionRunState {
+    ) : VexMapsDeliveryRouteState {
         init {
             require(planRef.isNotBlank())
             requireExecutionOrder(
@@ -136,13 +136,13 @@ internal sealed interface VexMapsDistributionRunState :
 }
 
 private fun requireExecutionOrder(
-    source: VexMapsDistributionRunDraftIdentity,
+    source: VexMapsDeliveryRouteDraftIdentity,
     orderedStopRefs: List<String>,
 ) {
     require(orderedStopRefs.isNotEmpty())
     require(orderedStopRefs.distinct().size == orderedStopRefs.size)
     require(orderedStopRefs.toSet() == source.stopRefs.toSet()) {
-        "Distribution execution order must contain the exact admitted Draft stop refs"
+        "Delivery route execution order must contain the exact admitted Draft stop refs"
     }
 }
 
