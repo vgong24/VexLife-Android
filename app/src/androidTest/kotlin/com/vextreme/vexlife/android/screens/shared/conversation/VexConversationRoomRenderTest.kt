@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.conversation
 
+import android.graphics.Bitmap
+import android.util.Log
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,6 +23,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.platform.io.PlatformTestStorageRegistry
 import com.vextreme.vexlife.android.conversation.InMemoryVexFamilyConversationRepository
 import com.vextreme.vexlife.android.conversation.VexConversationCompanionAvailability
 import com.vextreme.vexlife.android.conversation.VexConversationHomeAvailability
@@ -35,6 +39,8 @@ import com.vextreme.vexlife.android.conversation.projectVexFamilyConversationSen
 import com.vextreme.vexlife.android.ui.VexLifeTheme
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+import java.security.MessageDigest
 import org.junit.Rule
 import org.junit.Test
 
@@ -122,6 +128,9 @@ class VexConversationRoomRenderTest {
         waitForDisplayedText("Victor · Maya · Vex")
         waitForDisplayedText("Conversation Lab active · Auto mirror: Maya")
         waitForDisplayedText("Yep, leaving now.")
+        captureEvidence(
+            checkpoint = "00-initial-family-room",
+        )
 
         val composer =
             compose.onNodeWithTag(
@@ -158,6 +167,9 @@ class VexConversationRoomRenderTest {
         )
         waitForDisplayedText("Yep, leaving now.")
         waitForDisplayedText("Are you coming?")
+        captureEvidence(
+            checkpoint = "01-round-trip-multi-human",
+        )
 
         composer.performTextInput(
             "Can you still hear me?",
@@ -174,6 +186,9 @@ class VexConversationRoomRenderTest {
         waitForDisplayedText(
             "You said: \"Are you coming?\"",
         )
+        captureEvidence(
+            checkpoint = "02-home-unavailable",
+        )
 
         lab.clearHomeAvailabilityOverride()
 
@@ -182,6 +197,87 @@ class VexConversationRoomRenderTest {
         )
     }
 
+    private fun captureEvidence(
+        checkpoint: String,
+    ) {
+        require(
+            checkpoint.matches(
+                Regex("[a-z0-9][a-z0-9-]*"),
+            ),
+        ) {
+            "Conversation UI checkpoint must be lowercase kebab-case: $checkpoint"
+        }
+
+        val instrumentation =
+            InstrumentationRegistry
+                .getInstrumentation()
+
+        compose.waitForIdle()
+        instrumentation.waitForIdleSync()
+
+        val bitmap =
+            requireNotNull(
+                instrumentation
+                    .uiAutomation
+                    .takeScreenshot(),
+            ) {
+                "Conversation UI screenshot returned null at $checkpoint"
+            }
+
+        val bytes =
+            try {
+                ByteArrayOutputStream()
+                    .use { output ->
+                        check(
+                            bitmap.compress(
+                                Bitmap.CompressFormat.PNG,
+                                100,
+                                output,
+                            ),
+                        ) {
+                            "failed to encode Conversation UI screenshot at $checkpoint"
+                        }
+                        output.toByteArray()
+                    }
+            } finally {
+                bitmap.recycle()
+            }
+
+        check(bytes.isNotEmpty()) {
+            "Conversation UI screenshot encoded to zero bytes at $checkpoint"
+        }
+
+        val storage =
+            PlatformTestStorageRegistry
+                .getInstance()
+        val path =
+            "vex-conversation-ui-practicum/screenshots/" +
+                "$checkpoint.png"
+
+        storage
+            .openOutputFile(path)
+            .buffered()
+            .use { output ->
+                output.write(bytes)
+            }
+
+        val sha256 =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest(bytes)
+                .joinToString("") { byte ->
+                    "%02x".format(byte)
+                }
+
+        Log.i(
+            UI_PRACTICUM_LOG_TAG,
+            "CAPTURE checkpoint=$checkpoint " +
+                "output=$path " +
+                "bytes=" + bytes.size + " " +
+                "sha256=$sha256 " +
+                "uri=" + storage.getOutputFileUri(path),
+        )
+    }
     private fun waitForDisplayedText(
         text: String,
     ) {
@@ -225,6 +321,8 @@ class VexConversationRoomRenderTest {
     private companion object {
         const val ROOM_REF =
             "test.conversation.family-room"
+        const val UI_PRACTICUM_LOG_TAG =
+            "VexConversationUiPracticum"
     }
 }
 
