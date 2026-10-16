@@ -95,9 +95,14 @@ class VexConversationLabTest {
             VexConversationLabFixture.channelRef(2L),
             withAlex.currentChannelRef,
         )
-        assertTrue(
-            alexRef in
-                withAlex.currentAudienceRefs,
+        assertEquals(
+            listOf(
+                victorRef,
+                mayaRef,
+                vexRef,
+                alexRef,
+            ),
+            withAlex.currentAudienceRefs,
         )
         assertTrue(
             withAlex.messages.isEmpty(),
