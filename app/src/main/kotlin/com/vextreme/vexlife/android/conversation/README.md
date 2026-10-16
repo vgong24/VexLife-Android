@@ -446,13 +446,17 @@ Product-shaped rendering:
 
 ~~~text
 screens/shared/conversation/VexConversationRoom.kt
-    consumes VexConversationSurfaceProjection
+    generic Conversation projection/rendering only
     stable dynamic message identity = messageRef
     human labels supplied by presentation/identity owner
     optional developer-environment label
     no second room-state model
     generic room does NOT choose Family Send semantics
     owning Screen supplies the durable composer/control content
+
+screens/shared/conversation/VexConversationRoomPreview.kt
+    Lab + Family-specific visual pressure only
+    local raw composer is explicitly not the production action contract
 ~~~
 
 The room renderer is intentionally not a registered app Screen yet. A real Screen needs the same
