@@ -93,7 +93,7 @@ failureStatus = OPEN_UNEXPLAINED
 failureRootCause = UNKNOWN
 
 observabilityGapRootCause = KNOWN
-hardeningState = CANDIDATE
+hardeningState = PROVED_NOT_LANDED
 ~~~
 
 Knowing why evidence disappeared does not mean we know why the test failed.
