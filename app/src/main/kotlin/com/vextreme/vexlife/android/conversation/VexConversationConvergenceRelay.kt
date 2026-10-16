@@ -68,11 +68,7 @@ internal data class VexConversationConvergenceInputState(
                 companionAvailabilityByParticipantRef
                     ?.toMap(),
             lab =
-                lab?.copy(
-                    companionAvailabilityOverrides =
-                        lab.companionAvailabilityOverrides
-                            .toMap(),
-                ),
+                lab?.deepCopyForConversationRelay(),
         )
 }
 
@@ -178,12 +174,8 @@ internal class VexConversationConvergenceRelay(
                 ) { labState ->
                     VexConversationConvergenceInputState(
                         lab =
-                            labState.copy(
-                                companionAvailabilityOverrides =
-                                    labState
-                                        .companionAvailabilityOverrides
-                                        .toMap(),
-                            ),
+                            labState
+                                .deepCopyForConversationRelay(),
                     )
                 }
             }
@@ -273,11 +265,7 @@ internal class VexConversationConvergenceRelay(
         send(
             VexConversationConvergenceInputState(
                 lab =
-                    lab.copy(
-                        companionAvailabilityOverrides =
-                            lab.companionAvailabilityOverrides
-                                .toMap(),
-                    ),
+                    lab.deepCopyForConversationRelay(),
             ),
         )
     }
@@ -365,7 +353,9 @@ internal class VexConversationConvergenceRelay(
                     VexConversationInputProvenance
                         .LAB_OVERRIDE
 
-                observedHomeAvailability != null ->
+                observedHomeAvailability != null &&
+                    observedHomeAvailability !=
+                    VexConversationHomeAvailability.Unobserved ->
                     VexConversationInputProvenance
                         .OBSERVED
 
@@ -423,11 +413,7 @@ internal class VexConversationConvergenceRelay(
                     observedCompanionAvailability
                         ?.toMap(),
                 lab =
-                    lab?.copy(
-                        companionAvailabilityOverrides =
-                            lab.companionAvailabilityOverrides
-                                .toMap(),
-                    ),
+                    lab?.deepCopyForConversationRelay(),
             )
 
         val labOverridesActive =
@@ -460,6 +446,14 @@ internal class VexConversationConvergenceRelay(
             "conversation.lab"
     }
 }
+
+private fun VexConversationLabState.deepCopyForConversationRelay():
+    VexConversationLabState =
+    copy(
+        companionAvailabilityOverrides =
+            companionAvailabilityOverrides
+                .toMap(),
+    )
 
 private fun VexConversationState.deepCopyForConversationRelay():
     VexConversationState =
@@ -494,11 +488,13 @@ private fun VexConversationThreadState.deepCopyForConversationRelay():
                 )
             },
         familyBinding =
-            familyBinding?.copy(
-                segmentRefs =
-                    familyBinding.segmentRefs
-                        .toList(),
-            ),
+            familyBinding?.let { binding ->
+                binding.copy(
+                    segmentRefs =
+                        binding.segmentRefs
+                            .toList(),
+                )
+            },
     )
 
 private fun VexConversationSurfaceProjection.deepCopyForConversationRelay():
