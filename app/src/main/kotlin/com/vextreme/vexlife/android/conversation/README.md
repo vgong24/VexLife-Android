@@ -77,6 +77,7 @@ conversation/
 ├── VexConversationRepository.kt
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
+├── VexConversationLabFixture.kt
 ├── VexConversationLab.kt
 ├── VexConversationDocs.kt
 ├── README.md
@@ -436,6 +437,7 @@ VexConversationLab
     deterministic Family-room seed/reset
     add/remove participant -> successor Family generation/channel
     remote provider-authored speech
+    [Speaker]{message} debug injection resolves only known fixture labels
     optional mirror only after an accepted Victor Send
     Home / Companion availability as lab inputs outside Conversation state
 ~~~
