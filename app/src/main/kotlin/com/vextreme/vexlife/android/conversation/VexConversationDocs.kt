@@ -56,16 +56,17 @@ package com.vextreme.vexlife.android.conversation
  *
  * A generic direct Conversation does not silently gain Family Send semantics.
  *
- * ## Convergence
+ * ## Hybrid
  *
- * Independently changing Conversation/runtime/Lab facts reconcile in:
+ * Independently changing Conversation/runtime/Lab facts form one mixed-provenance relationship in:
  *
- * [VexConversationConvergenceRelay]
+ * [VexConversationHybridRelay]
  *
  * Read its `dependencies()`, public observation methods, `processStates()`, then `outputStates`
  * to see the current relationship.
  *
- * The Relay owns which Home/Companion facts are effective when Lab overrides exist. The existing
+ * Hybrid is a specialized Compound convergence role: the Relay owns which Home/Companion facts are
+ * effective when Lab overrides exist while canonical ownership and provenance remain intact. The existing
  * [projectVexConversationSurface] function remains a pure projection over already-effective facts;
  * it does not interpret Lab controls.
  *
@@ -94,7 +95,7 @@ package com.vextreme.vexlife.android.conversation
  *
  * The Lab publishes synthetic external truth through the existing in-memory provider seam and may
  * also hold explicit Home/Companion availability overrides. Those overrides do not rewrite
- * Conversation repository truth; [VexConversationConvergenceRelay] reconciles them with current
+ * Conversation repository truth; [VexConversationHybridRelay] reconciles them with current
  * observations.
  *
  * The Lab does not perform Victor's product Send or become another Conversation state owner. The
