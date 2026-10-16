@@ -418,6 +418,7 @@ class VexMapsDistributionNavigationConvergenceRelayTest {
                                     .ForeignNavigation
                         }
                 }
+                Unit
             } finally {
                 relay.deactivate()
             }
