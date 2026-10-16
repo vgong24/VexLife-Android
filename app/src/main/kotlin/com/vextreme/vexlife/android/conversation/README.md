@@ -14,6 +14,7 @@ Current state:
 foundation = TERMINAL_ACCEPTED_CURRENT on Android main
 feature-owned Conversation Lab controller = ACCEPTED ON MAIN / PR #99
 generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
+Conversation Convergence + Lab availability overrides = ACCEPTED ON MAIN / PR #104
 production Screen / app-session wiring = HELD on shared composition paths
 real Home adapter = HELD on authenticated cross-generation history exposure
 ~~~
