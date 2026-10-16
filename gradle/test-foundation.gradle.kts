@@ -685,7 +685,7 @@ val vexCoverageSummaryContract =
                           <counter type="LINE" missed="20" covered="10"/>
                         </class>
                         <class name="example/SmallGap">
-                          <counter type="LINE" missed="2" covered="18"/>
+                          <counter type="LINE" missed="3" covered="17"/>
                         </class>
                         <class name="example/Green">
                           <counter type="LINE" missed="1" covered="19"/>
