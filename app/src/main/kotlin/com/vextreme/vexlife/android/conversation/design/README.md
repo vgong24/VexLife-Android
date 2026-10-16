@@ -5,8 +5,8 @@
 Feature ref: `feature.vexlife.conversation`  
 Current human name: **Conversation**  
 Historical/search name: **VexConversation**  
-Last meaningfully updated: **2026-10-15T23:41-07:00**  
-Current design record: `records/2026-10-15-001-visible-conversation-lab.md`
+Last meaningfully updated: **2026-10-16**  
+Current design record: `records/2026-10-16-002-live-truth-lab-perturbations.md`
 
 ## Role of this file
 
@@ -87,6 +87,80 @@ The Debug Menu must never directly paint fake chat bubbles.
 DEBUG_SIMULATION != PRODUCT_PRESENTATION_SHORTCUT
 ~~~
 
+## Live, simulated and mixed development
+
+The Lab now distinguishes **where canonical feature truth comes from** from **which surrounding
+observations are deliberately perturbed**.
+
+~~~text
+SOURCE BINDING
+    real provider/repository
+    OR
+    simulated provider/repository
+
+LAB PERTURBATION
+    optional explicit override of an independently owned observation
+
+CONVERGENCE
+    combines current repository truth + observations + overrides once
+~~~
+
+Human-facing developer labels may summarize the current environment as:
+
+~~~text
+Live
+    real source
+    no overrides
+
+Simulated
+    simulated source
+    no overrides
+
+Mixed
+    real source
+    one or more overrides
+~~~
+
+Those labels are derived descriptions, not one architectural mode enum.
+
+Current Conversation relationship:
+
+~~~text
+Conversation repository -----\
+authenticated participant ----\
+Home availability ------------+-> VexConversationConvergenceRelay
+Companion availability -------/
+Conversation Lab ------------/
+                                      |
+                                      v
+                           effective current facts
+                                      |
+                                      v
+                         VexConversationSurfaceProjection
+~~~
+
+Permanent distinctions:
+
+~~~text
+SOURCE_BINDING != LAB_PERTURBATION
+CONVERGENCE != PROJECTION
+LAB_OVERRIDE != REPOSITORY_TRUTH
+~~~
+
+A Lab override must never require rewriting Conversation repository state. Removing an override
+reveals the latest observed value, not a stale snapshot captured when the override began.
+
+Synthetic provider events remain different:
+
+~~~text
+[Maya]{test message}
+-> synthetic provider publication
+-> Conversation repository
+-> Convergence observes the repository change
+~~~
+
+The Convergence Relay does not manufacture messages or provider admission.
+
 ## Feature surfaces
 
 ### Home
@@ -157,7 +231,7 @@ The reusable Debug Menu supplies the doorway. Conversation owns the lab's domain
 First useful controls:
 
 ~~~text
-Simulation mode              ON/OFF
+Provider simulation          ON/OFF
 
 Room
     Reset lab
@@ -174,8 +248,13 @@ Mock speaker
 
 Response behavior
     Auto mirror ON/OFF
-    Vex available ON/OFF
-    Home available ON/OFF
+
+Observed-input overrides
+    Home availability
+        Follow observed / Available / Unavailable
+    Vex availability
+        Follow observed / Available / Unavailable
+    Clear overrides
 
 Currentness
     Advance membership generation
@@ -183,8 +262,12 @@ Currentness
     Retry last Send
 ~~~
 
-These controls publish simulated provider truth through the same feature repository/state boundary.
-They do not create a second screen-local truth model.
+Provider-simulation controls publish simulated provider truth through the same feature
+repository/state boundary.
+
+Availability overrides remain separate Lab facts and are reconciled only by
+`VexConversationConvergenceRelay`. They do not mutate Conversation repository truth or create a
+second screen-local truth model.
 
 ## Debug-only message injection
 
@@ -308,16 +391,41 @@ are actually admitted.
 
 ## Current implementation strategy
 
-First vertical slice:
+Feature-local relationship:
 
 ~~~text
-one shared Conversation repository instance
-+ Conversation screen
-+ Victor composer
-+ remote message injection
-+ auto mirror
-+ add/remove participant
-+ Debug Menu Conversation Lab controls
+VexConversationRepository
++ authenticated participant observation
++ Home availability observation
++ Companion availability observations
++ VexConversationLab overrides
+        |
+        v
+VexConversationConvergenceRelay
+        |
+        v
+VexConversationSurfaceProjection
+        |
+        v
+VexConversationRoom
+~~~
+
+Provider simulation stays on the normal provider/repository side:
+
+~~~text
+VexConversationLab synthetic provider actions
+-> InMemoryVexFamilyConversationRepository
+-> Conversation state
+-> VexConversationConvergenceRelay observes the result
+~~~
+
+The shared production slice still requires:
+
+~~~text
+one app/session-owned Conversation repository instance
++ registered Conversation Screen
++ Victor composer / Send action
++ Debug Menu doorway into feature-owned Lab
 ~~~
 
 The same repository instance must be owned by the app/session composition graph.
@@ -325,23 +433,11 @@ The same repository instance must be owned by the app/session composition graph.
 ~~~text
 NO_DEBUG_SINGLETON
 NO_COMPOSE_OWNED_REPOSITORY
+NO_PARALLEL_OVERRIDE_REDUCER
 ~~~
 
-Today:
-
-~~~text
-Conversation UI
--> VexFamilyConversationRepository
--> InMemoryVexFamilyConversationRepository + Conversation Lab
-~~~
-
-Later:
-
-~~~text
-Conversation UI
--> same feature contract
--> Home-backed Family adapter
-~~~
+Later, source binding may move from the in-memory provider to a Home-backed Family adapter without
+changing the Convergence/room relationship.
 
 The product surface should not require conceptual replacement when the real provider arrives.
 
@@ -355,6 +451,8 @@ The product surface should not require conceptual replacement when the real prov
    history exposure remains the real producer gap.
 6. The feature focus moved from invisible architecture to a visible, reactive Conversation Lab that
    pressures the same repository/state path future production will consume.
+7. Live-bug/counterfactual pressure separated provider source binding from Lab input perturbations and
+   reused Compound Relay as the single reconciliation owner.
 
 ## Current holds
 
@@ -390,7 +488,7 @@ seed Family room
 add/remove participant
 debug remote speech
 auto mirror
-Vex/Home availability controls
+Vex/Home availability overrides
 ~~~
 
 Then use the scenarios above to decide what additional behavior is actually missing before adding
