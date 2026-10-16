@@ -461,7 +461,7 @@ NO_PARALLEL_OVERRIDE_REDUCER
 ~~~
 
 Later, source binding may move from the in-memory provider to a Home-backed Family adapter without
-changing the Convergence/room relationship.
+changing the Hybrid/room relationship.
 
 The product surface should not require conceptual replacement when the real provider arrives.
 
