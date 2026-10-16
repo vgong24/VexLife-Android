@@ -34,9 +34,9 @@ WHAT IS PLAYBACK DOING?
     -> Playback State / Control / Act / Effect
     -> Media3VexStreamPlaybackConnection
 
-CAN I MOVE TO THE PREVIOUS OR NEXT QUEUE ITEM?
+WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
-    -> Queue State / Control / Act / Effect
+    -> Previous / Next / Clear through Queue State / Control / Act / Effect
     -> Media3VexStreamQueueConnection
 
 WHAT DOES THE LISTENER SEE?
@@ -63,7 +63,7 @@ vexstream/playback/
     Behavior family + concrete Media3 Connection + UI Experience membrane
 
 vexstream/queue/
-    human question: Previous / Next from current queue truth
+    human question: Previous / Next / Clear from current queue truth
     Behavior family + concrete Media3 Connection + UI Experience membrane
 
 media/vexstream/
@@ -88,7 +88,10 @@ Playback asks:
 
 Queue currently asks:
 
-> Can the listener move to the previous or next item in the current ordered media context?
+> What can the listener truthfully do with the current ordered media context?
+
+Current admitted answers are Previous, Next, and Clear. Clear requests the provider mutation but does
+not claim Empty until Media3 observation reports that truth.
 
 They are near each other in the UI but remain independent Behavior families. Do not cross-multiply
 their States simply because Mini Player displays both.
@@ -96,6 +99,8 @@ their States simply because Mini Player displays both.
 ## Current Queue boundary
 
 Previous / Next are shared semantic Controls consumed by Mini Player and Context Dock.
+Clear is the same Queue family question and is consumed by Queue presentation through the same
+current-truth Connection.
 
 Still deliberately outside the Queue Behavior family:
 
@@ -108,7 +113,6 @@ reorder
 
 shuffle
 repeat
-clear
     separate semantic questions not absorbed merely because they are Queue-adjacent
 ~~~
 
