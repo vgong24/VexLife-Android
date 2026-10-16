@@ -14,7 +14,8 @@ Current state:
 foundation = TERMINAL_ACCEPTED_CURRENT on Android main
 feature-owned Conversation Lab controller = ACCEPTED ON MAIN / PR #99
 generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
-Conversation Hybrid + Lab availability overrides = ACCEPTED ON MAIN / PR #104
+mixed-provenance Conversation behavior + Lab availability overrides = ACCEPTED ON MAIN / PR #104
+Hybrid Name Ontology / code vocabulary = ACCEPTED ON MAIN / PR #107
 production Screen / app-session wiring = HELD on shared composition paths
 real Home adapter = HELD on authenticated cross-generation history exposure
 ~~~
@@ -534,7 +535,7 @@ Lab remote message
 
 The Relay does not manufacture messages, Family generations or provider admission.
 
-Developer/debug surfaces may use Convergence provenance to explain whether an effective availability
+Developer/debug surfaces may use Hybrid provenance to explain whether an effective availability
 is `OBSERVED`, `LAB_OVERRIDE` or `UNOBSERVED` without adding debug flags to Conversation domain
 objects.
 
@@ -781,8 +782,8 @@ No VexExecutionTestRule is used because no Conversation VexExecution consumer ex
 The accepted Conversation foundation deliberately did not modify AppRepositories, VexLifeSession,
 TalkToVexScreen, TalkToVexJourneys, VexRuntime, or VexTestEngine.
 
-PR #99 landed the feature-local Lab / fixture / generic-room / Preview slice. The current
-feature-local Convergence refinement keeps the same discipline: it reuses VexCompoundRelay and does
+PR #99 landed the feature-local Lab / fixture / generic-room / Preview slice. The accepted
+feature-local Hybrid refinement keeps the same discipline: it reuses VexCompoundRelay and does
 not claim shared app/session/Debug ownership.
 
 Shared app/data, Debug Menu and Journey integration remain separate. Parallel Android work still changes some of
