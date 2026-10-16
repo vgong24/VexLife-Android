@@ -62,9 +62,13 @@ package com.vextreme.vexlife.android.conversation
  *
  * [VexConversationLab]
  *
- * Product-shaped room renderer:
+ * Generic room renderer:
  *
  * app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/conversation/VexConversationRoom.kt
+ *
+ * Lab/Family preview pressure:
+ *
+ * app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/conversation/VexConversationRoomPreview.kt
  *
  * The Lab publishes synthetic external truth through the existing in-memory provider seam. It does
  * not perform Victor's product Send or become another Conversation state owner. The room renderer
