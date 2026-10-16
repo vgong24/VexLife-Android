@@ -12,6 +12,9 @@ sealed interface VexStreamQueueEffect :
 
     data object SeekNext :
         VexStreamQueueEffect
+
+    data object ClearQueue :
+        VexStreamQueueEffect
 }
 
 // [VXG RealForever]

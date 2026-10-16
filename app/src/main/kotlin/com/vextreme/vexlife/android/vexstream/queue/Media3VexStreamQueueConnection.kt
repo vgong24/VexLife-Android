@@ -4,7 +4,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 
 /**
- * Media3 realization of the VexStream neighboring-item Queue behavior.
+ * Media3 realization of the admitted VexStream Queue behavior.
  *
  * Activation always re-reads current Media3 truth before resolving the Control. UI projection is
  * therefore informative, not execution authority.
@@ -58,6 +58,10 @@ internal class Media3VexStreamQueueConnection(
             VexStreamQueueEffect.SeekNext ->
                 controller
                     .seekToNextMediaItem()
+
+            VexStreamQueueEffect.ClearQueue ->
+                controller
+                    .clearMediaItems()
         }
     }
 }
@@ -79,12 +83,18 @@ private fun Player.toVexStreamQueueState():
                     .COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
             ) &&
                 hasNextMediaItem(),
+        clearAvailable =
+            isCommandAvailable(
+                Player
+                    .COMMAND_CHANGE_MEDIA_ITEMS,
+            ),
     )
 
 internal fun vexStreamQueueState(
     mediaItemCount: Int,
     previousAvailable: Boolean,
     nextAvailable: Boolean,
+    clearAvailable: Boolean,
 ): VexStreamQueueState {
     require(
         mediaItemCount >= 0,
@@ -103,6 +113,8 @@ internal fun vexStreamQueueState(
             previousAvailable,
         nextAvailable =
             nextAvailable,
+        clearAvailable =
+            clearAvailable,
     )
 }
 

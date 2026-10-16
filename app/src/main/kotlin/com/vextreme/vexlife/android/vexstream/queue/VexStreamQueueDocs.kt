@@ -5,27 +5,30 @@ package com.vextreme.vexlife.android.vexstream.queue
  *
  * Search this symbol when asking:
  *
- * "Can I move to the previous or next item in the current VexStream queue?"
+ * "What can I do with the current ordered VexStream queue?"
+ *
+ * Current admitted questions are:
+ * - can I move to the previous item?
+ * - can I move to the next item?
+ * - can I clear the current queue?
  *
  * This class is documentation/navigation only. It owns no Media3 queue, player lifetime, rendered
  * queue-item identity, or Compose state.
  *
  * ## What is true?
  *
- * [VexStreamQueueState] distinguishes an empty queue from a non-empty queue and carries only the
- * provider-derived neighboring-item availability needed by this behavior.
+ * [VexStreamQueueState] distinguishes Empty from NonEmpty and carries only provider-derived
+ * availability required by the admitted Queue controls.
  *
  * ## What can the listener request?
  *
- * [VexStreamQueueControl.Previous] and [VexStreamQueueControl.Next].
+ * [VexStreamQueueControl.Previous], [VexStreamQueueControl.Next], and
+ * [VexStreamQueueControl.Clear].
  *
- * ## What do those Controls mean?
+ * ## What does Clear mean before provider observation?
  *
- * [VexStreamQueueAct.Previous] and [VexStreamQueueAct.Next].
- *
- * ## What should runtime attempt?
- *
- * [VexStreamQueueEffect.SeekPrevious] and [VexStreamQueueEffect.SeekNext].
+ * Clear selects [VexStreamQueueEffect.ClearQueue] but the relationship deliberately uses stay().
+ * Effect attempts the mutation; State does not claim Empty until Media3 actually reports no items.
  *
  * ## Who talks to Media3?
  *
@@ -34,14 +37,14 @@ package com.vextreme.vexlife.android.vexstream.queue
  *
  * ## What should Compose depend on?
  *
- * [VexStreamQueueExperience]. Mini Player and Context Dock consume the same Queue Projection and
- * activate the same Controls instead of each interpreting MediaController predicates themselves.
+ * [VexStreamQueueExperience]. Mini Player, Context Dock, and Queue presentation consume the same
+ * Queue Projection / Controls where those controls apply.
  *
  * ## What is deliberately NOT in this family?
  *
  * Queue-row selection still carries an index request payload. Reorder carries dynamic item identity.
- * Shuffle, repeat and clear are separate questions. The accepted Behavior kernel explicitly holds a
- * generic request-payload abstraction, so this slice does not invent one merely to absorb nearby
+ * Shuffle and repeat remain separate questions. The accepted Behavior kernel explicitly holds a
+ * generic request-payload abstraction, so this family does not invent one merely to absorb nearby
  * Queue mechanics.
  *
  * Playback remains the sibling [com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDocs]
