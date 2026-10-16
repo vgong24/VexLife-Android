@@ -122,7 +122,8 @@ internal fun VexConversationRoom(
                     ),
                 verticalArrangement =
                     Arrangement.spacedBy(
-                        8.dp,
+                        space = 8.dp,
+                        alignment = Alignment.Bottom,
                     ),
                 emptyContent = {
                     VexText(
