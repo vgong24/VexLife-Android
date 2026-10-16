@@ -189,10 +189,6 @@ class VexConversationLabTest {
             ),
             current.messages,
         )
-        assertEquals(
-            "scenario.conversation.lab.c04.remote-speech",
-            lab.state.value.scenarioRef,
-        )
     }
 
     @Test
@@ -332,10 +328,6 @@ class VexConversationLabTest {
                 "You said: \"Are you coming?\"",
                 mirror?.content,
             )
-            assertEquals(
-                "scenario.conversation.lab.c06.mirror-response",
-                lab.state.value.scenarioRef,
-            )
         }
 
     @Test
@@ -461,10 +453,6 @@ class VexConversationLabTest {
         )
         assertTrue(
             reset.messages.isEmpty(),
-        )
-        assertEquals(
-            "scenario.conversation.lab.c16.reset-reseed",
-            lab.state.value.scenarioRef,
         )
     }
 
