@@ -138,7 +138,7 @@ firstObserved
 lastObservedFailure
 lastReproductionAttempt
 proofSurface
-hardeningCandidate
+hardeningRef
 hardeningState
 recurrenceRule
 ~~~
@@ -180,8 +180,11 @@ failureRootCause = UNKNOWN
 observabilityGapRootCause =
     failed connected task prevented downstream result inspection
 
-hardeningCandidate = PR #100
-hardeningState = CANDIDATE
+hardeningRef =
+    PR #100
+    merge 3300af257c2ad54f3677e1e8b92cafce32212bf1
+
+hardeningState = LANDED
 ~~~
 
 Record:
