@@ -98,19 +98,6 @@ internal fun VexStreamLibrarySurface(
             )
         }
 
-    var queueShuffleSelected by rememberSaveable {
-        mutableStateOf(false)
-    }
-    fun toggleQueueShuffleSelection() {
-        if (queueShuffleSelected) {
-            queueShuffleSelected = false
-        } else if (
-            controller?.shuffleVexStreamQueue() == true
-        ) {
-            queueShuffleSelected = true
-        }
-    }
-
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
@@ -183,11 +170,6 @@ internal fun VexStreamLibrarySurface(
                                 playbackExperience,
                             ),
                         runtime = runtime,
-                        shuffleSelected =
-                            queueShuffleSelected,
-                        onShuffle = {
-                            toggleQueueShuffleSelection()
-                        },
                     )
                 }
 
@@ -199,11 +181,6 @@ internal fun VexStreamLibrarySurface(
                                 playbackExperience,
                             ),
                         runtime = runtime,
-                        shuffleSelected =
-                            queueShuffleSelected,
-                        onShuffle = {
-                            toggleQueueShuffleSelection()
-                        },
                     )
                 }
             }
@@ -301,10 +278,6 @@ internal fun VexStreamLibrarySurface(
             playback = playback,
             controller = controller,
             runtime = runtime,
-            shuffleSelected = queueShuffleSelected,
-            onShuffle = {
-                toggleQueueShuffleSelection()
-            },
         )
     }
 

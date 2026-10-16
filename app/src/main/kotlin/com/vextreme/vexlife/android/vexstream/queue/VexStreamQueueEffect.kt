@@ -13,6 +13,9 @@ sealed interface VexStreamQueueEffect :
     data object SeekNext :
         VexStreamQueueEffect
 
+    data object ShuffleFuture :
+        VexStreamQueueEffect
+
     data object ClearQueue :
         VexStreamQueueEffect
 }

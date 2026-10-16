@@ -36,7 +36,7 @@ WHAT IS PLAYBACK DOING?
 
 WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
-    -> Previous / Next / Clear through Queue State / Control / Act / Effect
+    -> Previous / Next / Shuffle / Clear through Queue State / Control / Act / Effect
     -> Media3VexStreamQueueConnection
 
 WHAT DOES THE LISTENER SEE?
@@ -63,7 +63,7 @@ vexstream/playback/
     Behavior family + concrete Media3 Connection + UI Experience membrane
 
 vexstream/queue/
-    human question: Previous / Next / Clear from current queue truth
+    human question: Previous / Next / Shuffle / Clear from current queue truth
     Behavior family + concrete Media3 Connection + UI Experience membrane
 
 media/vexstream/
@@ -99,8 +99,9 @@ their States simply because Mini Player displays both.
 ## Current Queue boundary
 
 Previous / Next are shared semantic Controls consumed by Mini Player and Context Dock.
-Clear is the same Queue family question and is consumed by Queue presentation through the same
-current-truth Connection.
+Shuffle is the same Queue family question and is consumed as a one-shot action by Mini Player and
+Queue presentation; it has no persistent selected state.
+Clear is consumed by Queue presentation through the same current-truth Connection.
 
 Still deliberately outside the Queue Behavior family:
 
@@ -111,9 +112,8 @@ queue-row selection
 reorder
     carries dynamic queue-item identity
 
-shuffle
 repeat
-    separate semantic questions not absorbed merely because they are Queue-adjacent
+    separate semantic question not absorbed merely because it is Queue-adjacent
 ~~~
 
 The accepted Behavior foundation still holds a generic runtime-request-payload abstraction. Do not
