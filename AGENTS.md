@@ -21,6 +21,10 @@ The front door should stay small. Architecture belongs with its owning building 
 
 ## Common contribution routes
 
+- **New product feature or major feature evolution:** start with `docs/features/README.md`.
+  Describe the human situation/current truth/missing question before new taxonomy, check established
+  development vocabulary before minting Vex-specific nouns, and keep one durable feature home current.
+  Existing features are worked examples, not mandatory source skeletons.
 A contributor should not need to learn testing-framework internals before changing product code.
 
 - **New Screen or interaction:** start with the owning `*Screen.kt`, then follow

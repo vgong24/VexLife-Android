@@ -36,6 +36,8 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -95,6 +97,12 @@ private fun VexStreamContextDockContent(
         playbackExperience
             .displayState
             .playback
+    val queueExperience =
+        rememberVexStreamQueueExperience(
+            controller,
+        )
+    val queueProjection =
+        queueExperience.projection
 
     var scrubFraction by
         remember(
@@ -184,16 +192,19 @@ private fun VexStreamContextDockContent(
                             .vexstream_music_previous,
                     ),
                 enabled =
-                    controller
-                        ?.hasPreviousMediaItem() ==
-                        true,
+                    queueProjection
+                        ?.get(
+                            VexStreamQueueControl.Previous,
+                        )
+                        ?.isAvailable == true,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =
                         "presentation.context-dock.vexstream.previous",
                 )
-                controller
-                    ?.seekToPreviousMediaItem()
+                queueExperience.activate(
+                    VexStreamQueueControl.Previous,
+                )
             }
             VexStreamDockIconButton(
                 icon =
@@ -223,16 +234,19 @@ private fun VexStreamContextDockContent(
                             .vexstream_music_next,
                     ),
                 enabled =
-                    controller
-                        ?.hasNextMediaItem() ==
-                        true,
+                    queueProjection
+                        ?.get(
+                            VexStreamQueueControl.Next,
+                        )
+                        ?.isAvailable == true,
             ) {
                 runtime.recordDynamicInteraction(
                     subjectRef =
                         "presentation.context-dock.vexstream.next",
                 )
-                controller
-                    ?.seekToNextMediaItem()
+                queueExperience.activate(
+                    VexStreamQueueControl.Next,
+                )
             }
         }
 

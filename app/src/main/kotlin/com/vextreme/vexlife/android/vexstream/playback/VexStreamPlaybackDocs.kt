@@ -81,9 +81,10 @@ package com.vextreme.vexlife.android.vexstream.playback
  * owners. There is no generic Host abstraction to learn: this concrete Connection simply uses the
  * rightful Android lifetime owner it needs.
  *
- * The raw MediaController remains an explicit temporary UI escape for Previous / Next / Seek /
- * Shuffle and other transport work that this PR intentionally has not migrated into Behavior.
- * Do not hide that held debt inside the Experience merely to make the membrane look cleaner.
+ * Previous / Next now belong to the sibling Queue Behavior family. The raw MediaController remains
+ * an explicit temporary UI escape for Seek / Shuffle and other transport work that has not yet
+ * earned its own Behavior boundary. Do not hide held debt inside Playback merely to make this
+ * membrane look cleaner.
  *
  * ## How is provider latency reconciled?
  *

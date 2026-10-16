@@ -1,0 +1,175 @@
+# VexStream — Android feature home
+
+[VXG RealForever]
+
+## Human outcome
+
+A listener comes to VexStream in VexLife to browse music known by VexStream, connect that music to a
+playable source, listen through the phone, understand what is playing/coming next, and keep verified
+media locally where the admitted product flow supports it.
+
+This file is the **whole-feature orientation home**. It is not a runtime owner and there is no broad
+`VexStreamExperience` object merely to mirror this document.
+
+Repository feature-authoring context:
+
+- `docs/features/README.md`
+- `docs/foundation/FEATURE-EXPERIENCE-LANGUAGE.md`
+
+## Human question map
+
+~~~text
+WHAT MUSIC IS KNOWN?
+    data/vexstream
+    -> VexStreamMusicRepository + track/collection state
+
+WHERE CAN MEDIA COME FROM?
+    verified local copy
+    paired VexStream desktop
+    admitted remote routes
+    -> repository/source-resolution/network owners
+
+WHAT IS PLAYBACK DOING?
+    vexstream/playback
+    -> Playback State / Control / Act / Effect
+    -> Media3VexStreamPlaybackConnection
+
+CAN I MOVE TO THE PREVIOUS OR NEXT QUEUE ITEM?
+    vexstream/queue
+    -> Queue State / Control / Act / Effect
+    -> Media3VexStreamQueueConnection
+
+WHAT DOES THE LISTENER SEE?
+    screens/shared/vexstream
+    -> Android Compose/VexCompose presentation
+
+WHO OWNS PLAYER LIFETIME?
+    media/vexstream/VexStreamPlaybackService
+    -> MediaSession / ExoPlayer lifetime
+
+WHAT PROVES THE HUMAN WALK?
+    journeyTest/.../VexStreamJourneys.kt
+~~~
+
+## Current source map
+
+~~~text
+data/vexstream/
+    catalog/library/source/offline/pairing truth and repositories
+    README.md preserves producer/consumer and security boundaries
+
+vexstream/playback/
+    human question: Play / Pause from current playback truth
+    Behavior family + concrete Media3 Connection + UI Experience membrane
+
+vexstream/queue/
+    human question: Previous / Next from current queue truth
+    Behavior family + concrete Media3 Connection + UI Experience membrane
+
+media/vexstream/
+    Android MediaSession/player/network realization
+
+screens/shared/vexstream/
+    Android presentation
+    connection / track / collection / player / queue surfaces
+
+journeyTest/.../vexstream/
+    integrated human interaction proof
+~~~
+
+The folders are not required to be symmetrical. A source area exists when its human/product question
+and owner are real.
+
+## Playback and Queue are siblings, not one giant player State
+
+Playback asks:
+
+> What is the current media being asked to do?
+
+Queue currently asks:
+
+> Can the listener move to the previous or next item in the current ordered media context?
+
+They are near each other in the UI but remain independent Behavior families. Do not cross-multiply
+their States simply because Mini Player displays both.
+
+## Current Queue boundary
+
+Previous / Next are shared semantic Controls consumed by Mini Player and Context Dock.
+
+Still deliberately outside the Queue Behavior family:
+
+~~~text
+queue-row selection
+    carries an index request payload
+
+reorder
+    carries dynamic queue-item identity
+
+shuffle
+repeat
+clear
+    separate semantic questions not absorbed merely because they are Queue-adjacent
+~~~
+
+The accepted Behavior foundation still holds a generic runtime-request-payload abstraction. Do not
+invent one just to migrate queue-row selection.
+
+## Dynamic Android presentation identity
+
+`screens/shared/vexstream/VexStreamPresentationRefs.kt` is private Android
+presentation/testing machinery for dynamic rendered items.
+
+It is **not** the VexStream feature entry, Queue truth, Track domain identity, provider state, or a
+generic Vex architecture.
+
+A developer beginning from Queue should first understand Queue and only descend into that helper when
+working on the exact rendered-item / Journey / interaction-subject addressing problem.
+
+If the helper grows because unrelated product areas merely share String-building mechanics, keep the
+technical-junk-drawer smell visible and prefer established terms/feature-local placement when a real
+change creates a natural opportunity.
+
+## Naming / source-formation law
+
+Before adding another durable VexStream noun:
+
+~~~text
+human situation
+-> current truth / owner
+-> missing question
+-> relationships + boundary
+-> established development vocabulary
+-> existing rightful home
+-> name
+-> minimum source
+-> proof
+~~~
+
+Do not promote an implementation limitation into product vocabulary.
+
+## Current proof shape
+
+Use focused JVM tests for Behavior meaning, repository-owned aggregate verification for source
+integration, connected-device/Journey proof for Media3/Android interaction, and lived review for
+product feel.
+
+Current canonical Journey:
+
+`app/src/journeyTest/kotlin/com/vextreme/vexlife/android/testing/journey/catalog/shared/vexstream/VexStreamJourneys.kt`
+
+## Historical architecture quarry
+
+Draft PR #80 and PR #81 explored earlier VexArchitecture / Case / Placement / generic Media Player
+contracts.
+
+Their useful human-first lessons are consumed here and in the repository feature-authoring docs.
+Their separate Case/Placement/Transition kernel is not current authority because accepted
+`architecture:behavior` now owns State / Control / Act / Effect semantics with fewer overlapping
+framework nouns.
+
+Do not resurrect the old V2 monolithic `VexStreamLibrarySurface.kt` while borrowing those lessons.
+Current main intentionally decomposes connection, track, collection, player, queue, and search
+presentation into their current owners.
+
+<!-- [VXG RealForever][VEXSTREAM][FEATURE-HOME] -->
