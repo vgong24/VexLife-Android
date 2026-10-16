@@ -114,12 +114,14 @@ VexStreamPlaybackDocs
 VexStreamQueueDocs
 ~~~
 
-Playback answers Play/Pause. Queue independently answers Previous/Next/Clear. Their separation is
-semantic: nearby media-player controls do not become one Behavior family merely because the UI
-displays them together.
+Playback answers Play/Pause. Queue independently answers Previous/Next/Shuffle/Clear. Their
+separation is semantic: nearby media-player controls do not become one Behavior family merely
+because the UI displays them together.
 
-Queue Clear also demonstrates the truth law: requesting a provider mutation can legitimately
-`.stay()` in the current State kind until provider observation earns a different truth.
+Queue Shuffle demonstrates that a one-shot action should not acquire fake persistent UI state merely
+because the rendering API supports a selected treatment. Queue Clear demonstrates the truth law:
+requesting a provider mutation can legitimately `.stay()` in the current State kind until provider
+observation earns a different truth.
 
 ## Experience membrane
 

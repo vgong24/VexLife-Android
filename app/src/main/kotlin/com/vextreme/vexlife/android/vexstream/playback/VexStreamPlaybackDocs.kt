@@ -81,9 +81,9 @@ package com.vextreme.vexlife.android.vexstream.playback
  * owners. There is no generic Host abstraction to learn: this concrete Connection simply uses the
  * rightful Android lifetime owner it needs.
  *
- * Previous / Next now belong to the sibling Queue Behavior family. The raw MediaController remains
- * an explicit temporary UI escape for Seek / Shuffle and other transport work that has not yet
- * earned its own Behavior boundary. Do not hide held debt inside Playback merely to make this
+ * Previous / Next / Shuffle now belong to the sibling Queue Behavior family. The raw MediaController
+ * remains an explicit temporary UI escape for Seek and payload-bearing transport work that has not
+ * yet earned its own Behavior boundary. Do not hide held debt inside Playback merely to make this
  * membrane look cleaner.
  *
  * ## How is provider latency reconciled?
@@ -128,8 +128,8 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * ## What is intentionally still outside this family?
  *
- * Queue, seek, shuffle, repeat, media loading/source selection, generic UIElement binding, and
- * higher convergence are not silently owned by Playback merely because they are nearby.
+ * Queue, seek, repeat, media loading/source selection, generic UIElement binding, and higher
+ * convergence are not silently owned by Playback merely because they are nearby.
  *
  * If one of those becomes an independently meaningful behavioral question, it may earn a sibling
  * package/family rather than making Playback grow forever.

@@ -93,8 +93,6 @@ internal fun VexStreamQueueSheet(
     playback: VexStreamPlaybackReadState,
     controller: androidx.media3.session.MediaController?,
     runtime: VexRuntime,
-    shuffleSelected: Boolean,
-    onShuffle: () -> Unit,
 ) {
     val queueExperience =
         rememberVexStreamQueueExperience(
@@ -169,7 +167,9 @@ internal fun VexStreamQueueSheet(
                     runtime.activate(
                         element,
                     )
-                    onShuffle()
+                    queueExperience.activate(
+                        VexStreamQueueControl.Shuffle,
+                    )
                 }
 
                 VexStreamMusicScreen.ToggleRepeat -> {
@@ -232,8 +232,12 @@ internal fun VexStreamQueueSheet(
                 VexIconButton(
                     element = VexStreamMusicScreen.QueueShuffle,
                     handler = handler,
-                    enabled = controller != null,
-                    selected = shuffleSelected,
+                    enabled =
+                        queueProjection
+                            ?.get(
+                                VexStreamQueueControl.Shuffle,
+                            )
+                            ?.isAvailable == true,
                 )
                 VexIconButton(
                     element = VexStreamMusicScreen.ToggleRepeat,

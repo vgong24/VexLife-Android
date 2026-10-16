@@ -37,6 +37,16 @@ internal fun vexStreamQueueBehavior():
             }.stay()
 
             on(
+                act = VexStreamQueueAct.Shuffle,
+                effect =
+                    VexStreamQueueEffect.ShuffleFuture,
+                conditionName =
+                    "shuffle-available",
+            ) { current ->
+                current.shuffleAvailable
+            }.stay()
+
+            on(
                 act = VexStreamQueueAct.Clear,
                 effect =
                     VexStreamQueueEffect.ClearQueue,

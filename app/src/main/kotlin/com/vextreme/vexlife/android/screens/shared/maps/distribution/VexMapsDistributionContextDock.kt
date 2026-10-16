@@ -362,7 +362,7 @@ internal fun vexMapsDistributionContextDockPage(
                     )
                 }
 
-                is VexMapsDeliveryRouteState.ReturningToStartToStart ->
+                is VexMapsDeliveryRouteState.ReturningToStart ->
                     Text(
                         stringResource(
                             R.string

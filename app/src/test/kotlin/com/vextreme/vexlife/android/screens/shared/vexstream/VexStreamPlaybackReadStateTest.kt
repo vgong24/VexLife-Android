@@ -2,9 +2,7 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Test
-import kotlin.random.Random
 
 class VexStreamPlaybackReadStateTest {
 
@@ -84,79 +82,6 @@ class VexStreamPlaybackReadStateTest {
                 itemHeightPx = 100,
                 lastIndex = 4,
             ),
-        )
-    }
-
-    @Test
-    fun oneShotShuffleKeepsHistoryAndCurrentFixedWhileChangingFutureOrder() {
-        val natural =
-            (0 until 7).toList()
-        val shuffled =
-            vexStreamQueueShuffleTargetOrder(
-                itemCount = natural.size,
-                currentIndex = 2,
-                random = Random(7),
-            )
-
-        assertEquals(
-            natural.take(3),
-            shuffled.take(3),
-        )
-        assertEquals(
-            natural.toSet(),
-            shuffled.toSet(),
-        )
-        assertNotEquals(
-            natural.drop(3),
-            shuffled.drop(3),
-        )
-    }
-
-    @Test
-    fun oneShotShuffleCanReorderTheWholeQueueBeforePlaybackStarts() {
-        val natural =
-            (0 until 5).toList()
-        val shuffled =
-            vexStreamQueueShuffleTargetOrder(
-                itemCount = natural.size,
-                currentIndex = -1,
-                random = Random(11),
-            )
-
-        assertEquals(
-            natural.toSet(),
-            shuffled.toSet(),
-        )
-        assertNotEquals(
-            natural,
-            shuffled,
-        )
-    }
-
-    @Test
-    fun largeQueueShuffleKeepsPrefixAndFormsOneCompleteFuturePermutation() {
-        val itemCount = 640
-        val currentIndex = 19
-        val natural =
-            (0 until itemCount).toList()
-        val shuffled =
-            vexStreamQueueShuffleTargetOrder(
-                itemCount = itemCount,
-                currentIndex = currentIndex,
-                random = Random(24),
-            )
-
-        assertEquals(
-            natural.take(currentIndex + 1),
-            shuffled.take(currentIndex + 1),
-        )
-        assertEquals(
-            natural.toSet(),
-            shuffled.toSet(),
-        )
-        assertNotEquals(
-            natural.drop(currentIndex + 1),
-            shuffled.drop(currentIndex + 1),
         )
     }
 

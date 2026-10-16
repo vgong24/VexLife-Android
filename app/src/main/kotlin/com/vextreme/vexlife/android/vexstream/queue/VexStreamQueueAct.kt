@@ -13,6 +13,10 @@ sealed interface VexStreamQueueAct :
     data object Next :
         VexStreamQueueAct
 
+    /** Randomize only the still-future queue while preserving already-played/current placement. */
+    data object Shuffle :
+        VexStreamQueueAct
+
     data object Clear :
         VexStreamQueueAct
 }

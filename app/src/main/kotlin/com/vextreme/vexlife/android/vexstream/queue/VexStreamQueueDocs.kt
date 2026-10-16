@@ -10,6 +10,7 @@ package com.vextreme.vexlife.android.vexstream.queue
  * Current admitted questions are:
  * - can I move to the previous item?
  * - can I move to the next item?
+ * - can I reshuffle the still-future queue?
  * - can I clear the current queue?
  *
  * This class is documentation/navigation only. It owns no Media3 queue, player lifetime, rendered
@@ -22,8 +23,19 @@ package com.vextreme.vexlife.android.vexstream.queue
  *
  * ## What can the listener request?
  *
- * [VexStreamQueueControl.Previous], [VexStreamQueueControl.Next], and
- * [VexStreamQueueControl.Clear].
+ * [VexStreamQueueControl.Previous], [VexStreamQueueControl.Next],
+ * [VexStreamQueueControl.Shuffle], and [VexStreamQueueControl.Clear].
+ *
+ * ## What does Shuffle mean?
+ *
+ * Shuffle is a one-shot Queue action, not a selected/persistent mode.
+ *
+ * [VexStreamQueueEffect.ShuffleFuture] preserves already-played items and the current item, then
+ * randomizes only the future queue. The Control is available only when at least two future items
+ * exist and Media3 currently permits playlist mutation.
+ *
+ * The relationship uses stay(): queue order changes, but the admitted State kind remains NonEmpty
+ * until provider observation supplies the next current projection.
  *
  * ## What does Clear mean before provider observation?
  *
@@ -43,7 +55,7 @@ package com.vextreme.vexlife.android.vexstream.queue
  * ## What is deliberately NOT in this family?
  *
  * Queue-row selection still carries an index request payload. Reorder carries dynamic item identity.
- * Shuffle and repeat remain separate questions. The accepted Behavior kernel explicitly holds a
+ * Repeat remains a separate semantic question. The accepted Behavior kernel explicitly holds a
  * generic request-payload abstraction, so this family does not invent one merely to absorb nearby
  * Queue mechanics.
  *
