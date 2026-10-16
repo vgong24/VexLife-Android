@@ -12,8 +12,8 @@ Current state:
 
 ~~~text
 foundation = TERMINAL_ACCEPTED_CURRENT on Android main
-feature-owned Conversation Lab controller = DRAFT on PR #99
-product-shaped room renderer = DRAFT on PR #99
+feature-owned Conversation Lab controller = ACCEPTED ON MAIN / PR #99
+generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
 production Screen / app-session wiring = HELD on shared composition paths
 real Home adapter = HELD on authenticated cross-generation history exposure
 ~~~
@@ -428,7 +428,7 @@ The admitted speaker is provider fixture input. The request cannot override it.
 
 ## First visible Conversation Lab construction
 
-PR #99 is the first implementation consumer of the accepted visible-Conversation design.
+PR #99 is the accepted first implementation consumer of the visible-Conversation design.
 
 Feature-owned synthetic conditions:
 
@@ -713,9 +713,9 @@ No VexExecutionTestRule is used because no Conversation VexExecution consumer ex
 The accepted Conversation foundation deliberately did not modify AppRepositories, VexLifeSession,
 TalkToVexScreen, TalkToVexJourneys, VexRuntime, or VexTestEngine.
 
-PR #99 now advances feature-local lab/presentation construction while keeping shared app/data,
-Debug Menu and Journey integration separate. Parallel Android work still changes some of those
-composition paths.
+PR #99 landed the feature-local Lab / fixture / generic-room / Preview slice while keeping shared
+app/data, Debug Menu and Journey integration separate. Parallel Android work still changes some of
+those composition paths.
 
 When the exact shared paths reconcile, integrate one app/session-owned Conversation repository and
 the Debug Menu doorway through the established Screen/action-registration shape. Do not replay the
