@@ -12,7 +12,9 @@ Current state:
 
 ~~~text
 foundation = TERMINAL_ACCEPTED_CURRENT on Android main
-production Screen wiring = HELD
+feature-owned Conversation Lab controller = DRAFT on PR #99
+product-shaped room renderer = DRAFT on PR #99
+production Screen / app-session wiring = HELD on shared composition paths
 real Home adapter = HELD on authenticated cross-generation history exposure
 ~~~
 
@@ -75,6 +77,8 @@ conversation/
 ├── VexConversationRepository.kt
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
+├── VexConversationLabFixture.kt
+├── VexConversationLab.kt
 ├── VexConversationDocs.kt
 ├── README.md
 └── design/
@@ -89,6 +93,7 @@ Tests:
 VexConversationStateTest
 InMemoryVexFamilyConversationRepositoryTest
 VexConversationSurfaceProjectionTest
+VexConversationLabTest
 ~~~
 
 ## Generic Conversation identity
@@ -421,6 +426,50 @@ It is not a product membership mutation API.
 
 The admitted speaker is provider fixture input. The request cannot override it.
 
+## First visible Conversation Lab construction
+
+PR #99 is the first implementation consumer of the accepted visible-Conversation design.
+
+Feature-owned synthetic conditions:
+
+~~~text
+VexConversationLab
+    deterministic Family-room seed/reset
+    add/remove participant -> successor Family generation/channel
+    remote provider-authored speech
+    [Speaker]{message} debug injection resolves only known fixture labels
+    optional mirror only after an accepted Victor Send
+    Home / Companion availability as lab inputs outside Conversation state
+~~~
+
+Product-shaped rendering:
+
+~~~text
+screens/shared/conversation/VexConversationRoom.kt
+    generic Conversation projection/rendering only
+    stable dynamic message identity = messageRef
+    human labels supplied by presentation/identity owner
+    optional developer-environment label
+    no second room-state model
+    generic room does NOT choose Family Send semantics
+    owning Screen supplies the durable composer/control content
+
+screens/shared/conversation/VexConversationRoomPreview.kt
+    Lab + Family-specific visual pressure only
+    local raw composer is explicitly not the production action contract
+~~~
+
+The room renderer is intentionally not a registered app Screen yet. A real Screen needs the same
+app/session-owned Conversation repository instance to cross the existing render bridge. Current
+shared app/data composition paths are being changed by other active Android work, so PR #99 keeps
+that exact integration effect held instead of constructing a Compose-owned repository or Debug
+singleton.
+
+~~~text
+FEATURE_LOCAL_CONSTRUCTION != APP_GRAPH_INTEGRATION
+VISIBLE_COMPONENT != REGISTERED_PRODUCTION_SCREEN
+~~~
+
 ## Generic/direct Conversation is represented, not overclaimed
 
 Current generic state can represent a direct human <-> Companion Conversation:
@@ -661,13 +710,16 @@ No VexExecutionTestRule is used because no Conversation VexExecution consumer ex
 
 ## Production app integration held
 
-PR #89 deliberately does not modify AppRepositories, VexLifeSession, TalkToVexScreen,
-TalkToVexJourneys, VexRuntime, or VexTestEngine.
+The accepted Conversation foundation deliberately did not modify AppRepositories, VexLifeSession,
+TalkToVexScreen, TalkToVexJourneys, VexRuntime, or VexTestEngine.
 
-Parallel Android work still occupies shared app/runtime/Journey paths.
+PR #99 now advances feature-local lab/presentation construction while keeping shared app/data,
+Debug Menu and Journey integration separate. Parallel Android work still changes some of those
+composition paths.
 
-When the shared Android paths and remaining thread-history producer predicate clear, use the
-established VexStream dependency/test shape.
+When the exact shared paths reconcile, integrate one app/session-owned Conversation repository and
+the Debug Menu doorway through the established Screen/action-registration shape. Do not replay the
+feature locally through a second repository just to avoid coordination.
 
 ## Deliberate holds
 
@@ -684,9 +736,16 @@ WHY:
     no real direct write provider contract has been consumed
 
 HELD:
-    production Screen / Compose wiring
+    production Screen / app-session wiring
 WHY:
-    real dependency graph/shared paths remain occupied
+    feature-local lab/room construction exists, but shared app/data composition must be reconciled
+    before one repository instance can reach the registered Screen render bridge
+
+HELD:
+    Debug Menu Conversation Lab doorway
+WHY:
+    feature-specific lab semantics now exist; shared Debug/AppAction composition remains a separate
+    integration seam and must not absorb those semantics
 
 HELD:
     Journey integration
@@ -723,11 +782,20 @@ A fresh worker should be able to answer:
 
 ## Next edge
 
-Resume when one of these predicates changes:
+Current implementation edge:
+
+~~~text
+prove PR #99 exact feature-local lab + room source
+-> reconcile app/session repository ownership
+-> register the real Conversation Screen
+-> connect Debug Menu doorway to feature-owned Lab controls
+-> add Journey/device proof only for the visible controls actually admitted
+~~~
+
+Independent future predicates remain:
 
 ~~~text
 authenticated Family thread history is exposed through the accepted server authority chain
-AppRepositories / Journey shared ownership clears
 Experience vocabulary is reconciled by its owner
 a real non-Family/direct write provider contract appears
 ~~~
