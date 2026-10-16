@@ -70,7 +70,7 @@ class VexConversationLabTest {
                 ),
         )
         assertTrue(
-            lab.state.value.simulationEnabled,
+            lab.state.value.syntheticProviderEnabled,
         )
     }
 
@@ -393,7 +393,7 @@ class VexConversationLabTest {
         }
 
     @Test
-    fun availabilityControlsDoNotRewriteConversationTruth() {
+    fun availabilityOverridesDoNotRewriteConversationTruthAndCanBeCleared() {
         val (repository, lab) =
             fixture()
         lab.seedFamilyRoom()
@@ -401,11 +401,13 @@ class VexConversationLabTest {
         val before =
             repository.state.value
 
-        lab.setHomeAvailability(
+        lab.overrideHomeAvailability(
             VexConversationHomeAvailability.Unavailable,
         )
-        lab.setCompanionAvailability(
-            VexConversationCompanionAvailability.Unavailable,
+        lab.overrideCompanionAvailability(
+            participantRef = vexRef,
+            availability =
+                VexConversationCompanionAvailability.Unavailable,
         )
 
         assertEquals(
@@ -414,11 +416,28 @@ class VexConversationLabTest {
         )
         assertSame(
             VexConversationHomeAvailability.Unavailable,
-            lab.state.value.homeAvailability,
+            lab.state.value.homeAvailabilityOverride,
         )
         assertSame(
             VexConversationCompanionAvailability.Unavailable,
-            lab.state.value.companionAvailability,
+            lab.state.value
+                .companionAvailabilityOverrides[vexRef],
+        )
+
+        lab.clearAvailabilityOverrides()
+
+        assertEquals(
+            before,
+            repository.state.value,
+        )
+        assertEquals(
+            null,
+            lab.state.value.homeAvailabilityOverride,
+        )
+        assertTrue(
+            lab.state.value
+                .companionAvailabilityOverrides
+                .isEmpty(),
         )
     }
 

@@ -14,6 +14,8 @@ Current state:
 foundation = TERMINAL_ACCEPTED_CURRENT on Android main
 feature-owned Conversation Lab controller = ACCEPTED ON MAIN / PR #99
 generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
+mixed-provenance Conversation behavior + Lab availability overrides = ACCEPTED ON MAIN / PR #104
+Hybrid Name Ontology / code vocabulary = ACCEPTED ON MAIN / PR #107
 production Screen / app-session wiring = HELD on shared composition paths
 real Home adapter = HELD on authenticated cross-generation history exposure
 ~~~
@@ -77,6 +79,7 @@ conversation/
 ├── VexConversationRepository.kt
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
+├── VexConversationHybridRelay.kt
 ├── VexConversationLabFixture.kt
 ├── VexConversationLab.kt
 ├── VexConversationDocs.kt
@@ -84,7 +87,9 @@ conversation/
 └── design/
     ├── README.md
     └── records/
-        └── 2026-10-15-001-visible-conversation-lab.md
+        ├── 2026-10-15-001-visible-conversation-lab.md
+        ├── 2026-10-16-002-live-truth-lab-perturbations.md
+        └── 2026-10-16-003-name-ontology-hybrid-relay.md
 ~~~
 
 Tests:
@@ -93,6 +98,7 @@ Tests:
 VexConversationStateTest
 InMemoryVexFamilyConversationRepositoryTest
 VexConversationSurfaceProjectionTest
+VexConversationHybridRelayTest
 VexConversationLabTest
 ~~~
 
@@ -439,7 +445,7 @@ VexConversationLab
     remote provider-authored speech
     [Speaker]{message} debug injection resolves only known fixture labels
     optional mirror only after an accepted Victor Send
-    Home / Companion availability as lab inputs outside Conversation state
+    explicit Home / Companion availability overrides outside Conversation state
 ~~~
 
 Product-shaped rendering:
@@ -469,6 +475,69 @@ singleton.
 FEATURE_LOCAL_CONSTRUCTION != APP_GRAPH_INTEGRATION
 VISIBLE_COMPONENT != REGISTERED_PRODUCTION_SCREEN
 ~~~
+
+## Hybrid relationship over observed truth and Lab overrides
+
+Conversation now reuses the accepted Compound Relay foundation for the question:
+
+> When Conversation truth, authenticated-participant truth, Home/Companion observations and
+> developer Lab overrides change independently, what do they mean together right now?
+
+~~~text
+Conversation repository -----\
+authenticated participant ----\
+Home availability ------------+-> VexConversationHybridRelay.processStates(...)
+Companion availability -------/
+Conversation Lab ------------/
+                                      |
+                                      v
+                           effective current facts
+                                      |
+                                      v
+                         VexConversationSurfaceProjection
+~~~
+
+The responsibilities are intentionally distinct:
+
+~~~text
+repository/provider
+    owns admitted Conversation truth
+
+Lab
+    owns explicit developer perturbations
+    and synthetic-provider controls
+
+Hybrid Relay
+    owns override precedence + retained current relationship
+
+Surface Projection
+    maps already-effective facts into UI-facing shape
+~~~
+
+~~~text
+CONVERGENCE != PROJECTION
+SOURCE_BINDING != LAB_PERTURBATION
+LAB_OVERRIDE != REPOSITORY_TRUTH
+~~~
+
+Availability overrides do not mutate `VexConversationState`. If a real observation changes while an
+override is active, clearing the override reveals that latest observation rather than restoring an old
+snapshot.
+
+Synthetic provider truth remains on the normal ingress path:
+
+~~~text
+Lab remote message
+-> InMemoryVexFamilyConversationRepository.publishThread(...)
+-> Conversation state changes
+-> Hybrid observes repository truth
+~~~
+
+The Relay does not manufacture messages, Family generations or provider admission.
+
+Developer/debug surfaces may use Hybrid provenance to explain whether an effective availability
+is `OBSERVED`, `LAB_OVERRIDE` or `UNOBSERVED` without adding debug flags to Conversation domain
+objects.
 
 ## Generic/direct Conversation is represented, not overclaimed
 
@@ -713,8 +782,11 @@ No VexExecutionTestRule is used because no Conversation VexExecution consumer ex
 The accepted Conversation foundation deliberately did not modify AppRepositories, VexLifeSession,
 TalkToVexScreen, TalkToVexJourneys, VexRuntime, or VexTestEngine.
 
-PR #99 landed the feature-local Lab / fixture / generic-room / Preview slice while keeping shared
-app/data, Debug Menu and Journey integration separate. Parallel Android work still changes some of
+PR #99 landed the feature-local Lab / fixture / generic-room / Preview slice. The accepted
+feature-local Hybrid refinement keeps the same discipline: it reuses VexCompoundRelay and does
+not claim shared app/session/Debug ownership.
+
+Shared app/data, Debug Menu and Journey integration remain separate. Parallel Android work still changes some of
 those composition paths.
 
 When the exact shared paths reconcile, integrate one app/session-owned Conversation repository and
@@ -785,9 +857,9 @@ A fresh worker should be able to answer:
 Current implementation edge:
 
 ~~~text
-prove PR #99 exact feature-local lab + room source
+prove the feature-local Conversation Hybrid / Lab-override refinement
 -> reconcile app/session repository ownership
--> register the real Conversation Screen
+-> register one real Conversation Screen over the same Hybrid output
 -> connect Debug Menu doorway to feature-owned Lab controls
 -> add Journey/device proof only for the visible controls actually admitted
 ~~~

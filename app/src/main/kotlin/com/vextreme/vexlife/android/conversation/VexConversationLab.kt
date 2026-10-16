@@ -7,18 +7,22 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Developer-only conditions that surround Conversation truth.
  *
- * Home/Companion availability are presentation/provider inputs already modeled outside
- * [VexConversationState]. Auto-mirror and selected remote speaker are laboratory behavior. None of
- * these fields become Conversation messages, Family membership, or production provider truth.
+ * Home/Companion availability are independently owned observations. The Lab may hold explicit
+ * overrides for those inputs, but it does not combine them with observed truth; that relationship
+ * belongs to [VexConversationConvergenceRelay].
+ *
+ * Synthetic-provider publication is a separate capability. It may be enabled while no availability
+ * override exists, and availability overrides may exist while a real provider remains canonical.
  */
 internal data class VexConversationLabState(
-    val simulationEnabled: Boolean = false,
-    val homeAvailability:
-        VexConversationHomeAvailability =
-        VexConversationHomeAvailability.Available,
-    val companionAvailability:
-        VexConversationCompanionAvailability =
-        VexConversationCompanionAvailability.Available,
+    val syntheticProviderEnabled: Boolean = false,
+    val homeAvailabilityOverride:
+        VexConversationHomeAvailability? = null,
+    val companionAvailabilityOverrides:
+        Map<
+            VexConversationParticipantRef,
+            VexConversationCompanionAvailability
+        > = emptyMap(),
     val autoMirror: Boolean = false,
     val remoteSpeakerRef:
         VexConversationParticipantRef =
@@ -78,7 +82,7 @@ internal class VexConversationLab(
         repository.publishThread(thread)
         mutableState.value =
             VexConversationLabState(
-                simulationEnabled = true,
+                syntheticProviderEnabled = true,
             )
 
         return thread
@@ -88,34 +92,74 @@ internal class VexConversationLab(
         VexConversationThreadState =
         seedFamilyRoom()
 
-    fun setSimulationEnabled(
+    fun setSyntheticProviderEnabled(
         enabled: Boolean,
     ) {
         updateLabState {
             copy(
-                simulationEnabled = enabled,
+                syntheticProviderEnabled = enabled,
             )
         }
     }
 
-    fun setHomeAvailability(
+    fun overrideHomeAvailability(
         availability:
             VexConversationHomeAvailability,
     ) {
         updateLabState {
             copy(
-                homeAvailability = availability,
+                homeAvailabilityOverride = availability,
             )
         }
     }
 
-    fun setCompanionAvailability(
+    fun clearHomeAvailabilityOverride() {
+        updateLabState {
+            copy(
+                homeAvailabilityOverride = null,
+            )
+        }
+    }
+
+    fun overrideCompanionAvailability(
+        participantRef:
+            VexConversationParticipantRef,
         availability:
             VexConversationCompanionAvailability,
     ) {
+        VexConversationLabFixture
+            .requireIdentity(
+                participantRef,
+            )
+
         updateLabState {
             copy(
-                companionAvailability = availability,
+                companionAvailabilityOverrides =
+                    companionAvailabilityOverrides +
+                        (participantRef to availability),
+            )
+        }
+    }
+
+    fun clearCompanionAvailabilityOverride(
+        participantRef:
+            VexConversationParticipantRef,
+    ) {
+        updateLabState {
+            copy(
+                companionAvailabilityOverrides =
+                    companionAvailabilityOverrides -
+                        participantRef,
+            )
+        }
+    }
+
+    fun clearAvailabilityOverrides() {
+        updateLabState {
+            copy(
+                homeAvailabilityOverride = null,
+                companionAvailabilityOverrides =
+                    emptyMap(),
             )
         }
     }
@@ -317,9 +361,9 @@ internal class VexConversationLab(
             state.value.remoteSpeakerRef,
     ): VexConversationMessage {
         check(
-            state.value.simulationEnabled,
+            state.value.syntheticProviderEnabled,
         ) {
-            "Conversation Lab simulation is not enabled"
+            "Conversation Lab synthetic provider is not enabled"
         }
 
         val trimmedContent =
