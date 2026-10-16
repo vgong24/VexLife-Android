@@ -857,12 +857,14 @@ A fresh worker should be able to answer:
 Current implementation edge:
 
 ~~~text
-prove the feature-local Conversation Hybrid / Lab-override refinement
--> reconcile app/session repository ownership
--> register one real Conversation Screen over the same Hybrid output
--> connect Debug Menu doorway to feature-owned Lab controls
+reconcile app/session repository ownership when the shared composition paths clear
+-> register one real Conversation Screen over the accepted Hybrid output
+-> connect Debug Menu doorway to the existing feature-owned Lab controls
 -> add Journey/device proof only for the visible controls actually admitted
 ~~~
+
+The feature-local Lab, mixed-provenance behavior, Hybrid Name Ontology and focused JVM/build proof are
+already accepted on main. Do not replay them merely because production app wiring remains held.
 
 Independent future predicates remain:
 

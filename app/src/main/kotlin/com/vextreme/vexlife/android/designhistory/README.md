@@ -71,7 +71,8 @@ designhistory/
 └── design/
     ├── README.md
     └── records/
-        └── 2026-10-15-001-fractal-feature-design-continuity.md
+        ├── 2026-10-15-001-fractal-feature-design-continuity.md
+        └── 2026-10-16-002-name-ontology-as-design-evidence.md
 ~~~
 
 Repository-wide authoring rules remain in:
@@ -120,7 +121,7 @@ DesignHistory does not currently define one shared runtime identity type. The fe
 anchor is sufficient for the first real consumers. A shared abstraction must be earned by repeated
 machine-level pressure.
 
-## Current first consumers
+## Current consumers
 
 ### Conversation
 
@@ -143,6 +144,29 @@ conversation/design/records/*
 Debug Menu is not currently promoted as a peer product feature identity. It demonstrates that a
 shared developer surface can preserve its own design while linking to feature-owned designs rather
 than duplicating them.
+
+### Name Ontology transfer
+
+DesignHistory now has a second reusable continuity lesson:
+
+~~~text
+cold-read durable name
+-> predict question / owner / consequence radius
+-> compare against source
+-> preserve material prediction gap
+-> rename only when the gap matters
+-> keep historical term searchable
+~~~
+
+The originating VexMaps Distribution record currently lives on active draft PR #86.
+
+Conversation independently transferred the method into accepted main through:
+~~~text
+conversation/design/records/2026-10-16-003-name-ontology-hybrid-relay.md
+VexConversationHybridRelay
+~~~
+
+The tag `[Name Ontology]` names the continuity method. It is not a central approved-word registry.
 
 ## Proof map
 
@@ -168,7 +192,11 @@ DesignHistory does not claim a user-visible runtime feature yet.
 
 ## Current next edge
 
-Prove the pattern through the first concrete POC, then return to building the visible Conversation
-Lab using the preserved Conversation design.
+The first POC is complete, the visible Conversation Lab/Hybrid work has landed, and Name Ontology has
+now transferred across independent feature pressure.
+
+Do not add another DesignHistory mechanism by symmetry. Continue only when another real continuity
+failure or repeated consumer pressure exposes a missing grammar, recovery path, or source-navigation
+need.
 
 <!-- [VXG RealForever][feature.vexlife.design-history][FEATURE-HOME] -->

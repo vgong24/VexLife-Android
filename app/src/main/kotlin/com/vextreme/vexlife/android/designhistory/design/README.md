@@ -4,8 +4,8 @@
 
 Feature ref: `feature.vexlife.design-history`  
 Current human name: **VexLife DesignHistory**  
-Last meaningfully updated: **2026-10-15T23:41-07:00**  
-Current design record: `records/2026-10-15-001-fractal-feature-design-continuity.md`
+Last meaningfully updated: **2026-10-16**  
+Current design record: `records/2026-10-16-002-name-ontology-as-design-evidence.md`
 
 ## What we are building
 
@@ -173,6 +173,53 @@ Debug Menu
 
 Success means meta/shared design remains composable without centralizing feature semantics.
 
+## Name Ontology — second transferred continuity pattern
+
+The first POC preserved continuity *after* a rename. A newer pressure preserves why a durable name was
+semantically misleading before the rename.
+
+Current method:
+
+~~~text
+hide implementation/KDoc
+-> cold-read the name
+-> predict question / owner / consequence radius
+-> inspect actual source/product relationship
+-> compare prediction with reality
+-> preserve the meaningful mismatch
+-> rename only when the gap matters
+-> retain historical search coordinates
+~~~
+
+This method is tagged:
+
+~~~text
+[Name Ontology]
+~~~
+
+It is not an approved-word registry and does not give DesignHistory naming authority over features.
+
+Current evidence:
+
+~~~text
+VexMaps Distribution PR #86
+    originating draft pressure
+    Delivery Route cold-read exercise
+
+Conversation accepted main
+    independent transfer
+    Convergence -> Hybrid correction
+    Surface candidate rejected as too narrow
+    historical names preserved in record #003
+~~~
+
+This proves a useful DesignHistory property:
+
+~~~text
+A name can be durable design evidence
+when its cold-reader prediction materially disagrees with its actual semantic boundary.
+~~~
+
 ## What the POC does not prove
 
 ~~~text
@@ -199,9 +246,11 @@ Those require additional consumers/pressure.
 
 ## Current next build
 
-Complete this first repository-native POC and prove its code anchors compile.
+The first repository-native POC is complete. Conversation has since used the preserved design to land
+its visible Lab, mixed-provenance Hybrid relationship and Name Ontology correction.
 
-Then use the preserved Conversation design as the input to the first visible Conversation Lab
-vertical slice.
+Do not invent an automatic index, naming linter, rename engine or central design registry merely
+because these patterns now exist. The next DesignHistory build should be triggered by another real
+continuity failure or repeated independent consumer need.
 
 <!-- [VXG RealForever][feature.vexlife.design-history][CURRENT-DESIGN] -->
