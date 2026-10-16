@@ -215,7 +215,7 @@ class VexConversationConvergenceRelayTest {
             ).companionAvailability,
         )
         assertSame(
-            VexConversationInputProvenance.OBSERVED,
+            VexConversationInputProvenance.UNOBSERVED,
             output.homeAvailabilityProvenance,
         )
         assertSame(
