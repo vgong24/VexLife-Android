@@ -237,6 +237,8 @@ tasks later; CI YAML must not become a second definition.
 
 Runs:
 - `:app:verifySourceAlignment`;
+- `:architecture:behavior:test`;
+- `:architecture:execution:test`;
 - `:architecture:elements:test`;
 - `:architecture:logging:test`;
 - `:architecture:relay:test`;

@@ -7,9 +7,9 @@ import org.gradle.api.tasks.bundling.Zip
 // collection, never feature semantics.
 
 // Code coverage communication is a projection of Kover truth, not another coverage engine.
-private const val VEX_COVERAGE_AWARENESS_THRESHOLD_PERCENT = 90.0
+val vexCoverageAwarenessThresholdPercent = 90.0
 
-private data class VexCoverageCounter(
+data class VexCoverageCounter(
     val missed: Long,
     val covered: Long,
 ) {
@@ -25,7 +25,7 @@ private data class VexCoverageCounter(
             }
 }
 
-private fun vexCoverageCounters(
+fun vexCoverageCounters(
     reportFile: java.io.File,
 ): Map<String, VexCoverageCounter> {
     val factory =
@@ -84,19 +84,19 @@ private fun vexCoverageCounters(
     return counters
 }
 
-private fun vexCoverageAwareness(
+fun vexCoverageAwareness(
     linePercent: Double,
 ): String =
     if (
         linePercent >=
-        VEX_COVERAGE_AWARENESS_THRESHOLD_PERCENT
+        vexCoverageAwarenessThresholdPercent
     ) {
         "GREEN"
     } else {
         "YELLOW"
     }
 
-private fun vexCoveragePercentText(
+fun vexCoveragePercentText(
     percent: Double,
 ): String =
     java.lang.String.format(
@@ -587,6 +587,10 @@ val vexCoverageSummary =
         description =
             "Publish one head-bound coverage summary with 90% awareness coloring."
 
+        notCompatibleWithConfigurationCache(
+            "Reads generated Kover XML and binds the summary to the current Git head.",
+        )
+
         dependsOn(
             "koverXmlReport",
             vexCoverageSummaryContract,
@@ -669,20 +673,26 @@ val vexCoverageSummary =
                                 it.readText()
                             }
                             .trim()
+                    val exit =
+                        process.waitFor()
                     if (
-                        process.waitFor() == 0 &&
-                        output.matches(
+                        exit != 0 ||
+                        !output.matches(
                             Regex(
                                 "[0-9a-fA-F]{40,64}",
                             ),
                         )
                     ) {
-                        output
-                    } else {
-                        "UNKNOWN"
+                        throw GradleException(
+                            "Coverage summary could not bind the current Git head.",
+                        )
                     }
-                }.getOrElse {
-                    "UNKNOWN"
+                    output
+                }.getOrElse { failure ->
+                    throw GradleException(
+                        "Coverage summary requires an exact Git head.",
+                        failure,
+                    )
                 }
 
             val markdown =
