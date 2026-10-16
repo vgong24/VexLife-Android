@@ -191,6 +191,64 @@ class VexConversationLabTest {
     }
 
     @Test
+    fun remoteInputUsesKnownHumanLabelWithoutMintingIdentity() {
+        val (repository, lab) =
+            fixture()
+        lab.seedFamilyRoom()
+
+        val message =
+            lab.publishRemoteInput(
+                "[Maya]{test message}",
+            )
+
+        assertEquals(
+            mayaRef,
+            message.speakerRef,
+        )
+        assertEquals(
+            "test message",
+            message.content,
+        )
+        assertEquals(
+            listOf(
+                message,
+            ),
+            requireNotNull(
+                repository
+                    .state
+                    .value
+                    .thread(
+                        VexConversationLabFixture.threadRef,
+                    ),
+            ).messages,
+        )
+    }
+
+    @Test
+    fun remoteInputRejectsUnknownSpeakerWithoutChangingConversationTruth() {
+        val (repository, lab) =
+            fixture()
+        lab.seedFamilyRoom()
+
+        val before =
+            repository.state.value
+        val failure =
+            runCatching {
+                lab.publishRemoteInput(
+                    "[Unknown]{do not mint me}",
+                )
+            }.exceptionOrNull()
+
+        assertTrue(
+            failure is IllegalArgumentException,
+        )
+        assertEquals(
+            before,
+            repository.state.value,
+        )
+    }
+
+    @Test
     fun victorSendStaysOnRepositoryContractAndMirrorArrivesOnlyAfterAcceptance() =
         runBlocking {
             val (repository, lab) =
