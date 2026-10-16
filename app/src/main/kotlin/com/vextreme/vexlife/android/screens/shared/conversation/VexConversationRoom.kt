@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -269,6 +270,12 @@ private fun ConversationComposer(
         "$semanticRootRef.composer"
     val sendRef =
         "$semanticRootRef.composer.send"
+    val composerModifier =
+        VexModifier
+            .weight(1f)
+            .vex(
+                composerRef,
+            )
 
     VexRow(
         id = "composer-row",
@@ -287,11 +294,7 @@ private fun ConversationComposer(
                 value = draft,
                 onValueChange = onDraftChange,
                 modifier =
-                    VexModifier
-                        .weight(1f)
-                        .vex(
-                            composerRef,
-                        ),
+                    composerModifier,
                 label = {
                     VexText(
                         id = "label",
