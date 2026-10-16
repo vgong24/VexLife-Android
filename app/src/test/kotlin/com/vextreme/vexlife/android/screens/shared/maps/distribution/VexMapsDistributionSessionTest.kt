@@ -600,7 +600,7 @@ class VexMapsDistributionSessionTest {
         }
 
     @Test
-    fun failedDurableClearPreservesDraftAndRunTruth() =
+    fun failedDurableClearPreservesDraftAndDeliveryRouteTruth() =
         runBlocking {
             val repository =
                 FailingClearRepository(

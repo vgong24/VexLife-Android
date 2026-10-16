@@ -15,7 +15,7 @@ import org.junit.Test
 
 class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
     @Test
-    fun nonEmptyRunRequestsOnlyModeReconciliationThenBecomesCoherent() =
+    fun nonEmptyDeliveryRouteRequestsOnlyModeReconciliationThenBecomesCoherent() =
         runBlocking {
             val mode =
                 VexMapsDistributionModeConnection()
@@ -34,7 +34,7 @@ class VexMapsDistributionModeDeliveryRouteConvergenceRelayTest {
                     this,
                 )
 
-                run.observeDraft(
+                deliveryRoute.observeDraft(
                     revision = 1L,
                     stopRefs =
                         listOf(
