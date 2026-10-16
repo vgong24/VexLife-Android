@@ -45,6 +45,22 @@ The journey coverage report names registered production semantics that no journe
 including the owning Screen where known. Use that as a discovery aid rather than maintaining a
 second checklist of every feature path.
 
+
+## PR current-state cleanliness
+
+For developmental PRs, keep one compact **current-state projection** in the PR body and update it in
+place when head/proof state materially changes. Routine commits and proof attempts do not each need a
+new conversation comment.
+
+Use comments only when a material failure, protected decision, or causal evidence would be lost by
+showing latest state alone. Machine/detail evidence belongs in the owning report/proof bundle.
+
+Coverage runs generate one replaceable PR-body block at:
+
+`build/vex/test-foundation/coverage-status.md`
+
+Update that block in place; do not append one coverage comment per run.
+
 ## Repository boundary
 
 `vgong24/VexLife-Android` owns the standalone **native Android implementation and native proof

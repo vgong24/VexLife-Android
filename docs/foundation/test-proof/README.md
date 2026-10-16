@@ -359,9 +359,17 @@ Whole-system proof composes those same owners.
 
 ## Coverage direction
 
-The first source candidate uses Kover 0.9.8 because it understands Kotlin Android build variants,
-supports multi-module report merging, emits HTML plus JaCoCo-compatible XML, and remains explicitly
-JVM/local-test coverage. Android on-device instrumentation coverage is a separate proof surface.
+Kover 0.9.8 remains the repository coverage producer because it understands Kotlin Android variants,
+merges modules, and emits both human HTML and JaCoCo-compatible XML. Android on-device
+instrumentation coverage remains a separate proof surface.
+
+Current aggregate coverage includes:
+- `:app`;
+- `:architecture:behavior`;
+- `:architecture:elements`;
+- `:architecture:execution`;
+- `:architecture:logging`;
+- `:architecture:relay`.
 
 The repository-level entry point is:
 
@@ -369,11 +377,36 @@ The repository-level entry point is:
 ./gradlew vexCoverage
 ~~~
 
-It produces aggregate Kover HTML/XML reports from the app plus architecture modules and runs the JVM
-tests required to form them.
+Alongside Kover HTML/XML, every run produces one replaceable latest-state projection:
 
-This is intentionally **report-only**. No global percentage gate is admitted until the report teaches
-us which coverage omissions are useful signals rather than incentives to test trivial code.
+~~~text
+build/vex/test-foundation/coverage-status.md
+build/vex/test-foundation/coverage-summary.json
+~~~
+
+The human surface intentionally stays tiny:
+
+~~~text
+🟢 >= 90% line coverage
+🟡 <  90% line coverage
+~~~
+
+**90% is an awareness target, not a correctness/build gate.** Yellow means “look here,” not
+“tests failed.” Branch coverage is reported beside lines but does not currently own the color.
+
+For PR cleanliness, update the generated coverage block in the PR body in place. Do not append one
+coverage comment per commit/run. Detailed reports remain in the proof bundle.
+
+### Proving the proof framework
+
+Architecture implementation belongs in aggregate code coverage because it is executable production
+foundation that features rely on.
+
+Gradle/test orchestration itself is different: folding build-script lines into the app percentage
+would make the number easier to game without proving the framework. Instead,
+`vexCoverageSummaryContract` behaviorally proves the coverage parser and the 90% GREEN/YELLOW
+boundary, while `vexVerifyJvm` continues to prove architecture-module contracts. The proof bundle
+also retains architecture execution test results alongside the other architecture modules.
 
 Coverage should help answer:
 
