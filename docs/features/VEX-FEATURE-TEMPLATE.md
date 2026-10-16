@@ -8,12 +8,20 @@
 ## Feature identity
 
 ~~~text
+STABLE FEATURE REF:
+CURRENT HUMAN NAME:
+HISTORICAL / SEARCH NAMES:
 FEATURE / HOME:
+CODE IDENTITY ANCHOR:
 HUMAN OUTCOME:
 CURRENT STATUS:
 SEMANTIC OWNER(S):
 CURRENT NEXT EDGE:
 ~~~
+
+The stable feature ref is semantic continuity, not the current spelling of the feature. When a
+feature is renamed, preserve the ref and retain prior names as searchable aliases at the code-local
+identity anchor.
 
 ## Experience sentence
 
@@ -105,6 +113,41 @@ HUMAN FEATURE AREAS:
 TECHNICAL ROLES INSIDE EACH AREA:
 CAN A NEWCOMER FIND THE AREA WITHOUT KNOWING INTERNAL FRAMEWORK TERMS?:
 ~~~
+
+## Continuity growth
+
+Use only when the feature's evolving design has become too important to reconstruct from one README.
+
+~~~text
+<feature>/
+├── README.md
+├── Vex<Feature>Docs.kt
+└── design/
+    ├── README.md
+    └── records/
+        └── YYYY-MM-DD-NNN-<design-refinement>.md
+~~~
+
+design/README.md is the current intended design, not a diary.
+
+Each dated record captures one meaningful refinement:
+
+~~~text
+FEATURE REF:
+RECORDED AT:
+DISCUSSION / PRESSURE:
+PRIOR DESIGN:
+NEW UNDERSTANDING:
+DECISIONS CRYSTALLIZED:
+WHAT REMAINS OPEN:
+CURRENT DESIGN CONSEQUENCE:
+~~~
+
+A record links to the stable feature ref so it survives feature/package renames. Preserve old records
+rather than rewriting the past; currentize the design synthesis instead.
+
+If repeated independent decisions later need stable addresses of their own, a feature-local
+design/decisions/ subpackage may be earned. Do not create it pre-emptively.
 
 ## Current source / ownership map
 
