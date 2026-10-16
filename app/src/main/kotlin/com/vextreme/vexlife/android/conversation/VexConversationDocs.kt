@@ -60,7 +60,7 @@ package com.vextreme.vexlife.android.conversation
  *
  * Independently changing Conversation/runtime/Lab facts reconcile in:
  *
- * [VexConversationConvergenceRelay]
+ * [VexConversationHybridRelay]
  *
  * Read its `dependencies()`, public observation methods, `processStates()`, then `outputStates`
  * to see the current relationship.
@@ -94,7 +94,7 @@ package com.vextreme.vexlife.android.conversation
  *
  * The Lab publishes synthetic external truth through the existing in-memory provider seam and may
  * also hold explicit Home/Companion availability overrides. Those overrides do not rewrite
- * Conversation repository truth; [VexConversationConvergenceRelay] reconciles them with current
+ * Conversation repository truth; [VexConversationHybridRelay] reconciles them with current
  * observations.
  *
  * The Lab does not perform Victor's product Send or become another Conversation state owner. The
