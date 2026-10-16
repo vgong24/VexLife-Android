@@ -16,8 +16,9 @@ Fresh humans, ChatGPT instances, Vex/Cultivation workers, and other coding agent
 1. [AGENTS.md](AGENTS.md) — route into the repository
 2. [docs/CULTURE.md](docs/CULTURE.md) — Android-local intention and upstream lineage
 3. [docs/foundation/INDEX.md](docs/foundation/INDEX.md) — current foundation map and maturity
-4. [docs/PORTING-MAP.md](docs/PORTING-MAP.md) only when old VexLife Android provenance matters
-5. only the exact foundation/source/tests implicated by the current task
+4. [docs/features/README.md](docs/features/README.md) for a new product feature or major feature evolution
+5. [docs/PORTING-MAP.md](docs/PORTING-MAP.md) only when old VexLife Android provenance matters
+6. only the exact foundation/source/tests implicated by the current task
 
 Do not broad-read every historical Android artifact before working.
 
