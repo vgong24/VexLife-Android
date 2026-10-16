@@ -433,8 +433,7 @@ private fun VexConversationRoomPreview() {
             },
             onSend = {},
             developerEnvironmentLabel =
-                "Conversation Lab · " +
-                    labState.scenarioRef,
+                "Conversation Lab active",
         )
     }
 }
