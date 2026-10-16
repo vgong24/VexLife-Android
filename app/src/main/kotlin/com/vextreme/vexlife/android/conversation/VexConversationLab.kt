@@ -251,19 +251,10 @@ internal class VexConversationLab(
         }
 
         val nextAudience =
-            current.knownParticipants
-                .map { participant ->
-                    participant.participantRef
-                }
-                .filter { knownRef ->
-                    knownRef in
-                        (
-                            current.currentAudienceRefs +
-                                identity
-                                    .participant
-                                    .participantRef
-                            )
-                }
+            current.currentAudienceRefs +
+                identity
+                    .participant
+                    .participantRef
 
         return publishSuccessorGeneration(
             current = current,
