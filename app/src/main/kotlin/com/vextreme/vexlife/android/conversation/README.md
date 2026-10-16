@@ -14,7 +14,7 @@ Current state:
 foundation = TERMINAL_ACCEPTED_CURRENT on Android main
 feature-owned Conversation Lab controller = ACCEPTED ON MAIN / PR #99
 generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
-Conversation Convergence + Lab availability overrides = ACCEPTED ON MAIN / PR #104
+Conversation Hybrid + Lab availability overrides = ACCEPTED ON MAIN / PR #104
 production Screen / app-session wiring = HELD on shared composition paths
 real Home adapter = HELD on authenticated cross-generation history exposure
 ~~~
@@ -78,7 +78,7 @@ conversation/
 ├── VexConversationRepository.kt
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
-├── VexConversationConvergenceRelay.kt
+├── VexConversationHybridRelay.kt
 ├── VexConversationLabFixture.kt
 ├── VexConversationLab.kt
 ├── VexConversationDocs.kt
@@ -96,7 +96,7 @@ Tests:
 VexConversationStateTest
 InMemoryVexFamilyConversationRepositoryTest
 VexConversationSurfaceProjectionTest
-VexConversationConvergenceRelayTest
+VexConversationHybridRelayTest
 VexConversationLabTest
 ~~~
 
@@ -484,7 +484,7 @@ Conversation now reuses the accepted Compound Relay foundation for the question:
 ~~~text
 Conversation repository -----\
 authenticated participant ----\
-Home availability ------------+-> VexConversationConvergenceRelay.processStates(...)
+Home availability ------------+-> VexConversationHybridRelay.processStates(...)
 Companion availability -------/
 Conversation Lab ------------/
                                       |
@@ -505,7 +505,7 @@ Lab
     owns explicit developer perturbations
     and synthetic-provider controls
 
-Convergence Relay
+Hybrid Relay
     owns override precedence + retained current relationship
 
 Surface Projection
@@ -528,7 +528,7 @@ Synthetic provider truth remains on the normal ingress path:
 Lab remote message
 -> InMemoryVexFamilyConversationRepository.publishThread(...)
 -> Conversation state changes
--> Convergence observes repository truth
+-> Hybrid observes repository truth
 ~~~
 
 The Relay does not manufacture messages, Family generations or provider admission.
@@ -855,9 +855,9 @@ A fresh worker should be able to answer:
 Current implementation edge:
 
 ~~~text
-prove the feature-local Conversation Convergence / Lab-override refinement
+prove the feature-local Conversation Hybrid / Lab-override refinement
 -> reconcile app/session repository ownership
--> register one real Conversation Screen over the same Convergence output
+-> register one real Conversation Screen over the same Hybrid output
 -> connect Debug Menu doorway to feature-owned Lab controls
 -> add Journey/device proof only for the visible controls actually admitted
 ~~~
