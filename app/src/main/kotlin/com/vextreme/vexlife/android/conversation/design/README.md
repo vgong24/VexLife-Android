@@ -128,7 +128,7 @@ Current Conversation relationship:
 ~~~text
 Conversation repository -----\
 authenticated participant ----\
-Home availability ------------+-> VexConversationConvergenceRelay
+Home availability ------------+-> VexConversationHybridRelay
 Companion availability -------/
 Conversation Lab ------------/
                                       |
@@ -156,10 +156,10 @@ Synthetic provider events remain different:
 [Maya]{test message}
 -> synthetic provider publication
 -> Conversation repository
--> Convergence observes the repository change
+-> Hybrid observes the repository change
 ~~~
 
-The Convergence Relay does not manufacture messages or provider admission.
+The Hybrid Relay does not manufacture messages or provider admission.
 
 ## Feature surfaces
 
@@ -266,7 +266,7 @@ Provider-simulation controls publish simulated provider truth through the same f
 repository/state boundary.
 
 Availability overrides remain separate Lab facts and are reconciled only by
-`VexConversationConvergenceRelay`. They do not mutate Conversation repository truth or create a
+`VexConversationHybridRelay`. They do not mutate Conversation repository truth or create a
 second screen-local truth model.
 
 ## Debug-only message injection
@@ -401,7 +401,7 @@ VexConversationRepository
 + VexConversationLab overrides
         |
         v
-VexConversationConvergenceRelay
+VexConversationHybridRelay
         |
         v
 VexConversationSurfaceProjection
@@ -416,7 +416,7 @@ Provider simulation stays on the normal provider/repository side:
 VexConversationLab synthetic provider actions
 -> InMemoryVexFamilyConversationRepository
 -> Conversation state
--> VexConversationConvergenceRelay observes the result
+-> VexConversationHybridRelay observes the result
 ~~~
 
 The shared production slice still requires:
