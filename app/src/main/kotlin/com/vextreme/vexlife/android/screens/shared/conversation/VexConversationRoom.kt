@@ -49,6 +49,11 @@ import com.vextreme.vexlife.android.ui.VexLifeTheme
  *
  * The parent semantic ref is supplied by the owning Screen/composition. That lets this component be
  * exercised before shared Screen registration is safe without creating a second Screen registry.
+ *
+ * Durable composer/Send controls are deliberately supplied as [composerContent]. The generic room
+ * must not decide that every Conversation has Family Send semantics or create a parallel callback-
+ * only action system. A production Screen can therefore provide registered TextField/Button
+ * identities and FormSubmission dispatch while Preview remains free to use a local visual composer.
  */
 @Composable
 internal fun VexConversationRoom(
@@ -57,27 +62,14 @@ internal fun VexConversationRoom(
     roomTitle: String,
     participantLabel:
         (VexConversationParticipantRef) -> String,
-    composerLabel: String,
-    sendLabel: String,
     emptyMessagesLabel: String,
     authenticatedSpeakerSuffix: String,
-    draft: String,
-    onDraftChange: (String) -> Unit,
-    onSend: (String) -> Unit,
     developerEnvironmentLabel: String? = null,
+    composerContent: @Composable () -> Unit = {},
 ) {
     require(semanticRootRef.isNotBlank()) {
         "Conversation room semantic root must be non-blank"
     }
-
-    val sendAvailability =
-        projectVexFamilyConversationSendAvailability(
-            projection,
-        )
-    val canSend =
-        sendAvailability is
-            VexFamilyConversationSurfaceSendAvailability.Ready &&
-            draft.isNotBlank()
 
     VexComposeScope(
         parentRef = semanticRootRef,
@@ -184,20 +176,7 @@ internal fun VexConversationRoom(
                 )
             }
 
-            ConversationComposer(
-                semanticRootRef =
-                    semanticRootRef,
-                label = composerLabel,
-                sendLabel = sendLabel,
-                draft = draft,
-                enabled = canSend,
-                onDraftChange = onDraftChange,
-                onSend = {
-                    onSend(
-                        draft.trim(),
-                    )
-                },
-            )
+            composerContent()
         }
     }
 }
@@ -257,7 +236,7 @@ private fun ConversationMessageCard(
 }
 
 @Composable
-private fun ConversationComposer(
+private fun PreviewConversationComposer(
     semanticRootRef: String,
     label: String,
     sendLabel: String,
@@ -423,17 +402,33 @@ private fun VexConversationRoomPreview() {
                     "missing preview label for $participantRef"
                 }
             },
-            composerLabel = "Type a message",
-            sendLabel = "Send",
             emptyMessagesLabel = "No messages yet.",
             authenticatedSpeakerSuffix = "you",
-            draft = draft,
-            onDraftChange = {
-                draft = it
-            },
-            onSend = {},
             developerEnvironmentLabel =
                 "Conversation Lab active",
+            composerContent = {
+                val sendAvailability =
+                    projectVexFamilyConversationSendAvailability(
+                        projection,
+                    )
+                val canSend =
+                    sendAvailability is
+                        VexFamilyConversationSurfaceSendAvailability.Ready &&
+                        draft.isNotBlank()
+
+                PreviewConversationComposer(
+                    semanticRootRef =
+                        "preview.conversation.family-room",
+                    label = "Type a message",
+                    sendLabel = "Send",
+                    draft = draft,
+                    enabled = canSend,
+                    onDraftChange = {
+                        draft = it
+                    },
+                    onSend = {},
+                )
+            },
         )
     }
 }
