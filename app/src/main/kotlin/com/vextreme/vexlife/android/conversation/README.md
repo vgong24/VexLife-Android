@@ -87,7 +87,8 @@ conversation/
     ├── README.md
     └── records/
         ├── 2026-10-15-001-visible-conversation-lab.md
-        └── 2026-10-16-002-live-truth-lab-perturbations.md
+        ├── 2026-10-16-002-live-truth-lab-perturbations.md
+        └── 2026-10-16-003-name-ontology-hybrid-relay.md
 ~~~
 
 Tests:
@@ -474,7 +475,7 @@ FEATURE_LOCAL_CONSTRUCTION != APP_GRAPH_INTEGRATION
 VISIBLE_COMPONENT != REGISTERED_PRODUCTION_SCREEN
 ~~~
 
-## Convergence of observed truth and Lab overrides
+## Hybrid relationship over observed truth and Lab overrides
 
 Conversation now reuses the accepted Compound Relay foundation for the question:
 
