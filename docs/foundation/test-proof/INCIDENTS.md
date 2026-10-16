@@ -191,7 +191,8 @@ observedHardeningGap =
     a real connected failure skipped the inspector despite the finalizer relationship
 
 followUpHardeningRef =
-    current repair PR / branch VXG-101626-test-proof-device-finalizer-graph-repair
+    PR #105
+    branch VXG-101626-test-proof-device-finalizer-graph-repair
 
 followUpHardeningState = CANDIDATE
 ~~~
