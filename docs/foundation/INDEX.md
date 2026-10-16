@@ -295,7 +295,7 @@ into one human round trip, use the **Reusable multi-path host-task template** in
 
 ## Test / Proof Architecture candidate
 
-Canonical detail: [`TEST-PROOF-ARCHITECTURE.md`](TEST-PROOF-ARCHITECTURE.md)
+Canonical detail: [`test-proof/README.md`](test-proof/README.md)
 
 ### Intention
 

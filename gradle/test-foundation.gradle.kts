@@ -2,7 +2,7 @@ import org.gradle.api.tasks.bundling.Zip
 
 // [VXG RealForever]
 //
-// Repository-owned execution surface for docs/foundation/TEST-PROOF-ARCHITECTURE.md.
+// Repository-owned execution surface for docs/foundation/test-proof/README.md.
 // Keep the root build file small; this script owns only test/proof orchestration and evidence
 // collection, never feature semantics.
 

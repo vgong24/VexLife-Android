@@ -18,11 +18,11 @@ It owns:
 
 It does **not** own each incident's full chronology. Those live in:
 
-`test-proof-incidents/TF-INCIDENT-*.md`
+`incidents/TF-INCIDENT-*.md`
 
 Current proof architecture remains in:
 
-`TEST-PROOF-ARCHITECTURE.md`
+`README.md`
 
 ## Why the split is semantic
 
@@ -186,7 +186,7 @@ hardeningState = CANDIDATE
 
 Record:
 
-`test-proof-incidents/TF-INCIDENT-2026-10-16-001.md`
+`incidents/TF-INCIDENT-2026-10-16-001.md`
 
 ## DesignHistory relationship
 

@@ -1,6 +1,22 @@
-# Test / Proof Architecture
+# Test / Proof Foundation
 
 [VXG RealForever]
+
+This directory is the single documentation doorway for the Test / Proof Foundation.
+
+~~~text
+test-proof/
+├── README.md
+│   current proof architecture
+├── INCIDENTS.md
+│   incident grammar / recurrence law / index
+└── incidents/
+    └── TF-INCIDENT-*.md
+        one independently evolving incident history
+~~~
+
+The repository-wide atlas is `../INDEX.md`. Do not add another Test Proof peer document directly
+under `docs/foundation/` when the meaning belongs inside this package.
 
 ## The question
 
@@ -173,7 +189,7 @@ An intermittent proof failure remains part of repository knowledge even when the
 passes on retry.
 
 Record recurring/intermittent proof incidents in
-[TEST-PROOF-INCIDENTS.md](TEST-PROOF-INCIDENTS.md).
+[INCIDENTS.md](INCIDENTS.md).
 
 The distinction is:
 
@@ -244,7 +260,7 @@ That task delegates to `:app:connectedDebugAndroidTest` and always finalizes int
 when JUnit XML exists, and still fails closed when a successful Android task produced zero tests.
 
 A retry PASS does **not** erase an earlier intermittent failure. Durable recurrence history lives in
-[TEST-PROOF-INCIDENTS.md](TEST-PROOF-INCIDENTS.md); use it to distinguish a first occurrence from a
+[INCIDENTS.md](INCIDENTS.md); use it to distinguish a first occurrence from a
 known unresolved/intermittent proof symptom.
 
 Android Studio is not required: Android Gradle Plugin discovers the connected emulator/physical
