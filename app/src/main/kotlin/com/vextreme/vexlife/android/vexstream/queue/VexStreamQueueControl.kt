@@ -10,6 +10,7 @@ enum class VexStreamQueueControl :
     > {
     Previous,
     Next,
+    Clear,
 }
 
 internal fun VexBehaviorBlueprint<
@@ -33,6 +34,10 @@ internal fun VexBehaviorBlueprint<
         control(
             VexStreamQueueControl.Next,
             VexStreamQueueAct.Next,
+        )
+        control(
+            VexStreamQueueControl.Clear,
+            VexStreamQueueAct.Clear,
         )
     }
 

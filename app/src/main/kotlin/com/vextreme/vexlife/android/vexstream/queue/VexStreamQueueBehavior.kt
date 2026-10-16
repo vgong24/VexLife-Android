@@ -35,6 +35,16 @@ internal fun vexStreamQueueBehavior():
             ) { current ->
                 current.nextAvailable
             }.stay()
+
+            on(
+                act = VexStreamQueueAct.Clear,
+                effect =
+                    VexStreamQueueEffect.ClearQueue,
+                conditionName =
+                    "clear-available",
+            ) { current ->
+                current.clearAvailable
+            }.stay()
         }
     }
 

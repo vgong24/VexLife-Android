@@ -2,7 +2,7 @@ package com.vextreme.vexlife.android.vexstream.queue
 
 import com.vextreme.vexlife.android.behavior.VexBehaviorFamily
 
-/** Human/product verbs admitted by the neighboring-item Queue behavior. */
+/** Human/product verbs admitted by VexStream Queue. */
 sealed interface VexStreamQueueAct :
     VexBehaviorFamily.Act<
         VexStreamQueueFamily
@@ -11,6 +11,9 @@ sealed interface VexStreamQueueAct :
         VexStreamQueueAct
 
     data object Next :
+        VexStreamQueueAct
+
+    data object Clear :
         VexStreamQueueAct
 }
 
