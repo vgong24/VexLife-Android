@@ -173,7 +173,7 @@ An intermittent proof failure remains part of repository knowledge even when the
 passes on retry.
 
 Record recurring/intermittent proof incidents in
-[TEST-PROOF-INCIDENTS.md](TEST-PROOF-INCIDENTS.md).
+[test-proof-integrity/README.md](test-proof-integrity/README.md).
 
 The distinction is:
 
@@ -244,7 +244,7 @@ That task delegates to `:app:connectedDebugAndroidTest` and always finalizes int
 when JUnit XML exists, and still fails closed when a successful Android task produced zero tests.
 
 A retry PASS does **not** erase an earlier intermittent failure. Durable recurrence history lives in
-[TEST-PROOF-INCIDENTS.md](TEST-PROOF-INCIDENTS.md); use it to distinguish a first occurrence from a
+[test-proof-integrity/README.md](test-proof-integrity/README.md); use it to distinguish a first occurrence from a
 known unresolved/intermittent proof symptom.
 
 Android Studio is not required: Android Gradle Plugin discovers the connected emulator/physical
