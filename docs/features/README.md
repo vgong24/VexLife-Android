@@ -136,6 +136,23 @@ advanced, the current source + feature README + design/README.md outrank stale r
 Small features do not need this package merely for symmetry. Add layers only when losing the design
 trajectory would make a successor reconstruct intent from chats, issues, or commit archaeology.
 
+### First worked continuity consumer — VexLife DesignHistory
+
+The repository-wide rules remain owned here. The first meta-feature consuming and pressure-testing this
+continuity grammar is:
+
+~~~text
+feature.vexlife.design-history
+-> app/src/main/kotlin/com/vextreme/vexlife/android/designhistory/
+-> VexLifeDesignHistoryDocs
+~~~
+
+VexLife DesignHistory owns the continuity capability/design/proof, not the semantic design of every
+feature. Feature-local current design and records stay with their feature.
+
+Its first POC uses Conversation rename/search continuity plus Conversation/Debug Menu local design
+packages to prove that the pattern is recoverable without centralizing their semantics.
+
 ## Package placement
 
 The source tree should first help someone locate the **human part of the feature**.
