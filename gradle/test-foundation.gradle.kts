@@ -537,7 +537,11 @@ val vexCoverageSummaryContract =
                         coveredLines = 90,
                     ),
                 ).getValue("LINE")
-            check(green.percent == 90.0)
+            check(
+                kotlin.math.abs(
+                    green.percent - 90.0,
+                ) < 0.0001,
+            )
             check(
                 vexCoverageAwareness(
                     green.percent,
@@ -552,7 +556,11 @@ val vexCoverageSummaryContract =
                         coveredLines = 89,
                     ),
                 ).getValue("LINE")
-            check(yellow.percent == 89.0)
+            check(
+                kotlin.math.abs(
+                    yellow.percent - 89.0,
+                ) < 0.0001,
+            )
             check(
                 vexCoverageAwareness(
                     yellow.percent,
