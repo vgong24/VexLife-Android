@@ -25,6 +25,9 @@ import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
+import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRequest
+import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
 import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
 
@@ -94,10 +97,31 @@ internal fun VexStreamLibraryFabActions(
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
 ) {
-    val canPlay =
-        controller != null &&
-            resolver != null &&
-            tracks.isNotEmpty()
+    val connection =
+        rememberVexStreamCollectionPlaybackConnection(
+            controller = controller,
+            resolver = resolver,
+        )
+    val playRequest =
+        remember(
+            tracks,
+        ) {
+            VexStreamCollectionPlaybackRequest(
+                tracks = tracks,
+                order =
+                    VexStreamCollectionPlaybackOrder.Natural,
+            )
+        }
+    val shuffleRequest =
+        remember(
+            tracks,
+        ) {
+            VexStreamCollectionPlaybackRequest(
+                tracks = tracks,
+                order =
+                    VexStreamCollectionPlaybackOrder.Shuffled,
+            )
+        }
     val handler =
         ElementActionHandler { element ->
             runtime.activate(
@@ -105,27 +129,14 @@ internal fun VexStreamLibraryFabActions(
             )
             when (element) {
                 VexStreamMusicScreen.PlayAll ->
-                    if (
-                        controller != null &&
-                        resolver != null
-                    ) {
-                        controller.playVexStreamCollection(
-                            tracks = tracks,
-                            resolver = resolver,
-                        )
-                    }
+                    connection?.play(
+                        playRequest,
+                    )
 
                 VexStreamMusicScreen.ShuffleAll ->
-                    if (
-                        controller != null &&
-                        resolver != null
-                    ) {
-                        controller.playVexStreamCollection(
-                            tracks = tracks,
-                            resolver = resolver,
-                            shuffled = true,
-                        )
-                    }
+                    connection?.play(
+                        shuffleRequest,
+                    )
 
                 else -> Unit
             }
@@ -138,12 +149,20 @@ internal fun VexStreamLibraryFabActions(
         VexActionFab(
             element = VexStreamMusicScreen.PlayAll,
             handler = handler,
-            enabled = canPlay,
+            enabled =
+                connection
+                    ?.isAvailable(
+                        playRequest,
+                    ) == true,
         )
         VexActionFab(
             element = VexStreamMusicScreen.ShuffleAll,
             handler = handler,
-            enabled = canPlay,
+            enabled =
+                connection
+                    ?.isAvailable(
+                        shuffleRequest,
+                    ) == true,
         )
     }
 }

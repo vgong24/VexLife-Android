@@ -35,6 +35,12 @@ WHAT IS PLAYBACK DOING?
     -> Seek through typed mediaId + position request
     -> Media3 playback / seek Connections
 
+HOW SHOULD THIS RENDERED COLLECTION START?
+    vexstream/collection
+    -> Play All / Shuffle All through typed rendered-collection request
+    -> activation-time source resolution + Media3 provider-capability Connection
+    -> Shuffle All is a one-shot resolved-order permutation, not persistent shuffle mode
+
 WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
     -> Previous / Next / Shuffle / Clear through Queue State / Control / Act / Effect
@@ -80,6 +86,11 @@ vexstream/track/
     human questions: play this rendered track context / place this rendered track next or at queue end
     typed Track requests + source-resolution / Media3 provider-capability Connection
     composition boundary only; not another finite Behavior family
+
+vexstream/collection/
+    human question: play this rendered collection naturally or as one shuffled start order
+    typed Collection playback request + source-resolution / Media3 provider-capability Connection
+    composition boundary only; collection membership remains upstream catalog/playlist truth
 
 vexstream/offline/
     human question: who owns a requested local copy after the initiating row/sheet disappears?
@@ -211,20 +222,9 @@ The marker never removes live code from the coverage denominator. It adds contex
 projection so a low percentage can say "known extraction debt" instead of implying "add tests around
 the current shape forever."
 
-Current marked VexStream seams are intentionally specific:
-
-~~~text
-VexStreamLibrarySurface
-    library/search list rendering has been extracted
-    remaining composition still routes raw controller/source-resolver concerns for held actions
-
-VexStreamTrackPresentation
-    play/next/queue use typed Track requests + provider-capability Connection
-    download/remove use typed Offline Copy requests + session-lifetime execution Connection
-
-VexStreamLibrarySurface
-    remaining raw Media3/source-resolver composition is Collection Play All / Shuffle All
-~~~
+Current VexStream extraction debt markers are closed by the accepted Track, Offline Copy, and
+Collection playback boundaries. Add another marker only when a new live source seam is intentionally
+held for a concrete ownership reason.
 
 A marker is removed when its described debt is actually resolved. A source file is not called
 deprecated/replaced merely because a successor design exists; production reachability remains the

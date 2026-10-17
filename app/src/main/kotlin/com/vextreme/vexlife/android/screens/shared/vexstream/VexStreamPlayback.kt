@@ -5,11 +5,9 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
-import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleTargetOrder
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackMediaItemResolver
 
 /**
@@ -78,38 +76,6 @@ internal class VexStreamPlaybackSourceResolver(
             .setClippingConfiguration(clipping)
             .build()
     }
-}
-
-internal fun MediaController.playVexStreamCollection(
-    tracks: List<VexStreamTrackState>,
-    resolver: VexStreamPlaybackSourceResolver,
-    shuffled: Boolean = false,
-): Boolean {
-    val items =
-        tracks.mapNotNull(
-            resolver::mediaItem,
-        )
-    if (items.isEmpty()) {
-        return false
-    }
-
-    val order =
-        if (shuffled) {
-            vexStreamQueueShuffleTargetOrder(
-                itemCount = items.size,
-                currentIndex = -1,
-            )
-        } else {
-            items.indices.toList()
-        }
-    val orderedItems =
-        order.map(items::get)
-
-    shuffleModeEnabled = false
-    setMediaItems(orderedItems)
-    prepare()
-    play()
-    return true
 }
 
 internal fun formatVexStreamPlaybackTime(
