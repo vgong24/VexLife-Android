@@ -21,19 +21,24 @@ class VexMapsAppearancePreferenceStorageTest {
     }
 
     @Test
-    fun legacyLibertyStorageBecomesLightAppearance() {
-        assertEquals(
-            VexMapsAppearancePreference.LIGHT,
-            vexMapsAppearancePreferenceFromStoredValue(
-                "liberty",
-            ),
-        )
+    fun legacyProviderStylesDoNotInventExplicitHumanPreference() {
+        listOf(
+            "liberty",
+            "dark",
+        ).forEach { legacyValue ->
+            assertEquals(
+                VexMapsAppearancePreference.AUTOMATIC,
+                vexMapsAppearancePreferenceFromStoredValue(
+                    legacyValue,
+                ),
+            )
+        }
     }
 
     @Test
     fun explicitAppearanceValuesRoundTripWithoutProviderNames() {
         assertEquals(
-            "light",
+            "appearance.light",
             VexMapsAppearancePreference
                 .LIGHT
                 .toStoredAppearanceValue(),
@@ -41,12 +46,12 @@ class VexMapsAppearancePreferenceStorageTest {
         assertEquals(
             VexMapsAppearancePreference.LIGHT,
             vexMapsAppearancePreferenceFromStoredValue(
-                "light",
+                "appearance.light",
             ),
         )
 
         assertEquals(
-            "dark",
+            "appearance.dark",
             VexMapsAppearancePreference
                 .DARK
                 .toStoredAppearanceValue(),
@@ -54,7 +59,7 @@ class VexMapsAppearancePreferenceStorageTest {
         assertEquals(
             VexMapsAppearancePreference.DARK,
             vexMapsAppearancePreferenceFromStoredValue(
-                "dark",
+                "appearance.dark",
             ),
         )
     }
