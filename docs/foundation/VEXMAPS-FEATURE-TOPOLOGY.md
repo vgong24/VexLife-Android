@@ -120,12 +120,17 @@ route truth + route-relative location fix
 Style convergence is smaller but still relational:
 
 ~~~text
-human selection
+human appearance/style intent
 + apply request
 + MapLibre loaded/failure observation
   -> VexMapsStyleConvergenceRelay
   -> style application status
 ~~~
+
+Current source presents OpenFreeMap Dark/Liberty as Context Dock pages. That is accepted current
+implementation, not the completed UX contract. [VexMaps Complete] now intends ordinary map appearance
+to be a compact Automatic / Light / Dark map control; provider style refs remain below that
+human-facing preference.
 
 The reusable lesson is not "everything should use Relay."
 
