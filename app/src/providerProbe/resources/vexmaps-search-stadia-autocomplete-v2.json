@@ -10,7 +10,7 @@
       "capabilityClass": "BUSINESS_POI_PARTIAL",
       "text": "in n out",
       "boundaryCountry": "US",
-      "layers": ["venue"],
+      "layers": ["poi"],
       "focus": {
         "focusRef": "public.city-center.los-angeles",
         "latitude": 34.052235,
@@ -26,7 +26,7 @@
       "capabilityClass": "LANDMARK_PARTIAL",
       "text": "griffith observ",
       "boundaryCountry": "US",
-      "layers": ["venue"],
+      "layers": ["poi"],
       "focus": {
         "focusRef": "public.city-center.los-angeles",
         "latitude": 34.052235,

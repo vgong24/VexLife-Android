@@ -186,6 +186,30 @@ val vexMapsStadiaAutocompleteV2Contract =
                 }
 
                 @Suppress("UNCHECKED_CAST")
+                val layers =
+                    (
+                        fixture["layers"] as?
+                            List<*>
+                    )
+                        ?.map { layer ->
+                            require(
+                                layer is String &&
+                                    layer.isNotBlank(),
+                            ) {
+                                "VexMaps provider probe layers must be non-blank strings"
+                            }
+                            layer
+                        }
+                        .orEmpty()
+
+                require(
+                    "venue" !in
+                        layers,
+                ) {
+                    "Stadia autocomplete v2 renamed the v1 'venue' layer to 'poi'"
+                }
+
+                @Suppress("UNCHECKED_CAST")
                 val focus =
                     requireNotNull(
                         fixture["focus"] as?
