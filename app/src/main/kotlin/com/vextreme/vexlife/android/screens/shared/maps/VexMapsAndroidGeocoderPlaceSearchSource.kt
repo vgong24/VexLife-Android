@@ -270,10 +270,15 @@ private fun stableAndroidGeocoderPlaceRef(
                 separator = "",
             ) {
                 byte ->
-                "%02x".format(
-                    Locale.ROOT,
-                    byte,
+                (
+                    byte.toInt() and
+                        0xff
                 )
+                    .toString(16)
+                    .padStart(
+                        2,
+                        '0',
+                    )
             }
 
     return "android-geocoder." +
