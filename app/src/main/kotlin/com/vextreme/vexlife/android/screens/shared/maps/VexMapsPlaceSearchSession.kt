@@ -119,6 +119,18 @@ internal class VexMapsPlaceSearchSession(
         }
     }
 
+    /**
+     * The human opened the document picker for a replacement place pack.
+     *
+     * Match the prior composition behavior: invalidate any in-flight search so it cannot land while
+     * the picker is open, but keep already-visible search results until an actual replacement URI is
+     * admitted through [importPack].
+     */
+    fun importSelectionStarted() {
+        searchGate.invalidate()
+        execution.cancelSearch()
+    }
+
     fun importPack(
         source: Uri,
     ) {
