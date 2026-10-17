@@ -57,15 +57,23 @@ object EventsJourneys : VexJourneyShard {
             ),
         )
 
-    private fun externalSnapshot(
+    private fun externalSnapshotSignal(
         revision: Int,
         eventCount: Int = revision,
-    ): VexExternalEventSourceSnapshot =
-        VexExternalEventSourceSnapshot(
-            sourceRef = SourceRef,
-            sourceRevision = revision.toLong(),
-            events = fixtureEvents.take(eventCount),
-        )
+    ): VexJourneySignal =
+        journeySignal(
+            signalRef =
+                "signal.events.external.snapshot-" +
+                    revision.toString().padStart(3, '0'),
+        ) { repositories ->
+            repositories.events.accept(
+                VexExternalEventSourceSnapshot(
+                    sourceRef = SourceRef,
+                    sourceRevision = revision.toLong(),
+                    events = fixtureEvents.take(eventCount),
+                ),
+            )
+        }
 
     val externalAttention =
         vexJourney(
@@ -80,81 +88,73 @@ object EventsJourneys : VexJourneyShard {
         ) {
             start(HomeScreen)
 
-            externalCause(
-                repository =
-                    getRepository(
-                        Repositories.events,
-                    ),
-                causeRef =
-                    "cause.events.external.snapshot-001",
-            ) {
-                accept(
-                    externalSnapshot(1),
-                )
-            }
+            signal(externalSnapshotSignal(1))
             tap(AppShell.Elements.Events)
-            tapElementById(
-                EventsPresentationRefs.attentionAction(
-                    MessageRef,
-                    "acknowledge",
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        MessageRef,
+                        "acknowledge",
+                    ),
                 ),
             )
 
             tap(AppShell.Elements.Home)
-            externalCause(
-                repository =
-                    getRepository(
-                        Repositories.events,
-                    ),
-                causeRef =
-                    "cause.events.external.snapshot-002",
-            ) {
-                accept(
-                    externalSnapshot(
-                        revision = 2,
-                        eventCount = 4,
-                    ),
-                )
-            }
+            signal(
+                externalSnapshotSignal(
+                    revision = 2,
+                    eventCount = 4,
+                ),
+            )
             tap(AppShell.Elements.Events)
 
             // LATER moves Call out of the current queue and into the next sequence.
-            tapElementById(
-                EventsPresentationRefs.attentionAction(
-                    CallRef,
-                    "later",
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        CallRef,
+                        "later",
+                    ),
                 ),
             )
 
             // SUSPEND keeps Map active but puts it behind unsuspended current-queue work.
-            tapElementById(
-                EventsPresentationRefs.attentionAction(
-                    MapRef,
-                    "suspend",
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        MapRef,
+                        "suspend",
+                    ),
                 ),
             )
 
             // MEDIA is now the remaining normal current-queue item.
-            tapElementById(
-                EventsPresentationRefs.attentionAction(
-                    MediaRef,
-                    "suppress",
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        MediaRef,
+                        "suppress",
+                    ),
                 ),
             )
 
             // Suspended Map returns before the deferred next-sequence Call.
-            tapElementById(
-                EventsPresentationRefs.attentionAction(
-                    MapRef,
-                    "acknowledge",
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        MapRef,
+                        "acknowledge",
+                    ),
                 ),
             )
 
             // Current queue drained: deferred Call becomes the next-sequence candidate.
-            tapElementById(
-                EventsPresentationRefs.attentionAction(
-                    CallRef,
-                    "acknowledge",
+            tapDynamic(
+                dynamicElement(
+                    EventsPresentationRefs.attentionAction(
+                        CallRef,
+                        "acknowledge",
+                    ),
                 ),
             )
         }
