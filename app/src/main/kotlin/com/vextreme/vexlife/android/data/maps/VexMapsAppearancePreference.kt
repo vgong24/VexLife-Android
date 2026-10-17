@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.data.maps
 
+import java.util.Locale
+
 /**
  * Human-facing VexMaps appearance preference.
  *
@@ -41,7 +43,9 @@ internal fun vexMapsAppearancePreferenceFromStoredValue(
     when (
         storedValue
             ?.trim()
-            ?.lowercase()
+            ?.lowercase(
+                Locale.ROOT,
+            )
     ) {
         null,
         "",
