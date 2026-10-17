@@ -66,11 +66,10 @@ internal fun VexMapsStateEntity.toStoredState():
 
     return VexMapsStoredState(
         lastLocation = location,
-        onlineStyleRef =
-            onlineStyleRef
-                ?.takeIf {
-                    it.isNotBlank()
-                },
+        appearancePreference =
+            vexMapsAppearancePreferenceFromStoredValue(
+                onlineStyleRef,
+            ),
     )
 }
 
