@@ -1,11 +1,5 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-/*
- * Coverage context: this file is still production-reachable. Do not exclude it from active
- * coverage while the VexStream library presentation is extracted into smaller rightful owners.
- */
-// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Production-reachable composition host still routes raw Media3/source-resolver concerns for Collection Play All / Shuffle All; keep counted until that composition owner is resolved.
-
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
