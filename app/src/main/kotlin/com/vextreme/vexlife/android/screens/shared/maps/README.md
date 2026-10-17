@@ -344,6 +344,26 @@ WHY
     deterministic routing/location + honest Context Dock traversal are not yet available
 ~~~
 
+## Current provider-reliability candidate
+
+The first feature-local live-provider candidate is **Stadia autocomplete v2**.
+
+~~~text
+deterministic contract:
+    :app:vexMapsProbeStadiaAutocompleteV2Contract
+
+live candidate probe:
+    :app:vexMapsProbeStadiaAutocompleteV2
+    VEXMAPS_STADIA_API_KEY required on host
+    max requests = 4
+    public fixtures only
+~~~
+
+This does not change VexMaps runtime provider truth.
+
+The probe exists to answer whether a suggestion/business-capable provider actually satisfies the
+VMC-01B human promise before product integration begins.
+
 ## Current next edge
 
 The active continuation is [VexMaps Complete].
