@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.screens.shared.gallery.elements
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -92,6 +93,8 @@ internal fun GalleryExplainableStatusSample() {
                         stringResource(
                             R.string.gallery_explainable_status_hint,
                         ),
+                    modifier =
+                        VexModifier.weight(1f),
                     role = TextRole.Supporting,
                 )
             }
