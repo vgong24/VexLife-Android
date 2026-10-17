@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.elements.ElementIcon
@@ -36,6 +35,9 @@ import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 
@@ -103,10 +105,15 @@ private fun VexStreamContextDockContent(
         )
     val queueProjection =
         queueExperience.projection
+    val seekConnection =
+        rememberVexStreamPlaybackSeekConnection(
+            controller,
+        )
 
     var scrubFraction by
         remember(
             playback.currentMediaId,
+            playback.currentIndex,
         ) {
             mutableStateOf<Float?>(null)
         }
@@ -114,11 +121,12 @@ private fun VexStreamContextDockContent(
         scrubFraction
             ?: playback.progressFraction
     val canSeek =
-        controller != null &&
-            playback.durationMs > 0L &&
-            controller.isCommandAvailable(
-                Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-            )
+        seekConnection
+            ?.isAvailable == true &&
+            playback.currentMediaId
+                ?.isNotBlank() == true &&
+            playback.currentIndex >= 0 &&
+            playback.durationMs > 0L
     val playbackProjection =
         requireNotNull(
             playbackExperience
@@ -259,8 +267,14 @@ private fun VexStreamContextDockContent(
                 onValueChangeFinished = {
                     val targetFraction =
                         scrubFraction
+                    val targetMediaId =
+                        playback.currentMediaId
+                    val targetMediaItemIndex =
+                        playback.currentIndex
                     if (
                         targetFraction != null &&
+                        !targetMediaId.isNullOrBlank() &&
+                        targetMediaItemIndex >= 0 &&
                         canSeek
                     ) {
                         runtime.recordDynamicInteraction(
@@ -268,12 +282,19 @@ private fun VexStreamContextDockContent(
                                 "presentation.context-dock.vexstream.seek",
                             action = "Changed",
                         )
-                        controller?.seekTo(
-                            vexStreamSeekPositionMs(
-                                fraction =
-                                    targetFraction,
-                                durationMs =
-                                    playback.durationMs,
+                        seekConnection?.seek(
+                            VexStreamPlaybackSeekRequest(
+                                mediaId =
+                                    targetMediaId,
+                                mediaItemIndex =
+                                    targetMediaItemIndex,
+                                positionMs =
+                                    vexStreamPlaybackSeekPositionMs(
+                                        fraction =
+                                            targetFraction,
+                                        durationMs =
+                                            playback.durationMs,
+                                    ),
                             ),
                         )
                     }
