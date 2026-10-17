@@ -86,9 +86,10 @@ package com.vextreme.vexlife.android.vexstream.playback
  * ## What about Seek?
  *
  * Seek carries a runtime position and therefore is not forced through the finite-Control Behavior
- * vocabulary. [VexStreamPlaybackSeekRequest] carries the exact media identity + target position, and
- * [Media3VexStreamPlaybackSeekConnection] re-checks both current media identity and Media3 seek
- * capability when the request is dispatched. A stale scrub therefore cannot seek a different item.
+ * vocabulary. [VexStreamPlaybackSeekRequest] carries the exact Media3 ID/index coordinate + target
+ * position, and [Media3VexStreamPlaybackSeekConnection] re-checks that coordinate plus Media3 seek
+ * capability when the request is dispatched. A stale scrub therefore cannot seek a different item
+ * or another queued occurrence of the same media ID.
  *
  * This is a playback-local payload boundary, not a generic PayloadPort abstraction.
  *

@@ -6,11 +6,12 @@ import androidx.media3.session.MediaController
 /**
  * One exact request to seek the media item the listener actually scrubbed.
  *
- * The media identity is part of the request so a delayed/stale scrub cannot seek whichever item
- * happens to be current later.
+ * Media identity + current Media3 index are part of the request so a delayed/stale scrub cannot
+ * seek another occurrence of the same track or whichever item happens to be current later.
  */
 internal data class VexStreamPlaybackSeekRequest(
     val mediaId: String,
+    val mediaItemIndex: Int,
     val positionMs: Long,
 ) {
     init {
@@ -18,6 +19,11 @@ internal data class VexStreamPlaybackSeekRequest(
             mediaId.isNotBlank(),
         ) {
             "seek mediaId must not be blank"
+        }
+        require(
+            mediaItemIndex >= 0,
+        ) {
+            "seek mediaItemIndex must not be negative"
         }
         require(
             positionMs >= 0L,
@@ -31,8 +37,8 @@ internal data class VexStreamPlaybackSeekRequest(
  * Feature-local payload boundary for Playback Seek.
  *
  * Seek intentionally does not pretend an arbitrary millisecond value is a finite Behavior Control.
- * UI availability is informative only; [seek] re-checks provider command availability and exact
- * current media identity at activation time.
+ * UI availability is informative only; [seek] re-checks provider command availability plus the
+ * exact current Media3 ID/index coordinate at activation time.
  */
 internal interface VexStreamPlaybackSeekConnection {
     val isAvailable: Boolean
@@ -61,6 +67,8 @@ internal class Media3VexStreamPlaybackSeekConnection(
             controller
                 .currentMediaItem
                 ?.mediaId
+        val currentMediaItemIndex =
+            controller.currentMediaItemIndex
         val seekAvailable =
             controller.isCommandAvailable(
                 Player
@@ -71,6 +79,8 @@ internal class Media3VexStreamPlaybackSeekConnection(
                 request = request,
                 currentMediaId =
                     currentMediaId,
+                currentMediaItemIndex =
+                    currentMediaItemIndex,
                 seekAvailable =
                     seekAvailable,
             )
@@ -86,13 +96,16 @@ internal class Media3VexStreamPlaybackSeekConnection(
 internal fun vexStreamPlaybackSeekTarget(
     request: VexStreamPlaybackSeekRequest,
     currentMediaId: String?,
+    currentMediaItemIndex: Int,
     seekAvailable: Boolean,
 ): Long? =
     request.positionMs
         .takeIf {
             seekAvailable &&
                 currentMediaId ==
-                request.mediaId
+                request.mediaId &&
+                currentMediaItemIndex ==
+                request.mediaItemIndex
         }
 
 internal fun vexStreamPlaybackSeekPositionMs(

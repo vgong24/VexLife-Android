@@ -42,6 +42,7 @@ class VexStreamPlaybackSeekTest {
         val request =
             VexStreamPlaybackSeekRequest(
                 mediaId = "track.alpha",
+                mediaItemIndex = 1,
                 positionMs = 60_000L,
             )
 
@@ -50,6 +51,7 @@ class VexStreamPlaybackSeekTest {
             vexStreamPlaybackSeekTarget(
                 request = request,
                 currentMediaId = "track.alpha",
+                currentMediaItemIndex = 1,
                 seekAvailable = true,
             ),
         )
@@ -60,6 +62,7 @@ class VexStreamPlaybackSeekTest {
         val request =
             VexStreamPlaybackSeekRequest(
                 mediaId = "track.alpha",
+                mediaItemIndex = 1,
                 positionMs = 60_000L,
             )
 
@@ -67,6 +70,26 @@ class VexStreamPlaybackSeekTest {
             vexStreamPlaybackSeekTarget(
                 request = request,
                 currentMediaId = "track.beta",
+                currentMediaItemIndex = 1,
+                seekAvailable = true,
+            ),
+        )
+    }
+
+    @Test
+    fun anotherOccurrenceOfSameMediaRejectsSeekRequest() {
+        val request =
+            VexStreamPlaybackSeekRequest(
+                mediaId = "track.alpha",
+                mediaItemIndex = 1,
+                positionMs = 60_000L,
+            )
+
+        assertNull(
+            vexStreamPlaybackSeekTarget(
+                request = request,
+                currentMediaId = "track.alpha",
+                currentMediaItemIndex = 2,
                 seekAvailable = true,
             ),
         )
@@ -77,6 +100,7 @@ class VexStreamPlaybackSeekTest {
         val request =
             VexStreamPlaybackSeekRequest(
                 mediaId = "track.alpha",
+                mediaItemIndex = 1,
                 positionMs = 60_000L,
             )
 
@@ -84,6 +108,7 @@ class VexStreamPlaybackSeekTest {
             vexStreamPlaybackSeekTarget(
                 request = request,
                 currentMediaId = "track.alpha",
+                currentMediaItemIndex = 1,
                 seekAvailable = false,
             ),
         )

@@ -118,6 +118,7 @@ internal fun VexStreamMiniPlayer(
             }
     var scrubFraction by remember(
         playback.currentMediaId,
+        playback.currentIndex,
     ) {
         mutableStateOf<Float?>(null)
     }
@@ -136,7 +137,9 @@ internal fun VexStreamMiniPlayer(
     val canSeek =
         seekConnection
             ?.isAvailable == true &&
-            playback.currentMediaId != null &&
+            playback.currentMediaId
+                ?.isNotBlank() == true &&
+            playback.currentIndex >= 0 &&
             playback.durationMs > 0L
 
     VexContainer(
@@ -199,9 +202,12 @@ internal fun VexStreamMiniPlayer(
                     scrubFraction
                 val targetMediaId =
                     playback.currentMediaId
+                val targetMediaItemIndex =
+                    playback.currentIndex
                 if (
                     targetFraction != null &&
-                    targetMediaId != null &&
+                    !targetMediaId.isNullOrBlank() &&
+                    targetMediaItemIndex >= 0 &&
                     canSeek
                 ) {
                     val targetPositionMs =
@@ -216,6 +222,8 @@ internal fun VexStreamMiniPlayer(
                     seekConnection?.seek(
                         VexStreamPlaybackSeekRequest(
                             mediaId = targetMediaId,
+                            mediaItemIndex =
+                                targetMediaItemIndex,
                             positionMs = targetPositionMs,
                         ),
                     )
