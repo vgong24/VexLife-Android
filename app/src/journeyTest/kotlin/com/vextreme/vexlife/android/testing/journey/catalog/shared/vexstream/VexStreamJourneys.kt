@@ -15,7 +15,7 @@ object VexStreamJourneys : VexJourneyShard {
     private fun trackRowActionElementId(
         action: ActionElement,
     ): String =
-        VexStreamPresentationRefs.trackRowActionElementId(
+        VexStreamPresentationRefs.trackRowAction(
             scope =
                 VexStreamTrackPresentationScope.Songs,
             trackRef =
@@ -26,7 +26,7 @@ object VexStreamJourneys : VexJourneyShard {
     private fun trackMenuActionElementId(
         action: ActionElement,
     ): String =
-        VexStreamPresentationRefs.trackMenuActionElementId(
+        VexStreamPresentationRefs.trackMenuAction(
             scope =
                 VexStreamTrackPresentationScope.Songs,
             trackRef =
@@ -46,7 +46,7 @@ object VexStreamJourneys : VexJourneyShard {
                 occurrence = 1,
             )
 
-        return VexStreamPresentationRefs.queueEntryActionElementId(
+        return VexStreamPresentationRefs.queueEntryAction(
             stableKey = stableKey,
             action = action,
         )
