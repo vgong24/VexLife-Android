@@ -23,7 +23,6 @@ internal enum class VexMapsOnlineStyle(
     ),
     ;
 
-    companion object
 }
 
 internal fun VexMapsAppearancePreference.resolveVexMapsOnlineStyle(
