@@ -62,12 +62,23 @@ package com.vextreme.vexlife.android.vexstream.queue
  *
  * Queue Sheet and Context Dock consume the same Queue Play boundary.
  *
- * ## What is deliberately NOT in this family?
+ * ## What about Reorder?
  *
- * Reorder still carries changing occurrence/index identity across repeated drag mutations. It remains
- * held until its own currentness boundary is earned. The accepted Behavior kernel does not carry
- * arbitrary runtime request payloads through finite Controls, so Queue does not invent a generic
- * payload framework merely to absorb it.
+ * Reorder also carries runtime occurrence identity, but every drag sample asks for only one adjacent
+ * move. [VexStreamQueueReorderRequest] combines the latest observed [VexStreamQueueOccurrence] with
+ * Earlier/Later direction. [Media3VexStreamQueueReorderConnection] re-reads provider queue truth and
+ * playlist-mutation authority before every move.
+ *
+ * The request rejects crossing adjacent identical media IDs. Media3 exposes no stronger durable item
+ * identity here, so an [A, A] projection cannot prove which duplicate moved. Failing closed preserves
+ * truth instead of promoting presentation occurrence order into durable identity.
+ *
+ * After an admitted step, Queue presentation carries that same occurrence at the expected adjacent
+ * index. The next request still goes through the Connection's provider re-check, so a later drag step
+ * is rejected until provider truth actually observes that occurrence there. A stale projection cannot
+ * silently substitute whichever item currently occupies the optimistic index.
+ *
+ * Queue Play and Reorder remain typed Queue-local request boundaries, not a generic payload framework.
  *
  * Repeat is now the sibling
  * [com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatDocs] family. Playback remains the

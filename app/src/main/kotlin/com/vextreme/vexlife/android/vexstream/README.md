@@ -39,7 +39,8 @@ WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
     -> Previous / Next / Shuffle / Clear through Queue State / Control / Act / Effect
     -> Play one current occurrence through typed occurrence request
-    -> Media3 Queue / Queue Play Connections
+    -> Reorder one current occurrence by adjacent typed request
+    -> Media3 Queue / Queue Play / Queue Reorder Connections
 
 IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
     vexstream/repeat
@@ -71,9 +72,9 @@ vexstream/playback/
     typed Seek request + current-media/provider-capability Connection
 
 vexstream/queue/
-    human questions: Previous / Next / Shuffle / Clear + play one current queue occurrence
+    human questions: finite Queue Controls + play/reorder one current occurrence
     Behavior family for finite Queue Controls
-    typed current-occurrence Queue Play request + Media3 currentness Connection
+    typed current-occurrence Queue Play + adjacent Reorder requests
 
 vexstream/repeat/
     human question: Is Repeat active for the current playback context?
@@ -130,16 +131,27 @@ current queue snapshot
 
 The occurrence coordinate is current provider identity, not a durable queue-item ID.
 
-Still deliberately held:
+Reorder reuses that currentness coordinate one adjacent move at a time:
 
 ~~~text
-reorder
-    occurrence/index identity changes while repeated drag mutations execute
+latest observed VexStreamQueueOccurrence
++ Earlier / Later
+-> VexStreamQueueReorderRequest
+-> provider queue + CHANGE_MEDIA_ITEMS re-check
+-> reject stale coordinate
+-> reject adjacent identical-media crossing
+-> move one adjacent item
 ~~~
 
+After one move is admitted, the drag carries that same occurrence forward at the expected adjacent
+index. The Reorder Connection re-checks provider truth before every later step, so a second move is
+rejected until the provider actually observes that occurrence at the expected index. Crossing
+adjacent identical media IDs still fails closed because the provider projection cannot distinguish
+which duplicate moved without a stronger durable item identity.
+
 Repeat remains its independent sibling Behavior family. The accepted Behavior foundation does not
-carry arbitrary runtime request payloads through finite Controls, so do not generalize Queue Play into
-a generic payload framework merely to migrate Reorder.
+carry arbitrary runtime request payloads through finite Controls, so Queue Play/Reorder remain
+feature-local request boundaries rather than a generic payload framework.
 
 ## Dynamic Android presentation identity
 
@@ -195,9 +207,6 @@ Current marked VexStream seams are intentionally specific:
 VexStreamLibrarySurface
     library/search list rendering has been extracted
     remaining composition still routes raw controller/source-resolver concerns for held actions
-
-VexStreamQueuePresentation
-    Reorder still carries changing runtime occurrence/index identity through raw Media3 mutation
 
 VexStreamTrackPresentation
     track play/queue/download actions still combine runtime identity with provider/repository effects
