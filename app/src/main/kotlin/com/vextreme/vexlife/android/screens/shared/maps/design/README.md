@@ -550,6 +550,64 @@ See:
 design/records/2026-10-16-004-provider-reliability-and-location-lab.md
 ~~~
 
+## Current provider candidate — Stadia autocomplete v2
+
+The first VMC-01B provider candidate under reliability evaluation is Stadia Maps autocomplete v2.
+
+Why it earned a probe:
+
+~~~text
+search-as-you-type endpoint
+addresses + POIs/venues + administrative places
+partial-input tuning
+focus-point bias
+bounded size parameter
+current Jetpack Compose / MapLibre ecosystem support
+low per-request autocomplete credit cost
+~~~
+
+This is **candidate evaluation**, not runtime-provider acceptance.
+
+Repository-owned probe surfaces:
+
+~~~text
+:app:vexMapsProbeStadiaAutocompleteV2Contract
+    deterministic
+    fixture/budget/privacy contract only
+    zero external requests
+
+:app:vexMapsProbeStadiaAutocompleteV2
+    opt-in live probe
+    maximum four requests in current fixture set
+    API key only from VEXMAPS_STADIA_API_KEY
+    JSON evidence under app/build/vex/provider-reliability/
+~~~
+
+The current public fixture classes pressure:
+
+~~~text
+BUSINESS_POI_PARTIAL
+LANDMARK_PARTIAL
+ADDRESS_PARTIAL
+PLACE_PARTIAL
+~~~
+
+No private user coordinate is part of this scheduled/provider-candidate fixture set.
+
+A live PASS is necessary to consider Stadia for ordinary VexMaps search, but not sufficient by itself.
+Before runtime adoption also confirm:
+
+~~~text
+commercial plan / terms
+mobile-key handling
+result-retention terms
+privacy
+failure behavior
+product ranking quality on lived queries
+~~~
+
+Do not ship the probe API key in the Android app merely because the host probe uses an API key.
+
 ## Current architecture pressure from completion work
 
 Do not run a separate cleanup campaign before product work.
