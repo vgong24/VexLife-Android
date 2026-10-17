@@ -4,7 +4,7 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
  * Coverage context: this file is still production-reachable. Do not exclude it from active
  * coverage while the VexStream library presentation is extracted into smaller rightful owners.
  */
-// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Production-reachable composition host is smaller but still routes raw Media3/source-resolver concerns for held track/collection actions; keep counted until those ownership boundaries are resolved.
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Production-reachable composition host still routes raw Media3/source-resolver concerns for Collection Play All / Shuffle All; keep counted until that composition owner is resolved.
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +27,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
 import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
@@ -41,6 +42,7 @@ import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlayback
 internal fun VexStreamLibrarySurface(
     runtime: VexRuntime,
     repository: VexStreamMusicRepository,
+    offlineCopyConnection: VexStreamOfflineCopyConnection,
 ) {
     val state by repository.state.collectAsState()
     val context = LocalContext.current
@@ -222,7 +224,8 @@ internal fun VexStreamLibrarySurface(
                         VexStreamDownloadsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
-                            repository = repository,
+                            offlineCopyConnection =
+                                offlineCopyConnection,
                             controller = controller,
                             resolver = resolver,
                             onVisitArtist = ::visitArtist,
@@ -232,7 +235,8 @@ internal fun VexStreamLibrarySurface(
                         VexStreamSongsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
-                            repository = repository,
+                            offlineCopyConnection =
+                                offlineCopyConnection,
                             controller = controller,
                             resolver = resolver,
                             onVisitArtist = ::visitArtist,
@@ -260,7 +264,8 @@ internal fun VexStreamLibrarySurface(
                 } else {
                     libraryProjection.searchResults
                 },
-            repository = repository,
+            offlineCopyConnection =
+                offlineCopyConnection,
             controller = controller,
             resolver = resolver,
             query = searchQuery,

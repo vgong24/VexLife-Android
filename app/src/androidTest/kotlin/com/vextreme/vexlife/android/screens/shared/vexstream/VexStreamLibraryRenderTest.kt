@@ -4,7 +4,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -21,10 +20,6 @@ class VexStreamLibraryRenderTest {
     fun songsPresentationRendersFeatureOwnedFixtureWithoutPlaybackProvider() {
         val state =
             vexStreamPreviewState()
-        val repository =
-            InMemoryVexStreamMusicRepository(
-                initialState = state,
-            )
         val runtime =
             VexRuntime(
                 registry = AppScreens.registry,
@@ -48,7 +43,7 @@ class VexStreamLibraryRenderTest {
                     VexStreamSongsPane(
                         runtime = runtime,
                         tracks = state.playableTracks(),
-                        repository = repository,
+                        offlineCopyConnection = null,
                         controller = null,
                         resolver = null,
                         onVisitArtist = {},

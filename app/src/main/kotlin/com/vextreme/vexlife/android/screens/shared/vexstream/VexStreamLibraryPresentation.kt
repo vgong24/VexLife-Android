@@ -14,21 +14,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
-import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
 import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
-import kotlinx.coroutines.launch
 
 /**
  * Library-level VexStream Android presentation.
@@ -154,12 +152,11 @@ internal fun VexStreamLibraryFabActions(
 internal fun VexStreamSongsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
-    repository: VexStreamMusicRepository,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
     onVisitArtist: (String) -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
     val trackPlaybackConnection =
         rememberVexStreamTrackPlaybackConnection(
             controller = controller,
@@ -205,20 +202,8 @@ internal fun VexStreamSongsPane(
                     contextTracks = sorted,
                     playbackConnection =
                         trackPlaybackConnection,
-                    onDownload = {
-                        scope.launch {
-                            repository.downloadForOffline(
-                                track.track.trackRef,
-                            )
-                        }
-                    },
-                    onRemoveDownload = {
-                        scope.launch {
-                            repository.removeOfflineCopy(
-                                track.track.trackRef,
-                            )
-                        }
-                    },
+                    offlineCopyConnection =
+                        offlineCopyConnection,
                     onVisitArtist = onVisitArtist,
                 )
             }
@@ -230,12 +215,11 @@ internal fun VexStreamSongsPane(
 internal fun VexStreamDownloadsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
-    repository: VexStreamMusicRepository,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
     onVisitArtist: (String) -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
     val trackPlaybackConnection =
         rememberVexStreamTrackPlaybackConnection(
             controller = controller,
@@ -281,14 +265,8 @@ internal fun VexStreamDownloadsPane(
                     contextTracks = downloaded,
                     playbackConnection =
                         trackPlaybackConnection,
-                    onDownload = {},
-                    onRemoveDownload = {
-                        scope.launch {
-                            repository.removeOfflineCopy(
-                                track.track.trackRef,
-                            )
-                        }
-                    },
+                    offlineCopyConnection =
+                        offlineCopyConnection,
                     onVisitArtist = onVisitArtist,
                 )
             }

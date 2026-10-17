@@ -1,7 +1,5 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Track download/remove still cross from presentation callbacks into repository execution; keep visible until their execution-lifetime owner is admitted.
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -43,6 +41,9 @@ import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyAction
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyRequest
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlayRequest
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlaybackConnection
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackQueuePlacement
@@ -63,8 +64,7 @@ internal fun VexStreamTrackCard(
     state: VexStreamTrackState,
     contextTracks: List<VexStreamTrackState>,
     playbackConnection: VexStreamTrackPlaybackConnection?,
-    onDownload: () -> Unit,
-    onRemoveDownload: () -> Unit,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     onVisitArtist: (String) -> Unit,
     showDownloadAction: Boolean = true,
 ) {
@@ -144,10 +144,26 @@ internal fun VexStreamTrackCard(
                     )
 
             VexStreamMusicScreen.DownloadTrack ->
-                onDownload()
+                offlineCopyConnection
+                    ?.request(
+                        VexStreamOfflineCopyRequest(
+                            trackRef =
+                                state.track.trackRef,
+                            action =
+                                VexStreamOfflineCopyAction.Download,
+                        ),
+                    )
 
             VexStreamMusicScreen.RemoveTrackDownload ->
-                onRemoveDownload()
+                offlineCopyConnection
+                    ?.request(
+                        VexStreamOfflineCopyRequest(
+                            trackRef =
+                                state.track.trackRef,
+                            action =
+                                VexStreamOfflineCopyAction.Remove,
+                        ),
+                    )
 
             VexStreamMusicScreen.VisitTrackArtist ->
                 onVisitArtist(
@@ -437,6 +453,8 @@ internal fun VexStreamTrackCard(
                                             VexStreamMusicScreen
                                                 .RemoveTrackDownload,
                                         handler = menuHandler,
+                                        enabled =
+                                            offlineCopyConnection != null,
                                     )
 
                                 is VexStreamLocalCopyState.Downloading ->
@@ -453,6 +471,8 @@ internal fun VexStreamTrackCard(
                                                 VexStreamMusicScreen
                                                     .DownloadTrack,
                                             handler = menuHandler,
+                                            enabled =
+                                                offlineCopyConnection != null,
                                         )
                                     }
                                 }

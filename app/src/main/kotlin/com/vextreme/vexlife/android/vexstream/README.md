@@ -81,6 +81,11 @@ vexstream/track/
     typed Track requests + source-resolution / Media3 provider-capability Connection
     composition boundary only; not another finite Behavior family
 
+vexstream/offline/
+    human question: who owns a requested local copy after the initiating row/sheet disappears?
+    typed Download / Remove request + in-process VexLife session-lifetime Connection
+    suspend repository remains byte/state authority; no process-death/background-resume claim
+
 vexstream/repeat/
     human question: Is Repeat active for the current playback context?
     Behavior family + concrete Media3 Connection + UI Experience membrane
@@ -214,8 +219,11 @@ VexStreamLibrarySurface
     remaining composition still routes raw controller/source-resolver concerns for held actions
 
 VexStreamTrackPresentation
-    play/next/queue now use typed Track requests + provider-capability Connection
-    download/remove still cross from presentation callbacks into repository execution
+    play/next/queue use typed Track requests + provider-capability Connection
+    download/remove use typed Offline Copy requests + session-lifetime execution Connection
+
+VexStreamLibrarySurface
+    remaining raw Media3/source-resolver composition is Collection Play All / Shuffle All
 ~~~
 
 A marker is removed when its described debt is actually resolved. A source file is not called
