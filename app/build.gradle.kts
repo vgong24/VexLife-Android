@@ -122,11 +122,4 @@ tasks.withType<Test>().configureEach {
 }
 
 
-apply(
-    from =
-        project.file(
-            "gradle/vexmaps-provider-probe.gradle.kts",
-        ),
-)
-
 apply(from = rootProject.file("gradle/source-alignment.gradle.kts"))

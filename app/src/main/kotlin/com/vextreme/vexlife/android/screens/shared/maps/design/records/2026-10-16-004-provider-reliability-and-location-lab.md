@@ -462,39 +462,41 @@ private runtime fixture reference
 
 Do not promote Maps query vocabulary, Maps location vocabulary, or one provider's contract.
 
-## First executable consumer
+## First executable consumer — historical outcome
 
-The first feature-local implementation of this design is intentionally provider-specific:
+The first implementation pressure was a provider-specific Stadia autocomplete v2 probe.
+
+It reached four successive zero-provider exact-head proofs while Fresh Assurance corrected provider version, redirect, secret and retention semantics. The protected A005 live probe was formed but **not executed**.
+
+The human placement decision changed before any Stadia query:
 
 ~~~text
-providerRef =
-provider.stadia.autocomplete.v2
+direct Android / third-party API dependency
+    -> not preferred
 
-deterministic task =
-:app:vexMapsProbeStadiaAutocompleteV2Contract
+VexHome-hosted Maps capability
+    -> preferred connected ownership
 
-live task =
-:app:vexMapsProbeStadiaAutocompleteV2
-
-host secret =
-VEXMAPS_STADIA_API_KEY
-
-current live request budget =
-4
-
-result limit requested =
-20
+Photon + OpenStreetMap
+    -> first self-hostable search-engine candidate
 ~~~
 
-The fixture set uses public geographic anchors only and exercises business/POI, landmark, address and
-place partial-input classes.
+Therefore:
 
-The API key is sent through Stadia's Authorization header and is not included in the request URL or
-evidence JSON.
+~~~text
+Stadia live requests executed = 0
+Stadia runtime adoption = NOT PERFORMED
+provider-probe learnings = PRESERVED
+provider-specific probe source = NOT CURRENT PRODUCT DIRECTION
+~~~
 
-This source is still feature-local. A second provider/feature consumer is required before promoting
-the probe schema/task grammar into shared Test / Proof Foundation.
+This is not a negative judgment on Stadia's API quality. It is a stronger product/deployment decision: the person's Home should own hosted capability realization and credentials rather than make the Android app depend directly on a commercial provider.
 
+The successor placement record is:
+
+~~~text
+design/records/2026-10-17-006-vexhome-hosted-maps-placement.md
+~~~
 ## Current consequence
 
 [VexMaps Complete] now carries two parallel completion questions:

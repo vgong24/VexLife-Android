@@ -344,26 +344,41 @@ WHY
     deterministic routing/location + honest Context Dock traversal are not yet available
 ~~~
 
-## Current provider-reliability candidate
+## Current hosted-capability placement decision
 
-The first feature-local live-provider candidate is **Stadia autocomplete v2**.
+The direct paid-API candidate work established useful provider-proof laws, but it is no longer the active product direction.
 
 ~~~text
-deterministic contract:
-    :app:vexMapsProbeStadiaAutocompleteV2Contract
+VexLife Android / VexMaps
+    owns:
+        human search experience
+        request/result currentness
+        destination selection
+        Android fallback truth
 
-live candidate probe:
-    :app:vexMapsProbeStadiaAutocompleteV2
-    VEXMAPS_STADIA_API_KEY required on host
-    max requests = 4
-    public fixtures only
+        |
+        | semantic Maps capability request
+        v
+
+VexHome
+    owns:
+        personal hosted capability realization
+        provider/engine custody
+        heavyweight indexes/data
+        provider credentials when any are needed
+        local-vs-remote deployment choice
+
+        |
+        +--> Photon / OpenStreetMap candidate engine
+        +--> future admitted route engine
+        +--> optional external provider fallback when justified
 ~~~
 
-This does not change VexMaps runtime provider truth.
+This does **not** mean the current narrow VEXHOME read-only observation contract already owns Maps. The Home-hosted capability boundary must be admitted explicitly in its rightful VexLife source.
 
-The probe exists to answer whether a suggestion/business-capable provider actually satisfies the
-VMC-01B human promise before product integration begins.
+It also does not earn a new VexMaps repository. Maps remains one VexLife capability with separate client and host realizations. The first deployment may be all-in-one on one VexHome machine; a later installation may place the same capability in another process, server or cloud host without changing the Android semantic contract.
 
+The previously qualified Stadia A005 live probe is **SUPERSEDED BEFORE EXECUTION** by this placement decision. No Stadia live request was made and no provider key is required for the current edge.
 ## Current next edge
 
 The active continuation is [VexMaps Complete].
@@ -384,7 +399,10 @@ The active product edge is:
 ~~~text
 VMC-01B — Browse/Search usability
 
-forgiving partial/business discovery
+establish the VexHome-hosted Maps search capability boundary
+-> realize the first self-hostable search engine candidate behind it
+-> consume that capability from Android without provider-specific coupling
+-> forgiving partial/business discovery
 -> keyboard-safe scrollable candidate list
 -> selected destination
 
@@ -393,7 +411,9 @@ plus browse hierarchy:
     recenter/current-area behavior that does not make the human recover from a detached world view
 ~~~
 
-Provider candidates should be evaluated through the feature-local reliability matrix before adoption.
+Photon/OpenStreetMap is the first engine candidate because it can be self-hosted and supports the human search pressure already observed. That engine choice remains below the capability contract.
+
+Provider/engine candidates still require bounded reliability evidence before they become accepted ordinary Maps truth.
 
 After ordinary Browse/Search is genuinely usable, the next unfinished product edge is:
 
