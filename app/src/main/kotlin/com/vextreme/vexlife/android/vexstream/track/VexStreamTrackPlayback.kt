@@ -5,6 +5,7 @@ import androidx.compose.runtime.remember
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 
 /**
@@ -123,9 +124,9 @@ internal class Media3VexStreamTrackPlaybackConnection(
     override fun isPlayAvailable(
         request: VexStreamTrackPlayRequest,
     ): Boolean =
-        resolver.mediaItem(
+        vexStreamTrackSourceProjectedAvailable(
             request.selected,
-        ) != null &&
+        ) &&
             playCommandsAvailable()
 
     override fun play(
@@ -164,9 +165,12 @@ internal class Media3VexStreamTrackPlaybackConnection(
     override fun isQueueAvailable(
         request: VexStreamTrackQueueRequest,
     ): Boolean =
-        resolveQueue(
-            request,
-        ) != null
+        vexStreamTrackSourceProjectedAvailable(
+            request.track,
+        ) &&
+            queueTarget(
+                request,
+            ) != null
 
     override fun queue(
         request: VexStreamTrackQueueRequest,
@@ -259,6 +263,21 @@ internal class Media3VexStreamTrackPlaybackConnection(
             )
                 ?: return null
 
+        val target =
+            queueTarget(
+                request,
+            )
+                ?: return null
+
+        return ResolvedTrackQueue(
+            item = item,
+            target = target,
+        )
+    }
+
+    private fun queueTarget(
+        request: VexStreamTrackQueueRequest,
+    ): VexStreamTrackQueueTarget? {
         val timelineAvailable =
             controller.isCommandAvailable(
                 Player.COMMAND_GET_TIMELINE,
@@ -284,38 +303,31 @@ internal class Media3VexStreamTrackPlaybackConnection(
                 null
             }
 
-        val target =
-            vexStreamTrackQueueTarget(
-                placement =
-                    request.placement,
-                mediaItemCount =
-                    mediaItemCount,
-                currentMediaItemIndex =
-                    currentMediaItemIndex,
-                timelineAvailable =
-                    timelineAvailable,
-                setMediaItemAvailable =
-                    controller.isCommandAvailable(
-                        Player.COMMAND_SET_MEDIA_ITEM,
-                    ),
-                changeMediaItemsAvailable =
-                    controller.isCommandAvailable(
-                        Player.COMMAND_CHANGE_MEDIA_ITEMS,
-                    ),
-                prepareAvailable =
-                    controller.isCommandAvailable(
-                        Player.COMMAND_PREPARE,
-                    ),
-                playAvailable =
-                    controller.isCommandAvailable(
-                        Player.COMMAND_PLAY_PAUSE,
-                    ),
-            )
-                ?: return null
-
-        return ResolvedTrackQueue(
-            item = item,
-            target = target,
+        return vexStreamTrackQueueTarget(
+            placement =
+                request.placement,
+            mediaItemCount =
+                mediaItemCount,
+            currentMediaItemIndex =
+                currentMediaItemIndex,
+            timelineAvailable =
+                timelineAvailable,
+            setMediaItemAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_SET_MEDIA_ITEM,
+                ),
+            changeMediaItemsAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_CHANGE_MEDIA_ITEMS,
+                ),
+            prepareAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_PREPARE,
+                ),
+            playAvailable =
+                controller.isCommandAvailable(
+                    Player.COMMAND_PLAY_PAUSE,
+                ),
         )
     }
 }
@@ -346,6 +358,19 @@ internal fun vexStreamTrackPlayTargetIndex(
         .takeIf {
             it >= 0
         }
+
+/**
+ * Cheap presentation projection only.
+ *
+ * This intentionally does not verify local bytes. Local-file digest verification and final source
+ * resolution remain activation-time work in [VexStreamTrackMediaItemResolver], so list composition
+ * never hashes media merely to decide whether an action should look available.
+ */
+internal fun vexStreamTrackSourceProjectedAvailable(
+    state: VexStreamTrackState,
+): Boolean =
+    state.availability !=
+        VexStreamTrackAvailability.UNAVAILABLE
 
 internal fun vexStreamTrackPlayCommandsAvailable(
     changeMediaItemsAvailable: Boolean,

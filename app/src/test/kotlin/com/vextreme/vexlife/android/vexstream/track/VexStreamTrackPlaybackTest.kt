@@ -51,6 +51,25 @@ class VexStreamTrackPlaybackTest {
     }
 
     @Test
+    fun sourceAvailabilityUsesProjectedTrackTruthWithoutByteVerification() {
+        assertTrue(
+            vexStreamTrackSourceProjectedAvailable(
+                track(
+                    "track.hub",
+                ),
+            ),
+        )
+        assertFalse(
+            vexStreamTrackSourceProjectedAvailable(
+                track(
+                    ref = "track.unavailable",
+                    hubAvailable = false,
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun playAdmissionRequiresEveryProviderCommandActuallyUsed() {
         assertTrue(
             vexStreamTrackPlayCommandsAvailable(
@@ -187,6 +206,7 @@ class VexStreamTrackPlaybackTest {
 
     private fun track(
         ref: String,
+        hubAvailable: Boolean = true,
     ): VexStreamTrackState =
         VexStreamTrackState(
             track =
@@ -203,7 +223,7 @@ class VexStreamTrackPlaybackTest {
                     title = ref,
                     artist = "Vex",
                 ),
-            hubAvailable = true,
+            hubAvailable = hubAvailable,
         )
 }
 
