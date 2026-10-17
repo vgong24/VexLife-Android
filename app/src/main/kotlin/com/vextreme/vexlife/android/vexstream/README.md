@@ -152,6 +152,43 @@ human situation
 
 Do not promote an implementation limitation into product vocabulary.
 
+## Coverage and architecture debt
+
+Coverage answers **what executable source the selected tests exercised**. It does not decide whether a
+large live class should receive more tests or be decomposed first.
+
+VexStream therefore allows a source-owned coverage-debt marker:
+
+~~~text
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | <why this live source remains intentionally broad>
+~~~
+
+The marker never removes live code from the coverage denominator. It adds context to the coverage
+projection so a low percentage can say "known extraction debt" instead of implying "add tests around
+the current shape forever."
+
+Current marked VexStream seams are intentionally specific:
+
+~~~text
+VexStreamLibrarySurface
+    library/search list rendering has been extracted
+    remaining composition still routes raw controller/source-resolver concerns for held actions
+
+VexStreamPlayerPresentation
+    Seek still carries a runtime position payload through raw MediaController
+
+VexStreamQueuePresentation
+    Queue play/reorder carry runtime occurrence/index identity
+    Repeat ownership remains unresolved
+
+VexStreamTrackPresentation
+    track play/queue/download actions still combine runtime identity with provider/repository effects
+~~~
+
+A marker is removed when its described debt is actually resolved. A source file is not called
+deprecated/replaced merely because a successor design exists; production reachability remains the
+deciding fact.
+
 ## Current proof shape
 
 Use focused JVM tests for Behavior meaning, repository-owned aggregate verification for source
