@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Home/Companion availability are independently owned observations. The Lab may hold explicit
  * overrides for those inputs, but it does not combine them with observed truth; that relationship
- * belongs to [VexConversationConvergenceRelay].
+ * belongs to [VexConversationHybridRelay].
  *
  * Synthetic-provider publication is a separate capability. It may be enabled while no availability
  * override exists, and availability overrides may exist while a real provider remains canonical.
@@ -259,14 +259,22 @@ internal class VexConversationLab(
         }
     }
 
+    /**
+     * Adds one known Conversation participant to the current Family-room audience.
+     *
+     * Participant is the broad Conversation actor category, not a synonym for human user. Current
+     * participant kinds are Human and Companion; additional kinds should extend this vocabulary only
+     * when Conversation actually earns them. The Lab publishes the resulting successor Family
+     * generation/channel rather than inventing a parallel membership model.
+     */
     fun addParticipant(
-        participantRef:
+        participantId:
             VexConversationParticipantRef,
     ): VexConversationThreadState {
         val identity =
             VexConversationLabFixture
                 .requireIdentity(
-                    participantRef,
+                    participantId,
                 )
         val current =
             requireFamilyRoom()
