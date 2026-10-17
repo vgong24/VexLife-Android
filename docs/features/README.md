@@ -183,18 +183,65 @@ Do not force this exact tree onto a feature with a different truthful shape.
 Before adding a class/layer, identify which existing owner answers each material question:
 
 ~~~text
-semantic meaning
-current truth
-data/source
-runtime effect
-Android/platform lifetime
-authorization/permission
-projection/UI
+semantic / domain meaning
+current / source truth
+relationship / convergence
+lived coordination / currentness
+runtime / provider effect
+execution custody / async lifetime
+Android / platform lifetime
+authorization / permission
+projection / presentation
 proof
+design continuity
 ~~~
 
-One object may legitimately fulfill several roles. Do not multiply owners merely to make a diagram
-symmetrical.
+These are questions, not mandatory layers or class names. One object may legitimately answer several
+when the question and consequence radius are genuinely the same. Split an owner only when another
+human/product question already exists; do not multiply owners merely to make a diagram symmetrical.
+
+Current independent consumers make several boundaries concrete:
+
+~~~text
+VexMaps Distribution
+    Behavior families
+        own local State / Control / Act / Effect meaning
+
+    Compound Relays
+        own relationships among independently complete truths
+
+    Distribution Session
+        owns lived currentness / failure / retry meaning across those relationships
+
+    VexMapsDistributionExecution
+        owns coroutine custody only
+
+Conversation
+    repository/provider
+        owns canonical Conversation truth
+
+    Lab
+        owns explicit perturbations / synthetic-provider controls
+
+    Hybrid Relay
+        owns mixed-provenance precedence + effective current relationship
+
+    Surface Projection
+        maps already-effective facts for presentation
+~~~
+
+Those are worked pressures, not a required skeleton for every feature.
+
+Coverage is also a discovery aid, not architecture authority. When executable source is heavily
+unexercised, first ask whether the file hides another rightful question, is legitimate
+composition/native-provider code, or lacks proof at its actual owner. Do not preserve a bad boundary
+with tests merely to raise a percentage, and do not split a truthful owner merely because coverage is
+yellow.
+
+Accepted VexStream pressure demonstrates the complementary case: production-reachable source may stay
+inside the coverage denominator while a source-owned `LIVE_REFACTOR_DEBT` note explains the specific
+ownership seam still being reshaped. That context is not a waiver and does not authorize a global
+refactor. The Test / Proof Foundation owns the detailed coverage/debt projection rules.
 
 ## Reusable-contract rule
 

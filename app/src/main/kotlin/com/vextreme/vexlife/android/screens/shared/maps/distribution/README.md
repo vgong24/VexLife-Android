@@ -148,34 +148,79 @@ VexMapsDistributionRun
 
 A historical name is continuity evidence, not current source vocabulary.
 
-## Current proof boundary
+## Accepted current checkpoint
 
-Independent Assurance accepted the core Distribution / Delivery Route decomposition and identified
-bounded relationship/presentation/name corrections. Those corrections change current PR-path bytes,
-so they must freshly earn the affected focused/local/device proof before lifecycle continuation.
+VexMaps Distribution / Delivery Route is accepted on current `main` through PR #86.
 
-Separately:
+~~~text
+merge = 28c80a8b2c89e0225427086685b6ceea8870e10c
+tree = 179a34d2b43c670ec99b65b0d0dbf00acb5e648e
 
-```text
+Fresh Independent Assurance = CLEAR_ON_EXACT_HEAD
+
+currentized aggregate proof:
+    vexVerifyLocal = PASS
+    physical-device preflight = PASS
+    vexVerifyDevice = PASS
+    connected tests = 10 executed / 0 skipped / 0 failed
+
+post-merge exact-tree verification = PASS
+~~~
+
+The accepted composition preserves the ownership laws above:
+
+~~~text
+Behavior families
+    own Distribution Mode / Delivery Route local semantics
+
+Convergence Relays
+    own relationships among independently complete truths
+
+Distribution Session
+    owns lived currentness / failure / retry meaning
+
+VexMapsDistributionExecution
+    owns coroutine custody only
+
+UI / Context Dock
+    presents already-resolved truth
+~~~
+
+This feature is therefore a worked production consumer of the accepted Behavior, Relay and
+VexExecution foundations rather than a separate VexMaps-only architecture.
+
+## Remaining proof debt
+
+~~~text
 connected Android aggregate proof
 !=
-end-to-end Distribution human-walk proof
-```
+full Distribution human-walk acceptance
+~~~
 
-The current Journey catalog still lacks an honest host-owned Context Dock page-selection step, so a
-full Delivery Route human walk remains explicit proof debt rather than a fabricated test shortcut.
+The Journey catalog still lacks an honest host-owned Context Dock page-selection + deterministic
+routing/location path for the complete Delivery Route workflow. That remains explicit non-blocking
+proof debt. Do not create a fake product/test shortcut merely to make coverage or Journey accounting
+look complete.
 
 ## Current next edge
 
-```text
-fresh corrected-head focused proof
--> vexVerifyLocal
--> connected Android proof
--> fresh Independent Assurance recheck
--> currentize lifecycle only from newly earned evidence
-```
+There is no automatic architecture rewrite or proof replay owed for the accepted PR #86 generation.
 
-A future Journey/Context Dock change should be earned by the host traversal question itself, not
-added solely to make semantic coverage appear complete.
+Future VexMaps Distribution work should begin only from real product/proof pressure, for example:
+
+~~~text
+honest full Delivery Route lived-Journey capability
+OR
+new Distribution product behavior
+OR
+coverage evidence that reveals a hidden rightful owner
+OR
+a native/provider claim that needs its own proof
+~~~
+
+Coverage is discovery evidence, not authority to split this feature or add tests around an accidental
+shape. If a large under-covered source area contains another human question, extract that rightful
+owner and prove it cheaply. If it is legitimate composition or native/provider machinery, use the
+proof surface that owns that claim.
 
 <!-- [VXG RealForever][feature.vexmaps.distribution][FEATURE-HOME] -->

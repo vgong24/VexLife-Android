@@ -40,6 +40,18 @@ VexMapsMapSurface
         +--> VexDeviceLocationSource / offline/search/routing stores
         |      Android/provider observations and effects
         |
+        +--> VexMapsDistributionSession
+        |      lived Distribution / Delivery Route relationship + currentness
+        |             |
+        |             +--> Distribution Mode + Delivery Route Behavior families
+        |             |      independently complete local semantic owners
+        |             |
+        |             +--> Mode <-> Delivery Route + Delivery Route <-> Navigation Relays
+        |             |      higher-order relationship owners
+        |             |
+        |             +--> VexMapsDistributionExecution
+        |                    coroutine custody only
+        |
         +--> planner / navigation overlay / Context Dock
                presentation projections
 ~~~
@@ -247,6 +259,48 @@ VexMapsDeliveryRouteNavigationConvergenceRelay
 
 Naming history and the cold-reader exercise that produced the current `Delivery Route` vocabulary
 are preserved under the searchable tag `[Name Ontology]` in the feature-local design record.
+
+## Accepted Distribution composition checkpoint
+
+PR #86 has now crossed its full source lifecycle and is accepted on current `main`:
+
+~~~text
+PR = #86
+merge = 28c80a8b2c89e0225427086685b6ceea8870e10c
+tree = 179a34d2b43c670ec99b65b0d0dbf00acb5e648e
+
+Fresh Independent Assurance = CLEAR_ON_EXACT_HEAD
+currentized vexVerifyLocal = PASS
+currentized physical-device preflight = PASS
+currentized vexVerifyDevice = PASS
+post-merge exact-tree verification = PASS
+~~~
+
+That checkpoint is important beyond the Distribution feature itself. It is the first substantial
+product composition on `main` where these accepted roles coexist without being collapsed:
+
+~~~text
+Behavior
+    local semantic question
+
+Compound Relay / convergence
+    relationship among independently-owned truths
+
+Session
+    lived relationship/currentness/failure/retry owner
+
+VexExecution
+    asynchronous execution custody
+
+Projection / Compose
+    presentation of already-resolved meaning
+~~~
+
+This is evidence for the repository feature-authoring grammar, not a requirement that every feature
+create all five roles.
+
+The full lived Delivery Route human walk remains a separate explicit proof debt. Connected Android
+aggregate proof does not silently become end-to-end lived acceptance.
 
 ## Still intentionally unresolved
 
