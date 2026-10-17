@@ -43,7 +43,6 @@ import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
@@ -131,21 +130,17 @@ internal fun VexStreamLibrarySurface(
         )
     }
 
-    val libraryTracks =
-        remember(state.tracks) {
-            state.playableTracks()
-        }
-    val searchResults =
+    val libraryProjection =
         remember(
             state.tracks,
             searchQuery,
         ) {
-            state.playableTracks().filter {
-                it.matchesSearch(
-                    searchQuery,
-                )
-            }
+            state.toVexStreamLibraryProjection(
+                searchQuery = searchQuery,
+            )
         }
+    val libraryTracks =
+        libraryProjection.playableTracks
 
     LaunchedEffect(repository) {
         if (repository.state.value.connectionState is VexStreamConnectionState.Paired) {
@@ -294,7 +289,7 @@ internal fun VexStreamLibrarySurface(
                 if (searchQuery.isBlank()) {
                     emptyList()
                 } else {
-                    searchResults
+                    libraryProjection.searchResults
                 },
             repository = repository,
             controller = controller,
@@ -693,66 +688,6 @@ internal fun VexStreamEmptyMessage(
         modifier = Modifier.padding(20.dp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-}
-
-@Composable
-private fun trackAvailabilityText(
-    state: VexStreamTrackState,
-): String =
-    when {
-        state.localCopy is VexStreamLocalCopyState.Downloading ->
-            stringResource(
-                R.string.vexstream_music_downloading,
-            )
-
-        state.localCopy is VexStreamLocalCopyState.Downloaded ->
-            if (state.hubAvailable) {
-                stringResource(
-                    R.string.vexstream_music_downloaded,
-                )
-            } else {
-                stringResource(
-                    R.string.vexstream_music_local_only,
-                )
-            }
-
-        state.availability == VexStreamTrackAvailability.HUB_ONLY ->
-            stringResource(
-                R.string.vexstream_music_hub_only,
-            )
-
-        state.availability == VexStreamTrackAvailability.LOCAL_ONLY ->
-            stringResource(
-                R.string.vexstream_music_local_only,
-            )
-
-        else ->
-            stringResource(
-                R.string.vexstream_music_unavailable,
-            )
-    }
-
-private fun VexStreamTrackState.matchesSearch(
-    query: String,
-): Boolean {
-    val normalized =
-        query.trim()
-    if (normalized.isBlank()) {
-        return true
-    }
-
-    return sequenceOf(
-        track.title,
-        track.artist,
-        track.album,
-        track.genre,
-        track.year,
-    ).any {
-        it.contains(
-            normalized,
-            ignoreCase = true,
-        )
-    }
 }
 
 // [VXG RealForever]
