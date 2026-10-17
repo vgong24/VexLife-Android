@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleTargetOrder
+import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackMediaItemResolver
 
 /**
  * Resolves product-level track availability into one Media3 item.
@@ -19,13 +20,14 @@ import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleTargetO
  */
 internal class VexStreamPlaybackSourceResolver(
     context: Context,
-) {
+) :
+    VexStreamTrackMediaItemResolver {
     private val mediaStore =
         VexStreamMediaStore.production(
             contextFilesDir = context.filesDir,
         )
 
-    fun mediaItem(
+    override fun mediaItem(
         state: VexStreamTrackState,
     ): MediaItem? {
         val localCopy =
@@ -78,38 +80,6 @@ internal class VexStreamPlaybackSourceResolver(
     }
 }
 
-internal fun MediaController.playVexStreamContext(
-    selected: VexStreamTrackState,
-    contextTracks: List<VexStreamTrackState>,
-    resolver: VexStreamPlaybackSourceResolver,
-): Boolean {
-    val items =
-        contextTracks
-            .mapNotNull(resolver::mediaItem)
-
-    if (items.isEmpty()) {
-        return false
-    }
-
-    val selectedIndex =
-        items.indexOfFirst {
-            it.mediaId == selected.track.trackRef.value
-        }
-    if (selectedIndex < 0) {
-        return false
-    }
-
-    setMediaItems(
-        items,
-        selectedIndex,
-        0L,
-    )
-    shuffleModeEnabled = false
-    prepare()
-    play()
-    return true
-}
-
 internal fun MediaController.playVexStreamCollection(
     tracks: List<VexStreamTrackState>,
     resolver: VexStreamPlaybackSourceResolver,
@@ -139,46 +109,6 @@ internal fun MediaController.playVexStreamCollection(
     setMediaItems(orderedItems)
     prepare()
     play()
-    return true
-}
-
-internal fun MediaController.playNextVexStream(
-    state: VexStreamTrackState,
-    resolver: VexStreamPlaybackSourceResolver,
-): Boolean {
-    val item =
-        resolver.mediaItem(state)
-            ?: return false
-
-    if (mediaItemCount == 0) {
-        setMediaItem(item)
-        prepare()
-        play()
-        return true
-    }
-
-    val insertAt =
-        (currentMediaItemIndex + 1)
-            .coerceIn(
-                0,
-                mediaItemCount,
-            )
-    addMediaItem(
-        insertAt,
-        item,
-    )
-    return true
-}
-
-internal fun MediaController.queueVexStream(
-    state: VexStreamTrackState,
-    resolver: VexStreamPlaybackSourceResolver,
-): Boolean {
-    val item =
-        resolver.mediaItem(state)
-            ?: return false
-
-    addMediaItem(item)
     return true
 }
 

@@ -76,6 +76,11 @@ vexstream/queue/
     Behavior family for finite Queue Controls
     typed current-occurrence Queue Play + adjacent Reorder requests
 
+vexstream/track/
+    human questions: play this rendered track context / place this rendered track next or at queue end
+    typed Track requests + source-resolution / Media3 provider-capability Connection
+    composition boundary only; not another finite Behavior family
+
 vexstream/repeat/
     human question: Is Repeat active for the current playback context?
     Behavior family + concrete Media3 Connection + UI Experience membrane
@@ -209,7 +214,8 @@ VexStreamLibrarySurface
     remaining composition still routes raw controller/source-resolver concerns for held actions
 
 VexStreamTrackPresentation
-    track play/queue/download actions still combine runtime identity with provider/repository effects
+    play/next/queue now use typed Track requests + provider-capability Connection
+    download/remove still cross from presentation callbacks into repository execution
 ~~~
 
 A marker is removed when its described debt is actually resolved. A source file is not called

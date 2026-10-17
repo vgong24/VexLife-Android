@@ -35,6 +35,7 @@ import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrailContent
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
 
 /**
  * Library collection presentation for Albums, Artists and Playlists.
@@ -384,6 +385,12 @@ private fun VexStreamCollectionDetail(
     onBack: () -> Unit,
     onVisitArtist: (String) -> Unit,
 ) {
+    val trackPlaybackConnection =
+        rememberVexStreamTrackPlaybackConnection(
+            controller = controller,
+            resolver = resolver,
+        )
+
     LazyColumn(
         modifier = VexModifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -443,8 +450,8 @@ private fun VexStreamCollectionDetail(
                     ),
                 state = track,
                 contextTracks = tracks,
-                controller = controller,
-                resolver = resolver,
+                playbackConnection =
+                    trackPlaybackConnection,
                 onDownload = {},
                 onRemoveDownload = {},
                 onVisitArtist = onVisitArtist,

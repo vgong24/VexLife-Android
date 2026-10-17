@@ -27,6 +27,7 @@ import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
 import kotlinx.coroutines.launch
 
 /**
@@ -159,6 +160,11 @@ internal fun VexStreamSongsPane(
     onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val trackPlaybackConnection =
+        rememberVexStreamTrackPlaybackConnection(
+            controller = controller,
+            resolver = resolver,
+        )
     val sorted =
         remember(tracks) {
             tracks.vexStreamSortedSongs()
@@ -197,8 +203,8 @@ internal fun VexStreamSongsPane(
                         VexStreamTrackPresentationScope.Songs,
                     state = track,
                     contextTracks = sorted,
-                    controller = controller,
-                    resolver = resolver,
+                    playbackConnection =
+                        trackPlaybackConnection,
                     onDownload = {
                         scope.launch {
                             repository.downloadForOffline(
@@ -230,6 +236,11 @@ internal fun VexStreamDownloadsPane(
     onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val trackPlaybackConnection =
+        rememberVexStreamTrackPlaybackConnection(
+            controller = controller,
+            resolver = resolver,
+        )
     val downloaded =
         remember(tracks) {
             tracks.vexStreamSortedDownloads()
@@ -268,8 +279,8 @@ internal fun VexStreamDownloadsPane(
                         VexStreamTrackPresentationScope.Downloads,
                     state = track,
                     contextTracks = downloaded,
-                    controller = controller,
-                    resolver = resolver,
+                    playbackConnection =
+                        trackPlaybackConnection,
                     onDownload = {},
                     onRemoveDownload = {
                         scope.launch {
