@@ -86,38 +86,6 @@ class VexStreamPlaybackReadStateTest {
     }
 
     @Test
-    fun seekProjectionClampsToPlayableDuration() {
-        assertEquals(
-            60_000L,
-            vexStreamSeekPositionMs(
-                fraction = 0.5f,
-                durationMs = 120_000L,
-            ),
-        )
-        assertEquals(
-            120_000L,
-            vexStreamSeekPositionMs(
-                fraction = 2f,
-                durationMs = 120_000L,
-            ),
-        )
-        assertEquals(
-            0L,
-            vexStreamSeekPositionMs(
-                fraction = -1f,
-                durationMs = 120_000L,
-            ),
-        )
-        assertEquals(
-            0L,
-            vexStreamSeekPositionMs(
-                fraction = 0.5f,
-                durationMs = 0L,
-            ),
-        )
-    }
-
-    @Test
     fun playbackTimeFormatsCompactPhoneDurations() {
         assertEquals(
             "0:00",

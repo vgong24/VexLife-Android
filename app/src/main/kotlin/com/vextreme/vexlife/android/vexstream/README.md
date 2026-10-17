@@ -31,8 +31,9 @@ WHERE CAN MEDIA COME FROM?
 
 WHAT IS PLAYBACK DOING?
     vexstream/playback
-    -> Playback State / Control / Act / Effect
-    -> Media3VexStreamPlaybackConnection
+    -> Play / Pause through Playback State / Control / Act / Effect
+    -> Seek through typed mediaId + position request
+    -> Media3 playback / seek Connections
 
 WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
@@ -64,8 +65,9 @@ data/vexstream/
     README.md preserves producer/consumer and security boundaries
 
 vexstream/playback/
-    human question: Play / Pause from current playback truth
-    Behavior family + concrete Media3 Connection + UI Experience membrane
+    human questions: Play / Pause + where should current media continue from?
+    Behavior family for finite Play/Pause meaning
+    typed Seek request + current-media/provider-capability Connection
 
 vexstream/queue/
     human question: Previous / Next / Shuffle / Clear from current queue truth
@@ -181,9 +183,6 @@ Current marked VexStream seams are intentionally specific:
 VexStreamLibrarySurface
     library/search list rendering has been extracted
     remaining composition still routes raw controller/source-resolver concerns for held actions
-
-VexStreamPlayerPresentation
-    Seek still carries a runtime position payload through raw MediaController
 
 VexStreamQueuePresentation
     Queue play/reorder carry runtime occurrence/index identity
