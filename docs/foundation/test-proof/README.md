@@ -396,6 +396,37 @@ The human surface intentionally stays tiny:
 **90% is an awareness target, not a correctness/build gate.** Yellow means “look here,” not
 “tests failed.” Branch coverage is reported beside lines but does not currently own the color.
 
+The generated block also includes up to ten under-90% classes ranked by **missed executable lines**.
+That keeps the PR focused on the largest exposure rather than letting tiny 0% helpers dominate
+attention. Full Kover HTML/XML remains the detailed source.
+
+### Autonomous PR projection after VexRelay
+
+GitHub Actions is not required to publish the coverage state.
+
+When `vexCoverage` is one proof command inside an exact-head VexRelay source-owner proof, its
+`VEX-COVERAGE-STATUS` block is already retained in that RUN operation receipt. After F09
+independently consumes a PASS canonical RETURN:
+
+~~~text
+require return candidate head == current PR head
+require exactly one bounded VEX-COVERAGE-STATUS block in the coverage proof receipt
+
+then:
+  adapter.direct-provider
+  -> append marked coverage block when absent
+  -> otherwise replace only the prior marked block
+  -> no new routine PR comment
+  -> continue F13 Assurance
+~~~
+
+If the head moved, the block is missing/ambiguous, or provider capability is unavailable, no
+coverage state is published. That holds only the projection effect; it does not relabel a valid Kover
+run as failed.
+
+This is intentionally a **repository-specific continuation using the current generic Relay contract**.
+VexRelay itself does not gain a coverage-specific schema or provider mutation inside the host proof.
+
 For PR cleanliness, update the generated coverage block in the PR body in place. Do not append one
 coverage comment per commit/run. Detailed reports remain in the proof bundle.
 
