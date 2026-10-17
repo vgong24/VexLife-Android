@@ -25,6 +25,7 @@ import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRe
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
+import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
@@ -64,6 +65,8 @@ class VexTestEngine(
         logHistory = logHistory,
         userProfile = InMemoryUserProfileRepository(),
         vexMaps = InMemoryVexMapsRepository(),
+        vexMapsDistribution =
+            InMemoryVexMapsDistributionRepository(),
         vexStream = vexStreamJourneyRepository(),
         events = RelayEventsRepository(),
         eventsAttention = RelayEventsAttentionPreferenceRepository(),
