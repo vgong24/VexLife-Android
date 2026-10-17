@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import com.vextreme.vexlife.android.testing.featurewalk.VexFeatureWalkJourneyCatalogEntry
+
 /**
  * One catalog assembled from feature/shell-owned shards.
  *
@@ -21,6 +23,23 @@ object VexJourneyCatalog {
 
     val all: List<VexJourney> =
         shards.flatMap { it.journeys }
+
+    /**
+     * Feature-Walk bindings are projected from the same shard owners as [all].
+     *
+     * This is completion traceability over Journeys, not a second Journey catalog.
+     */
+    val featureWalkBindings: List<VexFeatureWalkJourneyCatalogEntry> =
+        shards.flatMap { shard ->
+            shard.featureWalkJourneys.map { binding ->
+                VexFeatureWalkJourneyCatalogEntry(
+                    shardId =
+                        shard.shardId,
+                    binding =
+                        binding,
+                )
+            }
+        }
 
     val cases: List<VexJourneyCase> =
         shards.flatMap { shard ->

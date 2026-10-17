@@ -182,11 +182,41 @@ WHICH CONTROLS IT EXPOSES:
 WHAT IT DOES NOT OWN:
 ~~~
 
+## Feature Walk completion traceability
+
+Use this section only when owner-local proofs can be healthy while the whole human outcome remains
+incomplete. Read `FEATURE-WALKS.md` before adding identities.
+
+~~~text
+FEATURE WALK REF:
+WHOLE HUMAN OUTCOME:
+
+CASE REF:
+MATERIALLY DISTINCT HUMAN PATH:
+CURRENT COMMITMENT: REQUIRED | FUTURE
+
+CHECKPOINT REF:
+OBSERVABLE BOUNDARY:
+CURRENT HOLD OR NONE:
+RELEASE PREDICATE WHEN HELD:
+JOURNEY BINDING WHEN CURRENTLY EXECUTABLE:
+FOCUSED PROOF BACKLINKS:
+~~~
+
+Cases are product-completion paths. Journey environments such as locale/font scale remain
+`VexJourneyCase` execution permutations and must not be modeled as Feature-Walk Cases.
+
+Do not add a Feature Walk merely because a feature has tests. Add one when whole-outcome completion
+would otherwise be falsely inferred from disconnected proof.
+
 ## Acceptance walk
 
 ### <human request>
 
 ~~~text
+FEATURE WALK / CASE (when earned):
+CHECKPOINT(S) PROVED BY THIS WALK:
+
 GIVEN
     <current State / source / authorization facts>
 
@@ -230,6 +260,8 @@ WHAT REAL CONSUMER / EVIDENCE WOULD EARN IT:
 [ ] Established vocabulary was checked before new Vex vocabulary
 [ ] New durable concepts answer real missing questions
 [ ] Focused semantic tests pass
+[ ] Required unheld Feature-Walk Cases have exactly one typed Journey binding when Feature Walks apply
+[ ] Held Feature-Walk Checkpoints remain visible with release predicates when Feature Walks apply
 [ ] Changed Journey exists when warranted
 [ ] Native/provider proof used for native/provider claims
 [ ] Appropriate vexVerifyJvm / vexVerifyLocal / vexVerifyDevice run
