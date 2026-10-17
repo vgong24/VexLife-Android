@@ -1,0 +1,71 @@
+{
+  "schemaRef": "vexmaps.search-provider-probe-fixtures/v1",
+  "providerRef": "provider.stadia.autocomplete.v2",
+  "fixtureSetRef": "vexmaps.search-provider.stadia-autocomplete-v2/2026-10-16",
+  "maxRequestsPerRun": 4,
+  "resultLimit": 20,
+  "fixtures": [
+    {
+      "fixtureRef": "public.business.in-n-out-los-angeles",
+      "capabilityClass": "BUSINESS_POI_PARTIAL",
+      "text": "in n out",
+      "boundaryCountry": "US",
+      "layers": ["venue"],
+      "focus": {
+        "focusRef": "public.city-center.los-angeles",
+        "latitude": 34.052235,
+        "longitude": -118.243683
+      },
+      "expect": {
+        "minResults": 1,
+        "nameContainsNormalized": "innout"
+      }
+    },
+    {
+      "fixtureRef": "public.landmark.griffith-observatory-partial",
+      "capabilityClass": "LANDMARK_PARTIAL",
+      "text": "griffith observ",
+      "boundaryCountry": "US",
+      "layers": ["venue"],
+      "focus": {
+        "focusRef": "public.city-center.los-angeles",
+        "latitude": 34.052235,
+        "longitude": -118.243683
+      },
+      "expect": {
+        "minResults": 1,
+        "nameContainsNormalized": "griffith"
+      }
+    },
+    {
+      "fixtureRef": "public.address.white-house-partial",
+      "capabilityClass": "ADDRESS_PARTIAL",
+      "text": "1600 pennsylvania ave nw",
+      "boundaryCountry": "US",
+      "layers": ["address"],
+      "focus": {
+        "focusRef": "public.city-center.washington-dc",
+        "latitude": 38.907192,
+        "longitude": -77.036873
+      },
+      "expect": {
+        "minResults": 1
+      }
+    },
+    {
+      "fixtureRef": "public.place.santa-monica-partial",
+      "capabilityClass": "PLACE_PARTIAL",
+      "text": "santa moni",
+      "boundaryCountry": "US",
+      "focus": {
+        "focusRef": "public.city-center.los-angeles",
+        "latitude": 34.052235,
+        "longitude": -118.243683
+      },
+      "expect": {
+        "minResults": 1,
+        "nameContainsNormalized": "santamonica"
+      }
+    }
+  ]
+}
