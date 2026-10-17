@@ -163,6 +163,7 @@ VexColumn
 VexRow
 VexBox
 VexCard
+VexExplainableStatusIcon
 ~~~
 
 Existing registered cells such as `VexButton`, `VexIconButton`, `VexTextField`,
@@ -178,6 +179,28 @@ second semantic identity or text-role owner.
 Do not create one-for-one wrappers for every Compose API merely for naming symmetry. Add a Vex
 primitive when it carries recurring architectural meaning: inherited identity, semantic styling,
 interaction ownership, QA/evidence hooks, or another repeated cross-feature contract.
+
+
+`VexExplainableStatusIcon` owns one such repeated interaction contract:
+
+~~~text
+decorative icon
+    no independent interaction/meaning
+
+action icon
+    performs its named action
+
+explainable status icon
+    represents caller-owned state
+    tap or long-press -> explain that state
+    explanation does not mutate the represented state
+~~~
+
+The component deliberately does not own product wording or status truth. Features provide those.
+It reuses `VexAnchoredOverlay` so explanation presentation remains attached to the inspected target.
+The overlay resolver keeps the popup safe inside the window while shifting its caret toward the
+anchor center after edge clamping. Do not recreate feature-local tooltip/status wrappers merely to
+change text or icon choice.
 
 ### Gallery is the live Vex Compose catalog
 
