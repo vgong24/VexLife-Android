@@ -121,6 +121,47 @@ class VexMapsPlaceSearchSessionTest {
         }
 
     @Test
+    fun importChooserOpeningPreservesCompletedResults() =
+        runBlocking {
+            val source =
+                FakePlaceSearchSource()
+            val session =
+                session(
+                    source,
+                )
+
+            session.search(
+                "new",
+            )
+
+            withTimeout(
+                1_000L,
+            ) {
+                session.states
+                    .first { state ->
+                        state.search
+                            .resultRefs() ==
+                            listOf(
+                                "new",
+                            )
+                    }
+            }
+
+            session.importSelectionStarted()
+
+            assertEquals(
+                listOf(
+                    "new",
+                ),
+                session.current
+                    .search
+                    .resultRefs(),
+            )
+
+            session.close()
+        }
+
+    @Test
     fun searchFailureIsOwnedByPlaceSearchSession() =
         runBlocking {
             val source =
