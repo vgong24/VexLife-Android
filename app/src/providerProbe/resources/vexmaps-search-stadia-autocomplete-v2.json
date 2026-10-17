@@ -57,6 +57,7 @@
       "capabilityClass": "PLACE_PARTIAL",
       "text": "santa moni",
       "boundaryCountry": "US",
+      "layers": ["locality"],
       "focus": {
         "focusRef": "public.city-center.los-angeles",
         "latitude": 34.052235,

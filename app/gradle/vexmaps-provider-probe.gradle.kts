@@ -81,6 +81,24 @@ fun probeNormalize(
             character.isLetterOrDigit()
         }
 
+val vexMapsStadiaV2Layers =
+    setOf(
+        "poi",
+        "address",
+        "street",
+        "country",
+        "macroregion",
+        "region",
+        "macrocounty",
+        "county",
+        "locality",
+        "localadmin",
+        "borough",
+        "neighbourhood",
+        "postalcode",
+        "coarse",
+    )
+
 val vexMapsStadiaAutocompleteV2Contract =
     tasks.register(
         "vexMapsProbeStadiaAutocompleteV2Contract",
@@ -203,10 +221,11 @@ val vexMapsStadiaAutocompleteV2Contract =
                         .orEmpty()
 
                 require(
-                    "venue" !in
-                        layers,
+                    layers.all(
+                        vexMapsStadiaV2Layers::contains,
+                    ),
                 ) {
-                    "Stadia autocomplete v2 renamed the v1 'venue' layer to 'poi'"
+                    "Stadia autocomplete v2 fixtures must use current v2 layer names"
                 }
 
                 @Suppress("UNCHECKED_CAST")
@@ -387,7 +406,7 @@ tasks.register(
                     ),
                 )
                 .followRedirects(
-                    HttpClient.Redirect.NORMAL,
+                    HttpClient.Redirect.NEVER,
                 )
                 .build()
 
@@ -561,7 +580,7 @@ tasks.register(
                 0
             var resultNames =
                 emptyList<String>()
-            var resultLayers =
+            var returnedLayers =
                 emptyList<String>()
             var failureMessage:
                 String? =
@@ -645,15 +664,12 @@ tasks.register(
                                 resultLimit,
                             )
 
-                    resultLayers =
+                    returnedLayers =
                         properties
                             .mapNotNull { property ->
                                 property["layer"] as?
                                     String
                             }
-                            .take(
-                                resultLimit,
-                            )
                 } else {
                     failureMessage =
                         "HTTP_$httpStatus"
@@ -691,12 +707,23 @@ tasks.register(
                         )
                     }
 
+            val resultLimitHonored =
+                resultCount <=
+                    resultLimit
+            val layerExpectationMatched =
+                layers.isEmpty() ||
+                    returnedLayers.all(
+                        layers::contains,
+                    )
+
             val accepted =
                 httpStatus in
                     200..299 &&
                     resultCount >=
                     minimumResults &&
-                    tokenMatched
+                    resultLimitHonored &&
+                    tokenMatched &&
+                    layerExpectationMatched
 
             results +=
                 linkedMapOf(
@@ -714,16 +741,20 @@ tasks.register(
                         elapsedMillis,
                     "resultCount" to
                         resultCount,
-                    "topNames" to
-                        resultNames.take(5),
-                    "topLayers" to
-                        resultLayers.take(5),
                     "expectedMinimumResults" to
                         minimumResults,
+                    "resultLimitHonored" to
+                        resultLimitHonored,
+                    "requestedLayers" to
+                        layers,
+                    "layerExpectationMatched" to
+                        layerExpectationMatched,
                     "expectedNameContainsNormalized" to
                         expectedNameToken,
                     "nameExpectationMatched" to
                         tokenMatched,
+                    "providerResultContentPersisted" to
+                        false,
                     "accepted" to
                         accepted,
                     "failure" to
@@ -763,6 +794,8 @@ tasks.register(
                 "apiKeyPersisted" to
                     false,
                 "privateCoordinatesPersisted" to
+                    false,
+                "providerResultContentPersisted" to
                     false,
                 "results" to
                     results,
