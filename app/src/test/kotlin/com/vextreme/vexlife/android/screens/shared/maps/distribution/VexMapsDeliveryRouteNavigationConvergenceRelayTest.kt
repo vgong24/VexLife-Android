@@ -12,8 +12,8 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegFailureStage
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegTarget
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationConvergenceRelay
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationLayer
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRequest
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRelationshipStatus
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationReconciliationRequest
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRouteIdentity
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteConnection
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteControl
@@ -161,8 +161,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                     ) {
                         relay.outputStates
                             .first {
-                                it.layer ==
-                                    VexMapsDeliveryRouteNavigationLayer
+                                it.status ==
+                                    VexMapsDeliveryRouteNavigationRelationshipStatus
                                         .ReadyToStart
                             }
                     }
@@ -192,8 +192,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 ) {
                     relay.outputStates
                         .first {
-                            it.layer ==
-                                VexMapsDeliveryRouteNavigationLayer
+                            it.status ==
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
                                     .ForeignNavigation
                         }
                 }
@@ -220,8 +220,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 ) {
                     relay.outputStates
                         .first {
-                            it.layer ==
-                                VexMapsDeliveryRouteNavigationLayer
+                            it.status ==
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
                                     .ReadyToStart
                         }
                 }
@@ -240,8 +240,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 ) {
                     relay.outputStates
                         .first {
-                            it.layer ==
-                                VexMapsDeliveryRouteNavigationLayer
+                            it.status ==
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
                                     .ForeignNavigation
                         }
                 }
@@ -261,8 +261,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                     ) {
                         relay.outputStates
                             .first {
-                                it.layer ==
-                                    VexMapsDeliveryRouteNavigationLayer
+                                it.status ==
+                                    VexMapsDeliveryRouteNavigationRelationshipStatus
                                         .ForeignNavigation
                             }
                     }
@@ -276,7 +276,7 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
         }
 
     @Test
-    fun activeNavigationRerouteKeepsSameDistributionLegThroughArrival() =
+    fun activeNavigationRerouteKeepsSameDeliveryRouteLegThroughArrival() =
         runBlocking {
             val deliveryRoute =
                 readyConnection()
@@ -347,8 +347,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 ) {
                     relay.outputStates
                         .first {
-                            it.layer ==
-                                VexMapsDeliveryRouteNavigationLayer
+                            it.status ==
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
                                     .Navigating
                         }
                 }
@@ -364,8 +364,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 yield()
 
                 assertEquals(
-                    VexMapsDeliveryRouteNavigationLayer.Navigating,
-                    relay.currentOutput.layer,
+                    VexMapsDeliveryRouteNavigationRelationshipStatus.Navigating,
+                    relay.currentOutput.status,
                 )
                 assertNull(
                     relay.currentOutput.request,
@@ -384,7 +384,7 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                         relay.outputStates
                             .first {
                                 it.request ==
-                                    VexMapsDeliveryRouteNavigationRequest
+                                    VexMapsDeliveryRouteNavigationReconciliationRequest
                                         .DeliveryRouteControl(
                                             VexMapsDeliveryRouteControl
                                                 .Arrive,
@@ -393,8 +393,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                     }
 
                 assertEquals(
-                    VexMapsDeliveryRouteNavigationLayer.AtDelivery,
-                    arrived.layer,
+                    VexMapsDeliveryRouteNavigationRelationshipStatus.AtDelivery,
+                    arrived.status,
                 )
 
                 navigation.value =
@@ -413,12 +413,119 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 ) {
                     relay.outputStates
                         .first {
-                            it.layer ==
-                                VexMapsDeliveryRouteNavigationLayer
+                            it.status ==
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
                                     .ForeignNavigation
                         }
                 }
                 Unit
+            } finally {
+                relay.deactivate()
+            }
+        }
+
+    @Test
+    fun returnArrivalClassifiesAtStartBeforeDeliveryRouteControlIsConsumed() =
+        runBlocking {
+            val deliveryRoute =
+                readyConnection()
+                    .also {
+                        it.activate(
+                            VexMapsDeliveryRouteControl.Start,
+                        )
+                        it.activate(
+                            VexMapsDeliveryRouteControl.Arrive,
+                        )
+                        it.activate(
+                            VexMapsDeliveryRouteControl.MarkDelivered,
+                        )
+                        it.activate(
+                            VexMapsDeliveryRouteControl.Arrive,
+                        )
+                        it.activate(
+                            VexMapsDeliveryRouteControl.MarkDelivered,
+                        )
+                    }
+
+            assertEquals(
+                VexMapsDeliveryRouteState.ReturningToStart::class,
+                deliveryRoute.currentProjection.state::class,
+            )
+
+            val target =
+                VexMapsDeliveryRouteLegTarget.ReturnToStart
+            val navigation =
+                MutableStateFlow(
+                    VexNavigationSessionState(
+                        phase =
+                            VexNavigationSessionPhase.ARRIVED,
+                        routeResult =
+                            route(
+                                "distribution.return",
+                                9L,
+                            ),
+                    ),
+                )
+            val expected =
+                MutableStateFlow<
+                    VexMapsDeliveryRouteExpectedLegState
+                >(
+                    VexMapsDeliveryRouteExpectedLegState.Expected(
+                        VexMapsDeliveryRouteExpectedLeg(
+                            planRef =
+                                "plan.4",
+                            target =
+                                target,
+                            route =
+                                VexMapsDeliveryRouteNavigationRouteIdentity(
+                                    "distribution.return",
+                                    9L,
+                                ),
+                        ),
+                    ),
+                )
+            val attempts =
+                MutableStateFlow<
+                    VexMapsDeliveryRouteLegAttempt
+                >(
+                    VexMapsDeliveryRouteLegAttempt.Idle,
+                )
+            val relay =
+                VexMapsDeliveryRouteNavigationConvergenceRelay(
+                    deliveryRouteProjections =
+                        deliveryRoute.projections,
+                    navigationStates =
+                        navigation,
+                    expectedLegStates =
+                        expected,
+                    legAttempts =
+                        attempts,
+                )
+
+            try {
+                relay.activate(
+                    this,
+                )
+
+                val arrived =
+                    withTimeout(
+                        1_000L,
+                    ) {
+                        relay.outputStates
+                            .first {
+                                it.status ==
+                                    VexMapsDeliveryRouteNavigationRelationshipStatus
+                                        .AtStart
+                            }
+                    }
+
+                assertEquals(
+                    VexMapsDeliveryRouteNavigationReconciliationRequest
+                        .DeliveryRouteControl(
+                            VexMapsDeliveryRouteControl.Arrive,
+                        ),
+                    arrived.request,
+                )
             } finally {
                 relay.deactivate()
             }
@@ -484,8 +591,8 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                 ) {
                     relay.outputStates
                         .first {
-                            it.layer ==
-                                VexMapsDeliveryRouteNavigationLayer
+                            it.status ==
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
                                     .LegFailed
                         }
                 }
@@ -499,14 +606,14 @@ class VexMapsDeliveryRouteNavigationConvergenceRelayTest {
                     ) {
                         relay.outputStates
                             .first {
-                                it.layer ==
-                                    VexMapsDeliveryRouteNavigationLayer
+                                it.status ==
+                                    VexMapsDeliveryRouteNavigationRelationshipStatus
                                         .NeedsLeg
                             }
                     }
 
                 assertEquals(
-                    VexMapsDeliveryRouteNavigationRequest.PrepareLeg(
+                    VexMapsDeliveryRouteNavigationReconciliationRequest.PrepareLeg(
                         "beta",
                     ),
                     retry.request,

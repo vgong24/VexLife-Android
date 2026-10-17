@@ -336,7 +336,9 @@
     <string name="vexmaps_distribution_state_complete">Delivery route complete</string>
     <string name="vexmaps_distribution_draft_failed">Draft update failed: %1$s</string>
     <string name="vexmaps_distribution_preparation_failed">Preparation failed: %1$s</string>
-    <string name="vexmaps_distribution_leg_failed">Next leg unavailable: %1$s</string>
+    <string name="vexmaps_distribution_route_preparation_failed">Route preparation failed: %1$s</string>
+    <string name="vexmaps_distribution_navigation_start_failed">Navigation could not start: %1$s</string>
+    <string name="vexmaps_distribution_previous_leg_cleanup_failed">Previous navigation cleanup did not finish: %1$s</string>
     <string name="vexmaps_distribution_retry">Retry</string>
     <string name="vexmaps_distribution_plan_eta">Optimized travel estimate: ~%1$d min</string>
     <string name="vexmaps_distribution_optimized_order">Optimized order</string>

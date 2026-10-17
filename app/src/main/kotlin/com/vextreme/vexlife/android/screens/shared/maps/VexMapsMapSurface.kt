@@ -49,7 +49,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionUi
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.vexMapsDistributionContextDockPage
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationLayer
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRelationshipStatus
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionProcess
@@ -128,7 +128,7 @@ internal fun VexMapsMapSurface(
         distributionUi
             .modeProjections
             .collectAsState()
-    val distributionRunProjection by
+    val deliveryRouteProjection by
         distributionUi
             .deliveryRouteProjections
             .collectAsState()
@@ -1783,12 +1783,12 @@ internal fun VexMapsMapSurface(
                                 .Distribution
                     ) {
                         if (
-                            distributionRunProjection
+                            deliveryRouteProjection
                                 .state is
                                 VexMapsDeliveryRouteState.Ready &&
                             distributionNavigation
-                                .layer ==
-                                VexMapsDeliveryRouteNavigationLayer
+                                .status ==
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
                                     .ReadyToStart
                         ) {
                             runtime.activate(
@@ -1867,7 +1867,7 @@ internal fun VexMapsMapSurface(
                                 .Distribution
                     ) {
                         if (
-                            distributionRunProjection
+                            deliveryRouteProjection
                                 .state is
                                 VexMapsDeliveryRouteState.AtDelivery
                         ) {

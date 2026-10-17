@@ -19,7 +19,8 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegAttempt
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationLayer
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegFailureStage
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRelationshipStatus
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteControl
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
@@ -85,8 +86,8 @@ internal fun vexMapsDistributionContextDockPage(
         deliveryRouteProjection[
             VexMapsDeliveryRouteControl.Start
         ].isAvailable &&
-            navigation.layer ==
-            VexMapsDeliveryRouteNavigationLayer
+            navigation.status ==
+            VexMapsDeliveryRouteNavigationRelationshipStatus
                 .ReadyToStart
 
     return VexContextDockPage(
@@ -410,8 +411,9 @@ internal fun vexMapsDistributionContextDockPage(
                 ?.let { failed ->
                     Text(
                         stringResource(
-                            R.string
-                                .vexmaps_distribution_leg_failed,
+                            vexMapsDeliveryRouteFailureMessageResource(
+                                failed.stage,
+                            ),
                             failed.reason,
                         ),
                     )
@@ -538,5 +540,19 @@ internal fun vexMapsDistributionContextDockPage(
         }
     }
 }
+
+internal fun vexMapsDeliveryRouteFailureMessageResource(
+    stage: VexMapsDeliveryRouteLegFailureStage,
+): Int =
+    when (stage) {
+        VexMapsDeliveryRouteLegFailureStage.RoutePreparation ->
+            R.string.vexmaps_distribution_route_preparation_failed
+
+        VexMapsDeliveryRouteLegFailureStage.NavigationStart ->
+            R.string.vexmaps_distribution_navigation_start_failed
+
+        VexMapsDeliveryRouteLegFailureStage.PreviousLegCleanup ->
+            R.string.vexmaps_distribution_previous_leg_cleanup_failed
+    }
 
 // [VXG RealForever]

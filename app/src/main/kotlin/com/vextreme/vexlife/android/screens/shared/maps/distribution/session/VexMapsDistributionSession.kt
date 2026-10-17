@@ -19,7 +19,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteConvergenceRelay
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationConvergenceRelay
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationOutput
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRequest
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationReconciliationRequest
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRouteIdentity
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.vexMapsDeliveryRouteNavigationRealizesExpectedLeg
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeConnection
@@ -1177,9 +1177,9 @@ internal class VexMapsDistributionSession(
             VexMapsDeliveryRouteNavigationOutput,
     ) {
         if (
-            output.layer ==
+            output.status ==
                 com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
-                    .VexMapsDeliveryRouteNavigationLayer.Navigating &&
+                    .VexMapsDeliveryRouteNavigationRelationshipStatus.Navigating &&
             mutableLegAttempt.value is
                 VexMapsDeliveryRouteLegAttempt.Preparing
         ) {
@@ -1190,32 +1190,32 @@ internal class VexMapsDistributionSession(
 
         output.request
             ?.let {
-                realizeNavigationRequest(
+                realizeNavigationReconciliationRequest(
                     it,
                 )
             }
     }
 
-    private fun realizeNavigationRequest(
+    private fun realizeNavigationReconciliationRequest(
         request:
-            VexMapsDeliveryRouteNavigationRequest,
+            VexMapsDeliveryRouteNavigationReconciliationRequest,
     ) {
         when (
             request
         ) {
-            is VexMapsDeliveryRouteNavigationRequest.PrepareLeg ->
+            is VexMapsDeliveryRouteNavigationReconciliationRequest.PrepareLeg ->
                 prepareLeg(
                     VexMapsDeliveryRouteLegTarget.Stop(
                         request.stopRef,
                     ),
                 )
 
-            VexMapsDeliveryRouteNavigationRequest.PrepareReturn ->
+            VexMapsDeliveryRouteNavigationReconciliationRequest.PrepareReturn ->
                 prepareLeg(
                     VexMapsDeliveryRouteLegTarget.ReturnToStart,
                 )
 
-            VexMapsDeliveryRouteNavigationRequest.StartPreparedNavigation -> {
+            VexMapsDeliveryRouteNavigationReconciliationRequest.StartPreparedNavigation -> {
                 val target =
                     currentLegTargetOrNull()
                         ?: return
@@ -1243,7 +1243,7 @@ internal class VexMapsDistributionSession(
                 }
             }
 
-            is VexMapsDeliveryRouteNavigationRequest.DeliveryRouteControl -> {
+            is VexMapsDeliveryRouteNavigationReconciliationRequest.DeliveryRouteControl -> {
                 val completingReturn =
                     request.control ==
                         VexMapsDeliveryRouteControl.Arrive &&

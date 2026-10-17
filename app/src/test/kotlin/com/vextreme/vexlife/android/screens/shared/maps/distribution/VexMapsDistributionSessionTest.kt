@@ -19,7 +19,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegAttempt
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegFailureStage
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteLegTarget
-import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationLayer
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRelationshipStatus
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPlan
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.planning.VexMapsDistributionPreparationSnapshot
@@ -98,7 +98,7 @@ class VexMapsDistributionSessionTest {
         )
 
     @Test
-    fun preparingSealsDraftAndExperienceRecreationDoesNotResetSession() =
+    fun preparingSealsDraftAndUiRecreationDoesNotResetSession() =
         runBlocking {
             val repository =
                 InMemoryVexMapsDistributionRepository(
@@ -185,13 +185,13 @@ class VexMapsDistributionSessionTest {
                         session,
                     )
 
-                val experienceAfterRecreation =
+                val uiAfterRecreation =
                     VexMapsDistributionUi(
                         session,
                     )
                 assertEquals(
                     ready.state,
-                    experienceAfterRecreation
+                    uiAfterRecreation
                         .deliveryRouteProjection
                         .state,
                 )
@@ -199,7 +199,7 @@ class VexMapsDistributionSessionTest {
                     session.states.value
                         .plan
                         ?.planRef,
-                    experienceAfterRecreation
+                    uiAfterRecreation
                         .states
                         .value
                         .plan
@@ -455,8 +455,8 @@ class VexMapsDistributionSessionTest {
                     routing.routeCalls,
                 )
                 assertEquals(
-                    VexMapsDeliveryRouteNavigationLayer.AtDelivery,
-                    session.currentNavigation.layer,
+                    VexMapsDeliveryRouteNavigationRelationshipStatus.AtDelivery,
+                    session.currentNavigation.status,
                 )
             } finally {
                 session.shutdown()
@@ -1416,7 +1416,7 @@ class VexMapsDistributionSessionTest {
         }
 
     @Test
-    fun routingRegionReplacementInvalidatesPreparedRealityButNotActiveRun() =
+    fun routingRegionReplacementInvalidatesPreparedRealityButNotActiveDeliveryRoute() =
         runBlocking {
             val repository =
                 InMemoryVexMapsDistributionRepository(

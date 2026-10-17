@@ -6,7 +6,7 @@ Feature ref: `feature.vexmaps.distribution`
 Current human name: **VexMaps Distribution**  
 Current concrete journey noun: **Delivery Route**  
 Last meaningfully updated: **2026-10-16**  
-Current design record: `records/2026-10-16-001-name-ontology-delivery-route.md`
+Current design record: `records/2026-10-16-002-name-ontology-relationship-truth.md`
 
 ## Role of this file
 
@@ -42,6 +42,12 @@ Delivery Plan
 
 Delivery Route + Navigation
     independently-owned truths related through convergence
+
+Navigation Relationship Status
+    derived truth about how the Delivery Route and Navigation currently relate
+
+Reconciliation Request
+    bounded request emitted by convergence toward the rightful owner boundary
 ```
 
 The current source should let a colleague discover those distinctions from names and paths before
@@ -57,7 +63,7 @@ Current design uses the searchable continuity tag:
 
 The tag names a design practice, not an approved-word registry.
 
-The current record is intentionally structured as a cold-reading exercise. A future worker should
+The dated records are intentionally structured as cold-reading exercises. A future worker should
 experience their own prediction gap before reading the vocabulary change as history.
 
 ## Current architectural intent
@@ -91,7 +97,8 @@ Behavior-family Experience term.
 
 ## Proof / experience hold
 
-The rename itself must receive fresh repository proof.
+The current Assurance correction changes production relationship/presentation bytes and must receive
+fresh focused, local, and connected-device proof before lifecycle continuation.
 
 The separate lived interaction question remains open:
 

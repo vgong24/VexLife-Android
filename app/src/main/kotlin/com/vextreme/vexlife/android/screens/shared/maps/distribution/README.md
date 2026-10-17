@@ -50,6 +50,7 @@ DO DISTRIBUTION MODE AND THE DELIVERY ROUTE AGREE?
 DOES NAVIGATION REALIZE THE EXACT DELIVERY-ROUTE LEG?
     distribution/convergence/
     -> DeliveryRouteNavigation convergence
+    -> NavigationRelationshipStatus + bounded ReconciliationRequest
 
 WHO OWNS THE LIVED RELATIONSHIP?
     distribution/session/
@@ -100,7 +101,8 @@ distribution/
 └── design/
     ├── README.md
     └── records/
-        └── 2026-10-16-001-name-ontology-delivery-route.md
+        ├── 2026-10-16-001-name-ontology-delivery-route.md
+        └── 2026-10-16-002-name-ontology-relationship-truth.md
 ```
 
 Durable Draft storage remains under:
@@ -109,7 +111,8 @@ Durable Draft storage remains under:
 data/maps/distribution/
 ```
 
-The feature home explains current source truth. The design record preserves why the vocabulary changed.
+The feature home explains current source truth. The dated design records preserve the naming
+experiences that changed it without becoming competing current-source authority.
 
 ## Ownership laws
 
@@ -145,13 +148,11 @@ VexMapsDistributionRun
 
 A historical name is continuity evidence, not current source vocabulary.
 
-## Proof status after the Delivery Route rename
+## Current proof boundary
 
-This rename changes source identity on the active PR head, so prior exact-head proof must not be
-relabeled as proof of the renamed candidate.
-
-Preserved historical evidence still matters, but the renamed head must freshly earn the affected
-repository checks before lifecycle continuation.
+Independent Assurance accepted the core Distribution / Delivery Route decomposition and identified
+bounded relationship/presentation/name corrections. Those corrections change current PR-path bytes,
+so they must freshly earn the affected focused/local/device proof before lifecycle continuation.
 
 Separately:
 
@@ -167,9 +168,10 @@ full Delivery Route human walk remains explicit proof debt rather than a fabrica
 ## Current next edge
 
 ```text
-fresh renamed-head source proof
--> connected Android proof on the renamed head
--> fresh Independent Assurance
+fresh corrected-head focused proof
+-> vexVerifyLocal
+-> connected Android proof
+-> fresh Independent Assurance recheck
 -> currentize lifecycle only from newly earned evidence
 ```
 
