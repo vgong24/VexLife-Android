@@ -25,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.maps.VexMapsAppearancePreference
-import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
 
@@ -186,13 +185,5 @@ private fun VexMapsAppearancePreference.labelRes():
             R.string
                 .vexmaps_appearance_dark
     }
-
-@Suppress("UNUSED_PARAMETER")
-private fun semanticButton(
-    element: ButtonElement,
-) {
-    // Type anchor only: appearance actions remain registered ButtonElements even though this custom
-    // native Maps control renders them as icon/menu items rather than generic VexButton cells.
-}
 
 // [VXG RealForever]
