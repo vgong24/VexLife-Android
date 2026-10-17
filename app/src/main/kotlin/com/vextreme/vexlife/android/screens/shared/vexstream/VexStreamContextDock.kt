@@ -39,7 +39,10 @@ import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlayback
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
+import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
 
 private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
     "vexstream.now-playing"
@@ -105,6 +108,10 @@ private fun VexStreamContextDockContent(
         )
     val queueProjection =
         queueExperience.projection
+    val queuePlayConnection =
+        rememberVexStreamQueuePlayConnection(
+            controller,
+        )
     val seekConnection =
         rememberVexStreamPlaybackSeekConnection(
             controller,
@@ -355,6 +362,17 @@ private fun VexStreamContextDockContent(
                 controller != null &&
                 queueStart < queueEnd
             ) {
+                val queueOccurrences =
+                    vexStreamQueueOccurrences(
+                        (0 until controller.mediaItemCount)
+                            .map { index ->
+                                controller
+                                    .getMediaItemAt(
+                                        index,
+                                    ).mediaId
+                            },
+                    )
+
                 HorizontalDivider()
                 Text(
                     text =
@@ -372,6 +390,12 @@ private fun VexStreamContextDockContent(
                     index in
                     queueStart until queueEnd
                 ) {
+                    val occurrence =
+                        queueOccurrences
+                            .getOrNull(
+                                index,
+                            )
+                            ?: continue
                     val item =
                         controller
                             .getMediaItemAt(
@@ -393,11 +417,17 @@ private fun VexStreamContextDockContent(
                                     "presentation.context-dock.vexstream.queue-item",
                                 action = "Selected",
                             )
-                            controller.seekToDefaultPosition(
-                                index,
-                            )
-                            controller.play()
+                            queuePlayConnection
+                                ?.play(
+                                    VexStreamQueuePlayRequest(
+                                        occurrence =
+                                            occurrence,
+                                    ),
+                                )
                         },
+                        enabled =
+                            queuePlayConnection
+                                ?.isAvailable == true,
                     ) {
                         Text(
                             text = title,
