@@ -161,11 +161,32 @@ map
 + hamburger -> Offline maps
 ~~~
 
+Current online styles are also presented as full swipeable Context Dock pages:
+
+~~~text
+Dark
+Liberty
+~~~
+
+That presentation gives a provider-style choice too much product weight. The accepted style
+relationship remains useful, but the [VexMaps Complete] design now treats ordinary appearance as a
+compact map control with human-facing intent:
+
+~~~text
+Automatic
+Light
+Dark
+~~~
+
+Automatic follows VexLife's current app appearance; when the app follows Android system day/night,
+the map follows with it. Current provider realization may still map Light -> OpenFreeMap Liberty and
+Dark -> OpenFreeMap Dark, but those provider style refs are not the human preference model.
+
 The offline planner contains place search, route inputs, travel mode, offline-map import and routing
 region import.
 
-That source shape explains the current lived screenshots: the user can see a map and Distribution
-surface while the basic "Where to?" journey is not visually discoverable.
+That source shape explains the current lived screenshots: the user can see a map and Distribution /
+style surfaces while the basic "Where to?" journey is not visually discoverable.
 
 ## Current source / ownership map
 
