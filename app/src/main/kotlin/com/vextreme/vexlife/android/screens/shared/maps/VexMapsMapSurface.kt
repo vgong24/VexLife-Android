@@ -1437,7 +1437,7 @@ internal fun VexMapsMapSurface(
                         VexMapsScreen.ImportPlaceSearch,
                     )
                     placeSearchSession
-                        .searchInputChanged()
+                        .importSelectionStarted()
                     placeSearchImportLauncher.launch(
                         arrayOf("*/*"),
                     )
