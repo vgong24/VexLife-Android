@@ -77,9 +77,167 @@ fun probeNormalize(
         .lowercase(
             Locale.ROOT,
         )
-        .filter(
-            Char::isLetterOrDigit,
+        .filter { character ->
+            character.isLetterOrDigit()
+        }
+
+val vexMapsStadiaAutocompleteV2Contract =
+    tasks.register(
+        "vexMapsProbeStadiaAutocompleteV2Contract",
+    ) {
+        group = "verification"
+        description =
+            "Validate the bounded public fixture contract for the Stadia autocomplete probe."
+
+        inputs.file(
+            vexMapsStadiaProbeFixtureFile,
         )
+
+        doLast {
+            @Suppress("UNCHECKED_CAST")
+            val root =
+                JsonSlurper()
+                    .parse(
+                        vexMapsStadiaProbeFixtureFile,
+                    ) as Map<String, Any?>
+
+            require(
+                probeRequiredString(
+                    root,
+                    "schemaRef",
+                ) ==
+                    "vexmaps.search-provider-probe-fixtures/v1",
+            )
+            require(
+                probeRequiredString(
+                    root,
+                    "providerRef",
+                ) ==
+                    "provider.stadia.autocomplete.v2",
+            )
+
+            val requestBudget =
+                probeRequiredInt(
+                    root,
+                    "maxRequestsPerRun",
+                )
+            val resultLimit =
+                probeRequiredInt(
+                    root,
+                    "resultLimit",
+                )
+
+            require(
+                requestBudget in
+                    1..4,
+            ) {
+                "Current VexMaps Stadia probe budget must remain within 1..4 requests"
+            }
+            require(
+                resultLimit in
+                    1..20,
+            ) {
+                "Current VexMaps Stadia result limit must remain within 1..20"
+            }
+
+            val fixtures =
+                requireNotNull(
+                    root["fixtures"] as?
+                        List<*>,
+                )
+
+            require(
+                fixtures.isNotEmpty() &&
+                    fixtures.size <=
+                    requestBudget,
+            ) {
+                "VexMaps Stadia fixture count must be non-empty and within request budget"
+            }
+
+            fixtures.forEach { rawFixture ->
+                @Suppress("UNCHECKED_CAST")
+                val fixture =
+                    rawFixture as
+                        Map<String, Any?>
+
+                val fixtureRef =
+                    probeRequiredString(
+                        fixture,
+                        "fixtureRef",
+                    )
+                val queryText =
+                    probeRequiredString(
+                        fixture,
+                        "text",
+                    )
+
+                require(
+                    fixtureRef.startsWith(
+                        "public.",
+                    ),
+                ) {
+                    "Scheduled/provider-candidate fixtures must use public fixture refs"
+                }
+                require(
+                    queryText.length >=
+                        3,
+                ) {
+                    "Autocomplete reliability fixtures must use at least 3 input characters"
+                }
+
+                @Suppress("UNCHECKED_CAST")
+                val focus =
+                    requireNotNull(
+                        fixture["focus"] as?
+                            Map<String, Any?>,
+                    )
+
+                require(
+                    probeRequiredString(
+                        focus,
+                        "focusRef",
+                    ).startsWith(
+                        "public.",
+                    ),
+                ) {
+                    "Scheduled/provider-candidate focus must use a public fixture ref"
+                }
+
+                val latitude =
+                    probeRequiredDouble(
+                        focus,
+                        "latitude",
+                    )
+                val longitude =
+                    probeRequiredDouble(
+                        focus,
+                        "longitude",
+                    )
+
+                require(
+                    latitude in
+                        -90.0..90.0 &&
+                        longitude in
+                        -180.0..180.0,
+                )
+
+                @Suppress("UNCHECKED_CAST")
+                val expected =
+                    requireNotNull(
+                        fixture["expect"] as?
+                            Map<String, Any?>,
+                    )
+
+                require(
+                    probeRequiredInt(
+                        expected,
+                        "minResults",
+                    ) in
+                        1..resultLimit,
+                )
+            }
+        }
+    }
 
 tasks.register(
     "vexMapsProbeStadiaAutocompleteV2",
@@ -87,6 +245,10 @@ tasks.register(
     group = "verification"
     description =
         "Run the bounded live Stadia autocomplete candidate probe for VexMaps."
+
+    dependsOn(
+        vexMapsStadiaAutocompleteV2Contract,
+    )
 
     inputs.file(
         vexMapsStadiaProbeFixtureFile,
@@ -161,9 +323,9 @@ tasks.register(
 
         require(
             maxRequestsPerRun in
-                1..10,
+                1..4,
         ) {
-            "VexMaps provider probe request budget must be 1..10"
+            "Current VexMaps provider probe request budget must be 1..4"
         }
         require(
             resultLimit in
@@ -326,12 +488,6 @@ tasks.register(
                             ),
                     )
                     add(
-                        "api_key=" +
-                            probeEncode(
-                                apiKey,
-                            ),
-                    )
-                    add(
                         "lang=en",
                     )
                     add(
@@ -377,6 +533,8 @@ tasks.register(
             var httpStatus:
                 Int? =
                 null
+            var resultCount =
+                0
             var resultNames =
                 emptyList<String>()
             var resultLayers =
@@ -400,6 +558,10 @@ tasks.register(
                             .header(
                                 "Accept",
                                 "application/json",
+                            )
+                            .header(
+                                "Authorization",
+                                "Stadia-Auth $apiKey",
                             )
                             .GET()
                             .build(),
@@ -432,6 +594,9 @@ tasks.register(
                                 List<*>
                         )
                             .orEmpty()
+
+                    resultCount =
+                        features.size
 
                     val properties =
                         features.mapNotNull { feature ->
@@ -474,9 +639,10 @@ tasks.register(
                     Exception,
             ) {
                 failureMessage =
-                    failure::class
+                    failure
+                        .javaClass
                         .simpleName
-                        ?.takeIf(
+                        .takeIf(
                             String::isNotBlank,
                         )
                         ?: "PROBE_EXCEPTION"
@@ -504,7 +670,7 @@ tasks.register(
             val accepted =
                 httpStatus in
                     200..299 &&
-                    resultNames.size >=
+                    resultCount >=
                     minimumResults &&
                     tokenMatched
 
@@ -523,7 +689,7 @@ tasks.register(
                     "elapsedMillis" to
                         elapsedMillis,
                     "resultCount" to
-                        resultNames.size,
+                        resultCount,
                     "topNames" to
                         resultNames.take(5),
                     "topLayers" to
