@@ -154,6 +154,49 @@ class VexStreamQueueReorderTest {
     }
 
     @Test
+    fun chainedMoveWaitsUntilProviderObservesDraggedOccurrenceAtExpectedIndex() {
+        val nextRequest =
+            VexStreamQueueReorderRequest(
+                occurrence =
+                    VexStreamQueueOccurrence(
+                        mediaId = "track.beta",
+                        occurrence = 1,
+                        index = 2,
+                    ),
+                direction =
+                    VexStreamQueueReorderDirection.Later,
+            )
+
+        assertNull(
+            vexStreamQueueReorderTargetIndex(
+                request = nextRequest,
+                currentMediaIds =
+                    listOf(
+                        "track.alpha",
+                        "track.beta",
+                        "track.gamma",
+                        "track.delta",
+                    ),
+                changeAvailable = true,
+            ),
+        )
+        assertEquals(
+            3,
+            vexStreamQueueReorderTargetIndex(
+                request = nextRequest,
+                currentMediaIds =
+                    listOf(
+                        "track.alpha",
+                        "track.gamma",
+                        "track.beta",
+                        "track.delta",
+                    ),
+                changeAvailable = true,
+            ),
+        )
+    }
+
+    @Test
     fun adjacentIdenticalMediaIdsRejectAmbiguousDuplicateCrossing() {
         val request =
             VexStreamQueueReorderRequest(

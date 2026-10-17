@@ -73,8 +73,10 @@ package com.vextreme.vexlife.android.vexstream.queue
  * identity here, so an [A, A] projection cannot prove which duplicate moved. Failing closed preserves
  * truth instead of promoting presentation occurrence order into durable identity.
  *
- * Queue presentation advances its local drag index only when the request is admitted. A stale
- * projection therefore cannot silently move the wrong item.
+ * After an admitted step, Queue presentation carries that same occurrence at the expected adjacent
+ * index. The next request still goes through the Connection's provider re-check, so a later drag step
+ * is rejected until provider truth actually observes that occurrence there. A stale projection cannot
+ * silently substitute whichever item currently occupies the optimistic index.
  *
  * Queue Play and Reorder remain typed Queue-local request boundaries, not a generic payload framework.
  *

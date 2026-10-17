@@ -24,7 +24,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -51,6 +50,7 @@ import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueOccurrence
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
@@ -58,7 +58,6 @@ import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderDirecti
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueReorderConnection
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueAdjacentMoveTarget
-import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrenceAt
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
@@ -114,17 +113,13 @@ internal fun VexStreamQueueSheet(
                 playback.queueMediaIds,
             )
         }
-    val latestQueueMediaIds by
-        rememberUpdatedState(
-            playback.queueMediaIds,
-        )
     val listState =
         rememberLazyListState()
     var draggedKey by remember {
         mutableStateOf<String?>(null)
     }
-    var draggedIndex by remember {
-        mutableIntStateOf(-1)
+    var draggedOccurrence by remember {
+        mutableStateOf<VexStreamQueueOccurrence?>(null)
     }
     var dragOffsetPx by remember {
         mutableFloatStateOf(0f)
@@ -154,7 +149,7 @@ internal fun VexStreamQueueSheet(
             )
         }
         draggedKey = null
-        draggedIndex = -1
+        draggedOccurrence = null
         dragOffsetPx = 0f
         dragMoved = false
     }
@@ -317,7 +312,6 @@ VexStreamPresentationRefs
                                 )
                         },
                     ) { index, occurrence ->
-                        val latestIndex by rememberUpdatedState(index)
                         val latestOccurrence by
                             rememberUpdatedState(
                                 occurrence,
@@ -511,8 +505,8 @@ VexStreamPresentationRefs
                                             onDragStart = {
                                                 draggedKey =
                                                     stableKey
-                                                draggedIndex =
-                                                    latestIndex
+                                                draggedOccurrence =
+                                                    latestOccurrence
                                                 dragOffsetPx = 0f
                                                 dragMoved = false
                                             },
@@ -531,6 +525,10 @@ VexStreamPresentationRefs
                                                 return@detectVerticalDragGestures
                                             }
 
+                                            val currentOccurrence =
+                                                draggedOccurrence
+                                                    ?: return@detectVerticalDragGestures
+
                                             dragOffsetPx +=
                                                 dragAmount
 
@@ -546,7 +544,7 @@ VexStreamPresentationRefs
                                             val target =
                                                 vexStreamQueueAdjacentMoveTarget(
                                                     currentIndex =
-                                                        draggedIndex,
+                                                        currentOccurrence.index,
                                                     dragOffsetPx =
                                                         dragOffsetPx,
                                                     itemHeightPx =
@@ -556,18 +554,10 @@ VexStreamPresentationRefs
                                                 )
                                                     ?: return@detectVerticalDragGestures
 
-                                            val currentOccurrence =
-                                                vexStreamQueueOccurrenceAt(
-                                                    mediaIds =
-                                                        latestQueueMediaIds,
-                                                    index =
-                                                        draggedIndex,
-                                                )
-                                                    ?: return@detectVerticalDragGestures
                                             val direction =
                                                 if (
                                                     target >
-                                                    draggedIndex
+                                                    currentOccurrence.index
                                                 ) {
                                                     VexStreamQueueReorderDirection.Later
                                                 } else {
@@ -595,14 +585,16 @@ VexStreamPresentationRefs
                                             dragOffsetPx +=
                                                 if (
                                                     target >
-                                                    draggedIndex
+                                                    currentOccurrence.index
                                                 ) {
                                                     -height
                                                 } else {
                                                     height
                                                 }
-                                            draggedIndex =
-                                                target
+                                            draggedOccurrence =
+                                                currentOccurrence.copy(
+                                                    index = target,
+                                                )
                                         }
                                     },
                                 contentAlignment = Alignment.Center,

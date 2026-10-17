@@ -143,9 +143,11 @@ latest observed VexStreamQueueOccurrence
 -> move one adjacent item
 ~~~
 
-The drag surface advances its local index only when the request is admitted. Crossing adjacent
-identical media IDs fails closed because the provider projection cannot distinguish which duplicate
-moved without a stronger durable item identity.
+After one move is admitted, the drag carries that same occurrence forward at the expected adjacent
+index. The Reorder Connection re-checks provider truth before every later step, so a second move is
+rejected until the provider actually observes that occurrence at the expected index. Crossing
+adjacent identical media IDs still fails closed because the provider projection cannot distinguish
+which duplicate moved without a stronger durable item identity.
 
 Repeat remains its independent sibling Behavior family. The accepted Behavior foundation does not
 carry arbitrary runtime request payloads through finite Controls, so Queue Play/Reorder remain
