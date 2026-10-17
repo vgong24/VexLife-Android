@@ -6,7 +6,7 @@ Feature ref: feature.vexmaps
 Current human name: **VexMaps**  
 Current completion effort: **[VexMaps Complete]**  
 Last meaningfully updated: **2026-10-16**  
-Current design record: records/2026-10-16-003-first-destination-search-provider.md
+Current design record: records/2026-10-16-005-browse-surface-availability.md
 
 ## Role of this file
 
@@ -321,37 +321,115 @@ DISTRIBUTION
 
 Do not merge those questions merely to make the UI share one sheet.
 
-## Context Dock direction
+## Browse surface hierarchy
 
-The current Context Dock is useful infrastructure, but the lived screenshots show that a large
-Distribution/style card can occupy more attention than the basic Maps task.
+The lived Maps screen has now established a stronger UI law:
+
+~~~text
+FEATURE_AVAILABLE
+!=
+FEATURE_MUST_OCCUPY_PERMANENT_LARGE_SURFACE
+~~~
+
+Ordinary browse/search hierarchy:
+
+~~~text
+PRIMARY
+    Where to? / destination discovery
+
+MAP UTILITIES
+    recenter/current location
+    compact appearance control
+    future layer controls when earned
+
+FEATURE ENTRY
+    Distribution
+    offline preparation
+    other specialty workflows
+
+ACTIVE WORKFLOW SURFACE
+    selected place
+    route preview
+    active navigation
+    Distribution after explicit entry
+~~~
+
+### Distribution
+
+Distribution remains first-class but should not permanently occupy a large idle Context Dock card.
 
 Direction:
 
 ~~~text
-Browse
-    dock may stay compact / contextual
+idle browse
+    compact Distribution entry
+    candidate: delivery-truck FAB / floating feature action
 
+tap Distribution
+    expand/open the Distribution workflow surface
+    stop list / return policy / preparation / active Delivery Route
+
+leave Distribution
+    ordinary Maps regains the canvas
+~~~
+
+The FAB is earned here because it represents an available feature workflow, not a generic "+" action.
+
+### Map opening / recenter
+
+A person should not repeatedly recover their own area from a detached world-scale map.
+
+Preferred opening precedence:
+
+~~~text
+1. restore the last meaningful browse viewport when durably available
+2. otherwise use non-authoritative retained browse context / fresh current location when permitted
+3. otherwise choose a sane regional/default browse context
+4. explicit recenter always requests/focuses current device location
+~~~
+
+Current stored location remains historical browse context, never fresh navigation truth.
+
+Durable last-viewed viewport across process death may require its own persistence/schema decision; do
+not smuggle it into the existing last-location columns.
+
+### Search results
+
+The result surface belongs below/with Where to?, not in the Distribution workflow.
+
+Direction:
+
+~~~text
+provider may return up to ~20 useful candidates when its accepted contract supports that breadth
+visible panel height = remaining keyboard-safe screen height
+result list = internally scrollable
+select result = collapse transient search emphasis + focus destination
+~~~
+
+Do not force exactly twenty results from a provider whose truthful contract supplies fewer.
+
+### Context Dock
+
+Keep Context Dock for contextual product meaning rather than idle feature advertising:
+
+~~~text
 Place selected
-    dock may project selected-place context
+    selected-place context
 
 Route preview
-    dock may project route controls/summary
+    route controls/summary
 
 Navigation
     navigation-specific surface owns the active journey
 
 Distribution
-    dock expands after explicit Distribution intent
+    expands after explicit Distribution intent
 
 Map appearance
     compact overlay control; not a swipe page
 
-Provider/cartographic style details
-    secondary map options only when the human question is genuinely broader than appearance
-
 Offline preparation
-    secondary configuration, not the primary first-use explanation
+    secondary configuration
 ~~~
 
 This is a semantic hierarchy, not a pixel specification.
@@ -391,9 +469,86 @@ VexHome/self-hosted future
 A first real online provider may be hosted/self-hosted and still remain replaceable below VexMaps
 semantic meaning.
 
+The Android system Geocoder is now accepted as a bootstrap/system provider boundary, but the first
+lived business query ("in n out") returned no useful result. It is therefore not assumed to satisfy
+the completed ordinary search promise.
+
+The next ordinary provider must be evaluated against the intended product classes:
+
+~~~text
+address
+place / landmark
+business / POI
+partial / suggestion
+location-biased ambiguity when supported
+~~~
+
 Public OpenStreetMap Nominatim is not assumed to be the production answer: its public usage policy
 forbids client-side autocomplete and imposes strict capacity limits. That policy pressure is evidence
 for keeping provider choice below the VexMaps experience contract.
+
+## Reliability proof direction
+
+VexMaps now has observed evidence that deterministic proof and provider usefulness are different:
+
+~~~text
+source/currentness/device integration proof = GREEN
+lived Android Geocoder business query = no useful result
+~~~
+
+Use the existing Test / Proof Foundation rather than another registry:
+
+~~~text
+development
+    focused owner tests
+
+feature human-path scope
+    Journey shard shared.vex-maps
+
+final exact-head pre-READY gate
+    repository-wide deterministic vexVerifyLocal + vexVerifyDevice
+
+provider-changing work
+    bounded live-provider probe
+
+scheduled health
+    weekly qualified live-provider probe when configured
+
+pre-release
+    all deterministic proof
+    + admitted visual/Journey proof
+    + live-provider probes
+    + required lived human walks
+~~~
+
+Live-provider probes are budgeted, timestamped, provider-specific evidence. They are not ordinary
+per-PR autocomplete traffic and do not silently retry until green.
+
+Location testing keeps three strengths distinct:
+
+~~~text
+deterministic source fixture
+    cheap feature/domain proof
+
+Maps Lab Hybrid override
+    canonical location + removable noncanonical override
+    provenance retained
+    latest canonical truth revealed when override clears
+
+Android OS test provider
+    mock enters through LocationManager / production VexDeviceLocationSource
+    stronger native/provider proof
+~~~
+
+Do not use Hybrid merely because a test value is synthetic.
+
+Exact private location/address fixtures remain host-local and must not be committed into source or
+durable evidence.
+
+See:
+~~~text
+design/records/2026-10-16-004-provider-reliability-and-location-lab.md
+~~~
 
 ## Current architecture pressure from completion work
 
@@ -643,38 +798,56 @@ These are implementation questions, not excuses to delay VMC-01.
 ## Current VMC-01 progress
 
 ~~~text
-DONE IN FIRST SLICE
+ACCEPTED
     compact map-side appearance control
     Automatic / Light / Dark human preference
-    Automatic follows VexLife app appearance
-    Dark / Liberty removed from ordinary Context Dock pages
-    legacy provider-style storage does not invent explicit human preference
-
-CURRENT VMC-01 CANDIDATE
     visible Where to? front door
-    Android system Geocoder provider
+    Android system Geocoder provider boundary
     explicit Search submission
     provider availability / failure truth
-    real place/address results
     destination selection into existing Maps planning input
 
-STILL HELD
-    autocomplete/search-as-you-type
-        provider promise not yet earned
-    hosted/self-hosted provider
-        Android Geocoder is the first system-provider slice, not permanent provider lock-in
+LIVED PRODUCT PRESSURE
+    "in n out"
+    -> no matching places found
+
+CONCLUSION
+    Geocoder integration is accepted
+    ordinary business/partial discovery is not complete
+~~~
+
+Still held / newly earned:
+
+~~~text
+autocomplete / partial suggestions
+    now product-earned, but requires a provider whose accepted contract supports it
+
+up to ~20 keyboard-safe scrollable candidates
+    UI/product direction; provider breadth remains truthful rather than forced
+
+ordinary search-provider replacement/evolution
+    evaluate through bounded live-provider reliability fixtures
+
+Distribution idle-card removal
+    replace with compact workflow entry before ordinary browse is called complete
+
+last meaningful viewport / current-area opening behavior
+    product-earned; durable viewport persistence remains a separate storage decision
 ~~~
 
 ## Current next edge
 
 ~~~text
-VMC-01
-    prove the current Where to? / Android Geocoder / destination-selection vertical slice
-    on source + connected Android + lived device behavior
+VMC-01B — Browse/Search usability
+    evaluate and adopt a suggestion/business-capable provider
+    keyboard-safe result list
+    compact Distribution entry
+    sane local/last-viewed opening behavior
+    preserve accepted search/session ownership boundaries
 
 then
 VMC-02
-    use selected destination to earn route-preview + online route/currentness architecture
+    selected destination -> truthful route preview -> Start
 ~~~
 
 Do not begin with another architecture-only refactor unless VMC-01 itself exposes the missing
