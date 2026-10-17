@@ -11,6 +11,23 @@
 This map records the shape currently earned by VexMaps. It is a feature map, not a requirement that
 every Android feature create the same classes.
 
+It is also **not a product-completion claim**.
+
+~~~text
+ownership topology current
+!=
+ordinary Maps human journey complete
+~~~
+
+For current VexMaps capability truth and the active [VexMaps Complete] experiential trajectory, start
+at:
+
+~~~text
+app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/maps/README.md
+app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/maps/design/README.md
+VexMapsDocs
+~~~
+
 ## Current topology
 
 ~~~text
@@ -167,7 +184,10 @@ VexMapsNavigationOverlay.kt
   -> prepared/active navigation presentation
 
 VexMapsPlanningState.kt
-  -> planner/search/request state
+  -> current planning/import presentation state + bounded request-gate primitive
+
+VexMapsPlaceSearchSession.kt
+  -> local place-search pack/attempt/result currentness
 
 VexMapsLocation.kt
   -> location readiness/presentation
