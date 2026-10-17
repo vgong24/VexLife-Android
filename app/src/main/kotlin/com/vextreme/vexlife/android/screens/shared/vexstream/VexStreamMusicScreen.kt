@@ -530,6 +530,27 @@ object VexStreamMusicScreen : AppScreenBlueprint(
             offlineCopyScope = sessionScope,
         )
     }
+
+    /**
+     * Preserves the existing narrow Screen-render contract for direct tooling/test callers.
+     *
+     * Production enters through the session-aware overload above. A caller that intentionally uses
+     * this narrower contract owns only a composition lifetime, so its Offline Copy execution follows
+     * that supplied tooling/composition scope rather than pretending to be a VexLife session.
+     */
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        VexStreamMusicScreenContent(
+            runtime = runtime,
+            repository = repositories.vexStream,
+            offlineCopyScope =
+                rememberCoroutineScope(),
+        )
+    }
 }
 
 internal fun vexStreamActionRegistrations(
