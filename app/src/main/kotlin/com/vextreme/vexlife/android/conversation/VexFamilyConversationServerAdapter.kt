@@ -209,6 +209,20 @@ internal fun projectVexFamilyConversationServerThread(
                 "Family history message channel must belong to a retained segment"
             }
         require(
+            if (
+                message.channelRef ==
+                history.currentChannelRef
+            ) {
+                message.membershipGeneration ==
+                    history.membershipGeneration
+            } else {
+                message.membershipGeneration <
+                    history.membershipGeneration
+            },
+        ) {
+            "Family history message generation must match its current or historical segment position"
+        }
+        require(
             currentSegmentIndex >=
                 previousSegmentIndex,
         ) {

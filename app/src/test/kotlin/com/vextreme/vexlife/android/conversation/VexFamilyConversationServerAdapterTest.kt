@@ -371,6 +371,50 @@ class VexFamilyConversationServerAdapterTest {
     }
 
     @Test
+    fun historyMessageGenerationMustMatchCurrentVersusHistoricalSegment() {
+        val current =
+            history()
+
+        val staleCurrentSegment =
+            current.copy(
+                messages =
+                    listOf(
+                        current.messages
+                            .last()
+                            .copy(
+                                membershipGeneration =
+                                    1L,
+                            ),
+                    ),
+            )
+        assertThrows(IllegalArgumentException::class.java) {
+            projectVexFamilyConversationServerThread(
+                bootstrap = bootstrap(),
+                history = staleCurrentSegment,
+            )
+        }
+
+        val currentGenerationOnHistoricalSegment =
+            current.copy(
+                messages =
+                    listOf(
+                        current.messages
+                            .first()
+                            .copy(
+                                membershipGeneration =
+                                    current.membershipGeneration,
+                            ),
+                    ),
+            )
+        assertThrows(IllegalArgumentException::class.java) {
+            projectVexFamilyConversationServerThread(
+                bootstrap = bootstrap(),
+                history = currentGenerationOnHistoricalSegment,
+            )
+        }
+    }
+
+    @Test
     fun historyMessagesMustPreserveSegmentAndSequenceOrder() {
         val current =
             history()
