@@ -462,6 +462,39 @@ private runtime fixture reference
 
 Do not promote Maps query vocabulary, Maps location vocabulary, or one provider's contract.
 
+## First executable consumer
+
+The first feature-local implementation of this design is intentionally provider-specific:
+
+~~~text
+providerRef =
+provider.stadia.autocomplete.v2
+
+deterministic task =
+:app:vexMapsProbeStadiaAutocompleteV2Contract
+
+live task =
+:app:vexMapsProbeStadiaAutocompleteV2
+
+host secret =
+VEXMAPS_STADIA_API_KEY
+
+current live request budget =
+4
+
+result limit requested =
+20
+~~~
+
+The fixture set uses public geographic anchors only and exercises business/POI, landmark, address and
+place partial-input classes.
+
+The API key is sent through Stadia's Authorization header and is not included in the request URL or
+evidence JSON.
+
+This source is still feature-local. A second provider/feature consumer is required before promoting
+the probe schema/task grammar into shared Test / Proof Foundation.
+
 ## Current consequence
 
 [VexMaps Complete] now carries two parallel completion questions:
