@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Queue play/reorder carry runtime occurrence/index identity and Repeat ownership remains unresolved; keep these raw Media3 seams visible until rightful behavior owners are admitted.
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement

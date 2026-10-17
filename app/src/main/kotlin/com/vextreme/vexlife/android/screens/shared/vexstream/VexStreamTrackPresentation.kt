@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Track play/queue/download actions still combine runtime track identity with Media3 or repository effects; split only as payload and execution-lifetime owners are admitted.
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
