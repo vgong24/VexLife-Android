@@ -64,7 +64,7 @@ internal class VexMapsAndroidGeocoderPlaceSearchSource(
 
         return addresses
             .mapNotNull(
-                ::projectAddress,
+                ::projectVexMapsAndroidGeocoderAddress,
             )
             .distinctBy {
                 it.placeRef
@@ -131,157 +131,153 @@ internal class VexMapsAndroidGeocoderPlaceSearchSource(
                 .orEmpty()
         }
 
-    private fun projectAddress(
-        address: Address,
-    ): VexMapsPlaceSearchResult? {
-        if (
-            !address.hasLatitude() ||
-            !address.hasLongitude()
-        ) {
-            return null
-        }
-
-        val addressLine =
-            if (
-                address.maxAddressLineIndex >= 0
-            ) {
-                address
-                    .getAddressLine(0)
-                    ?.trim()
-                    ?.takeIf {
-                        it.isNotEmpty()
-                    }
-            } else {
-                null
-            }
-
-        val name =
-            listOfNotNull(
-                address.featureName,
-                address.thoroughfare,
-                address.locality,
-                address.subAdminArea,
-                address.adminArea,
-                address.countryName,
-                addressLine,
-            )
-                .firstOrNull {
-                    it.isNotBlank()
-                }
-                ?.trim()
-                ?: return null
-
-        val subtitle =
-            addressLine
-                ?.takeIf {
-                    !it.equals(
-                        name,
-                        ignoreCase = true,
-                    )
-                }
-                ?: listOfNotNull(
-                    address.locality,
-                    address.adminArea,
-                    address.countryName,
-                )
-                    .map(String::trim)
-                    .filter(String::isNotEmpty)
-                    .distinct()
-                    .joinToString(
-                        separator = ", ",
-                    )
-                    .takeIf {
-                        it.isNotEmpty() &&
-                            !it.equals(
-                                name,
-                                ignoreCase = true,
-                            )
-                    }
-
-        val coordinate =
-            VexMapCoordinate(
-                latitude =
-                    address.latitude,
-                longitude =
-                    address.longitude,
-            )
-
-        return VexMapsPlaceSearchResult(
-            placeRef =
-                stablePlaceRef(
-                    coordinate = coordinate,
-                    name = name,
-                    subtitle = subtitle,
-                ),
-            name = name,
-            subtitle = subtitle,
-            coordinate = coordinate,
-        )
-    }
-
-    private fun stablePlaceRef(
-        coordinate: VexMapCoordinate,
-        name: String,
-        subtitle: String?,
-    ): String {
-        val canonical =
-            buildString {
-                append(
-                    String.format(
-                        Locale.ROOT,
-                        "%.6f,%.6f",
-                        coordinate.latitude,
-                        coordinate.longitude,
-                    ),
-                )
-                append('|')
-                append(
-                    name
-                        .trim()
-                        .lowercase(
-                            Locale.ROOT,
-                        ),
-                )
-                append('|')
-                append(
-                    subtitle
-                        ?.trim()
-                        ?.lowercase(
-                            Locale.ROOT,
-                        )
-                        .orEmpty(),
-                )
-            }
-
-        val digest =
-            MessageDigest
-                .getInstance(
-                    "SHA-256",
-                )
-                .digest(
-                    canonical
-                        .toByteArray(
-                            Charsets.UTF_8,
-                        ),
-                )
-                .joinToString(
-                    separator = "",
-                ) {
-                    byte ->
-                    "%02x".format(
-                        Locale.ROOT,
-                        byte,
-                    )
-                }
-
-        return "android-geocoder." +
-            digest.take(24)
-    }
 }
 
-internal class VexMapsDestinationSearchUnavailableException :
-    IllegalStateException(
-        "Android Geocoder is unavailable",
+internal fun projectVexMapsAndroidGeocoderAddress(
+    address: Address,
+): VexMapsPlaceSearchResult? {
+    if (
+        !address.hasLatitude() ||
+        !address.hasLongitude()
+    ) {
+        return null
+    }
+
+    val addressLine =
+        if (
+            address.maxAddressLineIndex >= 0
+        ) {
+            address
+                .getAddressLine(0)
+                ?.trim()
+                ?.takeIf {
+                    it.isNotEmpty()
+                }
+        } else {
+            null
+        }
+
+    val name =
+        listOfNotNull(
+            address.featureName,
+            address.thoroughfare,
+            address.locality,
+            address.subAdminArea,
+            address.adminArea,
+            address.countryName,
+            addressLine,
+        )
+            .firstOrNull {
+                it.isNotBlank()
+            }
+            ?.trim()
+            ?: return null
+
+    val subtitle =
+        addressLine
+            ?.takeIf {
+                !it.equals(
+                    name,
+                    ignoreCase = true,
+                )
+            }
+            ?: listOfNotNull(
+                address.locality,
+                address.adminArea,
+                address.countryName,
+            )
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+                .distinct()
+                .joinToString(
+                    separator = ", ",
+                )
+                .takeIf {
+                    it.isNotEmpty() &&
+                        !it.equals(
+                            name,
+                            ignoreCase = true,
+                        )
+                }
+
+    val coordinate =
+        VexMapCoordinate(
+            latitude =
+                address.latitude,
+            longitude =
+                address.longitude,
+        )
+
+    return VexMapsPlaceSearchResult(
+        placeRef =
+            stableAndroidGeocoderPlaceRef(
+                coordinate = coordinate,
+                name = name,
+                subtitle = subtitle,
+            ),
+        name = name,
+        subtitle = subtitle,
+        coordinate = coordinate,
     )
+}
+
+private fun stableAndroidGeocoderPlaceRef(
+    coordinate: VexMapCoordinate,
+    name: String,
+    subtitle: String?,
+): String {
+    val canonical =
+        buildString {
+            append(
+                String.format(
+                    Locale.ROOT,
+                    "%.6f,%.6f",
+                    coordinate.latitude,
+                    coordinate.longitude,
+                ),
+            )
+            append('|')
+            append(
+                name
+                    .trim()
+                    .lowercase(
+                        Locale.ROOT,
+                    ),
+            )
+            append('|')
+            append(
+                subtitle
+                    ?.trim()
+                    ?.lowercase(
+                        Locale.ROOT,
+                    )
+                    .orEmpty(),
+            )
+        }
+
+    val digest =
+        MessageDigest
+            .getInstance(
+                "SHA-256",
+            )
+            .digest(
+                canonical
+                    .toByteArray(
+                        Charsets.UTF_8,
+                    ),
+            )
+            .joinToString(
+                separator = "",
+            ) {
+                byte ->
+                "%02x".format(
+                    Locale.ROOT,
+                    byte,
+                )
+            }
+
+    return "android-geocoder." +
+        digest.take(24)
+}
 
 // [VXG RealForever]
