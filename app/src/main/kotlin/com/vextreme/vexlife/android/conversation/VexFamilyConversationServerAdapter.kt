@@ -183,12 +183,6 @@ internal fun projectVexFamilyConversationServerThread(
             "Family history messageRef must be non-blank"
         }
         require(
-            message.speakerRef !=
-                room.familyCompanionLineageRef,
-        ) {
-            "Family history speaker must remain a human principal"
-        }
-        require(
             room.familyCompanionLineageRef in
                 message.witnessRefs,
         ) {

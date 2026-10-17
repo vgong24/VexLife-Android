@@ -237,11 +237,10 @@ class VexFamilyConversationServerAdapterTest {
     }
 
     @Test
-    fun historicalFamilyMessageKeepsCompanionWitnessOnly() {
+    fun historicalFamilyMessagePreservesCompanionSpeakerAndRequiresWitnessTruth() {
         val current =
             history()
-
-        val companionSpeaker =
+        val companionAuthored =
             current.copy(
                 messages =
                     listOf(
@@ -250,15 +249,52 @@ class VexFamilyConversationServerAdapterTest {
                             .copy(
                                 speakerRef =
                                     COMPANION,
+                                recipientRefs =
+                                    listOf(
+                                        VICTOR,
+                                        ALEX,
+                                        BRI,
+                                    ),
                             ),
                     ),
             )
-        assertThrows(IllegalArgumentException::class.java) {
+
+        val projected =
             projectVexFamilyConversationServerThread(
                 bootstrap = bootstrap(),
-                history = companionSpeaker,
+                history = companionAuthored,
             )
-        }
+
+        assertEquals(
+            VexConversationParticipantKind.Companion,
+            requireNotNull(
+                projected.participant(
+                    VexConversationParticipantRef(
+                        COMPANION,
+                    ),
+                ),
+            ).kind,
+        )
+        assertEquals(
+            VexConversationParticipantRef(
+                COMPANION,
+            ),
+            projected.messages
+                .single()
+                .speakerRef,
+        )
+        assertEquals(
+            listOf(
+                VICTOR,
+                ALEX,
+                BRI,
+            ).map(
+                ::VexConversationParticipantRef,
+            ),
+            projected.messages
+                .single()
+                .recipientRefs,
+        )
 
         val missingCompanionWitness =
             current.copy(

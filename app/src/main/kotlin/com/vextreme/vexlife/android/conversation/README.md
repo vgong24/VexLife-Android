@@ -743,9 +743,11 @@ accepted Family channel member refs remain human principals. The bootstrap must 
 `familyCompanionIncluded=true` before that lineage enters the current Android audience; lineage
 identity alone is not treated as current inclusion.
 
-Canonical Family history keeps the Companion lineage in immutable witness snapshots while speakers
-remain admitted human Family principals. The adapter fails closed if those producer meanings are
-contradicted.
+Canonical Family history preserves the original producer speaker identity. Human browser APPEND
+derives an authenticated human speaker, while the accepted Family Companion runtime may durably append
+the exact Family Companion lineage as speaker. READ_THREAD_HISTORY preserves that speakerRef unchanged,
+and the adapter keeps the lineage classified as Companion while retaining the immutable witness
+snapshot. It fails closed if those producer meanings are contradicted.
 
 The producer's `truncated` fact is preserved in [VexFamilyConversationThreadBinding.historyTruncated]
 so a bounded history window never looks complete.
