@@ -52,12 +52,22 @@ package com.vextreme.vexlife.android.vexstream.queue
  * [VexStreamQueueExperience]. Mini Player, Context Dock, and Queue presentation consume the same
  * Queue Projection / Controls where those controls apply.
  *
+ * ## What about Queue Play?
+ *
+ * Queue-row Play carries runtime occurrence identity, so it is not forced through finite Controls.
+ * [VexStreamQueueOccurrence] names one exact current provider occurrence as media ID + occurrence
+ * ordinal + current index. [VexStreamQueuePlayRequest] carries that coordinate, and
+ * [Media3VexStreamQueuePlayConnection] re-reads the provider queue plus Seek/Play command authority
+ * before dispatch. The coordinate is deliberately current-only, not durable queue-item identity.
+ *
+ * Queue Sheet and Context Dock consume the same Queue Play boundary.
+ *
  * ## What is deliberately NOT in this family?
  *
- * Queue-row selection still carries an index request payload. Reorder carries dynamic item identity.
- * The accepted Behavior kernel does not carry arbitrary runtime request payloads through finite
- * Controls, so this family does not invent a generic payload framework merely to absorb those
- * presentation mechanics.
+ * Reorder still carries changing occurrence/index identity across repeated drag mutations. It remains
+ * held until its own currentness boundary is earned. The accepted Behavior kernel does not carry
+ * arbitrary runtime request payloads through finite Controls, so Queue does not invent a generic
+ * payload framework merely to absorb it.
  *
  * Repeat is now the sibling
  * [com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatDocs] family. Playback remains the

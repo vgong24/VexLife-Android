@@ -38,7 +38,8 @@ WHAT IS PLAYBACK DOING?
 WHAT CAN I DO WITH THE CURRENT QUEUE?
     vexstream/queue
     -> Previous / Next / Shuffle / Clear through Queue State / Control / Act / Effect
-    -> Media3VexStreamQueueConnection
+    -> Play one current occurrence through typed occurrence request
+    -> Media3 Queue / Queue Play Connections
 
 IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
     vexstream/repeat
@@ -70,8 +71,9 @@ vexstream/playback/
     typed Seek request + current-media/provider-capability Connection
 
 vexstream/queue/
-    human question: Previous / Next / Shuffle / Clear from current queue truth
-    Behavior family + concrete Media3 Connection + UI Experience membrane
+    human questions: Previous / Next / Shuffle / Clear + play one current queue occurrence
+    Behavior family for finite Queue Controls
+    typed current-occurrence Queue Play request + Media3 currentness Connection
 
 vexstream/repeat/
     human question: Is Repeat active for the current playback context?
@@ -114,20 +116,30 @@ Shuffle is the same Queue family question and is consumed as a one-shot action b
 Queue presentation; it has no persistent selected state.
 Clear is consumed by Queue presentation through the same current-truth Connection.
 
-Still deliberately outside the Queue Behavior family:
+Queue-row Play remains outside the finite-Control Behavior family but now has a feature-local typed
+request boundary:
 
 ~~~text
-queue-row selection
-    carries an index request payload
-
-reorder
-    carries dynamic queue-item identity
+current queue snapshot
+-> VexStreamQueueOccurrence(mediaId, occurrence, index)
+-> VexStreamQueuePlayRequest
+-> provider queue + command re-check
+-> seek selected occurrence when needed
+-> play
 ~~~
 
-Repeat is now an independent sibling Behavior family because its current truth and toggle semantics
-are meaningful without Queue item identity. The accepted Behavior foundation does not carry arbitrary
-runtime request payloads through finite Controls, so do not invent one just to migrate queue-row
-selection or reorder.
+The occurrence coordinate is current provider identity, not a durable queue-item ID.
+
+Still deliberately held:
+
+~~~text
+reorder
+    occurrence/index identity changes while repeated drag mutations execute
+~~~
+
+Repeat remains its independent sibling Behavior family. The accepted Behavior foundation does not
+carry arbitrary runtime request payloads through finite Controls, so do not generalize Queue Play into
+a generic payload framework merely to migrate Reorder.
 
 ## Dynamic Android presentation identity
 
@@ -185,7 +197,7 @@ VexStreamLibrarySurface
     remaining composition still routes raw controller/source-resolver concerns for held actions
 
 VexStreamQueuePresentation
-    Queue play/reorder carry runtime occurrence/index identity
+    Reorder still carries changing runtime occurrence/index identity through raw Media3 mutation
 
 VexStreamTrackPresentation
     track play/queue/download actions still combine runtime identity with provider/repository effects

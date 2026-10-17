@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Queue play/reorder still carry runtime occurrence/index identity; keep those raw Media3 seams visible until rightful request owners are admitted.
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Reorder still performs raw Media3 moves while drag identity changes; keep that mutation seam visible until its request/currentness owner is admitted.
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -53,7 +53,10 @@ import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
+import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
 import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExperience
@@ -65,32 +68,6 @@ import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExpe
  * Android presentation mechanics that were previously embedded in VexStreamLibrarySurface, giving
  * the earned Queue semantic question one source neighborhood without changing its behavior.
  */
-private data class VexStreamQueueEntry(
-    val stableKey: String,
-    val mediaId: String,
-)
-
-private fun vexStreamQueueEntries(
-    mediaIds: List<String>,
-): List<VexStreamQueueEntry> {
-    val occurrences =
-        mutableMapOf<String, Int>()
-
-    return mediaIds.map { mediaId ->
-        val occurrence =
-            (occurrences[mediaId] ?: 0) + 1
-        occurrences[mediaId] = occurrence
-        VexStreamQueueEntry(
-            stableKey =
-                VexStreamPresentationRefs.queueEntryKey(
-                    mediaId = mediaId,
-                    occurrence = occurrence,
-                ),
-            mediaId = mediaId,
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VexStreamQueueSheet(
@@ -105,6 +82,10 @@ internal fun VexStreamQueueSheet(
         )
     val queueProjection =
         queueExperience.projection
+    val queuePlayConnection =
+        rememberVexStreamQueuePlayConnection(
+            controller,
+        )
     val repeatExperience =
         rememberVexStreamRepeatExperience(
             controller,
@@ -118,11 +99,11 @@ internal fun VexStreamQueueSheet(
                 it.track.trackRef.value
             }
         }
-    val queueEntries =
+    val queueOccurrences =
         remember(
             playback.queueMediaIds,
         ) {
-            vexStreamQueueEntries(
+            vexStreamQueueOccurrences(
                 playback.queueMediaIds,
             )
         }
@@ -314,29 +295,42 @@ VexStreamPresentationRefs
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     itemsIndexed(
-                        items = queueEntries,
-                        key = { _, entry ->
-                            entry.stableKey
+                        items = queueOccurrences,
+                        key = { _, occurrence ->
+                            VexStreamPresentationRefs
+                                .queueEntryKey(
+                                    mediaId =
+                                        occurrence.mediaId,
+                                    occurrence =
+                                        occurrence.occurrence,
+                                )
                         },
-                    ) { index, entry ->
+                    ) { index, occurrence ->
                         val latestIndex by rememberUpdatedState(index)
+                        val latestOccurrence by
+                            rememberUpdatedState(
+                                occurrence,
+                            )
+                        val stableKey =
+                            VexStreamPresentationRefs
+                                .queueEntryKey(
+                                    mediaId =
+                                        occurrence.mediaId,
+                                    occurrence =
+                                        occurrence.occurrence,
+                                )
                         val track =
-                            tracksByRef[entry.mediaId]
+                            tracksByRef[
+                                occurrence.mediaId
+                            ]
                         val isCurrent =
                             index == playback.currentIndex
                         val isDragging =
                             draggedKey ==
-                                entry.stableKey
+                                stableKey
                         val queuePlayEnabled =
-                            controller != null &&
-                                controller.isCommandAvailable(
-                                    androidx.media3.common.Player
-                                        .COMMAND_SEEK_TO_MEDIA_ITEM,
-                                ) &&
-                                controller.isCommandAvailable(
-                                    androidx.media3.common.Player
-                                        .COMMAND_PLAY_PAUSE,
-                                )
+                            queuePlayConnection
+                                ?.isAvailable == true
                         val reorderEnabled =
                             controller != null &&
                                 controller.isCommandAvailable(
@@ -407,16 +401,13 @@ VexStreamPresentationRefs
                                                                 .QueuePlay,
                                                     ),
                                         )
-                                        if (
-                                            latestIndex !=
-                                            playback.currentIndex
-                                        ) {
-                                            controller
-                                                ?.seekToDefaultPosition(
-                                                    latestIndex,
-                                                )
-                                        }
-                                        controller?.play()
+                                        queuePlayConnection
+                                            ?.play(
+                                                VexStreamQueuePlayRequest(
+                                                    occurrence =
+                                                        latestOccurrence,
+                                                ),
+                                            )
                                     },
                                 horizontalArrangement =
                                     Arrangement.spacedBy(
@@ -441,7 +432,7 @@ VexStreamPresentationRefs
                                             track
                                                 ?.track
                                                 ?.title
-                                                ?: entry.mediaId,
+                                                ?: occurrence.mediaId,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
@@ -553,7 +544,7 @@ VexStreamPresentationRefs
                                                     itemHeightPx =
                                                         itemInfo.size,
                                                     lastIndex =
-                                                        queueEntries.lastIndex,
+                                                        queueOccurrences.lastIndex,
                                                 )
                                                     ?: return@detectVerticalDragGestures
 
