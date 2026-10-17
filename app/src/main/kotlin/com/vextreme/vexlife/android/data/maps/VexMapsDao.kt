@@ -8,7 +8,8 @@ import androidx.room.Query
 /**
  * Storage plumbing for the one Maps-local state row.
  *
- * Field-specific updates avoid read-modify-write races between a style choice and a location refresh.
+ * Field-specific updates avoid read-modify-write races between an appearance preference and a
+ * location refresh.
  */
 @Dao
 interface VexMapsDao {
