@@ -59,6 +59,25 @@ Coverage runs generate one replaceable PR-body block at:
 
 `build/vex/test-foundation/coverage-status.md`
 
+When an exact-head VexRelay proof runs `vexCoverage`, successful F09 canonical RETURN consumption
+must treat that generated block as a bounded provider projection:
+
+~~~text
+PASS canonical RETURN
++ exact candidate head still equals PR head
++ exactly one VEX-COVERAGE-STATUS marker block in the coverage proof receipt
+  -> use the current direct-provider effect route
+  -> append the block when absent, otherwise replace only the existing marked block
+  -> continue to Assurance
+
+head mismatch / ambiguous or absent block / provider capability unavailable
+  -> do not invent or publish coverage
+  -> preserve the proof result and hold only the projection effect
+~~~
+
+The host proof itself never edits GitHub. VexRelay carries the evidence; the provider continuation
+projects it after F09. No GitHub Actions runner is required.
+
 Update that block in place; do not append one coverage comment per run.
 
 ## Repository boundary

@@ -25,6 +25,23 @@ data class VexCoverageCounter(
             }
 }
 
+data class VexCoverageClassExposure(
+    val className: String,
+    val missedLines: Long,
+    val coveredLines: Long,
+) {
+    val totalLines: Long
+        get() = missedLines + coveredLines
+
+    val percent: Double
+        get() =
+            if (totalLines <= 0L) {
+                0.0
+            } else {
+                coveredLines.toDouble() * 100.0 / totalLines.toDouble()
+            }
+}
+
 fun vexCoverageCounters(
     reportFile: java.io.File,
 ): Map<String, VexCoverageCounter> {
@@ -83,6 +100,149 @@ fun vexCoverageCounters(
 
     return counters
 }
+
+fun vexCoverageDirectCounter(
+    element: org.w3c.dom.Element,
+    type: String,
+): VexCoverageCounter? {
+    for (index in 0 until element.childNodes.length) {
+        val child =
+            element.childNodes.item(index)
+                as? org.w3c.dom.Element
+                ?: continue
+        if (
+            child.tagName == "counter" &&
+            child.getAttribute("type") == type
+        ) {
+            return VexCoverageCounter(
+                missed =
+                    child
+                        .getAttribute("missed")
+                        .toLong(),
+                covered =
+                    child
+                        .getAttribute("covered")
+                        .toLong(),
+            )
+        }
+    }
+    return null
+}
+
+fun vexCoverageClassExposures(
+    reportFile: java.io.File,
+): List<VexCoverageClassExposure> {
+    val factory =
+        javax.xml.parsers.DocumentBuilderFactory
+            .newInstance()
+            .apply {
+                setFeature(
+                    "http://apache.org/xml/features/disallow-doctype-decl",
+                    true,
+                )
+                setFeature(
+                    "http://xml.org/sax/features/external-general-entities",
+                    false,
+                )
+                setFeature(
+                    "http://xml.org/sax/features/external-parameter-entities",
+                    false,
+                )
+                isXIncludeAware = false
+                isExpandEntityReferences = false
+            }
+    val root =
+        factory
+            .newDocumentBuilder()
+            .parse(reportFile)
+            .documentElement
+    val exposures =
+        mutableListOf<VexCoverageClassExposure>()
+    val packages =
+        root.getElementsByTagName(
+            "package",
+        )
+
+    for (
+        packageIndex in
+        0 until packages.length
+    ) {
+        val packageElement =
+            packages.item(packageIndex)
+                as? org.w3c.dom.Element
+                ?: continue
+
+        for (
+            childIndex in
+            0 until packageElement.childNodes.length
+        ) {
+            val classElement =
+                packageElement.childNodes.item(childIndex)
+                    as? org.w3c.dom.Element
+                    ?: continue
+            if (classElement.tagName != "class") {
+                continue
+            }
+
+            val line =
+                vexCoverageDirectCounter(
+                    classElement,
+                    "LINE",
+                )
+                    ?: continue
+            if (
+                line.total <= 0L ||
+                line.percent >=
+                vexCoverageAwarenessThresholdPercent
+            ) {
+                continue
+            }
+
+            exposures +=
+                VexCoverageClassExposure(
+                    className =
+                        classElement
+                            .getAttribute("name")
+                            .replace(
+                                '/',
+                                '.',
+                            ),
+                    missedLines =
+                        line.missed,
+                    coveredLines =
+                        line.covered,
+                )
+        }
+    }
+
+    return exposures
+        .sortedWith(
+            compareByDescending<
+                VexCoverageClassExposure
+            > {
+                it.missedLines
+            }
+                .thenBy {
+                    it.percent
+                }
+                .thenBy {
+                    it.className
+                },
+        )
+}
+
+fun vexCoverageJsonString(
+    value: String,
+): String =
+    value
+        .replace(
+            "\\",
+            "\\\\",
+        )
+        .replace(
+            "\"",
+            "\\\"",
+        )
 
 fun vexCoverageAwareness(
     linePercent: Double,
@@ -520,6 +680,17 @@ val vexCoverageSummaryContract =
                 file.writeText(
                     """
                     <report name="fixture">
+                      <package name="example">
+                        <class name="example/LargeGap">
+                          <counter type="LINE" missed="20" covered="10"/>
+                        </class>
+                        <class name="example/SmallGap">
+                          <counter type="LINE" missed="3" covered="17"/>
+                        </class>
+                        <class name="example/Green">
+                          <counter type="LINE" missed="1" covered="19"/>
+                        </class>
+                      </package>
                       <counter type="INSTRUCTION" missed="0" covered="1"/>
                       <counter type="BRANCH" missed="1" covered="9"/>
                       <counter type="LINE" missed="$missedLines" covered="$coveredLines"/>
@@ -565,6 +736,27 @@ val vexCoverageSummaryContract =
                 vexCoverageAwareness(
                     yellow.percent,
                 ) == "YELLOW",
+            )
+
+            val exposures =
+                vexCoverageClassExposures(
+                    fixture(
+                        name = "exposure",
+                        missedLines = 10,
+                        coveredLines = 90,
+                    ),
+                )
+            check(
+                exposures.map {
+                    it.className
+                } ==
+                    listOf(
+                        "example.LargeGap",
+                        "example.SmallGap",
+                    ),
+            )
+            check(
+                exposures.first().missedLines == 20L,
             )
         }
     }
@@ -661,6 +853,14 @@ val vexCoverageSummary =
                             it.percent,
                         )
                     }
+            val underCoveredClasses =
+                vexCoverageClassExposures(
+                    reportFile,
+                )
+            val topUnderCoveredClasses =
+                underCoveredClasses.take(
+                    10,
+                )
             val gitHead =
                 runCatching {
                     val process =
@@ -725,6 +925,35 @@ val vexCoverageSummary =
                     appendLine(
                         "Head: `$gitHead`",
                     )
+                    if (
+                        topUnderCoveredClasses
+                            .isNotEmpty()
+                    ) {
+                        appendLine()
+                        appendLine(
+                            "#### Largest under-covered classes",
+                        )
+                        appendLine(
+                            "| Class | Lines | Missed |",
+                        )
+                        appendLine(
+                            "| --- | ---: | ---: |",
+                        )
+                        topUnderCoveredClasses
+                            .forEach { exposure ->
+                                appendLine(
+                                    "| `" +
+                                        exposure.className +
+                                        "` | 🟡 " +
+                                        vexCoveragePercentText(
+                                            exposure.percent,
+                                        ) +
+                                        "% | " +
+                                        exposure.missedLines +
+                                        " |",
+                                )
+                            }
+                    }
                     appendLine(
                         "<!-- VEX-COVERAGE-STATUS:END -->",
                     )
@@ -774,13 +1003,59 @@ val vexCoverageSummary =
                     )
                     if (branchText == null) {
                         appendLine(
-                            "  \"branchCoveragePercent\": null",
+                            "  \"branchCoveragePercent\": null,",
                         )
                     } else {
                         appendLine(
-                            "  \"branchCoveragePercent\": $branchText",
+                            "  \"branchCoveragePercent\": $branchText,",
                         )
                     }
+                    appendLine(
+                        "  \"underCoveredClassCount\": " +
+                            underCoveredClasses.size +
+                            ",",
+                    )
+                    appendLine(
+                        "  \"topUnderCoveredClasses\": [",
+                    )
+                    topUnderCoveredClasses
+                        .forEachIndexed {
+                                index,
+                                exposure,
+                            ->
+                            val comma =
+                                if (
+                                    index ==
+                                    topUnderCoveredClasses
+                                        .lastIndex
+                                ) {
+                                    ""
+                                } else {
+                                    ","
+                                }
+                            appendLine(
+                                "    {" +
+                                    "\"className\": \"" +
+                                    vexCoverageJsonString(
+                                        exposure.className,
+                                    ) +
+                                    "\", " +
+                                    "\"lineCoveragePercent\": " +
+                                    vexCoveragePercentText(
+                                        exposure.percent,
+                                    ) +
+                                    ", " +
+                                    "\"missedLines\": " +
+                                    exposure.missedLines +
+                                    ", " +
+                                    "\"coveredLines\": " +
+                                    exposure.coveredLines +
+                                    "}$comma",
+                            )
+                        }
+                    appendLine(
+                        "  ]",
+                    )
                     appendLine("}")
                 },
             )
