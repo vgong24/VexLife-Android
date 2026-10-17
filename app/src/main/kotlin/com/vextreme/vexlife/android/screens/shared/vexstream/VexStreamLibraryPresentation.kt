@@ -93,10 +93,11 @@ internal fun VexStreamLibraryFabActions(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
-    resolver: VexStreamPlaybackSourceResolver,
+    resolver: VexStreamPlaybackSourceResolver?,
 ) {
     val canPlay =
         controller != null &&
+            resolver != null &&
             tracks.isNotEmpty()
     val handler =
         ElementActionHandler { element ->
@@ -105,17 +106,27 @@ internal fun VexStreamLibraryFabActions(
             )
             when (element) {
                 VexStreamMusicScreen.PlayAll ->
-                    controller?.playVexStreamCollection(
-                        tracks = tracks,
-                        resolver = resolver,
-                    )
+                    if (
+                        controller != null &&
+                        resolver != null
+                    ) {
+                        controller.playVexStreamCollection(
+                            tracks = tracks,
+                            resolver = resolver,
+                        )
+                    }
 
                 VexStreamMusicScreen.ShuffleAll ->
-                    controller?.playVexStreamCollection(
-                        tracks = tracks,
-                        resolver = resolver,
-                        shuffled = true,
-                    )
+                    if (
+                        controller != null &&
+                        resolver != null
+                    ) {
+                        controller.playVexStreamCollection(
+                            tracks = tracks,
+                            resolver = resolver,
+                            shuffled = true,
+                        )
+                    }
 
                 else -> Unit
             }
@@ -144,7 +155,7 @@ internal fun VexStreamSongsPane(
     tracks: List<VexStreamTrackState>,
     repository: VexStreamMusicRepository,
     controller: androidx.media3.session.MediaController?,
-    resolver: VexStreamPlaybackSourceResolver,
+    resolver: VexStreamPlaybackSourceResolver?,
     onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -215,7 +226,7 @@ internal fun VexStreamDownloadsPane(
     tracks: List<VexStreamTrackState>,
     repository: VexStreamMusicRepository,
     controller: androidx.media3.session.MediaController?,
-    resolver: VexStreamPlaybackSourceResolver,
+    resolver: VexStreamPlaybackSourceResolver?,
     onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()

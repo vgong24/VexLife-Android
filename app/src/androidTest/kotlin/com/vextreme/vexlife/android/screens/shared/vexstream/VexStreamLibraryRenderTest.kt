@@ -1,13 +1,15 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.material3.Surface
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
-import com.vextreme.vexlife.android.preview.VexPreviewHost
-import com.vextreme.vexlife.android.preview.VexPreviewRepositories
+import com.vextreme.vexlife.android.logging.VexLogger
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
+import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.AppScreens
+import com.vextreme.vexlife.android.ui.VexLifeTheme
 import org.junit.Rule
 import org.junit.Test
 
@@ -16,30 +18,40 @@ class VexStreamLibraryRenderTest {
     val compose = createComposeRule()
 
     @Test
-    fun pairedLibraryRendersFeatureOwnedFixture() {
+    fun songsPresentationRendersFeatureOwnedFixtureWithoutPlaybackProvider() {
+        val state =
+            vexStreamPreviewState()
+        val repository =
+            InMemoryVexStreamMusicRepository(
+                initialState = state,
+            )
+        val runtime =
+            VexRuntime(
+                registry = AppScreens.registry,
+                logger = VexLogger(),
+                initialScreen = AppScreens.primary.first(),
+                primaryScreens = AppScreens.primary,
+                currentAppActions = {
+                    AppActionRegistrations.Empty
+                },
+            ).apply {
+                navigation.push(
+                    VexStreamMusicScreen,
+                )
+            }
+
         compose.setContent {
-            CompositionLocalProvider(
-                LocalInspectionMode provides true,
+            VexLifeTheme(
+                darkTheme = true,
             ) {
-                VexPreviewHost(
-                    id = "vexstream-library-render-test",
-                    startScreen = VexStreamMusicScreen,
-                    repositoriesFactory = {
-                        VexPreviewRepositories
-                            .empty()
-                            .copy(
-                                vexStream =
-                                    InMemoryVexStreamMusicRepository(
-                                        initialState =
-                                            vexStreamPreviewState(),
-                                    ),
-                            )
-                    },
-                ) { context ->
-                    VexStreamMusicScreenContent(
-                        runtime = context.runtime,
-                        repository =
-                            context.repositories.vexStream,
+                Surface {
+                    VexStreamSongsPane(
+                        runtime = runtime,
+                        tracks = state.playableTracks(),
+                        repository = repository,
+                        controller = null,
+                        resolver = null,
+                        onVisitArtist = {},
                     )
                 }
             }

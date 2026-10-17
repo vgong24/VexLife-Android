@@ -59,7 +59,7 @@ internal fun VexStreamTrackCard(
     state: VexStreamTrackState,
     contextTracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
-    resolver: VexStreamPlaybackSourceResolver,
+    resolver: VexStreamPlaybackSourceResolver?,
     onDownload: () -> Unit,
     onRemoveDownload: () -> Unit,
     onVisitArtist: (String) -> Unit,
@@ -76,23 +76,38 @@ internal fun VexStreamTrackCard(
     ) {
         when (element) {
             VexStreamMusicScreen.PlayTrack ->
-                controller?.playVexStreamContext(
-                    selected = state,
-                    contextTracks = contextTracks,
-                    resolver = resolver,
-                )
+                if (
+                    controller != null &&
+                    resolver != null
+                ) {
+                    controller.playVexStreamContext(
+                        selected = state,
+                        contextTracks = contextTracks,
+                        resolver = resolver,
+                    )
+                }
 
             VexStreamMusicScreen.PlayTrackNext ->
-                controller?.playNextVexStream(
-                    state = state,
-                    resolver = resolver,
-                )
+                if (
+                    controller != null &&
+                    resolver != null
+                ) {
+                    controller.playNextVexStream(
+                        state = state,
+                        resolver = resolver,
+                    )
+                }
 
             VexStreamMusicScreen.AddTrackToQueue ->
-                controller?.queueVexStream(
-                    state = state,
-                    resolver = resolver,
-                )
+                if (
+                    controller != null &&
+                    resolver != null
+                ) {
+                    controller.queueVexStream(
+                        state = state,
+                        resolver = resolver,
+                    )
+                }
 
             VexStreamMusicScreen.DownloadTrack ->
                 onDownload()
@@ -108,6 +123,10 @@ internal fun VexStreamTrackCard(
             else -> Unit
         }
     }
+
+    val playbackAvailable =
+        controller != null &&
+            resolver != null
 
     val rowHandler =
         ElementActionHandler { element ->
@@ -238,7 +257,7 @@ internal fun VexStreamTrackCard(
                         playPresentationRef,
                     )
                     .clickable(
-                        enabled = controller != null,
+                        enabled = playbackAvailable,
                     ) {
                         rowHandler.activate(
                             VexStreamMusicScreen.PlayTrack,
@@ -356,7 +375,7 @@ internal fun VexStreamTrackCard(
                             trackRef = state.track.trackRef,
                             element = VexStreamMusicScreen.PlayTrack,
                             handler = menuHandler,
-                            enabled = controller != null,
+                            enabled = playbackAvailable,
                         )
                         VexStreamTrackMenuItem(
                             presentationScope =
@@ -364,7 +383,7 @@ internal fun VexStreamTrackCard(
                             trackRef = state.track.trackRef,
                             element = VexStreamMusicScreen.PlayTrackNext,
                             handler = menuHandler,
-                            enabled = controller != null,
+                            enabled = playbackAvailable,
                         )
                         VexStreamTrackMenuItem(
                             presentationScope =
@@ -373,7 +392,7 @@ internal fun VexStreamTrackCard(
                             element =
                                 VexStreamMusicScreen.AddTrackToQueue,
                             handler = menuHandler,
-                            enabled = controller != null,
+                            enabled = playbackAvailable,
                         )
 
                         if (showDownloadAction) {
