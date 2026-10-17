@@ -1,7 +1,6 @@
 package com.vextreme.vexlife.android.testing.featurewalk
 
 import java.lang.reflect.Method
-import kotlin.reflect.KClass
 
 /**
  * One machine-checked source locator from a Feature-Walk Checkpoint to an existing focused test.
@@ -10,7 +9,7 @@ import kotlin.reflect.KClass
  */
 data class VexFeatureWalkProofBacklink(
     val checkpointRef: String,
-    val testClass: KClass<*>,
+    val testClass: Class<*>,
     val testMethodName: String,
 ) {
     init {
@@ -24,10 +23,10 @@ data class VexFeatureWalkProofBacklink(
 
     val testLocator: String
         get() =
-            "${testClass.qualifiedName}#$testMethodName"
+            "${testClass.name}#$testMethodName"
 
     fun resolveMethod(): Method =
-        testClass.java.getDeclaredMethod(
+        testClass.getDeclaredMethod(
             testMethodName,
         )
 }

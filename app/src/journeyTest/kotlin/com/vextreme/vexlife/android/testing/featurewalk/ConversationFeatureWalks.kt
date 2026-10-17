@@ -41,7 +41,7 @@ internal object ConversationFeatureWalks {
                         hold =
                             VexFeatureWalkHold(
                                 reason =
-                                    "Conversation has no registered installed-app doorway on current main.",
+                                    "Accepted Conversation product source has no registered installed-app doorway.",
                                 releasePredicate =
                                     "A production Screen and ordinary app navigation reach the Family room.",
                             ),

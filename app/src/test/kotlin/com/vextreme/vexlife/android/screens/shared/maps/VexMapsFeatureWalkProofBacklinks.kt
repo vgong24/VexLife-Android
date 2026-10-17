@@ -9,7 +9,7 @@ internal val vexMapsFeatureWalkProofBacklinks =
             checkpointRef =
                 VexMapsFeatureWalkRefs.SEARCH_CURRENTNESS,
             testClass =
-                VexMapsDestinationSearchSessionTest::class,
+                VexMapsDestinationSearchSessionTest::class.java,
             testMethodName =
                 "newerSearchOwnsResultsEvenIfOlderProviderReturnsLate",
         ),

@@ -10,7 +10,7 @@ internal val vexConversationFeatureWalkProofBacklinks =
                 ConversationFeatureWalkRefs
                     .VICTOR_SEND_ADMITTED,
             testClass =
-                VexConversationLabTest::class,
+                VexConversationLabTest::class.java,
             testMethodName =
                 "victorSendStaysOnRepositoryContractAndMirrorArrivesOnlyAfterAcceptance",
         ),
@@ -19,7 +19,7 @@ internal val vexConversationFeatureWalkProofBacklinks =
                 ConversationFeatureWalkRefs
                     .MAYA_PROVIDER_INGRESS,
             testClass =
-                VexConversationLabTest::class,
+                VexConversationLabTest::class.java,
             testMethodName =
                 "remoteSpeechPublishesProviderTruthThroughConversationRepository",
         ),
