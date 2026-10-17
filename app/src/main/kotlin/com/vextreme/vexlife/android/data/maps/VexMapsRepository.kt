@@ -42,24 +42,17 @@ data class VexMapsStoredLocation(
 
 data class VexMapsStoredState(
     val lastLocation: VexMapsStoredLocation? = null,
-    val onlineStyleRef: String? = null,
-) {
-    init {
-        require(
-            onlineStyleRef == null ||
-                onlineStyleRef.isNotBlank(),
-        ) {
-            "onlineStyleRef must be null or non-blank"
-        }
-    }
-}
+    val appearancePreference:
+        VexMapsAppearancePreference =
+        VexMapsAppearancePreference.AUTOMATIC,
+)
 
 /**
  * Durable Android-local Maps preference/state boundary.
  *
  * This answers only:
  * - what last accepted precise-location checkpoint may seed non-authoritative map context?
- * - which online map style did the human choose?
+ * - which map appearance preference did the human choose?
  *
  * The checkpoint never becomes a current fix merely because the app reopened. It is deliberately
  * not a GPS history, navigation-session owner, map-pack catalog, or generic preference store.
@@ -71,8 +64,9 @@ interface VexMapsRepository {
         location: VexMapsStoredLocation,
     )
 
-    suspend fun saveOnlineStyle(
-        styleRef: String,
+    suspend fun saveAppearancePreference(
+        preference:
+            VexMapsAppearancePreference,
     )
 }
 
