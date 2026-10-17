@@ -99,6 +99,28 @@ Do not create a repository-wide runtime feature registry merely to satisfy docum
 feature-local code anchor is enough until multiple real consumers need one shared machine-readable
 contract.
 
+### Whole-feature completion traceability
+
+Focused behavior, renderer, repository, provider and device proofs can all be healthy while a person
+still cannot complete the whole outcome through the installed app. When that failure has occurred—or
+multiple independent features expose the same completion question—use the bounded Feature Walk
+contract in `FEATURE-WALKS.md`.
+
+~~~text
+Feature
+-> Feature Walk
+-> Case
+-> Checkpoint
+-> rightful Journey / focused proof owner
+~~~
+
+Feature Walks do not execute UI, replace Journey, replace focused tests, or create product acceptance.
+They make required whole-outcome gaps and their release predicates visible.
+
+Do not create a Feature Walk for every test, Screen or action. One consumer may teach the pattern; the
+current contract was earned only after Conversation and VexMaps independently demonstrated that
+owner-local proof could not answer whole-feature completion.
+
 A feature home may grow fractally when continuity pressure earns it:
 
 ~~~text
@@ -291,6 +313,8 @@ Before presenting a feature as complete/current:
 
 ### Behavior and proof
 - Do focused tests protect changed meaning?
+- When Feature Walks apply, does every required unheld Case have exactly one typed Journey binding?
+- When Feature Walks apply, do held Checkpoints name the missing boundary and release predicate?
 - Did changed human walks update Journey proof when warranted?
 - Did native/provider claims receive native/provider proof?
 - Were aggregate verification and source cleanliness reconciled?
