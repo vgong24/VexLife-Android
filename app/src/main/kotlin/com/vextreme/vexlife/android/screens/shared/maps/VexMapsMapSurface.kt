@@ -972,6 +972,7 @@ internal fun VexMapsMapSurface(
     LaunchedEffect(
         styleConvergence.status,
         styleSelection?.revision,
+        appearancePreference,
     ) {
         val selection =
             styleSelection
