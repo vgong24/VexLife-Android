@@ -32,7 +32,7 @@ import kotlinx.coroutines.CoroutineScope
  */
 internal class VexLifeSession(
     val repositories: AppRepositories,
-    scope: CoroutineScope,
+    val scope: CoroutineScope,
     initialDarkTheme: Boolean = true,
 ) {
     var darkTheme by mutableStateOf(initialDarkTheme)

@@ -24,6 +24,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.shell.AppFrame
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * Application composition root.
@@ -78,6 +79,7 @@ internal fun VexLifeApp(
     val runtime = session.runtime
     val repositories = session.repositories
     val relays = session.relays
+    val sessionScope = session.scope
     val darkTheme = session.darkTheme
 
     LaunchedEffect(runtime) {
@@ -104,6 +106,7 @@ internal fun VexLifeApp(
             runtime = runtime,
             repositories = repositories,
             relays = relays,
+            sessionScope = sessionScope,
             darkTheme = darkTheme,
         )
     }
@@ -114,6 +117,7 @@ private fun VexLifeScaffold(
     runtime: VexRuntime,
     repositories: AppRepositories,
     relays: VexLifeRelays,
+    sessionScope: CoroutineScope,
     darkTheme: Boolean,
 ) {
     val primaryScreens = AppScreens.primary
@@ -182,6 +186,7 @@ private fun VexLifeScaffold(
                     runtime = runtime,
                     repositories = repositories,
                     relays = relays,
+                    sessionScope = sessionScope,
                     darkTheme = darkTheme,
                 )
             }
@@ -208,6 +213,7 @@ private fun VexLifeScaffold(
                     runtime = runtime,
                     repositories = repositories,
                     relays = relays,
+                    sessionScope = sessionScope,
                     darkTheme = darkTheme,
                 )
             }

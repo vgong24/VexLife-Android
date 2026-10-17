@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import com.android.tools.screenshot.PreviewTest
-import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -35,12 +34,6 @@ fun vexStreamSongsLibraryGolden() {
         remember {
             vexStreamPreviewState()
         }
-    val repository =
-        remember {
-            InMemoryVexStreamMusicRepository(
-                initialState = state,
-            )
-        }
     val runtime =
         remember {
             VexRuntime(
@@ -65,7 +58,7 @@ fun vexStreamSongsLibraryGolden() {
             VexStreamSongsPane(
                 runtime = runtime,
                 tracks = state.playableTracks(),
-                repository = repository,
+                offlineCopyConnection = null,
                 controller = null,
                 resolver = null,
                 onVisitArtist = {},

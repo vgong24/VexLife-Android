@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
-import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexColumn
@@ -19,8 +17,8 @@ import com.vextreme.vexlife.android.elements.VexStableLazyColumn
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
 import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
-import kotlinx.coroutines.launch
 
 /**
  * Search presentation for the VexStream library.
@@ -33,14 +31,13 @@ import kotlinx.coroutines.launch
 internal fun VexStreamSearchSheet(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
-    repository: VexStreamMusicRepository,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     query: String,
     onQueryChange: (String) -> Unit,
     onVisitArtist: (String) -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
     val trackPlaybackConnection =
         rememberVexStreamTrackPlaybackConnection(
             controller = controller,
@@ -120,20 +117,8 @@ internal fun VexStreamSearchSheet(
                         contextTracks = tracks,
                         playbackConnection =
                             trackPlaybackConnection,
-                        onDownload = {
-                            scope.launch {
-                                repository.downloadForOffline(
-                                    track.track.trackRef,
-                                )
-                            }
-                        },
-                        onRemoveDownload = {
-                            scope.launch {
-                                repository.removeOfflineCopy(
-                                    track.track.trackRef,
-                                )
-                            }
-                        },
+                        offlineCopyConnection =
+                            offlineCopyConnection,
                         onVisitArtist = onVisitArtist,
                     )
                 }

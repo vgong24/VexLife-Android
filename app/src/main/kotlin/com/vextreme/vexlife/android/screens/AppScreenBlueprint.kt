@@ -98,8 +98,28 @@ abstract class AppScreenBlueprint(
      * Broad app-composition bridge.
      *
      * Existing Screens keep their narrow three-argument renderer. A Screen that consumes a shared
-     * session Relay can override this overload and immediately narrow [relays] into its own content.
+     * session Relay can override the Relay-aware overload and immediately narrow [relays] into its
+     * own content. The broadest overload also carries the already-owned in-process session scope.
+     * Ordinary UI work stays composition scoped; consume [sessionScope] only when an admitted effect
+     * must intentionally survive the initiating presentation while the current VexLife session
+     * remains alive.
      */
+    @Composable
+    internal open fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        relays: VexLifeRelays,
+        sessionScope: CoroutineScope,
+        darkTheme: Boolean,
+    ) {
+        renderContent(
+            runtime = runtime,
+            repositories = repositories,
+            relays = relays,
+            darkTheme = darkTheme,
+        )
+    }
+
     @Composable
     internal open fun renderContent(
         runtime: VexRuntime,

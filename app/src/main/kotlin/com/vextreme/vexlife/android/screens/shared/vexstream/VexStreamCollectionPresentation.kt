@@ -452,8 +452,7 @@ private fun VexStreamCollectionDetail(
                 contextTracks = tracks,
                 playbackConnection =
                     trackPlaybackConnection,
-                onDownload = {},
-                onRemoveDownload = {},
+                offlineCopyConnection = null,
                 onVisitArtist = onVisitArtist,
                 showDownloadAction = false,
             )
