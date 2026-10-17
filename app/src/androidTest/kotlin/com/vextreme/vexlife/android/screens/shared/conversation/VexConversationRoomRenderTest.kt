@@ -2,6 +2,9 @@ package com.vextreme.vexlife.android.screens.shared.conversation
 
 import android.graphics.Bitmap
 import android.util.Log
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -115,7 +119,12 @@ class VexConversationRoomRenderTest {
             VexLifeTheme(
                 darkTheme = true,
             ) {
-                Surface {
+                Surface(
+                    modifier =
+                        Modifier.windowInsetsPadding(
+                            WindowInsets.safeDrawing,
+                        ),
+                ) {
                     ConversationLabUsabilityRoom(
                         repository = repository,
                         lab = lab,
@@ -187,6 +196,9 @@ class VexConversationRoomRenderTest {
         waitForSendEnabled(
             enabled = false,
         )
+        waitForDisplayedText(
+            "Conversation Lab active · Home unavailable",
+        )
         waitForDisplayedText("Are you coming?")
         waitForDisplayedText(
             "You said: \"Are you coming?\"",
@@ -199,6 +211,9 @@ class VexConversationRoomRenderTest {
 
         waitForSendEnabled(
             enabled = true,
+        )
+        waitForDisplayedText(
+            "Conversation Lab active · Auto mirror: Maya",
         )
     }
 
@@ -411,7 +426,16 @@ private fun ConversationLabUsabilityRoom(
         emptyMessagesLabel = "No messages yet.",
         authenticatedSpeakerSuffix = "you",
         developerEnvironmentLabel =
-            "Conversation Lab active · Auto mirror: Maya",
+            when (projection.homeAvailability) {
+                VexConversationHomeAvailability.Unobserved ->
+                    "Conversation Lab active · Home unobserved"
+
+                VexConversationHomeAvailability.Available ->
+                    "Conversation Lab active · Auto mirror: Maya"
+
+                VexConversationHomeAvailability.Unavailable ->
+                    "Conversation Lab active · Home unavailable"
+            },
         composerContent = {
             val sendAvailability =
                 projectVexFamilyConversationSendAvailability(
