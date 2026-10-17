@@ -11,6 +11,8 @@ import com.vextreme.vexlife.android.data.loghistory.LogHistoryRepository
 import com.vextreme.vexlife.android.data.loghistory.RoomLogHistoryRepository
 import com.vextreme.vexlife.android.data.maps.RoomVexMapsRepository
 import com.vextreme.vexlife.android.data.maps.VexMapsRepository
+import com.vextreme.vexlife.android.data.maps.distribution.RoomVexMapsDistributionRepository
+import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.userprofile.RoomUserProfileRepository
 import com.vextreme.vexlife.android.data.userprofile.UserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.PairedVexStreamMusicRepository
@@ -26,6 +28,7 @@ data class AppRepositories(
     val logHistory: LogHistoryRepository,
     val userProfile: UserProfileRepository,
     val vexMaps: VexMapsRepository,
+    val vexMapsDistribution: VexMapsDistributionRepository,
     val vexStream: VexStreamMusicRepository,
     val events: EventsRepository,
     val eventsAttention: EventsAttentionPreferenceRepository,
@@ -51,6 +54,9 @@ object AppRepositoryFactory {
             ),
             vexMaps = RoomVexMapsRepository(
                 dao = database.vexMapsDao(),
+            ),
+            vexMapsDistribution = RoomVexMapsDistributionRepository(
+                dao = database.vexMapsDistributionDao(),
             ),
             vexStream = PairedVexStreamMusicRepository.production(
                 context = context,

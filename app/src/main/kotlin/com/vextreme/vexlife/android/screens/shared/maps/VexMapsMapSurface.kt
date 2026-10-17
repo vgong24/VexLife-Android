@@ -40,12 +40,19 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.maps.VexMapsRepository
 import com.vextreme.vexlife.android.data.maps.VexMapsStoredLocation
+import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
-import com.vextreme.vexlife.android.elements.vexElement
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionUi
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.vexMapsDistributionContextDockPage
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDeliveryRouteNavigationRelationshipStatus
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.mode.VexMapsDistributionModeState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
+import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionProcess
 import com.vextreme.vexlife.android.screens.shared.vexstream.rememberVexStreamContextDockPage
 import java.time.Instant
 import kotlinx.coroutines.launch
@@ -76,11 +83,38 @@ import org.maplibre.android.maps.MapView
 internal fun VexMapsMapSurface(
     runtime: VexRuntime,
     repository: VexMapsRepository,
+    distributionRepository:
+        VexMapsDistributionRepository,
     darkTheme: Boolean,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
+    val distributionSession =
+        remember(
+            context.applicationContext,
+            distributionRepository,
+        ) {
+            VexMapsDistributionProcess
+                .session(
+                    context =
+                        context,
+                    repository =
+                        distributionRepository,
+                )
+        }
+    val distributionUi =
+        remember(
+            distributionSession,
+        ) {
+            VexMapsDistributionUi(
+                distributionSession,
+            )
+        }
+    val distributionSessionState by
+        distributionUi
+            .states
+            .collectAsState()
     val navigationState by
         VexMapsNavigationProcess
             .session
@@ -90,6 +124,22 @@ internal fun VexMapsMapSurface(
         VexMapsNavigationProcess
             .visualLocations
             .collectAsState()
+    val distributionModeProjection by
+        distributionUi
+            .modeProjections
+            .collectAsState()
+    val deliveryRouteProjection by
+        distributionUi
+            .deliveryRouteProjections
+            .collectAsState()
+    val distributionNavigation by
+        distributionUi
+            .navigationOutputs
+            .collectAsState(
+                initial =
+                    distributionUi
+                        .currentNavigation,
+            )
 
     val mapAdapter =
         remember {
@@ -274,6 +324,8 @@ internal fun VexMapsMapSurface(
         coordinate: VexMapCoordinate?,
     ) {
         routeRequestGate.invalidate()
+        distributionUi
+            .humanPlanningInputChanged()
         selectedOriginLatitude =
             coordinate?.latitude
         selectedOriginLongitude =
@@ -381,10 +433,18 @@ internal fun VexMapsMapSurface(
         mode: VexMapsTravelMode,
     ) {
         routeRequestGate.invalidate()
+        distributionUi
+            .humanPlanningInputChanged()
         travelModeName =
             mode.name
     }
 
+    /*
+     * Live device fixes are current Navigation/provider observations. They invalidate ordinary
+     * one-off route-request currentness when the device is the route origin, but they do not replace
+     * a Ready Distribution Plan's sealed preparation origin. Only explicit human planning changes
+     * call humanPlanningInputChanged().
+     */
     fun invalidateDeviceRouteOriginIfUnpinned() {
         if (
             !shouldVexMapsCurrentLocationAffectRoute(
@@ -695,6 +755,13 @@ internal fun VexMapsMapSurface(
                 .OpenDocument(),
         ) { uri ->
             if (uri == null) {
+                return@rememberLauncherForActivityResult
+            }
+
+            if (
+                !distributionUi
+                    .routingRegionReplacementRequested()
+            ) {
                 return@rememberLauncherForActivityResult
             }
 
@@ -1063,9 +1130,125 @@ internal fun VexMapsMapSurface(
         rememberVexStreamContextDockPage(
             runtime = runtime,
         )
+    val distributionDockPage =
+        vexMapsDistributionContextDockPage(
+            ui =
+                distributionUi,
+            canPrepare =
+                !distributionSessionState
+                    .draftOperationInFlight &&
+                    regionPack != null &&
+                    routeOrigin != null &&
+                    distributionSessionState
+                        .draft
+                        .stops
+                        .isNotEmpty(),
+            onToggleMode = {
+                runtime.activate(
+                    VexMapsScreen
+                        .ToggleDistributionMode,
+                )
+                distributionUi
+                    .toggleMode()
+            },
+            onAddStop = {
+                runtime.activate(
+                    VexMapsScreen
+                        .AddDistributionStop,
+                )
+                runtime.presentation.open(
+                    VexMapsScreen
+                        .OfflinePanel,
+                )
+            },
+            onRemoveStop = { stopRef ->
+                runtime.recordDynamicInteraction(
+                    subjectRef =
+                        "presentation.vexmaps.distribution.stop." +
+                            stopRef,
+                    action =
+                        "Removed",
+                )
+                distributionUi
+                    .removeStop(
+                        stopRef,
+                    )
+            },
+            onToggleReturnToStart = {
+                runtime.activate(
+                    VexMapsScreen
+                        .ToggleDistributionReturnToStart,
+                )
+                distributionUi
+                    .setReturnToStart(
+                        !distributionSessionState
+                            .draft
+                            .returnToStart,
+                    )
+            },
+            onPrepareDeliveryRoute = {
+                val pack =
+                    regionPack
+                        ?: return@vexMapsDistributionContextDockPage
+                val origin =
+                    routeOrigin
+                        ?: return@vexMapsDistributionContextDockPage
+
+                runtime.activate(
+                    VexMapsScreen
+                        .PrepareDeliveryRoute,
+                )
+                distributionUi
+                    .prepareDeliveryRoute(
+                        origin =
+                            origin,
+                        travelMode =
+                            travelMode,
+                        pack =
+                            pack,
+                    )
+            },
+            onStartDeliveryRoute = {
+                runtime.activate(
+                    VexMapsScreen
+                        .StartDeliveryRoute,
+                )
+                readCurrentPreciseLocation {
+                    distributionUi
+                        .startPreparedDeliveryRoute()
+                }
+            },
+            onMarkDelivered = {
+                runtime.activate(
+                    VexMapsScreen
+                        .MarkDeliveryComplete,
+                )
+                distributionUi
+                    .markCurrentDeliveryComplete()
+            },
+            onRetryDeliveryLeg = {
+                runtime.activate(
+                    VexMapsScreen
+                        .RetryDeliveryLeg,
+                )
+                distributionUi
+                    .retryFailedLeg()
+            },
+            onClearDeliveryRoute = {
+                runtime.activate(
+                    VexMapsScreen
+                        .ClearDeliveryRoute,
+                )
+                distributionUi
+                    .clearDeliveryRoute()
+            },
+        )
     val contextDockPages =
         buildList {
             vexStreamDockPage?.let(::add)
+            add(
+                distributionDockPage,
+            )
             VexMapsOnlineStyle
                 .entries
                 .map { style ->
@@ -1313,7 +1496,52 @@ internal fun VexMapsMapSurface(
                     }
                 },
                 onPlaceSelected = { place ->
-                    when (mapSelectionTarget) {
+                    if (
+                        distributionModeProjection
+                            .state is
+                            VexMapsDistributionModeState.Distribution
+                    ) {
+                        val currentDeliveryRouteState =
+                            distributionUi
+                                .deliveryRouteProjection
+                                .state
+                        if (
+                            currentDeliveryRouteState !is
+                                VexMapsDeliveryRouteState.Empty &&
+                            currentDeliveryRouteState !is
+                                VexMapsDeliveryRouteState.Draft
+                        ) {
+                            return@VexMapsRoutePlannerCard
+                        }
+
+                        runtime.recordDynamicInteraction(
+                            subjectRef =
+                                "presentation.vexmaps.place-search.result",
+                            action =
+                                "AddedToDistribution",
+                        )
+                        distributionUi
+                            .addStop(
+                                placeRef =
+                                    place.placeRef,
+                                name =
+                                    place.name,
+                                subtitle =
+                                    place.subtitle,
+                                latitude =
+                                    place.coordinate.latitude,
+                                longitude =
+                                    place.coordinate.longitude,
+                            )
+                        preferredDockPageRef =
+                            VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
+                                .value
+                        placeSearchState =
+                            VexMapsPlaceSearchState.Idle
+                        mapAdapter.focusOn(
+                            place.coordinate,
+                        )
+                    } else when (mapSelectionTarget) {
                         VexMapsMapSelectionTarget.ORIGIN -> {
                             runtime.recordDynamicInteraction(
                                 subjectRef =
@@ -1408,6 +1636,13 @@ internal fun VexMapsMapSurface(
                     )
                 },
                 onImportRegion = {
+                    if (
+                        !distributionUi
+                            .canReplaceRoutingRegion()
+                    ) {
+                        return@VexMapsRoutePlannerCard
+                    }
+
                     runtime.activate(
                         VexMapsScreen.ImportRoutingRegion,
                     )
@@ -1527,43 +1762,79 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.EditRoute,
                     )
-                    VexMapsNavigationProcess
-                        .stop()
+                    if (
+                        distributionModeProjection
+                            .state is
+                            VexMapsDistributionModeState
+                                .Distribution
+                    ) {
+                        distributionUi
+                            .cancelDeliveryRoutePreservingDraft()
+                    } else {
+                        VexMapsNavigationProcess
+                            .stop()
+                    }
                 },
                 onStart = {
-                    runtime.activate(
-                        VexMapsScreen.StartNavigation,
-                    )
-                    val expectedRouteKey =
-                        navigationState
-                            .routeResult
-                            ?.vexMapsRouteKey()
-                            ?: return@VexMapsNavigationCard
-
-                    readCurrentPreciseLocation {
-                        val currentState =
-                            VexMapsNavigationProcess
-                                .session
-                                .current
-                        val currentRouteKey =
-                            currentState
+                    if (
+                        distributionModeProjection
+                            .state is
+                            VexMapsDistributionModeState
+                                .Distribution
+                    ) {
+                        if (
+                            deliveryRouteProjection
+                                .state is
+                                VexMapsDeliveryRouteState.Ready &&
+                            distributionNavigation
+                                .status ==
+                                VexMapsDeliveryRouteNavigationRelationshipStatus
+                                    .ReadyToStart
+                        ) {
+                            runtime.activate(
+                                VexMapsScreen
+                                    .StartDeliveryRoute,
+                            )
+                            readCurrentPreciseLocation {
+                                distributionUi
+                                    .startPreparedDeliveryRoute()
+                            }
+                        }
+                    } else {
+                        runtime.activate(
+                            VexMapsScreen.StartNavigation,
+                        )
+                        val expectedRouteKey =
+                            navigationState
                                 .routeResult
                                 ?.vexMapsRouteKey()
+                                ?: return@VexMapsNavigationCard
 
-                        if (
-                            canContinueVexMapsNavigationStart(
-                                expectedRouteKey =
-                                    expectedRouteKey,
-                                currentPhase =
-                                    currentState.phase,
-                                currentRouteKey =
-                                    currentRouteKey,
-                            )
-                        ) {
-                            VexMapsNavigationService
-                                .startPrepared(
-                                    context,
+                        readCurrentPreciseLocation {
+                            val currentState =
+                                VexMapsNavigationProcess
+                                    .session
+                                    .current
+                            val currentRouteKey =
+                                currentState
+                                    .routeResult
+                                    ?.vexMapsRouteKey()
+
+                            if (
+                                canContinueVexMapsNavigationStart(
+                                    expectedRouteKey =
+                                        expectedRouteKey,
+                                    currentPhase =
+                                        currentState.phase,
+                                    currentRouteKey =
+                                        currentRouteKey,
                                 )
+                            ) {
+                                VexMapsNavigationService
+                                    .startPrepared(
+                                        context,
+                                    )
+                            }
                         }
                     }
                 },
@@ -1574,22 +1845,53 @@ internal fun VexMapsMapSurface(
                     currentLocation = null
                     locationState =
                         VexMapsLocationState.Idle
-                    VexMapsNavigationService
-                        .stop(context)
+
+                    if (
+                        distributionModeProjection
+                            .state is
+                            VexMapsDistributionModeState
+                                .Distribution
+                    ) {
+                        distributionUi
+                            .cancelDeliveryRoutePreservingDraft()
+                    } else {
+                        VexMapsNavigationService
+                            .stop(context)
+                    }
                 },
                 onDone = {
-                    runtime.activate(
-                        VexMapsScreen.DoneNavigation,
-                    )
-                    currentLocation = null
-                    locationState =
-                        VexMapsLocationState.Idle
-                    VexMapsNavigationService
-                        .dismissArrivalNotification(
-                            context,
+                    if (
+                        distributionModeProjection
+                            .state is
+                            VexMapsDistributionModeState
+                                .Distribution
+                    ) {
+                        if (
+                            deliveryRouteProjection
+                                .state is
+                                VexMapsDeliveryRouteState.AtDelivery
+                        ) {
+                            runtime.activate(
+                                VexMapsScreen
+                                    .MarkDeliveryComplete,
+                            )
+                            distributionUi
+                                .markCurrentDeliveryComplete()
+                        }
+                    } else {
+                        runtime.activate(
+                            VexMapsScreen.DoneNavigation,
                         )
-                    VexMapsNavigationProcess
-                        .stop()
+                        currentLocation = null
+                        locationState =
+                            VexMapsLocationState.Idle
+                        VexMapsNavigationService
+                            .dismissArrivalNotification(
+                                context,
+                            )
+                        VexMapsNavigationProcess
+                            .stop()
+                    }
                 },
                 modifier =
                     Modifier
