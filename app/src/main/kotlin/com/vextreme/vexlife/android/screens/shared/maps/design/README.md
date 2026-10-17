@@ -6,7 +6,7 @@ Feature ref: feature.vexmaps
 Current human name: **VexMaps**  
 Current completion effort: **[VexMaps Complete]**  
 Last meaningfully updated: **2026-10-16**  
-Current design record: records/2026-10-16-001-completion-means-human-navigation.md
+Current design record: records/2026-10-16-002-map-appearance-is-a-compact-control.md
 
 ## Role of this file
 
@@ -114,12 +114,77 @@ Primary visible affordances:
 ~~~text
 Where to?
 recenter / precise-location action
+compact map-appearance control
 map/options menu
 compact current context
 ~~~
 
-Distribution and map-style controls remain reachable, but they do not explain the first-use Maps
-experience.
+Distribution remains reachable, but it does not explain the first-use Maps experience.
+
+### Map appearance control
+
+Map appearance is a **small map control**, not a full Context Dock destination.
+
+Candidate placement:
+
+~~~text
+map edge / corner
+    small translucent icon control
+    visually peer to recenter / compass-style map controls
+~~~
+
+It should not use the primary-action FAB treatment and should not occupy a swipe page.
+
+Human preference:
+
+~~~text
+Automatic
+Light
+Dark
+~~~
+
+Semantics:
+
+~~~text
+Automatic
+    follow VexLife's current app appearance
+    -> when VexLife follows Android system day/night, VexMaps changes with it
+
+Light
+    explicit Maps light appearance override
+
+Dark
+    explicit Maps dark appearance override
+~~~
+
+Current provider realization may be:
+
+~~~text
+Light -> OpenFreeMap Liberty
+Dark  -> OpenFreeMap Dark
+~~~
+
+but those style refs remain provider details.
+
+Permanent distinction:
+
+~~~text
+MAP_APPEARANCE_PREFERENCE
+!=
+PROVIDER_STYLE_REF
+
+AUTOMATIC
+!=
+ONE FIXED STYLE
+
+MAP_APPEARANCE_CONTROL
+!=
+CONTEXT_DOCK_PAGE
+~~~
+
+If VexMaps later offers genuinely different cartographic products beyond appearance (terrain,
+satellite, transit, etc.), those choices may earn a separate map-layer/style surface. Do not overload
+Light/Dark appearance with that future question.
 
 ### 2. Search
 
@@ -279,7 +344,13 @@ Navigation
 Distribution
     dock expands after explicit Distribution intent
 
-Styles / offline preparation
+Map appearance
+    compact overlay control; not a swipe page
+
+Provider/cartographic style details
+    secondary map options only when the human question is genuinely broader than appearance
+
+Offline preparation
     secondary configuration, not the primary first-use explanation
 ~~~
 
@@ -402,12 +473,14 @@ stable VexMapsDocs identity
 
 Purpose: a fresh worker should know what complete means before touching implementation.
 
-### VMC-01 — Find a destination online
+### VMC-01 — Browse/search front door + find a destination online
 
 Human outcome:
 
 ~~~text
 open Maps
+-> see Where to? as the primary discovery path
+-> see compact recenter + appearance map controls
 -> tap Where to?
 -> type ordinary place/address query
 -> receive real online results
@@ -420,6 +493,8 @@ Must include:
 truthful online availability/failure
 request currentness
 stable result identity
+compact Automatic / Light / Dark map-appearance control
+no Dark/Liberty full Context Dock pages as the ordinary appearance UI
 no fake hardcoded results
 no public-endpoint architecture shortcut
 ~~~
@@ -559,7 +634,8 @@ exact online route provider
 search result ranking / debounce behavior
 whether route alternatives are needed in first complete generation
 whether selected-place details deserve their own semantic owner
-exact Context Dock presentation after primary search/route surfaces exist
+exact compact Context Dock behavior after primary search/route surfaces exist
+exact appearance-control icon/menu treatment after the semantic Automatic/Light/Dark contract is implemented
 ~~~
 
 These are implementation questions, not excuses to delay VMC-01.
@@ -568,7 +644,8 @@ These are implementation questions, not excuses to delay VMC-01.
 
 ~~~text
 VMC-01
-    build one real online place-search vertical slice behind the visible Where to? front door
+    build the ordinary Browse/Search front door:
+    visible Where to? + compact map appearance control + one real online place-search vertical slice
 
 then
 VMC-02
