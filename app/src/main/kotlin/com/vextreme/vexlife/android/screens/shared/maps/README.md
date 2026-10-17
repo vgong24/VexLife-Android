@@ -43,6 +43,7 @@ offline place-search machinery   = CURRENT
 offline Valhalla routing         = CURRENT
 Distribution / Delivery Route    = CURRENT
 place-search currentness owner   = CURRENT
+compact Automatic/Light/Dark map appearance = CURRENT IN VMC-01 SLICE
 
 ordinary connected-user search   = NOT YET PRESENT
 ordinary connected-user routing  = NOT YET PRESENT
@@ -161,16 +162,8 @@ map
 + hamburger -> Offline maps
 ~~~
 
-Current online styles are also presented as full swipeable Context Dock pages:
-
-~~~text
-Dark
-Liberty
-~~~
-
-That presentation gives a provider-style choice too much product weight. The accepted style
-relationship remains useful, but the [VexMaps Complete] design now treats ordinary appearance as a
-compact map control with human-facing intent:
+The VMC-01 appearance slice removes OpenFreeMap Dark / Liberty from full swipeable Context Dock
+pages and exposes one compact map-side control:
 
 ~~~text
 Automatic
@@ -179,8 +172,12 @@ Dark
 ~~~
 
 Automatic follows VexLife's current app appearance; when the app follows Android system day/night,
-the map follows with it. Current provider realization may still map Light -> OpenFreeMap Liberty and
-Dark -> OpenFreeMap Dark, but those provider style refs are not the human preference model.
+the map follows with it. Current provider realization still maps Light -> OpenFreeMap Liberty and
+Dark -> OpenFreeMap Dark, but those provider style refs are no longer the human preference model.
+
+The existing nullable Room column is reused as storage encoding, not redefined as product semantics:
+legacy provider-style bytes migrate conservatively to Automatic because old source persisted resolved
+defaults and therefore cannot prove an explicit historical human choice.
 
 The offline planner contains place search, route inputs, travel mode, offline-map import and routing
 region import.
@@ -351,10 +348,15 @@ design/README.md
 
 Do not resume by refactoring another coroutine merely because VexMapsMapSurface is large.
 
+The appearance half of the VMC-01 Browse shell is now implemented. The remaining VMC-01 product
+edge is a real online destination-search front door.
+
 The next implementation should make measurable progress on the human completion path:
 
 ~~~text
 open Maps
+-> Where to?
+-> real online results
 -> find destination
 -> select destination
 -> preview route
