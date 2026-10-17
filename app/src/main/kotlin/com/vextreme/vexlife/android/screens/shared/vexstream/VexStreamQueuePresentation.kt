@@ -1,7 +1,5 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Reorder still performs raw Media3 moves while drag identity changes; keep that mutation seam visible until its request/currentness owner is admitted.
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +54,11 @@ import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderDirection
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueReorderRequest
+import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueReorderConnection
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueAdjacentMoveTarget
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrenceAt
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
 import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
@@ -86,6 +89,10 @@ internal fun VexStreamQueueSheet(
         rememberVexStreamQueuePlayConnection(
             controller,
         )
+    val queueReorderConnection =
+        rememberVexStreamQueueReorderConnection(
+            controller,
+        )
     val repeatExperience =
         rememberVexStreamRepeatExperience(
             controller,
@@ -107,6 +114,10 @@ internal fun VexStreamQueueSheet(
                 playback.queueMediaIds,
             )
         }
+    val latestQueueMediaIds by
+        rememberUpdatedState(
+            playback.queueMediaIds,
+        )
     val listState =
         rememberLazyListState()
     var draggedKey by remember {
@@ -332,11 +343,8 @@ VexStreamPresentationRefs
                             queuePlayConnection
                                 ?.isAvailable == true
                         val reorderEnabled =
-                            controller != null &&
-                                controller.isCommandAvailable(
-                                    androidx.media3.common.Player
-                                        .COMMAND_CHANGE_MEDIA_ITEMS,
-                                )
+                            queueReorderConnection
+                                ?.isAvailable == true
 
                         Row(
                             modifier = Modifier
@@ -548,10 +556,37 @@ VexStreamPresentationRefs
                                                 )
                                                     ?: return@detectVerticalDragGestures
 
-                                            controller?.moveMediaItem(
-                                                draggedIndex,
-                                                target,
-                                            )
+                                            val currentOccurrence =
+                                                vexStreamQueueOccurrenceAt(
+                                                    mediaIds =
+                                                        latestQueueMediaIds,
+                                                    index =
+                                                        draggedIndex,
+                                                )
+                                                    ?: return@detectVerticalDragGestures
+                                            val direction =
+                                                if (
+                                                    target >
+                                                    draggedIndex
+                                                ) {
+                                                    VexStreamQueueReorderDirection.Later
+                                                } else {
+                                                    VexStreamQueueReorderDirection.Earlier
+                                                }
+                                            val moved =
+                                                queueReorderConnection
+                                                    ?.move(
+                                                        VexStreamQueueReorderRequest(
+                                                            occurrence =
+                                                                currentOccurrence,
+                                                            direction =
+                                                                direction,
+                                                        ),
+                                                    ) == true
+                                            if (!moved) {
+                                                return@detectVerticalDragGestures
+                                            }
+
                                             dragMoved = true
 
                                             val height =
