@@ -251,7 +251,7 @@ fun vexCoverageClassExposures(
         )
 }
 
-private const val VEX_COVERAGE_DEBT_PREFIX =
+val vexCoverageDebtPrefix =
     "// VEX-COVERAGE-DEBT:"
 
 fun vexCoverageDebtContext(
@@ -290,7 +290,7 @@ fun vexCoverageDebtContext(
                 lines.firstOrNull { line ->
                     line.trimStart()
                         .startsWith(
-                            VEX_COVERAGE_DEBT_PREFIX,
+                            vexCoverageDebtPrefix,
                         )
                 }
             }
@@ -300,7 +300,7 @@ fun vexCoverageDebtContext(
         marker
             .trimStart()
             .removePrefix(
-                VEX_COVERAGE_DEBT_PREFIX,
+                vexCoverageDebtPrefix,
             )
             .trim()
     val separator =
