@@ -739,7 +739,13 @@ that current channel/generation/space/thread coordinates agree before forming do
 
 knownParticipants are formed from current human audience plus historical speaker/recipient/witness
 refs; the exact Family Companion lineage identifies the Companion participant, while the other
-accepted Family channel member refs remain human principals.
+accepted Family channel member refs remain human principals. The bootstrap must also preserve
+`familyCompanionIncluded=true` before that lineage enters the current Android audience; lineage
+identity alone is not treated as current inclusion.
+
+Canonical Family history keeps the Companion lineage in immutable witness snapshots while speakers
+remain admitted human Family principals. The adapter fails closed if those producer meanings are
+contradicted.
 
 The producer's `truncated` fact is preserved in [VexFamilyConversationThreadBinding.historyTruncated]
 so a bounded history window never looks complete.

@@ -212,6 +212,79 @@ class VexFamilyConversationServerAdapterTest {
     }
 
     @Test
+    fun currentRoomMustConfirmCompanionInclusionForAcceptedHistory() {
+        val current =
+            bootstrap()
+        val excluded =
+            current.copy(
+                rooms =
+                    listOf(
+                        current.rooms
+                            .single()
+                            .copy(
+                                familyCompanionIncluded =
+                                    false,
+                            ),
+                    ),
+            )
+
+        assertFailsWith<IllegalArgumentException> {
+            projectVexFamilyConversationServerThread(
+                bootstrap = excluded,
+                history = history(),
+            )
+        }
+    }
+
+    @Test
+    fun historicalFamilyMessageKeepsCompanionWitnessOnly() {
+        val current =
+            history()
+
+        val companionSpeaker =
+            current.copy(
+                messages =
+                    listOf(
+                        current.messages
+                            .first()
+                            .copy(
+                                speakerRef =
+                                    COMPANION,
+                            ),
+                    ),
+            )
+        assertFailsWith<IllegalArgumentException> {
+            projectVexFamilyConversationServerThread(
+                bootstrap = bootstrap(),
+                history = companionSpeaker,
+            )
+        }
+
+        val missingCompanionWitness =
+            current.copy(
+                messages =
+                    listOf(
+                        current.messages
+                            .first()
+                            .copy(
+                                witnessRefs =
+                                    listOf(
+                                        VICTOR,
+                                        ALEX,
+                                        BRI,
+                                    ),
+                            ),
+                    ),
+            )
+        assertFailsWith<IllegalArgumentException> {
+            projectVexFamilyConversationServerThread(
+                bootstrap = bootstrap(),
+                history = missingCompanionWitness,
+            )
+        }
+    }
+
+    @Test
     fun companionLineageCannotCollideWithHumanPrincipalIdentity() {
         val current =
             bootstrap()
@@ -325,6 +398,8 @@ class VexFamilyConversationServerAdapterTest {
                             ),
                         familyCompanionLineageRef =
                             COMPANION,
+                        familyCompanionIncluded =
+                            true,
                     ),
                 ),
         )

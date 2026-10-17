@@ -21,6 +21,8 @@ internal data class VexFamilyConversationServerRoom(
         List<String>,
     val familyCompanionLineageRef:
         String,
+    val familyCompanionIncluded:
+        Boolean,
 )
 
 /**
@@ -143,6 +145,11 @@ internal fun projectVexFamilyConversationServerThread(
         "Family bootstrap current principal must belong to the current room audience"
     }
     require(
+        room.familyCompanionIncluded,
+    ) {
+        "Family thread history requires current room Companion inclusion"
+    }
+    require(
         room.familyCompanionLineageRef.isNotBlank(),
     ) {
         "Family current room must expose its accepted Companion lineage for participant identity"
@@ -174,6 +181,18 @@ internal fun projectVexFamilyConversationServerThread(
             message.messageRef.isNotBlank(),
         ) {
             "Family history messageRef must be non-blank"
+        }
+        require(
+            message.speakerRef !=
+                room.familyCompanionLineageRef,
+        ) {
+            "Family history speaker must remain a human principal"
+        }
+        require(
+            room.familyCompanionLineageRef in
+                message.witnessRefs,
+        ) {
+            "Family history witness snapshot must retain the accepted Companion lineage"
         }
         require(
             message.spaceRef ==
