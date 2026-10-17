@@ -640,12 +640,28 @@ exact appearance-control icon/menu treatment after the semantic Automatic/Light/
 
 These are implementation questions, not excuses to delay VMC-01.
 
+## Current VMC-01 progress
+
+~~~text
+DONE IN FIRST SLICE
+    compact map-side appearance control
+    Automatic / Light / Dark human preference
+    Automatic follows VexLife app appearance
+    Dark / Liberty removed from ordinary Context Dock pages
+    legacy provider-style storage does not invent explicit human preference
+
+REMAINING
+    visible Where to? front door
+    real online place-search provider
+    real online results + destination selection
+~~~
+
 ## Current next edge
 
 ~~~text
 VMC-01
-    build the ordinary Browse/Search front door:
-    visible Where to? + compact map appearance control + one real online place-search vertical slice
+    continue the ordinary Browse/Search front door:
+    visible Where to? + one real online place-search vertical slice
 
 then
 VMC-02
