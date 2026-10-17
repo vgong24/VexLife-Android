@@ -90,9 +90,12 @@ object VexStreamJourneys : VexJourneyShard {
 
         // Direct song-cell grammar: body is Play; the trailing menu owns secondary actions.
         tapElementById(
-            trackRowActionElementId(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.PlayTrack,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.PlayTrack,
-            ),
         )
         tap(VexStreamMusicScreen.ShowQueue)
         assertVisibleById(
@@ -107,31 +110,46 @@ object VexStreamJourneys : VexJourneyShard {
             ),
         )
         tapElementById(
-            queueEntryActionElementId(
+            elementId =
+                queueEntryActionElementId(
+                    VexStreamMusicScreen.QueuePlay,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.QueuePlay,
-            ),
         )
         tap(VexStreamMusicScreen.CloseQueue)
 
         tapElementById(
-            trackRowActionElementId(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.TrackMenu,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.TrackMenu,
-            ),
         )
         tapElementById(
-            trackMenuActionElementId(
+            elementId =
+                trackMenuActionElementId(
+                    VexStreamMusicScreen.PlayTrackNext,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.PlayTrackNext,
-            ),
         )
         tapElementById(
-            trackRowActionElementId(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.TrackMenu,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.TrackMenu,
-            ),
         )
         tapElementById(
-            trackMenuActionElementId(
+            elementId =
+                trackMenuActionElementId(
+                    VexStreamMusicScreen.AddTrackToQueue,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.AddTrackToQueue,
-            ),
         )
 
         // The one-song fixture now has multiple queue entries, so transport controls are meaningful.
@@ -148,34 +166,52 @@ object VexStreamJourneys : VexJourneyShard {
         tap(VexStreamMusicScreen.CloseQueue)
 
         tapElementById(
-            trackRowActionElementId(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.TrackMenu,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.TrackMenu,
-            ),
         )
         tapElementById(
-            trackMenuActionElementId(
+            elementId =
+                trackMenuActionElementId(
+                    VexStreamMusicScreen.DownloadTrack,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.DownloadTrack,
-            ),
         )
         tapElementById(
-            trackRowActionElementId(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.TrackMenu,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.TrackMenu,
-            ),
         )
         tapElementById(
-            trackMenuActionElementId(
+            elementId =
+                trackMenuActionElementId(
+                    VexStreamMusicScreen.RemoveTrackDownload,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.RemoveTrackDownload,
-            ),
         )
         tapElementById(
-            trackRowActionElementId(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.TrackMenu,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.TrackMenu,
-            ),
         )
         tapElementById(
-            trackMenuActionElementId(
+            elementId =
+                trackMenuActionElementId(
+                    VexStreamMusicScreen.VisitTrackArtist,
+                ),
+            behavesLike =
                 VexStreamMusicScreen.VisitTrackArtist,
-            ),
         )
         tap(VexStreamMusicScreen.CollectionBack)
         tap(VexStreamMusicScreen.SongsTab)
