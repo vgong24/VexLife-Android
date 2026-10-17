@@ -39,6 +39,11 @@ WHAT CAN I DO WITH THE CURRENT QUEUE?
     -> Previous / Next / Shuffle / Clear through Queue State / Control / Act / Effect
     -> Media3VexStreamQueueConnection
 
+IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
+    vexstream/repeat
+    -> Repeat State / Control / Act / Effect
+    -> Media3VexStreamRepeatConnection
+
 WHAT DOES THE LISTENER SEE?
     screens/shared/vexstream
     -> Android Compose/VexCompose presentation
@@ -66,6 +71,10 @@ vexstream/queue/
     human question: Previous / Next / Shuffle / Clear from current queue truth
     Behavior family + concrete Media3 Connection + UI Experience membrane
 
+vexstream/repeat/
+    human question: Is Repeat active for the current playback context?
+    Behavior family + concrete Media3 Connection + UI Experience membrane
+
 media/vexstream/
     Android MediaSession/player/network realization
 
@@ -90,8 +99,8 @@ Queue currently asks:
 
 > What can the listener truthfully do with the current ordered media context?
 
-Current admitted answers are Previous, Next, and Clear. Clear requests the provider mutation but does
-not claim Empty until Media3 observation reports that truth.
+Current admitted answers are Previous, Next, Shuffle, and Clear. Clear requests the provider mutation
+but does not claim Empty until Media3 observation reports that truth.
 
 They are near each other in the UI but remain independent Behavior families. Do not cross-multiply
 their States simply because Mini Player displays both.
@@ -111,13 +120,12 @@ queue-row selection
 
 reorder
     carries dynamic queue-item identity
-
-repeat
-    separate semantic question not absorbed merely because it is Queue-adjacent
 ~~~
 
-The accepted Behavior foundation still holds a generic runtime-request-payload abstraction. Do not
-invent one just to migrate queue-row selection.
+Repeat is now an independent sibling Behavior family because its current truth and toggle semantics
+are meaningful without Queue item identity. The accepted Behavior foundation does not carry arbitrary
+runtime request payloads through finite Controls, so do not invent one just to migrate queue-row
+selection or reorder.
 
 ## Dynamic Android presentation identity
 
@@ -179,7 +187,6 @@ VexStreamPlayerPresentation
 
 VexStreamQueuePresentation
     Queue play/reorder carry runtime occurrence/index identity
-    Repeat ownership remains unresolved
 
 VexStreamTrackPresentation
     track play/queue/download actions still combine runtime identity with provider/repository effects

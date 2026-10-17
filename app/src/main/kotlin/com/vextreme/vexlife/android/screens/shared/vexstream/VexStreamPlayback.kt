@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
-import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
@@ -216,15 +215,6 @@ internal fun vexStreamQueueAdjacentMoveTarget(
 
         else -> null
     }
-}
-
-internal fun MediaController.toggleVexStreamRepeatAll() {
-    repeatMode =
-        if (repeatMode == Player.REPEAT_MODE_OFF) {
-            Player.REPEAT_MODE_ALL
-        } else {
-            Player.REPEAT_MODE_OFF
-        }
 }
 
 internal fun vexStreamSeekPositionMs(

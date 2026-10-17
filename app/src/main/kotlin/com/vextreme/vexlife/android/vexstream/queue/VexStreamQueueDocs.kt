@@ -55,12 +55,14 @@ package com.vextreme.vexlife.android.vexstream.queue
  * ## What is deliberately NOT in this family?
  *
  * Queue-row selection still carries an index request payload. Reorder carries dynamic item identity.
- * Repeat remains a separate semantic question. The accepted Behavior kernel explicitly holds a
- * generic request-payload abstraction, so this family does not invent one merely to absorb nearby
- * Queue mechanics.
+ * The accepted Behavior kernel does not carry arbitrary runtime request payloads through finite
+ * Controls, so this family does not invent a generic payload framework merely to absorb those
+ * presentation mechanics.
  *
- * Playback remains the sibling [com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDocs]
- * family. Queue does not copy play/pause truth.
+ * Repeat is now the sibling
+ * [com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatDocs] family. Playback remains the
+ * sibling [com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDocs] family. Queue does
+ * not copy either repeat or play/pause truth.
  */
 @Suppress("unused")
 internal class VexStreamQueueDocs private constructor()
