@@ -19,17 +19,21 @@ internal fun VexMapsAppearancePreference.toStoredAppearanceValue():
             null
 
         VexMapsAppearancePreference.LIGHT ->
-            "light"
+            "appearance.light"
 
         VexMapsAppearancePreference.DARK ->
-            "dark"
+            "appearance.dark"
     }
 
 /**
  * Reads the existing online_style_ref storage column as an appearance preference.
  *
- * "liberty" is the accepted legacy OpenFreeMap light-style value. It remains readable so this
- * semantic correction does not require a Room schema migration or strand existing preference data.
+ * "dark" / "liberty" are legacy provider-style values. The old implementation persisted the
+ * resolved default style after a successful load, so those bytes cannot prove an explicit human
+ * Light/Dark choice. They therefore migrate conservatively to Automatic.
+ *
+ * New explicit preferences use appearance.light / appearance.dark in the existing nullable column,
+ * avoiding a Room schema migration while keeping human intent separate from provider identity.
  */
 internal fun vexMapsAppearancePreferenceFromStoredValue(
     storedValue: String?,
@@ -45,13 +49,17 @@ internal fun vexMapsAppearancePreferenceFromStoredValue(
         ->
             VexMapsAppearancePreference.AUTOMATIC
 
-        "light",
-        "liberty",
-        ->
+        "appearance.light" ->
             VexMapsAppearancePreference.LIGHT
 
-        "dark" ->
+        "appearance.dark" ->
             VexMapsAppearancePreference.DARK
+
+        "light",
+        "liberty",
+        "dark",
+        ->
+            VexMapsAppearancePreference.AUTOMATIC
 
         else ->
             VexMapsAppearancePreference.AUTOMATIC
