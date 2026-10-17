@@ -8,7 +8,8 @@ import androidx.room.Query
 /**
  * Storage plumbing for the one Maps-local state row.
  *
- * Field-specific updates avoid read-modify-write races between a style choice and a location refresh.
+ * Field-specific updates avoid read-modify-write races between an appearance preference and a
+ * location refresh.
  */
 @Dao
 interface VexMapsDao {
@@ -53,13 +54,13 @@ interface VexMapsDao {
     @Query(
         """
         UPDATE vex_maps_state
-        SET online_style_ref = :styleRef,
+        SET online_style_ref = :storedValue,
             updated_at_epoch_millis = :updatedAtEpochMillis
         WHERE state_ref = :stateRef
         """
     )
-    suspend fun updateOnlineStyle(
-        styleRef: String,
+    suspend fun updateAppearancePreference(
+        storedValue: String?,
         updatedAtEpochMillis: Long,
         stateRef: String,
     ): Int

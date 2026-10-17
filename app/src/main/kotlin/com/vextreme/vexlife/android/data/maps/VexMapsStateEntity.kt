@@ -34,7 +34,7 @@ data class VexMapsStateEntity(
     val lastLocationCapturedAtEpochMillis: Long? = null,
 
     @ColumnInfo(name = "online_style_ref")
-    val onlineStyleRef: String? = null,
+    val appearanceStorageValue: String? = null,
 
     @ColumnInfo(name = "updated_at_epoch_millis")
     val updatedAtEpochMillis: Long = 0L,
@@ -66,11 +66,10 @@ internal fun VexMapsStateEntity.toStoredState():
 
     return VexMapsStoredState(
         lastLocation = location,
-        onlineStyleRef =
-            onlineStyleRef
-                ?.takeIf {
-                    it.isNotBlank()
-                },
+        appearancePreference =
+            vexMapsAppearancePreferenceFromStoredValue(
+                appearanceStorageValue,
+            ),
     )
 }
 

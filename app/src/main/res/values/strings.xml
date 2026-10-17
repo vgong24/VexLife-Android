@@ -180,6 +180,10 @@
     <string name="vexmaps_navigation_arrived">Arrived at %1$s</string>
     <string name="vexmaps_navigation_done">Done</string>
     <string name="vexmaps_map_options">Map options</string>
+    <string name="vexmaps_appearance">Map appearance</string>
+    <string name="vexmaps_appearance_automatic">Automatic</string>
+    <string name="vexmaps_appearance_light">Light</string>
+    <string name="vexmaps_appearance_dark">Dark</string>
     <string name="vexmaps_style_dark">Dark</string>
     <string name="vexmaps_style_liberty">Liberty</string>
     <string name="vexmaps_style_online_hint">Swipe to preview this style on the live map.</string>

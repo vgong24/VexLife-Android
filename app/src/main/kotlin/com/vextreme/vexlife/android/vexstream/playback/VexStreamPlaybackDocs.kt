@@ -81,10 +81,17 @@ package com.vextreme.vexlife.android.vexstream.playback
  * owners. There is no generic Host abstraction to learn: this concrete Connection simply uses the
  * rightful Android lifetime owner it needs.
  *
- * Previous / Next / Shuffle now belong to the sibling Queue Behavior family. The raw MediaController
- * remains an explicit temporary UI escape for Seek and payload-bearing transport work that has not
- * yet earned its own Behavior boundary. Do not hide held debt inside Playback merely to make this
- * membrane look cleaner.
+ * Previous / Next / Shuffle belong to the sibling Queue Behavior family.
+ *
+ * ## What about Seek?
+ *
+ * Seek carries a runtime position and therefore is not forced through the finite-Control Behavior
+ * vocabulary. [VexStreamPlaybackSeekRequest] carries the exact Media3 ID/index coordinate + target
+ * position, and [Media3VexStreamPlaybackSeekConnection] re-checks that coordinate plus Media3 seek
+ * capability when the request is dispatched. A stale scrub therefore cannot seek a different item
+ * or another queued occurrence of the same media ID.
+ *
+ * This is a playback-local payload boundary, not a generic PayloadPort abstraction.
  *
  * ## How is provider latency reconciled?
  *
@@ -122,14 +129,16 @@ package com.vextreme.vexlife.android.vexstream.playback
  * - [VexStreamPlaybackConnection]
  * - [VexStreamPlaybackConnectionFlow]
  * - [VexStreamPlaybackProjection]
+ * - [VexStreamPlaybackSeekRequest] / [VexStreamPlaybackSeekConnection]
  *
  * These preserve the full Family-bound generic contract underneath without making ordinary Compose
  * code read the complete generic equation.
  *
  * ## What is intentionally still outside this family?
  *
- * Queue, seek, repeat, media loading/source selection, generic UIElement binding, and higher
- * convergence are not silently owned by Playback merely because they are nearby.
+ * Queue, repeat, media loading/source selection, generic UIElement binding, and higher convergence
+ * are not silently owned by Playback merely because they are nearby. Seek stays in the Playback
+ * neighborhood as a typed request boundary without becoming a finite Behavior Control.
  *
  * If one of those becomes an independently meaningful behavioral question, it may earn a sibling
  * package/family rather than making Playback grow forever.

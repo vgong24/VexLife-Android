@@ -1,7 +1,5 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Seek still carries a runtime position payload through raw MediaController; migrate only when the request-payload behavior boundary is earned.
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,14 +28,17 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
 
 /**
  * Mini-player presentation for the accepted VexStream Playback Experience.
  *
- * This layer projects current Playback Experience/read truth into Compose controls. Media3 remains
- * visible only for transport operations that have not yet earned a Behavior/Experience boundary.
+ * This layer projects current Playback Experience/read truth into Compose controls. Payload-bearing
+ * Seek uses its feature-local request Connection rather than issuing Media3 commands from Compose.
  */
 @Composable
 internal fun VexStreamMiniPlayer(
@@ -56,6 +57,10 @@ internal fun VexStreamMiniPlayer(
         )
     val queueProjection =
         queueExperience.projection
+    val seekConnection =
+        rememberVexStreamPlaybackSeekConnection(
+            controller,
+        )
 
     val handler =
         ElementActionHandler { element ->
@@ -107,6 +112,7 @@ internal fun VexStreamMiniPlayer(
             }
     var scrubFraction by remember(
         playback.currentMediaId,
+        playback.currentIndex,
     ) {
         mutableStateOf<Float?>(null)
     }
@@ -116,19 +122,19 @@ internal fun VexStreamMiniPlayer(
     val displayedPositionMs =
         scrubFraction
             ?.let { fraction ->
-                vexStreamSeekPositionMs(
+                vexStreamPlaybackSeekPositionMs(
                     fraction = fraction,
                     durationMs = playback.durationMs,
                 )
             }
             ?: playback.currentPositionMs
     val canSeek =
-        controller != null &&
-            playback.durationMs > 0L &&
-            controller.isCommandAvailable(
-                androidx.media3.common.Player
-                    .COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
-            )
+        seekConnection
+            ?.isAvailable == true &&
+            playback.currentMediaId
+                ?.isNotBlank() == true &&
+            playback.currentIndex >= 0 &&
+            playback.durationMs > 0L
 
     VexContainer(
         element = VexStreamMusicScreen.PlayerSection,
@@ -188,12 +194,18 @@ internal fun VexStreamMiniPlayer(
             onValueChangeFinished = {
                 val targetFraction =
                     scrubFraction
+                val targetMediaId =
+                    playback.currentMediaId
+                val targetMediaItemIndex =
+                    playback.currentIndex
                 if (
                     targetFraction != null &&
+                    !targetMediaId.isNullOrBlank() &&
+                    targetMediaItemIndex >= 0 &&
                     canSeek
                 ) {
                     val targetPositionMs =
-                        vexStreamSeekPositionMs(
+                        vexStreamPlaybackSeekPositionMs(
                             fraction = targetFraction,
                             durationMs = playback.durationMs,
                         )
@@ -201,8 +213,13 @@ internal fun VexStreamMiniPlayer(
                     runtime.activate(
                         VexStreamMusicScreen.SeekPlayback,
                     )
-                    controller?.seekTo(
-                        targetPositionMs,
+                    seekConnection?.seek(
+                        VexStreamPlaybackSeekRequest(
+                            mediaId = targetMediaId,
+                            mediaItemIndex =
+                                targetMediaItemIndex,
+                            positionMs = targetPositionMs,
+                        ),
                     )
                 } else {
                     scrubFraction = null
