@@ -19,6 +19,7 @@ import com.vextreme.vexlife.android.elements.VexStableLazyColumn
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.VexTextField
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
 import kotlinx.coroutines.launch
 
 /**
@@ -40,6 +41,11 @@ internal fun VexStreamSearchSheet(
     onVisitArtist: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val trackPlaybackConnection =
+        rememberVexStreamTrackPlaybackConnection(
+            controller = controller,
+            resolver = resolver,
+        )
 
     VexModalBottomSheet(
         element = VexStreamMusicScreen.SearchSheet,
@@ -112,8 +118,8 @@ internal fun VexStreamSearchSheet(
                             VexStreamTrackPresentationScope.Search,
                         state = track,
                         contextTracks = tracks,
-                        controller = controller,
-                        resolver = resolver,
+                        playbackConnection =
+                            trackPlaybackConnection,
                         onDownload = {
                             scope.launch {
                                 repository.downloadForOffline(
