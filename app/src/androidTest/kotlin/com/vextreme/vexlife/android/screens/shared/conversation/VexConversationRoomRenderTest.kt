@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.conversation
 
 import android.graphics.Bitmap
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
@@ -20,10 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
@@ -37,6 +37,8 @@ import com.vextreme.vexlife.android.conversation.VexConversationHybridRelay
 import com.vextreme.vexlife.android.conversation.VexConversationIdempotencyKey
 import com.vextreme.vexlife.android.conversation.VexConversationLab
 import com.vextreme.vexlife.android.conversation.VexConversationLabFixture
+import com.vextreme.vexlife.android.conversation.VexConversationMessage
+import com.vextreme.vexlife.android.conversation.VexConversationParticipantRef
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationRepositoryResult
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationSendRequest
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationSurfaceSendAvailability
@@ -62,6 +64,12 @@ class VexConversationRoomRenderTest {
 
     @Test
     fun familyRoomSupportsReadableRoundTripAndHybridAvailabilityPressure() {
+        val roomTitleId =
+            "$ROOM_ID.content.title"
+        val audienceId =
+            "$ROOM_ID.content.participants"
+        val labStateId =
+            "$ROOM_ID.content.developer-environment"
         val expectedRoomTitle =
             "Family"
         val expectedInitialAudience =
@@ -105,18 +113,18 @@ class VexConversationRoomRenderTest {
         val lab =
             VexConversationLab(
                 repository,
-            ).also { conversationLab ->
-                conversationLab.seedFamilyRoom()
-                conversationLab.setAutoMirror(true)
-                conversationLab.publishRemoteMessage(
-                    content = expectedSeedMessage,
-                    speakerRef =
-                        VexConversationLabFixture
-                            .Maya
-                            .participant
-                            .participantRef,
-                )
-            }
+            )
+        lab.seedFamilyRoom()
+        lab.setAutoMirror(true)
+        val seedMessage =
+            lab.publishRemoteMessage(
+                content = expectedSeedMessage,
+                speakerRef =
+                    VexConversationLabFixture
+                        .Maya
+                        .participant
+                        .participantRef,
+            )
         val relay =
             VexConversationHybridRelay(
                 conversationRepository =
@@ -166,10 +174,25 @@ class VexConversationRoomRenderTest {
             }
         }
 
-        waitForDisplayedText(expectedRoomTitle)
-        waitForDisplayedText(expectedInitialAudience)
-        waitForDisplayedText(expectedLabReady)
-        waitForDisplayedText(expectedSeedMessage)
+        waitForDisplayedTextWithId(
+            elementId = roomTitleId,
+            expectationString = expectedRoomTitle,
+        )
+        waitForDisplayedTextWithId(
+            elementId = audienceId,
+            expectationString = expectedInitialAudience,
+        )
+        waitForDisplayedTextWithId(
+            elementId = labStateId,
+            expectationString = expectedLabReady,
+        )
+        waitForDisplayedTextWithId(
+            elementId =
+                messageContentElementId(
+                    seedMessage,
+                ),
+            expectationString = expectedSeedMessage,
+        )
         captureEvidence(
             checkpoint = initialCheckpointId,
         )
@@ -191,9 +214,50 @@ class VexConversationRoomRenderTest {
             .assertIsEnabled()
             .performClick()
 
-        waitForDisplayedText(expectedVictorSpeaker)
-        waitForDisplayedText(victorMessage)
-        waitForDisplayedText(expectedMirrorMessage)
+        val victorMessageTruth =
+            waitForRepositoryMessage(
+                repository = repository,
+                expectationString = victorMessage,
+                participantId =
+                    VexConversationLabFixture
+                        .Victor
+                        .participant
+                        .participantRef,
+                afterSequence = seedMessage.sequence,
+            )
+        val mirrorMessageTruth =
+            waitForRepositoryMessage(
+                repository = repository,
+                expectationString = expectedMirrorMessage,
+                participantId =
+                    VexConversationLabFixture
+                        .Maya
+                        .participant
+                        .participantRef,
+                afterSequence = victorMessageTruth.sequence,
+            )
+
+        waitForDisplayedTextWithId(
+            elementId =
+                messageSpeakerElementId(
+                    victorMessageTruth,
+                ),
+            expectationString = expectedVictorSpeaker,
+        )
+        waitForDisplayedTextWithId(
+            elementId =
+                messageContentElementId(
+                    victorMessageTruth,
+                ),
+            expectationString = victorMessage,
+        )
+        waitForDisplayedTextWithId(
+            elementId =
+                messageContentElementId(
+                    mirrorMessageTruth,
+                ),
+            expectationString = expectedMirrorMessage,
+        )
 
         hideKeyboardIfShown()
 
@@ -201,9 +265,24 @@ class VexConversationRoomRenderTest {
             alexId,
         )
 
-        waitForDisplayedText(expectedExpandedAudience)
-        waitForDisplayedText(expectedSeedMessage)
-        waitForDisplayedText(victorMessage)
+        waitForDisplayedTextWithId(
+            elementId = audienceId,
+            expectationString = expectedExpandedAudience,
+        )
+        waitForDisplayedTextWithId(
+            elementId =
+                messageContentElementId(
+                    seedMessage,
+                ),
+            expectationString = expectedSeedMessage,
+        )
+        waitForDisplayedTextWithId(
+            elementId =
+                messageContentElementId(
+                    victorMessageTruth,
+                ),
+            expectationString = victorMessage,
+        )
         captureEvidence(
             checkpoint = expandedCheckpointId,
         )
@@ -221,9 +300,24 @@ class VexConversationRoomRenderTest {
         waitForSendEnabled(
             enabled = false,
         )
-        waitForDisplayedText(expectedHomeUnavailable)
-        waitForDisplayedText(victorMessage)
-        waitForDisplayedText(expectedMirrorMessage)
+        waitForDisplayedTextWithId(
+            elementId = labStateId,
+            expectationString = expectedHomeUnavailable,
+        )
+        waitForDisplayedTextWithId(
+            elementId =
+                messageContentElementId(
+                    victorMessageTruth,
+                ),
+            expectationString = victorMessage,
+        )
+        waitForDisplayedTextWithId(
+            elementId =
+                messageContentElementId(
+                    mirrorMessageTruth,
+                ),
+            expectationString = expectedMirrorMessage,
+        )
         captureEvidence(
             checkpoint = unavailableCheckpointId,
         )
@@ -233,7 +327,10 @@ class VexConversationRoomRenderTest {
         waitForSendEnabled(
             enabled = true,
         )
-        waitForDisplayedText(expectedLabReady)
+        waitForDisplayedTextWithId(
+            elementId = labStateId,
+            expectationString = expectedLabReady,
+        )
     }
 
     private fun captureEvidence(
@@ -326,28 +423,121 @@ class VexConversationRoomRenderTest {
             .waitForIdleSync()
     }
 
-    private fun waitForDisplayedText(
-        text: String,
+    private fun waitForDisplayedTextWithId(
+        elementId: String,
+        expectationString: String,
+        waitTimeInMillis: Long = 200L,
     ) {
-        compose.waitUntil(
-            timeoutMillis = 5_000,
-        ) {
-            compose
-                .onAllNodesWithText(text)
-                .fetchSemanticsNodes()
-                .isNotEmpty()
+        val startedAt =
+            SystemClock.elapsedRealtime()
+        val failure =
+            runCatching {
+                compose.waitUntil(
+                    timeoutMillis = waitTimeInMillis,
+                ) {
+                    runCatching {
+                        compose
+                            .onNodeWithTag(
+                                testTag = elementId,
+                                useUnmergedTree = true,
+                            )
+                            .assertTextEquals(
+                                expectationString,
+                            )
+                            .assertIsDisplayed()
+                        true
+                    }.getOrDefault(false)
+                }
+            }.exceptionOrNull()
+        val elapsedMillis =
+            SystemClock.elapsedRealtime() -
+                startedAt
+
+        Log.i(
+            UI_PRACTICUM_LOG_TAG,
+            "WAIT_TEXT elementId=$elementId " +
+                "elapsedMs=$elapsedMillis " +
+                "budgetMs=$waitTimeInMillis",
+        )
+
+        check(failure == null) {
+            "Conversation UI element $elementId did not display exact text " +
+                "within ${waitTimeInMillis}ms: $expectationString"
         }
 
         compose
-            .onNodeWithText(text)
+            .onNodeWithTag(
+                testTag = elementId,
+                useUnmergedTree = true,
+            )
+            .assertTextEquals(
+                expectationString,
+            )
             .assertIsDisplayed()
     }
 
+    private fun waitForRepositoryMessage(
+        repository:
+            InMemoryVexFamilyConversationRepository,
+        expectationString: String,
+        participantId:
+            VexConversationParticipantRef,
+        afterSequence: Long,
+        waitTimeInMillis: Long = 200L,
+    ): VexConversationMessage {
+        var message:
+            VexConversationMessage? = null
+
+        compose.waitUntil(
+            timeoutMillis = waitTimeInMillis,
+        ) {
+            message =
+                repository
+                    .state
+                    .value
+                    .thread(
+                        VexConversationLabFixture.threadRef,
+                    )
+                    ?.messages
+                    ?.lastOrNull { candidate ->
+                        candidate.sequence >
+                            afterSequence &&
+                            candidate.speakerRef ==
+                            participantId &&
+                            candidate.content ==
+                            expectationString
+                    }
+
+            message != null
+        }
+
+        return requireNotNull(
+            message,
+        )
+    }
+
+    private fun messageSpeakerElementId(
+        message:
+            VexConversationMessage,
+    ): String =
+        "$ROOM_ID.messages." +
+            message.messageRef.value +
+            ".lane.card.body.speaker"
+
+    private fun messageContentElementId(
+        message:
+            VexConversationMessage,
+    ): String =
+        "$ROOM_ID.messages." +
+            message.messageRef.value +
+            ".lane.card.body.content"
+
     private fun waitForSendEnabled(
         enabled: Boolean,
+        waitTimeInMillis: Long = 200L,
     ) {
         compose.waitUntil(
-            timeoutMillis = 5_000,
+            timeoutMillis = waitTimeInMillis,
         ) {
             runCatching {
                 val send =
