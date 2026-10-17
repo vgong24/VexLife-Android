@@ -45,7 +45,7 @@ Distribution / Delivery Route    = CURRENT
 place-search currentness owner   = CURRENT
 compact Automatic/Light/Dark map appearance = CURRENT IN VMC-01 SLICE
 
-ordinary connected-user search   = NOT YET PRESENT
+ordinary destination search      = VMC-01 CANDIDATE / ANDROID SYSTEM GEOCODER
 ordinary connected-user routing  = NOT YET PRESENT
 obvious "find -> route -> start"  = NOT YET PRESENT
 
@@ -100,7 +100,9 @@ hamburger
 -> select result
 ~~~
 
-There is no accepted online place-search provider in VexMaps today.
+The active VMC-01 candidate adds Android's best-effort system Geocoder behind a visible
+`Where to?` front door. It does not replace local pack search and does not claim provider
+availability/accuracy beyond what the device reports.
 
 ### Routing
 
@@ -348,19 +350,27 @@ design/README.md
 
 Do not resume by refactoring another coroutine merely because VexMapsMapSurface is large.
 
-The appearance half of the VMC-01 Browse shell is now implemented. The remaining VMC-01 product
-edge is a real online destination-search front door.
+The compact appearance half of VMC-01 is accepted. The active candidate now adds the ordinary
+destination-search front door using the Android system Geocoder.
 
-The next implementation should make measurable progress on the human completion path:
+The current completion walk is:
 
 ~~~text
 open Maps
 -> Where to?
--> real online results
--> find destination
+-> explicit Search
+-> real provider results when available
 -> select destination
--> preview route
--> start navigation
+-> existing destination marker/focus
+~~~
+
+After that slice is accepted, the next unfinished product edge becomes VMC-02:
+
+~~~text
+selected destination
+-> truthful route preview
+-> Start
+-> navigation
 ~~~
 
 and let the real feature need decide which route/search currentness or provider abstractions are

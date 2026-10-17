@@ -6,7 +6,7 @@ Feature ref: feature.vexmaps
 Current human name: **VexMaps**  
 Current completion effort: **[VexMaps Complete]**  
 Last meaningfully updated: **2026-10-16**  
-Current design record: records/2026-10-16-002-map-appearance-is-a-compact-control.md
+Current design record: records/2026-10-16-003-first-destination-search-provider.md
 
 ## Role of this file
 
@@ -650,18 +650,27 @@ DONE IN FIRST SLICE
     Dark / Liberty removed from ordinary Context Dock pages
     legacy provider-style storage does not invent explicit human preference
 
-REMAINING
+CURRENT VMC-01 CANDIDATE
     visible Where to? front door
-    real online place-search provider
-    real online results + destination selection
+    Android system Geocoder provider
+    explicit Search submission
+    provider availability / failure truth
+    real place/address results
+    destination selection into existing Maps planning input
+
+STILL HELD
+    autocomplete/search-as-you-type
+        provider promise not yet earned
+    hosted/self-hosted provider
+        Android Geocoder is the first system-provider slice, not permanent provider lock-in
 ~~~
 
 ## Current next edge
 
 ~~~text
 VMC-01
-    continue the ordinary Browse/Search front door:
-    visible Where to? + one real online place-search vertical slice
+    prove the current Where to? / Android Geocoder / destination-selection vertical slice
+    on source + connected Android + lived device behavior
 
 then
 VMC-02
