@@ -6,6 +6,266 @@ import org.gradle.api.tasks.bundling.Zip
 // Keep the root build file small; this script owns only test/proof orchestration and evidence
 // collection, never feature semantics.
 
+// Code coverage communication is a projection of Kover truth, not another coverage engine.
+val vexCoverageAwarenessThresholdPercent = 90.0
+
+data class VexCoverageCounter(
+    val missed: Long,
+    val covered: Long,
+) {
+    val total: Long
+        get() = missed + covered
+
+    val percent: Double
+        get() =
+            if (total <= 0L) {
+                0.0
+            } else {
+                covered.toDouble() * 100.0 / total.toDouble()
+            }
+}
+
+data class VexCoverageClassExposure(
+    val className: String,
+    val missedLines: Long,
+    val coveredLines: Long,
+) {
+    val totalLines: Long
+        get() = missedLines + coveredLines
+
+    val percent: Double
+        get() =
+            if (totalLines <= 0L) {
+                0.0
+            } else {
+                coveredLines.toDouble() * 100.0 / totalLines.toDouble()
+            }
+}
+
+fun vexCoverageCounters(
+    reportFile: java.io.File,
+): Map<String, VexCoverageCounter> {
+    val factory =
+        javax.xml.parsers.DocumentBuilderFactory
+            .newInstance()
+            .apply {
+                setFeature(
+                    "http://apache.org/xml/features/disallow-doctype-decl",
+                    true,
+                )
+                setFeature(
+                    "http://xml.org/sax/features/external-general-entities",
+                    false,
+                )
+                setFeature(
+                    "http://xml.org/sax/features/external-parameter-entities",
+                    false,
+                )
+                isXIncludeAware = false
+                isExpandEntityReferences = false
+            }
+    val root =
+        factory
+            .newDocumentBuilder()
+            .parse(reportFile)
+            .documentElement
+    val counters =
+        mutableMapOf<String, VexCoverageCounter>()
+
+    for (index in 0 until root.childNodes.length) {
+        val element =
+            root.childNodes.item(index)
+                as? org.w3c.dom.Element
+                ?: continue
+        if (element.tagName != "counter") {
+            continue
+        }
+        val type =
+            element.getAttribute("type")
+        if (type.isBlank()) {
+            continue
+        }
+        counters[type] =
+            VexCoverageCounter(
+                missed =
+                    element
+                        .getAttribute("missed")
+                        .toLong(),
+                covered =
+                    element
+                        .getAttribute("covered")
+                        .toLong(),
+            )
+    }
+
+    return counters
+}
+
+fun vexCoverageDirectCounter(
+    element: org.w3c.dom.Element,
+    type: String,
+): VexCoverageCounter? {
+    for (index in 0 until element.childNodes.length) {
+        val child =
+            element.childNodes.item(index)
+                as? org.w3c.dom.Element
+                ?: continue
+        if (
+            child.tagName == "counter" &&
+            child.getAttribute("type") == type
+        ) {
+            return VexCoverageCounter(
+                missed =
+                    child
+                        .getAttribute("missed")
+                        .toLong(),
+                covered =
+                    child
+                        .getAttribute("covered")
+                        .toLong(),
+            )
+        }
+    }
+    return null
+}
+
+fun vexCoverageClassExposures(
+    reportFile: java.io.File,
+): List<VexCoverageClassExposure> {
+    val factory =
+        javax.xml.parsers.DocumentBuilderFactory
+            .newInstance()
+            .apply {
+                setFeature(
+                    "http://apache.org/xml/features/disallow-doctype-decl",
+                    true,
+                )
+                setFeature(
+                    "http://xml.org/sax/features/external-general-entities",
+                    false,
+                )
+                setFeature(
+                    "http://xml.org/sax/features/external-parameter-entities",
+                    false,
+                )
+                isXIncludeAware = false
+                isExpandEntityReferences = false
+            }
+    val root =
+        factory
+            .newDocumentBuilder()
+            .parse(reportFile)
+            .documentElement
+    val exposures =
+        mutableListOf<VexCoverageClassExposure>()
+    val packages =
+        root.getElementsByTagName(
+            "package",
+        )
+
+    for (
+        packageIndex in
+        0 until packages.length
+    ) {
+        val packageElement =
+            packages.item(packageIndex)
+                as? org.w3c.dom.Element
+                ?: continue
+
+        for (
+            childIndex in
+            0 until packageElement.childNodes.length
+        ) {
+            val classElement =
+                packageElement.childNodes.item(childIndex)
+                    as? org.w3c.dom.Element
+                    ?: continue
+            if (classElement.tagName != "class") {
+                continue
+            }
+
+            val line =
+                vexCoverageDirectCounter(
+                    classElement,
+                    "LINE",
+                )
+                    ?: continue
+            if (
+                line.total <= 0L ||
+                line.percent >=
+                vexCoverageAwarenessThresholdPercent
+            ) {
+                continue
+            }
+
+            exposures +=
+                VexCoverageClassExposure(
+                    className =
+                        classElement
+                            .getAttribute("name")
+                            .replace(
+                                '/',
+                                '.',
+                            ),
+                    missedLines =
+                        line.missed,
+                    coveredLines =
+                        line.covered,
+                )
+        }
+    }
+
+    return exposures
+        .sortedWith(
+            compareByDescending<
+                VexCoverageClassExposure
+            > {
+                it.missedLines
+            }
+                .thenBy {
+                    it.percent
+                }
+                .thenBy {
+                    it.className
+                },
+        )
+}
+
+fun vexCoverageJsonString(
+    value: String,
+): String =
+    value
+        .replace(
+            "\\",
+            "\\\\",
+        )
+        .replace(
+            "\"",
+            "\\\"",
+        )
+
+fun vexCoverageAwareness(
+    linePercent: Double,
+): String =
+    if (
+        linePercent >=
+        vexCoverageAwarenessThresholdPercent
+    ) {
+        "GREEN"
+    } else {
+        "YELLOW"
+    }
+
+fun vexCoveragePercentText(
+    percent: Double,
+): String =
+    java.lang.String.format(
+        java.util.Locale.US,
+        "%.2f",
+        percent,
+    )
+
+
 /**
  * Canonical repository-owned JVM/source verification.
  *
@@ -396,18 +656,430 @@ tasks.register("vexVerifyDevice") {
 }
 
 /**
+ * Deterministic contract proof for the small coverage communication layer.
+ *
+ * This proves the parser/awareness boundary itself without pretending Gradle orchestration belongs
+ * inside the product's code-coverage percentage.
+ */
+val vexCoverageSummaryContract =
+    tasks.register("vexCoverageSummaryContract") {
+        group = "verification"
+        description =
+            "Prove coverage-summary parsing and 90% awareness classification."
+
+        doLast {
+            fun fixture(
+                name: String,
+                missedLines: Long,
+                coveredLines: Long,
+            ): java.io.File {
+                val file =
+                    temporaryDir.resolve(
+                        "$name.xml",
+                    )
+                file.writeText(
+                    """
+                    <report name="fixture">
+                      <package name="example">
+                        <class name="example/LargeGap">
+                          <counter type="LINE" missed="20" covered="10"/>
+                        </class>
+                        <class name="example/SmallGap">
+                          <counter type="LINE" missed="3" covered="17"/>
+                        </class>
+                        <class name="example/Green">
+                          <counter type="LINE" missed="1" covered="19"/>
+                        </class>
+                      </package>
+                      <counter type="INSTRUCTION" missed="0" covered="1"/>
+                      <counter type="BRANCH" missed="1" covered="9"/>
+                      <counter type="LINE" missed="$missedLines" covered="$coveredLines"/>
+                    </report>
+                    """.trimIndent(),
+                )
+                return file
+            }
+
+            val green =
+                vexCoverageCounters(
+                    fixture(
+                        name = "green",
+                        missedLines = 10,
+                        coveredLines = 90,
+                    ),
+                ).getValue("LINE")
+            check(
+                kotlin.math.abs(
+                    green.percent - 90.0,
+                ) < 0.0001,
+            )
+            check(
+                vexCoverageAwareness(
+                    green.percent,
+                ) == "GREEN",
+            )
+
+            val yellow =
+                vexCoverageCounters(
+                    fixture(
+                        name = "yellow",
+                        missedLines = 11,
+                        coveredLines = 89,
+                    ),
+                ).getValue("LINE")
+            check(
+                kotlin.math.abs(
+                    yellow.percent - 89.0,
+                ) < 0.0001,
+            )
+            check(
+                vexCoverageAwareness(
+                    yellow.percent,
+                ) == "YELLOW",
+            )
+
+            val exposures =
+                vexCoverageClassExposures(
+                    fixture(
+                        name = "exposure",
+                        missedLines = 10,
+                        coveredLines = 90,
+                    ),
+                )
+            check(
+                exposures.map {
+                    it.className
+                } ==
+                    listOf(
+                        "example.LargeGap",
+                        "example.SmallGap",
+                    ),
+            )
+            check(
+                exposures.first().missedLines == 20L,
+            )
+        }
+    }
+
+val vexCoverageStatusMarkdown =
+    layout.buildDirectory.file(
+        "vex/test-foundation/coverage-status.md",
+    )
+val vexCoverageSummaryJson =
+    layout.buildDirectory.file(
+        "vex/test-foundation/coverage-summary.json",
+    )
+
+/**
+ * One head-bound coverage projection for humans and dashboards.
+ *
+ * Kover remains the coverage producer. This task reads its JaCoCo-compatible XML and emits a tiny
+ * latest-state projection. The 90% line target is awareness-only:
+ *
+ *   GREEN  >= 90%
+ *   YELLOW <  90%
+ *
+ * Yellow never turns a successful test/coverage run into failure.
+ */
+val vexCoverageSummary =
+    tasks.register("vexCoverageSummary") {
+        group = "verification"
+        description =
+            "Publish one head-bound coverage summary with 90% awareness coloring."
+
+        notCompatibleWithConfigurationCache(
+            "Reads generated Kover XML and binds the summary to the current Git head.",
+        )
+
+        dependsOn(
+            "koverXmlReport",
+            vexCoverageSummaryContract,
+        )
+
+        doLast {
+            val reportFile =
+                layout.buildDirectory
+                    .file(
+                        "reports/kover/report.xml",
+                    )
+                    .get()
+                    .asFile
+            if (!reportFile.isFile) {
+                throw GradleException(
+                    "Kover XML report was not found at " +
+                        reportFile.relativeTo(
+                            rootProject.projectDir,
+                        ),
+                )
+            }
+
+            val counters =
+                vexCoverageCounters(
+                    reportFile,
+                )
+            val line =
+                counters["LINE"]
+                    ?: throw GradleException(
+                        "Kover XML report has no root LINE counter.",
+                    )
+            if (line.total <= 0L) {
+                throw GradleException(
+                    "Kover XML report has zero executable lines.",
+                )
+            }
+            val branch =
+                counters["BRANCH"]
+            val awareness =
+                vexCoverageAwareness(
+                    line.percent,
+                )
+            val emoji =
+                if (awareness == "GREEN") {
+                    "🟢"
+                } else {
+                    "🟡"
+                }
+            val lineText =
+                vexCoveragePercentText(
+                    line.percent,
+                )
+            val branchText =
+                branch
+                    ?.takeIf {
+                        it.total > 0L
+                    }
+                    ?.let {
+                        vexCoveragePercentText(
+                            it.percent,
+                        )
+                    }
+            val underCoveredClasses =
+                vexCoverageClassExposures(
+                    reportFile,
+                )
+            val topUnderCoveredClasses =
+                underCoveredClasses.take(
+                    10,
+                )
+            val gitHead =
+                runCatching {
+                    val process =
+                        ProcessBuilder(
+                            "git",
+                            "rev-parse",
+                            "HEAD",
+                        )
+                            .directory(
+                                rootProject.projectDir,
+                            )
+                            .redirectErrorStream(true)
+                            .start()
+                    val output =
+                        process.inputStream
+                            .bufferedReader()
+                            .use {
+                                it.readText()
+                            }
+                            .trim()
+                    val exit =
+                        process.waitFor()
+                    if (
+                        exit != 0 ||
+                        !output.matches(
+                            Regex(
+                                "[0-9a-fA-F]{40,64}",
+                            ),
+                        )
+                    ) {
+                        throw GradleException(
+                            "Coverage summary could not bind the current Git head.",
+                        )
+                    }
+                    output
+                }.getOrElse { failure ->
+                    throw GradleException(
+                        "Coverage summary requires an exact Git head.",
+                        failure,
+                    )
+                }
+
+            val markdown =
+                buildString {
+                    appendLine(
+                        "<!-- VEX-COVERAGE-STATUS:START -->",
+                    )
+                    appendLine(
+                        "### Code coverage",
+                    )
+                    append(
+                        "$emoji **$lineText% lines**",
+                    )
+                    if (branchText != null) {
+                        append(
+                            " · $branchText% branches",
+                        )
+                    }
+                    appendLine(
+                        " · awareness target ≥ 90%",
+                    )
+                    appendLine(
+                        "Head: `$gitHead`",
+                    )
+                    if (
+                        topUnderCoveredClasses
+                            .isNotEmpty()
+                    ) {
+                        appendLine()
+                        appendLine(
+                            "#### Largest under-covered classes",
+                        )
+                        appendLine(
+                            "| Class | Lines | Missed |",
+                        )
+                        appendLine(
+                            "| --- | ---: | ---: |",
+                        )
+                        topUnderCoveredClasses
+                            .forEach { exposure ->
+                                appendLine(
+                                    "| `" +
+                                        exposure.className +
+                                        "` | 🟡 " +
+                                        vexCoveragePercentText(
+                                            exposure.percent,
+                                        ) +
+                                        "% | " +
+                                        exposure.missedLines +
+                                        " |",
+                                )
+                            }
+                    }
+                    appendLine(
+                        "<!-- VEX-COVERAGE-STATUS:END -->",
+                    )
+                }
+
+            val markdownFile =
+                vexCoverageStatusMarkdown
+                    .get()
+                    .asFile
+            markdownFile
+                .parentFile
+                .mkdirs()
+            markdownFile.writeText(
+                markdown,
+            )
+
+            val jsonFile =
+                vexCoverageSummaryJson
+                    .get()
+                    .asFile
+            jsonFile
+                .parentFile
+                .mkdirs()
+            jsonFile.writeText(
+                buildString {
+                    appendLine("{")
+                    appendLine(
+                        "  \"schemaVersion\": \"vexlife.code-coverage-summary/v1\",",
+                    )
+                    appendLine(
+                        "  \"gitHead\": \"$gitHead\",",
+                    )
+                    appendLine(
+                        "  \"awarenessThresholdPercent\": 90.0,",
+                    )
+                    appendLine(
+                        "  \"awareness\": \"$awareness\",",
+                    )
+                    appendLine(
+                        "  \"lineCoveragePercent\": $lineText,",
+                    )
+                    appendLine(
+                        "  \"lineCovered\": ${line.covered},",
+                    )
+                    appendLine(
+                        "  \"lineMissed\": ${line.missed},",
+                    )
+                    if (branchText == null) {
+                        appendLine(
+                            "  \"branchCoveragePercent\": null,",
+                        )
+                    } else {
+                        appendLine(
+                            "  \"branchCoveragePercent\": $branchText,",
+                        )
+                    }
+                    appendLine(
+                        "  \"underCoveredClassCount\": " +
+                            underCoveredClasses.size +
+                            ",",
+                    )
+                    appendLine(
+                        "  \"topUnderCoveredClasses\": [",
+                    )
+                    topUnderCoveredClasses
+                        .forEachIndexed {
+                                index,
+                                exposure,
+                            ->
+                            val comma =
+                                if (
+                                    index ==
+                                    topUnderCoveredClasses
+                                        .lastIndex
+                                ) {
+                                    ""
+                                } else {
+                                    ","
+                                }
+                            appendLine(
+                                "    {" +
+                                    "\"className\": \"" +
+                                    vexCoverageJsonString(
+                                        exposure.className,
+                                    ) +
+                                    "\", " +
+                                    "\"lineCoveragePercent\": " +
+                                    vexCoveragePercentText(
+                                        exposure.percent,
+                                    ) +
+                                    ", " +
+                                    "\"missedLines\": " +
+                                    exposure.missedLines +
+                                    ", " +
+                                    "\"coveredLines\": " +
+                                    exposure.coveredLines +
+                                    "}$comma",
+                            )
+                        }
+                    appendLine(
+                        "  ]",
+                    )
+                    appendLine("}")
+                },
+            )
+
+            logger.lifecycle(
+                markdown.trimEnd(),
+            )
+        }
+    }
+
+/**
  * Local JVM coverage report across the current app + architecture modules.
  *
- * Coverage is diagnostic evidence only at this stage: no percentage gate is admitted.
+ * Coverage remains diagnostic evidence. The summary's 90% target is a human awareness threshold,
+ * not a build gate.
  */
 tasks.register("vexCoverage") {
     group = "verification"
     description =
-        "Run JVM tests and generate aggregate Kover HTML/XML coverage reports."
+        "Run JVM tests and generate aggregate Kover reports plus one current coverage summary."
 
     dependsOn(
         "koverHtmlReport",
-        "koverXmlReport",
+        vexCoverageSummary,
     )
 }
 
@@ -567,6 +1239,16 @@ val vexTestFoundationProofBundle =
             into("coverage/kover")
         }
         from(
+            vexCoverageStatusMarkdown,
+        ) {
+            into("coverage")
+        }
+        from(
+            vexCoverageSummaryJson,
+        ) {
+            into("coverage")
+        }
+        from(
             layout.projectDirectory.dir(
                 "app/build/reports/vex",
             ),
@@ -612,6 +1294,13 @@ val vexTestFoundationProofBundle =
             ),
         ) {
             into("tests/architecture-elements")
+        }
+        from(
+            layout.projectDirectory.dir(
+                "architecture/execution/build/test-results",
+            ),
+        ) {
+            into("tests/architecture-execution")
         }
         from(
             layout.projectDirectory.dir(

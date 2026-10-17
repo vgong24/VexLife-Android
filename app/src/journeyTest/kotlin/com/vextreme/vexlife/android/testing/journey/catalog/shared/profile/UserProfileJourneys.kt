@@ -19,7 +19,7 @@ object UserProfileJourneys : VexJourneyShard {
         start(HomeScreen)
         tap(AppShell.Elements.Add)
         tap(AppShell.Elements.UserProfile)
-        type(
+        enterText(
             field = UserProfileScreen.DisplayName,
             value = "Journey Victor",
         )
