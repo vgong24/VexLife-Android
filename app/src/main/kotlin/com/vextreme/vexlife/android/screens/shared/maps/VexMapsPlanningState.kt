@@ -8,11 +8,11 @@ package com.vextreme.vexlife.android.screens.shared.maps
  * testable/addressable.
  */
 /**
- * Admits only the newest result from a family of asynchronous composition-owned requests.
+ * Admits only the newest result from a family of asynchronous owner-bound requests.
  *
  * The gate does not decide whether a route/search/location result is semantically valid; the owning
  * domain/provider code still does that. It answers the narrower race question: "is this coroutine
- * result still the response to the latest request the current composition cares about?"
+ * result still the response to the latest request this currentness owner cares about?"
  */
 internal class VexMapsLatestRequestGate {
     private var generation = 0L

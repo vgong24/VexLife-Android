@@ -45,6 +45,7 @@ import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionUi
@@ -55,6 +56,7 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryrou
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.session.VexMapsDistributionProcess
 import com.vextreme.vexlife.android.screens.shared.vexstream.rememberVexStreamContextDockPage
 import java.time.Instant
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.geometry.LatLng
@@ -67,6 +69,7 @@ import org.maplibre.android.maps.MapView
  * Read this file as wiring between already-owned questions, not as one giant Maps controller:
  *
  * - VexMapsNavigationProcess / VexMapsStyleConvergenceRelay own changing semantic relationships;
+ * - VexMapsPlaceSearchSession owns local place-search pack/attempt/result currentness;
  * - VexMapsRepository owns durable Maps-local checkpoints/preferences;
  * - VexDeviceLocationSource / stores own Android or provider observations/effects;
  * - VexMapLibreAdapter owns translation from Maps rendering intent into MapLibre mechanics;
@@ -172,6 +175,32 @@ internal fun VexMapsMapSurface(
                 context,
             )
         }
+    val placeSearchSession =
+        remember(
+            placeSearchStore,
+        ) {
+            VexMapsPlaceSearchSession(
+                source =
+                    placeSearchStore,
+                executionRoot =
+                    VexExecutionRoot(
+                        dispatcher =
+                            Dispatchers.Main.immediate,
+                    ),
+            )
+        }
+    val placeSearchSessionState by
+        placeSearchSession
+            .states
+            .collectAsState()
+
+    DisposableEffect(
+        placeSearchSession,
+    ) {
+        onDispose {
+            placeSearchSession.close()
+        }
+    }
 
     /*
      * Keep three different notions separate:
@@ -367,26 +396,14 @@ internal fun VexMapsMapSurface(
                 null,
             )
         }
-    var placeSearchPack by
-        remember {
-            mutableStateOf(
-                placeSearchStore.currentPack(),
-            )
-        }
     var placeSearchQuery by
         rememberSaveable {
             mutableStateOf("")
         }
-    var placeSearchState by
-        remember {
-            mutableStateOf<VexMapsPlaceSearchState>(
-                VexMapsPlaceSearchState.Idle,
-            )
-        }
-    val placeSearchRequestGate =
-        remember {
-            VexMapsLatestRequestGate()
-        }
+    val placeSearchPack =
+        placeSearchSessionState.pack
+    val placeSearchState =
+        placeSearchSessionState.search
     var mapSelectionTargetName by
         rememberSaveable {
             mutableStateOf(
@@ -728,25 +745,10 @@ internal fun VexMapsMapSurface(
                     "presentation.vexmaps.place-search.import",
                 action = "Selected",
             )
-            placeSearchState =
-                VexMapsPlaceSearchState.Importing
-
-            scope.launch {
-                runCatching {
-                    placeSearchStore.import(
-                        uri,
-                    )
-                }.onSuccess { imported ->
-                    placeSearchPack = imported
-                    placeSearchState =
-                        VexMapsPlaceSearchState.Idle
-                }.onFailure {
-                    placeSearchState =
-                        VexMapsPlaceSearchState.Error(
-                            VexMapsPlaceSearchError.IMPORT,
-                        )
-                }
-            }
+            placeSearchSession
+                .importPack(
+                    uri,
+                )
         }
 
     val importLauncher =
@@ -1426,21 +1428,16 @@ internal fun VexMapsMapSurface(
                             .afterVexMapsRouteInputChanged()
                 },
                 onPlaceSearchQueryChange = { query ->
-                    placeSearchRequestGate.invalidate()
                     placeSearchQuery = query
-                    if (
-                        placeSearchState !is
-                            VexMapsPlaceSearchState.Importing
-                    ) {
-                        placeSearchState =
-                            VexMapsPlaceSearchState.Idle
-                    }
+                    placeSearchSession
+                        .searchInputChanged()
                 },
                 onImportPlaceSearch = {
                     runtime.activate(
                         VexMapsScreen.ImportPlaceSearch,
                     )
-                    placeSearchRequestGate.invalidate()
+                    placeSearchSession
+                        .importSelectionStarted()
                     placeSearchImportLauncher.launch(
                         arrayOf("*/*"),
                     )
@@ -1459,41 +1456,10 @@ internal fun VexMapsMapSurface(
                     runtime.activate(
                         VexMapsScreen.SearchPlaces,
                     )
-                    val requestGeneration =
-                        placeSearchRequestGate.begin()
-                    placeSearchState =
-                        VexMapsPlaceSearchState.Searching
-
-                    scope.launch {
-                        val result =
-                            runCatching {
-                                placeSearchStore.search(
-                                    pack = pack,
-                                    query = query,
-                                )
-                            }
-
-                        if (
-                            !placeSearchRequestGate
-                                .accepts(
-                                    requestGeneration,
-                                )
-                        ) {
-                            return@launch
-                        }
-
-                        result.onSuccess { places ->
-                            placeSearchState =
-                                VexMapsPlaceSearchState.Results(
-                                    places,
-                                )
-                        }.onFailure {
-                            placeSearchState =
-                                VexMapsPlaceSearchState.Error(
-                                    VexMapsPlaceSearchError.SEARCH,
-                                )
-                        }
-                    }
+                    placeSearchSession
+                        .search(
+                            query,
+                        )
                 },
                 onPlaceSelected = { place ->
                     if (
@@ -1536,8 +1502,8 @@ internal fun VexMapsMapSurface(
                         preferredDockPageRef =
                             VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
                                 .value
-                        placeSearchState =
-                            VexMapsPlaceSearchState.Idle
+                        placeSearchSession
+                            .resultConsumed()
                         mapAdapter.focusOn(
                             place.coordinate,
                         )
@@ -1560,8 +1526,8 @@ internal fun VexMapsMapSurface(
                             planningState =
                                 planningState
                                     .afterVexMapsRouteInputChanged()
-                            placeSearchState =
-                                VexMapsPlaceSearchState.Idle
+                            placeSearchSession
+                                .resultConsumed()
                             mapAdapter
                                 .showOrigin(
                                     place.coordinate,
@@ -1587,8 +1553,8 @@ internal fun VexMapsMapSurface(
                             planningState =
                                 planningState
                                     .afterVexMapsRouteInputChanged()
-                            placeSearchState =
-                                VexMapsPlaceSearchState.Idle
+                            placeSearchSession
+                                .resultConsumed()
                             mapAdapter
                                 .showDestination(
                                     place.coordinate,
