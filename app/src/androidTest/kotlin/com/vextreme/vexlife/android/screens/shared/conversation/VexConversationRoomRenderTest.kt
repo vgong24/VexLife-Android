@@ -62,6 +62,38 @@ class VexConversationRoomRenderTest {
 
     @Test
     fun familyRoomSupportsReadableRoundTripAndHybridAvailabilityPressure() {
+        val expectedRoomTitle =
+            "Family"
+        val expectedInitialAudience =
+            "Victor · Maya · Vex"
+        val expectedLabReady =
+            "Conversation Lab active · Auto mirror: Maya"
+        val expectedSeedMessage =
+            "Yep, leaving now."
+        val victorMessage =
+            "Are you coming?"
+        val expectedVictorSpeaker =
+            "Victor · you"
+        val expectedMirrorMessage =
+            "You said: \"Are you coming?\""
+        val alexId =
+            VexConversationLabFixture
+                .Alex
+                .participant
+                .participantRef
+        val expectedExpandedAudience =
+            "Victor · Maya · Vex · Alex"
+        val unavailableDraft =
+            "Can you still hear me?"
+        val expectedHomeUnavailable =
+            "Conversation Lab active · Home unavailable"
+        val initialCheckpointId =
+            "00-initial-family-room"
+        val expandedCheckpointId =
+            "01-round-trip-multi-human"
+        val unavailableCheckpointId =
+            "02-home-unavailable"
+
         val repository =
             InMemoryVexFamilyConversationRepository(
                 admittedSpeakerRef =
@@ -77,7 +109,7 @@ class VexConversationRoomRenderTest {
                 conversationLab.seedFamilyRoom()
                 conversationLab.setAutoMirror(true)
                 conversationLab.publishRemoteMessage(
-                    content = "Yep, leaving now.",
+                    content = expectedSeedMessage,
                     speakerRef =
                         VexConversationLabFixture
                             .Maya
@@ -134,60 +166,53 @@ class VexConversationRoomRenderTest {
             }
         }
 
-        waitForDisplayedText("Family")
-        waitForDisplayedText("Victor · Maya · Vex")
-        waitForDisplayedText("Conversation Lab active · Auto mirror: Maya")
-        waitForDisplayedText("Yep, leaving now.")
+        waitForDisplayedText(expectedRoomTitle)
+        waitForDisplayedText(expectedInitialAudience)
+        waitForDisplayedText(expectedLabReady)
+        waitForDisplayedText(expectedSeedMessage)
         captureEvidence(
-            checkpoint = "00-initial-family-room",
+            checkpoint = initialCheckpointId,
         )
 
         val composer =
             compose.onNodeWithTag(
-                "$ROOM_REF.composer",
+                "$ROOM_ID.composer",
             )
         val send =
             compose.onNodeWithTag(
-                "$ROOM_REF.composer.send",
+                "$ROOM_ID.composer.send",
             )
 
         composer.performTextClearance()
         composer.performTextInput(
-            "Are you coming?",
+            victorMessage,
         )
         send
             .assertIsEnabled()
             .performClick()
 
-        waitForDisplayedText("Victor · you")
-        waitForDisplayedText("Are you coming?")
-        waitForDisplayedText(
-            "You said: \"Are you coming?\"",
-        )
+        waitForDisplayedText(expectedVictorSpeaker)
+        waitForDisplayedText(victorMessage)
+        waitForDisplayedText(expectedMirrorMessage)
 
-        closeComposerKeyboardForRoomEvidence()
+        hideKeyboardIfShown()
 
         lab.addParticipant(
-            VexConversationLabFixture
-                .Alex
-                .participant
-                .participantRef,
+            alexId,
         )
 
-        waitForDisplayedText(
-            "Victor · Maya · Vex · Alex",
-        )
-        waitForDisplayedText("Yep, leaving now.")
-        waitForDisplayedText("Are you coming?")
+        waitForDisplayedText(expectedExpandedAudience)
+        waitForDisplayedText(expectedSeedMessage)
+        waitForDisplayedText(victorMessage)
         captureEvidence(
-            checkpoint = "01-round-trip-multi-human",
+            checkpoint = expandedCheckpointId,
         )
 
         composer.performTextInput(
-            "Can you still hear me?",
+            unavailableDraft,
         )
 
-        closeComposerKeyboardForRoomEvidence()
+        hideKeyboardIfShown()
 
         lab.overrideHomeAvailability(
             VexConversationHomeAvailability.Unavailable,
@@ -196,15 +221,11 @@ class VexConversationRoomRenderTest {
         waitForSendEnabled(
             enabled = false,
         )
-        waitForDisplayedText(
-            "Conversation Lab active · Home unavailable",
-        )
-        waitForDisplayedText("Are you coming?")
-        waitForDisplayedText(
-            "You said: \"Are you coming?\"",
-        )
+        waitForDisplayedText(expectedHomeUnavailable)
+        waitForDisplayedText(victorMessage)
+        waitForDisplayedText(expectedMirrorMessage)
         captureEvidence(
-            checkpoint = "02-home-unavailable",
+            checkpoint = unavailableCheckpointId,
         )
 
         lab.clearHomeAvailabilityOverride()
@@ -212,9 +233,7 @@ class VexConversationRoomRenderTest {
         waitForSendEnabled(
             enabled = true,
         )
-        waitForDisplayedText(
-            "Conversation Lab active · Auto mirror: Maya",
-        )
+        waitForDisplayedText(expectedLabReady)
     }
 
     private fun captureEvidence(
@@ -299,14 +318,7 @@ class VexConversationRoomRenderTest {
         )
     }
 
-    /**
-     * Returns the feature-local proof to a stable room viewport.
-     *
-     * The connected screenshots own Conversation room meaning, not transient IME pixels. Closing the
-     * test keyboard here does not decide production post-Send keyboard behavior; that remains for the
-     * future registered Screen.
-     */
-    private fun closeComposerKeyboardForRoomEvidence() {
+    private fun hideKeyboardIfShown() {
         Espresso.closeSoftKeyboard()
         compose.waitForIdle()
         InstrumentationRegistry
@@ -340,7 +352,7 @@ class VexConversationRoomRenderTest {
             runCatching {
                 val send =
                     compose.onNodeWithTag(
-                        "$ROOM_REF.composer.send",
+                        "$ROOM_ID.composer.send",
                     )
 
                 if (enabled) {
@@ -355,7 +367,7 @@ class VexConversationRoomRenderTest {
     }
 
     private companion object {
-        const val ROOM_REF =
+        const val ROOM_ID =
             "test.conversation.family-room"
         const val UI_PRACTICUM_LOG_TAG =
             "VexConversationUiPracticum"
@@ -416,11 +428,11 @@ private fun ConversationLabUsabilityRoom(
         semanticRootRef =
             "test.conversation.family-room",
         roomTitle = "Family",
-        participantLabel = { participantRef ->
+        participantLabel = { participantId ->
             requireNotNull(
-                labels[participantRef],
+                labels[participantId],
             ) {
-                "missing Conversation usability label for $participantRef"
+                "missing Conversation usability label for $participantId"
             }
         },
         emptyMessagesLabel = "No messages yet.",
