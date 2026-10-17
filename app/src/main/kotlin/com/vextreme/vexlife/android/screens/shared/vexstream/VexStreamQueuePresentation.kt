@@ -362,7 +362,7 @@ VexStreamPresentationRefs
                                 .vex(
 VexStreamPresentationRefs
                                             .queueEntry(
-                                                entry.stableKey,
+                                                stableKey,
 ),
                                 ),
                             horizontalArrangement =
@@ -379,7 +379,7 @@ VexStreamPresentationRefs
 VexStreamPresentationRefs
                                                 .queueEntryAction(
                                                     stableKey =
-                                                        entry.stableKey,
+                                                        stableKey,
                                                     action =
                                                         VexStreamMusicScreen
                                                             .QueuePlay,
@@ -395,7 +395,7 @@ VexStreamPresentationRefs
                                                 VexStreamPresentationRefs
                                                     .queueEntryAction(
                                                         stableKey =
-                                                            entry.stableKey,
+                                                            stableKey,
                                                         action =
                                                             VexStreamMusicScreen
                                                                 .QueuePlay,
@@ -485,14 +485,14 @@ VexStreamPresentationRefs
 VexStreamPresentationRefs
                                                 .queueEntryAction(
                                                     stableKey =
-                                                        entry.stableKey,
+                                                        stableKey,
                                                     action =
                                                         VexStreamMusicScreen
                                                             .QueueReorder,
 ),
                                     )
                                     .pointerInput(
-                                        entry.stableKey,
+                                        stableKey,
                                         reorderEnabled,
                                     ) {
                                         if (!reorderEnabled) {
@@ -502,7 +502,7 @@ VexStreamPresentationRefs
                                         detectVerticalDragGestures(
                                             onDragStart = {
                                                 draggedKey =
-                                                    entry.stableKey
+                                                    stableKey
                                                 draggedIndex =
                                                     latestIndex
                                                 dragOffsetPx = 0f
@@ -518,7 +518,7 @@ VexStreamPresentationRefs
                                             change.consume()
                                             if (
                                                 draggedKey !=
-                                                    entry.stableKey
+                                                    stableKey
                                             ) {
                                                 return@detectVerticalDragGestures
                                             }
@@ -532,7 +532,7 @@ VexStreamPresentationRefs
                                                     .visibleItemsInfo
                                                     .firstOrNull {
                                                         it.key ==
-                                                            entry.stableKey
+                                                            stableKey
                                                     }
                                                     ?: return@detectVerticalDragGestures
                                             val target =
