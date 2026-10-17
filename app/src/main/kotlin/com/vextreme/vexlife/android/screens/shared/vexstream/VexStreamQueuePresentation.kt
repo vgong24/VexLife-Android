@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Queue play/reorder carry runtime occurrence/index identity and Repeat ownership remains unresolved; keep these raw Media3 seams visible until rightful behavior owners are admitted.
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Queue play/reorder still carry runtime occurrence/index identity; keep those raw Media3 seams visible until rightful request owners are admitted.
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -54,6 +54,9 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatControl
+import com.vextreme.vexlife.android.vexstream.repeat.VexStreamRepeatState
+import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExperience
 
 /**
  * Queue presentation neighborhood for VexStream.
@@ -102,6 +105,12 @@ internal fun VexStreamQueueSheet(
         )
     val queueProjection =
         queueExperience.projection
+    val repeatExperience =
+        rememberVexStreamRepeatExperience(
+            controller,
+        )
+    val repeatProjection =
+        repeatExperience.projection
 
     val tracksByRef =
         remember(state.tracks) {
@@ -178,7 +187,9 @@ internal fun VexStreamQueueSheet(
                     runtime.activate(
                         element,
                     )
-                    controller?.toggleVexStreamRepeatAll()
+                    repeatExperience.activate(
+                        VexStreamRepeatControl.Toggle,
+                    )
                 }
 
                 VexStreamMusicScreen.ClearQueue -> {
@@ -244,8 +255,16 @@ internal fun VexStreamQueueSheet(
                 VexIconButton(
                     element = VexStreamMusicScreen.ToggleRepeat,
                     handler = handler,
-                    enabled = controller != null,
-                    selected = playback.repeatEnabled,
+                    enabled =
+                        repeatProjection
+                            ?.get(
+                                VexStreamRepeatControl.Toggle,
+                            )
+                            ?.isAvailable == true,
+                    selected =
+                        repeatProjection
+                            ?.state is
+                            VexStreamRepeatState.Enabled,
                 )
                 VexButton(
                     element = VexStreamMusicScreen.ClearQueue,

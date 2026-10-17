@@ -21,8 +21,6 @@ internal data class VexStreamPlaybackReadState(
     val currentMediaId: String? = null,
     val currentTitle: String = "",
     val currentArtist: String = "",
-    val repeatMode: Int =
-        Player.REPEAT_MODE_OFF,
     val queueMediaIds:
         List<String> =
         emptyList(),
@@ -34,11 +32,6 @@ internal data class VexStreamPlaybackReadState(
     val hasQueue: Boolean
         get() =
             queueMediaIds.isNotEmpty()
-
-    val repeatEnabled: Boolean
-        get() =
-            repeatMode !=
-                Player.REPEAT_MODE_OFF
 
     val progressFraction: Float
         get() =
@@ -231,8 +224,6 @@ private fun Player
                 ?.artist
                 ?.toString()
                 .orEmpty(),
-        repeatMode =
-            repeatMode,
         queueMediaIds =
             (0 until mediaItemCount)
                 .map { index ->
