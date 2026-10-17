@@ -1,5 +1,11 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+/*
+ * Coverage context: this file is still production-reachable. Do not exclude it from active
+ * coverage while the VexStream library presentation is extracted into smaller rightful owners.
+ */
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Production-reachable library composition monolith; extract search/list/presentation ownership into smaller owners, then remove this marker when the composition host is thin.
+
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
