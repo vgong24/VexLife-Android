@@ -148,6 +148,63 @@ class VexAnchoredOverlayTest {
         )
     }
 
+
+    @Test
+    fun centeredPopupKeepsCaretAtItsOwnCenter() {
+        val resolved =
+            resolveVexAnchoredOverlay(
+                anchorBounds =
+                    IntRect(
+                        left = 150,
+                        top = 100,
+                        right = 190,
+                        bottom = 140,
+                    ),
+                windowSize = IntSize(400, 800),
+                popupSize = IntSize(180, 120),
+                layoutDirection = LayoutDirection.Ltr,
+                marginPx = 12,
+                caretEdgeInsetPx = 10,
+            )
+
+        assertEquals(
+            0,
+            resolved.caretCrossAxisOffsetPx,
+        )
+    }
+
+    @Test
+    fun clampedPopupMovesCaretBackToAnchorCenter() {
+        val anchor =
+            IntRect(
+                left = 15,
+                top = 100,
+                right = 35,
+                bottom = 140,
+            )
+        val resolved =
+            resolveVexAnchoredOverlay(
+                anchorBounds = anchor,
+                windowSize = IntSize(300, 800),
+                popupSize = IntSize(180, 120),
+                layoutDirection = LayoutDirection.Ltr,
+                marginPx = 12,
+                caretEdgeInsetPx = 10,
+            )
+
+        assertEquals(
+            VexOverlayPlacement.BELOW,
+            resolved.placement,
+        )
+        assertEquals(
+            anchor.left +
+                anchor.width / 2,
+            resolved.offset.x +
+                180 / 2 +
+                resolved.caretCrossAxisOffsetPx,
+        )
+    }
+
     @Test
     fun impossibleFitIsExplicitFallbackRatherThanUnsafePreferredClaim() {
         val resolved =
