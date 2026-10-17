@@ -14,6 +14,8 @@ class VexMapsSemanticRegistrationTest {
                 VexMapsScreen.UsePreciseLocation,
                 VexMapsScreen.OpenMapMenu,
                 VexMapsScreen.OpenOfflineMaps,
+                VexMapsScreen.DestinationSearchQuery,
+                VexMapsScreen.SearchDestination,
                 VexMapsScreen.OpenAppearance,
                 VexMapsScreen.AppearanceAutomatic,
                 VexMapsScreen.AppearanceLight,
