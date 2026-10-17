@@ -89,7 +89,7 @@ class VexMapsDestinationSearchOverlayRenderTest {
                 Surface {
                     VexMapsDestinationSearchOverlay(
                         runtime = runtime,
-                        query = "Palmdale",
+                        query = "93550",
                         state =
                             VexMapsDestinationSearchState
                                 .Results(
