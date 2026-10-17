@@ -1,10 +1,10 @@
 package com.vextreme.vexlife.android.conversation
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class VexFamilyConversationServerAdapterTest {
     @Test
@@ -187,7 +187,7 @@ class VexFamilyConversationServerAdapterTest {
                 membershipGeneration = 3L,
             ),
         ).forEach { mismatched ->
-            assertFailsWith<IllegalStateException> {
+            assertThrows(IllegalStateException::class.java) {
                 projectVexFamilyConversationServerThread(
                     bootstrap = bootstrap(),
                     history = mismatched,
@@ -198,7 +198,7 @@ class VexFamilyConversationServerAdapterTest {
 
     @Test
     fun bootstrapCurrentPrincipalMustRemainInCurrentHumanAudience() {
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             projectVexFamilyConversationServerThread(
                 bootstrap =
                     bootstrap()
@@ -228,7 +228,7 @@ class VexFamilyConversationServerAdapterTest {
                     ),
             )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             projectVexFamilyConversationServerThread(
                 bootstrap = excluded,
                 history = history(),
@@ -253,7 +253,7 @@ class VexFamilyConversationServerAdapterTest {
                             ),
                     ),
             )
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             projectVexFamilyConversationServerThread(
                 bootstrap = bootstrap(),
                 history = companionSpeaker,
@@ -276,7 +276,7 @@ class VexFamilyConversationServerAdapterTest {
                             ),
                     ),
             )
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             projectVexFamilyConversationServerThread(
                 bootstrap = bootstrap(),
                 history = missingCompanionWitness,
@@ -301,7 +301,7 @@ class VexFamilyConversationServerAdapterTest {
                     ),
             )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             projectVexFamilyConversationServerThread(
                 bootstrap = colliding,
                 history = history(),
@@ -326,7 +326,7 @@ class VexFamilyConversationServerAdapterTest {
                     ),
             )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             projectVexFamilyConversationServerThread(
                 bootstrap = bootstrap(),
                 history = malformed,
@@ -345,7 +345,7 @@ class VexFamilyConversationServerAdapterTest {
                     current.messages
                         .reversed(),
             )
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             projectVexFamilyConversationServerThread(
                 bootstrap = bootstrap(),
                 history = reversedSegments,
@@ -367,7 +367,7 @@ class VexFamilyConversationServerAdapterTest {
                             ),
                     ),
             )
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             projectVexFamilyConversationServerThread(
                 bootstrap = bootstrap(),
                 history = repeatedSequence,
