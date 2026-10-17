@@ -303,6 +303,12 @@
     <string name="gallery_sheet_sample_body">ModalBottomSheet is suited to draggable, vertically spacious content and can be dismissed by dragging down.</string>
     <string name="gallery_sample_text">Container and row compose smaller cells without changing their identities.</string>
     <string name="gallery_graph_intro">Registered topology. Open a row to move one layer deeper without flattening the whole app into one map.</string>
+    <string name="gallery_explainable_status_title">Explainable status icon</string>
+    <string name="gallery_explainable_status_body">A status icon can explain its current meaning without performing or disguising another product action.</string>
+    <string name="gallery_explainable_status_label">Home connection unavailable</string>
+    <string name="gallery_explainable_status_explanation_title">Can’t send right now</string>
+    <string name="gallery_explainable_status_explanation_body">VexLife can’t currently establish the Home connection required for this example. The represented product state stays unchanged while this explanation is open.</string>
+    <string name="gallery_explainable_status_hint">Tap or long-press for meaning.</string>
 
     <string name="graph_buttons">Buttons</string>
     <string name="graph_navigatables">Navigatables</string>
