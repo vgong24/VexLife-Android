@@ -53,13 +53,13 @@ interface VexMapsDao {
     @Query(
         """
         UPDATE vex_maps_state
-        SET online_style_ref = :styleRef,
+        SET online_style_ref = :storedValue,
             updated_at_epoch_millis = :updatedAtEpochMillis
         WHERE state_ref = :stateRef
         """
     )
-    suspend fun updateOnlineStyle(
-        styleRef: String,
+    suspend fun updateAppearancePreference(
+        storedValue: String?,
         updatedAtEpochMillis: Long,
         stateRef: String,
     ): Int
