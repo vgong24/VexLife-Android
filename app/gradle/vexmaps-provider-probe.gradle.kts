@@ -761,8 +761,15 @@ tasks.register(
         )
 
         logger.lifecycle(
-            "VexMaps Stadia autocomplete probe: $disposition " +
-                "(requests=\${results.size}, evidence=\${output.relativeTo(project.projectDir)})",
+            "VexMaps Stadia autocomplete probe: " +
+                disposition +
+                " (requests=" +
+                results.size +
+                ", evidence=" +
+                output.relativeTo(
+                    project.projectDir,
+                ) +
+                ")",
         )
 
         if (
@@ -771,7 +778,8 @@ tasks.register(
         ) {
             throw GradleException(
                 "VexMaps Stadia autocomplete probe did not satisfy the fixture contract. " +
-                    "Evidence: \${output.absolutePath}",
+                    "Evidence: " +
+                    output.absolutePath,
             )
         }
     }
