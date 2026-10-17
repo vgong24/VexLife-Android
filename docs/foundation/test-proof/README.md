@@ -400,6 +400,29 @@ The generated block also includes up to ten under-90% classes ranked by **missed
 That keeps the PR focused on the largest exposure rather than letting tiny 0% helpers dominate
 attention. Full Kover HTML/XML remains the detailed source.
 
+Coverage may also surface **architecture debt context** from an owning source file marker:
+
+~~~text
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | <why this live source is intentionally being reshaped>
+~~~
+
+That marker is explanatory metadata, not a coverage waiver.
+
+~~~text
+LIVE_REFACTOR_DEBT
+  production still reaches the code
+  -> keep it inside the active coverage denominator
+  -> show the debt state/note beside its exposure
+
+DEPRECATED_REPLACED
+  only after accepted replacement means production no longer reaches the old code
+  -> a future exclusion policy may be admitted when a real case earns it
+  -> never silently disappear the debt/excluded code
+~~~
+
+No deprecated-code exclusion is implemented merely because the state name exists. A concrete
+replacement must first establish that the old source is no longer production-owned.
+
 ### Autonomous PR projection after VexRelay
 
 GitHub Actions is not required to publish the coverage state.

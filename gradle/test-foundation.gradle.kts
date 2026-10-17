@@ -25,10 +25,18 @@ data class VexCoverageCounter(
             }
 }
 
+data class VexCoverageDebtContext(
+    val state: String,
+    val note: String,
+)
+
 data class VexCoverageClassExposure(
     val className: String,
+    val packageName: String,
+    val sourceFileName: String,
     val missedLines: Long,
     val coveredLines: Long,
+    val debt: VexCoverageDebtContext? = null,
 ) {
     val totalLines: Long
         get() = missedLines + coveredLines
@@ -207,6 +215,18 @@ fun vexCoverageClassExposures(
                                 '/',
                                 '.',
                             ),
+                    packageName =
+                        packageElement
+                            .getAttribute("name")
+                            .replace(
+                                '/',
+                                '.',
+                            ),
+                    sourceFileName =
+                        classElement
+                            .getAttribute(
+                                "sourcefilename",
+                            ),
                     missedLines =
                         line.missed,
                     coveredLines =
@@ -230,6 +250,97 @@ fun vexCoverageClassExposures(
                 },
         )
 }
+
+val vexCoverageDebtPrefix =
+    "// VEX-COVERAGE-DEBT:"
+
+fun vexCoverageDebtContext(
+    exposure: VexCoverageClassExposure,
+    sourceRoots: List<java.io.File>,
+): VexCoverageDebtContext? {
+    if (exposure.sourceFileName.isBlank()) {
+        return null
+    }
+
+    val relative =
+        exposure.packageName
+            .replace(
+                '.',
+                java.io.File.separatorChar,
+            ) +
+            java.io.File.separator +
+            exposure.sourceFileName
+
+    val sourceFile =
+        sourceRoots
+            .asSequence()
+            .map { root ->
+                root.resolve(
+                    relative,
+                )
+            }
+            .firstOrNull {
+                it.isFile
+            }
+            ?: return null
+
+    val marker =
+        sourceFile
+            .useLines { lines ->
+                lines.firstOrNull { line ->
+                    line.trimStart()
+                        .startsWith(
+                            vexCoverageDebtPrefix,
+                        )
+                }
+            }
+            ?: return null
+
+    val payload =
+        marker
+            .trimStart()
+            .removePrefix(
+                vexCoverageDebtPrefix,
+            )
+            .trim()
+    val separator =
+        payload.indexOf('|')
+    if (separator <= 0) {
+        return VexCoverageDebtContext(
+            state = "UNCLASSIFIED_DEBT",
+            note = payload,
+        )
+    }
+
+    return VexCoverageDebtContext(
+        state =
+            payload
+                .substring(
+                    0,
+                    separator,
+                )
+                .trim(),
+        note =
+            payload
+                .substring(
+                    separator + 1,
+                )
+                .trim(),
+    )
+}
+
+fun vexCoverageMarkdownCell(
+    value: String,
+): String =
+    value
+        .replace(
+            "|",
+            "\\|",
+        )
+        .replace(
+            "\n",
+            " ",
+        )
 
 fun vexCoverageJsonString(
     value: String,
@@ -681,13 +792,13 @@ val vexCoverageSummaryContract =
                     """
                     <report name="fixture">
                       <package name="example">
-                        <class name="example/LargeGap">
+                        <class name="example/LargeGap" sourcefilename="LargeGap.kt">
                           <counter type="LINE" missed="20" covered="10"/>
                         </class>
-                        <class name="example/SmallGap">
+                        <class name="example/SmallGap" sourcefilename="SmallGap.kt">
                           <counter type="LINE" missed="3" covered="17"/>
                         </class>
-                        <class name="example/Green">
+                        <class name="example/Green" sourcefilename="Green.kt">
                           <counter type="LINE" missed="1" covered="19"/>
                         </class>
                       </package>
@@ -757,6 +868,39 @@ val vexCoverageSummaryContract =
             )
             check(
                 exposures.first().missedLines == 20L,
+            )
+
+            val sourceRoot =
+                temporaryDir.resolve(
+                    "src/main/kotlin",
+                )
+            val sourceFile =
+                sourceRoot.resolve(
+                    "example/LargeGap.kt",
+                )
+            sourceFile
+                .parentFile
+                .mkdirs()
+            sourceFile.writeText(
+                """
+                package example
+
+                // VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Extract the live monolith into rightful owners.
+                """.trimIndent(),
+            )
+            val debt =
+                vexCoverageDebtContext(
+                    exposures.first(),
+                    listOf(sourceRoot),
+                )
+            check(
+                debt ==
+                    VexCoverageDebtContext(
+                        state =
+                            "LIVE_REFACTOR_DEBT",
+                        note =
+                            "Extract the live monolith into rightful owners.",
+                    ),
             )
         }
     }
@@ -853,10 +997,34 @@ val vexCoverageSummary =
                             it.percent,
                         )
                     }
+            val sourceRoots =
+                rootProject
+                    .allprojects
+                    .flatMap { project ->
+                        listOf(
+                            project.file(
+                                "src/main/kotlin",
+                            ),
+                            project.file(
+                                "src/main/java",
+                            ),
+                        )
+                    }
+                    .filter {
+                        it.isDirectory
+                    }
             val underCoveredClasses =
                 vexCoverageClassExposures(
                     reportFile,
-                )
+                ).map { exposure ->
+                    exposure.copy(
+                        debt =
+                            vexCoverageDebtContext(
+                                exposure,
+                                sourceRoots,
+                            ),
+                    )
+                }
             val topUnderCoveredClasses =
                 underCoveredClasses.take(
                     10,
@@ -934,10 +1102,10 @@ val vexCoverageSummary =
                             "#### Largest under-covered classes",
                         )
                         appendLine(
-                            "| Class | Lines | Missed |",
+                            "| Class | Lines | Missed | Context |",
                         )
                         appendLine(
-                            "| --- | ---: | ---: |",
+                            "| --- | ---: | ---: | --- |",
                         )
                         topUnderCoveredClasses
                             .forEach { exposure ->
@@ -950,6 +1118,21 @@ val vexCoverageSummary =
                                         ) +
                                         "% | " +
                                         exposure.missedLines +
+                                        " | " +
+                                        (
+                                            exposure.debt
+                                                ?.let { debt ->
+                                                    "🧭 **" +
+                                                        vexCoverageMarkdownCell(
+                                                            debt.state,
+                                                        ) +
+                                                        "** — " +
+                                                        vexCoverageMarkdownCell(
+                                                            debt.note,
+                                                        )
+                                                }
+                                                ?: "—"
+                                        ) +
                                         " |",
                                 )
                             }
@@ -1050,6 +1233,24 @@ val vexCoverageSummary =
                                     ", " +
                                     "\"coveredLines\": " +
                                     exposure.coveredLines +
+                                    ", " +
+                                    "\"debt\": " +
+                                    (
+                                        exposure.debt
+                                            ?.let { debt ->
+                                                "{\"state\": \"" +
+                                                    vexCoverageJsonString(
+                                                        debt.state,
+                                                    ) +
+                                                    "\", " +
+                                                    "\"note\": \"" +
+                                                    vexCoverageJsonString(
+                                                        debt.note,
+                                                    ) +
+                                                    "\"}"
+                                            }
+                                            ?: "null"
+                                    ) +
                                     "}$comma",
                             )
                         }

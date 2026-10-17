@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Seek still carries a runtime position payload through raw MediaController; migrate only when the request-payload behavior boundary is earned.
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
