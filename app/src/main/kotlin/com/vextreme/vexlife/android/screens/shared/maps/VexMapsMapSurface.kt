@@ -977,20 +977,28 @@ internal fun VexMapsMapSurface(
             styleSelection
                 ?: return@LaunchedEffect
 
+        val preference =
+            appearancePreference
+                ?: return@LaunchedEffect
+        val expectedStyle =
+            preference
+                .resolveVexMapsOnlineStyle(
+                    darkTheme,
+                )
+
         if (
             styleConvergence.status ==
             VexMapsStyleConvergenceStatus
-                .APPLIED
+                .APPLIED &&
+            selection.styleRef ==
+            expectedStyle.styleRef
         ) {
-            appearancePreference
-                ?.let { preference ->
-                    runCatching {
-                        repository
-                            .saveAppearancePreference(
-                                preference,
-                            )
-                    }
-                }
+            runCatching {
+                repository
+                    .saveAppearancePreference(
+                        preference,
+                    )
+            }
         }
     }
 
