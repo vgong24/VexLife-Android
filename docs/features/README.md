@@ -236,7 +236,12 @@ Coverage is also a discovery aid, not architecture authority. When executable so
 unexercised, first ask whether the file hides another rightful question, is legitimate
 composition/native-provider code, or lacks proof at its actual owner. Do not preserve a bad boundary
 with tests merely to raise a percentage, and do not split a truthful owner merely because coverage is
-yellow. The Test / Proof Foundation owns the detailed coverage and proof rules.
+yellow.
+
+Accepted VexStream pressure demonstrates the complementary case: production-reachable source may stay
+inside the coverage denominator while a source-owned `LIVE_REFACTOR_DEBT` note explains the specific
+ownership seam still being reshaped. That context is not a waiver and does not authorize a global
+refactor. The Test / Proof Foundation owns the detailed coverage/debt projection rules.
 
 ## Reusable-contract rule
 
