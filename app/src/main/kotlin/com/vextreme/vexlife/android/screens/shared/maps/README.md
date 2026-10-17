@@ -45,7 +45,7 @@ Distribution / Delivery Route    = CURRENT
 place-search currentness owner   = CURRENT
 compact Automatic/Light/Dark map appearance = CURRENT IN VMC-01 SLICE
 
-ordinary destination search      = VMC-01 CANDIDATE / ANDROID SYSTEM GEOCODER
+ordinary destination search      = SOURCE ACCEPTED / LIVED BUSINESS DISCOVERY INSUFFICIENT
 ordinary connected-user routing  = NOT YET PRESENT
 obvious "find -> route -> start"  = NOT YET PRESENT
 
@@ -100,9 +100,10 @@ hamburger
 -> select result
 ~~~
 
-The active VMC-01 candidate adds Android's best-effort system Geocoder behind a visible
-`Where to?` front door. It does not replace local pack search and does not claim provider
-availability/accuracy beyond what the device reports.
+The accepted VMC-01 source adds Android's best-effort system Geocoder behind a visible
+`Where to?` front door. The integration/currentness boundary is accepted, but the first lived
+business query (`in n out`) returned no useful result. Geocoder is therefore treated as a
+bootstrap/system provider, not the completed ordinary VexMaps discovery provider.
 
 ### Routing
 
@@ -304,6 +305,10 @@ Compose semantics
 MapLibre / permissions / Service / physical location
     Android/device proof
 
+live external/provider usefulness
+    bounded opt-in provider reliability probe
+    not every ordinary PR
+
 ordinary human "find -> route -> start -> navigate"
     Journey + physical/lived product proof once the UI exists
 
@@ -315,10 +320,11 @@ coverage
 
 ~~~text
 HELD
-    exact online place-search provider
+    completed ordinary search provider
 WHY
-    completed UX requires the capability, but provider choice must satisfy availability,
-    policy/privacy/currentness requirements rather than being baked into UI architecture
+    Android Geocoder is accepted as a bootstrap/system provider boundary but lived business discovery
+    is insufficient; the next provider must satisfy partial/business usefulness plus
+    policy/privacy/currentness/budget requirements
 
 HELD
     exact online route provider
@@ -350,30 +356,35 @@ design/README.md
 
 Do not resume by refactoring another coroutine merely because VexMapsMapSurface is large.
 
-The compact appearance half of VMC-01 is accepted. The active candidate now adds the ordinary
-destination-search front door using the Android system Geocoder.
+VMC-01 source/currentness is accepted, but the lived Geocoder result showed ordinary discovery is
+still incomplete.
 
-The current completion walk is:
+The active product edge is:
 
 ~~~text
-open Maps
--> Where to?
--> explicit Search
--> real provider results when available
--> select destination
--> existing destination marker/focus
+VMC-01B — Browse/Search usability
+
+forgiving partial/business discovery
+-> keyboard-safe scrollable candidate list
+-> selected destination
+
+plus browse hierarchy:
+    compact Distribution entry instead of permanent large idle card
+    recenter/current-area behavior that does not make the human recover from a detached world view
 ~~~
 
-After that slice is accepted, the next unfinished product edge becomes VMC-02:
+Provider candidates should be evaluated through the feature-local reliability matrix before adoption.
+
+After ordinary Browse/Search is genuinely usable, the next unfinished product edge is:
 
 ~~~text
+VMC-02
 selected destination
 -> truthful route preview
 -> Start
 -> navigation
 ~~~
 
-and let the real feature need decide which route/search currentness or provider abstractions are
-actually earned.
+See the current design and provider-reliability record before changing provider/test foundations.
 
 <!-- [VXG RealForever][feature.vexmaps][VEXMAPS-COMPLETE][FEATURE-HOME] -->
