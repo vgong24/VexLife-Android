@@ -23,6 +23,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.test.espresso.Espresso
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
 import com.vextreme.vexlife.android.conversation.InMemoryVexFamilyConversationRepository
@@ -155,6 +156,8 @@ class VexConversationRoomRenderTest {
             "You said: \"Are you coming?\"",
         )
 
+        closeComposerKeyboardForRoomEvidence()
+
         lab.addParticipant(
             VexConversationLabFixture
                 .Alex
@@ -174,6 +177,8 @@ class VexConversationRoomRenderTest {
         composer.performTextInput(
             "Can you still hear me?",
         )
+
+        closeComposerKeyboardForRoomEvidence()
 
         lab.overrideHomeAvailability(
             VexConversationHomeAvailability.Unavailable,
@@ -278,6 +283,22 @@ class VexConversationRoomRenderTest {
                 "uri=" + storage.getOutputFileUri(path),
         )
     }
+
+    /**
+     * Returns the feature-local proof to a stable room viewport.
+     *
+     * The connected screenshots own Conversation room meaning, not transient IME pixels. Closing the
+     * test keyboard here does not decide production post-Send keyboard behavior; that remains for the
+     * future registered Screen.
+     */
+    private fun closeComposerKeyboardForRoomEvidence() {
+        Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
+        InstrumentationRegistry
+            .getInstrumentation()
+            .waitForIdleSync()
+    }
+
     private fun waitForDisplayedText(
         text: String,
     ) {
