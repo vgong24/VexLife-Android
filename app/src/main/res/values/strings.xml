@@ -184,6 +184,11 @@
     <string name="vexmaps_appearance_automatic">Automatic</string>
     <string name="vexmaps_appearance_light">Light</string>
     <string name="vexmaps_appearance_dark">Dark</string>
+    <string name="vexmaps_destination_search_hint">Where to?</string>
+    <string name="vexmaps_destination_search_action">Search</string>
+    <string name="vexmaps_destination_search_unavailable">Place search is not available on this device.</string>
+    <string name="vexmaps_destination_search_no_results">No matching places found.</string>
+    <string name="vexmaps_destination_search_error">VexMaps could not search for that place right now.</string>
     <string name="vexmaps_style_dark">Dark</string>
     <string name="vexmaps_style_liberty">Liberty</string>
     <string name="vexmaps_style_online_hint">Swipe to preview this style on the live map.</string>

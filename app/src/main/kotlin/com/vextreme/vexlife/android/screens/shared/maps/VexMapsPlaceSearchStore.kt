@@ -22,18 +22,6 @@ data class VexMapsPlaceSearchPack(
             lastModifiedMillis
 }
 
-data class VexMapsPlaceSearchResult(
-    val placeRef: String,
-    val name: String,
-    val subtitle: String?,
-    val coordinate: VexMapCoordinate,
-) {
-    init {
-        require(placeRef.isNotBlank())
-        require(name.isNotBlank())
-    }
-}
-
 /**
  * App-private local place-search custody.
  *

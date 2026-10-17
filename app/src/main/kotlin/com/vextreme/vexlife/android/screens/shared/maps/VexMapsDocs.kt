@@ -20,6 +20,9 @@ package com.vextreme.vexlife.android.screens.shared.maps
  * - [VexMapsScreen] owns stable Screen/action identity.
  * - [VexMapsMapSurface] is the native/custom composition root.
  * - [VexMapsPlaceSearchSession] owns local place-search pack/attempt/result currentness.
+ * - [VexMapsDestinationSearchSession] owns ordinary visible "Where to?" request/result currentness.
+ * - [VexMapsAndroidGeocoderPlaceSearchSource] is the first best-effort system destination-search
+ *   provider; it does not own selected-destination or route truth.
  * - [VexMapsStyleConvergenceRelay] owns online style selection/application relationship.
  * - [VexNavigationSession] owns one prepared/active navigation journey.
  * - [VexMapLibreAdapter] owns translation into MapLibre rendering mechanics.

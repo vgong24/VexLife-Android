@@ -71,6 +71,7 @@ import org.maplibre.android.maps.MapView
  *
  * - VexMapsNavigationProcess / VexMapsStyleConvergenceRelay own changing semantic relationships;
  * - VexMapsPlaceSearchSession owns local place-search pack/attempt/result currentness;
+ * - VexMapsDestinationSearchSession owns ordinary visible "Where to?" request/result currentness;
  * - VexMapsRepository owns durable Maps-local checkpoints/preferences;
  * - VexDeviceLocationSource / stores own Android or provider observations/effects;
  * - VexMapLibreAdapter owns translation from Maps rendering intent into MapLibre mechanics;
@@ -195,11 +196,38 @@ internal fun VexMapsMapSurface(
             .states
             .collectAsState()
 
+    val destinationSearchSource =
+        remember(context) {
+            VexMapsAndroidGeocoderPlaceSearchSource(
+                context,
+            )
+        }
+    val destinationSearchSession =
+        remember(
+            destinationSearchSource,
+        ) {
+            VexMapsDestinationSearchSession(
+                source =
+                    destinationSearchSource,
+                executionRoot =
+                    VexExecutionRoot(
+                        dispatcher =
+                            Dispatchers.Main.immediate,
+                    ),
+            )
+        }
+    val destinationSearchState by
+        destinationSearchSession
+            .states
+            .collectAsState()
+
     DisposableEffect(
         placeSearchSession,
+        destinationSearchSession,
     ) {
         onDispose {
             placeSearchSession.close()
+            destinationSearchSession.close()
         }
     }
 
@@ -398,6 +426,10 @@ internal fun VexMapsMapSurface(
             mutableStateOf<String?>(
                 null,
             )
+        }
+    var destinationSearchQuery by
+        rememberSaveable {
+            mutableStateOf("")
         }
     var placeSearchQuery by
         rememberSaveable {
@@ -1327,6 +1359,63 @@ internal fun VexMapsMapSurface(
         AndroidView(
             factory = { mapView },
             modifier = Modifier.fillMaxSize(),
+        )
+
+        VexMapsDestinationSearchOverlay(
+            runtime = runtime,
+            query =
+                destinationSearchQuery,
+            state =
+                destinationSearchState,
+            onQueryChange = { query ->
+                destinationSearchQuery =
+                    query
+                destinationSearchSession
+                    .queryChanged()
+            },
+            onSearch = {
+                destinationSearchSession
+                    .search(
+                        destinationSearchQuery,
+                    )
+            },
+            onPlaceSelected = { place ->
+                destinationSearchQuery =
+                    place.name
+                setMapSelectionTarget(
+                    VexMapsMapSelectionTarget
+                        .DESTINATION,
+                )
+                setDestination(
+                    place.coordinate,
+                )
+                destinationLabel =
+                    place.name
+                planningState =
+                    planningState
+                        .afterVexMapsRouteInputChanged()
+                destinationSearchSession
+                    .resultConsumed()
+                mapAdapter
+                    .showDestination(
+                        place.coordinate,
+                    )
+                mapAdapter
+                    .focusOn(
+                        place.coordinate,
+                    )
+            },
+            modifier =
+                Modifier
+                    .align(
+                        Alignment.TopCenter,
+                    )
+                    .fillMaxWidth()
+                    .padding(
+                        start = 12.dp,
+                        top = 12.dp,
+                        end = 72.dp,
+                    ),
         )
 
         VexMapsAppearanceControl(

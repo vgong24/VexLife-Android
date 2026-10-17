@@ -57,6 +57,12 @@ VexMapsMapSurface
         +--> VexDeviceLocationSource / offline/search/routing stores
         |      Android/provider observations and effects
         |
+        +--> VexMapsDestinationSearchSession
+        |      visible "Where to?" request/result currentness
+        |             |
+        |             +--> VexMapsAndroidGeocoderPlaceSearchSource
+        |                    best-effort Android system place/address observation
+        |
         +--> VexMapsDistributionSession
         |      lived Distribution / Delivery Route relationship + currentness
         |             |
@@ -192,6 +198,12 @@ VexMapsPlanningState.kt
 
 VexMapsPlaceSearchSession.kt
   -> local place-search pack/attempt/result currentness
+
+VexMapsDestinationSearchSession.kt
+  -> ordinary submitted destination-search attempt/result currentness
+
+VexMapsAndroidGeocoderPlaceSearchSource.kt
+  -> best-effort Android system place/address provider boundary
 
 VexMapsLocation.kt
   -> location readiness/presentation

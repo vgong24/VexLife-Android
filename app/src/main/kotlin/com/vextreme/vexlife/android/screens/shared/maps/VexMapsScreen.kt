@@ -67,6 +67,19 @@ object VexMapsScreen : AppScreenBlueprint(
                 .then(open(OfflinePanel)),
     )
 
+    val DestinationSearchQuery = textFieldRef(
+        id = "body.destination-search.query",
+        labelRes = R.string.vexmaps_destination_search_hint,
+    )
+
+    val SearchDestination = buttonRef(
+        id = "body.destination-search.search",
+        labelRes = R.string.vexmaps_destination_search_action,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Search,
+        intent = localEffect(),
+    )
+
     val OpenAppearance = buttonRef(
         id = "body.map.appearance.open",
         labelRes = R.string.vexmaps_appearance,
@@ -304,6 +317,11 @@ object VexMapsScreen : AppScreenBlueprint(
 
             column("location") {
                 button(UsePreciseLocation)
+            }
+
+            column("destination-search") {
+                textField(DestinationSearchQuery)
+                button(SearchDestination)
             }
 
             column("appearance") {
