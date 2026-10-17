@@ -180,6 +180,14 @@ data class VexFamilyConversationThreadBinding(
         Long,
     val segmentRefs:
         List<VexConversationChannelRef>,
+    /**
+     * True when the canonical producer returned only a bounded tail of this thread's history.
+     *
+     * Complete synthetic/Lab fixtures remain false. A real adapter must preserve the producer's
+     * truncation truth rather than making a bounded history window look complete.
+     */
+    val historyTruncated:
+        Boolean = false,
 ) {
     init {
         require(currentMembershipGeneration > 0L) {

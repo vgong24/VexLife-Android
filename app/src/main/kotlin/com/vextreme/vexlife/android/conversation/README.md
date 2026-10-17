@@ -16,8 +16,9 @@ feature-owned Conversation Lab controller = ACCEPTED ON MAIN / PR #99
 generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
 mixed-provenance Conversation behavior + Lab availability overrides = ACCEPTED ON MAIN / PR #104
 Hybrid Name Ontology / code vocabulary = ACCEPTED ON MAIN / PR #107
+Family server bootstrap/history projection = CURRENT SOURCE
 production Screen / app-session wiring = HELD on shared composition paths
-real Home adapter = HELD on authenticated cross-generation history exposure
+authenticated Android Home/session transport = HELD until a rightful generic transport owner exists
 ~~~
 
 Code-navigation root:
@@ -77,6 +78,7 @@ GENERIC_CONVERSATION != FAMILY_CONVERSATION
 conversation/
 ├── VexConversationState.kt
 ├── VexConversationRepository.kt
+├── VexFamilyConversationServerAdapter.kt
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
 ├── VexConversationHybridRelay.kt
@@ -96,6 +98,7 @@ Tests:
 
 ~~~text
 VexConversationStateTest
+VexFamilyConversationServerAdapterTest
 InMemoryVexFamilyConversationRepositoryTest
 VexConversationSurfaceProjectionTest
 VexConversationHybridRelayTest
@@ -662,45 +665,35 @@ Current accepted browser surfaces include:
 ~~~text
 GET  /api/v1/family/bootstrap
 POST /api/v1/family/conversation
-     operation = APPEND | READ | LIST
+     operation = APPEND | READ | READ_THREAD_HISTORY | LIST
 ~~~
 
-### Remaining producer predicate — authenticated cross-generation Family history
+### Cross-generation Family history producer is accepted
 
-Canonical VexLife source already owns:
+VexLife PR #892 accepted the bounded authenticated `READ_THREAD_HISTORY` projection while keeping
+`readFamilyThreadHistory(...)` as the canonical history owner.
+
+The accepted response carries:
 
 ~~~text
-readFamilyThreadHistory(...)
--> spaceRef
--> threadRef
--> currentChannelRef
--> membershipGeneration
--> principalRef
--> ordered segmentRefs[]
--> bounded messages[]
--> truncated
+spaceRef
+threadRef
+currentChannelRef
+membershipGeneration
+ordered segmentRefs[]
+bounded historical messages with original:
+    channelRef
+    membershipGeneration
+    recipientRefs[]
+    witnessRefs[]
+truncated
 ~~~
 
-That owner validates current Family membership/current channel, immutable historical channel segments,
-FROM_JOIN visibility and historical witnessRefs.
+The producer still validates current Family membership/current channel, immutable historical channel
+segments, FROM_JOIN visibility and historical witnessRefs. Android consumes that truth; it does not
+reconstruct old audiences from current membership.
 
-The current authenticated HTTP Conversation READ remains narrower: it resolves the current channel
-and calls readBrowserFamilyConversation(...). The current Family-room browser controller likewise
-loads only that current-channel response.
-
-Android therefore still needs one bounded authenticated projection of the existing canonical
-cross-generation history truth:
-
-~~~text
-stable threadRef
-current channel/generation
-ordered authorized segmentRefs[]
-bounded historical messages with original channelRef/generation/recipientRefs/witnessRefs
-truncation/currentness truth
-~~~
-
-This need is routed to the existing server-composition owner (#481) as second-consumer pressure.
-Android does not claim that server path or reconstruct old audiences from current membership.
+The current-channel `READ` response remains intentionally narrower.
 
 ## Real adapter composition
 
@@ -741,13 +734,27 @@ THREAD HISTORY
     cross-generation immutable historical message truth
 ~~~
 
-A truthful adapter must check that their current channel/generation/space/thread coordinates agree.
+[projectVexFamilyConversationServerThread] now owns this pure Android composition step. It checks
+that current channel/generation/space/thread coordinates agree before forming domain state.
 
-knownParticipants can then be formed from current audience plus historical speaker/recipient/witness
-refs; the exact Family Companion lineage identifies the Companion participant, while Family principal
-refs remain human participants.
+knownParticipants are formed from current human audience plus historical speaker/recipient/witness
+refs; the exact Family Companion lineage identifies the Companion participant, while the other
+accepted Family channel member refs remain human principals. The bootstrap must also preserve
+`familyCompanionIncluded=true` before that lineage enters the current Android audience; lineage
+identity alone is not treated as current inclusion.
 
-Android consumer feedback for the remaining producer need is recorded on VexLife issue #481.
+Canonical Family history preserves the original producer speaker identity. Human browser APPEND
+derives an authenticated human speaker, while the accepted Family Companion runtime may durably append
+the exact Family Companion lineage as speaker. READ_THREAD_HISTORY preserves that speakerRef unchanged,
+and the adapter keeps the lineage classified as Companion while retaining the immutable witness
+snapshot. It fails closed if those producer meanings are contradicted.
+
+The producer's `truncated` fact is preserved in [VexFamilyConversationThreadBinding.historyTruncated]
+so a bounded history window never looks complete.
+
+This is still projection only. Android has no generic Home/session transport owner yet, so HTTP,
+authentication/session realization and app-session repository wiring remain held rather than being
+invented inside Conversation.
 
 ## Testing / proof
 
@@ -768,6 +775,13 @@ InMemoryVexFamilyConversationRepositoryTest
     provider-derived recipients
     historical Family segments/witnesses
     independent repository instances
+
+VexFamilyConversationServerAdapterTest
+    bootstrap/history coordinate agreement
+    historical participant attribution
+    Companion lineage classification
+    truncation preservation
+    malformed producer truth fails closed
 
 VexConversationSurfaceProjectionTest
     generic surface projection
@@ -797,10 +811,10 @@ feature locally through a second repository just to avoid coordination.
 
 ~~~text
 HELD:
-    production Home-backed Family Conversation repository
+    production Home-backed Family Conversation repository / authenticated transport
 WHY:
-    live authority/server routing are now accepted, but the authenticated server surface still
-    lacks the canonical cross-generation thread-history projection required by this state model
+    the producer data contract is now accepted and projectable, but Android has no generic
+    Home/session transport owner and shared app-session composition paths remain under active work
 
 HELD:
     generic/direct Conversation Send

@@ -460,8 +460,9 @@ NO_COMPOSE_OWNED_REPOSITORY
 NO_PARALLEL_OVERRIDE_REDUCER
 ~~~
 
-Later, source binding may move from the in-memory provider to a Home-backed Family adapter without
-changing the Hybrid/room relationship.
+Source binding may move from the in-memory provider to a Home-backed Family repository without
+changing the Hybrid/room relationship. The pure server projection adapter now defines the producer
+truth that such a repository must consume; it deliberately does not own transport/session mechanics.
 
 The product surface should not require conceptual replacement when the real provider arrives.
 
@@ -471,20 +472,28 @@ The product surface should not require conceptual replacement when the real prov
 2. Sequence, generation and idempotency semantics were aligned to the real VF-02C producer.
 3. Historical audience/witness truth became explicit through Family channel segments.
 4. The foundation received exact source/build proof and merged to Android main.
-5. VexLife session/server authority progressed to accepted lived proof; authenticated cross-generation
-   history exposure remains the real producer gap.
-6. The feature focus moved from invisible architecture to a visible, reactive Conversation Lab that
+5. VexLife session/server authority progressed to accepted lived proof.
+6. VexLife PR #892 accepted authenticated cross-generation Family thread history without moving
+   history ownership out of `readFamilyThreadHistory(...)`.
+7. Android can now project bootstrap + history into its existing Conversation model while preserving
+   truncation and historical witness truth; authenticated Home/session transport remains separate.
+8. The feature focus moved from invisible architecture to a visible, reactive Conversation Lab that
    pressures the same repository/state path future production will consume.
-7. Live-bug/counterfactual pressure separated provider source binding from Lab input perturbations and
+9. Live-bug/counterfactual pressure separated provider source binding from Lab input perturbations and
    reused Compound Relay as the single reconciliation owner.
 
 ## Current holds
 
 ~~~text
-HELD
-    real Home-backed adapter
+CURRENT SOURCE
+    pure Family bootstrap + thread-history -> Conversation state adapter
 WHY
-    authenticated cross-generation history is not yet exposed through the server boundary
+    accepted producer truth can now be represented without inventing transport ownership
+
+HELD
+    authenticated Home/session transport + production repository binding
+WHY
+    Android has no generic Home/session transport owner yet and shared app composition remains active
 
 HELD
     generic/direct Send

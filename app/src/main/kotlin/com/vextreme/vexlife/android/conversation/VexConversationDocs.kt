@@ -117,23 +117,23 @@ package com.vextreme.vexlife.android.conversation
  *
  * into generic Android Conversation state + explicit Family binding.
  *
- * ## Current producer status / hold
+ * ## Current producer status / adapter
  *
- * The VexLife producer chain for authenticated Family conversation is now accepted through:
+ * The VexLife producer chain for authenticated Family conversation is accepted through:
  *
  * VF-02C bridge
  * -> durable Family channel binding
  * -> same-origin server composition
  * -> real VEX_CORE / Home session-authority reconnection
- * -> lived Family HTTP APPEND + READ proof.
+ * -> lived Family HTTP APPEND + READ proof
+ * -> authenticated READ_THREAD_HISTORY accepted by VexLife PR #892.
  *
- * The remaining producer hold is narrower: current HTTP READ is current-channel scoped, while the
- * accepted Family membership runtime already owns cross-generation readFamilyThreadHistory(...)
- * with ordered segments and historical witness truth.
+ * [projectVexFamilyConversationServerThread] now consumes the current bootstrap + history projections
+ * and forms existing Android Conversation state while preserving cross-generation segment/witness
+ * truth and [VexFamilyConversationThreadBinding.historyTruncated].
  *
- * A truthful Android Home-backed adapter therefore remains held only until that canonical
- * cross-generation history is exposed through the authenticated server boundary (or an exactly
- * equivalent safe projection).
+ * This is projection only. Android does not yet own a generic authenticated Home/session transport,
+ * and Conversation does not borrow VexStream's feature-owned pairing/remote transport.
  *
  * Feature-local Lab and room rendering are accepted on main through PR #99. Mixed-provenance
  * Conversation behavior and explicit Lab availability overrides are accepted through PR #104.
