@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | Track play/queue/download actions still combine runtime track identity with Media3 or repository effects; split only as payload and execution-lifetime owners are admitted.
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -57,7 +59,7 @@ internal fun VexStreamTrackCard(
     state: VexStreamTrackState,
     contextTracks: List<VexStreamTrackState>,
     controller: androidx.media3.session.MediaController?,
-    resolver: VexStreamPlaybackSourceResolver,
+    resolver: VexStreamPlaybackSourceResolver?,
     onDownload: () -> Unit,
     onRemoveDownload: () -> Unit,
     onVisitArtist: (String) -> Unit,
@@ -74,23 +76,38 @@ internal fun VexStreamTrackCard(
     ) {
         when (element) {
             VexStreamMusicScreen.PlayTrack ->
-                controller?.playVexStreamContext(
-                    selected = state,
-                    contextTracks = contextTracks,
-                    resolver = resolver,
-                )
+                if (
+                    controller != null &&
+                    resolver != null
+                ) {
+                    controller.playVexStreamContext(
+                        selected = state,
+                        contextTracks = contextTracks,
+                        resolver = resolver,
+                    )
+                }
 
             VexStreamMusicScreen.PlayTrackNext ->
-                controller?.playNextVexStream(
-                    state = state,
-                    resolver = resolver,
-                )
+                if (
+                    controller != null &&
+                    resolver != null
+                ) {
+                    controller.playNextVexStream(
+                        state = state,
+                        resolver = resolver,
+                    )
+                }
 
             VexStreamMusicScreen.AddTrackToQueue ->
-                controller?.queueVexStream(
-                    state = state,
-                    resolver = resolver,
-                )
+                if (
+                    controller != null &&
+                    resolver != null
+                ) {
+                    controller.queueVexStream(
+                        state = state,
+                        resolver = resolver,
+                    )
+                }
 
             VexStreamMusicScreen.DownloadTrack ->
                 onDownload()
@@ -106,6 +123,10 @@ internal fun VexStreamTrackCard(
             else -> Unit
         }
     }
+
+    val playbackAvailable =
+        controller != null &&
+            resolver != null
 
     val rowHandler =
         ElementActionHandler { element ->
@@ -236,7 +257,7 @@ internal fun VexStreamTrackCard(
                         playPresentationRef,
                     )
                     .clickable(
-                        enabled = controller != null,
+                        enabled = playbackAvailable,
                     ) {
                         rowHandler.activate(
                             VexStreamMusicScreen.PlayTrack,
@@ -354,7 +375,7 @@ internal fun VexStreamTrackCard(
                             trackRef = state.track.trackRef,
                             element = VexStreamMusicScreen.PlayTrack,
                             handler = menuHandler,
-                            enabled = controller != null,
+                            enabled = playbackAvailable,
                         )
                         VexStreamTrackMenuItem(
                             presentationScope =
@@ -362,7 +383,7 @@ internal fun VexStreamTrackCard(
                             trackRef = state.track.trackRef,
                             element = VexStreamMusicScreen.PlayTrackNext,
                             handler = menuHandler,
-                            enabled = controller != null,
+                            enabled = playbackAvailable,
                         )
                         VexStreamTrackMenuItem(
                             presentationScope =
@@ -371,7 +392,7 @@ internal fun VexStreamTrackCard(
                             element =
                                 VexStreamMusicScreen.AddTrackToQueue,
                             handler = menuHandler,
-                            enabled = controller != null,
+                            enabled = playbackAvailable,
                         )
 
                         if (showDownloadAction) {
