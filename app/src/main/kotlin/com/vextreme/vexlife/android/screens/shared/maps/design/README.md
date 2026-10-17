@@ -6,7 +6,7 @@ Feature ref: feature.vexmaps
 Current human name: **VexMaps**  
 Current completion effort: **[VexMaps Complete]**  
 Last meaningfully updated: **2026-10-16**  
-Current design record: records/2026-10-16-004-provider-reliability-and-location-lab.md
+Current design record: records/2026-10-16-005-browse-surface-availability.md
 
 ## Role of this file
 
