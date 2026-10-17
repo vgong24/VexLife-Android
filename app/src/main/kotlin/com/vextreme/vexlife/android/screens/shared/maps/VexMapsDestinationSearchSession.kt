@@ -16,6 +16,11 @@ internal interface VexMapsDestinationSearchSource {
     ): List<VexMapsPlaceSearchResult>
 }
 
+internal class VexMapsDestinationSearchUnavailableException :
+    IllegalStateException(
+        "VexMaps destination-search provider is unavailable",
+    )
+
 internal sealed interface VexMapsDestinationSearchState {
     data object Unavailable :
         VexMapsDestinationSearchState
