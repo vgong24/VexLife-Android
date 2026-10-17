@@ -29,16 +29,14 @@ class InMemoryVexMapsRepository(
             )
     }
 
-    override suspend fun saveOnlineStyle(
-        styleRef: String,
+    override suspend fun saveAppearancePreference(
+        preference:
+            VexMapsAppearancePreference,
     ) {
-        require(styleRef.isNotBlank()) {
-            "styleRef must not be blank"
-        }
         state =
             state.copy(
-                onlineStyleRef =
-                    styleRef,
+                appearancePreference =
+                    preference,
             )
     }
 

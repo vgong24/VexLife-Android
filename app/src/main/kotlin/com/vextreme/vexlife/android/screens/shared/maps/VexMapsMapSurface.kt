@@ -38,6 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.maps.VexMapsAppearancePreference
 import com.vextreme.vexlife.android.data.maps.VexMapsRepository
 import com.vextreme.vexlife.android.data.maps.VexMapsStoredLocation
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
@@ -232,15 +233,18 @@ internal fun VexMapsMapSurface(
         }
 
     /*
-     * Style selection is semantic relationship state; MapLibre loading is a provider effect.
-     * The Relay reconciles selected/requested/loaded/failed meaning while VexMapLibreAdapter performs
-     * the actual SDK work below. Keeping those two halves separate prevents provider callbacks from
-     * becoming the source of human intent.
+     * Human map appearance is semantic preference; provider style selection is its current
+     * OpenFreeMap realization; MapLibre loading is a provider effect.
+     *
+     * Automatic follows the current VexLife appearance without persisting the resolved Dark/Liberty
+     * style as an explicit override.
      */
-    val defaultOnlineStyle =
-        VexMapsOnlineStyle.default(
-            darkTheme,
-        )
+    var appearancePreference by
+        remember {
+            mutableStateOf<
+                VexMapsAppearancePreference?
+            >(null)
+        }
     val styleConvergenceRelay =
         remember {
             VexMapsStyleConvergenceRelay()
@@ -256,8 +260,7 @@ internal fun VexMapsMapSurface(
     var preferredDockPageRef by
         rememberSaveable {
             mutableStateOf(
-                defaultOnlineStyle
-                    .dockPageRef
+                VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
                     .value,
             )
         }
@@ -618,7 +621,7 @@ internal fun VexMapsMapSurface(
 
     /*
      * Repository restoration is intentionally one-way into bounded startup context:
-     * - persisted style becomes current human preference;
+     * - persisted appearance intent becomes current human preference;
      * - persisted location becomes restored browse context only;
      * - a fresh precise Android observation is requested separately when permission allows.
      *
@@ -631,28 +634,13 @@ internal fun VexMapsMapSurface(
                 repository.load()
             }.getOrNull()
 
-        val restoredStyle =
-            storedState
-                ?.onlineStyleRef
-                ?.let { styleRef ->
-                    VexMapsOnlineStyle
-                        .fromStyleRef(
-                            styleRef,
-                        )
-                }
-                ?: defaultOnlineStyle
-
-        styleConvergenceRelay
-            .styleSelected(
-                styleRef =
-                    restoredStyle.styleRef,
-                styleUri =
-                    restoredStyle.styleUri,
-            )
-        preferredDockPageRef =
-            restoredStyle
-                .dockPageRef
-                .value
+        if (appearancePreference == null) {
+            appearancePreference =
+                storedState
+                    ?.appearancePreference
+                    ?: VexMapsAppearancePreference
+                        .AUTOMATIC
+        }
 
         val precisePermissionGranted =
             ContextCompat.checkSelfPermission(
@@ -671,6 +659,40 @@ internal fun VexMapsMapSurface(
 
         if (precisePermissionGranted) {
             readCurrentPreciseLocation()
+        }
+    }
+
+    /*
+     * Resolve human appearance intent into the current provider style.
+     *
+     * App appearance changes are meaningful only for Automatic. Explicit Light/Dark remain stable.
+     */
+    LaunchedEffect(
+        appearancePreference,
+        darkTheme,
+    ) {
+        val preference =
+            appearancePreference
+                ?: return@LaunchedEffect
+        val resolvedStyle =
+            preference
+                .resolveVexMapsOnlineStyle(
+                    darkTheme,
+                )
+
+        if (
+            styleConvergence
+                .selection
+                ?.styleRef !=
+            resolvedStyle.styleRef
+        ) {
+            styleConvergenceRelay
+                .styleSelected(
+                    styleRef =
+                        resolvedStyle.styleRef,
+                    styleUri =
+                        resolvedStyle.styleUri,
+                )
         }
     }
 
@@ -950,20 +972,33 @@ internal fun VexMapsMapSurface(
     LaunchedEffect(
         styleConvergence.status,
         styleSelection?.revision,
+        appearancePreference,
     ) {
         val selection =
             styleSelection
                 ?: return@LaunchedEffect
 
+        val preference =
+            appearancePreference
+                ?: return@LaunchedEffect
+        val expectedStyle =
+            preference
+                .resolveVexMapsOnlineStyle(
+                    darkTheme,
+                )
+
         if (
             styleConvergence.status ==
             VexMapsStyleConvergenceStatus
-                .APPLIED
+                .APPLIED &&
+            selection.styleRef ==
+            expectedStyle.styleRef
         ) {
             runCatching {
-                repository.saveOnlineStyle(
-                    selection.styleRef,
-                )
+                repository
+                    .saveAppearancePreference(
+                        preference,
+                    )
             }
         }
     }
@@ -1251,22 +1286,6 @@ internal fun VexMapsMapSurface(
             add(
                 distributionDockPage,
             )
-            VexMapsOnlineStyle
-                .entries
-                .map { style ->
-                    style.contextDockPage(
-                        status =
-                            styleConvergence
-                                .status
-                                .takeIf {
-                                    styleConvergence
-                                        .selection
-                                        ?.styleRef ==
-                                        style.styleRef
-                                },
-                    )
-                }
-                .forEach(::add)
         }
     val preferredContextDockPage =
         remember(preferredDockPageRef) {
@@ -1308,6 +1327,28 @@ internal fun VexMapsMapSurface(
         AndroidView(
             factory = { mapView },
             modifier = Modifier.fillMaxSize(),
+        )
+
+        VexMapsAppearanceControl(
+            runtime = runtime,
+            preference =
+                appearancePreference
+                    ?: VexMapsAppearancePreference
+                        .AUTOMATIC,
+            onPreferenceSelected = {
+                    preference ->
+                appearancePreference =
+                    preference
+            },
+            modifier =
+                Modifier
+                    .align(
+                        Alignment.TopEnd,
+                    )
+                    .padding(
+                        top = 12.dp,
+                        end = 12.dp,
+                    ),
         )
 
         Box(
@@ -1939,9 +1980,8 @@ internal fun VexMapsMapSurface(
         }
 
         /*
-         * Context Dock may project a style choice into style convergence, but automatic convergence
-         * is not a human interaction. We record Selected only when the human actually changed the
-         * preferred page; restored/already-preferred synchronization remains non-human evidence.
+         * Context Dock now carries earned contextual product surfaces only. Map appearance has its
+         * own compact map control and no longer participates in page selection.
          */
         VexContextDock(
             pages = contextDockPages,
@@ -1949,40 +1989,8 @@ internal fun VexMapsMapSurface(
                 preferredContextDockPage,
             onSelectedPageChanged = {
                     selectedPageRef ->
-                val humanSelectionChanged =
-                    selectedPageRef.value !=
-                        preferredDockPageRef
-
                 preferredDockPageRef =
                     selectedPageRef.value
-
-                VexMapsOnlineStyle
-                    .fromDockPageRef(
-                        selectedPageRef,
-                    )
-                    ?.let { selectedStyle ->
-                        if (
-                            styleConvergence
-                                .selection
-                                ?.styleRef !=
-                            selectedStyle.styleRef
-                        ) {
-                            if (humanSelectionChanged) {
-                                runtime.recordDynamicInteraction(
-                                    subjectRef =
-                                        "presentation.context-dock.vexmaps.style",
-                                    action = "Selected",
-                                )
-                            }
-                            styleConvergenceRelay
-                                .styleSelected(
-                                    styleRef =
-                                        selectedStyle.styleRef,
-                                    styleUri =
-                                        selectedStyle.styleUri,
-                                )
-                        }
-                    }
             },
             modifier =
                 Modifier

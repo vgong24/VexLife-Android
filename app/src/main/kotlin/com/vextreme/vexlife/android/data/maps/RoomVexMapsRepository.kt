@@ -40,17 +40,16 @@ class RoomVexMapsRepository(
         }
     }
 
-    override suspend fun saveOnlineStyle(
-        styleRef: String,
+    override suspend fun saveAppearancePreference(
+        preference:
+            VexMapsAppearancePreference,
     ) {
-        require(styleRef.isNotBlank()) {
-            "styleRef must not be blank"
-        }
-
         ensureRow()
         val updated =
-            dao.updateOnlineStyle(
-                styleRef = styleRef,
+            dao.updateAppearancePreference(
+                storedValue =
+                    preference
+                        .toStoredAppearanceValue(),
                 updatedAtEpochMillis =
                     Instant.now()
                         .toEpochMilli(),
@@ -58,7 +57,7 @@ class RoomVexMapsRepository(
                     VEX_MAPS_STATE_REF,
             )
         check(updated == 1) {
-            "VexMaps style row disappeared during update"
+            "VexMaps appearance row disappeared during update"
         }
     }
 
