@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 
@@ -47,6 +49,20 @@ internal interface VexStreamPlaybackSeekConnection {
         request: VexStreamPlaybackSeekRequest,
     ): Boolean
 }
+
+@Composable
+internal fun rememberVexStreamPlaybackSeekConnection(
+    controller: MediaController?,
+): VexStreamPlaybackSeekConnection? =
+    remember(
+        controller,
+    ) {
+        controller?.let {
+            Media3VexStreamPlaybackSeekConnection(
+                it,
+            )
+        }
+    }
 
 internal class Media3VexStreamPlaybackSeekConnection(
     private val controller: MediaController,

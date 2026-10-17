@@ -28,7 +28,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.playback.present
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
-import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamPlaybackSeekConnection
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
@@ -58,15 +58,9 @@ internal fun VexStreamMiniPlayer(
     val queueProjection =
         queueExperience.projection
     val seekConnection =
-        remember(
+        rememberVexStreamPlaybackSeekConnection(
             controller,
-        ) {
-            controller?.let {
-                Media3VexStreamPlaybackSeekConnection(
-                    it,
-                )
-            }
-        }
+        )
 
     val handler =
         ElementActionHandler { element ->
