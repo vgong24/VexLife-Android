@@ -226,7 +226,7 @@ interface VexJourneyScope {
                     repository.resolve(
                         repositories,
                     )
-                source.change()
+                change(source)
             },
         )
     }
