@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -18,8 +20,11 @@ import com.vextreme.vexlife.android.conversation.InMemoryVexFamilyConversationRe
 import com.vextreme.vexlife.android.conversation.VexConversationCompanionAvailability
 import com.vextreme.vexlife.android.conversation.VexConversationHybridRelay
 import com.vextreme.vexlife.android.conversation.VexConversationHomeAvailability
+import com.vextreme.vexlife.android.conversation.VexConversationIdempotencyKey
 import com.vextreme.vexlife.android.conversation.VexConversationLab
 import com.vextreme.vexlife.android.conversation.VexConversationLabFixture
+import com.vextreme.vexlife.android.conversation.VexFamilyConversationRepositoryResult
+import com.vextreme.vexlife.android.conversation.VexFamilyConversationSendRequest
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationSurfaceSendAvailability
 import com.vextreme.vexlife.android.conversation.projectVexFamilyConversationSendAvailability
 import com.vextreme.vexlife.android.elements.TextRole
@@ -30,6 +35,7 @@ import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.ui.VexLifeTheme
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
 
 /**
  * Lived-design preview for the feature-owned Conversation Lab.
@@ -60,6 +66,7 @@ private fun VexConversationRoomPreview() {
                 repository,
             ).also { conversationLab ->
                 conversationLab.seedFamilyRoom()
+                conversationLab.setAutoMirror(true)
                 conversationLab.publishRemoteMessage(
                     content = "Yep, leaving now.",
                     speakerRef =
@@ -143,6 +150,12 @@ private fun VexConversationRoomPreview() {
                 "Are you coming?",
             )
         }
+    var sendOrdinal by
+        rememberSaveable {
+            mutableIntStateOf(0)
+        }
+    val previewScope =
+        rememberCoroutineScope()
 
     VexLifeTheme(
         darkTheme = true,
@@ -162,7 +175,7 @@ private fun VexConversationRoomPreview() {
             emptyMessagesLabel = "No messages yet.",
             authenticatedSpeakerSuffix = "you",
             developerEnvironmentLabel =
-                "Conversation Lab active",
+                "Conversation Lab active · Auto mirror: Maya",
             composerContent = {
                 val sendAvailability =
                     projectVexFamilyConversationSendAvailability(
@@ -183,15 +196,77 @@ private fun VexConversationRoomPreview() {
                     onDraftChange = {
                         draft = it
                     },
-                    onSend = {},
+                    onSend = {
+                        val content =
+                            draft.trim()
+                        val currentThread =
+                            repository
+                                .state
+                                .value
+                                .thread(
+                                    VexConversationLabFixture.threadRef,
+                                )
+                        val family =
+                            currentThread
+                                ?.familyBinding
+
+                        if (
+                            content.isNotEmpty() &&
+                            currentThread != null &&
+                            family != null
+                        ) {
+                            val idempotencyOrdinal =
+                                sendOrdinal
+                            sendOrdinal += 1
+
+                            previewScope.launch {
+                                val result =
+                                    repository.send(
+                                        VexFamilyConversationSendRequest(
+                                            threadRef =
+                                                currentThread.threadRef,
+                                            spaceRef =
+                                                family.spaceRef,
+                                            expectedChannelRef =
+                                                currentThread.currentChannelRef,
+                                            expectedMembershipGeneration =
+                                                family
+                                                    .currentMembershipGeneration,
+                                            idempotencyKey =
+                                                VexConversationIdempotencyKey(
+                                                    "preview-send-" +
+                                                        idempotencyOrdinal,
+                                                ),
+                                            content =
+                                                content,
+                                        ),
+                                    )
+
+                                if (
+                                    result is
+                                    VexFamilyConversationRepositoryResult
+                                        .Accepted
+                                ) {
+                                    draft = ""
+                                    lab.mirrorAcceptedVictorSend(
+                                        content,
+                                    )
+                                }
+                            }
+                        }
+                    },
                 )
             },
         )
     }
 }
 
+/**
+ * Preview/test-only raw composer used to pressure the Conversation room before a registered
+ * production Screen owns durable TextField/Button identity and FormSubmission/AppAction dispatch.
+ */
 @Composable
-private fun PreviewConversationComposer(
+internal fun PreviewConversationComposer(
     semanticRootRef: String,
     label: String,
     sendLabel: String,

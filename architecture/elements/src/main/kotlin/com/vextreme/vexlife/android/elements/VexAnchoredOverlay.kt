@@ -51,6 +51,14 @@ data class VexResolvedOverlayPlacement(
     val offset: IntOffset,
     val rect: IntRect,
     val clipped: Boolean,
+    /**
+     * Cross-axis shift from the popup edge center toward the anchor center.
+     *
+     * Zero means the popup remained naturally centered on its anchor. A non-zero value means safe
+     * window clamping moved the popup, so the caret must move along the resolved edge to keep the
+     * visual relationship aimed at the original target rather than at the popup's own center.
+     */
+    val caretCrossAxisOffsetPx: Int,
 )
 
 fun resolveVexAnchoredOverlay(
@@ -59,6 +67,7 @@ fun resolveVexAnchoredOverlay(
     popupSize: IntSize,
     layoutDirection: LayoutDirection,
     marginPx: Int,
+    caretEdgeInsetPx: Int = 0,
     preferred: List<VexOverlayPlacement> =
         listOf(
             VexOverlayPlacement.BELOW,
@@ -69,6 +78,9 @@ fun resolveVexAnchoredOverlay(
 ): VexResolvedOverlayPlacement {
     require(marginPx >= 0) {
         "overlay margin must be non-negative"
+    }
+    require(caretEdgeInsetPx >= 0) {
+        "overlay caret edge inset must be non-negative"
     }
     require(
         preferred.none {
@@ -225,18 +237,68 @@ fun resolveVexAnchoredOverlay(
             rect.right > safe.right ||
             rect.bottom > safe.bottom
 
+    val anchorCenterX =
+        anchorBounds.left +
+            anchorBounds.width / 2
+    val anchorCenterY =
+        anchorBounds.top +
+            anchorBounds.height / 2
+    val popupCenterX =
+        offset.x +
+            popupSize.width / 2
+    val popupCenterY =
+        offset.y +
+            popupSize.height / 2
+
+    val caretCrossAxisOffsetPx =
+        when (placement) {
+            VexOverlayPlacement.ABOVE,
+            VexOverlayPlacement.BELOW,
+            -> {
+                val maxShift =
+                    (popupSize.width / 2 - caretEdgeInsetPx)
+                        .coerceAtLeast(0)
+
+                (anchorCenterX - popupCenterX)
+                    .coerceIn(
+                        -maxShift,
+                        maxShift,
+                    )
+            }
+
+            VexOverlayPlacement.START,
+            VexOverlayPlacement.END,
+            -> {
+                val maxShift =
+                    (popupSize.height / 2 - caretEdgeInsetPx)
+                        .coerceAtLeast(0)
+
+                (anchorCenterY - popupCenterY)
+                    .coerceIn(
+                        -maxShift,
+                        maxShift,
+                    )
+            }
+
+            VexOverlayPlacement.FALLBACK ->
+                0
+        }
+
     return VexResolvedOverlayPlacement(
         placement = placement,
         offset = offset,
         rect = rect,
         clipped = clipped,
+        caretCrossAxisOffsetPx =
+            caretCrossAxisOffsetPx,
     )
 }
 
 private class VexAnchoredOverlayPositionProvider(
     private val marginPx: Int,
+    private val caretEdgeInsetPx: Int,
     private val preferred: List<VexOverlayPlacement>,
-    private val onResolvedPlacement: (VexOverlayPlacement) -> Unit,
+    private val onResolvedPlacement: (VexResolvedOverlayPlacement) -> Unit,
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -251,10 +313,12 @@ private class VexAnchoredOverlayPositionProvider(
                 popupSize = popupContentSize,
                 layoutDirection = layoutDirection,
                 marginPx = marginPx,
+                caretEdgeInsetPx =
+                    caretEdgeInsetPx,
                 preferred = preferred,
             )
 
-        onResolvedPlacement(resolved.placement)
+        onResolvedPlacement(resolved)
         return resolved.offset
     }
 }
@@ -333,23 +397,31 @@ fun VexAnchoredOverlay(
         with(density) {
             4.dp.roundToPx()
         }
+    val caretEdgeInsetPx =
+        with(density) {
+            vexAnchoredOverlayCaretEdgeInset
+                .roundToPx()
+        }
 
     var resolvedPlacement by
         remember {
-            mutableStateOf<VexOverlayPlacement?>(null)
+            mutableStateOf<VexResolvedOverlayPlacement?>(null)
         }
 
     val provider =
         remember(
             anchorGapPx,
+            caretEdgeInsetPx,
             preferredPlacements,
         ) {
             VexAnchoredOverlayPositionProvider(
                 marginPx = anchorGapPx,
+                caretEdgeInsetPx =
+                    caretEdgeInsetPx,
                 preferred = preferredPlacements,
-                onResolvedPlacement = { placement ->
-                    if (resolvedPlacement != placement) {
-                        resolvedPlacement = placement
+                onResolvedPlacement = { resolved ->
+                    if (resolvedPlacement != resolved) {
+                        resolvedPlacement = resolved
                     }
                 },
             )
@@ -357,7 +429,12 @@ fun VexAnchoredOverlay(
 
     val visualPlacement =
         resolvedPlacement
+            ?.placement
             ?: preferredPlacements.first()
+    val caretCrossAxisOffsetPx =
+        resolvedPlacement
+            ?.caretCrossAxisOffsetPx
+            ?: 0
 
     Popup(
         popupPositionProvider = provider,
@@ -370,6 +447,8 @@ fun VexAnchoredOverlay(
         VexAnchoredOverlayBubble(
             presentationRef = presentationRef,
             placement = visualPlacement,
+            caretCrossAxisOffsetPx =
+                caretCrossAxisOffsetPx,
             content = content,
         )
     }
@@ -379,6 +458,7 @@ fun VexAnchoredOverlay(
 private fun VexAnchoredOverlayBubble(
     presentationRef: String,
     placement: VexOverlayPlacement,
+    caretCrossAxisOffsetPx: Int,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val layoutDirection =
@@ -388,6 +468,12 @@ private fun VexAnchoredOverlayBubble(
             placement = placement,
             layoutDirection = layoutDirection,
         )
+    val density =
+        LocalDensity.current
+    val caretCrossAxisOffset =
+        with(density) {
+            caretCrossAxisOffsetPx.toDp()
+        }
 
     /*
      * PopupPositionProvider resolves placement from popupContentSize. The resolved caret therefore
@@ -412,6 +498,8 @@ private fun VexAnchoredOverlayBubble(
                     Modifier
                         .align(Alignment.TopCenter)
                         .offset(
+                            x =
+                                caretCrossAxisOffset,
                             y =
                                 -vexAnchoredOverlayCaretOffset,
                         )
@@ -420,6 +508,8 @@ private fun VexAnchoredOverlayBubble(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .offset(
+                            x =
+                                caretCrossAxisOffset,
                             y =
                                 vexAnchoredOverlayCaretOffset,
                         )
@@ -430,6 +520,8 @@ private fun VexAnchoredOverlayBubble(
                         .offset(
                             x =
                                 -vexAnchoredOverlayCaretOffset,
+                            y =
+                                caretCrossAxisOffset,
                         )
 
                 VexOverlayCaretDirection.RIGHT ->
@@ -438,6 +530,8 @@ private fun VexAnchoredOverlayBubble(
                         .offset(
                             x =
                                 vexAnchoredOverlayCaretOffset,
+                            y =
+                                caretCrossAxisOffset,
                         )
 
                 VexOverlayCaretDirection.NONE ->
@@ -621,6 +715,9 @@ private val vexAnchoredOverlayCaretRoom =
 
 private val vexAnchoredOverlayCaretOffset =
     5.dp
+
+private val vexAnchoredOverlayCaretEdgeInset =
+    10.dp
 
 
 // [VXG RealForever]

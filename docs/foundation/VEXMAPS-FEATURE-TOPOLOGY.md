@@ -127,10 +127,9 @@ human appearance/style intent
   -> style application status
 ~~~
 
-Current source presents OpenFreeMap Dark/Liberty as Context Dock pages. That is accepted current
-implementation, not the completed UX contract. [VexMaps Complete] now intends ordinary map appearance
-to be a compact Automatic / Light / Dark map control; provider style refs remain below that
-human-facing preference.
+The VMC-01 appearance slice presents ordinary map appearance as a compact Automatic / Light / Dark
+map control. OpenFreeMap Dark/Liberty remain provider realizations below the human-facing preference
+and no longer occupy ordinary Context Dock pages.
 
 The reusable lesson is not "everything should use Relay."
 

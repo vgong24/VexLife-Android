@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.screens.shared.maps
 import androidx.compose.runtime.Composable
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.maps.VexMapsAppearancePreference
 import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.TextRole
@@ -64,6 +65,34 @@ object VexMapsScreen : AppScreenBlueprint(
         intent =
             close(MapMenu)
                 .then(open(OfflinePanel)),
+    )
+
+    val OpenAppearance = buttonRef(
+        id = "body.map.appearance.open",
+        labelRes = R.string.vexmaps_appearance,
+        style = VexElementStyles.ToolbarIcon,
+        intent = localEffect(),
+    )
+
+    val AppearanceAutomatic = buttonRef(
+        id = "body.map.appearance.automatic",
+        labelRes = R.string.vexmaps_appearance_automatic,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val AppearanceLight = buttonRef(
+        id = "body.map.appearance.light",
+        labelRes = R.string.vexmaps_appearance_light,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val AppearanceDark = buttonRef(
+        id = "body.map.appearance.dark",
+        labelRes = R.string.vexmaps_appearance_dark,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
     )
 
     val ToggleOfflinePreparation = buttonRef(
@@ -277,6 +306,13 @@ object VexMapsScreen : AppScreenBlueprint(
                 button(UsePreciseLocation)
             }
 
+            column("appearance") {
+                button(OpenAppearance)
+                button(AppearanceAutomatic)
+                button(AppearanceLight)
+                button(AppearanceDark)
+            }
+
             column(
                 element = MapMenu,
             ) {
@@ -336,6 +372,21 @@ object VexMapsScreen : AppScreenBlueprint(
             listOf(
                 OpenMapMenu,
             )
+
+    internal fun appearanceElement(
+        preference:
+            VexMapsAppearancePreference,
+    ): ButtonElement =
+        when (preference) {
+            VexMapsAppearancePreference.AUTOMATIC ->
+                AppearanceAutomatic
+
+            VexMapsAppearancePreference.LIGHT ->
+                AppearanceLight
+
+            VexMapsAppearancePreference.DARK ->
+                AppearanceDark
+        }
 
     internal fun travelModeElement(
         mode: VexMapsTravelMode,

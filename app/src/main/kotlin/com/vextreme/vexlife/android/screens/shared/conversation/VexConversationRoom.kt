@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.conversation.VexConversationMessage
 import com.vextreme.vexlife.android.conversation.VexConversationParticipantRef
 import com.vextreme.vexlife.android.conversation.VexConversationSurfaceProjection
 import com.vextreme.vexlife.android.elements.TextRole
+import com.vextreme.vexlife.android.elements.VexBox
 import com.vextreme.vexlife.android.elements.VexCard
 import com.vextreme.vexlife.android.elements.VexColumn
 import com.vextreme.vexlife.android.elements.VexComposeScope
@@ -89,21 +91,15 @@ internal fun VexConversationRoom(
             developerEnvironmentLabel
                 ?.takeIf(String::isNotBlank)
                 ?.let { environmentLabel ->
-                    VexCard(
+                    VexText(
                         id = "developer-environment",
-                        modifier =
-                            VexModifier
-                                .fillMaxWidth(),
-                    ) {
-                        VexText(
-                            id = "label",
-                            text = environmentLabel,
-                            role = TextRole.Supporting,
-                            modifier =
-                                VexModifier
-                                    .padding(12.dp),
-                        )
-                    }
+                        text = environmentLabel,
+                        role = TextRole.Supporting,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant,
+                    )
                 }
 
             VexStableLazyColumn(
@@ -123,6 +119,11 @@ internal fun VexConversationRoom(
                 contentPadding =
                     PaddingValues(
                         vertical = 4.dp,
+                    ),
+                verticalArrangement =
+                    Arrangement.spacedBy(
+                        space = 8.dp,
+                        alignment = Alignment.Bottom,
                     ),
                 emptyContent = {
                     VexText(
@@ -176,40 +177,55 @@ private fun ConversationMessageCard(
     VexComposeScope(
         parentRef = messageRoot,
     ) {
-        VexCard(
-            id = "card",
+        VexBox(
+            id = "lane",
             modifier =
                 VexModifier
                     .fillMaxWidth(),
+            contentAlignment =
+                if (isAuthenticatedSpeaker) {
+                    Alignment.CenterEnd
+                } else {
+                    Alignment.CenterStart
+                },
         ) {
-            VexColumn(
-                id = "body",
+            VexCard(
+                id = "card",
                 modifier =
                     VexModifier
-                        .padding(12.dp),
-                verticalArrangement =
-                    Arrangement.spacedBy(
-                        4.dp,
-                    ),
+                        .fillMaxWidth(
+                            0.86f,
+                        ),
             ) {
-                VexText(
-                    id = "speaker",
-                    text =
-                        if (isAuthenticatedSpeaker) {
-                            "$speakerLabel · $authenticatedSpeakerSuffix"
-                        } else {
-                            speakerLabel
-                        },
-                    role = TextRole.Label,
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .primary,
-                )
-                VexText(
-                    id = "content",
-                    text = message.content,
-                )
+                VexColumn(
+                    id = "body",
+                    modifier =
+                        VexModifier
+                            .padding(12.dp),
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            4.dp,
+                        ),
+                ) {
+                    VexText(
+                        id = "speaker",
+                        text =
+                            if (isAuthenticatedSpeaker) {
+                                "$speakerLabel · $authenticatedSpeakerSuffix"
+                            } else {
+                                speakerLabel
+                            },
+                        role = TextRole.Label,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .primary,
+                    )
+                    VexText(
+                        id = "content",
+                        text = message.content,
+                    )
+                }
             }
         }
     }
