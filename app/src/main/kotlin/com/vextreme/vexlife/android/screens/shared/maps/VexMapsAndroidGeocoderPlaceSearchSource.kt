@@ -4,6 +4,7 @@ import android.content.Context
 import android.location.Address
 import android.location.Geocoder
 import android.os.Build
+import androidx.annotation.RequiresApi
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.Locale
@@ -72,6 +73,7 @@ internal class VexMapsAndroidGeocoderPlaceSearchSource(
             .take(limit)
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private suspend fun searchAsync(
         query: String,
         limit: Int,
