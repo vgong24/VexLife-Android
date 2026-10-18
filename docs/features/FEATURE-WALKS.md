@@ -81,6 +81,9 @@ feature.vexmaps/W01/C02/P01
 Wnn = Feature Walk
 Cnn = Case
 Pnn = Checkpoint
+
+nn means a zero-padded numeric identity with at least two digits.
+W100 / C100 / P100 and later are valid; append-only identity must never force renumbering.
 ~~~
 
 The dense indices are permanent addresses, not list positions. Do not renumber existing identities to

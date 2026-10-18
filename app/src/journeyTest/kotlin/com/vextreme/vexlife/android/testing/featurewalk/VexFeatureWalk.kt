@@ -5,11 +5,11 @@ private val featureRefPattern =
 private val keyPattern =
     Regex("[a-z0-9][a-z0-9-]*")
 private val walkRefPattern =
-    Regex(".+/W[0-9]{2}")
+    Regex(".+/W[0-9]{2,}")
 private val caseRefPattern =
-    Regex(".+/W[0-9]{2}/C[0-9]{2}")
+    Regex(".+/W[0-9]{2,}/C[0-9]{2,}")
 private val checkpointRefPattern =
-    Regex(".+/W[0-9]{2}/C[0-9]{2}/P[0-9]{2}")
+    Regex(".+/W[0-9]{2,}/C[0-9]{2,}/P[0-9]{2,}")
 
 /**
  * Whether a Case/Checkpoint belongs to current product completion or a named future frontier.
@@ -45,7 +45,7 @@ data class VexFeatureWalkCheckpoint(
 ) {
     init {
         require(checkpointRefPattern.matches(ref)) {
-            "feature-walk checkpoint ref must end in /Wnn/Cnn/Pnn: $ref"
+            "feature-walk checkpoint ref must use /Wnn/Cnn/Pnn with at least two digits per index: $ref"
         }
         require(keyPattern.matches(key)) {
             "feature-walk checkpoint key must be lowercase kebab-case: $key"
@@ -66,7 +66,7 @@ data class VexFeatureWalkCase(
 ) {
     init {
         require(caseRefPattern.matches(ref)) {
-            "feature-walk case ref must end in /Wnn/Cnn: $ref"
+            "feature-walk case ref must use /Wnn/Cnn with at least two digits per index: $ref"
         }
         require(keyPattern.matches(key)) {
             "feature-walk case key must be lowercase kebab-case: $key"
@@ -127,7 +127,7 @@ data class VexFeatureWalk(
 ) {
     init {
         require(walkRefPattern.matches(ref)) {
-            "feature-walk ref must end in /Wnn: $ref"
+            "feature-walk ref must use /Wnn with at least two digits: $ref"
         }
         require(keyPattern.matches(key)) {
             "feature-walk key must be lowercase kebab-case: $key"

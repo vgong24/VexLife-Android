@@ -62,6 +62,68 @@ class VexFeatureWalkContractTest {
     }
 
     @Test
+    fun appendOnlyStableAddressesCanGrowPastTwoDigitsWithoutRenumbering() {
+        val checkpoint =
+            VexFeatureWalkCheckpoint(
+                ref =
+                    "feature.fixture/W100/C100/P100",
+                key =
+                    "checkpoint-100",
+                title =
+                    "A later checkpoint keeps its append-only address",
+            )
+        val case =
+            VexFeatureWalkCase(
+                ref =
+                    "feature.fixture/W100/C100",
+                key =
+                    "case-100",
+                title =
+                    "A later case keeps its append-only address",
+                checkpoints =
+                    listOf(
+                        checkpoint,
+                    ),
+            )
+        val walk =
+            VexFeatureWalk(
+                ref =
+                    "feature.fixture/W100",
+                key =
+                    "walk-100",
+                title =
+                    "A later walk keeps its append-only address",
+                cases =
+                    listOf(
+                        case,
+                    ),
+            )
+
+        val feature =
+            VexFeatureWalkFeature(
+                featureRef =
+                    "feature.fixture",
+                currentName =
+                    "Fixture",
+                walks =
+                    listOf(
+                        walk,
+                    ),
+            )
+
+        assertEquals(
+            "feature.fixture/W100/C100/P100",
+            feature.walks
+                .single()
+                .cases
+                .single()
+                .checkpoints
+                .single()
+                .ref,
+        )
+    }
+
+    @Test
     fun everyRequiredUnheldCaseHasExactlyOneTypedJourneyBinding() {
         val expectedCaseRefs =
             FeatureWalks.cases
