@@ -120,7 +120,8 @@ They make required whole-outcome gaps and their release predicates visible.
 For a lane asking where to start and where the scenario ultimately lives, follow one descent:
 
 ~~~text
-repository AGENTS.md
+repository README.md
+-> AGENTS.md
 -> docs/features/README.md
 -> docs/features/FEATURE-WALKS.md
 -> FeatureWalks.<feature>...              typed discovery

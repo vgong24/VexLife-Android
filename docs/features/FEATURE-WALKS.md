@@ -114,7 +114,8 @@ A lane should not have to know the test package layout before it can find its en
 repository route intentionally descends from human context into exact executable proof:
 
 ~~~text
-AGENTS.md
+README.md
+-> AGENTS.md
 -> docs/features/README.md
 -> docs/features/FEATURE-WALKS.md
 -> app/src/journeyTest/.../testing/featurewalk/FeatureWalks.kt
@@ -133,7 +134,8 @@ Each level has a different responsibility:
 
 | Level | Responsibility | Source-of-truth status |
 |---|---|---|
-| `AGENTS.md` | repository-wide discovery route | router only |
+| `README.md` | absolute repository entry and human/agent start route | router only |
+| `AGENTS.md` | repository-wide task discovery route | router only |
 | `docs/features/README.md` | feature-authoring/completion entry | authoring contract/router |
 | `FEATURE-WALKS.md` | shared Feature-Walk vocabulary and construction law | shared contract |
 | `FeatureWalks.kt` | typed IDE-discoverable map across participating features | derived discovery projection |

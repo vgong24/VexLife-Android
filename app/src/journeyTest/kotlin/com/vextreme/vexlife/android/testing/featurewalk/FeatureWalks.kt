@@ -5,7 +5,9 @@ package com.vextreme.vexlife.android.testing.featurewalk
  *
  * Repository descent:
  *
- * docs/features/README.md
+ * README.md
+ * -> AGENTS.md
+ * -> docs/features/README.md
  * -> docs/features/FEATURE-WALKS.md
  * -> FeatureWalks.<feature>...
  * -> the owning <Feature>FeatureWalks.kt
