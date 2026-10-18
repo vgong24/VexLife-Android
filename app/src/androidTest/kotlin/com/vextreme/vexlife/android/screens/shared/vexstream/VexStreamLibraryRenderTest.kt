@@ -3,7 +3,10 @@ package com.vextreme.vexlife.android.screens.shared.vexstream
 import androidx.compose.material3.Surface
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.test.platform.app.InstrumentationRegistry
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -21,19 +24,7 @@ class VexStreamLibraryRenderTest {
         val state =
             vexStreamPreviewState()
         val runtime =
-            VexRuntime(
-                registry = AppScreens.registry,
-                logger = VexLogger(),
-                initialScreen = AppScreens.primary.first(),
-                primaryScreens = AppScreens.primary,
-                currentAppActions = {
-                    AppActionRegistrations.Empty
-                },
-            ).apply {
-                navigation.push(
-                    VexStreamMusicScreen,
-                )
-            }
+            vexStreamRuntime()
 
         compose.setContent {
             VexLifeTheme(
@@ -63,6 +54,16 @@ class VexStreamLibraryRenderTest {
             )
             .assertIsDisplayed()
         compose
+            .onNodeWithContentDescription(
+                "Download",
+            )
+            .assertIsDisplayed()
+        compose
+            .onNodeWithContentDescription(
+                "Remove Download",
+            )
+            .assertIsDisplayed()
+        compose
             .onNodeWithText(
                 "Songs",
             )
@@ -73,6 +74,63 @@ class VexStreamLibraryRenderTest {
             )
             .assertIsDisplayed()
     }
+
+    @Test
+    fun albumDetailKeepsOfflineCopyActionVisible() {
+        val state =
+            vexStreamPreviewState()
+        val runtime =
+            vexStreamRuntime()
+        val resolver =
+            VexStreamPlaybackSourceResolver(
+                InstrumentationRegistry
+                    .getInstrumentation()
+                    .targetContext,
+            )
+
+        compose.setContent {
+            VexLifeTheme(
+                darkTheme = true,
+            ) {
+                Surface {
+                    VexStreamAlbumsPane(
+                        runtime = runtime,
+                        tracks = state.playableTracks(),
+                        offlineCopyConnection = null,
+                        controller = null,
+                        resolver = resolver,
+                        onVisitArtist = {},
+                    )
+                }
+            }
+        }
+
+        compose
+            .onNodeWithText(
+                "Desktop Hub",
+            )
+            .performClick()
+        compose
+            .onNodeWithContentDescription(
+                "Download",
+            )
+            .assertIsDisplayed()
+    }
+
+    private fun vexStreamRuntime(): VexRuntime =
+        VexRuntime(
+            registry = AppScreens.registry,
+            logger = VexLogger(),
+            initialScreen = AppScreens.primary.first(),
+            primaryScreens = AppScreens.primary,
+            currentAppActions = {
+                AppActionRegistrations.Empty
+            },
+        ).apply {
+            navigation.push(
+                VexStreamMusicScreen,
+            )
+        }
 }
 
 // [VXG RealForever]
