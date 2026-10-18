@@ -117,6 +117,22 @@ Feature
 Feature Walks do not execute UI, replace Journey, replace focused tests, or create product acceptance.
 They make required whole-outcome gaps and their release predicates visible.
 
+For a lane asking where to start and where the scenario ultimately lives, follow one descent:
+
+~~~text
+repository AGENTS.md
+-> docs/features/README.md
+-> docs/features/FEATURE-WALKS.md
+-> FeatureWalks.<feature>...              typed discovery
+-> <Feature>FeatureWalks.kt               authored Walk / Case / Checkpoint truth
+-> <Feature>Journeys.kt                   executable human scenario, when unheld
+   OR <Feature>FeatureWalkProofBacklinks.kt
+      -> exact owning @Test method         focused Checkpoint proof
+~~~
+
+The generated Feature-Walk report reverses these relationships for review; it is not a second source
+of feature meaning or test results.
+
 Do not create a Feature Walk for every test, Screen or action. One consumer may teach the pattern; the
 current contract was earned only after Conversation and VexMaps independently demonstrated that
 owner-local proof could not answer whole-feature completion.

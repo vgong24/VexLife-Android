@@ -3,6 +3,18 @@ package com.vextreme.vexlife.android.testing.featurewalk
 /**
  * Typed human navigation into the current Feature-Walk contract.
  *
+ * Repository descent:
+ *
+ * docs/features/README.md
+ * -> docs/features/FEATURE-WALKS.md
+ * -> FeatureWalks.<feature>...
+ * -> the owning <Feature>FeatureWalks.kt
+ * -> its bound <Feature>Journeys.kt and/or focused FeatureWalk proof backlinks.
+ *
+ * This object is the IDE-discoverable cross-feature projection, not the semantic owner of each
+ * feature's Walk/Case/Checkpoint meaning. That authored truth remains in the feature-specific
+ * FeatureWalks file; Journey and focused tests remain their own proof owners.
+ *
  * This is test/proof metadata. It does not become a production feature registry, runtime router, or
  * acceptance authority.
  */

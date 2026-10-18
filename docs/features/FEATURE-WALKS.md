@@ -105,6 +105,79 @@ Derived truth:
 - forward/reverse proof-link report;
 - environment-specific Journey case refs.
 
+## Canonical descent — repository root to actual scenario
+
+A lane should not have to know the test package layout before it can find its end-to-end map. The
+repository route intentionally descends from human context into exact executable proof:
+
+~~~text
+AGENTS.md
+-> docs/features/README.md
+-> docs/features/FEATURE-WALKS.md
+-> app/src/journeyTest/.../testing/featurewalk/FeatureWalks.kt
+-> app/src/journeyTest/.../testing/featurewalk/<Feature>FeatureWalks.kt
+   -> app/src/journeyTest/.../<feature>/<Feature>Journeys.kt
+      -> vexFeatureWalkJourney(...) { <actual human scenario> }
+   -> app/src/test/.../<feature>/<Feature>FeatureWalkProofBacklinks.kt
+      -> exact owning test class#method
+
+structural/reverse projection:
+app/src/test/.../testing/featurewalk/VexFeatureWalkContractTest.kt
+-> build/reports/vex/feature-walks.txt
+~~~
+
+Each level has a different responsibility:
+
+| Level | Responsibility | Source-of-truth status |
+|---|---|---|
+| `AGENTS.md` | repository-wide discovery route | router only |
+| `docs/features/README.md` | feature-authoring/completion entry | authoring contract/router |
+| `FEATURE-WALKS.md` | shared Feature-Walk vocabulary and construction law | shared contract |
+| `FeatureWalks.kt` | typed IDE-discoverable map across participating features | derived discovery projection |
+| `<Feature>FeatureWalks.kt` | that feature's Walks, Cases, Checkpoints, commitments, holds and release predicates | **authored completion truth** |
+| `<Feature>Journeys.kt` | executable Android human interaction sequence for an unheld Case | **Journey scenario truth** |
+| `<Feature>FeatureWalkProofBacklinks.kt` | Checkpoint -> existing focused proof locator | link only |
+| named focused `@Test` | semantic/repository/provider transformation it actually tests | **focused proof truth** |
+| `VexFeatureWalkContractTest.kt` / generated report | verifies and projects the relationships above | regression/projection only |
+| real focused/Journey/device results | whether the applicable proof actually executed and passed | **execution evidence** |
+
+This preserves one important rule: there is no single giant "end-to-end test file" that becomes the
+owner of every feature behavior. The feature-owned Walk says what must be true; Journey says how the
+person traverses it; each focused test keeps the lower-level meaning it already owns.
+
+### Concrete first examples
+
+~~~text
+ConversationFeatureWalks.kt
+  feature.vexlife.conversation/W01/C01
+  -> VexConversationFeatureWalkProofBacklinks.kt
+       -> VexConversationLabTest
+            #victorSendStaysOnRepositoryContractAndMirrorArrivesOnlyAfterAcceptance
+            #remoteSpeechPublishesProviderTruthThroughConversationRepository
+  -> Journey intentionally absent while installed-doorway checkpoints are held
+
+VexMapsFeatureWalks.kt
+  feature.vexmaps/W01/C01
+  -> VexMapsJourneys.kt
+       -> vexFeatureWalkJourney(
+            FeatureWalks.vexMaps.destinationNavigation.destinationShell
+          ) {
+            start(HomeScreen)
+            tap(HomeScreen.VexMaps)
+            tap(AppShell.Elements.Back)
+          }
+
+  feature.vexmaps/W01/C02
+  -> VexMapsFeatureWalkProofBacklinks.kt
+       -> VexMapsDestinationSearchSessionTest
+            #newerSearchOwnsResultsEvenIfOlderProviderReturnsLate
+  -> full installed find -> route -> navigate Journey remains held
+~~~
+
+For another lane, copy the relationship shape—not the Conversation or Maps semantics. Start from that
+feature's existing stable `FEATURE_REF`, author its own `<Feature>FeatureWalks.kt`, then bind the
+rightful Journey and focused proofs that already own the required boundaries.
+
 ## Source shape
 
 ~~~text

@@ -27,6 +27,11 @@ The front door should stay small. Architecture belongs with its owning building 
   Existing features are worked examples, not mandatory source skeletons.
 A contributor should not need to learn testing-framework internals before changing product code.
 
+- **Whole-feature / end-to-end completion:** start with `docs/features/README.md`, then
+  `docs/features/FEATURE-WALKS.md`. Its canonical descent is feature identity/home ->
+  `FeatureWalks.<feature>...` -> owning `*FeatureWalks.kt` -> bound `*Journeys.kt` and focused
+  `*FeatureWalkProofBacklinks.kt` -> named test method. The generated
+  `build/reports/vex/feature-walks.txt` is a projection of those links, not another truth owner.
 - **New Screen or interaction:** start with the owning `*Screen.kt`, then follow
   `docs/foundation/F1-UI-BLUEPRINT-HOME.md`. Register the Screen once in `AppScreens`, keep
   feature-owned effects beside the Screen/domain, and add focused behavior proof.
