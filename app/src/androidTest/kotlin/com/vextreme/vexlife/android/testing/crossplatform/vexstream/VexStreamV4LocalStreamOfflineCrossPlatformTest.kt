@@ -46,6 +46,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.junit.runner.RunWith
 
 /**
@@ -76,6 +78,24 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class VexStreamV4LocalStreamOfflineCrossPlatformTest {
+    private var activeEvidence:
+        VexCrossPlatformEvidence? =
+        null
+
+    @get:Rule
+    val failureEvidence =
+        object : TestWatcher() {
+            override fun failed(
+                e: Throwable,
+                description: Description,
+            ) {
+                activeEvidence
+                    ?.failure(
+                        e,
+                    )
+            }
+        }
+
     @get:Rule
     val compose =
         createComposeRule()
@@ -92,6 +112,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             selectedEvidence(
                 expectedPhase = PHASE_A,
             )
+        activeEvidence =
+            evidence
 
         requireSafeExistingPairingMode(
             evidence,
@@ -470,6 +492,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             selectedEvidence(
                 expectedPhase = PHASE_B,
             )
+        activeEvidence =
+            evidence
 
         requireSafeExistingPairingMode(
             evidence,
