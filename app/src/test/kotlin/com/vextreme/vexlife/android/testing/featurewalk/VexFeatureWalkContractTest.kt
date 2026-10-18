@@ -127,6 +127,78 @@ class VexFeatureWalkContractTest {
     }
 
     @Test
+    fun futureCaseOwnsFutureStateAndCannotCarryCurrentHolds() {
+        val futureCheckpoint =
+            VexFeatureWalkCheckpoint(
+                ref =
+                    "feature.fixture/W97/C97/P97",
+                key =
+                    "later-boundary",
+                title =
+                    "A future boundary inherits the Case frontier",
+            )
+        val futureCase =
+            VexFeatureWalkCase(
+                ref =
+                    "feature.fixture/W97/C97",
+                key =
+                    "later-path",
+                title =
+                    "A future path",
+                commitment =
+                    VexFeatureWalkCommitment.FUTURE,
+                checkpoints =
+                    listOf(
+                        futureCheckpoint,
+                    ),
+            )
+
+        assertEquals(
+            VexFeatureWalkCommitment.FUTURE,
+            futureCase.commitment,
+        )
+        assertTrue(
+            !futureCase.journeyExpectedNow,
+        )
+
+        val heldFutureFailure =
+            runCatching {
+                VexFeatureWalkCase(
+                    ref =
+                        "feature.fixture/W96/C96",
+                    key =
+                        "held-future-path",
+                    title =
+                        "Invalid held future path",
+                    commitment =
+                        VexFeatureWalkCommitment.FUTURE,
+                    checkpoints =
+                        listOf(
+                            VexFeatureWalkCheckpoint(
+                                ref =
+                                    "feature.fixture/W96/C96/P96",
+                                key =
+                                    "future-hold",
+                                title =
+                                    "Future hold must not become current state",
+                                hold =
+                                    VexFeatureWalkHold(
+                                        reason =
+                                            "Synthetic invalid future hold.",
+                                        releasePredicate =
+                                            "Synthetic invalid release.",
+                                    ),
+                            ),
+                        ),
+                )
+            }.exceptionOrNull()
+
+        assertTrue(
+            heldFutureFailure is IllegalArgumentException,
+        )
+    }
+
+    @Test
     fun everyRequiredUnheldCaseHasExactlyOneTypedJourneyBinding() {
         val expectedCaseRefs =
             FeatureWalks.cases
@@ -265,9 +337,14 @@ class VexFeatureWalkContractTest {
                             Test::class.java,
                         ),
                     )
+                    val featureWalkCase =
+                        FeatureWalks.requireCase(
+                            backlink.checkpointRef
+                                .substringBeforeLast('/'),
+                        )
                     assertEquals(
                         VexFeatureWalkCommitment.REQUIRED,
-                        checkpoint.commitment,
+                        featureWalkCase.commitment,
                     )
 
                     backlink.checkpointRef
@@ -281,14 +358,17 @@ class VexFeatureWalkContractTest {
                 }
                 .toSet()
 
-        FeatureWalks.cases.forEach { case ->
-            case.checkpoints
-                .filter { checkpoint ->
-                    checkpoint.commitment ==
-                        VexFeatureWalkCommitment.REQUIRED &&
+        FeatureWalks.cases
+            .filter { case ->
+                case.commitment ==
+                    VexFeatureWalkCommitment.REQUIRED
+            }
+            .forEach { case ->
+                case.checkpoints
+                    .filter { checkpoint ->
                         checkpoint.hold == null
-                }
-                .forEach { checkpoint ->
+                    }
+                    .forEach { checkpoint ->
                     assertTrue(
                         "active checkpoint has neither Journey nor focused proof backlink: " +
                             checkpoint.ref,
@@ -431,12 +511,12 @@ private fun renderFeatureWalkReport(
                     case.checkpoints.forEach { checkpoint ->
                         val checkpointState =
                             when {
-                                checkpoint.hold != null ->
-                                    "HELD"
-
-                                checkpoint.commitment ==
+                                case.commitment ==
                                     VexFeatureWalkCommitment.FUTURE ->
                                     "FUTURE"
+
+                                checkpoint.hold != null ->
+                                    "HELD"
 
                                 else ->
                                     "ACTIVE"

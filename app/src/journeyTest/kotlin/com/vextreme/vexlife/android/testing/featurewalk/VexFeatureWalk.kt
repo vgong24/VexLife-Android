@@ -12,9 +12,10 @@ private val checkpointRefPattern =
     Regex(".+/W[0-9]{2,}/C[0-9]{2,}/P[0-9]{2,}")
 
 /**
- * Whether a Case/Checkpoint belongs to current product completion or a named future frontier.
+ * Whether a Case belongs to current product completion or a named future frontier.
  *
- * A hold is modeled separately because a required thing can be real and currently blocked.
+ * Checkpoints inherit the Case's commitment. A hold is modeled separately because one required
+ * current boundary can be real and blocked without turning that boundary into a future Case.
  */
 enum class VexFeatureWalkCommitment {
     REQUIRED,
@@ -39,8 +40,6 @@ data class VexFeatureWalkCheckpoint(
     val ref: String,
     val key: String,
     val title: String,
-    val commitment: VexFeatureWalkCommitment =
-        VexFeatureWalkCommitment.REQUIRED,
     val hold: VexFeatureWalkHold? = null,
 ) {
     init {
@@ -96,14 +95,20 @@ data class VexFeatureWalkCase(
         ) {
             "feature-walk checkpoint keys must be unique inside case: $ref"
         }
+        require(
+            commitment != VexFeatureWalkCommitment.FUTURE ||
+                checkpoints.none { checkpoint ->
+                    checkpoint.hold != null
+                },
+        ) {
+            "future Feature-Walk Case cannot carry current checkpoint holds: $ref"
+        }
     }
 
     val requiredHolds: List<VexFeatureWalkCheckpoint>
         get() =
             checkpoints.filter { checkpoint ->
-                checkpoint.commitment ==
-                    VexFeatureWalkCommitment.REQUIRED &&
-                    checkpoint.hold != null
+                checkpoint.hold != null
             }
 
     /**

@@ -40,6 +40,7 @@ Case
 
 Checkpoint
     one observable boundary that must be true for the Case
+    inherits whether the Case is current or future
 
 Journey
     executable Android human walk for one currently unheld required Case
@@ -97,9 +98,10 @@ FeatureWalks.vexMaps.destinationNavigation.destinationShell
 
 Authored truth:
 
-- feature-owned Walk/Case/Checkpoint names and commitments;
+- feature-owned Walk/Case/Checkpoint names;
+- Case commitment: `REQUIRED` or `FUTURE`;
 - stable refs;
-- exact holds and release predicates.
+- Checkpoint holds and exact release predicates for current required Cases.
 
 Derived truth:
 
@@ -222,6 +224,10 @@ preserving Journey as the execution owner.
 
 A held Case must not form a placeholder Journey merely to make the catalog look complete. The hold is
 the useful result.
+
+`FUTURE` belongs to the Case, not to individual Checkpoints. Checkpoints inherit that future state;
+a future Case cannot carry a current hold. When a future path becomes current, currentize the Case to
+`REQUIRED`, then use Checkpoint holds only for boundaries that are genuinely blocked.
 
 ## Focused proof relationship
 
