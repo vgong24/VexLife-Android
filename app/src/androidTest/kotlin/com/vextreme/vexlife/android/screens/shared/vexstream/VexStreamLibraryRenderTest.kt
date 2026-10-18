@@ -60,7 +60,7 @@ class VexStreamLibraryRenderTest {
             .assertIsDisplayed()
         compose
             .onNodeWithContentDescription(
-                "Remove Download",
+                "Remove download",
             )
             .assertIsDisplayed()
         compose
