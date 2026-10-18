@@ -62,6 +62,9 @@ internal class VexCrossPlatformEvidence(
     private val storage =
         PlatformTestStorageRegistry.getInstance()
 
+    private var lastCheckpointRef: String? =
+        null
+
     val enabled: Boolean
         get() =
             arguments
@@ -253,6 +256,27 @@ internal class VexCrossPlatformEvidence(
         )
 
         return evidence
+    }
+
+    fun failure(
+        failure: Throwable,
+    ) {
+        checkpoint(
+            phaseRef = "android.failure",
+            status = "FAIL",
+            details =
+                mapOf(
+                    "lastCheckpointRef" to
+                        lastCheckpointRef,
+                    "type" to
+                        failure
+                            .javaClass
+                            .name,
+                    "message" to
+                        failure
+                            .message,
+                ),
+        )
     }
 
     fun waitForHostMarker(
