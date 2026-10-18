@@ -8,12 +8,12 @@ import org.junit.Test
 
 class InMemoryVexMapsRepositoryTest {
     @Test
-    fun locationAndStyleRemainIndependentDurableQuestions() = runTest {
+    fun locationAndAppearanceRemainIndependentDurableQuestions() = runTest {
         val repository =
             InMemoryVexMapsRepository()
 
-        repository.saveOnlineStyle(
-            "liberty",
+        repository.saveAppearancePreference(
+            VexMapsAppearancePreference.LIGHT,
         )
         repository.saveLastLocation(
             VexMapsStoredLocation(
@@ -31,8 +31,8 @@ class InMemoryVexMapsRepositoryTest {
             repository.load()
 
         assertEquals(
-            "liberty",
-            state.onlineStyleRef,
+            VexMapsAppearancePreference.LIGHT,
+            state.appearancePreference,
         )
         val storedLocation =
             requireNotNull(
@@ -58,7 +58,7 @@ class InMemoryVexMapsRepositoryTest {
     }
 
     @Test
-    fun emptyRepositoryDoesNotInventLocationOrStyle() = runTest {
+    fun emptyRepositoryDefaultsToAutomaticAppearanceWithoutInventingLocation() = runTest {
         val state =
             InMemoryVexMapsRepository()
                 .load()
@@ -66,8 +66,9 @@ class InMemoryVexMapsRepositoryTest {
         assertNull(
             state.lastLocation,
         )
-        assertNull(
-            state.onlineStyleRef,
+        assertEquals(
+            VexMapsAppearancePreference.AUTOMATIC,
+            state.appearancePreference,
         )
     }
 }

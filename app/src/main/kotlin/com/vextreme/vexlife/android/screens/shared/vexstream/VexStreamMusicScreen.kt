@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
@@ -32,6 +33,8 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
+import com.vextreme.vexlife.android.ui.VexLifeRelays
+import com.vextreme.vexlife.android.vexstream.offline.rememberVexStreamOfflineCopyConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -71,6 +74,22 @@ object VexStreamMusicScreen : AppScreenBlueprint(
 
     val SearchSheet = modalBottomSheetRef(
         id = "body.library.search-sheet",
+    )
+
+    val SearchContent = columnRef(
+        "body.library.search-sheet.content",
+    )
+
+    val SearchPrompt = textRef(
+        id = "body.library.search-sheet.content.prompt",
+        textRes = R.string.vexstream_music_search,
+        role = TextRole.Supporting,
+    )
+
+    val SearchNoResults = textRef(
+        id = "body.library.search-sheet.content.no-results",
+        textRes = R.string.vexstream_music_no_search_results,
+        role = TextRole.Supporting,
     )
 
     val ConnectionMenuSheet = modalBottomSheetRef(
@@ -460,8 +479,12 @@ object VexStreamMusicScreen : AppScreenBlueprint(
             }
 
             modalBottomSheet(SearchSheet) {
-                textField(SearchQuery)
-                button(CloseSearch)
+                column(SearchContent) {
+                    textField(SearchQuery)
+                    text(SearchPrompt)
+                    text(SearchNoResults)
+                    button(CloseSearch)
+                }
             }
 
             modalBottomSheet(ConnectionMenuSheet) {
@@ -497,11 +520,35 @@ object VexStreamMusicScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
+        relays: VexLifeRelays,
+        sessionScope: CoroutineScope,
         darkTheme: Boolean,
     ) {
         VexStreamMusicScreenContent(
             runtime = runtime,
             repository = repositories.vexStream,
+            offlineCopyScope = sessionScope,
+        )
+    }
+
+    /**
+     * Preserves the existing narrow Screen-render contract for direct tooling/test callers.
+     *
+     * Production enters through the session-aware overload above. A caller that intentionally uses
+     * this narrower contract owns only a composition lifetime, so its Offline Copy execution follows
+     * that supplied tooling/composition scope rather than pretending to be a VexLife session.
+     */
+    @Composable
+    internal override fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        darkTheme: Boolean,
+    ) {
+        VexStreamMusicScreenContent(
+            runtime = runtime,
+            repository = repositories.vexStream,
+            offlineCopyScope =
+                rememberCoroutineScope(),
         )
     }
 }
@@ -557,10 +604,18 @@ internal fun vexStreamActionRegistrations(
 fun VexStreamMusicScreenContent(
     runtime: VexRuntime,
     repository: VexStreamMusicRepository,
+    offlineCopyScope: CoroutineScope,
 ) {
+    val offlineCopyConnection =
+        rememberVexStreamOfflineCopyConnection(
+            repository = repository,
+            scope = offlineCopyScope,
+        )
+
     VexStreamLibrarySurface(
         runtime = runtime,
         repository = repository,
+        offlineCopyConnection = offlineCopyConnection,
     )
 }
 
@@ -576,19 +631,23 @@ private fun VexStreamMusicScreenPreview() {
                 .copy(
                     vexStream =
                         InMemoryVexStreamMusicRepository(
-                            initialState = previewState(),
+                            initialState = vexStreamPreviewState(),
                         ),
                 )
         },
     ) { context ->
+        val previewOfflineCopyScope =
+            rememberCoroutineScope()
+
         VexStreamMusicScreenContent(
             runtime = context.runtime,
             repository = context.repositories.vexStream,
+            offlineCopyScope = previewOfflineCopyScope,
         )
     }
 }
 
-private fun previewState(): VexStreamMusicState {
+internal fun vexStreamPreviewState(): VexStreamMusicState {
     val streamed =
         VexStreamTrack(
             trackRef = VexStreamTrackRef("preview.streamed"),

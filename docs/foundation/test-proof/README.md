@@ -1,6 +1,22 @@
-# Test / Proof Architecture
+# Test / Proof Foundation
 
 [VXG RealForever]
+
+This directory is the single documentation doorway for the Test / Proof Foundation.
+
+~~~text
+test-proof/
+├── README.md
+│   current proof architecture
+├── INCIDENTS.md
+│   incident grammar / recurrence law / index
+└── incidents/
+    └── TF-INCIDENT-*.md
+        one independently evolving incident history
+~~~
+
+The repository-wide atlas is `../INDEX.md`. Do not add another Test Proof peer document directly
+under `docs/foundation/` when the meaning belongs inside this package.
 
 ## The question
 
@@ -167,6 +183,28 @@ pixel-diff authority.
 Its stable scenario/configuration/evidence identity is a candidate for promotion only when a second
 real visual-evidence consumer needs the same meaning.
 
+## Flakiness is evidence, not something a retry erases
+
+An intermittent proof failure remains part of repository knowledge even when the exact candidate
+passes on retry.
+
+Record recurring/intermittent proof incidents in
+[INCIDENTS.md](INCIDENTS.md).
+
+The distinction is:
+
+~~~text
+retry PASS
+    clears "this exact candidate is currently proven broken"
+
+retry PASS
+    does NOT clear "this proof foundation has exhibited an intermittent failure"
+~~~
+
+An incident stays visible until evidence establishes a root cause and disposition. This protects
+future features from assuming a foundation symptom is newly introduced merely because the previous
+occurrence was months earlier.
+
 ### Native / lived proof
 
 Use instrumentation/device/provider execution where the claim is inherently native:
@@ -199,6 +237,8 @@ tasks later; CI YAML must not become a second definition.
 
 Runs:
 - `:app:verifySourceAlignment`;
+- `:architecture:behavior:test`;
+- `:architecture:execution:test`;
 - `:architecture:elements:test`;
 - `:architecture:logging:test`;
 - `:architecture:relay:test`;
@@ -216,11 +256,23 @@ Connected Journey/device proof remains separate because it owns a different exec
 ./gradlew vexVerifyDevice
 ~~~
 
-That task delegates to `:app:connectedDebugAndroidTest`. Android Studio is not required: Android
-Gradle Plugin discovers the connected emulator/physical device and drives the instrumentation/adb
-path. ADB remains useful for device discovery, install/launch, Logcat and native/device diagnostics,
-but ScreenCrawler screenshot retrieval stays on AndroidX PlatformTestStorage rather than raw
-filesystem pulls.
+That task depends only on `:app:connectedDebugAndroidTest`. The connected task itself
+`finalizedBy(verifyVexDeviceResults)`, so result inspection is scheduled through Gradle's
+failure-safe finalizer relationship rather than as an ordinary aggregate dependency.
+
+That distinction matters: ordinary tasks that depend on a failed task are skipped, while a finalizer
+still runs after the finalized task fails. The inspector therefore forms
+`build/vex/test-foundation/device-result-summary.txt`, reports exact failing test class/name/message
+when JUnit XML exists, and still fails closed when a successful Android task produced zero tests.
+
+A retry PASS does **not** erase an earlier intermittent failure. Durable recurrence history lives in
+[INCIDENTS.md](INCIDENTS.md); use it to distinguish a first occurrence from a
+known unresolved/intermittent proof symptom.
+
+Android Studio is not required: Android Gradle Plugin discovers the connected emulator/physical
+device and drives the instrumentation/adb path. ADB remains useful for device discovery,
+install/launch, Logcat and native/device diagnostics, but ScreenCrawler screenshot retrieval stays
+on AndroidX PlatformTestStorage rather than raw filesystem pulls.
 
 ScreenCrawler remains opt-in; see `SCREEN-CRAWLER-EVIDENCE.md`.
 
@@ -285,6 +337,8 @@ build/vex/test-foundation/VexLife-Test-Foundation-Proof.zip
 with whatever evidence the run produced:
 - aggregate Kover reports;
 - app + architecture JVM test result XML;
+- connected Android JUnit XML + HTML report when formed;
+- `device-result-summary.txt` with exact failing testcase identity when available;
 - Journey coverage diagnostics;
 - screenshot validation report;
 - generated screenshot reference candidates;
@@ -307,9 +361,17 @@ Whole-system proof composes those same owners.
 
 ## Coverage direction
 
-The first source candidate uses Kover 0.9.8 because it understands Kotlin Android build variants,
-supports multi-module report merging, emits HTML plus JaCoCo-compatible XML, and remains explicitly
-JVM/local-test coverage. Android on-device instrumentation coverage is a separate proof surface.
+Kover 0.9.8 remains the repository coverage producer because it understands Kotlin Android variants,
+merges modules, and emits both human HTML and JaCoCo-compatible XML. Android on-device
+instrumentation coverage remains a separate proof surface.
+
+Current aggregate coverage includes:
+- `:app`;
+- `:architecture:behavior`;
+- `:architecture:elements`;
+- `:architecture:execution`;
+- `:architecture:logging`;
+- `:architecture:relay`.
 
 The repository-level entry point is:
 
@@ -317,11 +379,90 @@ The repository-level entry point is:
 ./gradlew vexCoverage
 ~~~
 
-It produces aggregate Kover HTML/XML reports from the app plus architecture modules and runs the JVM
-tests required to form them.
+Alongside Kover HTML/XML, every run produces one replaceable latest-state projection:
 
-This is intentionally **report-only**. No global percentage gate is admitted until the report teaches
-us which coverage omissions are useful signals rather than incentives to test trivial code.
+~~~text
+build/vex/test-foundation/coverage-status.md
+build/vex/test-foundation/coverage-summary.json
+~~~
+
+The human surface intentionally stays tiny:
+
+~~~text
+🟢 >= 90% line coverage
+🟡 <  90% line coverage
+~~~
+
+**90% is an awareness target, not a correctness/build gate.** Yellow means “look here,” not
+“tests failed.” Branch coverage is reported beside lines but does not currently own the color.
+
+The generated block also includes up to ten under-90% classes ranked by **missed executable lines**.
+That keeps the PR focused on the largest exposure rather than letting tiny 0% helpers dominate
+attention. Full Kover HTML/XML remains the detailed source.
+
+Coverage may also surface **architecture debt context** from an owning source file marker:
+
+~~~text
+// VEX-COVERAGE-DEBT: LIVE_REFACTOR_DEBT | <why this live source is intentionally being reshaped>
+~~~
+
+That marker is explanatory metadata, not a coverage waiver.
+
+~~~text
+LIVE_REFACTOR_DEBT
+  production still reaches the code
+  -> keep it inside the active coverage denominator
+  -> show the debt state/note beside its exposure
+
+DEPRECATED_REPLACED
+  only after accepted replacement means production no longer reaches the old code
+  -> a future exclusion policy may be admitted when a real case earns it
+  -> never silently disappear the debt/excluded code
+~~~
+
+No deprecated-code exclusion is implemented merely because the state name exists. A concrete
+replacement must first establish that the old source is no longer production-owned.
+
+### Autonomous PR projection after VexRelay
+
+GitHub Actions is not required to publish the coverage state.
+
+When `vexCoverage` is one proof command inside an exact-head VexRelay source-owner proof, its
+`VEX-COVERAGE-STATUS` block is already retained in that RUN operation receipt. After F09
+independently consumes a PASS canonical RETURN:
+
+~~~text
+require return candidate head == current PR head
+require exactly one bounded VEX-COVERAGE-STATUS block in the coverage proof receipt
+
+then:
+  adapter.direct-provider
+  -> append marked coverage block when absent
+  -> otherwise replace only the prior marked block
+  -> no new routine PR comment
+  -> continue F13 Assurance
+~~~
+
+If the head moved, the block is missing/ambiguous, or provider capability is unavailable, no
+coverage state is published. That holds only the projection effect; it does not relabel a valid Kover
+run as failed.
+
+This is intentionally a **repository-specific continuation using the current generic Relay contract**.
+VexRelay itself does not gain a coverage-specific schema or provider mutation inside the host proof.
+
+For PR cleanliness, update the generated coverage block in the PR body in place. Do not append one
+coverage comment per commit/run. Detailed reports remain in the proof bundle.
+
+### Proving the proof framework
+
+Architecture implementation belongs in aggregate code coverage because it is executable production
+foundation that features rely on.
+
+Gradle/test orchestration itself is different: folding build-script lines into the app percentage
+would make the number easier to game without proving the framework. Instead,
+`vexCoverageSummaryContract` behaviorally proves the coverage parser and the 90% GREEN/YELLOW
+boundary, while `vexVerifyJvm` continues to prove architecture-module contracts. The proof bundle
+also retains architecture execution test results alongside the other architecture modules.
 
 Coverage should help answer:
 

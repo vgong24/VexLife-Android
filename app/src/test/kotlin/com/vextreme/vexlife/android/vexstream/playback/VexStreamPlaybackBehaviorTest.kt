@@ -96,7 +96,7 @@ class VexStreamPlaybackBehaviorTest {
                 state,
             )[
                 VexStreamPlaybackControl.PlayPause
-            ].available,
+            ].isAvailable,
         )
     }
 
@@ -151,7 +151,7 @@ class VexStreamPlaybackBehaviorTest {
                 blocked,
             )[
                 VexStreamPlaybackControl.PlayPause
-            ].available,
+            ].isAvailable,
         )
     }
 
@@ -173,7 +173,7 @@ class VexStreamPlaybackBehaviorTest {
         assertFalse(
             projection[
                 VexStreamPlaybackControl.PlayPause
-            ].available,
+            ].isAvailable,
         )
 
         assertTrue(

@@ -1,11 +1,36 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
 import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
 class VexJourneyCoverageTest {
+    @Test
+    fun dynamicActionTemplateStillCountsTowardStaticSemanticCoverage() {
+        val recorder =
+            VexJourneyCoverageRecorder()
+
+        recorder.start(
+            HomeScreen,
+        )
+        recorder.tapDynamic(
+            dynamicElement(
+                elementId =
+                    "element.vexstream-music.dynamic.play.example",
+                actionTemplate =
+                    VexStreamMusicScreen.PlayTrack,
+            ),
+        )
+
+        assertTrue(
+            VexStreamMusicScreen.PlayTrack.elementId in
+                recorder.snapshot().actionElementIds,
+        )
+    }
+
     @Test
     fun reportSemanticCoverageDebtWithoutBlockingOrdinaryDevelopment() {
         val duplicateShardIds = VexJourneyCatalog.shards

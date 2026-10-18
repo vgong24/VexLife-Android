@@ -29,17 +29,26 @@ EFFECT
     runtime transformation that should be attempted
 ~~~
 
-Causal reading:
+Core equations:
 
 ~~~text
-observed State
--> Control resolves Act
--> Act selects Effect
--> Effect is admitted for dispatch
--> immediate admitted State
--> provider observation
--> next truthful State
+Control + CURRENT State
+-> Act
+
+CURRENT State + Act
+-> Effect + admitted State
+
+CURRENT State + Controls
+-> Projection
+
+Projection
+-> optional feature DisplayState
+-> UI treatment
 ~~~
+
+Behavior is the semantic rulebook for lawful relationships among State / Control / Act / Effect.
+A concrete Connection is the reality boundary that observes provider truth, realizes Effects, and
+reconciles the resulting State.
 
 > Act asks. Effect attempts the travel. State tells us what reality answered. Control decides which
 > Act one affordance represents from current truth.
@@ -61,6 +70,12 @@ observed State
    serialization.
 10. **Convergence stays above complete local truths.** Do not cross-multiply independent domains
     into one State family.
+11. **Control meaning is semantic-first.** Prefer `Available(Act)` / `Unavailable`; Boolean
+    availability is derived convenience.
+12. **Every relationship terminates explicitly.** Every `on(...)` must end in `.stay()` or
+    `.admit<State>()`.
+13. **DisplayState is a deterministic view classification, not another truth owner.** Use it only
+    when views would otherwise repeat conditional treatment of an already-derived Projection.
 
 ## Durable package pattern
 
@@ -83,21 +98,62 @@ When one family gets large, **split by independent behavioral question, not by l
 
 See the meta-blueprint for the full split law and VexStream Playback mapping.
 
-## Prime implementation
+## Prime implementations
 
-Current production-shaped example:
+Current production-shaped examples:
 
 ~~~text
 app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/
+app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/queue/
 ~~~
 
-Search the code symbol:
+Search the code symbols:
 
 ~~~text
 VexStreamPlaybackDocs
+VexStreamQueueDocs
 ~~~
 
-from there.
+Playback answers Play/Pause. Queue independently answers Previous/Next/Shuffle/Clear. Their
+separation is semantic: nearby media-player controls do not become one Behavior family merely
+because the UI displays them together.
+
+Queue Shuffle demonstrates that a one-shot action should not acquire fake persistent UI state merely
+because the rendering API supports a selected treatment. Queue Clear demonstrates the truth law:
+requesting a provider mutation can legitimately `.stay()` in the current State kind until provider
+observation earns a different truth.
+
+## Experience membrane
+
+When Compose repeatedly needs the same Behavior plumbing, the feature may expose one local
+`<Name>Experience` boundary:
+
+~~~text
+<Name>Experience
+    displayState
+    activate(Control)
+~~~
+
+The Experience observes the internal Port/Projection and supplies the final DisplayState. It does
+not own semantic truth.
+
+VexStream Playback is the first example:
+
+~~~text
+VexStreamPlaybackExperience
+    -> VexStreamPlaybackDisplayState
+    -> activate(VexStreamPlaybackControl)
+~~~
+
+Mini Player and Context Dock no longer assemble Playback Connection + Projection + DisplayState
+themselves.
+
+Queue is the second focused membrane. It exposes its Behavior Projection directly because no extra
+view classification is currently earned; Mini Player and Context Dock still consume one
+`VexStreamQueueExperience` rather than reinterpreting Media3 predicates independently.
+
+A generic `VexExperience` abstraction remains held until a second real feature proves the same
+surface across features, not merely two VexStream families.
 
 ## Deliberately held
 

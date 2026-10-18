@@ -21,6 +21,10 @@ The front door should stay small. Architecture belongs with its owning building 
 
 ## Common contribution routes
 
+- **New product feature or major feature evolution:** start with `docs/features/README.md`.
+  Describe the human situation/current truth/missing question before new taxonomy, check established
+  development vocabulary before minting Vex-specific nouns, and keep one durable feature home current.
+  Existing features are worked examples, not mandatory source skeletons.
 A contributor should not need to learn testing-framework internals before changing product code.
 
 - **New Screen or interaction:** start with the owning `*Screen.kt`, then follow
@@ -40,6 +44,41 @@ A contributor should not need to learn testing-framework internals before changi
 The journey coverage report names registered production semantics that no journey currently covers,
 including the owning Screen where known. Use that as a discovery aid rather than maintaining a
 second checklist of every feature path.
+
+
+## PR current-state cleanliness
+
+For developmental PRs, keep one compact **current-state projection** in the PR body and update it in
+place when head/proof state materially changes. Routine commits and proof attempts do not each need a
+new conversation comment.
+
+Use comments only when a material failure, protected decision, or causal evidence would be lost by
+showing latest state alone. Machine/detail evidence belongs in the owning report/proof bundle.
+
+Coverage runs generate one replaceable PR-body block at:
+
+`build/vex/test-foundation/coverage-status.md`
+
+When an exact-head VexRelay proof runs `vexCoverage`, successful F09 canonical RETURN consumption
+must treat that generated block as a bounded provider projection:
+
+~~~text
+PASS canonical RETURN
++ exact candidate head still equals PR head
++ exactly one VEX-COVERAGE-STATUS marker block in the coverage proof receipt
+  -> use the current direct-provider effect route
+  -> append the block when absent, otherwise replace only the existing marked block
+  -> continue to Assurance
+
+head mismatch / ambiguous or absent block / provider capability unavailable
+  -> do not invent or publish coverage
+  -> preserve the proof result and hold only the projection effect
+~~~
+
+The host proof itself never edits GitHub. VexRelay carries the evidence; the provider continuation
+projects it after F09. No GitHub Actions runner is required.
+
+Update that block in place; do not append one coverage comment per run.
 
 ## Repository boundary
 

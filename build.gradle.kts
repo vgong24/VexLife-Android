@@ -11,6 +11,7 @@ dependencies {
     kover(project(":app"))
     kover(project(":architecture:behavior"))
     kover(project(":architecture:elements"))
+    kover(project(":architecture:execution"))
     kover(project(":architecture:logging"))
     kover(project(":architecture:relay"))
 }

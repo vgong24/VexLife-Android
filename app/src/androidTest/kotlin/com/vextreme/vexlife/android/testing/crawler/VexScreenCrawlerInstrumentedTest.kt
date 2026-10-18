@@ -1,6 +1,6 @@
 package com.vextreme.vexlife.android.testing.crawler
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import android.util.Log
 import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
@@ -294,7 +294,10 @@ class VexScreenCrawlerInstrumentedTest(
             val className =
                 VexScreenCrawlerInstrumentedTest::class.java.name
             val packageName =
-                VexScreenCrawlerInstrumentedTest::class.java.packageName
+                className.substringBeforeLast(
+                    delimiter = ".",
+                    missingDelimiterValue = "",
+                )
 
             val classFilter = arguments
                 .getString("class")

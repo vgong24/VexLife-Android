@@ -11,6 +11,23 @@
 This map records the shape currently earned by VexMaps. It is a feature map, not a requirement that
 every Android feature create the same classes.
 
+It is also **not a product-completion claim**.
+
+~~~text
+ownership topology current
+!=
+ordinary Maps human journey complete
+~~~
+
+For current VexMaps capability truth and the active [VexMaps Complete] experiential trajectory, start
+at:
+
+~~~text
+app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/maps/README.md
+app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/maps/design/README.md
+VexMapsDocs
+~~~
+
 ## Current topology
 
 ~~~text
@@ -39,6 +56,24 @@ VexMapsMapSurface
         |
         +--> VexDeviceLocationSource / offline/search/routing stores
         |      Android/provider observations and effects
+        |
+        +--> VexMapsDestinationSearchSession
+        |      visible "Where to?" request/result currentness
+        |             |
+        |             +--> VexMapsAndroidGeocoderPlaceSearchSource
+        |                    best-effort Android system place/address observation
+        |
+        +--> VexMapsDistributionSession
+        |      lived Distribution / Delivery Route relationship + currentness
+        |             |
+        |             +--> Distribution Mode + Delivery Route Behavior families
+        |             |      independently complete local semantic owners
+        |             |
+        |             +--> Mode <-> Delivery Route + Delivery Route <-> Navigation Relays
+        |             |      higher-order relationship owners
+        |             |
+        |             +--> VexMapsDistributionExecution
+        |                    coroutine custody only
         |
         +--> planner / navigation overlay / Context Dock
                presentation projections
@@ -91,12 +126,16 @@ route truth + route-relative location fix
 Style convergence is smaller but still relational:
 
 ~~~text
-human selection
+human appearance/style intent
 + apply request
 + MapLibre loaded/failure observation
   -> VexMapsStyleConvergenceRelay
   -> style application status
 ~~~
+
+The VMC-01 appearance slice presents ordinary map appearance as a compact Automatic / Light / Dark
+map control. OpenFreeMap Dark/Liberty remain provider realizations below the human-facing preference
+and no longer occupy ordinary Context Dock pages.
 
 The reusable lesson is not "everything should use Relay."
 
@@ -155,7 +194,16 @@ VexMapsNavigationOverlay.kt
   -> prepared/active navigation presentation
 
 VexMapsPlanningState.kt
-  -> planner/search/request state
+  -> current planning/import presentation state + bounded request-gate primitive
+
+VexMapsPlaceSearchSession.kt
+  -> local place-search pack/attempt/result currentness
+
+VexMapsDestinationSearchSession.kt
+  -> ordinary submitted destination-search attempt/result currentness
+
+VexMapsAndroidGeocoderPlaceSearchSource.kt
+  -> best-effort Android system place/address provider boundary
 
 VexMapsLocation.kt
   -> location readiness/presentation
@@ -191,6 +239,104 @@ No age/accuracy cutoff is invented in this pass. Those facts remain attached to 
 future product decision can define when historical context is too stale or imprecise to restore. A
 full durable viewport (zoom/bearing/tilt) would require a separate persistence/migration decision and
 is not smuggled into the existing location columns.
+
+
+## VexMaps Distribution and Delivery Route
+
+Feature home:
+
+`app/src/main/kotlin/com/vextreme/vexlife/android/screens/shared/maps/distribution/README.md`
+
+VexMaps Distribution adds a second scale beneath the broader Maps Screen without transferring
+Navigation ownership:
+
+~~~text
+Distribution Mode
+    is Maps operating in the Distribution context?
+
+durable Distribution Draft
+    which delivery stops did the human enter, in what input order, with what return policy?
+
+Preparation snapshot
+    which exact Draft revision + origin + travel mode + routing region is being prepared?
+
+Plan
+    what route order is recommended for that exact snapshot?
+
+Delivery Route
+    what is truthfully happening while those deliveries are carried out?
+
+Navigation
+    what exact journey/route is the Navigation owner realizing?
+~~~
+
+The important separation is:
+
+~~~text
+DISTRIBUTION_MODE != DELIVERY_ROUTE
+DRAFT != PLAN
+PLAN != DELIVERY_ROUTE_STATE
+DELIVERY_ROUTE_STATE != NAVIGATION_STATE
+~~~
+
+The process-lifetime `VexMapsDistributionSession` owns the active relationship/currentness among
+those owners. `VexMapsDistributionExecution` owns coroutine custody only.
+
+Relationship owners remain explicit:
+
+~~~text
+VexMapsDistributionModeDeliveryRouteConvergenceRelay
+    Distribution Mode + Delivery Route -> coherence / bounded Mode Control request
+
+VexMapsDeliveryRouteNavigationConvergenceRelay
+    Delivery Route + Navigation + expected leg/attempt facts
+    -> exact relationship / bounded request
+~~~
+
+Naming history and the cold-reader exercise that produced the current `Delivery Route` vocabulary
+are preserved under the searchable tag `[Name Ontology]` in the feature-local design record.
+
+## Accepted Distribution composition checkpoint
+
+PR #86 has now crossed its full source lifecycle and is accepted on current `main`:
+
+~~~text
+PR = #86
+merge = 28c80a8b2c89e0225427086685b6ceea8870e10c
+tree = 179a34d2b43c670ec99b65b0d0dbf00acb5e648e
+
+Fresh Independent Assurance = CLEAR_ON_EXACT_HEAD
+currentized vexVerifyLocal = PASS
+currentized physical-device preflight = PASS
+currentized vexVerifyDevice = PASS
+post-merge exact-tree verification = PASS
+~~~
+
+That checkpoint is important beyond the Distribution feature itself. It is the first substantial
+product composition on `main` where these accepted roles coexist without being collapsed:
+
+~~~text
+Behavior
+    local semantic question
+
+Compound Relay / convergence
+    relationship among independently-owned truths
+
+Session
+    lived relationship/currentness/failure/retry owner
+
+VexExecution
+    asynchronous execution custody
+
+Projection / Compose
+    presentation of already-resolved meaning
+~~~
+
+This is evidence for the repository feature-authoring grammar, not a requirement that every feature
+create all five roles.
+
+The full lived Delivery Route human walk remains a separate explicit proof debt. Connected Android
+aggregate proof does not silently become end-to-end lived acceptance.
 
 ## Still intentionally unresolved
 

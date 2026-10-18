@@ -24,9 +24,13 @@ object GalleryJourneys : VexJourneyShard {
         tap(GalleryScreen.SampleFab)
 
         tap(GalleryScreen.ShowDialogModalSample)
+        assertVisible(GalleryScreen.DialogModalTitle)
+        assertVisible(GalleryScreen.DialogModalBody)
         tap(GalleryScreen.CloseDialogModalSample)
 
         tap(GalleryScreen.ShowBottomSheetModalSample)
+        assertVisible(GalleryScreen.BottomSheetTitle)
+        assertVisible(GalleryScreen.BottomSheetBody)
         tap(GalleryScreen.CloseBottomSheetModalSample)
 
         tap(GalleryScreen.AppGraphTab)

@@ -14,20 +14,25 @@ internal fun VexStreamPlaybackProjection.present(
         this[control]
 
     val icon =
-        when (projected.act) {
-            VexStreamPlaybackAct.Play ->
-                ElementIcon.Play
+        projected.meaning.fold(
+            onAvailable = { act ->
+                when (act) {
+                    VexStreamPlaybackAct.Play ->
+                        ElementIcon.Play
 
-            VexStreamPlaybackAct.Pause ->
-                ElementIcon.Pause
-
-            null ->
+                    VexStreamPlaybackAct.Pause ->
+                        ElementIcon.Pause
+                }
+            },
+            onUnavailable = {
                 ElementIcon.PlayPause
-        }
+            },
+        )
 
     return VexStreamPlaybackControlPresentation(
         icon = icon,
-        enabled = projected.available,
+        enabled =
+            projected.isAvailable,
     )
 }
 

@@ -11,6 +11,22 @@ package com.vextreme.vexlife.android.vexstream.playback
  * This class is documentation/navigation only. It owns no playback state, provider, lifecycle, or
  * semantic behavior.
  *
+ * ## What should Compose depend on?
+ *
+ * Start at [VexStreamPlaybackExperience].
+ *
+ * [rememberVexStreamPlaybackExperience] is the UI-facing membrane:
+ *
+ * - [VexStreamPlaybackExperience.displayState] supplies the final view-facing output.
+ * - [VexStreamPlaybackExperience.activate] carries [VexStreamPlaybackControl] back into the
+ *   internal Port.
+ *
+ * Compose should not assemble Connection + VexPortFlow + Projection + DisplayState itself.
+ *
+ * The Experience internally observes [Media3VexStreamPlaybackConnection], derives
+ * [VexStreamPlaybackProjection], combines provider-derived [VexStreamPlaybackReadState], and
+ * classifies [VexStreamPlaybackDisplayState].
+ *
  * ## What can Playback truthfully be?
  *
  * Start at [VexStreamPlaybackState].
@@ -39,9 +55,13 @@ package com.vextreme.vexlife.android.vexstream.playback
  *
  * See [vexStreamPlaybackBehavior].
  *
- * Read it as:
+ * Read the full equations as:
  *
- * State + Act -> Effect -> admitted State kind.
+ * Control + CURRENT State -> Act
+ *
+ * CURRENT State + Act -> Effect + admitted State
+ *
+ * CURRENT State + Controls -> Projection
  *
  * ## Who talks to Media3?
  *
@@ -58,7 +78,20 @@ package com.vextreme.vexlife.android.vexstream.playback
  * See [VexStreamPlaybackConnectionViewModel].
  *
  * The ViewModel owns Android configuration lifetime only. MediaSession/Player remain playback truth
- * owners.
+ * owners. There is no generic Host abstraction to learn: this concrete Connection simply uses the
+ * rightful Android lifetime owner it needs.
+ *
+ * Previous / Next / Shuffle belong to the sibling Queue Behavior family.
+ *
+ * ## What about Seek?
+ *
+ * Seek carries a runtime position and therefore is not forced through the finite-Control Behavior
+ * vocabulary. [VexStreamPlaybackSeekRequest] carries the exact Media3 ID/index coordinate + target
+ * position, and [Media3VexStreamPlaybackSeekConnection] re-checks that coordinate plus Media3 seek
+ * capability when the request is dispatched. A stale scrub therefore cannot seek a different item
+ * or another queued occurrence of the same media ID.
+ *
+ * This is a playback-local payload boundary, not a generic PayloadPort abstraction.
  *
  * ## How is provider latency reconciled?
  *
@@ -67,12 +100,27 @@ package com.vextreme.vexlife.android.vexstream.playback
  * Local admitted intent may be published before Media3 acknowledgement without pretending provider
  * convergence already happened.
  *
+ * ## How does the view know how to treat the arrived Projection?
+ *
+ * See [VexStreamPlaybackDisplayState] and [toVexStreamPlaybackDisplayState].
+ *
+ * The classification is pure and deterministic:
+ *
+ * - no Projection -> Unknown
+ * - NoMedia -> Inactive(projection)
+ * - pending admitted intent -> Transitioning(projection)
+ * - otherwise -> Active(projection)
+ *
+ * This is not another state owner. It replaces repeated view-level if/null gates with one sealed
+ * interpretation of the Projection that already arrived.
+ *
  * ## How does semantic meaning become UI meaning?
  *
  * See [VexStreamPlaybackControlPresentation] and [present].
  *
- * Presentation maps projected semantic meaning into icon/enabled treatment. It is not another State
- * owner.
+ * Presentation maps projected semantic meaning into icon/enabled treatment. Projected Control
+ * meaning is explicit as Available(Act) / Unavailable; Boolean enabled state is derived convenience.
+ * Presentation is not another State owner.
  *
  * ## What types should normal callers use?
  *
@@ -81,14 +129,16 @@ package com.vextreme.vexlife.android.vexstream.playback
  * - [VexStreamPlaybackConnection]
  * - [VexStreamPlaybackConnectionFlow]
  * - [VexStreamPlaybackProjection]
+ * - [VexStreamPlaybackSeekRequest] / [VexStreamPlaybackSeekConnection]
  *
  * These preserve the full Family-bound generic contract underneath without making ordinary Compose
  * code read the complete generic equation.
  *
  * ## What is intentionally still outside this family?
  *
- * Queue, seek, shuffle, repeat, media loading/source selection, generic UIElement binding, and
- * higher convergence are not silently owned by Playback merely because they are nearby.
+ * Queue, repeat, media loading/source selection, generic UIElement binding, and higher convergence
+ * are not silently owned by Playback merely because they are nearby. Seek stays in the Playback
+ * neighborhood as a typed request boundary without becoming a finite Behavior Control.
  *
  * If one of those becomes an independently meaningful behavioral question, it may earn a sibling
  * package/family rather than making Playback grow forever.

@@ -30,6 +30,15 @@ class VexBehaviorBlueprintBuilder<
             >
         >()
 
+    private val pendingRelationships =
+        linkedMapOf<
+            Int,
+            String
+        >()
+
+    private var nextRelationshipId =
+        0
+
     inline fun <reified Current : State> state(
         block:
             VexBehaviorStateScope<
@@ -51,9 +60,78 @@ class VexBehaviorBlueprintBuilder<
             Current
         >(
             from = Current::class,
-            addRelationship =
-                authoredRelationships::add,
+            beginRelationship =
+                ::beginRelationship,
+            completeRelationship =
+                ::completeRelationship,
         ).apply(block)
+    }
+
+    @PublishedApi
+    internal fun beginRelationship(
+        from: KClass<out State>,
+        act: Act,
+        effect: Effect,
+        conditionName: String?,
+    ): Int {
+        val id =
+            nextRelationshipId++
+
+        pendingRelationships[id] =
+            buildString {
+                append(
+                    from.simpleName,
+                )
+                append(
+                    " + ",
+                )
+                append(
+                    act,
+                )
+                append(
+                    " / ",
+                )
+                append(
+                    effect,
+                )
+                if (
+                    conditionName !=
+                    null
+                ) {
+                    append(
+                        " when ",
+                    )
+                    append(
+                        conditionName,
+                    )
+                }
+            }
+
+        return id
+    }
+
+    @PublishedApi
+    internal fun completeRelationship(
+        id: Int,
+        relationship:
+            VexBehaviorRelationship<
+                Family,
+                State,
+                Act,
+                Effect
+            >,
+    ) {
+        require(
+            pendingRelationships.remove(
+                id,
+            ) != null,
+        ) {
+            "behavior relationship was already completed: " +
+                relationship
+        }
+
+        authoredRelationships +=
+            relationship
     }
 
     internal fun build():
@@ -62,13 +140,28 @@ class VexBehaviorBlueprintBuilder<
             State,
             Act,
             Effect
-        > =
-        VexBehaviorBlueprint(
-            behaviorRef = behaviorRef,
-            states = stateTypes.toSet(),
+        > {
+        require(
+            pendingRelationships
+                .isEmpty(),
+        ) {
+            "behavior " +
+                behaviorRef +
+                " has relationship(s) without a terminal .stay() or .admit<State>(): " +
+                pendingRelationships.values
+                    .joinToString()
+        }
+
+        return VexBehaviorBlueprint(
+            behaviorRef =
+                behaviorRef,
+            states =
+                stateTypes.toSet(),
             relationships =
-                authoredRelationships.toList(),
+                authoredRelationships
+                    .toList(),
         )
+    }
 }
 
 class VexBehaviorStateScope<
@@ -79,16 +172,26 @@ class VexBehaviorStateScope<
     Current : State,
 > @PublishedApi internal constructor(
     @PublishedApi
-    internal val from: KClass<Current>,
+    internal val from:
+        KClass<Current>,
     @PublishedApi
-    internal val addRelationship:
+    internal val beginRelationship:
         (
+            KClass<out State>,
+            Act,
+            Effect,
+            String?,
+        ) -> Int,
+    @PublishedApi
+    internal val completeRelationship:
+        (
+            Int,
             VexBehaviorRelationship<
                 Family,
                 State,
                 Act,
                 Effect
-            >
+            >,
         ) -> Unit,
 ) {
     fun on(
@@ -104,22 +207,36 @@ class VexBehaviorStateScope<
         Act,
         Effect,
         Current
-    > =
-        VexBehaviorDestination(
+    > {
+        val relationshipId =
+            beginRelationship(
+                from,
+                act,
+                effect,
+                conditionName,
+            )
+
+        return VexBehaviorDestination(
+            relationshipId =
+                relationshipId,
             from = from,
             act = act,
             effect = effect,
-            conditionName = conditionName,
-            whenCurrent = whenCurrent,
-            addRelationship = addRelationship,
+            conditionName =
+                conditionName,
+            whenCurrent =
+                whenCurrent,
+            completeRelationship =
+                completeRelationship,
         )
+    }
 }
 
 /**
  * Completes one authored relationship with its immediate admitted State KIND.
  *
- * The admitted kind is semantic topology after an Effect is accepted for dispatch. It is not a
- * promise about a provider's eventual observed outcome.
+ * Every [VexBehaviorStateScope.on] must terminate in exactly one [stay] or [admit]. Construction
+ * fails if a relationship is silently left unfinished.
  */
 class VexBehaviorDestination<
     Family : VexBehaviorFamily<Family>,
@@ -129,43 +246,49 @@ class VexBehaviorDestination<
     Current : State,
 > @PublishedApi internal constructor(
     @PublishedApi
-    internal val from: KClass<Current>,
+    internal val relationshipId:
+        Int,
+    @PublishedApi
+    internal val from:
+        KClass<Current>,
     @PublishedApi
     internal val act: Act,
     @PublishedApi
     internal val effect: Effect,
     @PublishedApi
-    internal val conditionName: String?,
+    internal val conditionName:
+        String?,
     @PublishedApi
     internal val whenCurrent:
         (Current) -> Boolean,
     @PublishedApi
-    internal val addRelationship:
+    internal val completeRelationship:
         (
+            Int,
             VexBehaviorRelationship<
                 Family,
                 State,
                 Act,
                 Effect
-            >
+            >,
         ) -> Unit,
 ) {
     /**
      * Admit another semantic State kind immediately after the Effect is accepted for dispatch.
-     *
-     * A concrete Connection remains responsible for constructing the admitted State VALUE when
-     * runtime data is needed. Later provider observations are free to produce other truthful State
-     * kinds.
      */
-    inline fun <reified Next : State> admit() {
-        addRelationship(
+    inline fun <
+        reified Next : State,
+    > admit() {
+        completeRelationship(
+            relationshipId,
             VexBehaviorRelationship(
                 from = from,
                 act = act,
                 effect = effect,
                 admittedStateKind =
                     Next::class,
-                conditionName = conditionName,
+                conditionName =
+                    conditionName,
                 whenCurrent = { current ->
                     @Suppress(
                         "UNCHECKED_CAST",
@@ -178,10 +301,6 @@ class VexBehaviorDestination<
         )
     }
 
-    /**
-     * Earlier experiment spelling. Prefer [admit] because "to" looked like a promised final provider
-     * outcome rather than immediate semantic admission.
-     */
     @Deprecated(
         message =
             "Use admit(); the relationship declares immediate semantic admission, not final provider outcome",
@@ -190,7 +309,9 @@ class VexBehaviorDestination<
                 "admit<Next>()",
             ),
     )
-    inline fun <reified Next : State> to() {
+    inline fun <
+        reified Next : State,
+    > to() {
         admit<Next>()
     }
 
@@ -198,14 +319,16 @@ class VexBehaviorDestination<
      * Admit the same State kind while its data/flavor may change.
      */
     fun stay() {
-        addRelationship(
+        completeRelationship(
+            relationshipId,
             VexBehaviorRelationship(
                 from = from,
                 act = act,
                 effect = effect,
                 admittedStateKind =
                     from,
-                conditionName = conditionName,
+                conditionName =
+                    conditionName,
                 whenCurrent = { current ->
                     @Suppress(
                         "UNCHECKED_CAST",

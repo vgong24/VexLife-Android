@@ -60,38 +60,50 @@ This is the semantic core.
 
 Do not add files merely to make the directory visually symmetrical.
 
-## Optional roles are earned
+## Runtime boundary first; supporting roles are earned
 
-A family may additionally need:
+The semantic core does not arrive with an optional-file bundle.
+
+The next question is simply:
 
 ~~~text
-<Name>Connection.kt
-<Name>ConnectionHost.kt
-<Name>Presentation.kt
-<Name>Pending.kt
-<Name>Types.kt
+Does this family cross a runtime/provider boundary?
 ~~~
 
-Only create them when the responsibility actually exists.
+If no, the family may remain only:
+
+~~~text
+Docs
+Family
+State
+Control
+Act
+Effect
+Behavior
+~~~
+
+If yes, earn one concrete Connection.
 
 ### Connection
 
-Use a concrete Connection when a provider/runtime boundary must:
+The Connection is the reality boundary between semantic language and provider/runtime language:
 
 ~~~text
-observe provider truth
--> form semantic State
-
-activate(Control)
--> re-resolve current Act
--> select Effect
--> realize Effect through provider/runtime
-
-later provider observation
--> admit/reject/update semantic State
+provider/runtime
+    ↕ observe / realize / reconcile
+Connection
+    ↕
+Behavior family / Projection
 ~~~
 
-A Connection may implement VexPort or VexPortFlow, but the concrete class keeps an ordinary role name:
+A concrete Connection must answer:
+
+1. What provider/runtime does it bridge?
+2. Who owns this Connection's lifetime?
+3. What currentness/revision gates must it preserve?
+4. What concurrency/serialization guarantees must it preserve?
+
+A Connection may implement `VexPort` or `VexPortFlow`, but keeps an ordinary concrete role name:
 
 ~~~text
 Media3VexStreamPlaybackConnection
@@ -100,51 +112,158 @@ VexMapsLocationConnection
 
 Do not rename every implementation to Port.
 
-### ConnectionHost
-
-Use a host only when platform lifetime needs a real owner.
-
-Examples:
+This corresponds naturally to Ports & Adapters / Hexagonal architecture:
 
 ~~~text
-Android ViewModel
-session
-service
-repository composition root
+VexPort
+    semantic port
+
+concrete Connection
+    adapter between semantic family and provider/runtime
 ~~~
 
-The host owns lifetime, not semantic truth.
+Use that established understanding before inventing another architectural noun.
 
-### Presentation
+### Lifetime ownership
 
-Use a feature-local Presentation mapping when several consumers need the same visual interpretation:
+Do not manufacture a generic Host abstraction or Host file by default.
+
+The rightful lifetime owner may already be:
 
 ~~~text
-BehaviorProjection
-    -> icon
-    -> enabled
-    -> selected
-    -> label
-    -> spinner/visual treatment
+ViewModel
+Session
+Service
+repository/composition owner
+another existing platform owner
 ~~~
 
-Presentation is not another behavior truth.
+The family should be able to answer **who owns the Connection's lifetime** without requiring a new architectural primitive.
 
-### Pending
+### Reconciliation data
 
-Use a feature-local pending/reconciliation seam only when local admission and delayed provider observation differ in time.
+`Pending` is not a peer architecture role and is never a fifth Behavior concept.
+
+It is ordinary Connection-owned data when admitted local intent and provider acknowledgement differ in time:
 
 ~~~text
 admitted local request
-!=
-provider acknowledgement so far
+!= provider acknowledgement so far
 ~~~
 
-Pending implementation must not become a generic substitute for provider truth.
+Extract a dedicated file/type only when the reconciliation logic is large enough to benefit from it.
 
-### Types
+### Display State
 
-Use feature-local type aliases when foundation generics are correct but too noisy for ordinary feature/Compose code.
+A feature may wrap an already-derived output in one sealed `DisplayState` when the UI currently
+repeats conditionals to decide how that output should be treated.
+
+This is a **deterministic read classification**, not another truth owner or state machine:
+
+~~~text
+arrived Projection
+-> classify current display condition
+-> DisplayState
+-> UI treatment
+~~~
+
+VexStream Playback is the first pressure example:
+
+~~~text
+no Projection
+-> Unknown
+
+Projection(State.NoMedia)
+-> Inactive(projection)
+
+Projection(pending admitted intent)
+-> Transitioning(projection)
+
+ordinary displayable Projection
+-> Active(projection)
+~~~
+
+The Projection remains the semantic output. DisplayState merely preserves the condition that would
+otherwise be expressed as scattered `if` / `null` / fallback checks in each view.
+
+A view may render two DisplayState cases identically today and differently later. That does not
+change the source truth.
+
+Do not add DisplayState when the UI has no meaningful conditional treatment to preserve, and do not
+promote a generic `VexDisplayState` until repeated real consumers earn the same algebra.
+
+### Presentation
+
+Presentation may still derive visual vocabulary such as icon, enabled treatment, labels, or styling
+from a Projection or DisplayState.
+
+Presentation does not own semantic truth and is not another `VexBehaviorFamily` member.
+
+### Experience membrane
+
+If Compose repeatedly assembles the same Behavior plumbing:
+
+~~~text
+Connection / VexPortFlow
+Projection observation
+DisplayState classification
+Control activation
+~~~
+
+earn one feature-local `<Name>Experience` membrane:
+
+~~~text
+<Name>Experience
+    displayState
+    activate(Control)
+~~~
+
+The Experience owns **composition of the read/write boundary**, not semantic truth.
+
+Internally:
+
+~~~text
+provider/runtime
+    ↓
+Connection / VexPortFlow
+    ↓
+Projection
+    + provider-derived read data when needed
+    ↓
+DisplayState
+    ↑
+Experience
+    ↓ activate(Control)
+VexPort
+~~~
+
+Compose should depend on the Experience instead of knowing how Connection, PortFlow, Projection and
+DisplayState are assembled.
+
+This keeps screens scalable when several independent experiences coexist:
+
+~~~kotlin
+val playback =
+    rememberVexStreamPlaybackExperience()
+
+// later, only when independently earned:
+val maps =
+    rememberVexMapsLocationExperience()
+
+val calls =
+    rememberVexCallsExperience()
+~~~
+
+Do not hide unrelated provider operations inside the Experience merely to make the membrane look
+perfect. If Previous / Next / Seek / Queue are still explicitly outside the admitted Behavior slice,
+their remaining provider path should stay visible until that semantic seam is earned.
+
+Do not mint a generic `VexExperience<T>` from one feature. Let a second real Experience prove the
+common type equation first.
+
+### Human-facing aliases
+
+Use feature-local aliases when foundation generics are correct but too noisy for ordinary feature/Compose code.
 
 Example:
 
@@ -214,37 +333,72 @@ coordinator
 convergence owner
 ~~~
 
-# The four-move semantic grammar
+# The semantic equations
 
-Every family answers the same four questions:
-
-~~~text
-STATE
-    what is actually true now?
-
-CONTROL
-    what stable affordance did the human interact with?
-
-ACT
-    what does that Control mean from current State?
-
-EFFECT
-    what runtime transformation should be attempted?
-~~~
-
-Causal reading:
+Always write the full dependency equations rather than shorthand that hides State:
 
 ~~~text
-observed State
--> Control resolves Act
--> Act selects Effect
--> Effect is admitted for dispatch
--> immediate admitted State
--> provider observation
--> next truthful State
+Control + CURRENT State
+-> Act
+
+CURRENT State + Act
+-> Effect + admitted State
+
+CURRENT State + Controls
+-> Projection
+
+Projection
+-> optional feature DisplayState
+-> UI treatment
 ~~~
 
-Act asks. Effect attempts the travel. State tells us what reality answered. Control decides which Act one affordance represents from current truth.
+State is current context feeding several decisions.
+
+It is **not** an object that must be mechanically piped through every layer and it is not a reason to build one giant `when(state)` switchboard.
+
+## Behavior is the semantic rulebook
+
+~~~text
+State / Control / Act / Effect
+    vocabulary
+
+Behavior
+    lawful relationships among that vocabulary
+~~~
+
+`VexBehaviorBlueprint` should remain independent of provider APIs, Android lifecycle, UI rendering, repositories, and concurrency mechanics.
+
+Behavior answers:
+
+~~~text
+Given CURRENT State and Act,
+what Effect is lawful
+and what State kind is immediately admitted?
+~~~
+
+Control projection separately answers:
+
+~~~text
+Given CURRENT State and this Control,
+what Act does this affordance mean now?
+~~~
+
+## Semantic-first Control meaning
+
+Do not make a Boolean the source of meaning when it immediately creates the question "why?".
+
+Prefer:
+
+~~~text
+Control meaning:
+    Available(Act.Play)
+    Available(Act.Pause)
+    Unavailable
+~~~
+
+with Boolean convenience such as `isAvailable` derived afterward.
+
+This preserves the semantic reason while still supporting ordinary UI conditions.
 
 # State kind versus State flavor
 
@@ -322,9 +476,63 @@ A concrete Connection may construct the admitted State value when runtime inform
 
 The value must agree with the graph's admitted State kind.
 
+# Connection is the reality boundary
+
+The Behavior family is the semantic rulebook; the concrete Connection bridges it to reality.
+
+~~~text
+provider/runtime
+    ↕ observe / realize / reconcile
+Connection
+    ↕
+State / Behavior / Projection
+~~~
+
+The Connection may naturally be the busiest concrete class because it speaks both languages.
+
+That is acceptable when the responsibilities remain visible:
+
+~~~text
+provider observation -> semantic State
+Control activation -> re-resolve current Act
+Act -> Behavior -> Effect
+Effect -> provider realization
+provider result -> reconcile/admit current State
+~~~
+
+Do not move provider, lifecycle, or concurrency mechanics into Behavior merely to make the Connection shorter.
+
+# Behavior DSL integrity
+
+The Behavior DSL itself is foundational language.
+
+Canonical relationship terminals are:
+
+~~~kotlin
+state<Current> {
+    on(Act, Effect)
+        .stay()
+
+    on(OtherAct, OtherEffect)
+        .admit<NextState>()
+}
+~~~
+
+Every authored `on(...)` must terminate in exactly one `.stay()` or `.admit<State>()`.
+
+An unfinished relationship is not ignored. Blueprint construction fails because every relationship
+must answer:
+
+> What State kind is admitted when this Effect is accepted for dispatch?
+
+`NextState` is constrained to the same Family's State vocabulary and the Blueprint verifies that
+the admitted State kind is registered.
+
+The old `.to<State>()` spelling remains only as a compatibility alias for `.admit<State>()`.
+
 # VexPort boundary
 
-The reusable two-way boundary is:
+The reusable two-way semantic port is:
 
 ~~~text
 VexPort<Family, State, Control, Act>
@@ -336,26 +544,24 @@ VexPortFlow<Family, State, Control, Act>
     + StateFlow<BehaviorProjection>
 ~~~
 
-The UI sends Control identity back.
-
-It does not execute the Act it rendered earlier.
+The UI sends Control identity back, not the Act rendered earlier.
 
 ~~~text
 render:
-    Control -> Act A
+    Control + State A -> Act A
 
 time passes
 State changes
 
 click:
     activate(Control)
-    -> re-resolve from CURRENT State
+    -> re-read CURRENT State B
     -> maybe Act B
 ~~~
 
 This protects stale render -> activation meaning.
 
-It does NOT replace async completion gates such as:
+It does **not** replace:
 
 ~~~text
 request generation
@@ -363,35 +569,101 @@ revision
 expected key
 latest-request gate
 Relay admission
+provider timeout/failure recovery
 ~~~
 
 Those remain concrete-owner responsibilities.
 
 VexPort also does not prescribe locking, dispatcher ownership, actor serialization, or provider threading.
 
-# Higher convergence stays above families
+# Cross-family behavior stays convergence-based
 
-Do not cross-multiply independent truths into one Behavior family.
+No family may realize another family's Effect directly.
 
-Avoid:
-
-~~~text
-PlayingAndIncomingCall
-LocationReadyAndNavigationModalOpen
-PausedAndProviderDisconnectedAndEventWaiting
-~~~
-
-Prefer:
+If Family A changes and Family B should respond:
 
 ~~~text
-Playback Projection -----\
-Location Projection ------+-> higher convergence / attention owner
-Events Projection --------/
+A completes its own loop
+-> new A truth
+-> AB convergence evaluates A + B
+-> bounded desired relationship/request toward B
+-> B receives its own Control through B's Port
+-> B re-resolves against CURRENT B State
+-> B Behavior selects B Effect
+-> B completes its own loop
+-> new B truth
+-> convergence evaluates again
 ~~~
 
-One Behavior family answers one local behavioral question.
+Rule:
 
-Convergence coordinates several already-complete truths.
+> **No cross-family Effect bypass.**
+
+A convergence node remains one-way/pure:
+
+~~~text
+dependency truths / projections
+-> convergence output / desired relationship
+~~~
+
+If that output requires another family to change, a separate activation/reconciliation boundary carries a **Control**, not that family's Effect.
+
+This gives the safe fractal form:
+
+~~~text
+A + B
+-> AB relational truth
+
+AB + C + D + E
+-> higher convergence
+~~~
+
+Higher convergence consumes coherent envelopes/projections without flattening independent families into a Cartesian mega-State.
+
+## Sequential semantics do not require sequential I/O
+
+Provider observation, fetch, cache, or preparation work may run concurrently:
+
+~~~text
+parallel provider preparation
+-> validated current truths
+-> small serialized semantic decisions
+~~~
+
+The causal safety preference is:
+
+~~~text
+complete local truth-changing loop
+-> publish current truth
+-> next dependent convergence decision
+~~~
+
+Optimize expensive I/O around that path rather than deleting the path and mutating downstream families directly.
+
+# Industry correspondence — reassurance, not renaming
+
+The current pattern has recognizable correspondence with established architecture ideas:
+
+~~~text
+DDD / bounded contexts
+    -> semantic Family and split boundaries
+
+Vertical Slice
+    -> keep one behavioral question cohesive locally
+
+Hexagonal / Ports & Adapters
+    -> VexPort + concrete Connection/provider boundary
+
+CQRS / read models
+    -> Projection as derived current read model
+
+statechart ideas
+    -> keep orthogonal truths independent instead of Cartesian mega-states
+~~~
+
+These correspondences are useful checks, not instructions to rename Vex concepts.
+
+Before inventing another reusable primitive, first ask whether established architecture vocabulary already describes the pressure.
 
 # The split law — when one package becomes two
 
@@ -509,27 +781,37 @@ Effect is not provider success.
 ## 6. Author Behavior neighborhoods
 
 ~~~text
-current State
-+ Act
--> Effect
--> admitted State kind
+CURRENT State + Act
+-> Effect + admitted State
 ~~~
+
+Every `on(...)` must terminate in exactly one:
+
+~~~text
+.stay()
+.admit<NextState>()
+~~~
+
+Do not leave a relationship terminal implicit.
 
 Keep current truth visible.
 
 ## 7. Add a Connection only if required
 
-If the family crosses into provider/runtime/lifecycle mechanics, add a concrete Connection.
+If the family crosses a provider/runtime boundary, add one concrete Connection.
 
-Preserve:
+That Connection must answer:
 
 ~~~text
-provider ownership
-async currentness gates
-concurrency/serialization guarantees
+what provider/runtime does it bridge?
+who already owns its lifetime?
+what async currentness gates must survive?
+what concurrency/serialization guarantees must survive?
 ~~~
 
-Do not move those into VexPort by assumption.
+Use the rightful existing lifetime owner when one already exists. Do not create a generic Host abstraction by default.
+
+Do not move provider/currentness/concurrency responsibilities into VexPort or Behavior merely to make the Connection smaller.
 
 ## 8. Add feature-local aliases when generics leak
 
@@ -561,8 +843,11 @@ app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/
 | Effect | [VexStreamPlaybackEffect](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackEffect.kt) |
 | Behavior | [vexStreamPlaybackBehavior()](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackBehavior.kt) |
 | Connection | [Media3VexStreamPlaybackConnection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/Media3VexStreamPlaybackConnection.kt) |
-| Lifetime host | [VexStreamPlaybackConnectionViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackConnectionHost.kt) |
+| Lifetime host | [VexStreamPlaybackConnectionViewModel](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackConnectionViewModel.kt) |
 | Pending reconciliation | [VexStreamPlaybackPending](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPending.kt) |
+| UI membrane | [VexStreamPlaybackExperience](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackExperience.kt) |
+| Provider read data | [VexStreamPlaybackReadState](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackReadState.kt) |
+| Display classification | [VexStreamPlaybackDisplayState](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackDisplayState.kt) |
 | Presentation | [VexStreamPlaybackControlPresentation](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackPresentation.kt) |
 | Human-facing aliases | [VexStreamPlaybackConnection / Flow / Projection](../../app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/playback/VexStreamPlaybackTypes.kt) |
 
@@ -585,7 +870,12 @@ A family is healthy when a developer can answer:
 9. What protects stale activation?
 10. What protects stale async completion?
 11. What concurrency/currentness guarantees belong to the concrete owner?
-12. Is this still one behavioral question, or has it earned a sibling family?
+12. Does every on(...) explicitly end in stay() or admit<State>()?
+13. Is Control meaning preserved semantically as Available(Act) / Unavailable before Boolean convenience?
+14. If views branch on the arrived Projection, is that condition authored once as a feature-local DisplayState rather than repeated as booleans/null checks?
+15. If Compose assembles Port + Projection + DisplayState repeatedly, has the feature earned one <Name>Experience membrane?
+16. Does that Experience expose only the admitted behavior/display surface rather than hiding unrelated provider debt?
+17. Is this still one behavioral question, or has it earned a sibling family?
 
 If those answers require reconstructing a hidden switchboard, the package has lost the pattern.
 

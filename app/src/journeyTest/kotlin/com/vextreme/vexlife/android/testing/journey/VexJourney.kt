@@ -47,8 +47,105 @@ fun vexJourney(
         walk = walk,
     )
 
+/**
+ * Typed Journey handle for one repository already owned by the app/session composition.
+ *
+ * This is test vocabulary, not a production service locator. A Journey names the exact dependency it
+ * intends to arrange/change; the Android test engine resolves that handle against its own
+ * [AppRepositories] instance when the step executes.
+ */
+class VexJourneyRepository<Repository> internal constructor(
+    val repositoryRef: String,
+    internal val resolve:
+        (AppRepositories) -> Repository,
+) {
+    init {
+        require(repositoryRef.isNotBlank()) {
+            "journey repository ref must not be blank"
+        }
+    }
+}
+
+fun <Repository> journeyRepository(
+    repositoryRef: String,
+    resolve: (AppRepositories) -> Repository,
+): VexJourneyRepository<Repository> =
+    VexJourneyRepository(
+        repositoryRef = repositoryRef,
+        resolve = resolve,
+    )
+
+/**
+ * Current repository handles available to Journey authors.
+ *
+ * Feature-owned test seams may define a narrower typed handle when mutation requires a concrete test
+ * implementation rather than the production-facing repository interface.
+ */
+object Repositories {
+    val logHistory =
+        journeyRepository(
+            repositoryRef = "repository.log-history",
+        ) { repositories ->
+            repositories.logHistory
+        }
+
+    val userProfile =
+        journeyRepository(
+            repositoryRef = "repository.user-profile",
+        ) { repositories ->
+            repositories.userProfile
+        }
+
+    val vexMaps =
+        journeyRepository(
+            repositoryRef = "repository.vex-maps",
+        ) { repositories ->
+            repositories.vexMaps
+        }
+
+    val vexStream =
+        journeyRepository(
+            repositoryRef = "repository.vexstream",
+        ) { repositories ->
+            repositories.vexStream
+        }
+
+    val events =
+        journeyRepository(
+            repositoryRef = "repository.events",
+        ) { repositories ->
+            repositories.events
+        }
+
+    val eventsAttention =
+        journeyRepository(
+            repositoryRef = "repository.events.attention",
+        ) { repositories ->
+            repositories.eventsAttention
+        }
+
+    val eventsAttentionLab =
+        journeyRepository(
+            repositoryRef = "repository.events.attention-lab",
+        ) { repositories ->
+            repositories.eventsAttentionLab
+        }
+}
+
+/**
+ * Makes repository acquisition explicit at the Journey call site.
+ *
+ * The returned value is a typed handle resolved only when the Journey step executes; this does not
+ * expose a global repository instance or bypass app/session ownership.
+ */
+fun <Repository> getRepository(
+    repository: VexJourneyRepository<Repository>,
+): VexJourneyRepository<Repository> =
+    repository
+
 data class VexDynamicElementRef(
     val elementId: String,
+    val actionTemplate: ActionElement? = null,
 ) {
     init {
         require(elementId.isNotBlank()) {
@@ -59,8 +156,12 @@ data class VexDynamicElementRef(
 
 fun dynamicElement(
     elementId: String,
+    actionTemplate: ActionElement? = null,
 ): VexDynamicElementRef =
-    VexDynamicElementRef(elementId)
+    VexDynamicElementRef(
+        elementId = elementId,
+        actionTemplate = actionTemplate,
+    )
 
 class VexJourneySignal internal constructor(
     val signalRef: String,
@@ -85,21 +186,134 @@ fun journeySignal(
 /**
  * One human-readable semantic walk.
  *
- * [signal] is a deterministic test-side external cause. It does not pretend the human clicked
- * something and therefore forms no expected VexLogger interaction by itself.
+ * Preferred authoring language separates:
  *
- * [tapDynamic] is for runtime-data identity such as one event row action that cannot be a permanent
- * static registry element. Its element ID must still be production-formed and stable.
+ * - human action: [tap], [tapElementById], [enterText], [submit], [dismiss], [back];
+ * - non-human source change: [externalCause] through one explicitly named repository owner;
+ * - observation: [assertVisible], [assertVisibleById].
+ *
+ * The older [signal], [tapDynamic], [expectVisible] and [type] methods remain implementation
+ * primitives while the Android execution owner is reconciled by its active lane. New Journey source
+ * should use the intention-level front door above.
+ *
+ * A Journey may arrange/change source truth and observe resulting UI. It must not author a
+ * Convergence/Hybrid output directly.
  */
 interface VexJourneyScope {
     fun start(screen: ScreenElement)
 
+    /**
+     * Applies one non-human change through its explicit source repository.
+     *
+     * "External" means external to the Journey's human interaction stream, not necessarily external
+     * to the application process. The supplied repository remains the rightful source owner; this
+     * method never exposes a writable Convergence/Hybrid Relay.
+     */
+    fun <Repository> externalCause(
+        repository: VexJourneyRepository<Repository>,
+        causeRef: String,
+        change: Repository.() -> Unit,
+    ) {
+        require(causeRef.isNotBlank()) {
+            "Journey external cause ref must not be blank"
+        }
+
+        signal(
+            journeySignal(
+                signalRef = causeRef,
+            ) { repositories ->
+                val source =
+                    repository.resolve(
+                        repositories,
+                    )
+                change(source)
+            },
+        )
+    }
+
+    /**
+     * Legacy execution primitive retained beneath [externalCause].
+     */
     fun signal(signal: VexJourneySignal)
 
     fun tap(element: ActionElement)
 
+    /**
+     * Taps one runtime-rendered element through its stable production semantic element ID.
+     *
+     * [behavesLike] is optional expected-walk meaning only. It does not execute the registered
+     * element; it lets the independent expected interpreter understand the runtime instance using an
+     * already-declared static intent when that relationship is truthful.
+     */
+    fun tapElementById(
+        elementId: String,
+        behavesLike: ActionElement? = null,
+    ) {
+        require(elementId.isNotBlank()) {
+            "Journey runtime element ID must not be blank"
+        }
+
+        tapDynamic(
+            VexDynamicElementRef(
+                elementId = elementId,
+                actionTemplate = behavesLike,
+            ),
+        )
+    }
+
+    /**
+     * Legacy execution primitive retained beneath [tapElementById].
+     */
     fun tapDynamic(element: VexDynamicElementRef)
 
+    fun assertVisible(
+        element: UIElement,
+    ) {
+        expectVisible(
+            element,
+        )
+    }
+
+    fun assertVisibleById(
+        elementId: String,
+    ) {
+        require(elementId.isNotBlank()) {
+            "Journey runtime element ID must not be blank"
+        }
+
+        expectVisible(
+            VexDynamicElementRef(
+                elementId = elementId,
+            ),
+        )
+    }
+
+    /**
+     * Legacy execution primitive retained beneath [assertVisible].
+     */
+    fun expectVisible(element: UIElement)
+
+    /**
+     * Legacy execution primitive retained beneath [assertVisibleById].
+     */
+    fun expectVisible(element: VexDynamicElementRef)
+
+    /**
+     * Replaces the current editable field contents with [value].
+     */
+    fun enterText(
+        field: TextFieldElement,
+        value: String,
+    ) {
+        type(
+            field = field,
+            value = value,
+        )
+    }
+
+    /**
+     * Legacy execution primitive retained beneath [enterText].
+     */
     fun type(
         field: TextFieldElement,
         value: String,

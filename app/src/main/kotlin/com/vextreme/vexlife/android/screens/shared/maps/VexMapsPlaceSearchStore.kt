@@ -22,18 +22,6 @@ data class VexMapsPlaceSearchPack(
             lastModifiedMillis
 }
 
-data class VexMapsPlaceSearchResult(
-    val placeRef: String,
-    val name: String,
-    val subtitle: String?,
-    val coordinate: VexMapCoordinate,
-) {
-    init {
-        require(placeRef.isNotBlank())
-        require(name.isNotBlank())
-    }
-}
-
 /**
  * App-private local place-search custody.
  *
@@ -49,7 +37,8 @@ data class VexMapsPlaceSearchResult(
  */
 internal class VexMapsPlaceSearchStore(
     context: Context,
-) {
+) :
+    VexMapsPlaceSearchSource {
     private val appContext =
         context.applicationContext
     private val placeDirectory =
@@ -83,7 +72,7 @@ internal class VexMapsPlaceSearchStore(
         }
     }
 
-    fun currentPack(): VexMapsPlaceSearchPack? =
+    override fun currentPack(): VexMapsPlaceSearchPack? =
         placeDatabase
             .takeIf { file ->
                 file.isFile &&
@@ -92,7 +81,7 @@ internal class VexMapsPlaceSearchStore(
             }
             ?.toPack()
 
-    suspend fun import(
+    override suspend fun import(
         source: Uri,
     ): VexMapsPlaceSearchPack =
         withContext(Dispatchers.IO) {
@@ -195,10 +184,10 @@ internal class VexMapsPlaceSearchStore(
             }
         }
 
-    suspend fun search(
+    override suspend fun search(
         pack: VexMapsPlaceSearchPack,
         query: String,
-        limit: Int = 5,
+        limit: Int,
     ): List<VexMapsPlaceSearchResult> =
         withContext(Dispatchers.IO) {
             require(limit in 1..20)

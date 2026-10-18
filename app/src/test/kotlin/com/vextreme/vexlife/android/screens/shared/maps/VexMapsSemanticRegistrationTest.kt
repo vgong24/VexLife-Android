@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.screens.shared.maps
 
+import com.vextreme.vexlife.android.data.maps.VexMapsAppearancePreference
 import com.vextreme.vexlife.android.screens.AppScreens
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -13,6 +14,12 @@ class VexMapsSemanticRegistrationTest {
                 VexMapsScreen.UsePreciseLocation,
                 VexMapsScreen.OpenMapMenu,
                 VexMapsScreen.OpenOfflineMaps,
+                VexMapsScreen.DestinationSearchQuery,
+                VexMapsScreen.SearchDestination,
+                VexMapsScreen.OpenAppearance,
+                VexMapsScreen.AppearanceAutomatic,
+                VexMapsScreen.AppearanceLight,
+                VexMapsScreen.AppearanceDark,
                 VexMapsScreen.ToggleOfflinePreparation,
                 VexMapsScreen.PrepareOfflineAroundMe,
                 VexMapsScreen.PrepareOfflineTrip,
@@ -50,6 +57,28 @@ class VexMapsSemanticRegistrationTest {
                     ?.screenId,
             )
         }
+    }
+
+    @Test
+    fun appearanceSemanticIdentityMatchesPreference() {
+        assertSame(
+            VexMapsScreen.AppearanceAutomatic,
+            VexMapsScreen.appearanceElement(
+                VexMapsAppearancePreference.AUTOMATIC,
+            ),
+        )
+        assertSame(
+            VexMapsScreen.AppearanceLight,
+            VexMapsScreen.appearanceElement(
+                VexMapsAppearancePreference.LIGHT,
+            ),
+        )
+        assertSame(
+            VexMapsScreen.AppearanceDark,
+            VexMapsScreen.appearanceElement(
+                VexMapsAppearancePreference.DARK,
+            ),
+        )
     }
 
     @Test

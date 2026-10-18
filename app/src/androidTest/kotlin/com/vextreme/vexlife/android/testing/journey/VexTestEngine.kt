@@ -1,11 +1,14 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import android.app.KeyguardManager
+import android.os.PowerManager
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.FontScale
 import androidx.compose.ui.test.Locales
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -22,6 +25,7 @@ import com.vextreme.vexlife.android.data.events.RelayEventsAttentionPreferenceRe
 import com.vextreme.vexlife.android.data.events.RelayEventsRepository
 import com.vextreme.vexlife.android.data.loghistory.InMemoryLogHistoryRepository
 import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
+import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
@@ -29,7 +33,6 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylist
 import com.vextreme.vexlife.android.data.vexstream.VexStreamPlaylistRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ScreenElement
@@ -38,6 +41,7 @@ import com.vextreme.vexlife.android.elements.UIElement
 import com.vextreme.vexlife.android.ui.VexLifeApp
 import com.vextreme.vexlife.android.ui.VexLifeSession
 import androidx.test.espresso.Espresso
+import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,6 +65,8 @@ class VexTestEngine(
         logHistory = logHistory,
         userProfile = InMemoryUserProfileRepository(),
         vexMaps = InMemoryVexMapsRepository(),
+        vexMapsDistribution =
+            InMemoryVexMapsDistributionRepository(),
         vexStream = vexStreamJourneyRepository(),
         events = RelayEventsRepository(),
         eventsAttention = RelayEventsAttentionPreferenceRepository(),
@@ -107,6 +113,8 @@ class VexTestEngine(
         activeSession = session
 
         try {
+            requireConnectedDeviceReadyForCompose()
+
             compose.setContent {
                 environment.Host {
                     VexLifeApp(session = session)
@@ -164,6 +172,44 @@ class VexTestEngine(
         compose.waitForIdle()
         observe(
             stepKind = "tap-dynamic",
+            semanticRef = element.elementId,
+        )
+    }
+
+    override fun expectVisible(element: UIElement) {
+        expected.expectVisible(element)
+
+        waitForTaggedNode(
+            elementId = element.elementId,
+            useUnmergedTree = true,
+        )
+        compose.onNodeWithTag(
+            testTag = element.elementId,
+            useUnmergedTree = true,
+        )
+            .assertIsDisplayed()
+        compose.waitForIdle()
+        observe(
+            stepKind = "expect-visible",
+            semanticRef = element.elementId,
+        )
+    }
+
+    override fun expectVisible(element: VexDynamicElementRef) {
+        expected.expectVisible(element)
+
+        waitForTaggedNode(
+            elementId = element.elementId,
+            useUnmergedTree = true,
+        )
+        compose.onNodeWithTag(
+            testTag = element.elementId,
+            useUnmergedTree = true,
+        )
+            .assertIsDisplayed()
+        compose.waitForIdle()
+        observe(
+            stepKind = "expect-visible",
             semanticRef = element.elementId,
         )
     }
@@ -314,16 +360,55 @@ class VexTestEngine(
         }
     }
 
+    /**
+     * Connected Compose proof requires a visible interactive host.
+     *
+     * A secure keyguard cannot be bypassed by instrumentation. Fail immediately with the real
+     * environment predicate instead of waiting for every Journey to time out with an empty
+     * semantics tree.
+     */
+    private fun requireConnectedDeviceReadyForCompose() {
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        val power =
+            context.getSystemService(
+                PowerManager::class.java,
+            )
+        val keyguard =
+            context.getSystemService(
+                KeyguardManager::class.java,
+            )
+
+        check(
+            power?.isInteractive != false,
+        ) {
+            "Vex Journey connected-device proof requires the device screen to be awake"
+        }
+        check(
+            keyguard?.isKeyguardLocked != true,
+        ) {
+            "Vex Journey connected-device proof requires the device to be unlocked"
+        }
+    }
+
     private fun actualHistory(): List<VexExpectedRecord> =
         logHistory.records.value.map { record ->
             record.toJourneyRecord()
         }
 
-    private fun waitForTaggedNode(elementId: String) {
+    private fun waitForTaggedNode(
+        elementId: String,
+        useUnmergedTree: Boolean = false,
+    ) {
         val waitFailure =
             runCatching {
                 compose.waitUntil(timeoutMillis = 5_000) {
-                    compose.onAllNodesWithTag(elementId)
+                    compose.onAllNodesWithTag(
+                        testTag = elementId,
+                        useUnmergedTree = useUnmergedTree,
+                    )
                         .fetchSemanticsNodes()
                         .isNotEmpty()
                 }
@@ -415,9 +500,7 @@ private fun vexStreamJourneyRepository(): InMemoryVexStreamMusicRepository {
     val track =
         VexStreamTrack(
             trackRef =
-                VexStreamTrackRef(
-                    "journey.track.one",
-                ),
+                VexStreamJourneyFixtures.TrackOne,
             mediaSha256 =
                 VexStreamMediaSha256(
                     "1111111111111111111111111111111111111111111111111111111111111111",

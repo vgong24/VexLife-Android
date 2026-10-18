@@ -67,13 +67,24 @@ class VexBehaviorControlBlueprint<
             controls =
                 actPriorityByControl.keys
                     .associateWith { control ->
+                        val resolved =
+                            resolve(
+                                current = current,
+                                control = control,
+                            )
+
                         VexBehaviorControlProjection(
                             control = control,
-                            act =
-                                resolve(
-                                    current = current,
-                                    control = control,
-                                )?.act,
+                            meaning =
+                                if (
+                                    resolved != null
+                                ) {
+                                    VexBehaviorControlMeaning.Available(
+                                        resolved.act,
+                                    )
+                                } else {
+                                    VexBehaviorControlMeaning.Unavailable
+                                },
                         )
                     },
         )

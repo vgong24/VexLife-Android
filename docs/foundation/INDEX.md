@@ -62,7 +62,9 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 |---|---|---|---|---|
 | F0_STANDALONE_BUILD_FOUNDATION | Standalone Android build/toolchain | **CHECKPOINT EARNED / TEST PROOF PENDING** | Make a clean clone reproducibly Sync/build/install without VexLife monorepo or IDE-local state | standalone unit-test proof + later foundation extraction |
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
-| BEHAVIOR_BLUEPRINT_EXPERIMENT | relational behavior blueprint | **DRAFT EXPERIMENT / FIRST VEXSTREAM CONSUMER FORMED / JVM PROOF PENDING** | Test whether behavioral source can read from current State outward as Act -> Effect -> next State, then derive available Acts / Controls without a second UI state table | `:architecture:behavior:test` + `vexVerifyJvm`; later ScreenBlueprint binding only if the source grammar earns it |
+| VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **ACCEPTED ON MAIN / PR #88 / A013 LOCAL + PHYSICAL DEVICE PASS / ADVISORY MIGRATION ACTIVE** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | migrate one real consumer at a time; preserve exact runtime identities; keep raw-Compose findings advisory until replacements are earned |
+| EXECUTION_BRIDGE | VexExecution + source-referenced coroutine ownership | **ACCEPTED ON MAIN / PR #87 / EXACT MODULE + `vexVerifyJvm` PASS** | Put coroutine execution behind one compiler-visible meta-pattern with keyed custody, bounded collection recovery, and exact stop/join control | first production consumer + owner-bound shutdown proof; do not enlarge the kernel from infrastructure-only speculation |
+| BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational Behavior foundation | **ACCEPTED ON MAIN / PR #82 + #85 / EXACT `vexVerifyLocal` PASS / VEXSTREAM PLAYBACK CONSUMER CURRENT** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | extend from independent real behavioral questions; keep runtime request payloads and generic Experience abstraction held until repeated consumers earn them |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **ACCEPTED ON MAIN / PR #78 EXACT HOST PROOF PASS** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | extend only when a new proof claim earns another owner/task |
 | JOURNEY_INSTRUMENTATION | semantic walk grammar + map coverage + Compose instrumentation | **MERGED / CONNECTED DEVICE 13/13 OBSERVED** | Make real Android journeys executable once while keeping semantic coverage debt visible and non-blocking by default | extend journeys with new features + preserve baseline/device proof |
@@ -76,6 +78,79 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F6_DESIGN_LAB | debug/developer component gallery | FIRST PRACTICUM INCLUDED IN F1 | Exercise building blocks and inspect their registered topology without creating another truth map | prove F1 Gallery + AppGraph on device |
 | F7_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F8_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+
+## Vex Compose foundation
+
+Entry:
+[`architecture/elements/README.md`](../../architecture/elements/README.md)
+
+### Intention
+
+Custom Compose should inherit architectural identity rather than require every author to remember
+test tags, parent paths and Vex-specific presentation conventions manually.
+
+~~~text
+ScreenBlueprint parent path
+        |
+        +-> registered Vex Element cells
+        |
+        +-> VexComposeScope
+              -> VexColumn / VexRow / VexCard / VexText
+              -> child IDs append from the inherited parent
+~~~
+
+`VexModifier` is a real Compose Modifier root, not a parallel modifier type. Ordinary Compose
+extensions remain available underneath it while Vex-owned semantic identity/inspection behavior has
+one visible front door.
+
+Gallery is the first visual practicum. VexStream Search is the first larger product consumer: it
+enters through the registered Search sheet, preserves historical stable field/action IDs, and uses
+runtime track presentation refs without turning dynamic catalog data into fake static elements.
+
+Acceptance checkpoint:
+
+~~~text
+PR #88
+merge = 222c10206685946f7225f801a9e62e0beabcf74e
+tree = a68fe2eebaa2bdfbc0503648aee77ca6ddeb7577
+
+A013
+vexVerifyLocal = PASS
+physical connected Android = PASS
+instrumentation tests executed = 10
+~~~
+
+Further migration is consumer-driven. Raw Compose findings remain advisory while real product
+surfaces teach which additional Vex forms are actually worth preserving.
+
+## Execution bridge candidate
+
+Entry:
+[`architecture/execution/README.md`](../../architecture/execution/README.md)
+
+### Intention
+
+A developer should not decide coroutine ownership ad hoc from whichever Screen, repository, Service,
+or callback happens to need asynchronous work. The execution foundation makes that role explicit:
+
+```text
+FeatureExecution : VexExecution
+-> launchOnce(callable)
+-> launchForCollect(flowProvider)
+-> private ordered Job custody
+-> forceStop / joinStop
+```
+
+The actual `VexCoroutineLauncher` remains internal foundation machinery. Source callables supply both
+the executed function and the source-derived runtime ref, avoiding a parallel hand-maintained ID
+catalog. `launchOnce` never silently retries finite operations; sustained Flow collection owns a
+bounded recovery path where requested. Cancellation is terminal and exact root shutdown closes work
+admission before cancelling the supervised tree.
+
+This candidate is intentionally not yet wired through Relay/Maps/VexStream. PR #77 independently
+identified continuous dependency collector death/restart as execution-lifetime work, while current
+main still contains repeated raw `CoroutineScope`/Job ownership in app/runtime surfaces. Those are
+real consumers, but migration follows only after this kernel passes repository-native Gradle proof.
 
 ## Behavior Blueprint experiment
 
@@ -95,15 +170,21 @@ VexBehaviorDocs
 VexStreamPlaybackDocs
 ~~~
 
-The candidate preserves one human-readable four-move grammar:
+The candidate preserves one human-readable four-move vocabulary with explicit semantic equations:
 
 ~~~text
-State
--> Control resolves Act
--> Act selects Effect
--> immediate admitted State
--> provider observation
--> next truthful State
+Control + CURRENT State
+-> Act
+
+CURRENT State + Act
+-> Effect + admitted State
+
+CURRENT State + Controls
+-> Projection
+
+Projection
+-> optional Presentation / Display State
+-> UI
 ~~~
 
 Feature-owned State / Control / Act / Effect vocabularies share one F-bounded
@@ -139,6 +220,17 @@ Control activation
 
 The Connection preserves synchronous admitted intent without pretending provider convergence. Its
 ViewModel is an Android lifetime host only.
+
+Control meaning is semantic-first as `Available(Act)` / `Unavailable`; Boolean availability is
+derived convenience. Every authored `on(...)` must explicitly terminate in `.stay()` or
+`.admit<State>()`, so incomplete relationships cannot silently disappear during construction.
+
+Behavior is the provider/UI/lifecycle-independent semantic rulebook. A concrete Connection is the
+reality boundary/adapter; it must identify its provider/runtime, rightful lifetime owner,
+currentness gates, and concurrency guarantees without requiring a generic Host abstraction.
+
+Cross-family reactions remain convergence-based: convergence may request another family through
+that family's Control/Port, but must not bypass directly to a foreign Effect.
 
 VexMaps pressure establishes four compatibility boundaries without adding new semantic nouns:
 
@@ -203,7 +295,7 @@ into one human round trip, use the **Reusable multi-path host-task template** in
 
 ## Test / Proof Architecture candidate
 
-Canonical detail: [`TEST-PROOF-ARCHITECTURE.md`](TEST-PROOF-ARCHITECTURE.md)
+Canonical detail: [`test-proof/README.md`](test-proof/README.md)
 
 ### Intention
 

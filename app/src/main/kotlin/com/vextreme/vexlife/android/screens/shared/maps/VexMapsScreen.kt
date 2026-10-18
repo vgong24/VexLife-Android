@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.screens.shared.maps
 import androidx.compose.runtime.Composable
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.maps.VexMapsAppearancePreference
 import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.TextRole
@@ -64,6 +65,47 @@ object VexMapsScreen : AppScreenBlueprint(
         intent =
             close(MapMenu)
                 .then(open(OfflinePanel)),
+    )
+
+    val DestinationSearchQuery = textFieldRef(
+        id = "body.destination-search.query",
+        labelRes = R.string.vexmaps_destination_search_hint,
+    )
+
+    val SearchDestination = buttonRef(
+        id = "body.destination-search.search",
+        labelRes = R.string.vexmaps_destination_search_action,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Search,
+        intent = localEffect(),
+    )
+
+    val OpenAppearance = buttonRef(
+        id = "body.map.appearance.open",
+        labelRes = R.string.vexmaps_appearance,
+        style = VexElementStyles.ToolbarIcon,
+        intent = localEffect(),
+    )
+
+    val AppearanceAutomatic = buttonRef(
+        id = "body.map.appearance.automatic",
+        labelRes = R.string.vexmaps_appearance_automatic,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val AppearanceLight = buttonRef(
+        id = "body.map.appearance.light",
+        labelRes = R.string.vexmaps_appearance_light,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val AppearanceDark = buttonRef(
+        id = "body.map.appearance.dark",
+        labelRes = R.string.vexmaps_appearance_dark,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
     )
 
     val ToggleOfflinePreparation = buttonRef(
@@ -173,6 +215,58 @@ object VexMapsScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val ToggleDistributionMode = buttonRef(
+        id = "body.distribution.mode.toggle",
+        labelRes = R.string.vexmaps_distribution_title,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val AddDistributionStop = buttonRef(
+        id = "body.distribution.stop.add",
+        labelRes = R.string.vexmaps_distribution_add_stop,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val ToggleDistributionReturnToStart = buttonRef(
+        id = "body.distribution.return.toggle",
+        labelRes = R.string.vexmaps_distribution_return_on,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val PrepareDeliveryRoute = buttonRef(
+        id = "body.distribution.delivery-route.prepare",
+        labelRes = R.string.vexmaps_distribution_prepare,
+        intent = localEffect(),
+    )
+
+    val StartDeliveryRoute = buttonRef(
+        id = "body.distribution.delivery-route.start",
+        labelRes = R.string.vexmaps_distribution_start,
+        intent = localEffect(),
+    )
+
+    val MarkDeliveryComplete = buttonRef(
+        id = "body.distribution.delivery-route.mark-delivered",
+        labelRes = R.string.vexmaps_distribution_delivered,
+        intent = localEffect(),
+    )
+
+    val RetryDeliveryLeg = buttonRef(
+        id = "body.distribution.delivery-route.retry-leg",
+        labelRes = R.string.vexmaps_distribution_retry,
+        intent = localEffect(),
+    )
+
+    val ClearDeliveryRoute = buttonRef(
+        id = "body.distribution.delivery-route.clear",
+        labelRes = R.string.vexmaps_distribution_clear,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
     val EditRoute = buttonRef(
         id = "body.navigation.edit-route",
         labelRes = R.string.vexmaps_navigation_edit_route,
@@ -225,6 +319,18 @@ object VexMapsScreen : AppScreenBlueprint(
                 button(UsePreciseLocation)
             }
 
+            column("destination-search") {
+                textField(DestinationSearchQuery)
+                button(SearchDestination)
+            }
+
+            column("appearance") {
+                button(OpenAppearance)
+                button(AppearanceAutomatic)
+                button(AppearanceLight)
+                button(AppearanceDark)
+            }
+
             column(
                 element = MapMenu,
             ) {
@@ -258,6 +364,17 @@ object VexMapsScreen : AppScreenBlueprint(
                 button(PlanRoute)
             }
 
+            column("distribution") {
+                button(ToggleDistributionMode)
+                button(AddDistributionStop)
+                button(ToggleDistributionReturnToStart)
+                button(PrepareDeliveryRoute)
+                button(StartDeliveryRoute)
+                button(MarkDeliveryComplete)
+                button(RetryDeliveryLeg)
+                button(ClearDeliveryRoute)
+            }
+
             column("navigation") {
                 button(EditRoute)
                 button(StartNavigation)
@@ -273,6 +390,21 @@ object VexMapsScreen : AppScreenBlueprint(
             listOf(
                 OpenMapMenu,
             )
+
+    internal fun appearanceElement(
+        preference:
+            VexMapsAppearancePreference,
+    ): ButtonElement =
+        when (preference) {
+            VexMapsAppearancePreference.AUTOMATIC ->
+                AppearanceAutomatic
+
+            VexMapsAppearancePreference.LIGHT ->
+                AppearanceLight
+
+            VexMapsAppearancePreference.DARK ->
+                AppearanceDark
+        }
 
     internal fun travelModeElement(
         mode: VexMapsTravelMode,
@@ -297,6 +429,8 @@ object VexMapsScreen : AppScreenBlueprint(
         VexMapsMapSurface(
             runtime = runtime,
             repository = repositories.vexMaps,
+            distributionRepository =
+                repositories.vexMapsDistribution,
             darkTheme = darkTheme,
         )
     }

@@ -11,6 +11,7 @@ import com.vextreme.vexlife.android.elements.ElementPlacement
 import com.vextreme.vexlife.android.elements.ScreenRegistration
 import com.vextreme.vexlife.android.elements.ScreenBlueprint
 import com.vextreme.vexlife.android.elements.VexElementTree
+import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -97,8 +98,28 @@ abstract class AppScreenBlueprint(
      * Broad app-composition bridge.
      *
      * Existing Screens keep their narrow three-argument renderer. A Screen that consumes a shared
-     * session Relay can override this overload and immediately narrow [relays] into its own content.
+     * session Relay can override the Relay-aware overload and immediately narrow [relays] into its
+     * own content. The broadest overload also carries the already-owned in-process session scope.
+     * Ordinary UI work stays composition scoped; consume [sessionScope] only when an admitted effect
+     * must intentionally survive the initiating presentation while the current VexLife session
+     * remains alive.
      */
+    @Composable
+    internal open fun renderContent(
+        runtime: VexRuntime,
+        repositories: AppRepositories,
+        relays: VexLifeRelays,
+        sessionScope: CoroutineScope,
+        darkTheme: Boolean,
+    ) {
+        renderContent(
+            runtime = runtime,
+            repositories = repositories,
+            relays = relays,
+            darkTheme = darkTheme,
+        )
+    }
+
     @Composable
     internal open fun renderContent(
         runtime: VexRuntime,
@@ -123,7 +144,7 @@ abstract class AppScreenBlueprint(
             placement = content,
             registry = runtime.registry,
             handler = runtime,
-            modifier = Modifier.fillMaxSize(),
+            modifier = VexModifier.fillMaxSize(),
             selectedChild = runtime.presentation::selected,
         )
     }
