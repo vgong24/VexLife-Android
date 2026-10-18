@@ -3,6 +3,10 @@ package com.vextreme.vexlife.android.vexstream
 /**
  * # VexStream Music
  *
+ * Feature home:
+ *
+ * app/src/main/kotlin/com/vextreme/vexlife/android/vexstream/README.md
+ *
  * Search this symbol when asking:
  *
  * "How does the VexStream feature fit together on Android?"
@@ -72,7 +76,7 @@ package com.vextreme.vexlife.android.vexstream
  *
  * ## Desktop companion
  *
- * Desktop V2 lives in vgong24/VexstreamMusic under v2/.
+ * The current desktop producer is VexStream Desktop V4 in vgong24/VexstreamMusic.
  *
  * Desktop owns the sanitized producer contract and exact media bytes. Android consumes that contract.
  * Android owns phone-local verification/storage and Media3 realization.
@@ -119,4 +123,18 @@ package com.vextreme.vexlife.android.vexstream
  * [VXG RealForever]
  */
 @Suppress("unused")
-internal class VexStreamDocs private constructor()
+internal object VexStreamDocs {
+    const val FEATURE_REF: String =
+        "feature.vexstream"
+
+    const val CURRENT_FEATURE_NAME: String =
+        "VexStream Music"
+
+    val historicalSearchNames: List<String> =
+        listOf(
+            "VexStream Android Link",
+            "VexStream V4 Companion",
+        )
+}
+
+// [VXG RealForever]
