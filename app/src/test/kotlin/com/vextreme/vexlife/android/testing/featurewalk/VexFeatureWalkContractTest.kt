@@ -2,7 +2,10 @@ package com.vextreme.vexlife.android.testing.featurewalk
 
 import com.vextreme.vexlife.android.conversation.vexConversationFeatureWalkProofBacklinks
 import com.vextreme.vexlife.android.screens.shared.maps.vexMapsFeatureWalkProofBacklinks
+import com.vextreme.vexlife.android.testing.journey.VexJourney
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
+import com.vextreme.vexlife.android.testing.journey.VexJourneyShard
+import com.vextreme.vexlife.android.testing.journey.featureWalkCatalogEntries
 import java.nio.file.Files
 import java.nio.file.Path
 import org.junit.Assert.assertEquals
@@ -178,6 +181,64 @@ class VexFeatureWalkContractTest {
                 },
             )
         }
+    }
+
+    @Test
+    fun featureWalkJourneyBindingCannotCreateAShadowJourneyOutsideItsShard() {
+        val featureWalkCase =
+            VexFeatureWalkCase(
+                ref =
+                    "feature.fixture/W98/C98",
+                key =
+                    "shadow-journey",
+                title =
+                    "Shadow Journey negative control",
+                checkpoints =
+                    listOf(
+                        VexFeatureWalkCheckpoint(
+                            ref =
+                                "feature.fixture/W98/C98/P98",
+                            key =
+                                "reachable",
+                            title =
+                                "The Journey belongs to its shard",
+                        ),
+                    ),
+            )
+        val binding =
+            vexFeatureWalkJourney(
+                featureWalkCase =
+                    featureWalkCase,
+            ) {
+            }
+        val shard =
+            object : VexJourneyShard {
+                override val shardId: String =
+                    "fixture.shadow"
+                override val journeys: List<VexJourney> =
+                    emptyList()
+                override val featureWalkJourneys:
+                    List<VexFeatureWalkJourneyBinding> =
+                    listOf(
+                        binding,
+                    )
+            }
+
+        val failure =
+            runCatching {
+                shard.featureWalkCatalogEntries()
+            }.exceptionOrNull()
+
+        assertTrue(
+            failure is IllegalArgumentException,
+        )
+        assertTrue(
+            failure
+                ?.message
+                ?.contains(
+                    "Feature-Walk Journey is not registered in shard",
+                ) == true,
+        )
     }
 
     @Test
