@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -992,9 +993,22 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 productContext
 
             PairingMode.FRESH_TEST_PAIRING_NAMESPACE ->
-                productContext
-                    .createDeviceProtectedStorageContext()
+                StorageScopedContext(
+                    productContext
+                        .createDeviceProtectedStorageContext(),
+                )
         }
+
+    /**
+     * Preserve the selected storage domain through production owners that correctly ask for
+     * applicationContext to avoid retaining an Activity/test component context.
+     */
+    private class StorageScopedContext(
+        base: Context,
+    ) : ContextWrapper(base) {
+        override fun getApplicationContext(): Context =
+            this
+    }
 
     private fun resetFreshTestNamespace(
         context: Context,
