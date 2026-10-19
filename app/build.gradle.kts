@@ -23,6 +23,23 @@ android {
         testInstrumentationRunnerArguments["useTestStorageService"] = "true"
     }
 
+    buildTypes {
+        getByName("debug") {
+            providers
+                .gradleProperty(
+                    "vexCrossPlatformApplicationIdSuffix",
+                )
+                .orNull
+                ?.trim()
+                ?.takeIf {
+                    it.isNotEmpty()
+                }
+                ?.let { suffix ->
+                    applicationIdSuffix = suffix
+                }
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = false

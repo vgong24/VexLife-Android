@@ -38,6 +38,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRequest
 import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
 import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
 
 /**
@@ -65,6 +66,7 @@ private data class VexStreamCollectionRow(
 internal fun VexStreamAlbumsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onVisitArtist: (String) -> Unit,
@@ -116,6 +118,8 @@ internal fun VexStreamAlbumsPane(
                 R.string.vexstream_music_empty,
             ),
         navigationLabel = "vexstream-album-depth",
+        offlineCopyConnection =
+            offlineCopyConnection,
         controller = controller,
         resolver = resolver,
         onVisitArtist = onVisitArtist,
@@ -126,6 +130,7 @@ internal fun VexStreamAlbumsPane(
 internal fun VexStreamArtistsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     requestedArtist: String?,
@@ -173,6 +178,8 @@ internal fun VexStreamArtistsPane(
                 R.string.vexstream_music_empty,
             ),
         navigationLabel = "vexstream-artist-depth",
+        offlineCopyConnection =
+            offlineCopyConnection,
         controller = controller,
         resolver = resolver,
         onVisitArtist = onVisitArtist,
@@ -189,6 +196,7 @@ internal fun VexStreamArtistsPane(
 internal fun VexStreamPlaylistsPane(
     runtime: VexRuntime,
     state: VexStreamMusicState,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onVisitArtist: (String) -> Unit,
@@ -232,6 +240,8 @@ internal fun VexStreamPlaylistsPane(
                 R.string.vexstream_music_no_playlists,
             ),
         navigationLabel = "vexstream-playlist-depth",
+        offlineCopyConnection =
+            offlineCopyConnection,
         controller = controller,
         resolver = resolver,
         onVisitArtist = onVisitArtist,
@@ -245,6 +255,7 @@ private fun VexStreamCollectionBrowserPane(
     rows: List<VexStreamCollectionRow>,
     emptyText: String,
     navigationLabel: String,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onVisitArtist: (String) -> Unit,
@@ -365,6 +376,8 @@ private fun VexStreamCollectionBrowserPane(
                             collectionKey = selected.key,
                             title = selected.title,
                             tracks = selected.tracks,
+                            offlineCopyConnection =
+                                offlineCopyConnection,
                             controller = controller,
                             resolver = resolver,
                             onBack = trail::goBack,
@@ -383,6 +396,7 @@ private fun VexStreamCollectionDetail(
     collectionKey: String,
     title: String,
     tracks: List<VexStreamTrackState>,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     onBack: () -> Unit,
@@ -455,9 +469,9 @@ private fun VexStreamCollectionDetail(
                 contextTracks = tracks,
                 playbackConnection =
                     trackPlaybackConnection,
-                offlineCopyConnection = null,
+                offlineCopyConnection =
+                    offlineCopyConnection,
                 onVisitArtist = onVisitArtist,
-                showDownloadAction = false,
             )
         }
     }
