@@ -19,6 +19,36 @@ For substantial work:
 
 The front door should stay small. Architecture belongs with its owning building block.
 
+## Repository descent map
+
+A fresh worker should be able to descend without predecessor-chat reconstruction:
+
+```text
+README.md
+-> AGENTS.md
+-> docs/CULTURE.md
+-> docs/foundation/INDEX.md
+   -> exact owning foundation doc/source/tests
+
+feature work
+-> docs/features/README.md
+   -> feature home
+   -> docs/features/FEATURE-WALKS.md when whole-feature completion is the question
+
+proof question
+-> docs/foundation/test-proof/README.md
+   -> vexVerifyJvm / vexVerifyLocal
+   -> Journey / ScreenCrawler / vexVerifyDevice only when that claim needs them
+
+host/device proof unavailable locally
+-> docs/foundation/ANDROID-HOST-PROOF.md
+```
+
+`./gradlew vexFoundationHealth` checks that this repository-owned descent and the canonical proof
+entry points still exist. It is included by `vexVerifyJvm` and therefore by `vexVerifyLocal`.
+If that health check fails, repair the rightful source/map/task; do not weaken the check merely to
+make verification green.
+
 ## Common contribution routes
 
 - **New product feature or major feature evolution:** start with `docs/features/README.md`.
