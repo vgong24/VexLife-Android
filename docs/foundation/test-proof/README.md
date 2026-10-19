@@ -59,6 +59,12 @@ It writes `build/vex/test-foundation/foundation-health.txt` and is included by `
 This guard intentionally does **not** claim that any feature works. It only prevents the proof
 infrastructure and its discoverability from drifting without detection.
 
+GitHub Actions is a thin caller, not another proof owner. The repository workflow
+`.github/workflows/vexlife-android-health.yml` binds pull requests to their exact head and calls
+`vexVerifyLocal`. If hosted Actions is unavailable, the same repository-owned proof remains runnable
+locally or through Android Host Proof/VexRelay. The health contract also checks that this thin hosted
+caller remains source-addressable and still delegates to `vexVerifyLocal`.
+
 ## Current proof topology
 
 ~~~text
