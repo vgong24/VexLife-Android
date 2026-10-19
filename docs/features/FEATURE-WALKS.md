@@ -59,6 +59,7 @@ Environment stays orthogonal. `VexJourneyCase` remains the execution identity
 
 ~~~text
 FEATURE_WALK != JOURNEY
+FEATURE_WALK != INSTITUTIONAL_ENDTOEND_STANDARD
 FEATURE_WALK_CASE != VEX_JOURNEY_CASE
 CHECKPOINT_PROOF != WHOLE_WALK_COMPLETE
 PROOF_BACKLINK != TEST_PASS
@@ -283,6 +284,50 @@ feature.vexmaps/W01/C02
 
 This proves the vocabulary is not Conversation-specific and that a Journey, focused proof and whole
 feature completion can truthfully disagree.
+
+### VexStream
+
+~~~text
+feature.vexstream/W01/C01
+    Download and remove a VexStream song
+
+P01
+    direct Download action is reachable for the exact track
+
+P02
+    the exact downloaded track appears in Downloads
+
+P03
+    Remove download targets that exact track
+
+P04
+    removing the local copy preserves the catalog track identity
+~~~
+
+The Case binds the existing `shared.vexstream/download-and-remove` Journey rather than creating a
+second walk. The deeper Desktop V4 -> Android stream/offline/restart/reconnect outcome remains owned
+by the institutional cross-platform EndToEnd record in Vextreme-SDK; Feature Walk links the Android
+product path but does not duplicate that cross-repository proof.
+
+## Institutional EndToEnd and branch reuse
+
+~~~text
+Feature Walk
+    which whole feature outcome / Android Case matters?
+
+Journey + focused/native proof
+    how does Android execute/prove its owned boundaries?
+
+Vextreme-SDK EndToEnd standard
+    how is the exact composed human outcome proved across all material owners?
+
+QuantumTest / Vroomba
+    optional shared-prefix branch-reuse experiment beneath that proof
+~~~
+
+Do not infer QuantumTest from every Feature Walk. Discover it through the Test / Proof Foundation only
+when multiple descendant routes share reconstructable state and preserving child-specific evidence is
+the actual pressure.
 
 ## Structural report
 
