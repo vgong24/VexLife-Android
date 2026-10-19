@@ -34,6 +34,31 @@ A proof layer should answer one question well. More expensive layers verify rela
 cheaper layers cannot own; they do not re-implement lower-layer meaning merely to increase test
 count.
 
+## Repository foundation health
+
+Before the proof layers below can remain trustworthy, a fresh worker must still be able to find the
+repository's current owners and invoke the canonical proof entries. That is a structural repository
+question, not another feature test.
+
+```text
+README / AGENTS / culture / foundation index
+-> feature + proof routes remain source-addressable
+-> source-alignment owner remains present
+-> canonical vexVerify* / coverage / visual / proof-bundle tasks remain registered
+```
+
+The repository-owned check is:
+
+```bash
+./gradlew vexFoundationHealth
+```
+
+It writes `build/vex/test-foundation/foundation-health.txt` and is included by `vexVerifyJvm`, so
+`vexVerifyLocal` cannot silently stay green after the stable onboarding/proof route disappears.
+
+This guard intentionally does **not** claim that any feature works. It only prevents the proof
+infrastructure and its discoverability from drifting without detection.
+
 ## Current proof topology
 
 ~~~text
