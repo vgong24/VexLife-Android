@@ -27,7 +27,10 @@ The temporary incomplete notice can be removed when a fresh worker with reposito
 - distinguish portable VexLife meaning from Android-native ownership without relying on the old
   monorepo checkout;
 - recover from an ordinary failed build or environment mismatch without undocumented local ritual;
-- identify the currently provisional/held foundations rather than assuming examples are canonical.
+- identify the currently provisional/held foundations rather than assuming examples are canonical;
+- pass `vexFoundationHealth` and `vexVerifyLocal` on current source before treating the repository
+  foundation/proof route as healthy; use `vexVerifyDevice` when the claimed foundation property
+  actually depends on connected Android reality.
 
 Removal means the **repository foundation is established enough to build outward**, not that every
 feature, integration, or future architecture question is settled.
