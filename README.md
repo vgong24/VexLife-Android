@@ -47,21 +47,22 @@ These checks do not replace lived product review.
 ChatGPT Project instructions may improve convenience, but this repository is designed so they are
 not required to recover the Android architecture or development posture.
 
-## Current milestone
+## Current foundation state
 
-`F0_STANDALONE_BUILD_FOUNDATION`
+`docs/foundation/INDEX.md` is the canonical current foundation/maturity map.
 
-The first source milestone is deliberately small:
+The root README intentionally does not copy a mutable milestone table. That prevents a stable
+onboarding router from becoming stale while accepted foundations advance independently.
 
 ```text
-clean clone
--> deterministic Gradle/JDK/SDK contract
--> Gradle Sync
--> assemble debug APK
--> install/run on Victor's physical Android device
--> no IDE/build residue appears as source changes
+ROOT_README = ENTRY ROUTER
+FOUNDATION_INDEX = CURRENT FOUNDATION STATUS
+OWNING FOUNDATION DOC/SOURCE/TESTS = IMPLEMENTATION + PROOF DETAIL
 ```
 
-Product features come after the build foundation is real and reproducible.
+The original standalone-build concern remains foundational: a clean clone must still recover the
+repository-owned Gradle/JDK/SDK contract, build/test without hidden IDE state, and leave source clean.
+Its current evidence and remaining holds belong in the Foundation Index rather than in a duplicate
+root status block.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][FRONT-DOOR] -->
