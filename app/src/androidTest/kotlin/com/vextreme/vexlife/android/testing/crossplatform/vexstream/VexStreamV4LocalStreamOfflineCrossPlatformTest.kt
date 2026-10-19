@@ -130,6 +130,10 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             requireFixtureDigest(
                 evidence,
             )
+        val expectedTrackRef =
+            requireFixtureTrackRef(
+                evidence,
+            )
 
         evidence.resetRunEvidence()
 
@@ -403,6 +407,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             val fixtureTarget =
                 waitForFixtureCatalog(
                     vexStream = vexStream,
+                    expectedTrackRef = expectedTrackRef,
                     expectedDigest = expectedDigest,
                 )
             val targetRef =
@@ -785,6 +790,10 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             requireFixtureDigest(
                 evidence,
             )
+        val expectedTrackRef =
+            requireFixtureTrackRef(
+                evidence,
+            )
 
         val vexStreamContext =
             pairingContext(
@@ -807,6 +816,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         val restored =
             restoredOfflineFixture(
                 vexStream = vexStream,
+                expectedTrackRef = expectedTrackRef,
                 expectedDigest = expectedDigest,
             )
         val targetRef =
@@ -1260,8 +1270,22 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         return digest
     }
 
+    private fun requireFixtureTrackRef(
+        evidence: VexCrossPlatformEvidence,
+    ): VexStreamTrackRef =
+        VexStreamTrackRef(
+            requireNotNull(
+                evidence.argument(
+                    ARG_EXPECTED_TRACK_REF,
+                ),
+            ) {
+                "$ARG_EXPECTED_TRACK_REF is required"
+            }.trim(),
+        )
+
     private fun waitForFixtureCatalog(
         vexStream: PairedVexStreamMusicRepository,
+        expectedTrackRef: VexStreamTrackRef,
         expectedDigest: String,
     ): FixtureCatalogTarget {
         var observedTarget:
@@ -1286,22 +1310,24 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
             val item =
                 state
-                    .tracks
-                    .singleOrNull { candidate ->
-                        candidate
-                            .track
-                            .mediaSha256
-                            .value ==
-                            expectedDigest
-                    }
+                    .track(
+                        expectedTrackRef,
+                    )
                     ?: return@waitUntil false
-            val trackRef =
+
+            check(
                 item
                     .track
-                    .trackRef
+                    .mediaSha256
+                    .value ==
+                    expectedDigest,
+            ) {
+                "exact VexStream fixture trackRef was rebound to unexpected media bytes"
+            }
+
             observedTarget =
                 FixtureCatalogTarget(
-                    trackRef = trackRef,
+                    trackRef = expectedTrackRef,
                     availability = item.availability,
                     details =
                         mapOf(
@@ -1337,14 +1363,14 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             state.connectionState !is
                 VexStreamConnectionState.Failed,
         ) {
-            "VexStream failed while waiting for exact fixture catalog entry: " +
+            "VexStream failed while waiting for exact fixture trackRef: " +
                 state.connectionState
         }
 
         return requireNotNull(
             observedTarget,
         ) {
-            "exact VexStream fixture digest did not become available in Android catalog state"
+            "exact VexStream fixture trackRef did not become available in Android catalog state"
         }
     }
 
@@ -1356,22 +1382,28 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
     private fun restoredOfflineFixture(
         vexStream: PairedVexStreamMusicRepository,
+        expectedTrackRef: VexStreamTrackRef,
         expectedDigest: String,
     ) =
         requireNotNull(
             vexStream
                 .state
                 .value
-                .tracks
-                .singleOrNull { item ->
-                    item
-                        .track
-                        .mediaSha256
-                        .value ==
-                        expectedDigest
-                },
+                .track(
+                    expectedTrackRef,
+                ),
         ) {
-            "exact VexStream fixture digest was not restored from the offline index"
+            "exact VexStream fixture trackRef was not restored from the offline index"
+        }.also { item ->
+            check(
+                item
+                    .track
+                    .mediaSha256
+                    .value ==
+                    expectedDigest,
+            ) {
+                "restored VexStream fixture trackRef was rebound to unexpected media bytes"
+            }
         }
 
     private fun fixtureDetails(
@@ -1527,11 +1559,14 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 observation.uriScheme ==
                 expectedScheme &&
                 observation.playerErrorAbsent &&
-                observation.playbackState in
-                setOf(
-                    Player.STATE_BUFFERING,
-                    Player.STATE_READY,
-                    Player.STATE_ENDED,
+                (
+                    observation.playbackState ==
+                        Player.STATE_READY ||
+                        (
+                            observation.playbackState ==
+                                Player.STATE_ENDED &&
+                                observation.currentPositionMs > 0L
+                        )
                 )
         }
     }
@@ -1547,6 +1582,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             "mediaId" to observation.mediaId,
             "uriScheme" to observation.uriScheme,
             "playbackState" to observation.playbackState,
+            "currentPositionMs" to observation.currentPositionMs,
+            "isPlaying" to observation.isPlaying,
         )
     }
 
@@ -1570,6 +1607,10 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                         null,
                 playbackState =
                     controller.playbackState,
+                currentPositionMs =
+                    controller.currentPosition,
+                isPlaying =
+                    controller.isPlaying,
             )
         }
 
@@ -1618,6 +1659,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         val uriScheme: String?,
         val playerErrorAbsent: Boolean,
         val playbackState: Int,
+        val currentPositionMs: Long,
+        val isPlaying: Boolean,
     )
 
     private fun trackRow(
@@ -1700,6 +1743,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
         private const val ARG_EXPECTED_MEDIA_SHA256 =
             "vexCrossPlatformExpectedMediaSha256"
+
+        private const val ARG_EXPECTED_TRACK_REF =
+            "vexCrossPlatformExpectedTrackRef"
 
         private const val ARG_PAIRING_MODE =
             "vexCrossPlatformPairingMode"
