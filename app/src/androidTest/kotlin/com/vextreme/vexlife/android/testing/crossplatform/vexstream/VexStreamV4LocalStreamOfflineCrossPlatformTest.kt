@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 
 import android.content.ComponentName
+import android.content.Context
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -20,6 +21,7 @@ import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
 import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.PairedVexStreamMusicRepository
+import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
@@ -34,6 +36,7 @@ import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPrese
 import com.vextreme.vexlife.android.testing.crossplatform.VexCrossPlatformEvidence
 import com.vextreme.vexlife.android.ui.VexLifeApp
 import com.vextreme.vexlife.android.ui.VexLifeSession
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,9 +59,10 @@ import org.junit.runner.RunWith
  * Canonical relationship:
  *   test.cross-platform.vexstream.v4-android.local-stream-offline/v1
  *
- * This first safe implementation deliberately uses an already-approved Desktop/Android pairing.
- * It never clears, replaces, or revokes the human's ordinary VexStream pairing identity. A future
- * fresh-pair-from-zero mode requires a test-owned pairing namespace before it may be admitted.
+ * Pairing mode is explicit. EXISTING_PAIRING_SAFE_MODE preserves an already-approved ordinary
+ * pairing. FRESH_TEST_PAIRING_NAMESPACE uses Android device-protected storage for an isolated
+ * pairing/offline namespace that survives the real process restart without clearing ordinary
+ * credential-protected VexLife pairing/download state.
  *
  * The real VexLife process restart is proved by two separate host-selected instrumentation phases:
  *
@@ -115,9 +119,10 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         activeEvidence =
             evidence
 
-        requireSafeExistingPairingMode(
-            evidence,
-        )
+        val pairingMode =
+            requirePairingMode(
+                evidence,
+            )
         val expectedDigest =
             requireFixtureDigest(
                 evidence,
@@ -125,24 +130,36 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
         evidence.resetRunEvidence()
 
+        val vexStreamContext =
+            pairingContext(
+                productContext = context,
+                pairingMode = pairingMode,
+            )
         val connectionStore =
             VexStreamConnectionStore(
-                context,
+                vexStreamContext,
             )
-        val remembered =
-            connectionStore.load()
-                ?: error(
-                    "EXISTING_PAIRING_SAFE_MODE requires an already-approved " +
-                        "VexStream pairing; ordinary pairing state was left untouched",
-                )
+
+        if (
+            pairingMode ==
+            PairingMode.FRESH_TEST_PAIRING_NAMESPACE
+        ) {
+            resetFreshTestNamespace(
+                context = vexStreamContext,
+                connectionStore = connectionStore,
+            )
+        }
+
+        val deviceRef =
+            connectionStore.deviceRef()
 
         evidence.checkpoint(
             phaseRef = "android.fixture.ready",
             status = "PASS",
             details =
                 mapOf(
-                    "pairingMode" to PAIRING_MODE_EXISTING,
-                    "displayName" to remembered.displayName,
+                    "pairingMode" to pairingMode.name,
+                    "deviceRef" to deviceRef,
                     "expectedMediaSha256" to expectedDigest,
                 ),
         )
@@ -150,39 +167,23 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         val vexStream =
             PairedVexStreamMusicRepository
                 .production(
-                    context,
+                    vexStreamContext,
                 )
 
-        runBlocking {
-            vexStream
-                .reconnectPairedVexStream()
-        }
-
-        val ready =
-            vexStream.state.value
-        check(
-            ready.hubState is
-                VexStreamHubState.Ready
+        if (
+            pairingMode ==
+            PairingMode.EXISTING_PAIRING_SAFE_MODE
         ) {
-            "Existing VexStream pairing did not reconnect to a ready Desktop V4 Hub: " +
-                ready.hubState
+            check(
+                connectionStore.load() != null,
+            ) {
+                "EXISTING_PAIRING_SAFE_MODE requires an already-approved VexStream pairing"
+            }
+            runBlocking {
+                vexStream
+                    .reconnectPairedVexStream()
+            }
         }
-
-        val targetRef =
-            targetTrackRef(
-                vexStream = vexStream,
-                expectedDigest = expectedDigest,
-            )
-
-        evidence.checkpoint(
-            phaseRef = "android.catalog.fixture",
-            status = "PASS",
-            details =
-                fixtureDetails(
-                    vexStream = vexStream,
-                    targetRef = targetRef,
-                ),
-        )
 
         withApp(
             vexStream = vexStream,
@@ -191,6 +192,131 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 HomeScreen
                     .VexStreamMusic
                     .elementId,
+            )
+
+            if (
+                pairingMode ==
+                PairingMode.FRESH_TEST_PAIRING_NAMESPACE
+            ) {
+                tap(
+                    VexStreamMusicScreen
+                        .FindNearby
+                        .elementId,
+                )
+
+                compose.waitUntil(
+                    timeoutMillis =
+                        DISCOVERY_TIMEOUT_MS,
+                ) {
+                    vexStream
+                        .state
+                        .value
+                        .connectionState is
+                        VexStreamConnectionState.ConfirmCode ||
+                        vexStream
+                            .state
+                            .value
+                            .connectionState is
+                        VexStreamConnectionState.Failed
+                }
+
+                val confirmation =
+                    vexStream
+                        .state
+                        .value
+                        .connectionState
+                        as? VexStreamConnectionState.ConfirmCode
+                        ?: error(
+                            "fresh test pairing did not reach code confirmation: " +
+                                vexStream
+                                    .state
+                                    .value
+                                    .connectionState,
+                        )
+
+                evidence.checkpoint(
+                    phaseRef = "android.discovery.resolve",
+                    status = "PASS",
+                    details =
+                        mapOf(
+                            "displayName" to confirmation.displayName,
+                            "deviceRef" to deviceRef,
+                        ),
+                )
+
+                tap(
+                    VexStreamMusicScreen
+                        .ConfirmPairingCode
+                        .elementId,
+                )
+
+                evidence.checkpoint(
+                    phaseRef = "android.pairing.requested",
+                    status = "WAITING",
+                    details =
+                        mapOf(
+                            "deviceRef" to deviceRef,
+                        ),
+                )
+            }
+
+            compose.waitUntil(
+                timeoutMillis =
+                    PAIRING_APPROVAL_TIMEOUT_MS,
+            ) {
+                val state =
+                    vexStream
+                        .state
+                        .value
+
+                (
+                    state.connectionState is
+                        VexStreamConnectionState.Paired &&
+                        state.hubState is
+                        VexStreamHubState.Ready
+                ) ||
+                    state.connectionState is
+                    VexStreamConnectionState.Failed
+            }
+
+            val ready =
+                vexStream.state.value
+            check(
+                ready.connectionState is
+                    VexStreamConnectionState.Paired &&
+                    ready.hubState is
+                    VexStreamHubState.Ready
+            ) {
+                "VexStream pairing/catalog did not become ready: " +
+                    ready.connectionState +
+                    " / " +
+                    ready.hubState
+            }
+
+            evidence.checkpoint(
+                phaseRef = "android.pairing.ready",
+                status = "PASS",
+                details =
+                    mapOf(
+                        "pairingMode" to pairingMode.name,
+                        "deviceRef" to deviceRef,
+                    ),
+            )
+
+            val targetRef =
+                targetTrackRef(
+                    vexStream = vexStream,
+                    expectedDigest = expectedDigest,
+                )
+
+            evidence.checkpoint(
+                phaseRef = "android.catalog.fixture",
+                status = "PASS",
+                details =
+                    fixtureDetails(
+                        vexStream = vexStream,
+                        targetRef = targetRef,
+                    ),
             )
 
             waitForTag(
@@ -495,18 +621,31 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         activeEvidence =
             evidence
 
-        requireSafeExistingPairingMode(
-            evidence,
-        )
+        val pairingMode =
+            requirePairingMode(
+                evidence,
+            )
         val expectedDigest =
             requireFixtureDigest(
                 evidence,
             )
 
+        val vexStreamContext =
+            pairingContext(
+                productContext = context,
+                pairingMode = pairingMode,
+            )
+        val connectionStore =
+            VexStreamConnectionStore(
+                vexStreamContext,
+            )
+        val deviceRef =
+            connectionStore.deviceRef()
+
         val vexStream =
             PairedVexStreamMusicRepository
                 .production(
-                    context,
+                    vexStreamContext,
                 )
 
         val targetRef =
@@ -729,6 +868,49 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 "android.download.removed",
             )
 
+            if (
+                pairingMode ==
+                PairingMode.FRESH_TEST_PAIRING_NAMESPACE
+            ) {
+                evidence.checkpoint(
+                    phaseRef = "android.awaiting-test-pairing-revoke",
+                    status = "WAITING",
+                    details =
+                        mapOf(
+                            "deviceRef" to deviceRef,
+                            "hostMarkerRelativePath" to
+                                evidence
+                                    .hostMarkerRelativePath(
+                                        HOST_MARKER_TEST_PAIRING_REVOKED,
+                                    ),
+                        ),
+                )
+
+                val revokeReceipt =
+                    evidence.waitForHostMarker(
+                        markerRef =
+                            HOST_MARKER_TEST_PAIRING_REVOKED,
+                        timeoutMs =
+                            HOST_SYNC_TIMEOUT_MS,
+                    )
+
+                connectionStore.clear()
+                File(
+                    vexStreamContext.filesDir,
+                    "vexstream",
+                ).deleteRecursively()
+
+                evidence.checkpoint(
+                    phaseRef = "android.test-namespace.cleaned",
+                    status = "PASS",
+                    details =
+                        mapOf(
+                            "deviceRef" to deviceRef,
+                            "hostReceipt" to revokeReceipt,
+                        ),
+                )
+            }
+
             evidence.checkpoint(
                 phaseRef = "android.phase-b.complete",
                 status = "PASS",
@@ -780,20 +962,49 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         )
     }
 
-    private fun requireSafeExistingPairingMode(
+    private fun requirePairingMode(
         evidence: VexCrossPlatformEvidence,
-    ) {
-        val mode =
+    ): PairingMode =
+        when (
             evidence.argument(
                 ARG_PAIRING_MODE,
             )
-        check(
-            mode ==
-                PAIRING_MODE_EXISTING,
         ) {
-            "Only EXISTING_PAIRING_SAFE_MODE is admitted by the first V4 lived harness; " +
-                "fresh-pair automation remains held until a test-owned pairing namespace exists"
+            PAIRING_MODE_EXISTING ->
+                PairingMode.EXISTING_PAIRING_SAFE_MODE
+
+            PAIRING_MODE_FRESH_TEST ->
+                PairingMode.FRESH_TEST_PAIRING_NAMESPACE
+
+            else ->
+                error(
+                    "vexCrossPlatformPairingMode must be one of: " +
+                        "$PAIRING_MODE_EXISTING, $PAIRING_MODE_FRESH_TEST",
+                )
         }
+
+    private fun pairingContext(
+        productContext: Context,
+        pairingMode: PairingMode,
+    ): Context =
+        when (pairingMode) {
+            PairingMode.EXISTING_PAIRING_SAFE_MODE ->
+                productContext
+
+            PairingMode.FRESH_TEST_PAIRING_NAMESPACE ->
+                productContext
+                    .createDeviceProtectedStorageContext()
+        }
+
+    private fun resetFreshTestNamespace(
+        context: Context,
+        connectionStore: VexStreamConnectionStore,
+    ) {
+        connectionStore.clear()
+        File(
+            context.filesDir,
+            "vexstream",
+        ).deleteRecursively()
     }
 
     private fun requireFixtureDigest(
@@ -1071,6 +1282,11 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         }
     }
 
+    private enum class PairingMode {
+        EXISTING_PAIRING_SAFE_MODE,
+        FRESH_TEST_PAIRING_NAMESPACE,
+    }
+
     companion object {
         private const val FIXTURE_REF =
             "vexstream-v4-local-stream-offline"
@@ -1087,6 +1303,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         private const val PAIRING_MODE_EXISTING =
             "EXISTING_PAIRING_SAFE_MODE"
 
+        private const val PAIRING_MODE_FRESH_TEST =
+            "FRESH_TEST_PAIRING_NAMESPACE"
+
         private const val PHASE_A =
             "A"
 
@@ -1099,8 +1318,17 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         private const val HOST_MARKER_DESKTOP_RESTARTED =
             "desktop-restarted"
 
+        private const val HOST_MARKER_TEST_PAIRING_REVOKED =
+            "test-pairing-revoked"
+
         private const val UI_TIMEOUT_MS =
             10_000L
+
+        private const val DISCOVERY_TIMEOUT_MS =
+            55_000L
+
+        private const val PAIRING_APPROVAL_TIMEOUT_MS =
+            90_000L
 
         private const val DOWNLOAD_TIMEOUT_MS =
             60_000L
