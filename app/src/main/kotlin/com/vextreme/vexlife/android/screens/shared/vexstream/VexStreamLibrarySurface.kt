@@ -187,6 +187,8 @@ internal fun VexStreamLibrarySurface(
                         VexStreamAlbumsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
+                            offlineCopyConnection =
+                                offlineCopyConnection,
                             controller = controller,
                             resolver = resolver,
                             onVisitArtist = ::visitArtist,
@@ -196,6 +198,8 @@ internal fun VexStreamLibrarySurface(
                         VexStreamArtistsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
+                            offlineCopyConnection =
+                                offlineCopyConnection,
                             controller = controller,
                             resolver = resolver,
                             requestedArtist = artistVisitRequest,
@@ -209,6 +213,8 @@ internal fun VexStreamLibrarySurface(
                         VexStreamPlaylistsPane(
                             runtime = runtime,
                             state = state,
+                            offlineCopyConnection =
+                                offlineCopyConnection,
                             controller = controller,
                             resolver = resolver,
                             onVisitArtist = ::visitArtist,

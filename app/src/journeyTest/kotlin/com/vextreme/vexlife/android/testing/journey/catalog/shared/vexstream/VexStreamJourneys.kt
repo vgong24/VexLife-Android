@@ -8,16 +8,19 @@ import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScree
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPresentationScope
 import com.vextreme.vexlife.android.shell.AppShell
+import com.vextreme.vexlife.android.testing.featurewalk.FeatureWalks
+import com.vextreme.vexlife.android.testing.featurewalk.vexFeatureWalkJourney
 
 object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
 
     private fun trackRowActionElementId(
         action: ActionElement,
+        scope: VexStreamTrackPresentationScope =
+            VexStreamTrackPresentationScope.Songs,
     ): String =
         VexStreamPresentationRefs.trackRowAction(
-            scope =
-                VexStreamTrackPresentationScope.Songs,
+            scope = scope,
             trackRef =
                 VexStreamJourneyFixtures.TrackOne,
             action = action,
@@ -270,7 +273,81 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
+    private val downloadAndRemoveFeatureWalk =
+        vexFeatureWalkJourney(
+            featureWalkCase =
+                FeatureWalks
+                    .vexStream
+                    .offlineDownload
+                    .downloadAndRemove,
+        ) {
+        start(HomeScreen)
+        tap(HomeScreen.ConnectVexStreamMusic)
+        tap(VexStreamMusicScreen.FindNearby)
+        tap(VexStreamMusicScreen.ConfirmPairingCode)
+        tap(AppShell.Elements.Back)
+        tap(HomeScreen.VexStreamMusic)
+
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures.TrackOne,
+            ),
+        )
+        tapElementById(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.DownloadTrack,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.DownloadTrack,
+        )
+
+        tap(VexStreamMusicScreen.DownloadsTab)
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Downloads,
+                trackRef =
+                    VexStreamJourneyFixtures.TrackOne,
+            ),
+        )
+        tapElementById(
+            elementId =
+                trackRowActionElementId(
+                    action =
+                        VexStreamMusicScreen.RemoveTrackDownload,
+                    scope =
+                        VexStreamTrackPresentationScope.Downloads,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.RemoveTrackDownload,
+        )
+
+        tap(VexStreamMusicScreen.SongsTab)
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures.TrackOne,
+            ),
+        )
+        tap(AppShell.Elements.Back)
+    }
+
+    val downloadAndRemove =
+        downloadAndRemoveFeatureWalk.journey
+
     override val journeys = listOf(
         connectRefreshForget,
+        downloadAndRemove,
     )
+
+    override val featureWalkJourneys =
+        listOf(
+            downloadAndRemoveFeatureWalk,
+        )
 }
