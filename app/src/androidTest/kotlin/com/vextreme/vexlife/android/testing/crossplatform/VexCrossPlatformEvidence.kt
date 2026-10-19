@@ -168,6 +168,9 @@ internal class VexCrossPlatformEvidence(
             LOG_TAG,
             "CHECKPOINT run=$runRef phase=$phaseRef status=$status details=$detailJson",
         )
+
+        lastCheckpointRef =
+            phaseRef
     }
 
     /**
@@ -178,6 +181,7 @@ internal class VexCrossPlatformEvidence(
      */
     fun screenshot(
         phaseRef: String,
+        details: Map<String, Any?> = emptyMap(),
     ): ScreenshotEvidence {
         require(phaseRef.isNotBlank())
 
@@ -266,19 +270,80 @@ internal class VexCrossPlatformEvidence(
             phaseRef = "$phaseRef.screenshot",
             status = "PASS",
             details =
-                mapOf(
-                    "outputPath" to evidence.outputPath,
-                    "privatePath" to evidence.privatePath,
-                    "byteLength" to evidence.byteLength,
-                    "sha256" to evidence.sha256,
-                    "uri" to
-                        storage
-                            .getOutputFileUri(outputPath)
-                            .toString(),
-                ),
+                details +
+                    mapOf(
+                        "outputPath" to evidence.outputPath,
+                        "privatePath" to evidence.privatePath,
+                        "byteLength" to evidence.byteLength,
+                        "sha256" to evidence.sha256,
+                        "uri" to
+                            storage
+                                .getOutputFileUri(outputPath)
+                                .toString(),
+                    ),
         )
 
         return evidence
+    }
+
+    fun beginWalkAction(
+        walkRef: String,
+        actionRef: String,
+        expectedResultRef: String,
+        details: Map<String, Any?> = emptyMap(),
+    ): WalkAction {
+        val action =
+            WalkAction(
+                walkRef = walkRef,
+                actionRef = actionRef,
+                expectedResultRef = expectedResultRef,
+            )
+        val links =
+            action.links() +
+                details
+
+        checkpoint(
+            phaseRef = "$actionRef.action",
+            status = "OBSERVED",
+            details = links,
+        )
+        screenshot(
+            phaseRef = "$actionRef.before",
+            details =
+                links +
+                    mapOf(
+                        "visualStage" to "BEFORE_ACTION",
+                    ),
+        )
+
+        return action
+    }
+
+    fun completeWalkAction(
+        action: WalkAction,
+        observedResultRef: String,
+        details: Map<String, Any?> = emptyMap(),
+    ) {
+        val links =
+            action.links() +
+                mapOf(
+                    "observedResultRef" to observedResultRef,
+                ) +
+                details
+
+        checkpoint(
+            phaseRef = "${action.actionRef}.result",
+            status = "PASS",
+            details = links,
+        )
+        screenshot(
+            phaseRef = "${action.actionRef}.after",
+            details =
+                links +
+                    mapOf(
+                        "visualStage" to "AFTER_RESULT",
+                    ),
+        )
     }
 
     fun failure(
@@ -357,6 +422,19 @@ internal class VexCrossPlatformEvidence(
             runRoot,
             "host.${markerRef.safePath()}",
         )
+
+    data class WalkAction(
+        val walkRef: String,
+        val actionRef: String,
+        val expectedResultRef: String,
+    ) {
+        fun links(): Map<String, Any?> =
+            mapOf(
+                "walkRef" to walkRef,
+                "actionRef" to actionRef,
+                "expectedResultRef" to expectedResultRef,
+            )
+    }
 
     data class ScreenshotEvidence(
         val outputPath: String,
