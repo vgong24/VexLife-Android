@@ -417,6 +417,12 @@ class VexFeatureWalkContractTest {
                 "${VexMapsFeatureWalkRefs.FIND_ROUTE_NAVIGATE} status=HELD journey=HELD",
             ),
         )
+        assertTrue(
+            report.contains(
+                "${VexStreamFeatureWalkRefs.DOWNLOAD_AND_REMOVE} status=ACTIVE " +
+                    "journey=shared.vexstream/download-and-remove",
+            ),
+        )
 
         val reportPath =
             Path.of(
