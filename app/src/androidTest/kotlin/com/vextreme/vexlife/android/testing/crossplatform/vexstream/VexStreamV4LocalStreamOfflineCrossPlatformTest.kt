@@ -3,11 +3,15 @@ package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 import android.content.ComponentName
 import android.content.Context
 import android.os.Looper
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -62,9 +66,9 @@ import org.junit.runner.RunWith
  *   test.cross-platform.vexstream.v4-android.local-stream-offline/v1
  *
  * Pairing mode is explicit. EXISTING_PAIRING_SAFE_MODE preserves an already-approved ordinary
- * pairing. FRESH_TEST_PAIRING_NAMESPACE uses Android device-protected storage for an isolated
- * pairing/offline namespace that survives the real process restart without clearing ordinary
- * credential-protected VexLife pairing/download state.
+ * pairing. FRESH_TEST_PAIRING_NAMESPACE requires the dedicated .crossplatform application identity,
+ * so pairing, Media3 playback, offline bytes and restart restoration share one isolated app sandbox
+ * without clearing ordinary VexLife pairing/download state.
  *
  * The real VexLife process restart is proved by two separate host-selected instrumentation phases:
  *
@@ -442,7 +446,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                                     .name,
                         ),
                 )
-            tap(
+            tapLazyTarget(
                 songsPlay,
             )
             waitForPlayback(
@@ -475,7 +479,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "trackRef" to targetRef.value,
                         ),
                 )
-            tap(
+            tapLazyTarget(
                 trackRowAction(
                     scope =
                         VexStreamTrackPresentationScope.Songs,
@@ -545,7 +549,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "trackRef" to targetRef.value,
                         ),
                 )
-            tap(
+            tapLazyTarget(
                 trackRowAction(
                     scope =
                         VexStreamTrackPresentationScope.Songs,
@@ -865,7 +869,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     .elementId,
             )
 
-            waitForTag(
+            revealLazyTarget(
                 trackRow(
                     scope =
                         VexStreamTrackPresentationScope.Downloads,
@@ -891,7 +895,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "trackRef" to targetRef.value,
                         ),
                 )
-            tap(
+            tapLazyTarget(
                 trackRowAction(
                     scope =
                         VexStreamTrackPresentationScope.Downloads,
@@ -1028,7 +1032,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "trackRef" to targetRef.value,
                         ),
                 )
-            tap(
+            tapLazyTarget(
                 trackRowAction(
                     scope =
                         VexStreamTrackPresentationScope.Downloads,
@@ -1057,7 +1061,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     .SongsTab
                     .elementId,
             )
-            waitForTag(
+            revealLazyTarget(
                 trackRow(
                     scope =
                         VexStreamTrackPresentationScope.Songs,
@@ -1683,6 +1687,40 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 trackRef = targetRef,
                 action = action,
             )
+
+    private fun revealLazyTarget(
+        elementId: String,
+    ) {
+        compose
+            .onNode(
+                hasScrollToIndexAction(),
+            )
+            .performScrollToNode(
+                hasTestTag(
+                    elementId,
+                ),
+            )
+
+        waitForTag(
+            elementId,
+        )
+    }
+
+    private fun tapLazyTarget(
+        elementId: String,
+    ) {
+        revealLazyTarget(
+            elementId,
+        )
+
+        compose
+            .onNodeWithTag(
+                elementId,
+            )
+            .performClick()
+
+        compose.waitForIdle()
+    }
 
     private fun tap(
         elementId: String,
