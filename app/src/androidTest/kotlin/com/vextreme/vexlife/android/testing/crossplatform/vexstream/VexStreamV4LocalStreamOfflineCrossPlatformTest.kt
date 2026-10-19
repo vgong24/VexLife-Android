@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Looper
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -39,6 +40,7 @@ import com.vextreme.vexlife.android.ui.VexLifeApp
 import com.vextreme.vexlife.android.ui.VexLifeSession
 import java.io.File
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -189,6 +191,20 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         withApp(
             vexStream = vexStream,
         ) { controller ->
+            val openVexStreamAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.action.open-vexstream",
+                    expectedResultRef = "android.result.vexstream-screen-open",
+                    details =
+                        mapOf(
+                            "targetElementId" to
+                                HomeScreen
+                                    .VexStreamMusic
+                                    .elementId,
+                        ),
+                )
+
             tap(
                 HomeScreen
                     .VexStreamMusic
@@ -199,6 +215,37 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 pairingMode ==
                 PairingMode.FRESH_TEST_PAIRING_NAMESPACE
             ) {
+                waitForTag(
+                    VexStreamMusicScreen
+                        .FindNearby
+                        .elementId,
+                )
+                evidence.completeWalkAction(
+                    action = openVexStreamAction,
+                    observedResultRef = "android.result.vexstream-screen-open",
+                    details =
+                        mapOf(
+                            "visibleElementId" to
+                                VexStreamMusicScreen
+                                    .FindNearby
+                                    .elementId,
+                        ),
+                )
+
+                val findNearbyAction =
+                    evidence.beginWalkAction(
+                        walkRef = WALK_REF,
+                        actionRef = "android.action.find-nearby",
+                        expectedResultRef = "android.result.pairing-code-visible",
+                        details =
+                            mapOf(
+                                "targetElementId" to
+                                    VexStreamMusicScreen
+                                        .FindNearby
+                                        .elementId,
+                            ),
+                    )
+
                 tap(
                     VexStreamMusicScreen
                         .FindNearby
@@ -235,16 +282,38 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                                     .connectionState,
                         )
 
+                val discoveryDetails =
+                    mapOf(
+                        "displayName" to confirmation.displayName,
+                        "deviceRef" to deviceRef,
+                        "pairingCode" to confirmation.pairingCode,
+                    )
+
                 evidence.checkpoint(
                     phaseRef = "android.discovery.resolve",
                     status = "PASS",
-                    details =
-                        mapOf(
-                            "displayName" to confirmation.displayName,
-                            "deviceRef" to deviceRef,
-                            "pairingCode" to confirmation.pairingCode,
-                        ),
+                    details = discoveryDetails,
                 )
+                evidence.completeWalkAction(
+                    action = findNearbyAction,
+                    observedResultRef = "android.result.pairing-code-visible",
+                    details = discoveryDetails,
+                )
+
+                val confirmPairingAction =
+                    evidence.beginWalkAction(
+                        walkRef = WALK_REF,
+                        actionRef = "android.action.confirm-pairing-code",
+                        expectedResultRef = "android.result.pairing-request-pending",
+                        details =
+                            mapOf(
+                                "targetElementId" to
+                                    VexStreamMusicScreen
+                                        .ConfirmPairingCode
+                                        .elementId,
+                                "pairingCode" to confirmation.pairingCode,
+                            ),
+                    )
 
                 tap(
                     VexStreamMusicScreen
@@ -258,6 +327,23 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     details =
                         mapOf(
                             "deviceRef" to deviceRef,
+                        ),
+                )
+                evidence.completeWalkAction(
+                    action = confirmPairingAction,
+                    observedResultRef = "android.result.pairing-request-pending",
+                    details =
+                        mapOf(
+                            "deviceRef" to deviceRef,
+                        ),
+                )
+            } else {
+                evidence.completeWalkAction(
+                    action = openVexStreamAction,
+                    observedResultRef = "android.result.vexstream-screen-open",
+                    details =
+                        mapOf(
+                            "pairingMode" to pairingMode.name,
                         ),
                 )
             }
@@ -341,6 +427,17 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                         VexStreamMusicScreen.PlayTrack,
                 )
 
+            val streamPlayAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.action.play-stream",
+                    expectedResultRef = "android.result.stream-playing",
+                    details =
+                        mapOf(
+                            "targetElementId" to songsPlay,
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 songsPlay,
             )
@@ -349,18 +446,31 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 targetRef = targetRef,
                 expectedScheme = "vexstream",
             )
+            val streamPlaybackDetails =
+                playbackDetails(
+                    controller,
+                )
             evidence.checkpoint(
                 phaseRef = "android.playback.stream",
                 status = "PASS",
-                details =
-                    playbackDetails(
-                        controller,
-                    ),
+                details = streamPlaybackDetails,
             )
-            evidence.screenshot(
-                "android.playback.stream",
+            evidence.completeWalkAction(
+                action = streamPlayAction,
+                observedResultRef = "android.result.stream-playing",
+                details = streamPlaybackDetails,
             )
 
+            val addQueueAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.action.add-to-queue",
+                    expectedResultRef = "android.result.queue-second-occurrence-visible",
+                    details =
+                        mapOf(
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 trackRowAction(
                     scope =
@@ -400,17 +510,20 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                         secondOccurrence,
                     ),
             )
+            val queueDetails =
+                mapOf(
+                    "trackRef" to targetRef.value,
+                    "queueOccurrence" to 2,
+                )
             evidence.checkpoint(
                 phaseRef = "android.queue.fixture",
                 status = "PASS",
-                details =
-                    mapOf(
-                        "trackRef" to targetRef.value,
-                        "queueOccurrence" to 2,
-                    ),
+                details = queueDetails,
             )
-            evidence.screenshot(
-                "android.queue.fixture",
+            evidence.completeWalkAction(
+                action = addQueueAction,
+                observedResultRef = "android.result.queue-second-occurrence-visible",
+                details = queueDetails,
             )
             tap(
                 VexStreamMusicScreen
@@ -418,6 +531,16 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     .elementId,
             )
 
+            val downloadAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.action.download-track",
+                    expectedResultRef = "android.result.download-verified",
+                    details =
+                        mapOf(
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 trackRowAction(
                     scope =
@@ -465,26 +588,29 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 downloaded.byteLength > 0L,
             )
 
+            val downloadDetails =
+                mapOf(
+                    "trackRef" to targetRef.value,
+                    "mediaSha256" to
+                        downloaded
+                            .mediaSha256
+                            .value,
+                    "byteLength" to
+                        downloaded
+                            .byteLength,
+                    "localMediaRef" to
+                        downloaded
+                            .localMediaRef,
+                )
             evidence.checkpoint(
                 phaseRef = "android.download.verified",
                 status = "PASS",
-                details =
-                    mapOf(
-                        "trackRef" to targetRef.value,
-                        "mediaSha256" to
-                            downloaded
-                                .mediaSha256
-                                .value,
-                        "byteLength" to
-                            downloaded
-                                .byteLength,
-                        "localMediaRef" to
-                            downloaded
-                                .localMediaRef,
-                    ),
+                details = downloadDetails,
             )
-            evidence.screenshot(
-                "android.download.verified",
+            evidence.completeWalkAction(
+                action = downloadAction,
+                observedResultRef = "android.result.download-verified",
+                details = downloadDetails,
             )
 
             evidence.checkpoint(
@@ -518,9 +644,21 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     ),
             )
 
-            controller.pause()
-            controller.clearMediaItems()
+            onMainThread {
+                controller.pause()
+                controller.clearMediaItems()
+            }
 
+            val offlineRefreshAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.action.refresh-after-desktop-stop",
+                    expectedResultRef = "android.result.hub-local-only",
+                    details =
+                        mapOf(
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 VexStreamMusicScreen
                     .ManageConnection
@@ -563,18 +701,31 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 localOnly.availability,
             )
 
+            val localOnlyDetails =
+                mapOf(
+                    "trackRef" to targetRef.value,
+                )
             evidence.checkpoint(
                 phaseRef = "android.hub.local-only",
                 status = "PASS",
-                details =
-                    mapOf(
-                        "trackRef" to targetRef.value,
-                    ),
+                details = localOnlyDetails,
             )
-            evidence.screenshot(
-                "android.hub.local-only",
+            evidence.completeWalkAction(
+                action = offlineRefreshAction,
+                observedResultRef = "android.result.hub-local-only",
+                details = localOnlyDetails,
             )
 
+            val localPlayAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.action.play-local",
+                    expectedResultRef = "android.result.local-playing",
+                    details =
+                        mapOf(
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 songsPlay,
             )
@@ -584,16 +735,19 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 expectedScheme = "file",
             )
 
+            val localPlaybackDetails =
+                playbackDetails(
+                    controller,
+                )
             evidence.checkpoint(
                 phaseRef = "android.playback.local",
                 status = "PASS",
-                details =
-                    playbackDetails(
-                        controller,
-                    ),
+                details = localPlaybackDetails,
             )
-            evidence.screenshot(
-                "android.playback.local",
+            evidence.completeWalkAction(
+                action = localPlayAction,
+                observedResultRef = "android.result.local-playing",
+                details = localPlaybackDetails,
             )
 
             evidence.checkpoint(
@@ -687,6 +841,16 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         withApp(
             vexStream = vexStream,
         ) { controller ->
+            val restoredDownloadsAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.phase-b.action.open-restored-downloads",
+                    expectedResultRef = "android.phase-b.result.download-visible",
+                    details =
+                        mapOf(
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 HomeScreen
                     .VexStreamMusic
@@ -705,7 +869,25 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     targetRef = targetRef,
                 ),
             )
+            evidence.completeWalkAction(
+                action = restoredDownloadsAction,
+                observedResultRef = "android.phase-b.result.download-visible",
+                details =
+                    mapOf(
+                        "trackRef" to targetRef.value,
+                    ),
+            )
 
+            val restoredPlayAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.phase-b.action.play-restored",
+                    expectedResultRef = "android.phase-b.result.restored-playing",
+                    details =
+                        mapOf(
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 trackRowAction(
                     scope =
@@ -721,16 +903,19 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 expectedScheme = "file",
             )
 
+            val restoredPlaybackDetails =
+                playbackDetails(
+                    controller,
+                )
             evidence.checkpoint(
                 phaseRef = "android.playback.restored",
                 status = "PASS",
-                details =
-                    playbackDetails(
-                        controller,
-                    ),
+                details = restoredPlaybackDetails,
             )
-            evidence.screenshot(
-                "android.playback.restored",
+            evidence.completeWalkAction(
+                action = restoredPlayAction,
+                observedResultRef = "android.phase-b.result.restored-playing",
+                details = restoredPlaybackDetails,
             )
 
             evidence.checkpoint(
@@ -764,6 +949,16 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     ),
             )
 
+            val reconnectAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.phase-b.action.reconnect",
+                    expectedResultRef = "android.phase-b.result.hub-and-local",
+                    details =
+                        mapOf(
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 VexStreamMusicScreen
                     .ManageConnection
@@ -805,12 +1000,31 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 VexStreamTrackAvailability.HUB_AND_LOCAL,
                 reconnected.availability,
             )
+            evidence.completeWalkAction(
+                action = reconnectAction,
+                observedResultRef = "android.phase-b.result.hub-and-local",
+                details =
+                    mapOf(
+                        "trackRef" to targetRef.value,
+                        "availability" to reconnected.availability.name,
+                    ),
+            )
 
             tap(
                 VexStreamMusicScreen
                     .DownloadsTab
                     .elementId,
             )
+            val removeDownloadAction =
+                evidence.beginWalkAction(
+                    walkRef = WALK_REF,
+                    actionRef = "android.phase-b.action.remove-download",
+                    expectedResultRef = "android.phase-b.result.download-removed-catalog-preserved",
+                    details =
+                        mapOf(
+                            "trackRef" to targetRef.value,
+                        ),
+                )
             tap(
                 trackRowAction(
                     scope =
@@ -857,17 +1071,20 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     ),
             )
 
+            val removedDetails =
+                mapOf(
+                    "trackRef" to targetRef.value,
+                    "catalogIdentityPreserved" to true,
+                )
             evidence.checkpoint(
                 phaseRef = "android.download.removed",
                 status = "PASS",
-                details =
-                    mapOf(
-                        "trackRef" to targetRef.value,
-                        "catalogIdentityPreserved" to true,
-                    ),
+                details = removedDetails,
             )
-            evidence.screenshot(
-                "android.download.removed",
+            evidence.completeWalkAction(
+                action = removeDownloadAction,
+                observedResultRef = "android.phase-b.result.download-removed-catalog-preserved",
+                details = removedDetails,
             )
 
             if (
@@ -1144,19 +1361,23 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     sessionScope,
             )
         val controllerFuture =
-            MediaController
-                .Builder(
-                    context,
-                    SessionToken(
+            onMainThread {
+                MediaController
+                    .Builder(
                         context,
-                        ComponentName(
+                        SessionToken(
                             context,
-                            VexStreamPlaybackService::class.java,
+                            ComponentName(
+                                context,
+                                VexStreamPlaybackService::class.java,
+                            ),
                         ),
-                    ),
-                )
-                .buildAsync()
+                    )
+                    .buildAsync()
+            }
 
+        var primaryFailure: Throwable? =
+            null
         try {
             compose.setContent {
                 VexLifeApp(
@@ -1176,11 +1397,38 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             block(
                 controller,
             )
+        } catch (
+            failure: Throwable,
+        ) {
+            primaryFailure =
+                failure
+            throw failure
         } finally {
-            MediaController.releaseFuture(
-                controllerFuture,
-            )
+            val releaseFailure =
+                runCatching {
+                    onMainThread {
+                        MediaController.releaseFuture(
+                            controllerFuture,
+                        )
+                    }
+                }.exceptionOrNull()
+
             sessionScope.cancel()
+
+            if (
+                primaryFailure !=
+                null
+            ) {
+                releaseFailure
+                    ?.let(
+                        primaryFailure::addSuppressed,
+                    )
+            } else if (
+                releaseFailure !=
+                null
+            ) {
+                throw releaseFailure
+            }
         }
     }
 
@@ -1193,20 +1441,17 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             timeoutMillis =
                 PLAYBACK_TIMEOUT_MS,
         ) {
-            val item =
-                controller
-                    .currentMediaItem
+            val observation =
+                controllerObservation(
+                    controller,
+                )
 
-            item
-                ?.mediaId ==
+            observation.mediaId ==
                 targetRef.value &&
-                item.localConfiguration
-                    ?.uri
-                    ?.scheme ==
+                observation.uriScheme ==
                 expectedScheme &&
-                controller.playerError ==
-                null &&
-                controller.playbackState in
+                observation.playerErrorAbsent &&
+                observation.playbackState in
                 setOf(
                     Player.STATE_BUFFERING,
                     Player.STATE_READY,
@@ -1217,22 +1462,87 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
     private fun playbackDetails(
         controller: MediaController,
-    ): Map<String, Any?> =
-        mapOf(
-            "mediaId" to
-                controller
-                    .currentMediaItem
-                    ?.mediaId,
-            "uriScheme" to
-                controller
-                    .currentMediaItem
-                    ?.localConfiguration
-                    ?.uri
-                    ?.scheme,
-            "playbackState" to
-                controller
-                    .playbackState,
+    ): Map<String, Any?> {
+        val observation =
+            controllerObservation(
+                controller,
+            )
+        return mapOf(
+            "mediaId" to observation.mediaId,
+            "uriScheme" to observation.uriScheme,
+            "playbackState" to observation.playbackState,
         )
+    }
+
+    private fun controllerObservation(
+        controller: MediaController,
+    ): ControllerObservation =
+        onMainThread {
+            val item =
+                controller
+                    .currentMediaItem
+
+            ControllerObservation(
+                mediaId = item?.mediaId,
+                uriScheme =
+                    item
+                        ?.localConfiguration
+                        ?.uri
+                        ?.scheme,
+                playerErrorAbsent =
+                    controller.playerError ==
+                        null,
+                playbackState =
+                    controller.playbackState,
+            )
+        }
+
+    private fun <T> onMainThread(
+        block: () -> T,
+    ): T {
+        if (
+            Looper.myLooper() ==
+            Looper.getMainLooper()
+        ) {
+            return block()
+        }
+
+        val value =
+            AtomicReference<T?>()
+        val failure =
+            AtomicReference<Throwable?>()
+
+        InstrumentationRegistry
+            .getInstrumentation()
+            .runOnMainSync {
+                try {
+                    value.set(
+                        block(),
+                    )
+                } catch (
+                    throwable: Throwable,
+                ) {
+                    failure.set(
+                        throwable,
+                    )
+                }
+            }
+
+        failure.get()
+            ?.let {
+                throw it
+            }
+
+        @Suppress("UNCHECKED_CAST")
+        return value.get() as T
+    }
+
+    private data class ControllerObservation(
+        val mediaId: String?,
+        val uriScheme: String?,
+        val playerErrorAbsent: Boolean,
+        val playbackState: Int,
+    )
 
     private fun trackRow(
         scope: VexStreamTrackPresentationScope,
@@ -1303,6 +1613,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
     }
 
     companion object {
+        private const val WALK_REF =
+            "test.cross-platform.vexstream.v4-android.local-stream-offline/v1"
+
         private const val FIXTURE_REF =
             "vexstream-v4-local-stream-offline"
 
