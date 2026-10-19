@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 
 import android.content.ComponentName
 import android.content.Context
-import android.content.ContextWrapper
 import android.os.Looper
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -1214,28 +1213,27 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             PairingMode.EXISTING_PAIRING_SAFE_MODE ->
                 productContext
 
-            PairingMode.FRESH_TEST_PAIRING_NAMESPACE ->
-                StorageScopedContext(
-                    productContext
-                        .createDeviceProtectedStorageContext(),
-                )
+            PairingMode.FRESH_TEST_PAIRING_NAMESPACE -> {
+                check(
+                    productContext.packageName ==
+                        CROSS_PLATFORM_APPLICATION_ID,
+                ) {
+                    "FRESH_TEST_PAIRING_NAMESPACE requires the isolated cross-platform application identity"
+                }
+                productContext
+            }
         }
-
-    /**
-     * Preserve the selected storage domain through production owners that correctly ask for
-     * applicationContext to avoid retaining an Activity/test component context.
-     */
-    private class StorageScopedContext(
-        base: Context,
-    ) : ContextWrapper(base) {
-        override fun getApplicationContext(): Context =
-            this
-    }
 
     private fun resetFreshTestNamespace(
         context: Context,
         connectionStore: VexStreamConnectionStore,
     ) {
+        check(
+            context.packageName ==
+                CROSS_PLATFORM_APPLICATION_ID,
+        ) {
+            "fresh test namespace cleanup requires the isolated cross-platform application identity"
+        }
         connectionStore.clear()
         File(
             context.filesDir,
@@ -1740,6 +1738,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
         private const val FIXTURE_SHA256 =
             "602e675b3d27d2496ac968172b68ca1dc74ddaec455be92d41b51ec65fa359a7"
+
+        private const val CROSS_PLATFORM_APPLICATION_ID =
+            "com.vextreme.vexlife.android.crossplatform"
 
         private const val ARG_EXPECTED_MEDIA_SHA256 =
             "vexCrossPlatformExpectedMediaSha256"
