@@ -58,10 +58,14 @@ make verification green.
 A contributor should not need to learn testing-framework internals before changing product code.
 
 - **Whole-feature / end-to-end completion:** start with `docs/features/README.md`, then
-  `docs/features/FEATURE-WALKS.md`. Its canonical descent is feature identity/home ->
+  `docs/features/FEATURE-WALKS.md`. Its Android-local descent is feature identity/home ->
   `FeatureWalks.<feature>...` -> owning `*FeatureWalks.kt` -> bound `*Journeys.kt` and focused
-  `*FeatureWalkProofBacklinks.kt` -> named test method. The generated
-  `build/reports/vex/feature-walks.txt` is a projection of those links, not another truth owner.
+  `*FeatureWalkProofBacklinks.kt` -> named test method. When the claimed outcome crosses repositories,
+  hosts, devices, producer loss/restart, or another ownership boundary, continue to the institutional
+  Vextreme-SDK standard at `docs/process/end-to-end-proof-standard.md`; Feature Walk does not replace
+  that lived composition. If shared-prefix branch reuse is the actual proof question, follow the
+  Test / Proof Foundation's QuantumTest/Vroomba section rather than inventing a local clone.
+  `build/reports/vex/feature-walks.txt` remains a projection of links, not another truth owner.
 - **New Screen or interaction:** start with the owning `*Screen.kt`, then follow
   `docs/foundation/F1-UI-BLUEPRINT-HOME.md`. Register the Screen once in `AppScreens`, keep
   feature-owned effects beside the Screen/domain, and add focused behavior proof.
