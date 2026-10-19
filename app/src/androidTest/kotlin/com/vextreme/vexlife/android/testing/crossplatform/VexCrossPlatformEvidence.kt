@@ -233,9 +233,31 @@ internal class VexCrossPlatformEvidence(
                 output.write(bytes)
             }
 
+        val privateScreenshot =
+            File(
+                runRoot,
+                "screenshots/" +
+                    phaseRef.safePath() +
+                    ".png",
+            )
+        privateScreenshot
+            .parentFile
+            ?.mkdirs()
+        privateScreenshot
+            .writeBytes(
+                bytes,
+            )
+
         val evidence =
             ScreenshotEvidence(
                 outputPath = outputPath,
+                privatePath =
+                    privateScreenshot
+                        .relativeTo(
+                            root.parentFile
+                                ?: error("cross-platform evidence root has no parent"),
+                        )
+                        .path,
                 byteLength = bytes.size,
                 sha256 = bytes.sha256(),
             )
@@ -246,6 +268,7 @@ internal class VexCrossPlatformEvidence(
             details =
                 mapOf(
                     "outputPath" to evidence.outputPath,
+                    "privatePath" to evidence.privatePath,
                     "byteLength" to evidence.byteLength,
                     "sha256" to evidence.sha256,
                     "uri" to
@@ -337,6 +360,7 @@ internal class VexCrossPlatformEvidence(
 
     data class ScreenshotEvidence(
         val outputPath: String,
+        val privatePath: String,
         val byteLength: Int,
         val sha256: String,
     )
