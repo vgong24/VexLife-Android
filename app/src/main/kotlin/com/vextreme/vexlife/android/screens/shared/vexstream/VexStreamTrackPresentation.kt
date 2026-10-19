@@ -264,6 +264,24 @@ internal fun VexStreamTrackCard(
             else ->
                 null
         }
+    val offlineAction =
+        if (!showDownloadAction) {
+            null
+        } else {
+            when (state.localCopy) {
+                is VexStreamLocalCopyState.Downloaded ->
+                    VexStreamMusicScreen.RemoveTrackDownload
+
+                is VexStreamLocalCopyState.Downloading ->
+                    null
+
+                else ->
+                    VexStreamMusicScreen.DownloadTrack
+                        .takeIf {
+                            state.hubAvailable
+                        }
+            }
+        }
 
     val trackPresentationRef =
         VexStreamPresentationRefs.trackRow(
@@ -400,6 +418,23 @@ internal fun VexStreamTrackCard(
                     }
                 }
 
+                offlineAction?.let { action ->
+                    VexIconButton(
+                        element = action,
+                        handler = rowHandler,
+                        enabled =
+                            offlineCopyConnection != null,
+                        semanticRef =
+                            VexStreamPresentationRefs.trackRowAction(
+                                scope =
+                                    presentationScope,
+                                trackRef =
+                                    state.track.trackRef,
+                                action = action,
+                            ),
+                    )
+                }
+
                 VexBox(
                     id = "menu",
                 ) {
@@ -441,42 +476,16 @@ internal fun VexStreamTrackCard(
                             enabled = addToQueueAvailable,
                         )
 
-                        if (showDownloadAction) {
-                            when (state.localCopy) {
-                                is VexStreamLocalCopyState.Downloaded ->
-                                    VexStreamTrackMenuItem(
-                                        presentationScope =
-                                            presentationScope,
-                                        trackRef =
-                                            state.track.trackRef,
-                                        element =
-                                            VexStreamMusicScreen
-                                                .RemoveTrackDownload,
-                                        handler = menuHandler,
-                                        enabled =
-                                            offlineCopyConnection != null,
-                                    )
-
-                                is VexStreamLocalCopyState.Downloading ->
-                                    Unit
-
-                                else -> {
-                                    if (state.hubAvailable) {
-                                        VexStreamTrackMenuItem(
-                                            presentationScope =
-                                                presentationScope,
-                                            trackRef =
-                                                state.track.trackRef,
-                                            element =
-                                                VexStreamMusicScreen
-                                                    .DownloadTrack,
-                                            handler = menuHandler,
-                                            enabled =
-                                                offlineCopyConnection != null,
-                                        )
-                                    }
-                                }
-                            }
+                        offlineAction?.let { action ->
+                            VexStreamTrackMenuItem(
+                                presentationScope =
+                                    presentationScope,
+                                trackRef = state.track.trackRef,
+                                element = action,
+                                handler = menuHandler,
+                                enabled =
+                                    offlineCopyConnection != null,
+                            )
                         }
 
                         if (state.track.artist.isNotBlank()) {
@@ -508,12 +517,12 @@ private fun VexStreamTrackMenuItem(
     DropdownMenuItem(
         modifier =
             VexModifier.vex(
-VexStreamPresentationRefs.trackMenuAction(
-                        scope =
-                            presentationScope,
-                        trackRef = trackRef,
-                        action = element,
-),
+                VexStreamPresentationRefs.trackMenuAction(
+                    scope =
+                        presentationScope,
+                    trackRef = trackRef,
+                    action = element,
+                ),
             ),
         text = {
             Text(
