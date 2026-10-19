@@ -400,25 +400,18 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     ),
             )
 
-            waitForFixtureCatalog(
-                vexStream = vexStream,
-                expectedDigest = expectedDigest,
-            )
-
-            val targetRef =
-                targetTrackRef(
+            val fixtureTarget =
+                waitForFixtureCatalog(
                     vexStream = vexStream,
                     expectedDigest = expectedDigest,
                 )
+            val targetRef =
+                fixtureTarget.trackRef
 
             evidence.checkpoint(
                 phaseRef = "android.catalog.fixture",
                 status = "PASS",
-                details =
-                    fixtureDetails(
-                        vexStream = vexStream,
-                        targetRef = targetRef,
-                    ),
+                details = fixtureTarget.details,
             )
 
             val songsPlay =
@@ -440,14 +433,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "targetElementId" to songsPlay,
                             "trackRef" to targetRef.value,
                             "catalogAvailability" to
-                                requireNotNull(
-                                    vexStream
-                                        .state
-                                        .value
-                                        .track(
-                                            targetRef,
-                                        ),
-                                )
+                                fixtureTarget
                                     .availability
                                     .name,
                         ),
@@ -1283,7 +1269,11 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
     private fun waitForFixtureCatalog(
         vexStream: PairedVexStreamMusicRepository,
         expectedDigest: String,
-    ) {
+    ): FixtureCatalogTarget {
+        var observedTarget:
+            FixtureCatalogTarget? =
+            null
+
         compose.waitUntil(
             timeoutMillis =
                 CATALOG_FIXTURE_TIMEOUT_MS,
@@ -1293,14 +1283,74 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     .state
                     .value
 
-            state.connectionState is
-                VexStreamConnectionState.Failed ||
-                state.tracks.any { item ->
-                    item.track
-                        .mediaSha256
-                        .value ==
-                        expectedDigest
-                }
+            if (
+                state.connectionState is
+                VexStreamConnectionState.Failed
+            ) {
+                return@waitUntil true
+            }
+
+            val item =
+                state
+                    .tracks
+                    .singleOrNull { candidate ->
+                        candidate
+                            .track
+                            .mediaSha256
+                            .value ==
+                            expectedDigest
+                    }
+                    ?: return@waitUntil false
+            val trackRef =
+                item
+                    .track
+                    .trackRef
+            val playElementId =
+                trackRowAction(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    targetRef = trackRef,
+                    action =
+                        VexStreamMusicScreen.PlayTrack,
+                )
+            val playVisible =
+                compose
+                    .onAllNodesWithTag(
+                        playElementId,
+                    )
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+
+            if (playVisible) {
+                observedTarget =
+                    FixtureCatalogTarget(
+                        trackRef = trackRef,
+                        availability = item.availability,
+                        details =
+                            mapOf(
+                                "trackRef" to
+                                    item
+                                        .track
+                                        .trackRef
+                                        .value,
+                                "mediaSha256" to
+                                    item
+                                        .track
+                                        .mediaSha256
+                                        .value,
+                                "mediaByteLength" to
+                                    item
+                                        .track
+                                        .mediaByteLength,
+                                "availability" to
+                                    item
+                                        .availability
+                                        .name,
+                            ),
+                    )
+            }
+
+            playVisible
         }
 
         val state =
@@ -1314,63 +1364,19 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             "VexStream failed while waiting for exact fixture catalog entry: " +
                 state.connectionState
         }
+
+        return requireNotNull(
+            observedTarget,
+        ) {
+            "exact VexStream fixture did not become a rendered Songs Play target"
+        }
     }
 
-    private fun targetTrackRef(
-        vexStream: PairedVexStreamMusicRepository,
-        expectedDigest: String,
-    ): VexStreamTrackRef =
-        vexStream
-            .state
-            .value
-            .tracks
-            .singleOrNull { item ->
-                item.track
-                    .mediaSha256
-                    .value ==
-                    expectedDigest
-            }
-            ?.track
-            ?.trackRef
-            ?: error(
-                "exact VexStream fixture digest was not present in Android state",
-            )
-
-    private fun fixtureDetails(
-        vexStream: PairedVexStreamMusicRepository,
-        targetRef: VexStreamTrackRef,
-    ): Map<String, Any?> {
-        val item =
-            requireNotNull(
-                vexStream
-                    .state
-                    .value
-                    .track(
-                        targetRef,
-                    ),
-            )
-
-        return mapOf(
-            "trackRef" to
-                item
-                    .track
-                    .trackRef
-                    .value,
-            "mediaSha256" to
-                item
-                    .track
-                    .mediaSha256
-                    .value,
-            "mediaByteLength" to
-                item
-                    .track
-                    .mediaByteLength,
-            "availability" to
-                item
-                    .availability
-                    .name,
-        )
-    }
+    private data class FixtureCatalogTarget(
+        val trackRef: VexStreamTrackRef,
+        val availability: VexStreamTrackAvailability,
+        val details: Map<String, Any?>,
+    )
 
     private fun withApp(
         vexStream: PairedVexStreamMusicRepository,
