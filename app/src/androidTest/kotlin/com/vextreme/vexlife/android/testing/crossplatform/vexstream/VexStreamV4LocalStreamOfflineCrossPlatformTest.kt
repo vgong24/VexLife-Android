@@ -804,20 +804,15 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     vexStreamContext,
                 )
 
-        val targetRef =
-            targetTrackRef(
+        val restored =
+            restoredOfflineFixture(
                 vexStream = vexStream,
                 expectedDigest = expectedDigest,
             )
-        val restored =
-            requireNotNull(
-                vexStream
-                    .state
-                    .value
-                    .track(
-                        targetRef,
-                    ),
-            )
+        val targetRef =
+            restored
+                .track
+                .trackRef
 
         assertEquals(
             VexStreamTrackAvailability.LOCAL_ONLY,
@@ -833,8 +828,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             status = "PASS",
             details =
                 fixtureDetails(
-                    vexStream = vexStream,
-                    targetRef = targetRef,
+                    restored,
                 ),
         )
 
@@ -1377,6 +1371,50 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         val availability: VexStreamTrackAvailability,
         val details: Map<String, Any?>,
     )
+
+    private fun restoredOfflineFixture(
+        vexStream: PairedVexStreamMusicRepository,
+        expectedDigest: String,
+    ) =
+        requireNotNull(
+            vexStream
+                .state
+                .value
+                .tracks
+                .singleOrNull { item ->
+                    item
+                        .track
+                        .mediaSha256
+                        .value ==
+                        expectedDigest
+                },
+        ) {
+            "exact VexStream fixture digest was not restored from the offline index"
+        }
+
+    private fun fixtureDetails(
+        item: com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState,
+    ): Map<String, Any?> =
+        mapOf(
+            "trackRef" to
+                item
+                    .track
+                    .trackRef
+                    .value,
+            "mediaSha256" to
+                item
+                    .track
+                    .mediaSha256
+                    .value,
+            "mediaByteLength" to
+                item
+                    .track
+                    .mediaByteLength,
+            "availability" to
+                item
+                    .availability
+                    .name,
+        )
 
     private fun withApp(
         vexStream: PairedVexStreamMusicRepository,
