@@ -242,6 +242,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                         mapOf(
                             "displayName" to confirmation.displayName,
                             "deviceRef" to deviceRef,
+                            "pairingCode" to confirmation.pairingCode,
                         ),
                 )
 
