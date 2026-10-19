@@ -117,6 +117,28 @@ Feature
 Feature Walks do not execute UI, replace Journey, replace focused tests, or create product acceptance.
 They make required whole-outcome gaps and their release predicates visible.
 
+### Institutional EndToEnd boundary
+
+Feature Walk is Android-local completion traceability. It is **not** Vextreme's institutional EndToEnd
+proof standard.
+
+When the human outcome crosses repositories, physical hosts/devices, producer loss/restart, or another
+owner boundary, continue from this feature map into:
+
+~~~text
+vgong24/Vextreme-SDK
+-> docs/process/end-to-end-proof-standard.md
+-> docs/process/cross-platform-lived-proof-and-branch-reuse.md when cross-platform realization applies
+~~~
+
+The institutional standard owns exact participant/currentness binding, lived boundary realization,
+scope/non-claims, evidence custody and cleanup ownership. Android Feature Walk/Journey remains the
+feature-local source of human path identity.
+
+When several descendant proof paths share one exact reconstructable prefix, branch reuse is an
+optimization question beneath EndToEnd. The Android Test / Proof Foundation documents the bounded
+QuantumTest/Vroomba POC; do not make branch reuse a prerequisite for ordinary EndToEnd proof.
+
 For a lane asking where to start and where the scenario ultimately lives, follow one descent:
 
 ~~~text
