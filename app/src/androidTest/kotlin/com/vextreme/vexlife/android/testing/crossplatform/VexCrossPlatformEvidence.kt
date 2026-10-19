@@ -188,38 +188,116 @@ internal class VexCrossPlatformEvidence(
         val instrumentation =
             InstrumentationRegistry.getInstrumentation()
 
-        instrumentation.waitForIdleSync()
+        val capture =
+            runCatching {
+                instrumentation.waitForIdleSync()
 
-        val bitmap =
-            requireNotNull(
-                instrumentation
-                    .uiAutomation
-                    .takeScreenshot(),
-            ) {
-                "UiAutomation.takeScreenshot() returned null for $phaseRef"
+                val bitmap =
+                    requireNotNull(
+                        instrumentation
+                            .uiAutomation
+                            .takeScreenshot(),
+                    ) {
+                        "UiAutomation.takeScreenshot() returned null for $phaseRef"
+                    }
+
+                val bytes =
+                    try {
+                        ByteArrayOutputStream().use { output ->
+                            check(
+                                bitmap.compress(
+                                    Bitmap.CompressFormat.PNG,
+                                    100,
+                                    output,
+                                ),
+                            ) {
+                                "failed to encode cross-platform screenshot for $phaseRef"
+                            }
+                            output.toByteArray()
+                        }
+                    } finally {
+                        bitmap.recycle()
+                    }
+
+                check(bytes.isNotEmpty()) {
+                    "cross-platform screenshot encoded to zero bytes for $phaseRef"
+                }
+
+                bytes
             }
+
+        if (capture.isFailure) {
+            val failure =
+                requireNotNull(
+                    capture.exceptionOrNull(),
+                )
+            val evidence =
+                ScreenshotEvidence(
+                    state = "UNAVAILABLE",
+                    outputPath = null,
+                    privatePath = null,
+                    byteLength = null,
+                    sha256 = null,
+                    transferState = "NOT_REACHED",
+                    transferFailureType = null,
+                    transferFailureMessage = null,
+                    captureFailureType =
+                        failure
+                            .javaClass
+                            .name,
+                    captureFailureMessage =
+                        failure
+                            .message,
+                )
+
+            checkpoint(
+                phaseRef = "$phaseRef.screenshot",
+                status = "OBSERVED",
+                details =
+                    details +
+                        evidence.details(),
+            )
+
+            return evidence
+        }
 
         val bytes =
-            try {
-                ByteArrayOutputStream().use { output ->
-                    check(
-                        bitmap.compress(
-                            Bitmap.CompressFormat.PNG,
-                            100,
-                            output,
-                        ),
-                    ) {
-                        "failed to encode cross-platform screenshot for $phaseRef"
-                    }
-                    output.toByteArray()
-                }
-            } finally {
-                bitmap.recycle()
-            }
+            requireNotNull(
+                capture.getOrNull(),
+            )
+        val sha256 =
+            bytes.sha256()
 
-        check(bytes.isNotEmpty()) {
-            "cross-platform screenshot encoded to zero bytes for $phaseRef"
-        }
+        val privateScreenshot =
+            File(
+                runRoot,
+                "screenshots/" +
+                    phaseRef.safePath() +
+                    ".png",
+            )
+        val privateWrite =
+            runCatching {
+                privateScreenshot
+                    .parentFile
+                    ?.mkdirs()
+                privateScreenshot
+                    .writeBytes(
+                        bytes,
+                    )
+            }
+        val privatePath =
+            if (
+                privateWrite.isSuccess
+            ) {
+                privateScreenshot
+                    .relativeTo(
+                        root.parentFile
+                            ?: error("cross-platform evidence root has no parent"),
+                    )
+                    .path
+            } else {
+                null
+            }
 
         val outputPath =
             "vex-cross-platform/" +
@@ -230,57 +308,93 @@ internal class VexCrossPlatformEvidence(
                 phaseRef.safePath() +
                 ".png"
 
-        storage
-            .openOutputFile(outputPath)
-            .buffered()
-            .use { output ->
-                output.write(bytes)
-            }
+        val transfer =
+            runCatching {
+                storage
+                    .openOutputFile(outputPath)
+                    .buffered()
+                    .use { output ->
+                        output.write(bytes)
+                    }
 
-        val privateScreenshot =
-            File(
-                runRoot,
-                "screenshots/" +
-                    phaseRef.safePath() +
-                    ".png",
-            )
-        privateScreenshot
-            .parentFile
-            ?.mkdirs()
-        privateScreenshot
-            .writeBytes(
-                bytes,
-            )
+                storage
+                    .getOutputFileUri(
+                        outputPath,
+                    )
+                    .toString()
+            }
+        val transferUri =
+            transfer.getOrNull()
+        val transferFailure =
+            transfer.exceptionOrNull()
+
+        val state =
+            when {
+                privateWrite.isSuccess &&
+                    transfer.isSuccess ->
+                    "CAPTURED_PRIVATE_AND_TRANSFERRED"
+
+                privateWrite.isSuccess ->
+                    "CAPTURED_PRIVATE_ONLY"
+
+                transfer.isSuccess ->
+                    "CAPTURED_TRANSFER_ONLY"
+
+                else ->
+                    "UNAVAILABLE"
+            }
 
         val evidence =
             ScreenshotEvidence(
-                outputPath = outputPath,
-                privatePath =
-                    privateScreenshot
-                        .relativeTo(
-                            root.parentFile
-                                ?: error("cross-platform evidence root has no parent"),
-                        )
-                        .path,
+                state = state,
+                outputPath =
+                    outputPath.takeIf {
+                        transfer.isSuccess
+                    },
+                privatePath = privatePath,
                 byteLength = bytes.size,
-                sha256 = bytes.sha256(),
+                sha256 = sha256,
+                transferState =
+                    if (
+                        transfer.isSuccess
+                    ) {
+                        "PASS"
+                    } else {
+                        "UNAVAILABLE"
+                    },
+                transferFailureType =
+                    transferFailure
+                        ?.javaClass
+                        ?.name,
+                transferFailureMessage =
+                    transferFailure
+                        ?.message,
+                captureFailureType =
+                    privateWrite
+                        .exceptionOrNull()
+                        ?.javaClass
+                        ?.name,
+                captureFailureMessage =
+                    privateWrite
+                        .exceptionOrNull()
+                        ?.message,
+                transferUri = transferUri,
             )
 
         checkpoint(
             phaseRef = "$phaseRef.screenshot",
-            status = "PASS",
+            status =
+                if (
+                    state ==
+                    "UNAVAILABLE"
+                ) {
+                    "OBSERVED"
+                } else {
+                    "PASS"
+                },
             details =
                 details +
-                    mapOf(
-                        "outputPath" to evidence.outputPath,
-                        "privatePath" to evidence.privatePath,
-                        "byteLength" to evidence.byteLength,
-                        "sha256" to evidence.sha256,
-                        "uri" to
-                            storage
-                                .getOutputFileUri(outputPath)
-                                .toString(),
-                    ),
+                    evidence.details(),
         )
 
         return evidence
@@ -437,11 +551,33 @@ internal class VexCrossPlatformEvidence(
     }
 
     data class ScreenshotEvidence(
-        val outputPath: String,
-        val privatePath: String,
-        val byteLength: Int,
-        val sha256: String,
-    )
+        val state: String,
+        val outputPath: String?,
+        val privatePath: String?,
+        val byteLength: Int?,
+        val sha256: String?,
+        val transferState: String,
+        val transferFailureType: String?,
+        val transferFailureMessage: String?,
+        val captureFailureType: String?,
+        val captureFailureMessage: String?,
+        val transferUri: String? = null,
+    ) {
+        fun details(): Map<String, Any?> =
+            mapOf(
+                "screenshotState" to state,
+                "outputPath" to outputPath,
+                "privatePath" to privatePath,
+                "byteLength" to byteLength,
+                "sha256" to sha256,
+                "transferState" to transferState,
+                "transferUri" to transferUri,
+                "transferFailureType" to transferFailureType,
+                "transferFailureMessage" to transferFailureMessage,
+                "captureFailureType" to captureFailureType,
+                "captureFailureMessage" to captureFailureMessage,
+            )
+    }
 
     companion object {
         const val ARG_FIXTURE =
