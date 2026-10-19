@@ -163,8 +163,10 @@ class VexJourneyBranchReuseExperimentTest {
         val second = executePrefix(prefix)
 
         assertEquals(first.snapshotRef, second.snapshotRef)
+        // Snapshot state identity is canonicalized independently of traversal order.
+        // The ordered walk remains owned by routeRef; snapshotRef names only the reached state.
         assertEquals(
-            "snapshot:downloaded:paired|catalog-visible|download-verified",
+            "snapshot:downloaded:catalog-visible|download-verified|paired",
             first.snapshotRef,
         )
     }
