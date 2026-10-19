@@ -473,6 +473,12 @@ val vexFoundationHealth =
                             "VexFeatureWalkContractTest.kt",
                             "build/reports/vex/feature-walks.txt",
                         ),
+                    "docs/foundation/ANDROID-HOST-PROOF.md" to
+                        listOf(
+                            "vexFoundationHealth",
+                            "vexVerifyLocal",
+                            "vexVerifyDevice",
+                        ),
                 )
 
             requiredSources.forEach {
