@@ -445,8 +445,12 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                                     .name,
                         ),
                 )
-            tapLazyTarget(
-                songsPlay,
+            tapTrackAction(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                targetRef = targetRef,
+                action =
+                    VexStreamMusicScreen.PlayTrack,
             )
             waitForPlayback(
                 controller = controller,
@@ -478,14 +482,12 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "trackRef" to targetRef.value,
                         ),
                 )
-            tapLazyTarget(
-                trackRowAction(
-                    scope =
-                        VexStreamTrackPresentationScope.Songs,
-                    targetRef = targetRef,
-                    action =
-                        VexStreamMusicScreen.TrackMenu,
-                ),
+            tapTrackAction(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                targetRef = targetRef,
+                action =
+                    VexStreamMusicScreen.TrackMenu,
             )
             tap(
                 VexStreamPresentationRefs
@@ -548,14 +550,12 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "trackRef" to targetRef.value,
                         ),
                 )
-            tapLazyTarget(
-                trackRowAction(
-                    scope =
-                        VexStreamTrackPresentationScope.Songs,
-                    targetRef = targetRef,
-                    action =
-                        VexStreamMusicScreen.DownloadTrack,
-                ),
+            tapTrackAction(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                targetRef = targetRef,
+                action =
+                    VexStreamMusicScreen.DownloadTrack,
             )
 
             compose.waitUntil(
@@ -868,12 +868,10 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     .elementId,
             )
 
-            revealLazyTarget(
-                trackRow(
-                    scope =
-                        VexStreamTrackPresentationScope.Downloads,
-                    targetRef = targetRef,
-                ),
+            revealTrack(
+                scope =
+                    VexStreamTrackPresentationScope.Downloads,
+                targetRef = targetRef,
             )
             evidence.completeWalkAction(
                 action = restoredDownloadsAction,
@@ -894,14 +892,12 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "trackRef" to targetRef.value,
                         ),
                 )
-            tapLazyTarget(
-                trackRowAction(
-                    scope =
-                        VexStreamTrackPresentationScope.Downloads,
-                    targetRef = targetRef,
-                    action =
-                        VexStreamMusicScreen.PlayTrack,
-                ),
+            tapTrackAction(
+                scope =
+                    VexStreamTrackPresentationScope.Downloads,
+                targetRef = targetRef,
+                action =
+                    VexStreamMusicScreen.PlayTrack,
             )
             waitForPlayback(
                 controller = controller,
@@ -1031,14 +1027,12 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             "trackRef" to targetRef.value,
                         ),
                 )
-            tapLazyTarget(
-                trackRowAction(
-                    scope =
-                        VexStreamTrackPresentationScope.Downloads,
-                    targetRef = targetRef,
-                    action =
-                        VexStreamMusicScreen.RemoveTrackDownload,
-                ),
+            tapTrackAction(
+                scope =
+                    VexStreamTrackPresentationScope.Downloads,
+                targetRef = targetRef,
+                action =
+                    VexStreamMusicScreen.RemoveTrackDownload,
             )
 
             compose.waitUntil(
@@ -1060,12 +1054,10 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     .SongsTab
                     .elementId,
             )
-            revealLazyTarget(
-                trackRow(
-                    scope =
-                        VexStreamTrackPresentationScope.Songs,
-                    targetRef = targetRef,
-                ),
+            revealTrack(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                targetRef = targetRef,
             )
 
             assertNotNull(
@@ -1687,31 +1679,61 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 action = action,
             )
 
-    private fun revealLazyTarget(
-        elementId: String,
+    /**
+     * LazyColumn scroll identity is the row's root Play semantic ref.
+     *
+     * Nested row/menu/download refs remain exact action identities, but the production Card owns the
+     * Play ref at the lazy-item root. Scroll by that exact trackRef-root first, then resolve the exact
+     * nested action. This keeps collection size / viewport placement out of target selection.
+     */
+    private fun revealTrack(
+        scope: VexStreamTrackPresentationScope,
+        targetRef: VexStreamTrackRef,
     ) {
+        val rootPlayRef =
+            trackRowAction(
+                scope = scope,
+                targetRef = targetRef,
+                action =
+                    VexStreamMusicScreen.PlayTrack,
+            )
+
         compose
             .onNode(
                 hasScrollToIndexAction(),
             )
             .performScrollToNode(
                 hasTestTag(
-                    elementId,
+                    rootPlayRef,
                 ),
+            )
+
+        waitForTag(
+            rootPlayRef,
+        )
+    }
+
+    private fun tapTrackAction(
+        scope: VexStreamTrackPresentationScope,
+        targetRef: VexStreamTrackRef,
+        action:
+            com.vextreme.vexlife.android.elements.ActionElement,
+    ) {
+        revealTrack(
+            scope = scope,
+            targetRef = targetRef,
+        )
+
+        val elementId =
+            trackRowAction(
+                scope = scope,
+                targetRef = targetRef,
+                action = action,
             )
 
         waitForTag(
             elementId,
         )
-    }
-
-    private fun tapLazyTarget(
-        elementId: String,
-    ) {
-        revealLazyTarget(
-            elementId,
-        )
-
         compose
             .onNodeWithTag(
                 elementId,
