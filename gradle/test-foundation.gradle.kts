@@ -482,7 +482,7 @@ val vexFoundationHealth =
                     ".github/workflows/vexlife-android-health.yml" to
                         listOf(
                             "pull_request:",
-                            "vexVerifyLocal",
+                            "vexFoundationHealth vexVerifyLocal",
                             "github.event.pull_request.head.sha",
                         ),
                 )
@@ -503,6 +503,14 @@ val vexFoundationHealth =
             }
 
             listOf(
+                "docs/CULTURE.md",
+                "docs/PORTING-MAP.md",
+                "docs/foundation/test-proof/README.md",
+                "docs/foundation/JOURNEY-INSTRUMENTATION.md",
+                "docs/foundation/SCREEN-CRAWLER-EVIDENCE.md",
+                "docs/foundation/ANDROID-HOST-PROOF.md",
+                "docs/foundation/FEATURE-EXPERIENCE-LANGUAGE.md",
+                "docs/features/VEX-FEATURE-TEMPLATE.md",
                 "gradle/test-foundation.gradle.kts",
                 "gradle/source-alignment.gradle.kts",
                 "app/src/journeyTest/kotlin/com/vextreme/vexlife/android/testing/featurewalk/FeatureWalks.kt",
@@ -512,6 +520,13 @@ val vexFoundationHealth =
                     violations +=
                         "missing foundation/proof source required by the onboarding map: $path"
                 }
+            }
+
+            val rootReadme =
+                source("README.md")
+            if (rootReadme.contains("## Current milestone")) {
+                violations +=
+                    "README.md must stay an entry router; mutable current foundation status belongs in docs/foundation/INDEX.md"
             }
 
             val requiredRootTasks =
@@ -530,6 +545,62 @@ val vexFoundationHealth =
                 if (taskName !in rootTaskNames) {
                     violations +=
                         "canonical root verification task is missing: $taskName"
+                }
+            }
+
+            if (
+                "vexVerifyJvm" in
+                rootTaskNames &&
+                "vexFoundationHealth" in
+                rootTaskNames
+            ) {
+                val verifyJvm =
+                    rootProject.tasks.named(
+                        "vexVerifyJvm",
+                    ).get()
+                val verifyJvmDependencies =
+                    verifyJvm.taskDependencies
+                        .getDependencies(
+                            verifyJvm,
+                        )
+                        .map { task ->
+                            task.path
+                        }
+                        .toSet()
+                if (
+                    ":vexFoundationHealth" !in
+                    verifyJvmDependencies
+                ) {
+                    violations +=
+                        "vexVerifyJvm must depend on :vexFoundationHealth"
+                }
+            }
+
+            if (
+                "vexVerifyLocal" in
+                rootTaskNames &&
+                "vexVerifyJvm" in
+                rootTaskNames
+            ) {
+                val verifyLocal =
+                    rootProject.tasks.named(
+                        "vexVerifyLocal",
+                    ).get()
+                val verifyLocalDependencies =
+                    verifyLocal.taskDependencies
+                        .getDependencies(
+                            verifyLocal,
+                        )
+                        .map { task ->
+                            task.path
+                        }
+                        .toSet()
+                if (
+                    ":vexVerifyJvm" !in
+                    verifyLocalDependencies
+                ) {
+                    violations +=
+                        "vexVerifyLocal must depend on :vexVerifyJvm"
                 }
             }
 
