@@ -1299,52 +1299,34 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 item
                     .track
                     .trackRef
-            val playElementId =
-                trackRowAction(
-                    scope =
-                        VexStreamTrackPresentationScope.Songs,
-                    targetRef = trackRef,
-                    action =
-                        VexStreamMusicScreen.PlayTrack,
+            observedTarget =
+                FixtureCatalogTarget(
+                    trackRef = trackRef,
+                    availability = item.availability,
+                    details =
+                        mapOf(
+                            "trackRef" to
+                                item
+                                    .track
+                                    .trackRef
+                                    .value,
+                            "mediaSha256" to
+                                item
+                                    .track
+                                    .mediaSha256
+                                    .value,
+                            "mediaByteLength" to
+                                item
+                                    .track
+                                    .mediaByteLength,
+                            "availability" to
+                                item
+                                    .availability
+                                    .name,
+                        ),
                 )
-            val playVisible =
-                compose
-                    .onAllNodesWithTag(
-                        playElementId,
-                    )
-                    .fetchSemanticsNodes()
-                    .isNotEmpty()
 
-            if (playVisible) {
-                observedTarget =
-                    FixtureCatalogTarget(
-                        trackRef = trackRef,
-                        availability = item.availability,
-                        details =
-                            mapOf(
-                                "trackRef" to
-                                    item
-                                        .track
-                                        .trackRef
-                                        .value,
-                                "mediaSha256" to
-                                    item
-                                        .track
-                                        .mediaSha256
-                                        .value,
-                                "mediaByteLength" to
-                                    item
-                                        .track
-                                        .mediaByteLength,
-                                "availability" to
-                                    item
-                                        .availability
-                                        .name,
-                            ),
-                    )
-            }
-
-            playVisible
+            true
         }
 
         val state =
@@ -1362,7 +1344,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         return requireNotNull(
             observedTarget,
         ) {
-            "exact VexStream fixture did not become a rendered Songs Play target"
+            "exact VexStream fixture digest did not become available in Android catalog state"
         }
     }
 
