@@ -41,8 +41,8 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
-      - name: Run repository-owned local verification
-        run: ./gradlew vexVerifyLocal --no-configuration-cache --continue --stacktrace
+      - name: Run repository-owned foundation health + local verification
+        run: ./gradlew vexFoundationHealth vexVerifyLocal --no-configuration-cache --continue --stacktrace
 
       - name: Preserve foundation health and JVM diagnostics
         if: always()
