@@ -191,6 +191,19 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         withApp(
             vexStream = vexStream,
         ) { controller ->
+            val homeEntryElementId =
+                when (pairingMode) {
+                    PairingMode.FRESH_TEST_PAIRING_NAMESPACE ->
+                        HomeScreen
+                            .ConnectVexStreamMusic
+                            .elementId
+
+                    PairingMode.EXISTING_PAIRING_SAFE_MODE ->
+                        HomeScreen
+                            .VexStreamMusic
+                            .elementId
+                }
+
             val openVexStreamAction =
                 evidence.beginWalkAction(
                     walkRef = WALK_REF,
@@ -198,17 +211,13 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     expectedResultRef = "android.result.vexstream-screen-open",
                     details =
                         mapOf(
-                            "targetElementId" to
-                                HomeScreen
-                                    .VexStreamMusic
-                                    .elementId,
+                            "targetElementId" to homeEntryElementId,
+                            "pairingMode" to pairingMode.name,
                         ),
                 )
 
             tap(
-                HomeScreen
-                    .VexStreamMusic
-                    .elementId,
+                homeEntryElementId,
             )
 
             if (
