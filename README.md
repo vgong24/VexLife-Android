@@ -24,6 +24,26 @@ Fresh humans, ChatGPT instances, Vex/Cultivation workers, and other coding agent
 
 Do not broad-read every historical Android artifact before working.
 
+### Repository self-check
+
+Once the repository Gradle/toolchain contract is available, the smallest onboarding/foundation
+integrity check is:
+
+```bash
+./gradlew vexFoundationHealth
+```
+
+It verifies that the root entry route, feature/proof descent, source-alignment owner and canonical
+verification tasks are still discoverable from source. Ordinary local verification already includes
+it:
+
+```bash
+./gradlew vexVerifyLocal
+```
+
+Use `vexVerifyDevice` only when the claim actually requires connected Android/provider reality.
+These checks do not replace lived product review.
+
 ChatGPT Project instructions may improve convenience, but this repository is designed so they are
 not required to recover the Android architecture or development posture.
 
