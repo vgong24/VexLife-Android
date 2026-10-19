@@ -24,15 +24,19 @@ android {
     }
 
     buildTypes {
-        create("crossPlatform") {
-            initWith(
-                getByName("debug"),
-            )
-            applicationIdSuffix = ".crossplatform"
-            matchingFallbacks +=
-                listOf(
-                    "debug",
+        getByName("debug") {
+            providers
+                .gradleProperty(
+                    "vexCrossPlatformApplicationIdSuffix",
                 )
+                .orNull
+                ?.trim()
+                ?.takeIf {
+                    it.isNotEmpty()
+                }
+                ?.let { suffix ->
+                    applicationIdSuffix = suffix
+                }
         }
     }
 
@@ -75,14 +79,6 @@ dependencies {
     implementation(libs.composeUiToolingPreview)
     debugImplementation(libs.composeUiTooling)
     debugImplementation(libs.composeUiTestManifest)
-    add(
-        "crossPlatformImplementation",
-        libs.composeUiTooling,
-    )
-    add(
-        "crossPlatformImplementation",
-        libs.composeUiTestManifest,
-    )
 
     implementation(libs.roomRuntime)
     implementation(libs.roomKtx)
