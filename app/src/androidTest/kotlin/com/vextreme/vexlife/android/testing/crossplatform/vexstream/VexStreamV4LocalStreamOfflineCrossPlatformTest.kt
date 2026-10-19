@@ -400,6 +400,11 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     ),
             )
 
+            waitForFixtureCatalog(
+                vexStream = vexStream,
+                expectedDigest = expectedDigest,
+            )
+
             val targetRef =
                 targetTrackRef(
                     vexStream = vexStream,
@@ -1275,6 +1280,42 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         return digest
     }
 
+    private fun waitForFixtureCatalog(
+        vexStream: PairedVexStreamMusicRepository,
+        expectedDigest: String,
+    ) {
+        compose.waitUntil(
+            timeoutMillis =
+                CATALOG_FIXTURE_TIMEOUT_MS,
+        ) {
+            val state =
+                vexStream
+                    .state
+                    .value
+
+            state.connectionState is
+                VexStreamConnectionState.Failed ||
+                state.tracks.any { item ->
+                    item.track
+                        .mediaSha256
+                        .value ==
+                        expectedDigest
+                }
+        }
+
+        val state =
+            vexStream
+                .state
+                .value
+        check(
+            state.connectionState !is
+                VexStreamConnectionState.Failed,
+        ) {
+            "VexStream failed while waiting for exact fixture catalog entry: " +
+                state.connectionState
+        }
+    }
+
     private fun targetTrackRef(
         vexStream: PairedVexStreamMusicRepository,
         expectedDigest: String,
@@ -1666,6 +1707,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
         private const val PAIRING_APPROVAL_TIMEOUT_MS =
             90_000L
+
+        private const val CATALOG_FIXTURE_TIMEOUT_MS =
+            60_000L
 
         private const val DOWNLOAD_TIMEOUT_MS =
             60_000L
