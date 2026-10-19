@@ -416,17 +416,6 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     ),
             )
 
-            waitForTag(
-                trackRow(
-                    scope =
-                        VexStreamTrackPresentationScope.Songs,
-                    targetRef = targetRef,
-                ),
-            )
-            evidence.screenshot(
-                "android.catalog.fixture",
-            )
-
             val songsPlay =
                 trackRowAction(
                     scope =
@@ -445,6 +434,17 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                         mapOf(
                             "targetElementId" to songsPlay,
                             "trackRef" to targetRef.value,
+                            "catalogAvailability" to
+                                requireNotNull(
+                                    vexStream
+                                        .state
+                                        .value
+                                        .track(
+                                            targetRef,
+                                        ),
+                                )
+                                    .availability
+                                    .name,
                         ),
                 )
             tap(
