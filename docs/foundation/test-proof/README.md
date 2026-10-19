@@ -244,6 +244,53 @@ storage and physical GPS/navigation behavior.
 
 Do not build a JVM imitation merely to avoid the rightful substrate.
 
+### Institutional EndToEnd and QuantumTest branch reuse
+
+When a feature claim spans more than one proof owner, Android-local proof composes into the
+institutional Vextreme EndToEnd standard:
+
+~~~text
+docs/features/README.md
+-> docs/features/FEATURE-WALKS.md              Android whole-outcome traceability
+-> Journey / focused / native proof            Android-owned execution evidence
+
+vgong24/Vextreme-SDK
+-> docs/process/end-to-end-proof-standard.md   institutional completion contract
+-> docs/process/cross-platform-lived-proof-and-branch-reuse.md
+                                               cross-repository/device realization
+~~~
+
+QuantumTest / Vroomba is **not another proof owner**. It is the bounded branch-reuse question:
+
+> Can several descendant routes reuse one exact reconstructable reached state while retaining full
+> route identity, child-specific success/failure evidence and the same final result as full replay?
+
+The current Android experiment lives at:
+
+~~~text
+app/src/test/kotlin/com/vextreme/vexlife/android/testing/journey/
+  VexJourneyBranchReuseExperimentTest.kt
+~~~
+
+Its admitted semantics are:
+
+~~~text
+one authored graph
+-> derived complete route refs
+-> canonical shared reached-state snapshot ref
+-> suffix execution from that snapshot
+-> final state equals full replay
+-> one failed child preserves its passing sibling
+-> failed child retains exact route / branch / step identity
+~~~
+
+It snapshots reconstructable **test truth**, never live Coroutine jobs, Binder objects, sockets,
+Media3 sessions or Compose runtime objects.
+
+Use ordinary EndToEnd/Journey execution by default. Consider QuantumTest only when branch reuse
+reduces repeated prefix execution without changing the claim being proved. A source-level POC does
+not itself prove device/runtime snapshot reuse or universal framework graduation.
+
 ## Gradle implementation boundary
 
 The root `build.gradle.kts` stays a small plugin/dependency front door. Test Foundation task
