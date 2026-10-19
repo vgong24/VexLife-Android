@@ -401,6 +401,11 @@ val vexFoundationHealth =
         outputs.file(
             vexFoundationHealthReport,
         )
+        outputs.upToDateWhen {
+            // The task graph itself is part of the health contract, so file timestamps alone are
+            // insufficient to decide that this check can be skipped.
+            false
+        }
 
         doLast {
             val violations =
