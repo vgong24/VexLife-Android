@@ -41,10 +41,19 @@ object FeatureWalks {
         }
     }
 
+    object vexStream {
+        object offlineDownload {
+            val downloadAndRemove: VexFeatureWalkCase
+                get() =
+                    VexStreamFeatureWalks.downloadAndRemove
+        }
+    }
+
     val features: List<VexFeatureWalkFeature> =
         listOf(
             ConversationFeatureWalks.feature,
             VexMapsFeatureWalks.feature,
+            VexStreamFeatureWalks.feature,
         )
 
     val walks: List<VexFeatureWalk> =
