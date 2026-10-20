@@ -430,78 +430,78 @@ private fun VexStreamCollectionDetail(
             modifier = VexModifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-        item(
-            key = "collection-header",
-        ) {
-            VexColumn(
-                id = "detail-header",
-                modifier = VexModifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            item(
+                key = "collection-header",
             ) {
-                VexButton(
-                    element =
-                        VexStreamMusicScreen
-                            .CollectionBack,
-                    handler =
-                        ElementActionHandler { element ->
-                            runtime.activate(
-                                element,
-                            )
-                            onBack()
-                        },
-                )
-                VexText(
-                    id = "title",
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                VexText(
-                    id = "track-count",
-                    text =
-                        stringResource(
-                            R.string.vexstream_music_track_count,
-                            tracks.size,
-                        ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                VexText(
-                    id = "offline-status",
-                    text =
-                        vexStreamOfflineCollectionStatusText(
-                            offlinePlan,
-                        ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                VexStreamCollectionActions(
+                VexColumn(
+                    id = "detail-header",
+                    modifier = VexModifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    VexButton(
+                        element =
+                            VexStreamMusicScreen
+                                .CollectionBack,
+                        handler =
+                            ElementActionHandler { element ->
+                                runtime.activate(
+                                    element,
+                                )
+                                onBack()
+                            },
+                    )
+                    VexText(
+                        id = "title",
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                    VexText(
+                        id = "track-count",
+                        text =
+                            stringResource(
+                                R.string.vexstream_music_track_count,
+                                tracks.size,
+                            ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    VexText(
+                        id = "offline-status",
+                        text =
+                            vexStreamOfflineCollectionStatusText(
+                                offlinePlan,
+                            ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    VexStreamCollectionActions(
+                        runtime = runtime,
+                        tracks = tracks,
+                        offlinePlan = offlinePlan,
+                        offlineCopyConnection = offlineCopyConnection,
+                        controller = controller,
+                        resolver = resolver,
+                    )
+                }
+            }
+
+            items(
+                items = tracks,
+                key = { it.track.trackRef.value },
+            ) { track ->
+                VexStreamTrackCard(
                     runtime = runtime,
-                    tracks = tracks,
-                    offlinePlan = offlinePlan,
-                    offlineCopyConnection = offlineCopyConnection,
-                    controller = controller,
-                    resolver = resolver,
+                    presentationScope =
+                        VexStreamTrackPresentationScope.collection(
+                            collectionKey,
+                        ),
+                    state = track,
+                    contextTracks = tracks,
+                    playbackConnection =
+                        trackPlaybackConnection,
+                    offlineCopyConnection =
+                        offlineCopyConnection,
+                    onVisitArtist = onVisitArtist,
                 )
             }
-        }
-
-        items(
-            items = tracks,
-            key = { it.track.trackRef.value },
-        ) { track ->
-            VexStreamTrackCard(
-                runtime = runtime,
-                presentationScope =
-                    VexStreamTrackPresentationScope.collection(
-                        collectionKey,
-                    ),
-                state = track,
-                contextTracks = tracks,
-                playbackConnection =
-                    trackPlaybackConnection,
-                offlineCopyConnection =
-                    offlineCopyConnection,
-                onVisitArtist = onVisitArtist,
-            )
-        }
         }
     }
 }
