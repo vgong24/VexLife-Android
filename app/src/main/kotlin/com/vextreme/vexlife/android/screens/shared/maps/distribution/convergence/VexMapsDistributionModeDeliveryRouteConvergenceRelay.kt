@@ -13,19 +13,20 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryrou
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Current truths used to answer one relationship question:
+ * Product context for keeping Maps honest while the person is doing distribution work.
  *
- * "Does the independently-owned Distribution Mode agree with the independently-owned Delivery
- * Route?"
+ * A person who has an active Delivery Route should not unknowingly be carrying out that route while
+ * Maps still behaves like ordinary Regular mode. At the same time, Delivery Route must not take
+ * ownership of Maps mode just because it needs Distribution behavior.
  *
  * mode
- *     tells whether Maps is currently operating in Regular or Distribution mode;
+ *     says how Maps is currently operating for the person;
  *
  * deliveryRoute
- *     tells whether a delivery-route truth currently exists.
+ *     says whether the person currently has admitted delivery work that needs Distribution context.
  *
- * A non-empty Delivery Route combined with Regular mode is the only relationship that earns a
- * bounded request back through [VexMapsDistributionModeControl.UseDistribution].
+ * When those truths disagree, convergence asks the Mode family to use Distribution through its
+ * existing Control boundary. Mode still decides what that request means from its own current State.
  */
 internal data class VexMapsDistributionModeDeliveryRouteInputState(
     val mode:
@@ -58,15 +59,15 @@ internal enum class VexMapsDistributionModeDeliveryRouteCoherence {
 }
 
 internal data class VexMapsDistributionModeDeliveryRouteOutput(
-    /** Current truth of the Mode / Delivery Route relationship. */
+    /** Whether the person's current Maps mode and current delivery work agree. */
     val coherence:
         VexMapsDistributionModeDeliveryRouteCoherence,
 
     /**
-     * Optional bounded feedback into the Mode family's existing SCAE boundary.
+     * The smallest request needed to repair that product mismatch, when one exists.
      *
-     * Convergence never selects a Mode Act/Effect directly; Mode re-resolves this Control against
-     * its own current State.
+     * Asking through Mode's Control preserves the human meaning of the request and lets Mode decide
+     * the lawful Act/Effect from its own current truth instead of Delivery Route changing Mode for it.
      */
     val requestedModeControl:
         VexMapsDistributionModeControl? =
@@ -156,8 +157,10 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
             VexMapsDistributionModeDeliveryRouteOutput
         > {
         /*
-         * Restore the complete current relationship first. Either observed dependency may arrive
-         * alone, but the output must always be projected from the latest Mode + Delivery Route pair.
+         * Judge the person's delivery context from the current Mode and Delivery Route together.
+         *
+         * Either can change first; the product should never temporarily treat a stale pairing as
+         * coherent merely because the other observation arrived on a different update.
          */
         val previousInput =
             currentState.inputState
@@ -191,10 +194,10 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
                 )
 
         /*
-         * Project relationship meaning before assembling the next Compound State.
+         * Answer the only feature question this Relay owns:
          *
-         * projectModeDeliveryRoute is the only feature decision here: coherent, or distribution
-         * mode is required and should be requested through the Mode Control boundary.
+         * "Is the person's current Maps mode appropriate for the delivery work they are carrying?"
+         * If not, request the rightful Mode Control and let that family own the correction.
          */
         val currentOutput =
             projectModeDeliveryRoute(

@@ -36,35 +36,38 @@ data class EventsProfileObservation(
 }
 
 /**
- * Current dependency truth retained by Events convergence.
+ * Context needed to answer one product question:
  *
- * Each field has a distinct relationship consequence:
+ * "Of the information that is currently true, what should the person be helped to notice now
+ * without losing, reordering, or interrupting what they are already dealing with?"
  *
  * currentScreenId
- *     decides whether a selected candidate is relevant to the currently active Screen;
+ *     protects the person from an Events attention surface appearing while they are somewhere else;
  *
  * feed
- *     owns canonical external-event truth and therefore feeds list, queue and candidate derivation;
+ *     is the outside-world information that actually exists, independent of whether it deserves
+ *     attention right now;
  *
  * preferences
- *     owns human acknowledge/defer/suspend/suppress truth and therefore changes queue membership,
- *     ordering, counts and candidate eligibility without rewriting event truth;
+ *     preserves what the person already chose to do with that information. Acknowledge, Later,
+ *     Suspend and Suppress change attention treatment, not whether the event happened;
  *
  * lab
- *     may provide one deterministic target/scenario for proof and therefore participates in
- *     candidate preference plus the projected scenario metadata;
+ *     names the exact lived condition being intentionally exercised so proof can target one stable
+ *     event without changing ordinary Events meaning;
  *
  * profile
- *     may contribute one bounded display-name-change notice into the converged event set;
+ *     lets a meaningful local identity change become visible as a bounded Events notice instead of
+ *     disappearing merely because it came from inside VexLife;
  *
  * visibleEventRefsBySurface
- *     answers target reachability only; it may hold presentation without changing candidate identity;
+ *     protects anchored attention from claiming a target the person cannot currently see/reach;
  *
  * transientBlocked
- *     answers whether another transient currently owns presentation attention.
+ *     protects the person from competing transient surfaces trying to own attention at once.
  *
- * A partial incoming patch may supply only one field. [processStates] restores every other field
- * from retained current input before recalculating the complete Events relationship.
+ * These truths may change independently, but the person should experience one coherent answer.
+ * [processStates] therefore re-evaluates the whole bounded Events relationship after any one changes.
  */
 data class EventsConvergenceInputState(
     val currentScreenId: String? = null,
@@ -139,18 +142,19 @@ data class EventsConvergenceOutputState(
         EventsConvergenceListState.Unobserved,
 
     /**
-     * Stable attention identity selected from the current queue relationship.
+     * The one event the product is currently helping the person deal with next.
      *
-     * Provider insertion/reorder, Screen changes and temporary reachability changes do not
-     * automatically replace a still-lawful candidate.
+     * Keep this identity stable while it is still lawful so a newer arrival, list reorder, Screen
+     * change, or temporary visibility loss does not yank the person's attention to something else.
      */
     val candidate: EventsConvergenceCandidate? = null,
 
     /**
-     * Current presentation eligibility of [candidate].
+     * Whether [candidate] may responsibly ask for the person's attention right now.
      *
-     * Availability may change while candidate identity stays the same; a held candidate is still
-     * current Events truth, only not presently eligible for anchored presentation.
+     * A candidate can remain the right event while being temporarily held because the person is on
+     * another Screen, another transient already owns attention, or the exact row is not reachable.
+     * Holding presentation must not silently replace the candidate or erase the event.
      */
     val availability: EventsConvergenceAvailability =
         EventsConvergenceAvailability.UNOBSERVED,
@@ -422,11 +426,11 @@ class EventsConvergenceRelay internal constructor(
         EventsConvergenceOutputState
     > {
         /*
-         * Reconciliation starts from one coherent current world.
+         * Decide from one coherent picture of the person's current Events situation.
          *
-         * inputState is only the newly admitted patch. previousInput supplies sibling dependency
-         * truth that did not change. previousOutput is consulted only where continuity itself is
-         * meaningful: retained candidate identity and the bounded profile-change notice.
+         * Feed, human choices, Screen context, row visibility and transient attention can change at
+         * different times. Never let one fresh observation be interpreted against stale siblings
+         * and accidentally change what the person is being shown or asked to deal with.
          */
         val previousInput =
             currentState.inputState
@@ -485,10 +489,11 @@ class EventsConvergenceRelay internal constructor(
             )
 
         /*
-         * Form current Events content.
+         * Form the information that Events should currently preserve for the person.
          *
-         * Canonical feed truth and one bounded profile-name transition share the same downstream
-         * list/queue/candidate calculation, so either source changing reevaluates the full result.
+         * Provider events remain factual whether or not they receive attention. A meaningful local
+         * profile-name change joins that same human-facing information stream as a bounded notice,
+         * rather than becoming a separate hidden notification path.
          */
         val latestProfileNameChange =
             profileNameChangeFromPatch(
@@ -544,11 +549,10 @@ class EventsConvergenceRelay internal constructor(
             }
 
         /*
-         * Form the human attention ordering.
+         * Respect the person's prior attention choices without rewriting what actually happened.
          *
-         * Preferences do not delete or rewrite events. They determine which current events remain
-         * in the active sequence, which are suspended behind current work, and which move to the
-         * next deferred sequence.
+         * Acknowledge/Suppress finish proactive attention, Suspend keeps an item in the current
+         * sequence but moves it behind current work, and Later moves it to the next sequence.
          */
         val dispositions =
             currentPreferences
@@ -609,10 +613,11 @@ class EventsConvergenceRelay internal constructor(
             }
 
         /*
-         * Preserve one candidate identity across unrelated changes when it remains lawful.
+         * Keep the person's current attention target stable unless there is a real reason to move on.
          *
-         * Explicit lab target wins for deterministic proof; otherwise retain the current candidate;
-         * only then choose the first item from the active attention pool.
+         * A proof scenario may deliberately select one target. Otherwise preserve the candidate the
+         * person is already dealing with while it remains lawful; only choose a new event when that
+         * identity can no longer be retained.
          */
         val candidateEvent =
             if (
@@ -656,10 +661,10 @@ class EventsConvergenceRelay internal constructor(
                 )
 
         /*
-         * Classify whether the selected candidate may be presented now.
+         * Decide whether asking for attention now would fit the person's current context.
          *
-         * This does not choose a different candidate. Screen ownership, transient occupancy and
-         * target reachability only change the candidate's current presentation relationship.
+         * Being on another Screen, already handling another transient, or lacking a reachable row
+         * should pause presentation, not reinterpret which event matters.
          */
         val availability =
             when {
@@ -698,10 +703,10 @@ class EventsConvergenceRelay internal constructor(
             }
 
         /*
-         * Freeze every derived output value before constructing the projection.
+         * Publish one self-consistent Events answer for every consumer.
          *
-         * EventsConvergenceOutputState is assembly only: no new relationship rule is hidden in its
-         * constructor arguments.
+         * The Screen should receive already-resolved list, candidate, availability and queue meaning
+         * together; it should not have to reconstruct product policy from raw inputs.
          */
         val deferredCount =
             deferredQueue.size
