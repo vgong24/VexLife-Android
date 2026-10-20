@@ -295,18 +295,26 @@ digests, timestamps, absolute task windows, SDK revisions or adapter bindings.
 The Android host layer should ask the repository for proof instead of reproducing its task list.
 
 ```text
-focused feature proof when needed
+vexFoundationHealth
+-> focused feature proof when needed
 -> vexVerifyLocal
 -> optional evidence collectors
+-> vexVerifyDevice only when Android/device reality owns the claim
 ```
 
 Canonical repository entry points are owned by `gradle/test-foundation.gradle.kts`:
 
 ```bash
+./gradlew vexFoundationHealth
 ./gradlew vexVerifyJvm
 ./gradlew vexVerifyLocal
 ./gradlew vexVerifyDevice
 ```
+
+`vexFoundationHealth` verifies that the repository front door, foundation/feature/proof routes and
+canonical verification entries are still discoverable from current source. It is already included
+by `vexVerifyJvm`, so a normal `vexVerifyLocal` host proof does not need a second standalone health
+run unless the caller wants the focused diagnostic.
 
 `vexVerifyLocal` owns the ordinary source/JVM/debug-APK proof and does not require a connected
 Android target. `vexVerifyDevice` owns the connected Android instrumentation/Journey substrate.

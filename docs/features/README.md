@@ -99,6 +99,67 @@ Do not create a repository-wide runtime feature registry merely to satisfy docum
 feature-local code anchor is enough until multiple real consumers need one shared machine-readable
 contract.
 
+### Whole-feature completion traceability
+
+Focused behavior, renderer, repository, provider and device proofs can all be healthy while a person
+still cannot complete the whole outcome through the installed app. When that failure has occurred—or
+multiple independent features expose the same completion question—use the bounded Feature Walk
+contract in `FEATURE-WALKS.md`.
+
+~~~text
+Feature
+-> Feature Walk
+-> Case
+-> Checkpoint
+-> rightful Journey / focused proof owner
+~~~
+
+Feature Walks do not execute UI, replace Journey, replace focused tests, or create product acceptance.
+They make required whole-outcome gaps and their release predicates visible.
+
+### Institutional EndToEnd boundary
+
+Feature Walk is Android-local completion traceability. It is **not** Vextreme's institutional EndToEnd
+proof standard.
+
+When the human outcome crosses repositories, physical hosts/devices, producer loss/restart, or another
+owner boundary, continue from this feature map into:
+
+~~~text
+vgong24/Vextreme-SDK
+-> docs/process/end-to-end-proof-standard.md
+-> docs/process/cross-platform-lived-proof-and-branch-reuse.md when cross-platform realization applies
+~~~
+
+The institutional standard owns exact participant/currentness binding, lived boundary realization,
+scope/non-claims, evidence custody and cleanup ownership. Android Feature Walk/Journey remains the
+feature-local source of human path identity.
+
+When several descendant proof paths share one exact reconstructable prefix, branch reuse is an
+optimization question beneath EndToEnd. The Android Test / Proof Foundation documents the bounded
+QuantumTest/Vroomba POC; do not make branch reuse a prerequisite for ordinary EndToEnd proof.
+
+For a lane asking where to start and where the scenario ultimately lives, follow one descent:
+
+~~~text
+repository README.md
+-> AGENTS.md
+-> docs/features/README.md
+-> docs/features/FEATURE-WALKS.md
+-> FeatureWalks.<feature>...              typed discovery
+-> <Feature>FeatureWalks.kt               authored Walk / Case / Checkpoint truth
+-> <Feature>Journeys.kt                   executable human scenario, when unheld
+   OR <Feature>FeatureWalkProofBacklinks.kt
+      -> exact owning @Test method         focused Checkpoint proof
+~~~
+
+The generated Feature-Walk report reverses these relationships for review; it is not a second source
+of feature meaning or test results.
+
+Do not create a Feature Walk for every test, Screen or action. One consumer may teach the pattern; the
+current contract was earned only after Conversation and VexMaps independently demonstrated that
+owner-local proof could not answer whole-feature completion.
+
 A feature home may grow fractally when continuity pressure earns it:
 
 ~~~text
@@ -291,6 +352,8 @@ Before presenting a feature as complete/current:
 
 ### Behavior and proof
 - Do focused tests protect changed meaning?
+- When Feature Walks apply, does every required unheld Case have exactly one typed Journey binding?
+- When Feature Walks apply, do held Checkpoints name the missing boundary and release predicate?
 - Did changed human walks update Journey proof when warranted?
 - Did native/provider claims receive native/provider proof?
 - Were aggregate verification and source cleanliness reconciled?

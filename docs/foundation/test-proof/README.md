@@ -34,6 +34,44 @@ A proof layer should answer one question well. More expensive layers verify rela
 cheaper layers cannot own; they do not re-implement lower-layer meaning merely to increase test
 count.
 
+## Repository foundation health
+
+Before the proof layers below can remain trustworthy, a fresh worker must still be able to find the
+repository's current owners and invoke the canonical proof entries. That is a structural repository
+question, not another feature test.
+
+```text
+README / AGENTS / culture / foundation index
+-> feature + proof routes remain source-addressable
+-> source-alignment owner remains present
+-> canonical vexVerify* / coverage / visual / proof-bundle tasks remain registered
+```
+
+The repository-owned check is:
+
+```bash
+./gradlew vexFoundationHealth
+```
+
+It writes `build/vex/test-foundation/foundation-health.txt` and is included by `vexVerifyJvm`, so
+`vexVerifyLocal` cannot silently stay green after the stable onboarding/proof route disappears.
+
+This guard intentionally does **not** claim that any feature works. It only prevents the proof
+infrastructure and its discoverability from drifting without detection.
+
+GitHub Actions is not a required proof surface for this repository. A short-lived health workflow
+was intentionally removed when proof execution returned to repository-owned commands carried locally
+or through Android Host Proof/VexRelay. The durable contract is therefore:
+
+~~~text
+repository-owned vexFoundationHealth / vexVerifyJvm / vexVerifyLocal
+-> exact source/head binding by the selected execution surface
+-> retained canonical evidence
+~~~
+
+Foundation health must verify those durable source/proof routes, not require an optional hosted CI
+caller merely because one existed historically.
+
 ## Current proof topology
 
 ~~~text
@@ -212,6 +250,53 @@ permissions, services, notifications, MediaSession, AndroidView/MapLibre behavio
 storage and physical GPS/navigation behavior.
 
 Do not build a JVM imitation merely to avoid the rightful substrate.
+
+### Institutional EndToEnd and QuantumTest branch reuse
+
+When a feature claim spans more than one proof owner, Android-local proof composes into the
+institutional Vextreme EndToEnd standard:
+
+~~~text
+docs/features/README.md
+-> docs/features/FEATURE-WALKS.md              Android whole-outcome traceability
+-> Journey / focused / native proof            Android-owned execution evidence
+
+vgong24/Vextreme-SDK
+-> docs/process/end-to-end-proof-standard.md   institutional completion contract
+-> docs/process/cross-platform-lived-proof-and-branch-reuse.md
+                                               cross-repository/device realization
+~~~
+
+QuantumTest / Vroomba is **not another proof owner**. It is the bounded branch-reuse question:
+
+> Can several descendant routes reuse one exact reconstructable reached state while retaining full
+> route identity, child-specific success/failure evidence and the same final result as full replay?
+
+The current Android experiment lives at:
+
+~~~text
+app/src/test/kotlin/com/vextreme/vexlife/android/testing/journey/
+  VexJourneyBranchReuseExperimentTest.kt
+~~~
+
+Its admitted semantics are:
+
+~~~text
+one authored graph
+-> derived complete route refs
+-> canonical shared reached-state snapshot ref
+-> suffix execution from that snapshot
+-> final state equals full replay
+-> one failed child preserves its passing sibling
+-> failed child retains exact route / branch / step identity
+~~~
+
+It snapshots reconstructable **test truth**, never live Coroutine jobs, Binder objects, sockets,
+Media3 sessions or Compose runtime objects.
+
+Use ordinary EndToEnd/Journey execution by default. Consider QuantumTest only when branch reuse
+reduces repeated prefix execution without changing the claim being proved. A source-level POC does
+not itself prove device/runtime snapshot reuse or universal framework graduation.
 
 ## Gradle implementation boundary
 

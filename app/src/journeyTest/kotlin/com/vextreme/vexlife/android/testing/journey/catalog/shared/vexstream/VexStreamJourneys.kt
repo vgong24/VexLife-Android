@@ -8,6 +8,8 @@ import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScree
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamPresentationRefs
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPresentationScope
 import com.vextreme.vexlife.android.shell.AppShell
+import com.vextreme.vexlife.android.testing.featurewalk.FeatureWalks
+import com.vextreme.vexlife.android.testing.featurewalk.vexFeatureWalkJourney
 
 object VexStreamJourneys : VexJourneyShard {
     override val shardId = "shared.vexstream"
@@ -271,10 +273,14 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
-    val downloadAndRemove = vexJourney(
-        id = "download-and-remove",
-        title = "Download and remove a VexStream song",
-    ) {
+    private val downloadAndRemoveFeatureWalk =
+        vexFeatureWalkJourney(
+            featureWalkCase =
+                FeatureWalks
+                    .vexStream
+                    .offlineDownload
+                    .downloadAndRemove,
+        ) {
         start(HomeScreen)
         tap(HomeScreen.ConnectVexStreamMusic)
         tap(VexStreamMusicScreen.FindNearby)
@@ -332,8 +338,16 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
+    val downloadAndRemove =
+        downloadAndRemoveFeatureWalk.journey
+
     override val journeys = listOf(
         connectRefreshForget,
         downloadAndRemove,
     )
+
+    override val featureWalkJourneys =
+        listOf(
+            downloadAndRemoveFeatureWalk,
+        )
 }

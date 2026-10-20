@@ -27,10 +27,76 @@ The temporary incomplete notice can be removed when a fresh worker with reposito
 - distinguish portable VexLife meaning from Android-native ownership without relying on the old
   monorepo checkout;
 - recover from an ordinary failed build or environment mismatch without undocumented local ritual;
-- identify the currently provisional/held foundations rather than assuming examples are canonical.
+- identify the currently provisional/held foundations rather than assuming examples are canonical;
+- pass `vexFoundationHealth` and `vexVerifyLocal` on current source before treating the repository
+  foundation/proof route as healthy; use `vexVerifyDevice` when the claimed foundation property
+  actually depends on connected Android reality.
 
 Removal means the **repository foundation is established enough to build outward**, not that every
 feature, integration, or future architecture question is settled.
+
+## Repository onboarding and foundation health
+
+The repository front door and the proof system are themselves stable infrastructure. A future worker
+must be able to find them from source rather than from remembered chats:
+
+```text
+README.md
+-> AGENTS.md
+-> docs/CULTURE.md
+-> docs/foundation/INDEX.md
+
+foundation question
+-> this index
+-> exact owning foundation document
+-> canonical source + focused tests
+
+feature question
+-> docs/features/README.md
+-> feature home
+-> FEATURE-WALKS.md only when whole-feature completion/traceability is implicated
+
+proof question
+-> test-proof/README.md
+-> vexVerifyJvm
+-> vexVerifyLocal
+-> JOURNEY-INSTRUMENTATION.md / SCREEN-CRAWLER-EVIDENCE.md / vexVerifyDevice as required
+
+host/device substrate missing
+-> ANDROID-HOST-PROOF.md
+```
+
+The executable structural guard is:
+
+```bash
+./gradlew vexFoundationHealth
+```
+
+It fails when required entry sources disappear, the root maps stop pointing at their canonical
+owners, Feature-Walk proof becomes undiscoverable, the source-alignment check disappears, or the
+repository-owned verification tasks are no longer registered.
+
+`vexFoundationHealth` is part of `vexVerifyJvm`, so ordinary `vexVerifyLocal` proof always checks
+this front-door/foundation integrity before being treated as a healthy local checkpoint. Its receipt
+is written to:
+
+```text
+build/vex/test-foundation/foundation-health.txt
+```
+
+and is collected into `VexLife-Test-Foundation-Proof.zip`.
+
+Permanent distinction:
+
+```text
+FOUNDATION_HEALTH_PASS
+!= FEATURE_BEHAVIOR_PASS
+!= JOURNEY_DEVICE_PASS
+!= PRODUCT_ACCEPTANCE
+```
+
+Foundation health prevents silent drift of the repository's stable entry/proof infrastructure. The
+owning semantic, Journey, native/provider and lived proofs still own their respective claims.
 
 ## Foundation checkpoint convention
 

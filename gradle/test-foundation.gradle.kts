@@ -377,6 +377,288 @@ fun vexCoveragePercentText(
     )
 
 
+val vexFoundationHealthReport =
+    layout.buildDirectory.file(
+        "vex/test-foundation/foundation-health.txt",
+    )
+
+/**
+ * Repository-entry and stable-foundation health check.
+ *
+ * This does not prove feature behavior. It proves that a fresh worker can still descend from the
+ * repository front door into current culture/foundation/feature/proof owners and that the canonical
+ * verification tasks still exist. It intentionally checks source-owned routes rather than model or
+ * predecessor-chat memory.
+ */
+val vexFoundationHealth =
+    tasks.register("vexFoundationHealth") {
+        notCompatibleWithConfigurationCache(
+            "Reads repository onboarding source and the configured task graph at execution time.",
+        )
+        group = "verification"
+        description =
+            "Verify repository onboarding routes and canonical foundation proof entry points."
+        outputs.file(
+            vexFoundationHealthReport,
+        )
+        outputs.upToDateWhen {
+            // The task graph itself is part of the health contract, so file timestamps alone are
+            // insufficient to decide that this check can be skipped.
+            false
+        }
+
+        doLast {
+            val violations =
+                mutableListOf<String>()
+
+            fun source(
+                path: String,
+            ): String {
+                val file =
+                    rootProject.file(path)
+                if (!file.isFile) {
+                    violations +=
+                        "missing required repository-entry source: $path"
+                    return ""
+                }
+                return file.readText()
+            }
+
+            fun requireContains(
+                path: String,
+                text: String,
+                token: String,
+            ) {
+                if (!text.contains(token)) {
+                    violations +=
+                        "$path no longer routes to '$token'"
+                }
+            }
+
+            val requiredSources =
+                linkedMapOf(
+                    "README.md" to
+                        listOf(
+                            "AGENTS.md",
+                            "docs/CULTURE.md",
+                            "docs/foundation/INDEX.md",
+                            "docs/features/README.md",
+                        ),
+                    "AGENTS.md" to
+                        listOf(
+                            "docs/CULTURE.md",
+                            "docs/foundation/INDEX.md",
+                            "docs/features/README.md",
+                            "docs/features/FEATURE-WALKS.md",
+                            "docs/foundation/test-proof/README.md",
+                            "docs/foundation/ANDROID-HOST-PROOF.md",
+                        ),
+                    "docs/foundation/INDEX.md" to
+                        listOf(
+                            "test-proof/README.md",
+                            "JOURNEY-INSTRUMENTATION.md",
+                            "SCREEN-CRAWLER-EVIDENCE.md",
+                            "ANDROID-HOST-PROOF.md",
+                            "vexFoundationHealth",
+                        ),
+                    "docs/features/README.md" to
+                        listOf(
+                            "FEATURE-WALKS.md",
+                            "VEX-FEATURE-TEMPLATE.md",
+                            "FEATURE-EXPERIENCE-LANGUAGE.md",
+                        ),
+                    "docs/features/FEATURE-WALKS.md" to
+                        listOf(
+                            "FeatureWalks.kt",
+                            "VexFeatureWalkContractTest.kt",
+                            "build/reports/vex/feature-walks.txt",
+                        ),
+                    "docs/foundation/ANDROID-HOST-PROOF.md" to
+                        listOf(
+                            "vexFoundationHealth",
+                            "vexVerifyLocal",
+                            "vexVerifyDevice",
+                        ),
+                )
+
+            requiredSources.forEach {
+                    path,
+                    tokens,
+                ->
+                val text =
+                    source(path)
+                tokens.forEach { token ->
+                    requireContains(
+                        path = path,
+                        text = text,
+                        token = token,
+                    )
+                }
+            }
+
+            listOf(
+                "docs/CULTURE.md",
+                "docs/PORTING-MAP.md",
+                "docs/foundation/test-proof/README.md",
+                "docs/foundation/JOURNEY-INSTRUMENTATION.md",
+                "docs/foundation/SCREEN-CRAWLER-EVIDENCE.md",
+                "docs/foundation/ANDROID-HOST-PROOF.md",
+                "docs/foundation/FEATURE-EXPERIENCE-LANGUAGE.md",
+                "docs/features/VEX-FEATURE-TEMPLATE.md",
+                "gradle/test-foundation.gradle.kts",
+                "gradle/source-alignment.gradle.kts",
+                "app/src/journeyTest/kotlin/com/vextreme/vexlife/android/testing/featurewalk/FeatureWalks.kt",
+                "app/src/test/kotlin/com/vextreme/vexlife/android/testing/featurewalk/VexFeatureWalkContractTest.kt",
+            ).forEach { path ->
+                if (!rootProject.file(path).isFile) {
+                    violations +=
+                        "missing foundation/proof source required by the onboarding map: $path"
+                }
+            }
+
+            val rootReadme =
+                source("README.md")
+            if (rootReadme.contains("## Current milestone")) {
+                violations +=
+                    "README.md must stay an entry router; mutable current foundation status belongs in docs/foundation/INDEX.md"
+            }
+
+            val requiredRootTasks =
+                listOf(
+                    "vexFoundationHealth",
+                    "vexVerifyJvm",
+                    "vexVerifyLocal",
+                    "vexVerifyDevice",
+                    "vexCoverage",
+                    "vexVisualValidate",
+                    "vexTestFoundationProofBundle",
+                )
+            val rootTaskNames =
+                rootProject.tasks.names
+            requiredRootTasks.forEach { taskName ->
+                if (taskName !in rootTaskNames) {
+                    violations +=
+                        "canonical root verification task is missing: $taskName"
+                }
+            }
+
+            val testFoundationSource =
+                source(
+                    "gradle/test-foundation.gradle.kts",
+                )
+
+            fun requireTaskSourceDependency(
+                taskName: String,
+                dependencyToken: String,
+            ) {
+                val taskBlock =
+                    testFoundationSource
+                        .substringAfter(
+                            "tasks.register(\"$taskName\") {",
+                            missingDelimiterValue = "",
+                        )
+                        .substringBefore(
+                            "\n}\n",
+                            missingDelimiterValue = "",
+                        )
+                if (
+                    taskBlock.isBlank() ||
+                    !taskBlock.contains(
+                        dependencyToken,
+                    )
+                ) {
+                    violations +=
+                        "$taskName must declare dependency on $dependencyToken in gradle/test-foundation.gradle.kts"
+                }
+            }
+
+            requireTaskSourceDependency(
+                taskName =
+                    "vexVerifyJvm",
+                dependencyToken =
+                    "vexFoundationHealth,",
+            )
+            requireTaskSourceDependency(
+                taskName =
+                    "vexVerifyLocal",
+                dependencyToken =
+                    "\"vexVerifyJvm\",",
+            )
+
+            val appTaskNames =
+                rootProject.project(":app").tasks.names
+            if ("verifySourceAlignment" !in appTaskNames) {
+                violations +=
+                    "app source-alignment health task is missing: :app:verifySourceAlignment"
+            }
+
+            val reportFile =
+                vexFoundationHealthReport
+                    .get()
+                    .asFile
+            reportFile.parentFile.mkdirs()
+            reportFile.writeText(
+                buildString {
+                    appendLine("[VXG RealForever]")
+                    appendLine(
+                        "schemaVersion=vexlife.android.foundation-health/v1",
+                    )
+                    appendLine(
+                        "status=" +
+                            if (violations.isEmpty()) {
+                                "PASS"
+                            } else {
+                                "FAIL"
+                            },
+                    )
+                    appendLine(
+                        "entryRoute=README.md -> AGENTS.md -> docs/CULTURE.md -> docs/foundation/INDEX.md",
+                    )
+                    appendLine(
+                        "featureRoute=docs/features/README.md -> FEATURE-WALKS.md -> FeatureWalks.<feature> -> Journey/focused proof",
+                    )
+                    appendLine(
+                        "proofRoute=docs/foundation/test-proof/README.md -> vexVerifyJvm -> vexVerifyLocal -> vexVerifyDevice",
+                    )
+                    appendLine(
+                        "sourceAlignment=:app:verifySourceAlignment",
+                    )
+                    appendLine(
+                        "violations=${violations.size}",
+                    )
+                    violations.forEach { violation ->
+                        appendLine(
+                            "violation=$violation",
+                        )
+                    }
+                },
+            )
+
+            if (violations.isNotEmpty()) {
+                throw GradleException(
+                    buildString {
+                        appendLine(
+                            "Repository foundation health verification failed:",
+                        )
+                        violations.forEach { violation ->
+                            appendLine(
+                                " - $violation",
+                            )
+                        }
+                        appendLine()
+                        append(
+                            "Repair the owning onboarding/foundation/proof source rather than weakening the health check.",
+                        )
+                    },
+                )
+            }
+
+            logger.lifecycle(
+                "Foundation health: OK — repository entry, feature routes, and canonical proof tasks remain discoverable.",
+            )
+        }
+    }
+
 /**
  * Canonical repository-owned JVM/source verification.
  *
@@ -389,6 +671,7 @@ tasks.register("vexVerifyJvm") {
         "Run source alignment, reusable architecture contracts, and app JVM tests."
 
     dependsOn(
+        vexFoundationHealth,
         ":app:verifySourceAlignment",
         ":architecture:behavior:test",
         ":architecture:execution:test",
@@ -1433,6 +1716,11 @@ val vexTestFoundationProofBundle =
             into("meta")
         }
         from(
+            vexFoundationHealthReport,
+        ) {
+            into("health")
+        }
+        from(
             layout.buildDirectory.dir(
                 "reports/kover",
             ),
@@ -1563,6 +1851,7 @@ val vexTestFoundationProofBundle =
 
 vexTestFoundationProofBundle.configure {
     mustRunAfter(
+        "vexFoundationHealth",
         "vexVerifyLocal",
         "vexCoverage",
         ":app:updateDebugScreenshotTest",

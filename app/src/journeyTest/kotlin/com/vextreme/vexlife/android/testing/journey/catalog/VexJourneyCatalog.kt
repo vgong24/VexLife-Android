@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import com.vextreme.vexlife.android.testing.featurewalk.VexFeatureWalkJourneyCatalogEntry
+
 /**
  * One catalog assembled from feature/shell-owned shards.
  *
@@ -21,6 +23,16 @@ object VexJourneyCatalog {
 
     val all: List<VexJourney> =
         shards.flatMap { it.journeys }
+
+    /**
+     * Feature-Walk bindings are projected from the same shard owners as [all].
+     *
+     * This is completion traceability over Journeys, not a second Journey catalog.
+     */
+    val featureWalkBindings: List<VexFeatureWalkJourneyCatalogEntry> =
+        shards.flatMap { shard ->
+            shard.featureWalkCatalogEntries()
+        }
 
     val cases: List<VexJourneyCase> =
         shards.flatMap { shard ->
@@ -67,3 +79,31 @@ object VexJourneyCatalog {
             "unknown journey case: $caseRef"
         }
 }
+
+/**
+ * Projects Feature-Walk bindings only from Journeys that the same shard actually registers.
+ *
+ * A binding is completion metadata over an executable Journey; it must never create a shadow Journey
+ * that exists only in the Feature-Walk projection.
+ */
+internal fun VexJourneyShard.featureWalkCatalogEntries():
+    List<VexFeatureWalkJourneyCatalogEntry> =
+    featureWalkJourneys.map { binding ->
+        require(
+            journeys.any { journey ->
+                journey === binding.journey
+            },
+        ) {
+            "Feature-Walk Journey is not registered in shard: " +
+                "${shardId}/${binding.journey.id}"
+        }
+
+        VexFeatureWalkJourneyCatalogEntry(
+            shardId =
+                shardId,
+            binding =
+                binding,
+        )
+    }
+
+// [VXG RealForever]

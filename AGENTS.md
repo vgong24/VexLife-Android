@@ -19,6 +19,36 @@ For substantial work:
 
 The front door should stay small. Architecture belongs with its owning building block.
 
+## Repository descent map
+
+A fresh worker should be able to descend without predecessor-chat reconstruction:
+
+```text
+README.md
+-> AGENTS.md
+-> docs/CULTURE.md
+-> docs/foundation/INDEX.md
+   -> exact owning foundation doc/source/tests
+
+feature work
+-> docs/features/README.md
+   -> feature home
+   -> docs/features/FEATURE-WALKS.md when whole-feature completion is the question
+
+proof question
+-> docs/foundation/test-proof/README.md
+   -> vexVerifyJvm / vexVerifyLocal
+   -> Journey / ScreenCrawler / vexVerifyDevice only when that claim needs them
+
+host/device proof unavailable locally
+-> docs/foundation/ANDROID-HOST-PROOF.md
+```
+
+`./gradlew vexFoundationHealth` checks that this repository-owned descent and the canonical proof
+entry points still exist. It is included by `vexVerifyJvm` and therefore by `vexVerifyLocal`.
+If that health check fails, repair the rightful source/map/task; do not weaken the check merely to
+make verification green.
+
 ## Common contribution routes
 
 - **New product feature or major feature evolution:** start with `docs/features/README.md`.
@@ -27,6 +57,15 @@ The front door should stay small. Architecture belongs with its owning building 
   Existing features are worked examples, not mandatory source skeletons.
 A contributor should not need to learn testing-framework internals before changing product code.
 
+- **Whole-feature / end-to-end completion:** start with `docs/features/README.md`, then
+  `docs/features/FEATURE-WALKS.md`. Its Android-local descent is feature identity/home ->
+  `FeatureWalks.<feature>...` -> owning `*FeatureWalks.kt` -> bound `*Journeys.kt` and focused
+  `*FeatureWalkProofBacklinks.kt` -> named test method. When the claimed outcome crosses repositories,
+  hosts, devices, producer loss/restart, or another ownership boundary, continue to the institutional
+  Vextreme-SDK standard at `docs/process/end-to-end-proof-standard.md`; Feature Walk does not replace
+  that lived composition. If shared-prefix branch reuse is the actual proof question, follow the
+  Test / Proof Foundation's QuantumTest/Vroomba section rather than inventing a local clone.
+  `build/reports/vex/feature-walks.txt` remains a projection of links, not another truth owner.
 - **New Screen or interaction:** start with the owning `*Screen.kt`, then follow
   `docs/foundation/F1-UI-BLUEPRINT-HOME.md`. Register the Screen once in `AppScreens`, keep
   feature-owned effects beside the Screen/domain, and add focused behavior proof.

@@ -201,6 +201,54 @@ Record:
 
 `incidents/TF-INCIDENT-2026-10-16-001.md`
 
+### TF-INCIDENT-2026-10-19-002
+
+`vexFoundationHealth` failed on PR #134 A009 after the focused Feature Walk contract had already
+passed. The health task attempted to resolve `vexVerifyJvm.taskDependencies` from inside its own
+`doLast`, which Gradle 9.6 rejected with an internal build-state transition error.
+
+~~~text
+failureStatus = EXPLAINED
+failureRootCause =
+    execution-time dependency-graph resolution re-entered Gradle configuration
+
+observabilityGapRootCause =
+    A009 outer VexLocalBridge consumer also rejected the retained exact-candidate pre-review RETURN;
+    the canonical inner RETURN remained byte-identical and was consumed directly
+
+hardeningRef =
+    PR #134
+    source correction after A009
+
+hardeningState = CANDIDATE
+~~~
+
+Record:
+
+`incidents/TF-INCIDENT-2026-10-19-002.md`
+
+### TF-INCIDENT-2026-10-19-003
+
+Repository health required a GitHub Actions workflow that the same PR had intentionally removed when
+proof execution moved back to repository-owned local/VexRelay commands.
+
+~~~text
+failureStatus = EXPLAINED
+failureRootCause =
+    health contract retained a deleted optional CI caller as required source
+
+observabilityGapRootCause = NONE
+
+hardeningRef =
+    PR #134 source correction after A014
+
+hardeningState = CANDIDATE
+~~~
+
+Record:
+
+`incidents/TF-INCIDENT-2026-10-19-003.md`
+
 ## DesignHistory relationship
 
 Test / Proof owns operational incident truth.
