@@ -143,8 +143,9 @@ rendered album / artist collection / playlist
    blocked missing
 -> Download missing
 -> exact targets carry trackRef + media SHA-256 + byte length
--> VexStreamOfflineCopyConnection re-checks current truth before each target
--> sequential repository downloadForOffline(...)
+-> VexStreamOfflineCopyConnection cheaply skips already-invalid current targets
+-> repository downloadForOffline(...) re-checks exact media identity at serialized admission
+-> sequential copy attempt
 -> repository observation changes local-copy truth
 -> collection plan/projection derives again
 ~~~
