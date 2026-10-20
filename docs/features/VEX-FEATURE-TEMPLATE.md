@@ -56,6 +56,39 @@ WHO / WHAT REALIZES IT?:
 WHAT DO THEY SEE?:
 ~~~
 
+## Semantic source grounding
+
+Use this when the feature contains Behavior, Convergence, or another source whose local calculation
+would be easy to understand mechanically but easy to detach from its human/product purpose.
+
+~~~text
+PURPOSE OWNER:
+    <feature README / practicum / current accepted semantic source>
+
+EXACT HUMAN / PRODUCT QUESTION:
+    <the question this local source helps answer>
+
+WHOLE HUMAN USE CASE:
+    <Feature Walk / Journey / lived contract>
+    OR
+    NOT YET AUTHORED / HELD because <current owning source says why>
+
+LOCAL SEMANTIC OWNER:
+    <Behavior / Convergence / repository / other source>
+
+FOCUSED EXAMPLE / PROOF:
+    <exact test(s) proving the narrower relationship>
+
+SOURCE COMMENT SHOULD EXPLAIN:
+    <why this owner exists + what relationship it owns + what it must not own>
+
+DO NOT CLAIM:
+    <whole-feature / provider / lived outcome not proved by these sources>
+~~~
+
+If WHOLE HUMAN USE CASE is absent, do not synthesize one from unit-test fixtures. A focused example
+may still be documented, but label it as focused evidence rather than accepted end-to-end experience.
+
 ## Source-concept formation
 
 For each proposed durable noun:

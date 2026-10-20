@@ -33,6 +33,10 @@ ScreenCrawler, Android-host-proof, or provider manuals.
 8. Prove each claim at its rightful proof owner.
 9. Reconcile the feature home, source, generated effects, and next real edge before calling it done.
 
+10. Before adding explanatory KDoc/comments to semantic source, derive them from the current feature
+    purpose owner and human path rather than inferring purpose from the implementation. If the whole
+    human path is absent or held, preserve that absence instead of inventing one.
+
 ## Concept formation
 
 For every proposed durable noun:
@@ -76,6 +80,43 @@ Include only what is materially useful:
 ~~~
 
 Do not create empty sections for ceremony.
+
+## Purpose-to-source explanation route
+
+When a Behavior family, Convergence Relay, repository relationship, or other semantic owner needs
+durable explanation, use one descent:
+
+~~~text
+feature home / practicum / current accepted purpose source
+-> exact human/product question
+-> Feature Walk / Journey / lived contract when one exists
+   OR explicit absence / hold when it does not
+-> local semantic owner
+-> focused proof that actually owns the narrower claim
+-> source-local KDoc / comments
+~~~
+
+The comment is not another truth owner. It should help a fresh developer recover accepted context
+without requiring them to reconstruct product intention from a reducer or test.
+
+Permanent distinctions:
+
+~~~text
+COMMENT != PURPOSE OWNER
+TEST EXAMPLE != WHOLE FEATURE STORY
+SOURCE BEHAVIOR != PRODUCT ACCEPTANCE
+ABSENT WALK != PERMISSION TO INVENT ONE
+~~~
+
+Architecture-specific construction rules live with their rightful foundations:
+
+~~~text
+SCAE / Behavior family
+    -> architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md
+
+Compound Relay / Convergence
+    -> architecture/relay/README.md
+~~~
 
 ## Stable feature identity and continuity growth
 

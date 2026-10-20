@@ -131,6 +131,114 @@ CODE SHAPE
 -> COMMENT EXPLAINING THE NOUN
 ~~~
 
+## Source-grounded explanation
+
+Source comments and architecture documentation may summarize accepted meaning; they must not invent
+feature purpose by reading implementation backward.
+
+Before explaining a semantic owner such as a Behavior family or Compound Relay, descend through the
+rightful sources in this order:
+
+~~~text
+accepted feature-purpose source
+    feature README / practicum / other current semantic owner
+        ↓
+exact human/product question
+        ↓
+whole-human Walk / Journey / lived contract when one exists
+        OR explicit current absence / hold when it does not
+        ↓
+local semantic owner
+    Behavior / Convergence / repository / other rightful source
+        ↓
+focused proof examples
+        ↓
+source-local KDoc / comments
+~~~
+
+Keep these distinctions explicit:
+
+~~~text
+FEATURE PURPOSE
+!= IMPLEMENTATION INFERENCE
+
+WHOLE HUMAN WALK
+!= FOCUSED TEST EXAMPLE
+
+FOCUSED TEST
+!= PRODUCT ACCEPTANCE
+
+CURRENT SOURCE
+!= HISTORICAL DESIGN RECORD
+~~~
+
+A focused test is useful for explaining one relationship only after the owning feature question is
+known. Do not promote a plausible unit-test scenario into an accepted end-to-end product story.
+
+If no complete human Walk exists, preserve that absence in the explanation:
+
+~~~text
+WHOLE HUMAN USE CASE
+    NOT YET AUTHORED / HELD
+    <owning source that records the gap>
+~~~
+
+Do not fill the gap with a synthesized story merely because the local source is understandable.
+
+### Comment derivation rule
+
+Good semantic comments answer, in order:
+
+~~~text
+WHY DOES THIS OWNER EXIST?
+    cite/summarize the accepted feature question
+
+WHAT HUMAN / PRODUCT SITUATION MAKES IT NECESSARY?
+    use the canonical Walk/Journey when one exists
+    otherwise name the narrower focused example as such
+
+WHAT TRUTHS PARTICIPATE?
+    name their independent owners and boundaries
+
+WHAT RELATIONSHIP / DECISION DOES THIS SOURCE OWN?
+    explain the consequence without retelling syntax
+
+WHAT DOES IT NOT PROVE OR OWN?
+    preserve neighboring authority and explicit completion gaps
+~~~
+
+Avoid comments that merely translate code:
+
+~~~text
+"calculate availability from visibility"
+"derive output from current state"
+"this field affects candidate selection"
+~~~
+
+Prefer context that lets a fresh reader predict why the calculation belongs here before tracing it.
+
+The current worked examples show both sides:
+
+~~~text
+Events
+    purpose:
+        docs/foundation/EVENTS-CONVERGENCE-PRACTICUM.md
+    executable human sequence:
+        EventsJourneys.externalAttention
+    local relationship:
+        EventsConvergenceRelay
+
+VexMaps Distribution
+    purpose / human question map:
+        app/.../screens/shared/maps/distribution/README.md
+    full Delivery Route lived Walk:
+        explicitly still proof debt
+    local relationship examples:
+        *ConvergenceRelay
+    focused evidence:
+        *ConvergenceRelayTest / VexMapsDistributionSessionTest
+~~~
+
 ## Established language before Vex language
 
 Do not invent architecture vocabulary for a problem software engineering already names clearly.
