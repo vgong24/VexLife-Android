@@ -238,6 +238,15 @@ class VexJourneyConcurrentBranchIsolationExperimentTest {
                 }
             }
         } finally {
+            branches.values.forEach { world ->
+                world.executionRoot.forceStopAll(
+                    "concurrent branch experiment complete",
+                )
+            }
+            // A TestCoroutineScheduler must be allowed to deliver cancellation before a blocking
+            // join. This keeps cleanup truthful even when an assertion fails before the branch
+            // gate is released.
+            scheduler.advanceUntilIdle()
             runBlocking {
                 branches.values.forEach { world ->
                     world.executionRoot.joinStopAll(
@@ -245,7 +254,6 @@ class VexJourneyConcurrentBranchIsolationExperimentTest {
                     )
                 }
             }
-            scheduler.advanceUntilIdle()
             branches.values.forEach(BranchWorld::deleteStorage)
         }
 
@@ -334,16 +342,16 @@ class VexJourneyConcurrentBranchIsolationExperimentTest {
 
             val mediaPath = "vexstream/media/${mediaDigest.value}.media"
             val indexPath = "vexstream/offline-index.properties"
+            val resources =
+                listOf(
+                    seedRoot.resolve(mediaPath).asSnapshotResource(mediaPath),
+                    seedRoot.resolve(indexPath).asSnapshotResource(indexPath),
+                )
+            val copiedState = state.branchCopy()
             return VexStreamSnapshot(
-                snapshotRef =
-                    "snapshot:vexstream:${TRACK_REF.value}:${mediaDigest.value}:" +
-                        VexStreamTrackAvailability.HUB_AND_LOCAL.name,
-                state = state.branchCopy(),
-                resources =
-                    listOf(
-                        seedRoot.resolve(mediaPath).asSnapshotResource(mediaPath),
-                        seedRoot.resolve(indexPath).asSnapshotResource(indexPath),
-                    ),
+                snapshotRef = copiedState.snapshotRef(resources),
+                state = copiedState,
+                resources = resources,
                 provenanceRouteRef = "pair/catalog/download-verified",
                 semanticCheckpoint = "download-verified",
             )
@@ -416,6 +424,55 @@ class VexJourneyConcurrentBranchIsolationExperimentTest {
         requireNotNull(
             track(TRACK_REF)?.localCopy as? VexStreamLocalCopyState.Downloaded,
         )
+
+    private fun VexStreamMusicState.snapshotRef(
+        resources: List<SnapshotResource>,
+    ): String {
+        val hub =
+            requireNotNull(
+                hubState as? VexStreamHubState.Ready,
+            )
+        val connection =
+            requireNotNull(
+                connectionState as? VexStreamConnectionState.Paired,
+            )
+        val canonical =
+            buildString {
+                append("vexstream.concurrent-snapshot/v1\n")
+                append("hubRef=").append(hub.hubRef).append('\n')
+                append("catalogRevision=").append(hub.catalogRevision).append('\n')
+                append("pairedDisplayName=").append(connection.displayName).append('\n')
+
+                tracks
+                    .sortedBy { item -> item.track.trackRef.value }
+                    .forEach { item ->
+                        val local =
+                            requireNotNull(
+                                item.localCopy as? VexStreamLocalCopyState.Downloaded,
+                            )
+                        append("trackRef=").append(item.track.trackRef.value).append('\n')
+                        append("mediaSha256=").append(item.track.mediaSha256.value).append('\n')
+                        append("mediaByteLength=").append(item.track.mediaByteLength).append('\n')
+                        append("hubAvailable=").append(item.hubAvailable).append('\n')
+                        append("localMediaRef=").append(local.localMediaRef).append('\n')
+                        append("localSha256=").append(local.mediaSha256.value).append('\n')
+                        append("localByteLength=").append(local.byteLength).append('\n')
+                    }
+
+                resources
+                    .sortedBy(SnapshotResource::relativePath)
+                    .forEach { resource ->
+                        append("resource=")
+                            .append(resource.relativePath)
+                            .append(':')
+                            .append(resource.sha256)
+                            .append('\n')
+                    }
+            }
+
+        return "snapshot:vexstream:" +
+            canonical.toByteArray().sha256()
+    }
 
     private fun File.asSnapshotResource(relativePath: String): SnapshotResource {
         val bytes = readBytes()
