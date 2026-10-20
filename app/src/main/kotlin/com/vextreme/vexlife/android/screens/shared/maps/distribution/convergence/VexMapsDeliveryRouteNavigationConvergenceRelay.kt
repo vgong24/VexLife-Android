@@ -291,57 +291,70 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
             VexMapsDeliveryRouteNavigationInputState,
             VexMapsDeliveryRouteNavigationOutput
         > {
-        val previous =
+        val previousInput =
             currentState.inputState
-        val coherent =
+
+        val currentDeliveryRoute =
+            inputState.deliveryRoute
+                ?: previousInput.deliveryRoute
+        val currentNavigation =
+            inputState.navigation
+                ?: previousInput.navigation
+        val currentExpectedLeg =
+            inputState.expectedLeg
+                ?: previousInput.expectedLeg
+        val currentLegAttempt =
+            inputState.legAttempt
+                ?: previousInput.legAttempt
+
+        val currentInput =
             VexMapsDeliveryRouteNavigationInputState(
                 deliveryRoute =
-                    inputState.deliveryRoute
-                        ?: previous.deliveryRoute,
+                    currentDeliveryRoute,
                 navigation =
-                    inputState.navigation
-                        ?: previous.navigation,
+                    currentNavigation,
                 expectedLeg =
-                    inputState.expectedLeg
-                        ?: previous.expectedLeg,
+                    currentExpectedLeg,
                 legAttempt =
-                    inputState.legAttempt
-                        ?: previous.legAttempt,
+                    currentLegAttempt,
             )
 
         val deliveryRoute =
-            coherent.deliveryRoute
+            currentDeliveryRoute
                 ?: return currentState.copy(
                     inputState =
-                        coherent,
+                        currentInput,
                 )
         val navigation =
-            coherent.navigation
+            currentNavigation
                 ?: return currentState.copy(
                     inputState =
-                        coherent,
+                        currentInput,
                 )
         val expectedLeg =
-            coherent.expectedLeg
+            currentExpectedLeg
                 ?: VexMapsDeliveryRouteExpectedLegState.None
         val legAttempt =
-            coherent.legAttempt
+            currentLegAttempt
                 ?: VexMapsDeliveryRouteLegAttempt.Idle
+
+        val currentOutput =
+            projectDeliveryRouteNavigation(
+                deliveryRoute =
+                    deliveryRoute,
+                navigation =
+                    navigation,
+                expectedLeg =
+                    expectedLeg,
+                legAttempt =
+                    legAttempt,
+            )
 
         return currentState.copy(
             inputState =
-                coherent,
+                currentInput,
             outputState =
-                projectDeliveryRouteNavigation(
-                    deliveryRoute =
-                        deliveryRoute,
-                    navigation =
-                        navigation,
-                    expectedLeg =
-                        expectedLeg,
-                    legAttempt =
-                        legAttempt,
-                ),
+                currentOutput,
         )
     }
 }

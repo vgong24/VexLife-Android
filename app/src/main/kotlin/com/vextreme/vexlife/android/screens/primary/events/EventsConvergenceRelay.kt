@@ -377,47 +377,76 @@ class EventsConvergenceRelay internal constructor(
         EventsConvergenceInputState,
         EventsConvergenceOutputState
     > {
-        val previous =
+        val previousInput =
             currentState.inputState
+        val previousOutput =
+            currentState.outputState
 
-        val screenId =
+        val currentScreenId =
             inputState.currentScreenId
-                ?: previous.currentScreenId
-        val feed =
+                ?: previousInput.currentScreenId
+        val currentFeed =
             inputState.feed
-                ?: previous.feed
-        val preferences =
+                ?: previousInput.feed
+        val currentPreferences =
             inputState.preferences
-                ?: previous.preferences
-        val lab =
+                ?: previousInput.preferences
+        val currentLab =
             inputState.lab
-                ?: previous.lab
-        val profile =
+                ?: previousInput.lab
+        val currentProfile =
             inputState.profile
-                ?: previous.profile
-        val visibleEventRefsBySurface =
+                ?: previousInput.profile
+        val currentVisibleEventRefsBySurface =
             mergeVisibleSurfacePatches(
                 previous =
-                    previous.visibleEventRefsBySurface,
+                    previousInput.visibleEventRefsBySurface,
                 patch =
                     inputState.visibleEventRefsBySurface,
             )
-        val transientBlocked =
+        val currentTransientBlocked =
             inputState.transientBlocked
-                ?: previous.transientBlocked
+                ?: previousInput.transientBlocked
+
+        val currentInput =
+            EventsConvergenceInputState(
+                currentScreenId =
+                    currentScreenId,
+                feed =
+                    currentFeed
+                        ?.deepCopy(),
+                preferences =
+                    currentPreferences
+                        ?.deepCopy(),
+                lab =
+                    currentLab
+                        ?.deepCopy(),
+                profile =
+                    currentProfile
+                        ?.deepCopy(),
+                visibleEventRefsBySurface =
+                    currentVisibleEventRefsBySurface
+                        ?.mapValues { (_, refs) ->
+                            refs.toSet()
+                        },
+                transientBlocked =
+                    currentTransientBlocked,
+            )
 
         val latestProfileNameChange =
             profileNameChangeFromPatch(
-                previousProfile = previous.profile,
-                incomingProfile = inputState.profile,
+                previousProfile =
+                    previousInput.profile,
+                incomingProfile =
+                    inputState.profile,
             )
-                ?: currentState.outputState
+                ?: previousOutput
                     .latestProfileNameChange
                     ?.deepCopy()
 
         val events =
             (
-                feed
+                currentFeed
                     ?.events
                     .orEmpty()
                     .map(VexExternalEvent::deepCopy) +
@@ -450,29 +479,15 @@ class EventsConvergenceRelay internal constructor(
                             ),
                     )
 
-                feed == null ->
+                currentFeed == null ->
                     EventsConvergenceListState.Unobserved
 
                 else ->
                     EventsConvergenceListState.Empty
             }
 
-        val coherentInput =
-            EventsConvergenceInputState(
-                currentScreenId = screenId,
-                feed = feed?.deepCopy(),
-                preferences = preferences?.deepCopy(),
-                lab = lab?.deepCopy(),
-                profile = profile?.deepCopy(),
-                visibleEventRefsBySurface =
-                    visibleEventRefsBySurface?.mapValues { (_, refs) ->
-                        refs.toSet()
-                    },
-                transientBlocked = transientBlocked,
-            )
-
         val dispositions =
-            preferences
+            currentPreferences
                 ?.dispositionByEventRef
                 .orEmpty()
 
@@ -498,7 +513,7 @@ class EventsConvergenceRelay internal constructor(
                         EventsAttentionDisposition.SUSPENDED
                 }
                 .sortedBy { event ->
-                    preferences
+                    currentPreferences
                         ?.suspendedOrderByEventRef
                         ?.get(event.eventRef)
                         ?: Long.MAX_VALUE
@@ -511,7 +526,7 @@ class EventsConvergenceRelay internal constructor(
                         EventsAttentionDisposition.DEFERRED
                 }
                 .sortedBy { event ->
-                    preferences
+                    currentPreferences
                         ?.deferredOrderByEventRef
                         ?.get(event.eventRef)
                         ?: Long.MAX_VALUE
@@ -530,14 +545,16 @@ class EventsConvergenceRelay internal constructor(
             }
 
         val candidateEvent =
-            if (feed != null && preferences != null) {
+            if (
+                currentFeed != null &&
+                currentPreferences != null
+            ) {
                 val labTargetRef =
-                    lab
+                    currentLab
                         ?.currentScenario
                         ?.targetEventRef
-
                 val retainedCandidateRef =
-                    currentState.outputState
+                    previousOutput
                         .candidate
                         ?.eventRef
 
@@ -553,7 +570,8 @@ class EventsConvergenceRelay internal constructor(
         val candidate =
             candidateEvent?.let { event ->
                 EventsConvergenceCandidate(
-                    eventRef = event.eventRef,
+                    eventRef =
+                        event.eventRef,
                     targetElementRef =
                         EventsPresentationRefs.row(
                             event.eventRef,
@@ -562,24 +580,26 @@ class EventsConvergenceRelay internal constructor(
             }
 
         val eventsSurfaceVisibility =
-            visibleEventRefsBySurface
-                ?.get(EventsScreen.screenId)
+            currentVisibleEventRefsBySurface
+                ?.get(
+                    EventsScreen.screenId,
+                )
 
         val availability =
             when {
-                feed == null ||
-                    preferences == null ||
-                    screenId == null ||
-                    transientBlocked == null ->
+                currentFeed == null ||
+                    currentPreferences == null ||
+                    currentScreenId == null ||
+                    currentTransientBlocked == null ->
                     EventsConvergenceAvailability.UNOBSERVED
 
                 candidate == null ->
                     EventsConvergenceAvailability.NONE
 
-                screenId != EventsScreen.screenId ->
+                currentScreenId != EventsScreen.screenId ->
                     EventsConvergenceAvailability.HELD_OTHER_SCREEN
 
-                transientBlocked ->
+                currentTransientBlocked ->
                     EventsConvergenceAvailability.HELD_TRANSIENT_OCCUPIED
 
                 /*
@@ -593,76 +613,101 @@ class EventsConvergenceRelay internal constructor(
                 eventsSurfaceVisibility == null ->
                     EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
 
-                candidate.eventRef !in eventsSurfaceVisibility ->
+                candidate.eventRef !in
+                    eventsSurfaceVisibility ->
                     EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
 
                 else ->
                     EventsConvergenceAvailability.READY
             }
 
+        val deferredCount =
+            deferredQueue.size
+        val suspendedCount =
+            suspendedQueue.size
         val currentQueueCount =
             normalQueue.size +
-                suspendedQueue.size
+                suspendedCount
         val nextSequenceCount =
-            deferredQueue.size
+            deferredCount
         val unhandledCount =
             currentQueueCount +
                 nextSequenceCount
-
         val activeQueueCount =
             when {
                 normalQueue.isNotEmpty() ->
                     currentQueueCount
 
                 suspendedQueue.isNotEmpty() ->
-                    suspendedQueue.size
+                    suspendedCount
 
                 else ->
-                    deferredQueue.size
+                    deferredCount
             }
+        val queuedAfterCurrentCount =
+            if (candidate == null) {
+                0
+            } else {
+                (activeQueueCount - 1)
+                    .coerceAtLeast(0)
+            }
+        val acknowledgedCount =
+            dispositions.values.count { disposition ->
+                disposition ==
+                    EventsAttentionDisposition.ACKNOWLEDGED
+            }
+        val suppressedCount =
+            dispositions.values.count { disposition ->
+                disposition ==
+                    EventsAttentionDisposition.SUPPRESSED
+            }
+        val currentDispositionByEventRef =
+            dispositions.toMap()
+        val currentScenario =
+            currentLab
+                ?.currentScenario
+                ?.copy()
+        val currentProfileNameChange =
+            latestProfileNameChange
+                ?.deepCopy()
+
+        val currentOutput =
+            EventsConvergenceOutputState(
+                list =
+                    listState,
+                candidate =
+                    candidate,
+                availability =
+                    availability,
+                dispositionByEventRef =
+                    currentDispositionByEventRef,
+                scenario =
+                    currentScenario,
+                latestProfileNameChange =
+                    currentProfileNameChange,
+                unhandledCount =
+                    unhandledCount,
+                queuedAfterCurrentCount =
+                    queuedAfterCurrentCount,
+                acknowledgedCount =
+                    acknowledgedCount,
+                deferredCount =
+                    deferredCount,
+                suspendedCount =
+                    suspendedCount,
+                suppressedCount =
+                    suppressedCount,
+                currentQueueCount =
+                    currentQueueCount,
+                nextSequenceCount =
+                    nextSequenceCount,
+            )
 
         return currentState.copy(
-            inputState = coherentInput,
+            inputState =
+                currentInput,
             outputState =
-                EventsConvergenceOutputState(
-                    list = listState,
-                    candidate = candidate,
-                    availability = availability,
-                    dispositionByEventRef = dispositions.toMap(),
-                    scenario =
-                        lab
-                            ?.currentScenario
-                            ?.copy(),
-                    latestProfileNameChange =
-                        latestProfileNameChange
-                            ?.deepCopy(),
-                    unhandledCount = unhandledCount,
-                    queuedAfterCurrentCount =
-                        if (candidate == null) {
-                            0
-                        } else {
-                            (activeQueueCount - 1)
-                                .coerceAtLeast(0)
-                        },
-                    acknowledgedCount =
-                        dispositions.values.count { disposition ->
-                            disposition ==
-                                EventsAttentionDisposition.ACKNOWLEDGED
-                        },
-                    deferredCount =
-                        deferredQueue.size,
-                    suspendedCount =
-                        suspendedQueue.size,
-                    suppressedCount =
-                        dispositions.values.count { disposition ->
-                            disposition ==
-                                EventsAttentionDisposition.SUPPRESSED
-                        },
-                    currentQueueCount =
-                        currentQueueCount,
-                    nextSequenceCount =
-                        nextSequenceCount,
-                ),
+                currentOutput,
         )
     }
 

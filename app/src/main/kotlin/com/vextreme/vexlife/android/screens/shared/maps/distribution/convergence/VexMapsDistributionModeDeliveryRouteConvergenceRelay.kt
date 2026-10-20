@@ -132,40 +132,50 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
             VexMapsDistributionModeDeliveryRouteInputState,
             VexMapsDistributionModeDeliveryRouteOutput
         > {
-        val previous =
+        val previousInput =
             currentState.inputState
-        val coherent =
+
+        val currentMode =
+            inputState.mode
+                ?: previousInput.mode
+        val currentDeliveryRoute =
+            inputState.deliveryRoute
+                ?: previousInput.deliveryRoute
+
+        val currentInput =
             VexMapsDistributionModeDeliveryRouteInputState(
                 mode =
-                    inputState.mode
-                        ?: previous.mode,
+                    currentMode,
                 deliveryRoute =
-                    inputState.deliveryRoute
-                        ?: previous.deliveryRoute,
+                    currentDeliveryRoute,
             )
+
         val mode =
-            coherent.mode
+            currentMode
                 ?: return currentState.copy(
                     inputState =
-                        coherent,
+                        currentInput,
                 )
         val deliveryRoute =
-            coherent.deliveryRoute
+            currentDeliveryRoute
                 ?: return currentState.copy(
                     inputState =
-                        coherent,
+                        currentInput,
                 )
+
+        val currentOutput =
+            projectModeDeliveryRoute(
+                mode =
+                    mode,
+                deliveryRoute =
+                    deliveryRoute,
+            )
 
         return currentState.copy(
             inputState =
-                coherent,
+                currentInput,
             outputState =
-                projectModeDeliveryRoute(
-                    mode =
-                        mode,
-                    deliveryRoute =
-                        deliveryRoute,
-                ),
+                currentOutput,
         )
     }
 }
