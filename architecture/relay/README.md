@@ -47,6 +47,26 @@ The concrete Relay should be boring to inspect:
 
 ### Compound Relay / Convergence authoring context
 
+Within the [SCAE architecture](../behavior/README.md#scae-architecture), a Compound Convergence Relay
+is the **fractal composition pattern for independently-owned current truths**. It is not another
+letter or final pipeline stage after Effect.
+
+~~~text
+complete State A
+complete State B
+    ↓
+Convergence relationship
+    ↓
+relationship truth
+    +
+optional bounded Control/request
+    ↓
+rightful SCAE family
+~~~
+
+That same pattern may compose local families, higher relationship projections, or other complete
+truths without flattening them into one mega-State.
+
 processStates() should be the perceivable calculation center, but its purpose must be recoverable
 without reverse-engineering the reducer.
 

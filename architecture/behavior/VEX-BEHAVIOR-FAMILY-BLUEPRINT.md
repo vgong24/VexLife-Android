@@ -3,7 +3,11 @@
 
 [VXG RealForever]
 
-This is the canonical construction pattern for a durable Behavior family.
+This is the canonical construction pattern for one durable **local SCAE Behavior family**.
+
+The canonical SCAE definition lives in [Vex Behavior](README.md#scae-architecture). This blueprint
+constructs the local State / Control / Act / Effect family; Convergence Relay is SCAE's fractal
+cross-State composition pattern, not a fifth family role.
 
 It exists so a new feature does not have to reverse-engineer VexStream Playback to discover what the architecture expects.
 
