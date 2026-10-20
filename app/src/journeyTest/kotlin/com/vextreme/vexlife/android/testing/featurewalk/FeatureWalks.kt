@@ -46,6 +46,10 @@ object FeatureWalks {
             val downloadAndRemove: VexFeatureWalkCase
                 get() =
                     VexStreamFeatureWalks.downloadAndRemove
+
+            val downloadCollectionMissing: VexFeatureWalkCase
+                get() =
+                    VexStreamFeatureWalks.downloadCollectionMissing
         }
     }
 
