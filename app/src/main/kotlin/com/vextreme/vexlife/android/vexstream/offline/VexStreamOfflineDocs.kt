@@ -35,8 +35,10 @@ package com.vextreme.vexlife.android.vexstream.offline
  * -> plan/projection is derived again from current truth
  *
  * [VexStreamOfflineCopyTarget] binds current Hub address to expected SHA-256 + byte length. The
- * Connection re-reads repository truth before every target so a stale rendered collection cannot
- * download changed media merely because a trackRef string still matches.
+ * Connection may cheaply skip work from current projected truth, but the repository remains the
+ * authoritative admission owner: it re-reads the track inside its serialized operation and rejects
+ * the copy when the current SHA-256/byte length no longer match the rendered request. A reused
+ * trackRef therefore cannot silently select changed bytes.
  *
  * ## What "Download missing" means
  *
