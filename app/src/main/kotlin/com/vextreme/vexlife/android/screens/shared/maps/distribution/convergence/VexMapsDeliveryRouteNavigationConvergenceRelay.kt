@@ -103,27 +103,22 @@ internal sealed interface VexMapsDeliveryRouteLegAttempt {
 }
 
 /**
- * Product context for keeping the person's delivery progress tied to the Navigation journey that
- * actually belongs to it.
- *
- * Delivery Route must not advance because some unrelated, stale, or rerouted Navigation happens to
- * be READY/ACTIVE/ARRIVED. It should advance only when the device is realizing the exact delivery
- * leg that this plan expects, and it should not start duplicate preparation while recovery or prior
- * cleanup is still current.
+ * Inputs for the feature-home question "Does Navigation realize the exact Delivery Route leg?"
  *
  * deliveryRoute
- *     says what the person's delivery journey currently requires next;
+ *     current Delivery Route projection;
  *
  * navigation
- *     says what route the device is actually navigating right now;
+ *     current independently-owned Navigation session State;
  *
  * expectedLeg
- *     proves that the Navigation route belongs to this exact delivery plan and target rather than
- *     merely looking like a compatible Navigation phase;
+ *     Distribution Session fact binding the required plan/target to the admitted route identity;
  *
  * legAttempt
- *     preserves in-flight cleanup/preparation/failure so the person is not given duplicate or
- *     contradictory route work while that condition is unresolved.
+ *     Distribution Session fact preserving cleanup/preparation/failure currentness.
+ *
+ * These four truths are enough to classify the relationship and form a bounded reconciliation
+ * request without transferring Navigation or Delivery Route ownership into Convergence.
  */
 internal data class VexMapsDeliveryRouteNavigationInputState(
     val deliveryRoute:
@@ -212,23 +207,32 @@ internal data class VexMapsDeliveryRouteNavigationOutput(
 }
 
 /**
- * Pure relationship among complete Delivery Route truth, Navigation truth and the Distribution session's
- * expected-leg/attempt facts.
+ * One feature-owned relationship from the VexMaps Distribution question map:
  *
- * User story:
+ * "DOES NAVIGATION REALIZE THE EXACT DELIVERY-ROUTE LEG?"
  *
- * The person is delivering stop B. Distribution prepared the Navigation route for that exact stop and
- * remembers its route identity. If Navigation says ARRIVED on that same admitted route, convergence
- * may request DeliveryRouteControl.Arrive and the Delivery Route can advance to AtDelivery. If an
- * unrelated Navigation route is active or an older/wrong route identity reports ARRIVED, the
- * delivery journey must not advance; the relationship becomes ForeignNavigation instead. After the
- * person marks the stop delivered, the same relationship helps prepare/start the next stop or return
- * leg without duplicating work already preparing or failed.
+ * Canonical feature context:
+ * app/.../screens/shared/maps/distribution/README.md
  *
- * A Navigation phase is never treated as sufficient identity. READY requires the exact admitted
- * routeRef + routeRevision. Once the same Navigation journey is active, reroutes may advance the
- * routeRevision while preserving routeRef; ACTIVE/OFF_ROUTE/LOCATION_HELD/ARRIVED still realize the
- * expected leg only when that stable identity and revision law holds.
+ * Ownership remains separate:
+ *
+ * DELIVERY_ROUTE_STATE != NAVIGATION_STATE
+ *
+ * This Relay compares Delivery Route truth with independently-owned Navigation truth plus the
+ * Distribution Session's expected-leg / attempt facts. It projects relationship status and at most
+ * one bounded reconciliation request. It does not itself perform Navigation work or advance Delivery
+ * Route State.
+ *
+ * Focused proof examples:
+ * VexMapsDeliveryRouteNavigationConvergenceRelayTest
+ *     #readyNavigationRequiresExactDistributionRouteIdentity
+ *     #activeNavigationRerouteKeepsSameDeliveryRouteLegThroughArrival
+ *     #returnArrivalClassifiesAtStartBeforeDeliveryRouteControlIsConsumed
+ *     #failedLegIsStableUntilAnExplicitRetryChangesAttemptTruth
+ *
+ * Those tests prove the relationship's local semantics. They are not a claim that the complete
+ * Delivery Route lived workflow has end-to-end acceptance; the feature home explicitly records that
+ * full human walk as remaining proof debt.
  */
 internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
     private val deliveryRouteProjections:
@@ -336,11 +340,9 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
             VexMapsDeliveryRouteNavigationOutput
         > {
         /*
-         * Re-evaluate the lived delivery journey whenever any participating truth changes.
-         *
-         * Delivery progress, actual Navigation, expected identity and attempt/recovery state can
-         * update independently, but the person should only see consequences from their current
-         * combination—not from a stale mix of them.
+         * Restore the complete current relationship before classifying it. Delivery Route,
+         * Navigation and Session facts publish independently; arrival order is not relationship
+         * identity.
          */
         val previousInput =
             currentState.inputState
@@ -390,10 +392,8 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
                 ?: VexMapsDeliveryRouteLegAttempt.Idle
 
         /*
-         * Decide what the person can truthfully be said to be doing in the delivery journey now.
-         *
-         * If the current truths earn another step, emit only that bounded request; the rightful
-         * Navigation or Delivery Route owner still performs and proves the actual change.
+         * Project relationship status plus at most one bounded reconciliation request. Execution and
+         * resulting State remain with the rightful Session / Navigation / Delivery Route owner.
          */
         val currentOutput =
             projectDeliveryRouteNavigation(

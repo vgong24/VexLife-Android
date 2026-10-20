@@ -13,20 +13,16 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryrou
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Product context for keeping Maps honest while the person is doing distribution work.
- *
- * A person who has an active Delivery Route should not unknowingly be carrying out that route while
- * Maps still behaves like ordinary Regular mode. At the same time, Delivery Route must not take
- * ownership of Maps mode just because it needs Distribution behavior.
+ * Inputs for the feature-home question "Do Distribution Mode and the Delivery Route agree?"
  *
  * mode
- *     says how Maps is currently operating for the person;
+ *     current Distribution Mode projection;
  *
  * deliveryRoute
- *     says whether the person currently has admitted delivery work that needs Distribution context.
+ *     current Delivery Route projection.
  *
- * When those truths disagree, convergence asks the Mode family to use Distribution through its
- * existing Control boundary. Mode still decides what that request means from its own current State.
+ * These are independently-owned truths. Their combination may require a bounded Mode Control
+ * request, but neither input becomes subordinate to this Relay.
  */
 internal data class VexMapsDistributionModeDeliveryRouteInputState(
     val mode:
@@ -80,21 +76,27 @@ internal data class VexMapsDistributionModeDeliveryRouteOutput(
 }
 
 /**
- * One higher-order question:
+ * One feature-owned relationship from the VexMaps Distribution question map:
  *
- * Is the independently-owned Maps Mode coherent with the independently-owned Delivery Route?
+ * "DO DISTRIBUTION MODE AND THE DELIVERY ROUTE AGREE?"
  *
- * User story:
+ * Canonical feature context:
+ * app/.../screens/shared/maps/distribution/README.md
  *
- * The person has entered delivery stops and now has an admitted Delivery Route, but Maps is still in
- * ordinary Regular mode. The route should not silently run inside the wrong product context, and
- * Delivery Route should not directly flip Maps state. This relationship therefore reports
- * NeedsDistributionMode and requests UseDistribution through the Mode Control. Mode resolves that
- * request from its own current State, publishes Distribution, and this relationship becomes
- * Coherent on the next observation.
+ * Ownership remains separate:
  *
- * This Relay deliberately does not restate Delivery Route phase. A Delivery-Route-state addition should require a change
- * here only when it changes the Mode/Delivery Route relationship itself.
+ * DISTRIBUTION_MODE != DELIVERY_ROUTE
+ *
+ * This Relay observes those two independently complete truths and projects only their coherence.
+ * When a non-empty Delivery Route exists while Mode is Regular, the relationship may request
+ * VexMapsDistributionModeControl.UseDistribution; it does not choose Mode's Act/Effect itself.
+ *
+ * Focused proof example:
+ * VexMapsDistributionModeDeliveryRouteConvergenceRelayTest
+ *     #nonEmptyDeliveryRouteRequestsOnlyModeReconciliationThenBecomesCoherent
+ *
+ * That test is evidence for this relationship only. The feature home explicitly records that the
+ * full Delivery Route human walk is still separate proof debt.
  */
 internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
     private val modeProjections:
@@ -166,10 +168,8 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
             VexMapsDistributionModeDeliveryRouteOutput
         > {
         /*
-         * Judge the person's delivery context from the current Mode and Delivery Route together.
-         *
-         * Either can change first; the product should never temporarily treat a stale pairing as
-         * coherent merely because the other observation arrived on a different update.
+         * Restore the complete current pair before answering the feature-home coherence question.
+         * Either owner may publish first; arrival order is not relationship meaning.
          */
         val previousInput =
             currentState.inputState
@@ -203,10 +203,7 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
                 )
 
         /*
-         * Answer the only feature question this Relay owns:
-         *
-         * "Is the person's current Maps mode appropriate for the delivery work they are carrying?"
-         * If not, request the rightful Mode Control and let that family own the correction.
+         * Project only the owned relationship answer: coherent, or a bounded Mode Control request.
          */
         val currentOutput =
             projectModeDeliveryRoute(

@@ -36,38 +36,33 @@ data class EventsProfileObservation(
 }
 
 /**
- * Context needed to answer one product question:
+ * Retained inputs for the practicum's canonical attention relationship.
  *
- * "Of the information that is currently true, what should the person be helped to notice now
- * without losing, reordering, or interrupting what they are already dealing with?"
+ * See docs/foundation/EVENTS-CONVERGENCE-PRACTICUM.md for the owning semantics:
  *
- * currentScreenId
- *     protects the person from an Events attention surface appearing while they are somewhere else;
+ * EVENT_HAPPENED != TOOLTIP_SHOULD_SHOW_NOW
+ * ACKNOWLEDGED != EVENT_DELETED
+ * DEFERRED != EVENT_FALSE
+ * TARGET_UNREACHABLE != EVENT_DISAPPEARED
+ * TRANSIENT_BLOCKED != EVENT_REJECTED
  *
  * feed
- *     is the outside-world information that actually exists, independent of whether it deserves
- *     attention right now;
+ *     current normalized event truth from EventsRepository;
  *
  * preferences
- *     preserves what the person already chose to do with that information. Acknowledge, Later,
- *     Suspend and Suppress change attention treatment, not whether the event happened;
+ *     separate proactive-attention treatment owned by EventsAttentionPreferenceRepository;
+ *
+ * currentScreenId / visibleEventRefsBySurface / transientBlocked
+ *     current presentation context used only to decide whether the retained candidate is presentable;
  *
  * lab
- *     names the exact lived condition being intentionally exercised so proof can target one stable
- *     event without changing ordinary Events meaning;
+ *     deterministic practicum condition/proof input;
  *
  * profile
- *     lets a meaningful local identity change become visible as a bounded Events notice instead of
- *     disappearing merely because it came from inside VexLife;
+ *     real cross-domain input whose later display-name transition may form one bounded SYSTEM notice.
  *
- * visibleEventRefsBySurface
- *     protects anchored attention from claiming a target the person cannot currently see/reach;
- *
- * transientBlocked
- *     protects the person from competing transient surfaces trying to own attention at once.
- *
- * These truths may change independently, but the person should experience one coherent answer.
- * [processStates] therefore re-evaluates the whole bounded Events relationship after any one changes.
+ * A partial patch may update any one of these. processStates restores the retained siblings and
+ * recalculates the whole relationship from that coherent current combination.
  */
 data class EventsConvergenceInputState(
     val currentScreenId: String? = null,
@@ -222,18 +217,32 @@ data class EventsConvergenceOutputState(
 /**
  * One reusable convergence relationship over current Events truth.
  *
- * User story:
+ * Canonical feature context:
+ * docs/foundation/EVENTS-CONVERGENCE-PRACTICUM.md
  *
- * The person is on Home when a message/call/map-style event arrives. The event must remain true even
- * though Events is not current, so it is retained without interrupting them. Later they open Events:
- * the oldest still-unhandled event becomes the attention candidate. If that row is off-screen or a
- * different transient is already open, the same candidate is held rather than replaced. When the
- * row becomes reachable and attention is free, the candidate becomes READY. Pressing Later changes
- * only the person's attention preference, moves that event to the next sequence, and lets the next
- * current event become the candidate without deleting the deferred event.
+ * That practicum owns the product question this Relay serves:
  *
- * This Relay exists so those facts are resolved once from current truth instead of every Screen or
- * overlay separately deciding what deserves attention.
+ * "Can one mastered Android node prove how information arriving outside the current Screen becomes
+ * truthful, addressable, composable human attention?"
+ *
+ * The source-owned lattice is:
+ *
+ * provider/current source snapshot
+ * -> EventsRepository normalized feed
+ * -> attention preferences + current Screen + visible targets + transient occupancy
+ * -> this Relay
+ * -> candidate identity + availability
+ * -> anchored overlay / stable dynamic interaction
+ *
+ * Concrete executable example:
+ * EventsJourneys.externalAttention starts on Home, admits external information, enters Events,
+ * acknowledges the first candidate, later admits more information while Home is current, then proves
+ * Later -> deferred next sequence, Suspend -> tail of current sequence, Suppress -> terminal proactive
+ * handling, and finally deferred work becoming candidate only after the current queue drains.
+ *
+ * This class therefore does not invent what an Event means or what a service action should do. It
+ * owns the narrow relationship between current event truth, the person's attention preferences and
+ * current presentation context.
  *
  * Read this class in four places:
  *
