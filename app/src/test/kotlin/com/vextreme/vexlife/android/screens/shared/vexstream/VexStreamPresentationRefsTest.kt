@@ -105,6 +105,44 @@ class VexStreamPresentationRefsTest {
     }
 
     @Test
+    fun collectionOpenKeepsStaticActionMeaningAndExactDynamicCollectionKey() {
+        val collectionKey =
+            "album:Journey Album"
+
+        val row =
+            VexStreamPresentationRefs.collectionRow(
+                collectionKey,
+            )
+        val action =
+            VexStreamPresentationRefs.collectionRowAction(
+                collectionKey = collectionKey,
+                action = VexStreamMusicScreen.OpenCollection,
+            )
+
+        assertTrue(
+            row.startsWith(
+                "element.vexstream-music.collection.dynamic.utf8hex.",
+            ),
+        )
+        assertTrue(
+            action.startsWith(
+                VexStreamMusicScreen.OpenCollection.elementId +
+                    ".collection-row.dynamic.utf8hex.",
+            ),
+        )
+        assertTrue(
+            row.endsWith(
+                collectionKey.utf8Hex(),
+            ),
+        )
+        assertTrue(
+            action.endsWith(
+                collectionKey.utf8Hex(),
+            ),
+        )
+    }
+
+    @Test
     fun queueOccurrenceIdentityIsExplicitAndOpaqueSafe() {
         val stableKey =
             VexStreamPresentationRefs.queueEntryKey(
