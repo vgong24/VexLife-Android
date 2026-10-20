@@ -12,6 +12,21 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryrou
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * Current truths used to answer one relationship question:
+ *
+ * "Does the independently-owned Distribution Mode agree with the independently-owned Delivery
+ * Route?"
+ *
+ * mode
+ *     tells whether Maps is currently operating in Regular or Distribution mode;
+ *
+ * deliveryRoute
+ *     tells whether a delivery-route truth currently exists.
+ *
+ * A non-empty Delivery Route combined with Regular mode is the only relationship that earns a
+ * bounded request back through [VexMapsDistributionModeControl.UseDistribution].
+ */
 internal data class VexMapsDistributionModeDeliveryRouteInputState(
     val mode:
         VexMapsDistributionModeProjection? =
@@ -43,8 +58,16 @@ internal enum class VexMapsDistributionModeDeliveryRouteCoherence {
 }
 
 internal data class VexMapsDistributionModeDeliveryRouteOutput(
+    /** Current truth of the Mode / Delivery Route relationship. */
     val coherence:
         VexMapsDistributionModeDeliveryRouteCoherence,
+
+    /**
+     * Optional bounded feedback into the Mode family's existing SCAE boundary.
+     *
+     * Convergence never selects a Mode Act/Effect directly; Mode re-resolves this Control against
+     * its own current State.
+     */
     val requestedModeControl:
         VexMapsDistributionModeControl? =
         null,
@@ -132,6 +155,10 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
             VexMapsDistributionModeDeliveryRouteInputState,
             VexMapsDistributionModeDeliveryRouteOutput
         > {
+        /*
+         * Restore the complete current relationship first. Either observed dependency may arrive
+         * alone, but the output must always be projected from the latest Mode + Delivery Route pair.
+         */
         val previousInput =
             currentState.inputState
 
@@ -163,6 +190,12 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
                         currentInput,
                 )
 
+        /*
+         * Project relationship meaning before assembling the next Compound State.
+         *
+         * projectModeDeliveryRoute is the only feature decision here: coherent, or distribution
+         * mode is required and should be requested through the Mode Control boundary.
+         */
         val currentOutput =
             projectModeDeliveryRoute(
                 mode =

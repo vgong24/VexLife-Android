@@ -102,6 +102,25 @@ internal sealed interface VexMapsDeliveryRouteLegAttempt {
     }
 }
 
+/**
+ * Current truths used to answer one relationship question:
+ *
+ * "Does current Navigation truth realize the exact leg that Delivery Route currently requires, and
+ * if not, what bounded reconciliation is needed?"
+ *
+ * deliveryRoute
+ *     determines the current delivery phase and therefore which stop/return leg should exist;
+ *
+ * navigation
+ *     reports the independently-owned Navigation journey actually present on the device;
+ *
+ * expectedLeg
+ *     binds Delivery Route intent to the exact Navigation route identity originally admitted;
+ *
+ * legAttempt
+ *     preserves preparation/cleanup/failure truth so convergence does not manufacture duplicate
+ *     work while an attempt is already in flight or explicitly failed.
+ */
 internal data class VexMapsDeliveryRouteNavigationInputState(
     val deliveryRoute:
         VexMapsDeliveryRouteProjection? =
@@ -165,8 +184,21 @@ internal sealed interface VexMapsDeliveryRouteNavigationReconciliationRequest {
 }
 
 internal data class VexMapsDeliveryRouteNavigationOutput(
+    /**
+     * Current relationship truth between Delivery Route and Navigation.
+     *
+     * This status is derived context, not a replacement owner for either underlying State.
+     */
     val status:
         VexMapsDeliveryRouteNavigationRelationshipStatus,
+
+    /**
+     * Optional next reconciliation requested by that relationship truth.
+     *
+     * Requests either target Distribution session work (prepare/start Navigation) or carry a
+     * Delivery Route Control back through the existing SCAE boundary. They never mutate a foreign
+     * State or realize a foreign Effect directly.
+     */
     val request:
         VexMapsDeliveryRouteNavigationReconciliationRequest? =
         null,
@@ -291,6 +323,12 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
             VexMapsDeliveryRouteNavigationInputState,
             VexMapsDeliveryRouteNavigationOutput
         > {
+        /*
+         * Restore one complete relationship snapshot before projecting anything.
+         *
+         * Delivery Route, Navigation, expected-leg identity and attempt truth update independently;
+         * any one patch therefore reevaluates the relationship against the latest retained siblings.
+         */
         val previousInput =
             currentState.inputState
 
@@ -338,6 +376,12 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
             currentLegAttempt
                 ?: VexMapsDeliveryRouteLegAttempt.Idle
 
+        /*
+         * Project the complete relationship before assembling the next Compound State.
+         *
+         * The projection decides status plus at most one bounded reconciliation request; execution
+         * remains with Distribution Session / Navigation / Delivery Route owners.
+         */
         val currentOutput =
             projectDeliveryRouteNavigation(
                 deliveryRoute =
