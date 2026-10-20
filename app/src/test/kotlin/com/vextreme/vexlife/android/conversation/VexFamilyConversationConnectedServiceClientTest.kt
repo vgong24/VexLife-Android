@@ -212,10 +212,14 @@ class VexFamilyConversationConnectedServiceClientTest {
                     bootstrapResult =
                         bootstrap(),
                     historyResult =
-                        history(
-                            currentChannelRef =
-                                CHANNEL_ONE,
-                        ),
+                        history()
+                            .copy(
+                                segmentRefs =
+                                    listOf(
+                                        CHANNEL_TWO,
+                                        CHANNEL_ONE,
+                                    ),
+                            ),
                 )
             val client =
                 VexFamilyConversationConnectedServiceClient(
