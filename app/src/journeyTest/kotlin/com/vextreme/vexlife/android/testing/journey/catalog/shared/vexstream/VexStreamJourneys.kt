@@ -411,6 +411,12 @@ object VexStreamJourneys : VexJourneyShard {
             behavesLike =
                 VexStreamMusicScreen.OpenCollection,
         )
+        assertVisibleById(
+            VexStreamPresentationRefs.collectionOfflineStatus(
+                "album:" +
+                VexStreamJourneyFixtures.AlbumName,
+            ),
+        )
         assertVisible(
             VexStreamMusicScreen.DownloadMissing,
         )
