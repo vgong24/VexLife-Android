@@ -209,9 +209,9 @@ internal fun VexStreamPlaylistsPane(
                 it.track.trackRef
             }
         }
-    val syncedLabel =
+    val sourceLabel =
         stringResource(
-            R.string.vexstream_music_playlist_synced,
+            R.string.vexstream_music_playlist_source,
         )
     val rows =
         state.playlists
@@ -221,7 +221,7 @@ internal fun VexStreamPlaylistsPane(
                         "playlist:" +
                             playlist.playlistRef.value,
                     title = playlist.name,
-                    subtitle = syncedLabel,
+                    subtitle = sourceLabel,
                     tracks =
                         playlist.trackRefs
                             .mapNotNull(
