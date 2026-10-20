@@ -102,6 +102,24 @@ internal sealed interface VexMapsDeliveryRouteLegAttempt {
     }
 }
 
+/**
+ * Inputs for the feature-home question "Does Navigation realize the exact Delivery Route leg?"
+ *
+ * deliveryRoute
+ *     current Delivery Route projection;
+ *
+ * navigation
+ *     current independently-owned Navigation session State;
+ *
+ * expectedLeg
+ *     Distribution Session fact binding the required plan/target to the admitted route identity;
+ *
+ * legAttempt
+ *     Distribution Session fact preserving cleanup/preparation/failure currentness.
+ *
+ * These four truths are enough to classify the relationship and form a bounded reconciliation
+ * request without transferring Navigation or Delivery Route ownership into Convergence.
+ */
 internal data class VexMapsDeliveryRouteNavigationInputState(
     val deliveryRoute:
         VexMapsDeliveryRouteProjection? =
@@ -165,8 +183,19 @@ internal sealed interface VexMapsDeliveryRouteNavigationReconciliationRequest {
 }
 
 internal data class VexMapsDeliveryRouteNavigationOutput(
+    /**
+     * What the person's Delivery Route / Navigation relationship means right now:
+     * drafting, preparing, needing a leg, ready, navigating, arrived, foreign, failed, or complete.
+     */
     val status:
         VexMapsDeliveryRouteNavigationRelationshipStatus,
+
+    /**
+     * The smallest next step needed to keep the lived delivery journey truthful.
+     *
+     * It may prepare/start the expected Navigation leg or carry an Arrive Control back to Delivery
+     * Route. The request never pretends Navigation success or advances Delivery Route on its own.
+     */
     val request:
         VexMapsDeliveryRouteNavigationReconciliationRequest? =
         null,
@@ -178,13 +207,32 @@ internal data class VexMapsDeliveryRouteNavigationOutput(
 }
 
 /**
- * Pure relationship among complete Delivery Route truth, Navigation truth and the Distribution session's
- * expected-leg/attempt facts.
+ * One feature-owned relationship from the VexMaps Distribution question map:
  *
- * A Navigation phase is never treated as sufficient identity. READY requires the exact admitted
- * routeRef + routeRevision. Once the same Navigation journey is active, reroutes may advance the
- * routeRevision while preserving routeRef; ACTIVE/OFF_ROUTE/LOCATION_HELD/ARRIVED still realize the
- * expected leg only when that stable identity and revision law holds.
+ * "DOES NAVIGATION REALIZE THE EXACT DELIVERY-ROUTE LEG?"
+ *
+ * Canonical feature context:
+ * app/.../screens/shared/maps/distribution/README.md
+ *
+ * Ownership remains separate:
+ *
+ * DELIVERY_ROUTE_STATE != NAVIGATION_STATE
+ *
+ * This Relay compares Delivery Route truth with independently-owned Navigation truth plus the
+ * Distribution Session's expected-leg / attempt facts. It projects relationship status and at most
+ * one bounded reconciliation request. It does not itself perform Navigation work or advance Delivery
+ * Route State.
+ *
+ * Focused proof examples:
+ * VexMapsDeliveryRouteNavigationConvergenceRelayTest
+ *     #readyNavigationRequiresExactDistributionRouteIdentity
+ *     #activeNavigationRerouteKeepsSameDeliveryRouteLegThroughArrival
+ *     #returnArrivalClassifiesAtStartBeforeDeliveryRouteControlIsConsumed
+ *     #failedLegIsStableUntilAnExplicitRetryChangesAttemptTruth
+ *
+ * Those tests prove the relationship's local semantics. They are not a claim that the complete
+ * Delivery Route lived workflow has end-to-end acceptance; the feature home explicitly records that
+ * full human walk as remaining proof debt.
  */
 internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
     private val deliveryRouteProjections:
@@ -291,57 +339,79 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
             VexMapsDeliveryRouteNavigationInputState,
             VexMapsDeliveryRouteNavigationOutput
         > {
-        val previous =
+        /*
+         * Restore the complete current relationship before classifying it. Delivery Route,
+         * Navigation and Session facts publish independently; arrival order is not relationship
+         * identity.
+         */
+        val previousInput =
             currentState.inputState
-        val coherent =
+
+        val currentDeliveryRoute =
+            inputState.deliveryRoute
+                ?: previousInput.deliveryRoute
+        val currentNavigation =
+            inputState.navigation
+                ?: previousInput.navigation
+        val currentExpectedLeg =
+            inputState.expectedLeg
+                ?: previousInput.expectedLeg
+        val currentLegAttempt =
+            inputState.legAttempt
+                ?: previousInput.legAttempt
+
+        val currentInput =
             VexMapsDeliveryRouteNavigationInputState(
                 deliveryRoute =
-                    inputState.deliveryRoute
-                        ?: previous.deliveryRoute,
+                    currentDeliveryRoute,
                 navigation =
-                    inputState.navigation
-                        ?: previous.navigation,
+                    currentNavigation,
                 expectedLeg =
-                    inputState.expectedLeg
-                        ?: previous.expectedLeg,
+                    currentExpectedLeg,
                 legAttempt =
-                    inputState.legAttempt
-                        ?: previous.legAttempt,
+                    currentLegAttempt,
             )
 
         val deliveryRoute =
-            coherent.deliveryRoute
+            currentDeliveryRoute
                 ?: return currentState.copy(
                     inputState =
-                        coherent,
+                        currentInput,
                 )
         val navigation =
-            coherent.navigation
+            currentNavigation
                 ?: return currentState.copy(
                     inputState =
-                        coherent,
+                        currentInput,
                 )
         val expectedLeg =
-            coherent.expectedLeg
+            currentExpectedLeg
                 ?: VexMapsDeliveryRouteExpectedLegState.None
         val legAttempt =
-            coherent.legAttempt
+            currentLegAttempt
                 ?: VexMapsDeliveryRouteLegAttempt.Idle
+
+        /*
+         * Project relationship status plus at most one bounded reconciliation request. Execution and
+         * resulting State remain with the rightful Session / Navigation / Delivery Route owner.
+         */
+        val currentOutput =
+            projectDeliveryRouteNavigation(
+                deliveryRoute =
+                    deliveryRoute,
+                navigation =
+                    navigation,
+                expectedLeg =
+                    expectedLeg,
+                legAttempt =
+                    legAttempt,
+            )
 
         return currentState.copy(
             inputState =
-                coherent,
+                currentInput,
             outputState =
-                projectDeliveryRouteNavigation(
-                    deliveryRoute =
-                        deliveryRoute,
-                    navigation =
-                        navigation,
-                    expectedLeg =
-                        expectedLeg,
-                    legAttempt =
-                        legAttempt,
-                ),
+                currentOutput,
         )
     }
 }

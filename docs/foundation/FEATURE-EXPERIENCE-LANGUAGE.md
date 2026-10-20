@@ -131,6 +131,57 @@ CODE SHAPE
 -> COMMENT EXPLAINING THE NOUN
 ~~~
 
+## Source-grounded explanation
+
+The formation rule above also governs how semantic source is explained.
+
+Do not read a reducer, State machine, or focused test backward and turn a plausible interpretation
+into feature purpose. Ground source-local explanation through current authority:
+
+~~~text
+accepted feature-purpose source
+-> exact human/product question
+-> whole-human Walk / Journey / lived contract when one exists
+   OR explicit current absence / hold
+-> local semantic owner
+-> focused proof of the narrower claim
+-> source-local KDoc / comments
+~~~
+
+Preserve these distinctions:
+
+~~~text
+FEATURE PURPOSE != IMPLEMENTATION INFERENCE
+WHOLE HUMAN WALK != FOCUSED TEST EXAMPLE
+FOCUSED TEST != PRODUCT ACCEPTANCE
+CURRENT SOURCE != HISTORICAL DESIGN RECORD
+~~~
+
+If the whole human path is absent, keep that absence visible. Do not synthesize one from unit-test
+fixtures merely because the local implementation is understandable.
+
+A useful semantic comment should deepen the existing doorway by answering only what the code cannot
+make obvious on its own:
+
+~~~text
+why this owner exists
+which accepted feature question it serves
+which independently-owned truths participate
+what relationship / decision it owns
+what neighboring authority or completion claim it does not own
+~~~
+
+Comments that merely translate syntax add little value:
+
+~~~text
+"calculate availability from visibility"
+"derive output from current state"
+"this field affects candidate selection"
+~~~
+
+The feature home / practicum remains the purpose owner; Journey / Feature Walk owns the human path
+when present; focused tests own narrower proof; comments summarize that accepted context locally.
+
 ## Established language before Vex language
 
 Do not invent architecture vocabulary for a problem software engineering already names clearly.

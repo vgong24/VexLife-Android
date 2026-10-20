@@ -740,6 +740,27 @@ What isolated behavioral question am I trying to make understandable?
 
 Then:
 
+## 0. Ground the question in feature source
+
+Before defining SCAE, recover only the context this family is allowed to summarize:
+
+~~~text
+purpose source
+    feature README / practicum / current accepted semantic owner
+
+whole-human example
+    canonical Feature Walk / Journey / lived contract
+    OR explicit absence / hold
+
+focused proof
+    exact Behavior test / relationship case
+
+boundary
+    what this family must not own or claim
+~~~
+
+Do not infer feature purpose from the Behavior conditions themselves.
+
 ## 1. Name the family
 
 <Name>Family should describe the human/domain question, not the mechanism.
@@ -821,7 +842,19 @@ If ordinary callers repeatedly see the full generic equation, hide it behind mea
 
 Make the package searchable and traversable in the IDE.
 
-The Docs node should answer questions and link directly to source symbols.
+The Docs node should answer questions and link directly to source symbols. It is also the broad
+source-context doorway for the family:
+
+~~~text
+accepted feature-purpose source
+-> exact behavioral question
+-> canonical human example or explicit absence
+-> source-navigation map
+~~~
+
+State / Control / Act / Effect / Behavior KDoc should then document only the consequence local to
+that role. Do not copy the whole feature story into every file, and do not invent an attractive
+product rationale from a DSL condition merely to make the comment sound meaningful.
 
 # Prime implementation — VexStream Playback
 

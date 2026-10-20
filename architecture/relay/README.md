@@ -45,6 +45,85 @@ The concrete Relay should be boring to inspect:
 3. read `processState / processStates` to see the reconciliation law;
 4. read its output state to see what consumers are allowed to depend on.
 
+### Compound Relay / Convergence authoring context
+
+processStates() should be the perceivable calculation center, but its purpose must be recoverable
+without reverse-engineering the reducer.
+
+Before authoring or documenting a Compound Relay, establish:
+
+~~~text
+canonical feature source
+relationship question: "What do A + B (+ C...) mean together?"
+independent input owners
+output relationship this Relay alone owns
+bounded Control/request that may leave this owner
+whole-human Walk/Journey when present, otherwise explicit absence/hold
+focused proof of the narrower relationship
+~~~
+
+Do not derive a whole product story from processStates() or from a focused test. When the feature
+home says the full human Walk is still missing, preserve that incompleteness in the Relay explanation.
+
+#### processStates() source shape
+
+Keep one full reevaluation boundary:
+
+~~~text
+incoming partial patch + previous retained truth
+-> current independently-owned input values
+-> one coherent current InputState
+-> named relationship calculations
+-> one fully-derived current OutputState
+-> one final Compound State
+~~~
+
+Any admitted dependency change may cause the complete bounded relationship to be recalculated. Do
+not introduce hand-maintained partial invalidation merely to make helpers look independent.
+
+The final output constructor should be assembly, not another decision surface:
+
+~~~kotlin
+val queuedAfterCurrentCount = ...
+val availability = ...
+
+val currentOutput =
+    ExampleOutputState(
+        availability = availability,
+        queuedAfterCurrentCount = queuedAfterCurrentCount,
+    )
+
+return currentState.copy(
+    inputState = currentInput,
+    outputState = currentOutput,
+)
+~~~
+
+Avoid hiding relationship rules inside constructor arguments when naming the result would make the
+dependency map clearer.
+
+#### Relationship comments
+
+Comments near a Compound Relay should answer:
+
+~~~text
+What feature question does this relationship serve?
+Which accepted source owns that question?
+What independent truths participate?
+What output relationship does this Relay own?
+What bounded request may leave this owner?
+What whole-human proof exists—or is explicitly absent?
+~~~
+
+Then use process-stage comments only where they preserve meaning that the code shape does not reveal,
+for example candidate identity versus presentation availability or foreign-route identity versus a
+Navigation phase.
+
+This rule is intentionally compatible with both current pressures: Events has a canonical executable
+Journey, while VexMaps Distribution currently has focused relationship proof and an explicitly
+unclosed full Delivery Route human walk. The Relay must preserve whichever truth the feature owner
+actually supplies rather than normalizing both into the same documentation story.
+
 ### Declarative Compound dependencies
 
 A Compound Relay may declare continuously observed Flows:

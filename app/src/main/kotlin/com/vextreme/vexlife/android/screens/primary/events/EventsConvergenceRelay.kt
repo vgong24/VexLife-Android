@@ -35,6 +35,35 @@ data class EventsProfileObservation(
         )
 }
 
+/**
+ * Retained inputs for the practicum's canonical attention relationship.
+ *
+ * See docs/foundation/EVENTS-CONVERGENCE-PRACTICUM.md for the owning semantics:
+ *
+ * EVENT_HAPPENED != TOOLTIP_SHOULD_SHOW_NOW
+ * ACKNOWLEDGED != EVENT_DELETED
+ * DEFERRED != EVENT_FALSE
+ * TARGET_UNREACHABLE != EVENT_DISAPPEARED
+ * TRANSIENT_BLOCKED != EVENT_REJECTED
+ *
+ * feed
+ *     current normalized event truth from EventsRepository;
+ *
+ * preferences
+ *     separate proactive-attention treatment owned by EventsAttentionPreferenceRepository;
+ *
+ * currentScreenId / visibleEventRefsBySurface / transientBlocked
+ *     current presentation context used only to decide whether the retained candidate is presentable;
+ *
+ * lab
+ *     deterministic practicum condition/proof input;
+ *
+ * profile
+ *     real cross-domain input whose later display-name transition may form one bounded SYSTEM notice.
+ *
+ * A partial patch may update any one of these. processStates restores the retained siblings and
+ * recalculates the whole relationship from that coherent current combination.
+ */
 data class EventsConvergenceInputState(
     val currentScreenId: String? = null,
     val feed: EventsFeedState? = null,
@@ -107,7 +136,21 @@ data class EventsConvergenceOutputState(
     val list: EventsConvergenceListState =
         EventsConvergenceListState.Unobserved,
 
+    /**
+     * The one event the product is currently helping the person deal with next.
+     *
+     * Keep this identity stable while it is still lawful so a newer arrival, list reorder, Screen
+     * change, or temporary visibility loss does not yank the person's attention to something else.
+     */
     val candidate: EventsConvergenceCandidate? = null,
+
+    /**
+     * Whether [candidate] may responsibly ask for the person's attention right now.
+     *
+     * A candidate can remain the right event while being temporarily held because the person is on
+     * another Screen, another transient already owns attention, or the exact row is not reachable.
+     * Holding presentation must not silently replace the candidate or erase the event.
+     */
     val availability: EventsConvergenceAvailability =
         EventsConvergenceAvailability.UNOBSERVED,
 
@@ -173,6 +216,33 @@ data class EventsConvergenceOutputState(
 
 /**
  * One reusable convergence relationship over current Events truth.
+ *
+ * Canonical feature context:
+ * docs/foundation/EVENTS-CONVERGENCE-PRACTICUM.md
+ *
+ * That practicum owns the product question this Relay serves:
+ *
+ * "Can one mastered Android node prove how information arriving outside the current Screen becomes
+ * truthful, addressable, composable human attention?"
+ *
+ * The source-owned lattice is:
+ *
+ * provider/current source snapshot
+ * -> EventsRepository normalized feed
+ * -> attention preferences + current Screen + visible targets + transient occupancy
+ * -> this Relay
+ * -> candidate identity + availability
+ * -> anchored overlay / stable dynamic interaction
+ *
+ * Concrete executable example:
+ * EventsJourneys.externalAttention starts on Home, admits external information, enters Events,
+ * acknowledges the first candidate, later admits more information while Home is current, then proves
+ * Later -> deferred next sequence, Suspend -> tail of current sequence, Suppress -> terminal proactive
+ * handling, and finally deferred work becoming candidate only after the current queue drains.
+ *
+ * This class therefore does not invent what an Event means or what a service action should do. It
+ * owns the narrow relationship between current event truth, the person's attention preferences and
+ * current presentation context.
  *
  * Read this class in four places:
  *
@@ -377,47 +447,90 @@ class EventsConvergenceRelay internal constructor(
         EventsConvergenceInputState,
         EventsConvergenceOutputState
     > {
-        val previous =
+        /*
+         * Decide from one coherent picture of the person's current Events situation.
+         *
+         * Feed, human choices, Screen context, row visibility and transient attention can change at
+         * different times. Never let one fresh observation be interpreted against stale siblings
+         * and accidentally change what the person is being shown or asked to deal with.
+         */
+        val previousInput =
             currentState.inputState
+        val previousOutput =
+            currentState.outputState
 
-        val screenId =
+        val currentScreenId =
             inputState.currentScreenId
-                ?: previous.currentScreenId
-        val feed =
+                ?: previousInput.currentScreenId
+        val currentFeed =
             inputState.feed
-                ?: previous.feed
-        val preferences =
+                ?: previousInput.feed
+        val currentPreferences =
             inputState.preferences
-                ?: previous.preferences
-        val lab =
+                ?: previousInput.preferences
+        val currentLab =
             inputState.lab
-                ?: previous.lab
-        val profile =
+                ?: previousInput.lab
+        val currentProfile =
             inputState.profile
-                ?: previous.profile
-        val visibleEventRefsBySurface =
+                ?: previousInput.profile
+        val currentVisibleEventRefsBySurface =
             mergeVisibleSurfacePatches(
                 previous =
-                    previous.visibleEventRefsBySurface,
+                    previousInput.visibleEventRefsBySurface,
                 patch =
                     inputState.visibleEventRefsBySurface,
             )
-        val transientBlocked =
+        val currentTransientBlocked =
             inputState.transientBlocked
-                ?: previous.transientBlocked
+                ?: previousInput.transientBlocked
 
+        val currentInput =
+            EventsConvergenceInputState(
+                currentScreenId =
+                    currentScreenId,
+                feed =
+                    currentFeed
+                        ?.deepCopy(),
+                preferences =
+                    currentPreferences
+                        ?.deepCopy(),
+                lab =
+                    currentLab
+                        ?.deepCopy(),
+                profile =
+                    currentProfile
+                        ?.deepCopy(),
+                visibleEventRefsBySurface =
+                    currentVisibleEventRefsBySurface
+                        ?.mapValues { (_, refs) ->
+                            refs.toSet()
+                        },
+                transientBlocked =
+                    currentTransientBlocked,
+            )
+
+        /*
+         * Form the information that Events should currently preserve for the person.
+         *
+         * Provider events remain factual whether or not they receive attention. A meaningful local
+         * profile-name change joins that same human-facing information stream as a bounded notice,
+         * rather than becoming a separate hidden notification path.
+         */
         val latestProfileNameChange =
             profileNameChangeFromPatch(
-                previousProfile = previous.profile,
-                incomingProfile = inputState.profile,
+                previousProfile =
+                    previousInput.profile,
+                incomingProfile =
+                    inputState.profile,
             )
-                ?: currentState.outputState
+                ?: previousOutput
                     .latestProfileNameChange
                     ?.deepCopy()
 
         val events =
             (
-                feed
+                currentFeed
                     ?.events
                     .orEmpty()
                     .map(VexExternalEvent::deepCopy) +
@@ -450,29 +563,21 @@ class EventsConvergenceRelay internal constructor(
                             ),
                     )
 
-                feed == null ->
+                currentFeed == null ->
                     EventsConvergenceListState.Unobserved
 
                 else ->
                     EventsConvergenceListState.Empty
             }
 
-        val coherentInput =
-            EventsConvergenceInputState(
-                currentScreenId = screenId,
-                feed = feed?.deepCopy(),
-                preferences = preferences?.deepCopy(),
-                lab = lab?.deepCopy(),
-                profile = profile?.deepCopy(),
-                visibleEventRefsBySurface =
-                    visibleEventRefsBySurface?.mapValues { (_, refs) ->
-                        refs.toSet()
-                    },
-                transientBlocked = transientBlocked,
-            )
-
+        /*
+         * Respect the person's prior attention choices without rewriting what actually happened.
+         *
+         * Acknowledge/Suppress finish proactive attention, Suspend keeps an item in the current
+         * sequence but moves it behind current work, and Later moves it to the next sequence.
+         */
         val dispositions =
-            preferences
+            currentPreferences
                 ?.dispositionByEventRef
                 .orEmpty()
 
@@ -498,7 +603,7 @@ class EventsConvergenceRelay internal constructor(
                         EventsAttentionDisposition.SUSPENDED
                 }
                 .sortedBy { event ->
-                    preferences
+                    currentPreferences
                         ?.suspendedOrderByEventRef
                         ?.get(event.eventRef)
                         ?: Long.MAX_VALUE
@@ -511,7 +616,7 @@ class EventsConvergenceRelay internal constructor(
                         EventsAttentionDisposition.DEFERRED
                 }
                 .sortedBy { event ->
-                    preferences
+                    currentPreferences
                         ?.deferredOrderByEventRef
                         ?.get(event.eventRef)
                         ?: Long.MAX_VALUE
@@ -529,15 +634,24 @@ class EventsConvergenceRelay internal constructor(
                     deferredQueue
             }
 
+        /*
+         * Keep the person's current attention target stable unless there is a real reason to move on.
+         *
+         * A proof scenario may deliberately select one target. Otherwise preserve the candidate the
+         * person is already dealing with while it remains lawful; only choose a new event when that
+         * identity can no longer be retained.
+         */
         val candidateEvent =
-            if (feed != null && preferences != null) {
+            if (
+                currentFeed != null &&
+                currentPreferences != null
+            ) {
                 val labTargetRef =
-                    lab
+                    currentLab
                         ?.currentScenario
                         ?.targetEventRef
-
                 val retainedCandidateRef =
-                    currentState.outputState
+                    previousOutput
                         .candidate
                         ?.eventRef
 
@@ -553,7 +667,8 @@ class EventsConvergenceRelay internal constructor(
         val candidate =
             candidateEvent?.let { event ->
                 EventsConvergenceCandidate(
-                    eventRef = event.eventRef,
+                    eventRef =
+                        event.eventRef,
                     targetElementRef =
                         EventsPresentationRefs.row(
                             event.eventRef,
@@ -562,24 +677,32 @@ class EventsConvergenceRelay internal constructor(
             }
 
         val eventsSurfaceVisibility =
-            visibleEventRefsBySurface
-                ?.get(EventsScreen.screenId)
+            currentVisibleEventRefsBySurface
+                ?.get(
+                    EventsScreen.screenId,
+                )
 
+        /*
+         * Decide whether asking for attention now would fit the person's current context.
+         *
+         * Being on another Screen, already handling another transient, or lacking a reachable row
+         * should pause presentation, not reinterpret which event matters.
+         */
         val availability =
             when {
-                feed == null ||
-                    preferences == null ||
-                    screenId == null ||
-                    transientBlocked == null ->
+                currentFeed == null ||
+                    currentPreferences == null ||
+                    currentScreenId == null ||
+                    currentTransientBlocked == null ->
                     EventsConvergenceAvailability.UNOBSERVED
 
                 candidate == null ->
                     EventsConvergenceAvailability.NONE
 
-                screenId != EventsScreen.screenId ->
+                currentScreenId != EventsScreen.screenId ->
                     EventsConvergenceAvailability.HELD_OTHER_SCREEN
 
-                transientBlocked ->
+                currentTransientBlocked ->
                     EventsConvergenceAvailability.HELD_TRANSIENT_OCCUPIED
 
                 /*
@@ -593,76 +716,107 @@ class EventsConvergenceRelay internal constructor(
                 eventsSurfaceVisibility == null ->
                     EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
 
-                candidate.eventRef !in eventsSurfaceVisibility ->
+                candidate.eventRef !in
+                    eventsSurfaceVisibility ->
                     EventsConvergenceAvailability.HELD_TARGET_UNREACHABLE
 
                 else ->
                     EventsConvergenceAvailability.READY
             }
 
+        /*
+         * Publish one self-consistent Events answer for every consumer.
+         *
+         * The Screen should receive already-resolved list, candidate, availability and queue meaning
+         * together; it should not have to reconstruct product policy from raw inputs.
+         */
+        val deferredCount =
+            deferredQueue.size
+        val suspendedCount =
+            suspendedQueue.size
         val currentQueueCount =
             normalQueue.size +
-                suspendedQueue.size
+                suspendedCount
         val nextSequenceCount =
-            deferredQueue.size
+            deferredCount
         val unhandledCount =
             currentQueueCount +
                 nextSequenceCount
-
         val activeQueueCount =
             when {
                 normalQueue.isNotEmpty() ->
                     currentQueueCount
 
                 suspendedQueue.isNotEmpty() ->
-                    suspendedQueue.size
+                    suspendedCount
 
                 else ->
-                    deferredQueue.size
+                    deferredCount
             }
+        val queuedAfterCurrentCount =
+            if (candidate == null) {
+                0
+            } else {
+                (activeQueueCount - 1)
+                    .coerceAtLeast(0)
+            }
+        val acknowledgedCount =
+            dispositions.values.count { disposition ->
+                disposition ==
+                    EventsAttentionDisposition.ACKNOWLEDGED
+            }
+        val suppressedCount =
+            dispositions.values.count { disposition ->
+                disposition ==
+                    EventsAttentionDisposition.SUPPRESSED
+            }
+        val currentDispositionByEventRef =
+            dispositions.toMap()
+        val currentScenario =
+            currentLab
+                ?.currentScenario
+                ?.copy()
+        val currentProfileNameChange =
+            latestProfileNameChange
+                ?.deepCopy()
+
+        val currentOutput =
+            EventsConvergenceOutputState(
+                list =
+                    listState,
+                candidate =
+                    candidate,
+                availability =
+                    availability,
+                dispositionByEventRef =
+                    currentDispositionByEventRef,
+                scenario =
+                    currentScenario,
+                latestProfileNameChange =
+                    currentProfileNameChange,
+                unhandledCount =
+                    unhandledCount,
+                queuedAfterCurrentCount =
+                    queuedAfterCurrentCount,
+                acknowledgedCount =
+                    acknowledgedCount,
+                deferredCount =
+                    deferredCount,
+                suspendedCount =
+                    suspendedCount,
+                suppressedCount =
+                    suppressedCount,
+                currentQueueCount =
+                    currentQueueCount,
+                nextSequenceCount =
+                    nextSequenceCount,
+            )
 
         return currentState.copy(
-            inputState = coherentInput,
+            inputState =
+                currentInput,
             outputState =
-                EventsConvergenceOutputState(
-                    list = listState,
-                    candidate = candidate,
-                    availability = availability,
-                    dispositionByEventRef = dispositions.toMap(),
-                    scenario =
-                        lab
-                            ?.currentScenario
-                            ?.copy(),
-                    latestProfileNameChange =
-                        latestProfileNameChange
-                            ?.deepCopy(),
-                    unhandledCount = unhandledCount,
-                    queuedAfterCurrentCount =
-                        if (candidate == null) {
-                            0
-                        } else {
-                            (activeQueueCount - 1)
-                                .coerceAtLeast(0)
-                        },
-                    acknowledgedCount =
-                        dispositions.values.count { disposition ->
-                            disposition ==
-                                EventsAttentionDisposition.ACKNOWLEDGED
-                        },
-                    deferredCount =
-                        deferredQueue.size,
-                    suspendedCount =
-                        suspendedQueue.size,
-                    suppressedCount =
-                        dispositions.values.count { disposition ->
-                            disposition ==
-                                EventsAttentionDisposition.SUPPRESSED
-                        },
-                    currentQueueCount =
-                        currentQueueCount,
-                    nextSequenceCount =
-                        nextSequenceCount,
-                ),
+                currentOutput,
         )
     }
 

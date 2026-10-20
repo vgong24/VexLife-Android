@@ -56,6 +56,24 @@ WHO / WHAT REALIZES IT?:
 WHAT DO THEY SEE?:
 ~~~
 
+## Semantic source grounding
+
+Use only when local semantic source could otherwise become detached from its feature purpose.
+
+~~~text
+PURPOSE SOURCE:
+WHOLE HUMAN PATH / JOURNEY / WALK:
+    <source>
+    OR <explicit hold / absence>
+
+LOCAL SEMANTIC OWNER:
+FOCUSED PROOF:
+NON-CLAIM / BOUNDARY:
+COMMENT MUST PRESERVE:
+~~~
+
+Do not synthesize a missing human path from implementation or focused-test fixtures.
+
 ## Source-concept formation
 
 For each proposed durable noun:

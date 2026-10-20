@@ -12,6 +12,18 @@ import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryrou
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.deliveryroute.VexMapsDeliveryRouteState
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * Inputs for the feature-home question "Do Distribution Mode and the Delivery Route agree?"
+ *
+ * mode
+ *     current Distribution Mode projection;
+ *
+ * deliveryRoute
+ *     current Delivery Route projection.
+ *
+ * These are independently-owned truths. Their combination may require a bounded Mode Control
+ * request, but neither input becomes subordinate to this Relay.
+ */
 internal data class VexMapsDistributionModeDeliveryRouteInputState(
     val mode:
         VexMapsDistributionModeProjection? =
@@ -43,8 +55,16 @@ internal enum class VexMapsDistributionModeDeliveryRouteCoherence {
 }
 
 internal data class VexMapsDistributionModeDeliveryRouteOutput(
+    /** Whether the person's current Maps mode and current delivery work agree. */
     val coherence:
         VexMapsDistributionModeDeliveryRouteCoherence,
+
+    /**
+     * The smallest request needed to repair that product mismatch, when one exists.
+     *
+     * Asking through Mode's Control preserves the human meaning of the request and lets Mode decide
+     * the lawful Act/Effect from its own current truth instead of Delivery Route changing Mode for it.
+     */
     val requestedModeControl:
         VexMapsDistributionModeControl? =
         null,
@@ -56,12 +76,27 @@ internal data class VexMapsDistributionModeDeliveryRouteOutput(
 }
 
 /**
- * One higher-order question:
+ * One feature-owned relationship from the VexMaps Distribution question map:
  *
- * Is the independently-owned Maps Mode coherent with the independently-owned Delivery Route?
+ * "DO DISTRIBUTION MODE AND THE DELIVERY ROUTE AGREE?"
  *
- * This Relay deliberately does not restate Delivery Route phase. A Delivery-Route-state addition should require a change
- * here only when it changes the Mode/Delivery Route relationship itself.
+ * Canonical feature context:
+ * app/.../screens/shared/maps/distribution/README.md
+ *
+ * Ownership remains separate:
+ *
+ * DISTRIBUTION_MODE != DELIVERY_ROUTE
+ *
+ * This Relay observes those two independently complete truths and projects only their coherence.
+ * When a non-empty Delivery Route exists while Mode is Regular, the relationship may request
+ * VexMapsDistributionModeControl.UseDistribution; it does not choose Mode's Act/Effect itself.
+ *
+ * Focused proof example:
+ * VexMapsDistributionModeDeliveryRouteConvergenceRelayTest
+ *     #nonEmptyDeliveryRouteRequestsOnlyModeReconciliationThenBecomesCoherent
+ *
+ * That test is evidence for this relationship only. The feature home explicitly records that the
+ * full Delivery Route human walk is still separate proof debt.
  */
 internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
     private val modeProjections:
@@ -132,40 +167,57 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
             VexMapsDistributionModeDeliveryRouteInputState,
             VexMapsDistributionModeDeliveryRouteOutput
         > {
-        val previous =
+        /*
+         * Restore the complete current pair before answering the feature-home coherence question.
+         * Either owner may publish first; arrival order is not relationship meaning.
+         */
+        val previousInput =
             currentState.inputState
-        val coherent =
+
+        val currentMode =
+            inputState.mode
+                ?: previousInput.mode
+        val currentDeliveryRoute =
+            inputState.deliveryRoute
+                ?: previousInput.deliveryRoute
+
+        val currentInput =
             VexMapsDistributionModeDeliveryRouteInputState(
                 mode =
-                    inputState.mode
-                        ?: previous.mode,
+                    currentMode,
                 deliveryRoute =
-                    inputState.deliveryRoute
-                        ?: previous.deliveryRoute,
+                    currentDeliveryRoute,
             )
+
         val mode =
-            coherent.mode
+            currentMode
                 ?: return currentState.copy(
                     inputState =
-                        coherent,
+                        currentInput,
                 )
         val deliveryRoute =
-            coherent.deliveryRoute
+            currentDeliveryRoute
                 ?: return currentState.copy(
                     inputState =
-                        coherent,
+                        currentInput,
                 )
+
+        /*
+         * Project only the owned relationship answer: coherent, or a bounded Mode Control request.
+         */
+        val currentOutput =
+            projectModeDeliveryRoute(
+                mode =
+                    mode,
+                deliveryRoute =
+                    deliveryRoute,
+            )
 
         return currentState.copy(
             inputState =
-                coherent,
+                currentInput,
             outputState =
-                projectModeDeliveryRoute(
-                    mode =
-                        mode,
-                    deliveryRoute =
-                        deliveryRoute,
-                ),
+                currentOutput,
         )
     }
 }
