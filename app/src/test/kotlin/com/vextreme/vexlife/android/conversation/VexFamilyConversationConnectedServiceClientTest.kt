@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.conversation
 
+import java.lang.reflect.Modifier
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -170,27 +171,26 @@ class VexFamilyConversationConnectedServiceClientTest {
 
     @Test
     fun featureIntentContainsOnlyFamilyConversationCurrentnessMeaning() {
-        val intent =
-            VexFamilyConversationThreadHistoryIntent(
-                spaceRef =
-                    SPACE,
-                channelRef =
-                    CHANNEL_TWO,
-                expectedMembershipGeneration =
-                    2L,
-            )
+        val fieldNames =
+            VexFamilyConversationThreadHistoryIntent::class.java
+                .declaredFields
+                .filterNot { field ->
+                    Modifier.isStatic(
+                        field.modifiers,
+                    )
+                }
+                .map { field ->
+                    field.name
+                }
+                .toSet()
 
         assertEquals(
-            SPACE,
-            intent.spaceRef,
-        )
-        assertEquals(
-            CHANNEL_TWO,
-            intent.channelRef,
-        )
-        assertEquals(
-            2L,
-            intent.expectedMembershipGeneration,
+            setOf(
+                "spaceRef",
+                "channelRef",
+                "expectedMembershipGeneration",
+            ),
+            fieldNames,
         )
     }
 
