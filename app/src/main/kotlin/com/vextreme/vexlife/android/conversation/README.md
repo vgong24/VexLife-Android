@@ -17,7 +17,7 @@ generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
 mixed-provenance Conversation behavior + Lab availability overrides = ACCEPTED ON MAIN / PR #104
 Hybrid Name Ontology / code vocabulary = ACCEPTED ON MAIN / PR #107
 Family server bootstrap/history projection = CURRENT SOURCE
-VCS-04 Family Connected Services read client = DRAFT CANDIDATE / REAL TRANSPORT + APP GRAPH HELD
+VCS-04 Family Connected Services read client/repository = DRAFT CANDIDATE / REAL TRANSPORT + APP GRAPH HELD
 production Screen / app-session wiring = HELD on shared composition paths
 authenticated Android Home/session producer stack = SOURCE CANDIDATES FORMED / LIFECYCLE ACCEPTANCE + REAL BINDING HELD
 ~~~
@@ -81,6 +81,7 @@ conversation/
 ├── VexConversationRepository.kt
 ├── VexFamilyConversationServerAdapter.kt
 ├── VexFamilyConversationConnectedServiceClient.kt
+├── VexFamilyConversationConnectedServiceRepository.kt
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
 ├── VexConversationHybridRelay.kt
@@ -102,6 +103,7 @@ Tests:
 VexConversationStateTest
 VexFamilyConversationServerAdapterTest
 VexFamilyConversationConnectedServiceClientTest
+VexFamilyConversationConnectedServiceRepositoryTest
 InMemoryVexFamilyConversationRepositoryTest
 VexConversationSurfaceProjectionTest
 VexConversationHybridRelayTest
@@ -124,6 +126,8 @@ human-selected spaceRef + threadRef
 -> existing VexFamilyConversationServerBootstrap / ThreadHistory
 -> existing projectVexFamilyConversationServerThread(...)
 -> existing VexConversationThreadState
+-> VexFamilyConversationConnectedServiceRepository.state
+-> existing VexConversationHybridRelay
 ~~~
 
 The client never receives a URL, bearer/session handle, HTTP header, Home lease or private-gateway
@@ -145,6 +149,7 @@ FEATURE_CLIENT != SESSION_OWNER
 FEATURE_CLIENT != PRIVATE_GATEWAY
 PORT != GENERIC_API_MANAGER
 FIXTURE_PASS != REAL_REMOTE_INTEGRATION
+ANDROID_REPOSITORY_STATE != CANONICAL_HOME_WRITER
 ~~~
 
 ## Generic Conversation identity
