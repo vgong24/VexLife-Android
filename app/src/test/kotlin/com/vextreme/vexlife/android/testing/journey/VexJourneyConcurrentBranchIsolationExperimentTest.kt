@@ -438,10 +438,23 @@ class VexJourneyConcurrentBranchIsolationExperimentTest {
             )
         val canonical =
             buildString {
-                append("vexstream.concurrent-snapshot/v1\n")
-                append("hubRef=").append(hub.hubRef).append('\n')
-                append("catalogRevision=").append(hub.catalogRevision).append('\n')
-                append("pairedDisplayName=").append(connection.displayName).append('\n')
+                fun field(
+                    name: String,
+                    value: Any?,
+                ) {
+                    val text = value?.toString() ?: "<null>"
+                    append(name)
+                        .append(':')
+                        .append(text.length)
+                        .append(':')
+                        .append(text)
+                        .append('\n')
+                }
+
+                field("schema", "vexstream.concurrent-snapshot/v1")
+                field("hubRef", hub.hubRef)
+                field("catalogRevision", hub.catalogRevision)
+                field("pairedDisplayName", connection.displayName)
 
                 tracks
                     .sortedBy { item -> item.track.trackRef.value }
@@ -450,23 +463,38 @@ class VexJourneyConcurrentBranchIsolationExperimentTest {
                             requireNotNull(
                                 item.localCopy as? VexStreamLocalCopyState.Downloaded,
                             )
-                        append("trackRef=").append(item.track.trackRef.value).append('\n')
-                        append("mediaSha256=").append(item.track.mediaSha256.value).append('\n')
-                        append("mediaByteLength=").append(item.track.mediaByteLength).append('\n')
-                        append("hubAvailable=").append(item.hubAvailable).append('\n')
-                        append("localMediaRef=").append(local.localMediaRef).append('\n')
-                        append("localSha256=").append(local.mediaSha256.value).append('\n')
-                        append("localByteLength=").append(local.byteLength).append('\n')
+                        field("trackRef", item.track.trackRef.value)
+                        field("mediaSha256", item.track.mediaSha256.value)
+                        field("mediaByteLength", item.track.mediaByteLength)
+                        field("title", item.track.title)
+                        field("artist", item.track.artist)
+                        field("album", item.track.album)
+                        field("genre", item.track.genre)
+                        field("year", item.track.year)
+                        field("durationSeconds", item.track.durationSeconds)
+                        field("playbackStartSeconds", item.track.playbackStartSeconds)
+                        field("playbackEndSeconds", item.track.playbackEndSeconds)
+                        field("hubAvailable", item.hubAvailable)
+                        field("localMediaRef", local.localMediaRef)
+                        field("localSha256", local.mediaSha256.value)
+                        field("localByteLength", local.byteLength)
+                    }
+
+                playlists
+                    .sortedBy { playlist -> playlist.playlistRef.value }
+                    .forEach { playlist ->
+                        field("playlistRef", playlist.playlistRef.value)
+                        field("playlistName", playlist.name)
+                        playlist.trackRefs.forEach { trackRef ->
+                            field("playlistTrackRef", trackRef.value)
+                        }
                     }
 
                 resources
                     .sortedBy(SnapshotResource::relativePath)
                     .forEach { resource ->
-                        append("resource=")
-                            .append(resource.relativePath)
-                            .append(':')
-                            .append(resource.sha256)
-                            .append('\n')
+                        field("resourcePath", resource.relativePath)
+                        field("resourceSha256", resource.sha256)
                     }
             }
 
