@@ -52,6 +52,9 @@ internal object VexStreamPresentationRefs {
     private const val TrackRowPrefix =
         "element.vexstream-music.track"
 
+    private const val CollectionRowPrefix =
+        "element.vexstream-music.collection"
+
     const val SearchResultsList =
         "element.vexstream-music.search.results"
 
@@ -82,6 +85,38 @@ internal object VexStreamPresentationRefs {
             action = action,
             placement = "row",
         )
+
+    fun collectionRow(
+        collectionKey: String,
+    ): String {
+        require(collectionKey.isNotBlank()) {
+            "collection presentation key must not be blank"
+        }
+
+        return dynamicRef(
+            ownerRef = CollectionRowPrefix,
+            instanceRef = collectionKey,
+        )
+    }
+
+    fun collectionRowAction(
+        collectionKey: String,
+        action: ActionElement,
+    ): String {
+        require(collectionKey.isNotBlank()) {
+            "collection presentation key must not be blank"
+        }
+        val uiElement =
+            action as? UIElement
+                ?: error("ActionElement must also be a UIElement")
+
+        return dynamicRef(
+            ownerRef =
+                uiElement.elementId +
+                    ".collection-row",
+            instanceRef = collectionKey,
+        )
+    }
 
     fun trackMenuAction(
         scope: VexStreamTrackPresentationScope,
