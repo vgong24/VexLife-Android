@@ -420,10 +420,16 @@ private fun VexStreamCollectionDetail(
             )
         }
 
-    LazyColumn(
-        modifier = VexModifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    VexComposeScope(
+        parentRef =
+            VexStreamPresentationRefs.collectionRow(
+                collectionKey,
+            ),
     ) {
+        LazyColumn(
+            modifier = VexModifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
         item(
             key = "collection-header",
         ) {
@@ -495,6 +501,7 @@ private fun VexStreamCollectionDetail(
                     offlineCopyConnection,
                 onVisitArtist = onVisitArtist,
             )
+        }
         }
     }
 }
