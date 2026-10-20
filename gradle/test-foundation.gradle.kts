@@ -479,12 +479,6 @@ val vexFoundationHealth =
                             "vexVerifyLocal",
                             "vexVerifyDevice",
                         ),
-                    ".github/workflows/vexlife-android-health.yml" to
-                        listOf(
-                            "pull_request:",
-                            "vexFoundationHealth vexVerifyLocal",
-                            "github.event.pull_request.head.sha",
-                        ),
                 )
 
             requiredSources.forEach {
