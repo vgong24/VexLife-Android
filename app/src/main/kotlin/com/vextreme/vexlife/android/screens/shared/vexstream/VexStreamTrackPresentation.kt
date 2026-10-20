@@ -151,6 +151,10 @@ internal fun VexStreamTrackCard(
                                 state.track.trackRef,
                             action =
                                 VexStreamOfflineCopyAction.Download,
+                            expectedMediaSha256 =
+                                state.track.mediaSha256,
+                            expectedMediaByteLength =
+                                state.track.mediaByteLength,
                         ),
                     )
 
