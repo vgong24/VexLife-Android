@@ -215,6 +215,16 @@ internal data class VexMapsDeliveryRouteNavigationOutput(
  * Pure relationship among complete Delivery Route truth, Navigation truth and the Distribution session's
  * expected-leg/attempt facts.
  *
+ * User story:
+ *
+ * The person is delivering stop B. Distribution prepared the Navigation route for that exact stop and
+ * remembers its route identity. If Navigation says ARRIVED on that same admitted route, convergence
+ * may request DeliveryRouteControl.Arrive and the Delivery Route can advance to AtDelivery. If an
+ * unrelated Navigation route is active or an older/wrong route identity reports ARRIVED, the
+ * delivery journey must not advance; the relationship becomes ForeignNavigation instead. After the
+ * person marks the stop delivered, the same relationship helps prepare/start the next stop or return
+ * leg without duplicating work already preparing or failed.
+ *
  * A Navigation phase is never treated as sufficient identity. READY requires the exact admitted
  * routeRef + routeRevision. Once the same Navigation journey is active, reroutes may advance the
  * routeRevision while preserving routeRef; ACTIVE/OFF_ROUTE/LOCATION_HELD/ARRIVED still realize the

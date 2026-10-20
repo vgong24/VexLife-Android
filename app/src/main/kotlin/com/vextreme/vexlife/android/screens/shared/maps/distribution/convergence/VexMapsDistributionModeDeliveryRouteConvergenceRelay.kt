@@ -84,6 +84,15 @@ internal data class VexMapsDistributionModeDeliveryRouteOutput(
  *
  * Is the independently-owned Maps Mode coherent with the independently-owned Delivery Route?
  *
+ * User story:
+ *
+ * The person has entered delivery stops and now has an admitted Delivery Route, but Maps is still in
+ * ordinary Regular mode. The route should not silently run inside the wrong product context, and
+ * Delivery Route should not directly flip Maps state. This relationship therefore reports
+ * NeedsDistributionMode and requests UseDistribution through the Mode Control. Mode resolves that
+ * request from its own current State, publishes Distribution, and this relationship becomes
+ * Coherent on the next observation.
+ *
  * This Relay deliberately does not restate Delivery Route phase. A Delivery-Route-state addition should require a change
  * here only when it changes the Mode/Delivery Route relationship itself.
  */

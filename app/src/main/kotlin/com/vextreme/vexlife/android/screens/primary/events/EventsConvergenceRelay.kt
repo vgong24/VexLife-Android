@@ -222,6 +222,19 @@ data class EventsConvergenceOutputState(
 /**
  * One reusable convergence relationship over current Events truth.
  *
+ * User story:
+ *
+ * The person is on Home when a message/call/map-style event arrives. The event must remain true even
+ * though Events is not current, so it is retained without interrupting them. Later they open Events:
+ * the oldest still-unhandled event becomes the attention candidate. If that row is off-screen or a
+ * different transient is already open, the same candidate is held rather than replaced. When the
+ * row becomes reachable and attention is free, the candidate becomes READY. Pressing Later changes
+ * only the person's attention preference, moves that event to the next sequence, and lets the next
+ * current event become the candidate without deleting the deferred event.
+ *
+ * This Relay exists so those facts are resolved once from current truth instead of every Screen or
+ * overlay separately deciding what deserves attention.
+ *
  * Read this class in four places:
  *
  * dependencies()   -> what continuously changes around Events?
