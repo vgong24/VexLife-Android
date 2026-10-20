@@ -163,6 +163,7 @@ Identify the primitive by the **question it answers**, not by string matching.
 | **Identity** | What is this thing, and what remains the same while other facts change? | stable feature/ref/element/domain identity, family kinship |
 | **Terrain / Topology** | Where can things exist, relate, or be reached? | route graph, timeline, queue order, channel/thread relationships, dependency graph |
 | **State / Position** | What is actually true now / where are we now? | domain State, repository truth, Relay input/output truth |
+| **Relationship / Convergence** | What new meaning exists only when independently-owned truths are considered together? | Compound Relay, relationship status, bounded reconciliation request |
 | **Intention / Target** | What outcome or destination is being sought? | feature outcome, selected destination, desired work/result |
 | **Engagement / Request** | What stable change/traversal can be requested? | SCAE Control, ordinary typed request, semantic interaction |
 | **Interpretation** | What does that request mean from current truth? | SCAE Act or another explicit semantic resolution |
@@ -220,7 +221,7 @@ Effect                 -> Transformation / Dynamics
 Connection             -> Manifestation
 provider observation   -> Observation
 Projection             -> Projection / Experience
-Convergence            -> explicit relationship among independently-owned current truths
+Convergence            -> Relationship / Convergence among independently-owned current truths
 ~~~
 
 SCAE does not need extra letters for Terrain, Projection, Connection, Proof or Convergence. Those
