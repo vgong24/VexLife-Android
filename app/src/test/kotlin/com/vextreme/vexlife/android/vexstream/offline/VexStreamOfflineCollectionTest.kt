@@ -205,6 +205,101 @@ class VexStreamOfflineCollectionTest {
         }
 
     @Test
+    fun savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable() =
+        runBlocking {
+            val existingCopy =
+                VexStreamLocalCopyState.Downloaded(
+                    mediaSha256 = digest('a'),
+                    byteLength = BYTE_LENGTH,
+                    localMediaRef = "local.existing",
+                )
+            val repository =
+                InMemoryVexStreamMusicRepository(
+                    initialState =
+                        readyState(
+                            track(
+                                ref = "already-local",
+                                digestChar = 'a',
+                                localCopy = existingCopy,
+                            ),
+                            track(
+                                ref = "missing-one",
+                                digestChar = 'b',
+                            ),
+                            track(
+                                ref = "missing-two",
+                                digestChar = 'c',
+                            ),
+                        ),
+                )
+            val ownerScope =
+                CoroutineScope(
+                    SupervisorJob() +
+                        Dispatchers.Unconfined,
+                )
+            val connection =
+                VexStreamOfflineCopyConnection(
+                    repository = repository,
+                    scope = ownerScope,
+                )
+
+            try {
+                val request =
+                    requireNotNull(
+                        vexStreamOfflineCollectionPlan(
+                            repository.state.value.tracks,
+                        ).requestOrNull(),
+                    )
+
+                repository.publishHubUnavailable(
+                    VexStreamHubState.Unreachable,
+                )
+
+                connection
+                    .request(
+                        request,
+                    )
+                    .join()
+
+                val current =
+                    repository.state.value
+                val currentPlan =
+                    vexStreamOfflineCollectionPlan(
+                        current.tracks,
+                    )
+
+                assertSame(
+                    existingCopy,
+                    current
+                        .track(
+                            VexStreamTrackRef(
+                                "already-local",
+                            ),
+                        )
+                        ?.localCopy,
+                )
+                assertEquals(
+                    1,
+                    currentPlan.onDeviceCount,
+                )
+                assertEquals(
+                    2,
+                    currentPlan.blockedMissingCount,
+                )
+                assertEquals(
+                    0,
+                    currentPlan.downloadableMissingCount,
+                )
+                assertEquals(
+                    null,
+                    currentPlan.requestOrNull(),
+                )
+            } finally {
+                ownerScope.cancel()
+            }
+        }
+
+    @Test
     fun staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia() =
         runBlocking {
             val ref =
