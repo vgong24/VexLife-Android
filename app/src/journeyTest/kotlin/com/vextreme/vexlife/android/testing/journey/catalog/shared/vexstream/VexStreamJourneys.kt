@@ -1,7 +1,10 @@
 package com.vextreme.vexlife.android.testing.journey
 
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
+import com.vextreme.vexlife.android.data.vexstream.VexStreamHubCatalogProjection
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamHubTrackProjection
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -35,6 +38,14 @@ object VexStreamJourneys : VexJourneyShard {
             trackRef =
                 VexStreamJourneyFixtures.TrackOne,
             action = action,
+        )
+
+    private fun collectionOpenElementId(
+        collectionKey: String,
+    ): String =
+        VexStreamPresentationRefs.collectionRowAction(
+            collectionKey = collectionKey,
+            action = VexStreamMusicScreen.OpenCollection,
         )
 
     private fun queueEntryActionElementId(
@@ -338,16 +349,151 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
+    private val downloadCollectionMissingFeatureWalk =
+        vexFeatureWalkJourney(
+            featureWalkCase =
+                FeatureWalks
+                    .vexStream
+                    .offlineDownload
+                    .downloadCollectionMissing,
+        ) {
+        start(HomeScreen)
+        tap(HomeScreen.ConnectVexStreamMusic)
+        tap(VexStreamMusicScreen.FindNearby)
+        tap(VexStreamMusicScreen.ConfirmPairingCode)
+        tap(AppShell.Elements.Back)
+        tap(HomeScreen.VexStreamMusic)
+
+        // Form the partial-offline checkpoint using the ordinary single-track product action first.
+        tapElementById(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.DownloadTrack,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.DownloadTrack,
+        )
+
+        // The producer catalog then grows the same album. TrackOne's verified local bytes are
+        // preserved by media identity while TrackTwo/TrackThree arrive as Hub-only missing media.
+        externalCause(
+            repository =
+                getRepository(
+                    vexStreamJourneyRepository,
+                ),
+            causeRef =
+                "cause.vexstream.mass-download.catalog-expanded",
+        ) {
+            publishCatalog(
+                massDownloadCatalog(),
+            )
+        }
+
+        tap(VexStreamMusicScreen.AlbumsTab)
+        tapElementById(
+            elementId =
+                collectionOpenElementId(
+                    "album:" +
+                        VexStreamJourneyFixtures.AlbumName,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.OpenCollection,
+        )
+        assertVisible(
+            VexStreamMusicScreen.DownloadMissing,
+        )
+        tap(
+            VexStreamMusicScreen.DownloadMissing,
+        )
+
+        tap(
+            VexStreamMusicScreen.CollectionBack,
+        )
+        tap(
+            VexStreamMusicScreen.DownloadsTab,
+        )
+
+        listOf(
+            VexStreamJourneyFixtures.TrackOne,
+            VexStreamJourneyFixtures.TrackTwo,
+            VexStreamJourneyFixtures.TrackThree,
+        ).forEach { trackRef ->
+            assertVisibleById(
+                VexStreamPresentationRefs.trackRow(
+                    scope =
+                        VexStreamTrackPresentationScope.Downloads,
+                    trackRef = trackRef,
+                ),
+            )
+        }
+
+        tap(AppShell.Elements.Back)
+    }
+
+    val downloadCollectionMissing =
+        downloadCollectionMissingFeatureWalk.journey
+
     val downloadAndRemove =
         downloadAndRemoveFeatureWalk.journey
 
     override val journeys = listOf(
         connectRefreshForget,
         downloadAndRemove,
+        downloadCollectionMissing,
     )
 
     override val featureWalkJourneys =
         listOf(
             downloadAndRemoveFeatureWalk,
+            downloadCollectionMissingFeatureWalk,
+        )
+
+    private fun massDownloadCatalog(): VexStreamHubCatalogProjection =
+        VexStreamHubCatalogProjection(
+            hubRef = "hub.journey.mass-download",
+            sourceVersion = "journey",
+            catalogRevision = "catalog.journey.mass-download.1",
+            tracks =
+                listOf(
+                    VexStreamHubTrackProjection(
+                        trackRef = VexStreamJourneyFixtures.TrackOne,
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                "1".repeat(64),
+                            ),
+                        mediaByteLength = 4_096L,
+                        title = "Journey Song",
+                        artist = "Journey Artist",
+                        album = VexStreamJourneyFixtures.AlbumName,
+                        genre = "Journey",
+                        durationSeconds = 180.0,
+                    ),
+                    VexStreamHubTrackProjection(
+                        trackRef = VexStreamJourneyFixtures.TrackTwo,
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                "2".repeat(64),
+                            ),
+                        mediaByteLength = 4_097L,
+                        title = "Journey Song Two",
+                        artist = "Journey Artist",
+                        album = VexStreamJourneyFixtures.AlbumName,
+                        genre = "Journey",
+                        durationSeconds = 181.0,
+                    ),
+                    VexStreamHubTrackProjection(
+                        trackRef = VexStreamJourneyFixtures.TrackThree,
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                "3".repeat(64),
+                            ),
+                        mediaByteLength = 4_098L,
+                        title = "Journey Song Three",
+                        artist = "Journey Artist",
+                        album = VexStreamJourneyFixtures.AlbumName,
+                        genre = "Journey",
+                        durationSeconds = 182.0,
+                    ),
+                ),
         )
 }
