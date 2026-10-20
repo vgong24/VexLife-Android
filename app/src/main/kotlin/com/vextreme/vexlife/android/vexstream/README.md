@@ -53,9 +53,15 @@ IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
     -> Repeat State / Control / Act / Effect
     -> Media3VexStreamRepeatConnection
 
+HOW MUCH OF THIS COLLECTION IS ON THIS PHONE?
+    vexstream/offline
+    -> current collection offline plan from repository-owned per-track copy truth
+    -> exact Download missing request over only requestable current media
+
 WHAT DOES THE LISTENER SEE?
     screens/shared/vexstream
     -> Android Compose/VexCompose presentation
+    -> collection-level on-device summary + per-track copy status
 
 WHO OWNS PLAYER LIFETIME?
     media/vexstream/VexStreamPlaybackService
@@ -93,8 +99,13 @@ vexstream/collection/
     composition boundary only; collection membership remains upstream catalog/playlist truth
 
 vexstream/offline/
-    human question: who owns a requested local copy after the initiating row/sheet disappears?
-    typed Download / Remove request + in-process VexLife session-lifetime Connection
+    human questions:
+      who owns a requested local copy after the initiating row/sheet disappears?
+      how much of this rendered collection is already on the phone?
+      which exact missing media may be requested now without re-downloading current copies?
+    VexStreamOfflineDocs is the code-local semantic doorway
+    single-track Download / Remove + one-shot collection Download missing requests
+    in-process VexLife session-lifetime Connection
     suspend repository remains byte/state authority; no process-death/background-resume claim
 
 vexstream/repeat/
@@ -114,6 +125,51 @@ journeyTest/.../vexstream/
 
 The folders are not required to be symmetrical. A source area exists when its human/product question
 and owner are real.
+
+## MassDownload / collection offline download — current slice
+
+"MassDownload" is the current project/lane search name. Product/source language stays centered on the
+human question: **download the missing part of this collection**.
+
+Current admitted shape:
+
+~~~text
+rendered album / artist collection / playlist
+-> repository-owned per-track local-copy truth
+-> VexStreamOfflineCollectionPlan
+   on device
+   downloading
+   requestable missing
+   blocked missing
+-> Download missing
+-> exact targets carry trackRef + media SHA-256 + byte length
+-> VexStreamOfflineCopyConnection re-checks current truth before each target
+-> sequential repository downloadForOffline(...)
+-> repository observation changes local-copy truth
+-> collection plan/projection derives again
+~~~
+
+This is deliberately one-shot. It does not yet mean "keep this collection synchronized forever."
+
+Held until independently earned:
+
+~~~text
+persistent Keep available offline intention
+durable collection identity for album-like groupings
+background / process-death resumption
+whole-library download policy
+storage/free-space admission
+bounded parallel transfer policy
+multi-select / mass removal
+~~~
+
+Do not call the one-shot relationship "synced" merely because all current members happen to be local.
+A later persistent sync feature would own desired membership plus convergence against changing
+collection truth.
+
+QuantumTest remains downstream proof optimization. Once this ordinary feature is proven, a partially
+downloaded collection becomes a useful reconstructable branch checkpoint; the Quantum experiment
+must consume the feature's truth rather than becoming a second MassDownload implementation.
 
 ## Playback and Queue are siblings, not one giant player State
 
