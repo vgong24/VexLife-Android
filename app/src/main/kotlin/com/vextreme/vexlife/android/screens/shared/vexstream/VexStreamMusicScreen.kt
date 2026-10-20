@@ -690,7 +690,7 @@ internal fun vexStreamPreviewState(): VexStreamMusicState {
             mediaByteLength = 4_000_000,
             title = "Take It With You",
             artist = "Vex",
-            album = "Offline",
+            album = "Desktop Hub",
             durationSeconds = 184.0,
         )
 
