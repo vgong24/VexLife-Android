@@ -15,13 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
 internal class VexFamilyConversationConnectedServiceRepository(
     private val client:
         VexFamilyConversationConnectedServiceClient,
-    initialState:
-        VexConversationState =
-        VexConversationState.Empty,
 ) : VexConversationRepository {
     private val mutableState =
         MutableStateFlow(
-            initialState,
+            VexConversationState.Empty,
         )
 
     override val state:

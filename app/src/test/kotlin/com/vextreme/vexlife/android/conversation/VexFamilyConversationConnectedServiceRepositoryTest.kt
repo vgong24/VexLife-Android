@@ -14,7 +14,7 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
             val repository =
                 repository(
                     port =
-                        FixedPort(
+                        MutablePort(
                             bootstrapValue =
                                 bootstrap(),
                             historyValue =
@@ -48,7 +48,7 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
             val repository =
                 repository(
                     port =
-                        FixedPort(
+                        MutablePort(
                             bootstrapValue =
                                 bootstrap(),
                             historyValue =
@@ -75,27 +75,73 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
     @Test
     fun refreshReplacesOnlyTheRequestedThreadAndPreservesThreadOrder() =
         runBlocking {
-            val other =
-                projectedThread(
+            val port =
+                MutablePort(
+                    bootstrapValue =
+                        bootstrap(
+                            rooms =
+                                listOf(
+                                    room(
+                                        spaceRef =
+                                            OTHER_SPACE,
+                                        threadRef =
+                                            OTHER_THREAD,
+                                        channelRef =
+                                            OTHER_CHANNEL,
+                                        membershipGeneration =
+                                            1L,
+                                    ),
+                                ),
+                        ),
+                    historyValue =
+                        history(
+                            spaceRef =
+                                OTHER_SPACE,
+                            threadRef =
+                                OTHER_THREAD,
+                            currentChannelRef =
+                                OTHER_CHANNEL,
+                            membershipGeneration =
+                                1L,
+                            segmentRefs =
+                                listOf(
+                                    OTHER_CHANNEL,
+                                ),
+                        ),
+                )
+            val repository =
+                repository(
+                    port =
+                        port,
+                )
+
+            repository.refresh(
+                request(
                     spaceRef =
                         OTHER_SPACE,
                     threadRef =
                         OTHER_THREAD,
-                    currentChannelRef =
-                        OTHER_CHANNEL,
-                    membershipGeneration =
-                        1L,
-                    segmentRefs =
+                ),
+            )
+
+            port.bootstrapValue =
+                bootstrap(
+                    rooms =
                         listOf(
-                            OTHER_CHANNEL,
+                            room(
+                                spaceRef =
+                                    SPACE,
+                                threadRef =
+                                    THREAD,
+                                channelRef =
+                                    CHANNEL_ONE,
+                                membershipGeneration =
+                                    1L,
+                            ),
                         ),
                 )
-            val priorTarget =
-                projectedThread(
-                    spaceRef =
-                        SPACE,
-                    threadRef =
-                        THREAD,
+            port.historyValue =
+                history(
                     currentChannelRef =
                         CHANNEL_ONE,
                     membershipGeneration =
@@ -105,25 +151,14 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
                             CHANNEL_ONE,
                         ),
                 )
-            val repository =
-                repository(
-                    port =
-                        FixedPort(
-                            bootstrapValue =
-                                bootstrap(),
-                            historyValue =
-                                history(),
-                        ),
-                    initialState =
-                        VexConversationState(
-                            threads =
-                                listOf(
-                                    other,
-                                    priorTarget,
-                                ),
-                        ),
-                )
+            repository.refresh(
+                request(),
+            )
 
+            port.bootstrapValue =
+                bootstrap()
+            port.historyValue =
+                history()
             repository.refresh(
                 request(),
             )
@@ -160,43 +195,63 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
     @Test
     fun failedReadDoesNotMutateExistingAndroidProjection() =
         runBlocking {
-            val initialState =
-                VexConversationState(
-                    threads =
-                        listOf(
-                            projectedThread(
-                                spaceRef =
-                                    OTHER_SPACE,
-                                threadRef =
-                                    OTHER_THREAD,
-                                currentChannelRef =
-                                    OTHER_CHANNEL,
-                                membershipGeneration =
-                                    1L,
-                                segmentRefs =
-                                    listOf(
-                                        OTHER_CHANNEL,
+            val port =
+                MutablePort(
+                    bootstrapValue =
+                        bootstrap(
+                            rooms =
+                                listOf(
+                                    room(
+                                        spaceRef =
+                                            OTHER_SPACE,
+                                        threadRef =
+                                            OTHER_THREAD,
+                                        channelRef =
+                                            OTHER_CHANNEL,
+                                        membershipGeneration =
+                                            1L,
                                     ),
-                            ),
+                                ),
+                        ),
+                    historyValue =
+                        history(
+                            spaceRef =
+                                OTHER_SPACE,
+                            threadRef =
+                                OTHER_THREAD,
+                            currentChannelRef =
+                                OTHER_CHANNEL,
+                            membershipGeneration =
+                                1L,
+                            segmentRefs =
+                                listOf(
+                                    OTHER_CHANNEL,
+                                ),
                         ),
                 )
             val repository =
                 repository(
                     port =
-                        FixedPort(
-                            bootstrapValue =
-                                bootstrap(
-                                    rooms =
-                                        emptyList(),
-                                ),
-                            historyValue =
-                                history(),
-                        ),
-                    initialState =
-                        initialState,
+                        port,
                 )
+            repository.refresh(
+                request(
+                    spaceRef =
+                        OTHER_SPACE,
+                    threadRef =
+                        OTHER_THREAD,
+                ),
+            )
             val before =
                 repository.state.value
+
+            port.bootstrapValue =
+                bootstrap(
+                    rooms =
+                        emptyList(),
+                )
+            port.historyValue =
+                history()
 
             assertThrows(
                 IllegalStateException::class.java,
@@ -217,28 +272,30 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
     private fun repository(
         port:
             VexFamilyConversationConnectedServicePort,
-        initialState:
-            VexConversationState =
-            VexConversationState.Empty,
     ) =
         VexFamilyConversationConnectedServiceRepository(
             client =
                 VexFamilyConversationConnectedServiceClient(
                     port,
                 ),
-            initialState =
-                initialState,
         )
 
-    private fun request() =
+    private fun request(
+        spaceRef:
+            String =
+            SPACE,
+        threadRef:
+            String =
+            THREAD,
+    ) =
         VexFamilyConversationReadRequest(
             spaceRef =
                 VexConversationSpaceRef(
-                    SPACE,
+                    spaceRef,
                 ),
             threadRef =
                 VexConversationThreadRef(
-                    THREAD,
+                    threadRef,
                 ),
         )
 
@@ -265,75 +322,41 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
                 rooms,
         )
 
-    private fun history() =
+    private fun history(
+        spaceRef:
+            String =
+            SPACE,
+        threadRef:
+            String =
+            THREAD,
+        currentChannelRef:
+            String =
+            CHANNEL_TWO,
+        membershipGeneration:
+            Long =
+            2L,
+        segmentRefs:
+            List<String> =
+            listOf(
+                CHANNEL_ONE,
+                CHANNEL_TWO,
+            ),
+    ) =
         VexFamilyConversationServerThreadHistory(
             spaceRef =
-                SPACE,
+                spaceRef,
             threadRef =
-                THREAD,
+                threadRef,
             currentChannelRef =
-                CHANNEL_TWO,
+                currentChannelRef,
             membershipGeneration =
-                2L,
+                membershipGeneration,
             segmentRefs =
-                listOf(
-                    CHANNEL_ONE,
-                    CHANNEL_TWO,
-                ),
+                segmentRefs,
             messages =
                 emptyList(),
             truncated =
                 false,
-        )
-
-    private fun projectedThread(
-        spaceRef:
-            String,
-        threadRef:
-            String,
-        currentChannelRef:
-            String,
-        membershipGeneration:
-            Long,
-        segmentRefs:
-            List<String>,
-    ) =
-        projectVexFamilyConversationServerThread(
-            bootstrap =
-                VexFamilyConversationServerBootstrap(
-                    currentPrincipalRef =
-                        VICTOR,
-                    rooms =
-                        listOf(
-                            room(
-                                spaceRef =
-                                    spaceRef,
-                                threadRef =
-                                    threadRef,
-                                channelRef =
-                                    currentChannelRef,
-                                membershipGeneration =
-                                    membershipGeneration,
-                            ),
-                        ),
-                ),
-            history =
-                VexFamilyConversationServerThreadHistory(
-                    spaceRef =
-                        spaceRef,
-                    threadRef =
-                        threadRef,
-                    currentChannelRef =
-                        currentChannelRef,
-                    membershipGeneration =
-                        membershipGeneration,
-                    segmentRefs =
-                        segmentRefs,
-                    messages =
-                        emptyList(),
-                    truncated =
-                        false,
-                ),
         )
 
     private fun room(
@@ -366,10 +389,10 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
                 true,
         )
 
-    private class FixedPort(
-        private val bootstrapValue:
+    private class MutablePort(
+        var bootstrapValue:
             VexFamilyConversationServerBootstrap,
-        private val historyValue:
+        var historyValue:
             VexFamilyConversationServerThreadHistory,
     ) : VexFamilyConversationConnectedServicePort {
         override suspend fun bootstrap():
