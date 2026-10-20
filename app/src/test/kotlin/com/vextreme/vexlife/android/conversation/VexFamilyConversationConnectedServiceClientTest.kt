@@ -137,6 +137,74 @@ class VexFamilyConversationConnectedServiceClientTest {
         }
 
     @Test
+    fun anotherCurrentRoomsHistoryFailsInsteadOfReturningTheWrongThread() =
+        runBlocking {
+            val currentRoom =
+                room()
+            val otherRoom =
+                currentRoom.copy(
+                    threadRef =
+                        OTHER_THREAD,
+                    channelRef =
+                        OTHER_CHANNEL,
+                    membershipGeneration =
+                        3L,
+                )
+            val port =
+                RecordingPort(
+                    bootstrapResult =
+                        bootstrap(
+                            rooms =
+                                listOf(
+                                    currentRoom,
+                                    otherRoom,
+                                ),
+                        ),
+                    historyResult =
+                        history()
+                            .copy(
+                                threadRef =
+                                    OTHER_THREAD,
+                                currentChannelRef =
+                                    OTHER_CHANNEL,
+                                membershipGeneration =
+                                    3L,
+                                segmentRefs =
+                                    listOf(
+                                        OTHER_CHANNEL,
+                                    ),
+                            ),
+                )
+            val client =
+                VexFamilyConversationConnectedServiceClient(
+                    port,
+                )
+
+            assertThrows(
+                IllegalStateException::class.java,
+            ) {
+                runBlocking {
+                    client.readThread(
+                        request(),
+                    )
+                }
+            }
+            assertEquals(
+                listOf(
+                    VexFamilyConversationThreadHistoryIntent(
+                        spaceRef =
+                            SPACE,
+                        channelRef =
+                            CHANNEL_TWO,
+                        expectedMembershipGeneration =
+                            2L,
+                    ),
+                ),
+                port.historyIntents,
+            )
+        }
+
+    @Test
     fun contradictoryHistoryStillFailsAtExistingServerAdapterBoundary() =
         runBlocking {
             val port =
@@ -306,6 +374,10 @@ class VexFamilyConversationConnectedServiceClientTest {
             "channel.vex-family.vcs04.g1"
         const val CHANNEL_TWO =
             "channel.vex-family.vcs04.g2"
+        const val OTHER_THREAD =
+            "thread.vex-family.vcs04.other"
+        const val OTHER_CHANNEL =
+            "channel.vex-family.vcs04.other.g3"
         const val VICTOR =
             "person.victor-gong"
         const val BRI =

@@ -110,6 +110,19 @@ internal class VexFamilyConversationConnectedServiceClient(
                 ),
             )
 
+        check(
+            history.spaceRef ==
+                room.spaceRef &&
+                history.threadRef ==
+                room.threadRef &&
+                history.currentChannelRef ==
+                room.channelRef &&
+                history.membershipGeneration ==
+                room.membershipGeneration,
+        ) {
+            "Family Conversation history must match the requested current bootstrap room"
+        }
+
         return projectVexFamilyConversationServerThread(
             bootstrap =
                 bootstrap,
