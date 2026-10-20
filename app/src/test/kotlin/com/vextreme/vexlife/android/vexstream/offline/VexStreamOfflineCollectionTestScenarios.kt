@@ -43,26 +43,23 @@ internal object VexStreamOfflineCollectionTestScenarios {
             get() =
                 when (this) {
                     CompleteMissing ->
-                        canonicalTestRef(
-                            VexStreamOfflineCollectionTest::
-                                collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice,
+                        VexStreamOfflineCollectionTestScenarios.sourceTestRef(
+                            VexStreamOfflineCollectionTest::collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice,
                         )
 
                     StaleContent ->
-                        canonicalTestRef(
-                            VexStreamOfflineCollectionTest::
-                                staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia,
+                        VexStreamOfflineCollectionTestScenarios.sourceTestRef(
+                            VexStreamOfflineCollectionTest::staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia,
                         )
 
                     HubLoss ->
-                        canonicalTestRef(
-                            VexStreamOfflineCollectionTest::
-                                savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable,
+                        VexStreamOfflineCollectionTestScenarios.sourceTestRef(
+                            VexStreamOfflineCollectionTest::savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable,
                         )
                 }
     }
 
-    private fun canonicalTestRef(
+    private fun sourceTestRef(
         callable: KCallable<*>,
     ): String =
         (VexStreamOfflineCollectionTest::class.qualifiedName
