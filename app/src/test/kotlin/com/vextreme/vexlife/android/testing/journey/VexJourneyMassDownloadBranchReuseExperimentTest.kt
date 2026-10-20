@@ -2,19 +2,20 @@ package com.vextreme.vexlife.android.testing.journey
 
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTest
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTestScenarios
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTestScenarios.Outcome
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTestScenarios.Scenario
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
-import kotlinx.coroutines.CoroutineScope
+import kotlin.reflect.KCallable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -31,13 +32,24 @@ import org.junit.Test
 class VexJourneyMassDownloadBranchReuseExperimentTest {
     @Test
     fun quantumCompositionMatchesCanonicalScenariosAndReportsWallClock() {
+        assertEquals(
+            Scenario.entries.toSet(),
+            SHARDS.map(
+                ShardDescriptor::scenario,
+            ).toSet(),
+        )
+
         val traditional =
             runTraditional()
         val quantum =
             runQuantum()
 
         assertEquals(
-            Scenario.entries.toSet(),
+            SHARDS
+                .map(
+                    ShardDescriptor::scenario,
+                )
+                .toSet(),
             traditional.outcomes.keys,
         )
         assertEquals(
@@ -45,7 +57,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             quantum.outcomes,
         )
         assertEquals(
-            Scenario.entries.size,
+            SHARDS.size,
             traditional.checkpointFormationCount,
         )
         assertEquals(
@@ -53,9 +65,9 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             quantum.checkpointFormationCount,
         )
         assertEquals(
-            Scenario.entries
+            SHARDS
                 .map(
-                    Scenario::canonicalTestRef,
+                    ShardDescriptor::canonicalTestRef,
                 )
                 .toSet(),
             quantum.evidence
@@ -74,7 +86,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                 .size,
         )
         assertEquals(
-            Scenario.entries.size,
+            SHARDS.size,
             quantum.evidence
                 .map { evidence ->
                     Triple(
@@ -115,7 +127,8 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                 append(" observedSpeedup=")
                 append(
                     if (
-                        quantum.elapsedNanos == 0L
+                        quantum.elapsedNanos ==
+                        0L
                     ) {
                         "undefined"
                     } else {
@@ -141,20 +154,14 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
         val evidence =
             runBlocking {
                 supervisorScope {
-                    Scenario.entries
-                        .map { scenario ->
+                    SHARDS
+                        .map { descriptor ->
                             async(
                                 Dispatchers.Default,
                             ) {
-                                val scope =
-                                    CoroutineScope(
-                                        SupervisorJob() +
-                                            Dispatchers.Default,
-                                    )
-
                                 try {
                                     if (
-                                        scenario ==
+                                        descriptor.scenario ==
                                         Scenario.StaleContent
                                     ) {
                                         error(
@@ -165,32 +172,36 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                                     val outcome =
                                         VexStreamOfflineCollectionTestScenarios
                                             .execute(
-                                                scenario = scenario,
+                                                scenario =
+                                                    descriptor.scenario,
                                                 checkpoint = checkpoint,
                                                 world =
                                                     VexStreamOfflineCollectionTestScenarios
                                                         .restore(
                                                             checkpoint = checkpoint,
-                                                            scope = scope,
+                                                            scope = this,
                                                         ),
                                             )
 
                                     ShardEvidence.pass(
                                         checkpointRef = checkpointRef,
-                                        scenario = scenario,
+                                        descriptor = descriptor,
                                         outcome = outcome,
                                     )
+                                } catch (
+                                    cancelled:
+                                        CancellationException,
+                                ) {
+                                    throw cancelled
                                 } catch (
                                     failure:
                                         Throwable,
                                 ) {
                                     ShardEvidence.fail(
                                         checkpointRef = checkpointRef,
-                                        scenario = scenario,
+                                        descriptor = descriptor,
                                         failure = failure,
                                     )
-                                } finally {
-                                    scope.cancel()
                                 }
                             }
                         }
@@ -236,9 +247,9 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                 .status,
         )
         assertEquals(
-            Scenario.entries
+            SHARDS
                 .map(
-                    Scenario::canonicalTestRef,
+                    ShardDescriptor::canonicalTestRef,
                 )
                 .toSet(),
             evidence
@@ -250,48 +261,49 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
     }
 
     private fun runTraditional(): ModeResult {
-        val outcomes =
-            linkedMapOf<
-                Scenario,
-                Outcome
-            >()
         var checkpointFormationCount =
             0
-
         val started =
             System.nanoTime()
 
-        Scenario.entries.forEach { scenario ->
-            checkpointFormationCount +=
-                1
-            val checkpoint =
-                VexStreamOfflineCollectionTestScenarios
-                    .partialOfflineCheckpoint()
-            val scope =
-                CoroutineScope(
-                    SupervisorJob() +
-                        Dispatchers.Default,
-                )
+        val outcomes =
+            runBlocking {
+                buildMap<
+                    Scenario,
+                    Outcome
+                > {
+                    SHARDS.forEach { descriptor ->
+                        checkpointFormationCount +=
+                            1
+                        val checkpoint =
+                            VexStreamOfflineCollectionTestScenarios
+                                .partialOfflineCheckpoint()
 
-            try {
-                outcomes[scenario] =
-                    runBlocking {
-                        VexStreamOfflineCollectionTestScenarios
-                            .execute(
-                                scenario = scenario,
-                                checkpoint = checkpoint,
-                                world =
-                                    VexStreamOfflineCollectionTestScenarios
-                                        .restore(
-                                            checkpoint = checkpoint,
-                                            scope = scope,
-                                        ),
-                            )
+                        val outcome =
+                            withContext(
+                                Dispatchers.Default,
+                            ) {
+                                VexStreamOfflineCollectionTestScenarios
+                                    .execute(
+                                        scenario =
+                                            descriptor.scenario,
+                                        checkpoint = checkpoint,
+                                        world =
+                                            VexStreamOfflineCollectionTestScenarios
+                                                .restore(
+                                                    checkpoint = checkpoint,
+                                                    scope = this,
+                                                ),
+                                    )
+                            }
+
+                        put(
+                            descriptor.scenario,
+                            outcome,
+                        )
                     }
-            } finally {
-                scope.cancel()
+                }
             }
-        }
 
         return ModeResult(
             elapsedNanos =
@@ -300,9 +312,9 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             checkpointFormationCount =
                 checkpointFormationCount,
             restoreCount =
-                Scenario.entries.size,
+                SHARDS.size,
             outcomes =
-                outcomes.toMap(),
+                outcomes,
             evidence =
                 emptyList(),
         )
@@ -325,49 +337,49 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
         val evidence =
             runBlocking {
                 supervisorScope {
-                    Scenario.entries
-                        .map { scenario ->
+                    SHARDS
+                        .map { descriptor ->
                             async(
                                 Dispatchers.Default,
                             ) {
-                                val scope =
-                                    CoroutineScope(
-                                        SupervisorJob() +
-                                            Dispatchers.Default,
-                                    )
-
                                 try {
                                     val outcome =
                                         VexStreamOfflineCollectionTestScenarios
                                             .execute(
-                                                scenario = scenario,
+                                                scenario =
+                                                    descriptor.scenario,
                                                 checkpoint = checkpoint,
                                                 world =
                                                     VexStreamOfflineCollectionTestScenarios
                                                         .restore(
                                                             checkpoint = checkpoint,
-                                                            scope = scope,
+                                                            scope = this,
                                                         ),
                                             )
-                                    outcomes[scenario] =
+                                    outcomes[
+                                        descriptor.scenario
+                                    ] =
                                         outcome
 
                                     ShardEvidence.pass(
                                         checkpointRef = checkpointRef,
-                                        scenario = scenario,
+                                        descriptor = descriptor,
                                         outcome = outcome,
                                     )
+                                } catch (
+                                    cancelled:
+                                        CancellationException,
+                                ) {
+                                    throw cancelled
                                 } catch (
                                     failure:
                                         Throwable,
                                 ) {
                                     ShardEvidence.fail(
                                         checkpointRef = checkpointRef,
-                                        scenario = scenario,
+                                        descriptor = descriptor,
                                         failure = failure,
                                     )
-                                } finally {
-                                    scope.cancel()
                                 }
                             }
                         }
@@ -382,7 +394,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             checkpointFormationCount =
                 1,
             restoreCount =
-                Scenario.entries.size,
+                SHARDS.size,
             outcomes =
                 outcomes.toMap(),
             evidence =
@@ -401,6 +413,16 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             >,
         val evidence: List<ShardEvidence>,
     )
+
+    private data class ShardDescriptor(
+        val scenario: Scenario,
+        val routeRef: String,
+        val canonicalTestRef: String,
+    ) {
+        val shardRef: String
+            get() =
+                scenario.scenarioRef
+    }
 
     private enum class ShardStatus {
         PASS,
@@ -422,17 +444,20 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
         companion object {
             fun pass(
                 checkpointRef: String,
-                scenario: Scenario,
+                descriptor: ShardDescriptor,
                 outcome: Outcome,
             ): ShardEvidence =
                 ShardEvidence(
                     suiteRef = SUITE_REF,
                     checkpointRef = checkpointRef,
-                    shardRef = scenario.scenarioRef,
-                    routeRef = scenario.routeRef,
+                    shardRef =
+                        descriptor.shardRef,
+                    routeRef =
+                        descriptor.routeRef,
                     canonicalTestRef =
-                        scenario.canonicalTestRef,
-                    scenario = scenario,
+                        descriptor.canonicalTestRef,
+                    scenario =
+                        descriptor.scenario,
                     status = ShardStatus.PASS,
                     outcome = outcome,
                     failureClass = null,
@@ -441,17 +466,20 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
 
             fun fail(
                 checkpointRef: String,
-                scenario: Scenario,
+                descriptor: ShardDescriptor,
                 failure: Throwable,
             ): ShardEvidence =
                 ShardEvidence(
                     suiteRef = SUITE_REF,
                     checkpointRef = checkpointRef,
-                    shardRef = scenario.scenarioRef,
-                    routeRef = scenario.routeRef,
+                    shardRef =
+                        descriptor.shardRef,
+                    routeRef =
+                        descriptor.routeRef,
                     canonicalTestRef =
-                        scenario.canonicalTestRef,
-                    scenario = scenario,
+                        descriptor.canonicalTestRef,
+                    scenario =
+                        descriptor.scenario,
                     status = ShardStatus.FAIL,
                     outcome = null,
                     failureClass =
@@ -611,6 +639,54 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             "VEX-QUANTUM-BENCHMARK"
         const val SYNTHETIC_SHARD_FAILURE =
             "synthetic MassDownload shard failure"
+
+        val SHARDS =
+            listOf(
+                ShardDescriptor(
+                    scenario =
+                        Scenario.CompleteMissing,
+                    routeRef =
+                        "partial-offline/download-missing/complete",
+                    canonicalTestRef =
+                        canonicalTestRef(
+                            VexStreamOfflineCollectionTest::
+                                collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice,
+                        ),
+                ),
+                ShardDescriptor(
+                    scenario =
+                        Scenario.StaleContent,
+                    routeRef =
+                        "partial-offline/content-changed/download-missing",
+                    canonicalTestRef =
+                        canonicalTestRef(
+                            VexStreamOfflineCollectionTest::
+                                staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia,
+                        ),
+                ),
+                ShardDescriptor(
+                    scenario =
+                        Scenario.HubLoss,
+                    routeRef =
+                        "partial-offline/hub-unavailable/download-missing",
+                    canonicalTestRef =
+                        canonicalTestRef(
+                            VexStreamOfflineCollectionTest::
+                                savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable,
+                        ),
+                ),
+            )
+
+        private fun canonicalTestRef(
+            callable: KCallable<*>,
+        ): String =
+            (VexStreamOfflineCollectionTest::class.qualifiedName
+                ?: VexStreamOfflineCollectionTest::class.simpleName
+                ?: error(
+                    "MassDownload canonical test class must be named",
+                )) +
+                "." +
+                callable.name
     }
 }
 
