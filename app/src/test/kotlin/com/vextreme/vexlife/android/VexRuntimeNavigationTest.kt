@@ -1,0 +1,508 @@
+package com.vextreme.vexlife.android
+
+import com.vextreme.vexlife.android.logging.VexLogger
+import com.vextreme.vexlife.android.elements.FormSubmission
+import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
+import com.vextreme.vexlife.android.screens.AppScreens
+import com.vextreme.vexlife.android.screens.primary.events.EventsScreen
+import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.screens.primary.settings.SettingsScreen
+import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
+import com.vextreme.vexlife.android.screens.shared.gallery.GalleryScreen
+import com.vextreme.vexlife.android.screens.shared.profile.UserProfileScreen
+import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
+import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
+import com.vextreme.vexlife.android.runtime.AppActionRegistrations
+import com.vextreme.vexlife.android.runtime.appAction
+import com.vextreme.vexlife.android.runtime.AppActions
+import com.vextreme.vexlife.android.runtime.AppNavigationBack
+import com.vextreme.vexlife.android.runtime.BackResolution
+import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.shell.AppShell
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Test
+
+class VexRuntimeNavigationTest {
+    private fun runtime(
+        logger: VexLogger = VexLogger(),
+        appActions: AppActionRegistrations = AppActionRegistrations.Empty,
+    ): VexRuntime =
+        VexRuntime(
+            registry = AppScreens.registry,
+            logger = logger,
+            initialScreen = HomeScreen,
+            primaryScreens = AppScreens.primary,
+            currentAppActions = { appActions },
+        )
+
+    @Test
+    fun primaryScreensArePeersNotAStack() {
+        val runtime = runtime()
+
+        runtime.activate(AppShell.Elements.Events)
+
+        assertEquals(EventsScreen.screenId, runtime.currentScreen.screenId)
+        assertTrue(runtime.navigation.screenStack.isEmpty())
+
+        val back = runtime.nextBack as BackResolution.AppNavigation
+        val root = back.step as AppNavigationBack.ReturnToPrimaryRoot
+        assertEquals(HomeScreen.screenId, root.target.screenId)
+    }
+
+    @Test
+    fun backFromPrimaryPeerReturnsHomeBeforeRootBackFallsThrough() {
+        val runtime = runtime()
+
+        runtime.activate(AppShell.Elements.Settings)
+
+        assertEquals(SettingsScreen.screenId, runtime.currentScreen.screenId)
+        assertTrue(runtime.goBack())
+        assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
+
+        assertEquals(null, runtime.nextBack)
+        assertFalse(runtime.goBack())
+    }
+
+    @Test
+    fun sharedScreenPushesAndBackReturnsToTheSelectedPrimaryScreen() {
+        val runtime = runtime()
+
+        runtime.activate(AppShell.Elements.Events)
+        runtime.activate(AppShell.Elements.DebugMenu)
+
+        assertEquals(DebugMenuScreen.screenId, runtime.currentScreen.screenId)
+
+        val back = runtime.nextBack as BackResolution.AppNavigation
+        val pop = back.step as AppNavigationBack.PopScreen
+        assertEquals(EventsScreen.screenId, pop.target.screenId)
+
+        runtime.goBack(back)
+
+        assertEquals(EventsScreen.screenId, runtime.currentScreen.screenId)
+        assertTrue(runtime.navigation.screenStack.isEmpty())
+    }
+
+    @Test
+    fun screenLocalBackLayerPopsBeforeLeavingThePushedScreen() {
+        val runtime = runtime()
+        val trail = NavigationTrail("root")
+
+        runtime.activate(AppShell.Elements.Gallery)
+        trail.push("child")
+        runtime.attachBackLayer(trail)
+
+        val localBack = runtime.nextBack as BackResolution.PopLocalLayer
+        runtime.goBack(localBack)
+
+        assertEquals("root", trail.current)
+        assertEquals("screen.gallery", runtime.currentScreen.screenId)
+        assertFalse(trail.canGoBack)
+
+        runtime.goBack()
+
+        assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
+    }
+
+    @Test
+    fun swapChangesLocalSelectionWithoutAddingBackDepth() {
+        val runtime = runtime()
+
+        runtime.activate(AppShell.Elements.Gallery)
+        runtime.activate(GalleryScreen.AppGraphTab)
+
+        assertSame(
+            GalleryScreen.AppGraphPanel,
+            runtime.presentation.selected(GalleryScreen.Content),
+        )
+
+        runtime.goBack()
+
+        assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
+    }
+
+    @Test
+    fun dynamicActivationKeepsRegisteredIntentButLogsRuntimeIdentity() {
+        val logger =
+            VexLogger()
+        val runtime =
+            runtime(
+                logger = logger,
+            )
+
+        runtime.activate(
+            AppShell.Elements.Gallery,
+        )
+
+        val dynamicRef =
+            "element.gallery.dynamic.app-graph.example"
+
+        runtime.activateDynamic(
+            element =
+                GalleryScreen.AppGraphTab,
+            subjectRef =
+                dynamicRef,
+        )
+
+        assertSame(
+            GalleryScreen.AppGraphPanel,
+            runtime.presentation.selected(
+                GalleryScreen.Content,
+            ),
+        )
+
+        val record =
+            logger.history.value.last()
+        assertEquals(
+            dynamicRef,
+            record.subjectRef,
+        )
+        assertEquals(
+            "Clicked",
+            record.action,
+        )
+        assertEquals(
+            GalleryScreen.screenId,
+            record.screenBeforeId,
+        )
+        assertNull(
+            record.screenAfterId,
+        )
+    }
+
+    @Test
+    fun dynamicIdentityCannotBypassRegisteredScreenOwnership() {
+        val runtime =
+            runtime()
+
+        val failure =
+            runCatching {
+                runtime.activateDynamic(
+                    element =
+                        UserProfileScreen.Save,
+                    subjectRef =
+                        "element.user-profile.dynamic.save.example",
+                )
+            }.exceptionOrNull()
+
+        requireNotNull(
+            failure,
+        )
+        assertTrue(
+            failure.message.orEmpty()
+                .contains(
+                    UserProfileScreen.screenId,
+                ),
+        )
+        assertTrue(
+            failure.message.orEmpty()
+                .contains(
+                    HomeScreen.screenId,
+                ),
+        )
+    }
+
+    @Test
+    fun offScreenOwnedElementCannotBeActivatedDirectly() {
+        val runtime = runtime()
+
+        try {
+            runtime.activate(UserProfileScreen.Save)
+            fail("off-screen feature element activation should fail")
+        } catch (error: IllegalStateException) {
+            assertTrue(error.message.orEmpty().contains(UserProfileScreen.screenId))
+            assertTrue(error.message.orEmpty().contains(HomeScreen.screenId))
+        }
+    }
+
+    @Test
+    fun externalRegisteredScreenEntryUsesRuntimeNavigationAndLogging() {
+        val logger =
+            VexLogger()
+        val runtime =
+            runtime(
+                logger = logger,
+            )
+
+        runtime.appOpened()
+        runtime.openExternalScreen(
+            subjectRef =
+                MainActivity
+                    .VEXMAPS_NAVIGATION_NOTIFICATION_REF,
+            screen = VexMapsScreen,
+        )
+
+        assertSame(
+            VexMapsScreen,
+            runtime.currentScreen,
+        )
+
+        val record =
+            logger.history.value.last()
+        assertEquals(
+            MainActivity
+                .VEXMAPS_NAVIGATION_NOTIFICATION_REF,
+            record.subjectRef,
+        )
+        assertEquals(
+            "Opened",
+            record.action,
+        )
+        assertEquals(
+            HomeScreen.screenId,
+            record.screenBeforeId,
+        )
+        assertEquals(
+            VexMapsScreen.screenId,
+            record.screenAfterId,
+        )
+    }
+
+    @Test
+    fun externalScreenEntryClearsOutgoingTransientBackLayers() {
+        val runtime =
+            runtime()
+        val trail =
+            NavigationTrail("root")
+
+        runtime.activate(
+            AppShell.Elements.DebugMenu,
+        )
+        runtime.activate(
+            DebugMenuScreen.ShowLog,
+        )
+        trail.push("child")
+        runtime.attachBackLayer(trail)
+
+        runtime.openExternalScreen(
+            subjectRef =
+                MainActivity
+                    .VEXMAPS_NAVIGATION_NOTIFICATION_REF,
+            screen = VexMapsScreen,
+        )
+
+        assertFalse(
+            runtime.presentation.isOpen(
+                DebugMenuScreen.LogSheet,
+            ),
+        )
+        assertSame(
+            VexMapsScreen,
+            runtime.currentScreen,
+        )
+        val back =
+            runtime.nextBack as
+                BackResolution.AppNavigation
+        val pop =
+            back.step as
+                AppNavigationBack.PopScreen
+        assertSame(
+            DebugMenuScreen,
+            pop.target,
+        )
+    }
+
+    @Test
+    fun notificationActionResolvesOnlyToVexMaps() {
+        assertSame(
+            VexMapsScreen,
+            resolveVexLifeExternalScreen(
+                MainActivity
+                    .ACTION_OPEN_ACTIVE_VEXMAPS,
+            ),
+        )
+        assertNull(
+            resolveVexLifeExternalScreen(
+                "unknown.external.action",
+            ),
+        )
+    }
+
+    @Test
+    fun formSubmissionLogsOneSubmittedSnapshotAndForwardsIt() {
+        val logger = VexLogger()
+        var request: com.vextreme.vexlife.android.runtime.AppActionRequest? = null
+        val actions = AppActionRegistrations.of(
+            appAction(
+                action = AppActions.SaveUserProfile,
+                ownerRef = UserProfileScreen.screenId,
+            ) {
+                request = it
+            },
+        )
+        val runtime = runtime(
+            logger = logger,
+            appActions = actions,
+        )
+
+        runtime.activate(AppShell.Elements.UserProfile)
+
+        val typedName = "Victor Private Draft"
+        runtime.submit(
+            element = UserProfileScreen.Save,
+            submission = FormSubmission.of(
+                UserProfileScreen.DisplayName to typedName,
+            ),
+        )
+
+        assertEquals(typedName, request?.submission?.value(UserProfileScreen.DisplayName))
+        assertEquals(AppActions.SaveUserProfile, request?.action)
+        assertEquals(UserProfileScreen.Save.elementId, request?.source?.elementId)
+
+        val text = logger.renderHistory()
+        assertTrue(text.contains("Save Submitted"))
+        assertTrue(text.contains(typedName))
+        assertTrue(
+            text.contains(
+                UserProfileScreen.DisplayName.elementId,
+            ),
+        )
+    }
+
+    @Test
+    fun rendererLocalEffectIsValidatedAndLoggedWithoutAppActionDispatch() {
+        val logger = VexLogger()
+        val runtime = runtime(
+            logger = logger,
+        )
+
+        runtime.activate(
+            HomeScreen.VexStreamMusic,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.TogglePlayback,
+        )
+
+        assertEquals(
+            VexStreamMusicScreen.screenId,
+            runtime.currentScreen.screenId,
+        )
+        assertTrue(
+            logger.renderHistory().contains(
+                "PlayPause Clicked",
+            ),
+        )
+    }
+
+    @Test
+    fun vexStreamForgetRequiresManagementAndConfirmationBeforeTheEffect() {
+        val actions =
+            AppActionRegistrations.of(
+                appAction(
+                    action = AppActions.ForgetPairedVexStream,
+                    ownerRef = VexStreamMusicScreen.screenId,
+                ) {
+                    // This test owns only the runtime/presentation sequence.
+                },
+            )
+        val runtime =
+            runtime(
+                appActions = actions,
+            )
+
+        runtime.activate(
+            HomeScreen.VexStreamMusic,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.ManageConnection,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.RequestForgetPaired,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.CancelForgetPaired,
+        )
+
+        assertTrue(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+
+        runtime.activate(
+            VexStreamMusicScreen.RequestForgetPaired,
+        )
+        runtime.activate(
+            VexStreamMusicScreen.ForgetPaired,
+        )
+
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ForgetConfirmationDialog,
+            ),
+        )
+        assertFalse(
+            runtime.presentation.isOpen(
+                VexStreamMusicScreen.ConnectionMenuSheet,
+            ),
+        )
+    }
+
+    @Test
+    fun platformDismissalLogsThePresentationWithoutInventingACloseClick() {
+        val logger = VexLogger()
+        val runtime = runtime(logger = logger)
+
+        runtime.activate(AppShell.Elements.DebugMenu)
+        runtime.activate(DebugMenuScreen.ShowLog)
+        runtime.dismissPresentation(DebugMenuScreen.LogSheet)
+
+        assertFalse(runtime.presentation.isOpen(DebugMenuScreen.LogSheet))
+        assertTrue(logger.renderHistory().contains("Sheet Dismissed"))
+        assertFalse(logger.renderHistory().contains("Close Clicked"))
+    }
+
+    @Test
+    fun backDismissesPresentationBeforePoppingItsScreen() {
+        val runtime = runtime()
+
+        runtime.activate(AppShell.Elements.DebugMenu)
+        runtime.activate(DebugMenuScreen.ShowLog)
+
+        assertTrue(runtime.presentation.isOpen(DebugMenuScreen.LogSheet))
+        assertEquals(DebugMenuScreen.screenId, runtime.currentScreen.screenId)
+        assertEquals(BackResolution.DismissPresentation, runtime.nextBack)
+
+        runtime.goBack(requireNotNull(runtime.nextBack))
+
+        assertFalse(runtime.presentation.isOpen(DebugMenuScreen.LogSheet))
+        assertEquals(DebugMenuScreen.screenId, runtime.currentScreen.screenId)
+
+        runtime.goBack()
+
+        assertEquals(HomeScreen.screenId, runtime.currentScreen.screenId)
+    }
+}

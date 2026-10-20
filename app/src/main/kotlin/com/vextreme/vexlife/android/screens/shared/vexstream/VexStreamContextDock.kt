@@ -1,0 +1,488 @@
+package com.vextreme.vexlife.android.screens.shared.vexstream
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.elements.ElementIcon
+import com.vextreme.vexlife.android.elements.VexIcon
+import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPage
+import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
+import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.playback.present
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamMediaController
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDisplayState
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackExperience
+import com.vextreme.vexlife.android.vexstream.playback.rememberVexStreamPlaybackSeekConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackSeekRequest
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackSeekPositionMs
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueuePlayRequest
+import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueueExperience
+import com.vextreme.vexlife.android.vexstream.queue.rememberVexStreamQueuePlayConnection
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueOccurrences
+
+private const val VEXSTREAM_CONTEXT_DOCK_PAGE_REF =
+    "vexstream.now-playing"
+
+/**
+ * VexStream-owned projection for any host that admits the shared Context Dock.
+ *
+ * Playback remains MediaSessionService-owned. The host receives a projection only; it does not gain
+ * VexStream repository, queue, or transport ownership.
+ */
+@Composable
+internal fun rememberVexStreamContextDockPage(
+    runtime: VexRuntime,
+): VexContextDockPage? {
+    val controller =
+        rememberVexStreamMediaController()
+    val playbackExperience =
+        rememberVexStreamPlaybackExperience()
+    when (
+        playbackExperience
+            .displayState
+    ) {
+        is VexStreamPlaybackDisplayState.Unknown,
+        is VexStreamPlaybackDisplayState.Inactive ->
+            return null
+
+        is VexStreamPlaybackDisplayState.Transitioning,
+        is VexStreamPlaybackDisplayState.Active ->
+            Unit
+    }
+
+    return VexContextDockPage(
+        pageRef =
+            VexContextDockPageRef(
+                VEXSTREAM_CONTEXT_DOCK_PAGE_REF,
+            ),
+    ) { expanded ->
+        VexStreamContextDockContent(
+            runtime = runtime,
+            controller = controller,
+            playbackExperience =
+                playbackExperience,
+            expanded = expanded,
+        )
+    }
+}
+
+@Composable
+private fun VexStreamContextDockContent(
+    runtime: VexRuntime,
+    controller: MediaController?,
+    playbackExperience:
+        VexStreamPlaybackExperience,
+    expanded: Boolean,
+) {
+    val playback =
+        playbackExperience
+            .displayState
+            .playback
+    val queueExperience =
+        rememberVexStreamQueueExperience(
+            controller,
+        )
+    val queueProjection =
+        queueExperience.projection
+    val queuePlayConnection =
+        rememberVexStreamQueuePlayConnection(
+            controller,
+        )
+    val seekConnection =
+        rememberVexStreamPlaybackSeekConnection(
+            controller,
+        )
+
+    var scrubFraction by
+        remember(
+            playback.currentMediaId,
+            playback.currentIndex,
+        ) {
+            mutableStateOf<Float?>(null)
+        }
+    val displayedProgress =
+        scrubFraction
+            ?: playback.progressFraction
+    val canSeek =
+        seekConnection
+            ?.isAvailable == true &&
+            playback.currentMediaId
+                ?.isNotBlank() == true &&
+            playback.currentIndex >= 0 &&
+            playback.durationMs > 0L
+    val playbackProjection =
+        requireNotNull(
+            playbackExperience
+                .displayState
+                .projection,
+        )
+    val playPause =
+        playbackProjection.present(
+            VexStreamPlaybackControl.PlayPause,
+        )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement =
+            Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment =
+                Alignment.CenterVertically,
+            horizontalArrangement =
+                Arrangement.spacedBy(8.dp),
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text =
+                        playback.currentTitle
+                            .ifBlank {
+                                stringResource(
+                                    R.string
+                                        .vexstream_music_now_playing,
+                                )
+                            },
+                    style =
+                        MaterialTheme
+                            .typography
+                            .titleSmall,
+                    maxLines = 1,
+                    overflow =
+                        TextOverflow.Ellipsis,
+                )
+                if (
+                    playback.currentArtist
+                        .isNotBlank()
+                ) {
+                    Text(
+                        text =
+                            playback.currentArtist,
+                        style =
+                            MaterialTheme
+                                .typography
+                                .bodySmall,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant,
+                        maxLines = 1,
+                        overflow =
+                            TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            VexStreamDockIconButton(
+                icon = ElementIcon.Previous,
+                contentDescription =
+                    stringResource(
+                        R.string
+                            .vexstream_music_previous,
+                    ),
+                enabled =
+                    queueProjection
+                        ?.get(
+                            VexStreamQueueControl.Previous,
+                        )
+                        ?.isAvailable == true,
+            ) {
+                runtime.recordDynamicInteraction(
+                    subjectRef =
+                        "presentation.context-dock.vexstream.previous",
+                )
+                queueExperience.activate(
+                    VexStreamQueueControl.Previous,
+                )
+            }
+            VexStreamDockIconButton(
+                icon =
+                    playPause.icon,
+                contentDescription =
+                    stringResource(
+                        R.string
+                            .vexstream_music_play_pause,
+                    ),
+                enabled =
+                    playPause.enabled,
+            ) {
+                runtime.recordDynamicInteraction(
+                    subjectRef =
+                        "presentation.context-dock.vexstream.play-pause",
+                )
+                playbackExperience
+                    .activate(
+                        VexStreamPlaybackControl.PlayPause,
+                    )
+            }
+            VexStreamDockIconButton(
+                icon = ElementIcon.Next,
+                contentDescription =
+                    stringResource(
+                        R.string
+                            .vexstream_music_next,
+                    ),
+                enabled =
+                    queueProjection
+                        ?.get(
+                            VexStreamQueueControl.Next,
+                        )
+                        ?.isAvailable == true,
+            ) {
+                runtime.recordDynamicInteraction(
+                    subjectRef =
+                        "presentation.context-dock.vexstream.next",
+                )
+                queueExperience.activate(
+                    VexStreamQueueControl.Next,
+                )
+            }
+        }
+
+        if (expanded) {
+            Slider(
+                value = displayedProgress,
+                onValueChange = { value ->
+                    scrubFraction = value
+                },
+                onValueChangeFinished = {
+                    val targetFraction =
+                        scrubFraction
+                    val targetMediaId =
+                        playback.currentMediaId
+                    val targetMediaItemIndex =
+                        playback.currentIndex
+                    if (
+                        targetFraction != null &&
+                        !targetMediaId.isNullOrBlank() &&
+                        targetMediaItemIndex >= 0 &&
+                        canSeek
+                    ) {
+                        runtime.recordDynamicInteraction(
+                            subjectRef =
+                                "presentation.context-dock.vexstream.seek",
+                            action = "Changed",
+                        )
+                        seekConnection?.seek(
+                            VexStreamPlaybackSeekRequest(
+                                mediaId =
+                                    targetMediaId,
+                                mediaItemIndex =
+                                    targetMediaItemIndex,
+                                positionMs =
+                                    vexStreamPlaybackSeekPositionMs(
+                                        fraction =
+                                            targetFraction,
+                                        durationMs =
+                                            playback.durationMs,
+                                    ),
+                            ),
+                        )
+                    }
+                    scrubFraction = null
+                },
+                modifier =
+                    Modifier.fillMaxWidth(),
+                enabled = canSeek,
+                valueRange = 0f..1f,
+            )
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                horizontalArrangement =
+                    Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text =
+                        formatVexStreamPlaybackTime(
+                            playback.currentPositionMs,
+                        ),
+                    style =
+                        MaterialTheme
+                            .typography
+                            .labelSmall,
+                )
+                Text(
+                    text =
+                        if (
+                            playback.durationMs >
+                            0L
+                        ) {
+                            formatVexStreamPlaybackTime(
+                                playback.durationMs,
+                            )
+                        } else {
+                            "--:--"
+                        },
+                    style =
+                        MaterialTheme
+                            .typography
+                            .labelSmall,
+                )
+            }
+
+            val queueStart =
+                (playback.currentIndex + 1)
+                    .coerceAtLeast(0)
+            val queueEnd =
+                (
+                    queueStart + 3
+                ).coerceAtMost(
+                    controller?.mediaItemCount
+                        ?: 0,
+                )
+            if (
+                controller != null &&
+                queueStart < queueEnd
+            ) {
+                val queueOccurrences =
+                    vexStreamQueueOccurrences(
+                        (0 until controller.mediaItemCount)
+                            .map { index ->
+                                controller
+                                    .getMediaItemAt(
+                                        index,
+                                    ).mediaId
+                            },
+                    )
+
+                HorizontalDivider()
+                Text(
+                    text =
+                        stringResource(
+                            R.string
+                                .vexstream_context_up_next,
+                        ),
+                    style =
+                        MaterialTheme
+                            .typography
+                            .labelLarge,
+                )
+
+                for (
+                    index in
+                    queueStart until queueEnd
+                ) {
+                    val occurrence =
+                        queueOccurrences
+                            .getOrNull(
+                                index,
+                            )
+                            ?: continue
+                    val item =
+                        controller
+                            .getMediaItemAt(
+                                index,
+                            )
+                    val title =
+                        item.mediaMetadata
+                            .title
+                            ?.toString()
+                            ?.takeIf {
+                                it.isNotBlank()
+                            }
+                            ?: item.mediaId
+
+                    TextButton(
+                        onClick = {
+                            runtime.recordDynamicInteraction(
+                                subjectRef =
+                                    "presentation.context-dock.vexstream.queue-item",
+                                action = "Selected",
+                            )
+                            queuePlayConnection
+                                ?.play(
+                                    VexStreamQueuePlayRequest(
+                                        occurrence =
+                                            occurrence,
+                                    ),
+                                )
+                        },
+                        enabled =
+                            queuePlayConnection
+                                ?.isAvailable == true,
+                    ) {
+                        Text(
+                            text = title,
+                            maxLines = 1,
+                            overflow =
+                                TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+
+            Button(
+                onClick = {
+                    runtime.openExternalScreen(
+                        subjectRef =
+                            "presentation.context-dock.vexstream.open",
+                        screen =
+                            VexStreamMusicScreen,
+                    )
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            top = 2.dp,
+                        ),
+            ) {
+                Text(
+                    stringResource(
+                        R.string
+                            .vexstream_context_open,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VexStreamDockIconButton(
+    icon: ElementIcon,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+    ) {
+        VexIcon(
+            icon = icon,
+            contentDescription =
+                contentDescription,
+        )
+    }
+}
+
+// [VXG RealForever]

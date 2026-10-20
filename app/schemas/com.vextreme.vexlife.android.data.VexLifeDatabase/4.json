@@ -1,0 +1,193 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 4,
+    "identityHash": "f8599769af76d0c05e01a81c171c0cd1",
+    "entities": [
+      {
+        "tableName": "log_history",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`database_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `session_ref` TEXT NOT NULL, `sequence` INTEGER NOT NULL, `timestamp_epoch_millis` INTEGER NOT NULL, `duration_since_previous_seconds` INTEGER, `kind` TEXT NOT NULL, `subject_ref` TEXT NOT NULL, `action` TEXT NOT NULL, `screen_before_id` TEXT, `screen_after_id` TEXT, `section` INTEGER NOT NULL, `details_json` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "databaseId",
+            "columnName": "database_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionRef",
+            "columnName": "session_ref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sequence",
+            "columnName": "sequence",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestampEpochMillis",
+            "columnName": "timestamp_epoch_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationSincePreviousSeconds",
+            "columnName": "duration_since_previous_seconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subjectRef",
+            "columnName": "subject_ref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "action",
+            "columnName": "action",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "screenBeforeId",
+            "columnName": "screen_before_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "screenAfterId",
+            "columnName": "screen_after_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "section",
+            "columnName": "section",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detailsJson",
+            "columnName": "details_json",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "database_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_log_history_session_ref_sequence",
+            "unique": false,
+            "columnNames": [
+              "session_ref",
+              "sequence"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_log_history_session_ref_sequence` ON `${TABLE_NAME}` (`session_ref`, `sequence`)"
+          },
+          {
+            "name": "index_log_history_timestamp_epoch_millis",
+            "unique": false,
+            "columnNames": [
+              "timestamp_epoch_millis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_log_history_timestamp_epoch_millis` ON `${TABLE_NAME}` (`timestamp_epoch_millis`)"
+          }
+        ]
+      },
+      {
+        "tableName": "user_profile",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profile_ref` TEXT NOT NULL, `display_name` TEXT NOT NULL, `updated_at_epoch_millis` INTEGER NOT NULL, PRIMARY KEY(`profile_ref`))",
+        "fields": [
+          {
+            "fieldPath": "profileRef",
+            "columnName": "profile_ref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayName",
+            "columnName": "display_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profile_ref"
+          ]
+        }
+      },
+      {
+        "tableName": "vex_maps_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`state_ref` TEXT NOT NULL, `last_location_latitude` REAL, `last_location_longitude` REAL, `last_location_accuracy_meters` REAL, `last_location_captured_at_epoch_millis` INTEGER, `online_style_ref` TEXT, `updated_at_epoch_millis` INTEGER NOT NULL, PRIMARY KEY(`state_ref`))",
+        "fields": [
+          {
+            "fieldPath": "stateRef",
+            "columnName": "state_ref",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastLocationLatitude",
+            "columnName": "last_location_latitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "lastLocationLongitude",
+            "columnName": "last_location_longitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "lastLocationAccuracyMeters",
+            "columnName": "last_location_accuracy_meters",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "lastLocationCapturedAtEpochMillis",
+            "columnName": "last_location_captured_at_epoch_millis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "onlineStyleRef",
+            "columnName": "online_style_ref",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updatedAtEpochMillis",
+            "columnName": "updated_at_epoch_millis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "state_ref"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f8599769af76d0c05e01a81c171c0cd1')"
+    ]
+  }
+}
