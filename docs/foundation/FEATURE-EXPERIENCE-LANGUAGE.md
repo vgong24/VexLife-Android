@@ -69,6 +69,52 @@ Write the sentence before deciding which answers deserve durable source.
 
 The table does not imply one source type per row.
 
+## First-principle semantic map
+
+When an unfamiliar feature uses different nouns, do not require the reader to memorize every local
+name before they can understand what kind of meaning is present.
+
+Use the [Vex Body Semantic Blueprint](VEX-BODY-SEMANTIC-BLUEPRINT.md) to deepen **MEANING** and
+**RELATIONSHIPS** into reusable first-principle questions:
+
+~~~text
+purpose / outcome
+-> domain
+-> semantic primitives
+   Identity
+   Terrain / Topology
+   State / Position
+   Intention / Target
+   Engagement / Request
+   Interpretation
+   Traversal / Transition
+   Transformation / Dynamics
+   Constraint / Authority
+   Manifestation / Connection
+   Observation
+   Projection / Experience
+   Continuity
+   Proof
+-> relationships
+-> established pattern
+-> minimum source form
+-> proof
+~~~
+
+The primitive names are an orientation vocabulary, not mandatory Kotlin type names. SCAE is the
+local causal grammar across State / engagement(Control) / interpretation(Act) /
+transformation(Effect); Convergence, Connection, Projection and proof remain surrounding meanings
+rather than extra sequential SCAE letters.
+
+Use the map to recognize semantic equivalence across different local vocabulary while preserving
+domain-specific truth and ownership.
+
+~~~text
+SAME FIRST-PRINCIPLE ROLE
+!= SAME DOMAIN MEANING
+!= SAME REQUIRED SOURCE FORM
+~~~
+
 ## Formation rule for human and AI workers
 
 Before creating a durable class/file/interface/concept:

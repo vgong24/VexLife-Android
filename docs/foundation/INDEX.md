@@ -130,6 +130,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **ACCEPTED ON MAIN / PR #88 / A013 LOCAL + PHYSICAL DEVICE PASS / ADVISORY MIGRATION ACTIVE** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | migrate one real consumer at a time; preserve exact runtime identities; keep raw-Compose findings advisory until replacements are earned |
 | EXECUTION_BRIDGE | VexExecution + source-referenced coroutine ownership | **ACCEPTED ON MAIN / PR #87 / EXACT MODULE + `vexVerifyJvm` PASS** | Put coroutine execution behind one compiler-visible meta-pattern with keyed custody, bounded collection recovery, and exact stop/join control | first production consumer + owner-bound shutdown proof; do not enlarge the kernel from infrastructure-only speculation |
+| BODY_SEMANTIC_BLUEPRINT | first-principle purpose -> primitive -> relationship -> form orientation | **DOCUMENTATION FOUNDATION / NO NEW RUNTIME CONTRACT** | Let a fresh human/AI recognize reusable semantic roles across differently named domains without turning the map into one class hierarchy | pressure the map against live feature/foundation examples; promote a primitive to a type/interface only when addressability or an executable invariant earns it |
 | BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational Behavior foundation | **ACCEPTED ON MAIN / PR #82 + #85 / EXACT `vexVerifyLocal` PASS / VEXSTREAM PLAYBACK CONSUMER CURRENT** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | extend from independent real behavioral questions; keep runtime request payloads and generic Experience abstraction held until repeated consumers earn them |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
 | TEST_PROOF_ARCHITECTURE | local-first proof topology + reusable verification entry points | **ACCEPTED ON MAIN / PR #78 EXACT HOST PROOF PASS** | Keep semantic, render, journey, visual, coverage and device proofs distinct while making the normal proof path reusable | extend only when a new proof claim earns another owner/task |
@@ -144,6 +145,53 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F6_DESIGN_LAB | debug/developer component gallery | FIRST PRACTICUM INCLUDED IN F1 | Exercise building blocks and inspect their registered topology without creating another truth map | prove F1 Gallery + AppGraph on device |
 | F7_HOME_TRANSPORT | real Home/network/session integration | HELD | Requires explicit real transport, identity, permission, and failure contracts | not part of bootstrap |
 | F8_MODEL_COMPANION | model/AI companion integration | HELD | Requires separate model/runtime ownership and real integration contracts | not part of bootstrap |
+
+## Vex Body Semantic Blueprint
+
+Entry:
+[`VEX-BODY-SEMANTIC-BLUEPRINT.md`](VEX-BODY-SEMANTIC-BLUEPRINT.md)
+
+### Intention
+
+A fresh human or AI should be able to move in both directions without predecessor-chat reconstruction:
+
+~~~text
+purpose
+-> domain
+-> semantic primitive
+-> relationship
+-> established architecture
+-> concrete form
+-> manifestation
+-> proof
+
+implementation
+-> form
+-> relationship
+-> primitive
+-> purpose
+~~~
+
+The Body map is an orientation foundation, not another runtime framework. It relates current live
+examples across Behavior/SCAE, Convergence Relay, Conversation, Events, VexMaps, Elements and
+VexExecution while preserving their separate owners.
+
+Permanent:
+
+~~~text
+REUSABLE SEMANTIC PRIMITIVE
+!= REQUIRED SHARED INTERFACE
+
+ALIGNMENT
+!= SAMENESS
+
+DOMAIN MEANING
+!= IMPLEMENTATION SUBSTRATE
+~~~
+
+Use the map to recover why a source owner exists and what first-principle role it carries. Promote a
+primitive into a durable type/interface only when a real addressability, compiler-safety or repeated
+executable-invariant pressure earns that stronger form.
 
 ## Vex Compose foundation
 
