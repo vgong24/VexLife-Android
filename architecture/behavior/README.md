@@ -13,23 +13,29 @@ This module preserves the geometry of **what a human can do from what is true no
 - Review pressure/evidence:
   [`REVIEW-CHECKPOINT.md`](REVIEW-CHECKPOINT.md)
 
-## Four semantic moves
+## SCAE architecture
+
+**SCAE** names the Vex semantic architecture built around four explicit roles:
 
 ~~~text
 STATE
     what is actually true now
 
 CONTROL
-    stable human-facing affordance
+    stable human-facing affordance or request identity
 
 ACT
     what that Control means from current State
 
 EFFECT
-    runtime transformation that should be attempted
+    runtime transformation that may be attempted
 ~~~
 
-Core equations:
+SCAE is more than an acronym for four source types. It names the architectural discipline that keeps
+current truth, request identity, semantic meaning, runtime consequence, reality reconciliation and
+cross-truth composition legible as separate questions.
+
+Local Behavior uses the core equations:
 
 ~~~text
 Control + CURRENT State
@@ -46,12 +52,51 @@ Projection
 -> UI treatment
 ~~~
 
-Behavior is the semantic rulebook for lawful relationships among State / Control / Act / Effect.
-A concrete Connection is the reality boundary that observes provider truth, realizes Effects, and
-reconciles the resulting State.
+Behavior is the local semantic rulebook for lawful SCAE relationships.
 
-> Act asks. Effect attempts the travel. State tells us what reality answered. Control decides which
-> Act one affordance represents from current truth.
+A concrete Connection closes the local reality loop:
+
+~~~text
+Effect
+-> provider/runtime realization
+-> observed truth
+-> current State
+~~~
+
+Projection / optional DisplayState / UI are read and presentation boundaries around that semantic
+truth; they are not additional SCAE roles.
+
+When several independently-owned States have meaning only in combination, **Convergence Relay is the
+fractal composition pattern of SCAE**:
+
+~~~text
+State A + State B + ...
+-> Convergence
+-> explicit relationship truth
+-> optional bounded Control/request
+-> rightful SCAE family
+~~~
+
+Convergence is not a fifth sequential SCAE stage. It may consume current truths and feed a bounded
+Control/request back into another family at whatever semantic scale the relationship is earned.
+
+Therefore a review question such as **"does this follow SCAE?"** includes both:
+
+~~~text
+local behavior
+    State + Control -> Act
+    State + Act -> Effect + admitted State
+    Effect -> Connection -> observed State
+
+cross-truth composition, when applicable
+    independently-owned States
+    -> Convergence relationship
+    -> bounded Control/request
+    -> rightful SCAE family
+~~~
+
+> Act names what the request means now. Effect names what reality may be asked to do about that
+> meaning. State remains the current truth used to resolve both.
 
 ## Core laws
 
@@ -68,8 +113,9 @@ reconciles the resulting State.
    responsibilities.
 9. **Concurrency remains concrete.** VexPort does not prescribe locks, dispatchers, or Relay
    serialization.
-10. **Convergence stays above complete local truths.** Do not cross-multiply independent domains
-    into one State family.
+10. **Convergence is fractal SCAE composition.** Keep independently-owned local truths complete;
+    combine them into explicit relationship truth rather than cross-multiplying them into one State
+    family. Any requested correction returns through the rightful family's Control boundary.
 11. **Control meaning is semantic-first.** Prefer `Available(Act)` / `Unavailable`; Boolean
     availability is derived convenience.
 12. **Every relationship terminates explicitly.** Every `on(...)` must end in `.stay()` or

@@ -220,8 +220,12 @@ real consumers, but migration follows only after this kernel passes repository-n
 
 ## Behavior Blueprint experiment
 
-Entry:
+Canonical **SCAE architecture** entry:
 [`architecture/behavior/README.md`](../../architecture/behavior/README.md)
+
+SCAE names the State / Control / Act / Effect semantic architecture. Local Behavior owns those
+relationships; Convergence Relay is its fractal cross-State composition pattern when independently
+owned truths must be reconciled.
 
 Canonical family/package construction pattern:
 [`architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md`](../../architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md)
