@@ -118,6 +118,14 @@ internal object VexStreamPresentationRefs {
         )
     }
 
+    fun collectionOfflineStatus(
+        collectionKey: String,
+    ): String =
+        collectionRow(
+            collectionKey,
+        ) +
+            ".detail-header.offline-status"
+
     fun trackMenuAction(
         scope: VexStreamTrackPresentationScope,
         trackRef: VexStreamTrackRef,
