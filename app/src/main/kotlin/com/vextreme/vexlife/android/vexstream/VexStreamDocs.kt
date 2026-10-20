@@ -21,9 +21,10 @@ package com.vextreme.vexlife.android.vexstream
  * 1. find and pair with their VexStream desktop/Home producer;
  * 2. browse the known music library;
  * 3. play through Android Media3;
- * 4. deliberately download selected media;
- * 5. keep playing verified local media with no network;
- * 6. use an admitted private remote route when away from home without exposing the desktop
+ * 4. deliberately download selected media or the currently missing part of a collection;
+ * 5. understand which collection media is already on this phone;
+ * 6. keep playing verified local media with no network;
+ * 7. use an admitted private remote route when away from home without exposing the desktop
  *    administration surface.
  *
  * ## Current truth owners
@@ -36,6 +37,9 @@ package com.vextreme.vexlife.android.vexstream
  *
  * Playback semantic family:
  * com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackDocs
+ *
+ * Offline copy + collection "Download missing" semantics:
+ * com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineDocs
  *
  * Screen identity / durable interaction surfaces:
  * com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
