@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import kotlin.reflect.KCallable
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -24,30 +25,53 @@ internal object VexStreamOfflineCollectionTestScenarios {
     enum class Scenario(
         val scenarioRef: String,
         val routeRef: String,
-        val canonicalTestRef: String,
     ) {
         CompleteMissing(
             scenarioRef = "mass-download.complete-missing",
             routeRef = "partial-offline/download-missing/complete",
-            canonicalTestRef =
-                "VexStreamOfflineCollectionTest." +
-                    "collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice",
         ),
         StaleContent(
             scenarioRef = "mass-download.stale-content",
             routeRef = "partial-offline/content-changed/download-missing",
-            canonicalTestRef =
-                "VexStreamOfflineCollectionTest." +
-                    "staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia",
         ),
         HubLoss(
             scenarioRef = "mass-download.hub-loss",
             routeRef = "partial-offline/hub-unavailable/download-missing",
-            canonicalTestRef =
-                "VexStreamOfflineCollectionTest." +
-                    "savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable",
-        ),
+        );
+
+        val canonicalTestRef: String
+            get() =
+                when (this) {
+                    CompleteMissing ->
+                        canonicalTestRef(
+                            VexStreamOfflineCollectionTest::
+                                collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice,
+                        )
+
+                    StaleContent ->
+                        canonicalTestRef(
+                            VexStreamOfflineCollectionTest::
+                                staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia,
+                        )
+
+                    HubLoss ->
+                        canonicalTestRef(
+                            VexStreamOfflineCollectionTest::
+                                savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable,
+                        )
+                }
     }
+
+    private fun canonicalTestRef(
+        callable: KCallable<*>,
+    ): String =
+        (VexStreamOfflineCollectionTest::class.qualifiedName
+            ?: VexStreamOfflineCollectionTest::class.simpleName
+            ?: error(
+                "MassDownload canonical test class must be named",
+            )) +
+            "." +
+            callable.name
 
     data class Checkpoint(
         val state: VexStreamMusicState,
