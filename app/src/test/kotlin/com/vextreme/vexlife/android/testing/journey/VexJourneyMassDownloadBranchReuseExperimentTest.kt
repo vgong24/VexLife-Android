@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.testing.journey
 
+import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTestScenarios
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTestScenarios.Outcome
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTestScenarios.Scenario
@@ -465,34 +467,107 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
         String {
         val canonical =
             buildString {
-                append(
-                    "vexstream.mass-download.quantum-checkpoint/v1\n",
+                fun field(
+                    name: String,
+                    value: Any?,
+                ) {
+                    val text =
+                        value?.toString()
+                            ?: "<null>"
+                    append(name)
+                    append(':')
+                    append(text.length)
+                    append(':')
+                    append(text)
+                    append('\n')
+                }
+
+                field(
+                    "schema",
+                    "vexstream.mass-download.quantum-checkpoint/v1",
                 )
+
+                when (
+                    val hub =
+                        state.hubState
+                ) {
+                    VexStreamHubState.NotConfigured ->
+                        field(
+                            "hubState",
+                            "not-configured",
+                        )
+
+                    VexStreamHubState.Unreachable ->
+                        field(
+                            "hubState",
+                            "unreachable",
+                        )
+
+                    VexStreamHubState.PairingRequired ->
+                        field(
+                            "hubState",
+                            "pairing-required",
+                        )
+
+                    VexStreamHubState.AuthenticationRequired ->
+                        field(
+                            "hubState",
+                            "authentication-required",
+                        )
+
+                    VexStreamHubState.AuthorizationRequired ->
+                        field(
+                            "hubState",
+                            "authorization-required",
+                        )
+
+                    VexStreamHubState.Revoked ->
+                        field(
+                            "hubState",
+                            "revoked",
+                        )
+
+                    is VexStreamHubState.Ready -> {
+                        field(
+                            "hubState",
+                            "ready",
+                        )
+                        field(
+                            "hubRef",
+                            hub.hubRef,
+                        )
+                        field(
+                            "catalogRevision",
+                            hub.catalogRevision,
+                        )
+                    }
+                }
+
                 state.tracks
                     .sortedBy {
                         it.track.trackRef.value
                     }
                     .forEach { track ->
-                        append(
+                        field(
+                            "trackRef",
                             track.track.trackRef.value,
                         )
-                        append('|')
-                        append(
+                        field(
+                            "mediaSha256",
                             track.track.mediaSha256.value,
                         )
-                        append('|')
-                        append(
+                        field(
+                            "mediaByteLength",
                             track.track.mediaByteLength,
                         )
-                        append('|')
-                        append(
+                        field(
+                            "hubAvailable",
                             track.hubAvailable,
                         )
-                        append('|')
-                        append(
-                            track.localCopy.toString(),
+                        field(
+                            "localCopy",
+                            track.localCopy.checkpointValue(),
                         )
-                        append('\n')
                     }
             }
 
@@ -513,6 +588,21 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                     )
                 }
     }
+
+    private fun VexStreamLocalCopyState.checkpointValue(): String =
+        when (this) {
+            VexStreamLocalCopyState.NotDownloaded ->
+                "not-downloaded"
+
+            is VexStreamLocalCopyState.Downloading ->
+                "downloading:$bytesDownloaded/$totalBytes"
+
+            is VexStreamLocalCopyState.Downloaded ->
+                "downloaded:${mediaSha256.value}:$byteLength:$localMediaRef"
+
+            is VexStreamLocalCopyState.Failed ->
+                "failed:$reasonCode:$retryable"
+        }
 
     private companion object {
         const val SUITE_REF =
