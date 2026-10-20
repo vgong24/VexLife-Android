@@ -6,10 +6,6 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTestScenarios.Scenario
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -214,25 +210,16 @@ class VexStreamOfflineCollectionTest {
             val checkpoint =
                 VexStreamOfflineCollectionTestScenarios
                     .partialOfflineCheckpoint()
-            val ownerScope =
-                CoroutineScope(
-                    SupervisorJob() +
-                        Dispatchers.Unconfined,
-                )
 
-            try {
-                VexStreamOfflineCollectionTestScenarios.execute(
-                    scenario = scenario,
-                    checkpoint = checkpoint,
-                    world =
-                        VexStreamOfflineCollectionTestScenarios.restore(
-                            checkpoint = checkpoint,
-                            scope = ownerScope,
-                        ),
-                )
-            } finally {
-                ownerScope.cancel()
-            }
+            VexStreamOfflineCollectionTestScenarios.execute(
+                scenario = scenario,
+                checkpoint = checkpoint,
+                world =
+                    VexStreamOfflineCollectionTestScenarios.restore(
+                        checkpoint = checkpoint,
+                        scope = this,
+                    ),
+            )
         }
 
     private fun track(

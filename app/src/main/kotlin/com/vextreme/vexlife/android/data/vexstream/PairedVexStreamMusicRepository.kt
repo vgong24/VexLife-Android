@@ -313,6 +313,8 @@ class PairedVexStreamMusicRepository(
 
     override suspend fun downloadForOffline(
         trackRef: VexStreamTrackRef,
+        expectedMediaSha256: VexStreamMediaSha256?,
+        expectedMediaByteLength: Long?,
     ): VexStreamRepositoryResult =
         operationMutex.withLock {
             val connection =
@@ -336,6 +338,22 @@ class PairedVexStreamMusicRepository(
                         reason = VexStreamRepositoryRejection.TRACK_UNKNOWN,
                         trackRef = trackRef,
                     )
+
+            if (
+                (
+                    expectedMediaSha256 != null &&
+                        target.track.mediaSha256 != expectedMediaSha256
+                ) ||
+                (
+                    expectedMediaByteLength != null &&
+                        target.track.mediaByteLength != expectedMediaByteLength
+                )
+            ) {
+                return VexStreamRepositoryResult.Rejected(
+                    reason = VexStreamRepositoryRejection.MEDIA_NOT_AVAILABLE_FROM_HUB,
+                    trackRef = trackRef,
+                )
+            }
 
             if (!target.hubAvailable) {
                 return VexStreamRepositoryResult.Rejected(

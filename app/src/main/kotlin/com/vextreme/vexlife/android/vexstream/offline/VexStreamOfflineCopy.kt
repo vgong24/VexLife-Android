@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.vexstream.offline
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +17,8 @@ internal enum class VexStreamOfflineCopyAction {
 internal data class VexStreamOfflineCopyRequest(
     val trackRef: VexStreamTrackRef,
     val action: VexStreamOfflineCopyAction,
+    val expectedMediaSha256: VexStreamMediaSha256? = null,
+    val expectedMediaByteLength: Long? = null,
 )
 
 /**
@@ -45,7 +48,11 @@ internal class VexStreamOfflineCopyConnection(
             ) {
                 VexStreamOfflineCopyAction.Download ->
                     repository.downloadForOffline(
-                        request.trackRef,
+                        trackRef = request.trackRef,
+                        expectedMediaSha256 =
+                            request.expectedMediaSha256,
+                        expectedMediaByteLength =
+                            request.expectedMediaByteLength,
                     )
 
                 VexStreamOfflineCopyAction.Remove ->
@@ -77,7 +84,11 @@ internal class VexStreamOfflineCopyConnection(
                 }
 
                 repository.downloadForOffline(
-                    target.trackRef,
+                    trackRef = target.trackRef,
+                    expectedMediaSha256 =
+                        target.mediaSha256,
+                    expectedMediaByteLength =
+                        target.mediaByteLength,
                 )
             }
         }
