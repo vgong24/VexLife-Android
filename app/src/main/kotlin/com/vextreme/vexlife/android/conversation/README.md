@@ -17,7 +17,7 @@ generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
 mixed-provenance Conversation behavior + Lab availability overrides = ACCEPTED ON MAIN / PR #104
 Hybrid Name Ontology / code vocabulary = ACCEPTED ON MAIN / PR #107
 Family server bootstrap/history projection = CURRENT SOURCE
-VCS-04 Family Connected Services read client/repository = DRAFT CANDIDATE / REAL TRANSPORT + APP GRAPH HELD
+VCS-04 Family Connected Services read client/repository = SOURCE-QUALIFIED / REAL TRANSPORT + APP GRAPH HELD
 production Screen / app-session wiring = HELD on shared composition paths
 authenticated Android Home/session producer stack = SOURCE CANDIDATES FORMED / LIFECYCLE ACCEPTANCE + REAL BINDING HELD
 ~~~
@@ -111,7 +111,7 @@ VexConversationLabTest
 ~~~
 
 
-## VCS-04 Connected Services read client candidate
+## VCS-04 Connected Services read client source slice
 
 The first remote-read adoption stays feature-local and deliberately stops before shared app/session
 composition:
