@@ -1,13 +1,11 @@
 package com.vextreme.vexlife.android.vexstream.offline
 
-import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
-import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
-import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionTestScenarios.Scenario
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,7 +13,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -106,269 +103,137 @@ class VexStreamOfflineCollectionTest {
     }
 
     @Test
-    fun collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice() =
-        runBlocking {
-            val existingCopy =
-                VexStreamLocalCopyState.Downloaded(
-                    mediaSha256 = digest('a'),
-                    byteLength = BYTE_LENGTH,
-                    localMediaRef = "local.existing",
-                )
-            val repository =
-                InMemoryVexStreamMusicRepository(
-                    initialState =
-                        readyState(
-                            track(
-                                ref = "already-local",
-                                digestChar = 'a',
-                                localCopy = existingCopy,
-                            ),
-                            track(
-                                ref = "missing-one",
-                                digestChar = 'b',
-                            ),
-                            track(
-                                ref = "missing-two",
-                                digestChar = 'c',
-                            ),
-                        ),
-                )
-            val ownerScope =
-                CoroutineScope(
-                    SupervisorJob() +
-                        Dispatchers.Unconfined,
-                )
-            val connection =
-                VexStreamOfflineCopyConnection(
-                    repository = repository,
-                    scope = ownerScope,
-                )
+    fun collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice() {
+        val outcome =
+            runCanonicalScenario(
+                Scenario.CompleteMissing,
+            )
 
-            try {
-                val request =
-                    requireNotNull(
-                        vexStreamOfflineCollectionPlan(
-                            repository.state.value.tracks,
-                        ).requestOrNull(),
-                    )
-
-                connection
-                    .request(
-                        request,
-                    )
-                    .join()
-
-                val current =
-                    repository.state.value
-                assertSame(
-                    existingCopy,
-                    current
-                        .track(
-                            VexStreamTrackRef(
-                                "already-local",
-                            ),
-                        )
-                        ?.localCopy,
-                )
-                assertTrue(
-                    current
-                        .track(
-                            VexStreamTrackRef(
-                                "missing-one",
-                            ),
-                        )
-                        ?.localCopy is
-                        VexStreamLocalCopyState.Downloaded,
-                )
-                assertTrue(
-                    current
-                        .track(
-                            VexStreamTrackRef(
-                                "missing-two",
-                            ),
-                        )
-                        ?.localCopy is
-                        VexStreamLocalCopyState.Downloaded,
-                )
-
-                val completedPlan =
-                    vexStreamOfflineCollectionPlan(
-                        current.tracks,
-                    )
-                assertTrue(completedPlan.fullyOnDevice)
-                assertEquals(3, completedPlan.onDeviceCount)
-                assertEquals(0, completedPlan.downloadableMissingCount)
-                assertEquals(null, completedPlan.requestOrNull())
-            } finally {
-                ownerScope.cancel()
-            }
-        }
-
-    @Test
-    fun savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable() =
-        runBlocking {
-            val existingCopy =
-                VexStreamLocalCopyState.Downloaded(
-                    mediaSha256 = digest('a'),
-                    byteLength = BYTE_LENGTH,
-                    localMediaRef = "local.existing",
-                )
-            val repository =
-                InMemoryVexStreamMusicRepository(
-                    initialState =
-                        readyState(
-                            track(
-                                ref = "already-local",
-                                digestChar = 'a',
-                                localCopy = existingCopy,
-                            ),
-                            track(
-                                ref = "missing-one",
-                                digestChar = 'b',
-                            ),
-                            track(
-                                ref = "missing-two",
-                                digestChar = 'c',
-                            ),
-                        ),
-                )
-            val ownerScope =
-                CoroutineScope(
-                    SupervisorJob() +
-                        Dispatchers.Unconfined,
-                )
-            val connection =
-                VexStreamOfflineCopyConnection(
-                    repository = repository,
-                    scope = ownerScope,
-                )
-
-            try {
-                val request =
-                    requireNotNull(
-                        vexStreamOfflineCollectionPlan(
-                            repository.state.value.tracks,
-                        ).requestOrNull(),
-                    )
-
-                repository.publishHubUnavailable(
-                    VexStreamHubState.Unreachable,
-                )
-
-                connection
-                    .request(
-                        request,
-                    )
-                    .join()
-
-                val current =
-                    repository.state.value
-                val currentPlan =
-                    vexStreamOfflineCollectionPlan(
-                        current.tracks,
-                    )
-
-                assertSame(
-                    existingCopy,
-                    current
-                        .track(
-                            VexStreamTrackRef(
-                                "already-local",
-                            ),
-                        )
-                        ?.localCopy,
-                )
-                assertEquals(
-                    1,
-                    currentPlan.onDeviceCount,
-                )
-                assertEquals(
-                    2,
-                    currentPlan.blockedMissingCount,
-                )
-                assertEquals(
-                    0,
-                    currentPlan.downloadableMissingCount,
-                )
-                assertEquals(
-                    null,
-                    currentPlan.requestOrNull(),
-                )
-            } finally {
-                ownerScope.cancel()
-            }
-        }
-
-    @Test
-    fun staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia() =
-        runBlocking {
-            val ref =
-                VexStreamTrackRef(
-                    "changing-track",
-                )
-            val staleTarget =
-                VexStreamOfflineCopyTarget(
-                    trackRef = ref,
-                    mediaSha256 = digest('a'),
-                    mediaByteLength = BYTE_LENGTH,
-                )
-            val repository =
-                InMemoryVexStreamMusicRepository(
-                    initialState =
-                        readyState(
-                            track(
-                                ref = ref.value,
-                                digestChar = 'b',
-                            ),
-                        ),
-                )
-            val ownerScope =
-                CoroutineScope(
-                    SupervisorJob() +
-                        Dispatchers.Unconfined,
-                )
-            val connection =
-                VexStreamOfflineCopyConnection(
-                    repository = repository,
-                    scope = ownerScope,
-                )
-
-            try {
-                connection
-                    .request(
-                        VexStreamOfflineCollectionRequest(
-                            targets =
-                                listOf(
-                                    staleTarget,
-                                ),
-                        ),
-                    )
-                    .join()
-
-                assertTrue(
-                    repository
-                        .state
-                        .value
-                        .track(ref)
-                        ?.localCopy ===
-                        VexStreamLocalCopyState.NotDownloaded,
-                )
-            } finally {
-                ownerScope.cancel()
-            }
-        }
-
-    private fun readyState(
-        vararg tracks: VexStreamTrackState,
-    ): VexStreamMusicState =
-        VexStreamMusicState(
-            hubState =
-                VexStreamHubState.Ready(
-                    hubRef = "hub.mass-download.test",
-                    catalogRevision = "catalog.mass-download.test",
-                ),
-            tracks = tracks.toList(),
+        assertTrue(
+            outcome.finalPlan.fullyOnDevice,
         )
+        assertEquals(
+            3,
+            outcome.finalPlan.onDeviceCount,
+        )
+        assertEquals(
+            0,
+            outcome.finalPlan.downloadableMissingCount,
+        )
+        assertEquals(
+            null,
+            outcome.finalPlan.requestOrNull(),
+        )
+        assertEquals(
+            VexStreamOfflineCollectionTestScenarios.LOCAL_REF_ONE,
+            (
+                outcome.finalState
+                    .track(
+                        VexStreamOfflineCollectionTestScenarios.TRACK_ONE,
+                    )
+                    ?.localCopy as
+                    VexStreamLocalCopyState.Downloaded
+            ).localMediaRef,
+        )
+    }
+
+    @Test
+    fun savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable() {
+        val outcome =
+            runCanonicalScenario(
+                Scenario.HubLoss,
+            )
+
+        assertEquals(
+            1,
+            outcome.finalPlan.onDeviceCount,
+        )
+        assertEquals(
+            2,
+            outcome.finalPlan.blockedMissingCount,
+        )
+        assertEquals(
+            0,
+            outcome.finalPlan.downloadableMissingCount,
+        )
+        assertEquals(
+            null,
+            outcome.finalPlan.requestOrNull(),
+        )
+        assertTrue(
+            outcome.finalState
+                .track(
+                    VexStreamOfflineCollectionTestScenarios.TRACK_ONE,
+                )
+                ?.localCopy is
+                VexStreamLocalCopyState.Downloaded,
+        )
+    }
+
+    @Test
+    fun staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia() {
+        val outcome =
+            runCanonicalScenario(
+                Scenario.StaleContent,
+            )
+
+        assertEquals(
+            2,
+            outcome.finalPlan.onDeviceCount,
+        )
+        assertEquals(
+            listOf(
+                VexStreamOfflineCollectionTestScenarios.TRACK_TWO,
+            ),
+            outcome.finalPlan.targets.map {
+                it.trackRef
+            },
+        )
+        assertTrue(
+            outcome.finalState
+                .track(
+                    VexStreamOfflineCollectionTestScenarios.TRACK_TWO,
+                )
+                ?.localCopy ===
+                VexStreamLocalCopyState.NotDownloaded,
+        )
+        assertTrue(
+            outcome.finalState
+                .track(
+                    VexStreamOfflineCollectionTestScenarios.TRACK_THREE,
+                )
+                ?.localCopy is
+                VexStreamLocalCopyState.Downloaded,
+        )
+    }
+
+    private fun runCanonicalScenario(
+        scenario: Scenario,
+    ): VexStreamOfflineCollectionTestScenarios.Outcome =
+        runBlocking {
+            val checkpoint =
+                VexStreamOfflineCollectionTestScenarios
+                    .partialOfflineCheckpoint()
+            val ownerScope =
+                CoroutineScope(
+                    SupervisorJob() +
+                        Dispatchers.Unconfined,
+                )
+
+            try {
+                VexStreamOfflineCollectionTestScenarios.execute(
+                    scenario = scenario,
+                    checkpoint = checkpoint,
+                    world =
+                        VexStreamOfflineCollectionTestScenarios.restore(
+                            checkpoint = checkpoint,
+                            scope = ownerScope,
+                        ),
+                )
+            } finally {
+                ownerScope.cancel()
+            }
+        }
 
     private fun track(
         ref: String,
