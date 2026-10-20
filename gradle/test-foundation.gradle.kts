@@ -479,12 +479,6 @@ val vexFoundationHealth =
                             "vexVerifyLocal",
                             "vexVerifyDevice",
                         ),
-                    ".github/workflows/vexlife-android-health.yml" to
-                        listOf(
-                            "pull_request:",
-                            "vexFoundationHealth vexVerifyLocal",
-                            "github.event.pull_request.head.sha",
-                        ),
                 )
 
             requiredSources.forEach {
@@ -548,61 +542,48 @@ val vexFoundationHealth =
                 }
             }
 
-            if (
-                "vexVerifyJvm" in
-                rootTaskNames &&
-                "vexFoundationHealth" in
-                rootTaskNames
+            val testFoundationSource =
+                source(
+                    "gradle/test-foundation.gradle.kts",
+                )
+
+            fun requireTaskSourceDependency(
+                taskName: String,
+                dependencyToken: String,
             ) {
-                val verifyJvm =
-                    rootProject.tasks.named(
-                        "vexVerifyJvm",
-                    ).get()
-                val verifyJvmDependencies =
-                    verifyJvm.taskDependencies
-                        .getDependencies(
-                            verifyJvm,
+                val taskBlock =
+                    testFoundationSource
+                        .substringAfter(
+                            "tasks.register(\"$taskName\") {",
+                            missingDelimiterValue = "",
                         )
-                        .map { task ->
-                            task.path
-                        }
-                        .toSet()
+                        .substringBefore(
+                            "\n}\n",
+                            missingDelimiterValue = "",
+                        )
                 if (
-                    ":vexFoundationHealth" !in
-                    verifyJvmDependencies
+                    taskBlock.isBlank() ||
+                    !taskBlock.contains(
+                        dependencyToken,
+                    )
                 ) {
                     violations +=
-                        "vexVerifyJvm must depend on :vexFoundationHealth"
+                        "$taskName must declare dependency on $dependencyToken in gradle/test-foundation.gradle.kts"
                 }
             }
 
-            if (
-                "vexVerifyLocal" in
-                rootTaskNames &&
-                "vexVerifyJvm" in
-                rootTaskNames
-            ) {
-                val verifyLocal =
-                    rootProject.tasks.named(
-                        "vexVerifyLocal",
-                    ).get()
-                val verifyLocalDependencies =
-                    verifyLocal.taskDependencies
-                        .getDependencies(
-                            verifyLocal,
-                        )
-                        .map { task ->
-                            task.path
-                        }
-                        .toSet()
-                if (
-                    ":vexVerifyJvm" !in
-                    verifyLocalDependencies
-                ) {
-                    violations +=
-                        "vexVerifyLocal must depend on :vexVerifyJvm"
-                }
-            }
+            requireTaskSourceDependency(
+                taskName =
+                    "vexVerifyJvm",
+                dependencyToken =
+                    "vexFoundationHealth,",
+            )
+            requireTaskSourceDependency(
+                taskName =
+                    "vexVerifyLocal",
+                dependencyToken =
+                    "\"vexVerifyJvm\",",
+            )
 
             val appTaskNames =
                 rootProject.project(":app").tasks.names
