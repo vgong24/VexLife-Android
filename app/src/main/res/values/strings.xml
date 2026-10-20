@@ -142,6 +142,10 @@
     <string name="vexstream_music_unknown_album">Unknown album</string>
     <string name="vexstream_music_unknown_artist">Unknown artist</string>
     <string name="vexstream_music_track_count">%1$d songs</string>
+    <string name="vexstream_music_open_collection">Open collection</string>
+    <string name="vexstream_music_download_missing">Download missing</string>
+    <string name="vexstream_music_on_device_count">%1$d of %2$d on device</string>
+    <string name="vexstream_music_collection_available_offline">Available offline · %1$d songs</string>
 
     <string name="vexmaps_foundation_title">Maps and navigation</string>
     <string name="vexmaps_foundation_body">VexMaps is ready for map, place, route, and navigation experiences. Opening this screen does not require location permission; device location will be requested only when a location-dependent action needs it.</string>
