@@ -4,6 +4,7 @@ import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicReposit
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubCatalogProjection
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubTrackProjection
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
@@ -384,6 +385,17 @@ object VexStreamJourneys : VexJourneyShard {
             causeRef =
                 "cause.vexstream.mass-download.catalog-expanded",
         ) {
+            check(
+                state.value
+                    .track(
+                        VexStreamJourneyFixtures.TrackOne,
+                    )
+                    ?.localCopy is
+                    VexStreamLocalCopyState.Downloaded,
+            ) {
+                "MassDownload Journey requires TrackOne to be locally verified before catalog expansion"
+            }
+
             publishCatalog(
                 massDownloadCatalog(),
             )
