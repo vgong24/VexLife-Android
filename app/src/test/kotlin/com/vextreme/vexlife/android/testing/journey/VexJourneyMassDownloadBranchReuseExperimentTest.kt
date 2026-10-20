@@ -67,18 +67,21 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             snapshot.restore(
                 branchRef = BRANCH_SUCCESS,
                 routeRef = ROUTE_SUCCESS,
+                canonicalTestRef = TEST_SUCCESS,
                 dispatcher = dispatcher,
             )
         val stale =
             snapshot.restore(
                 branchRef = BRANCH_STALE,
                 routeRef = ROUTE_STALE,
+                canonicalTestRef = TEST_STALE,
                 dispatcher = dispatcher,
             )
         val hubLoss =
             snapshot.restore(
                 branchRef = BRANCH_HUB_LOSS,
                 routeRef = ROUTE_HUB_LOSS,
+                canonicalTestRef = TEST_HUB_LOSS,
                 dispatcher = dispatcher,
             )
         val branches =
@@ -166,6 +169,16 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                         item.routeRef,
                     )
                 }.distinct().size,
+            )
+            assertEquals(
+                setOf(
+                    TEST_SUCCESS,
+                    TEST_STALE,
+                    TEST_HUB_LOSS,
+                ),
+                evidence.map(
+                    BranchEvidence::canonicalTestRef,
+                ).toSet(),
             )
 
             val evidenceByBranch =
@@ -346,6 +359,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
     private fun MassDownloadSnapshot.restore(
         branchRef: String,
         routeRef: String,
+        canonicalTestRef: String,
         dispatcher: kotlinx.coroutines.CoroutineDispatcher,
     ): BranchWorld {
         val repository =
@@ -363,6 +377,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             snapshotRef = snapshotRef,
             branchRef = branchRef,
             routeRef = routeRef,
+            canonicalTestRef = canonicalTestRef,
             repository = repository,
             scope = scope,
             connection =
@@ -389,6 +404,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
         val snapshotRef: String,
         val branchRef: String,
         val routeRef: String,
+        val canonicalTestRef: String,
         val finalPlan: VexStreamOfflineCollectionPlan,
     )
 
@@ -396,6 +412,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
         val snapshotRef: String,
         val branchRef: String,
         val routeRef: String,
+        val canonicalTestRef: String,
         val repository: InMemoryVexStreamMusicRepository,
         val scope: CoroutineScope,
         val connection: VexStreamOfflineCopyConnection,
@@ -410,6 +427,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                 snapshotRef = snapshotRef,
                 branchRef = branchRef,
                 routeRef = routeRef,
+                canonicalTestRef = canonicalTestRef,
                 finalPlan = currentPlan(),
             )
 
@@ -678,6 +696,16 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             "partial-offline/content-changed/download-missing"
         const val ROUTE_HUB_LOSS =
             "partial-offline/hub-unavailable/download-missing"
+
+        const val TEST_SUCCESS =
+            "VexStreamOfflineCollectionTest." +
+                "collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice"
+        const val TEST_STALE =
+            "VexStreamOfflineCollectionTest." +
+                "staleExactTargetIsSkippedInsteadOfDownloadingChangedMedia"
+        const val TEST_HUB_LOSS =
+            "VexStreamOfflineCollectionTest." +
+                "savedCollectionRequestSkipsMissingTargetsAfterHubBecomesUnavailable"
     }
 }
 
