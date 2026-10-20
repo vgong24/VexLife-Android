@@ -38,7 +38,9 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRequest
 import com.vextreme.vexlife.android.vexstream.collection.rememberVexStreamCollectionPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCollectionPlan
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
+import com.vextreme.vexlife.android.vexstream.offline.vexStreamOfflineCollectionPlan
 import com.vextreme.vexlife.android.vexstream.track.rememberVexStreamTrackPlaybackConnection
 
 /**
@@ -344,6 +346,8 @@ private fun VexStreamCollectionBrowserPane(
                                 },
                             ) { row ->
                                 VexStreamCollectionCard(
+                                    runtime = runtime,
+                                    collectionKey = row.key,
                                     title = row.title,
                                     subtitle = row.subtitle,
                                     tracks = row.tracks,
@@ -407,6 +411,14 @@ private fun VexStreamCollectionDetail(
             controller = controller,
             resolver = resolver,
         )
+    val offlinePlan =
+        remember(
+            tracks,
+        ) {
+            vexStreamOfflineCollectionPlan(
+                tracks,
+            )
+        }
 
     LazyColumn(
         modifier = VexModifier.fillMaxSize(),
@@ -446,9 +458,19 @@ private fun VexStreamCollectionDetail(
                         ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                VexText(
+                    id = "offline-status",
+                    text =
+                        vexStreamOfflineCollectionStatusText(
+                            offlinePlan,
+                        ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 VexStreamCollectionActions(
                     runtime = runtime,
                     tracks = tracks,
+                    offlinePlan = offlinePlan,
+                    offlineCopyConnection = offlineCopyConnection,
                     controller = controller,
                     resolver = resolver,
                 )
@@ -479,16 +501,41 @@ private fun VexStreamCollectionDetail(
 
 @Composable
 private fun VexStreamCollectionCard(
+    runtime: VexRuntime,
+    collectionKey: String,
     title: String,
     subtitle: String,
     tracks: List<VexStreamTrackState>,
     onOpen: () -> Unit,
 ) {
+    val offlinePlan =
+        remember(
+            tracks,
+        ) {
+            vexStreamOfflineCollectionPlan(
+                tracks,
+            )
+        }
+    val openRef =
+        VexStreamPresentationRefs.collectionRowAction(
+            collectionKey = collectionKey,
+            action = VexStreamMusicScreen.OpenCollection,
+        )
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .clickable(onClick = onOpen),
+        modifier =
+            VexModifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .vex(openRef)
+                .clickable {
+                    runtime.activateDynamic(
+                        element =
+                            VexStreamMusicScreen
+                                .OpenCollection,
+                        subjectRef = openRef,
+                    )
+                    onOpen()
+                },
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -512,14 +559,43 @@ private fun VexStreamCollectionCard(
                     ),
                 style = MaterialTheme.typography.bodySmall,
             )
+            Text(
+                text =
+                    vexStreamOfflineCollectionStatusText(
+                        offlinePlan,
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
 
 @Composable
+private fun vexStreamOfflineCollectionStatusText(
+    plan: VexStreamOfflineCollectionPlan,
+): String =
+    if (
+        plan.fullyOnDevice
+    ) {
+        stringResource(
+            R.string.vexstream_music_collection_available_offline,
+            plan.totalCount,
+        )
+    } else {
+        stringResource(
+            R.string.vexstream_music_on_device_count,
+            plan.onDeviceCount,
+            plan.totalCount,
+        )
+    }
+
+@Composable
 private fun VexStreamCollectionActions(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
+    offlinePlan: VexStreamOfflineCollectionPlan,
+    offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
     modifier: Modifier = VexModifier,
@@ -549,6 +625,12 @@ private fun VexStreamCollectionActions(
                     VexStreamCollectionPlaybackOrder.Shuffled,
             )
         }
+    val downloadMissingRequest =
+        remember(
+            offlinePlan.targets,
+        ) {
+            offlinePlan.requestOrNull()
+        }
     val handler =
         ElementActionHandler { element ->
             runtime.activate(
@@ -564,6 +646,15 @@ private fun VexStreamCollectionActions(
                     connection?.play(
                         shuffleRequest,
                     )
+
+                VexStreamMusicScreen.DownloadMissing ->
+                    downloadMissingRequest
+                        ?.let { request ->
+                            offlineCopyConnection
+                                ?.request(
+                                    request,
+                                )
+                        }
 
                 else -> Unit
             }
@@ -591,6 +682,13 @@ private fun VexStreamCollectionActions(
                     ?.isAvailable(
                         shuffleRequest,
                     ) == true,
+        )
+        VexButton(
+            element = VexStreamMusicScreen.DownloadMissing,
+            handler = handler,
+            enabled =
+                offlineCopyConnection != null &&
+                    downloadMissingRequest != null,
         )
     }
 }
