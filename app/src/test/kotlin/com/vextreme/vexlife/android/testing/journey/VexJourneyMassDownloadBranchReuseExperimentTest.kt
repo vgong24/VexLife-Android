@@ -138,9 +138,9 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                     }
 
                 assertTrue(
-                    jobs.values.all(
-                        Job::isActive,
-                    ),
+                    jobs.values.all { job ->
+                        job.isActive
+                    },
                 )
 
                 advanceUntilIdle()
@@ -155,6 +155,12 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                     BranchWorld::evidence,
                 )
 
+            assertEquals(
+                1,
+                evidence.map(
+                    BranchEvidence::snapshotRef,
+                ).distinct().size,
+            )
             assertEquals(
                 3,
                 evidence.map { item ->
@@ -436,24 +442,106 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
     private fun VexStreamMusicState.massDownloadSnapshotRef(): String {
         val canonical =
             buildString {
-                append(
-                    "vexstream.mass-download.quantum-snapshot/v1\n",
+                fun field(
+                    name: String,
+                    value: Any?,
+                ) {
+                    val text =
+                        value?.toString()
+                            ?: "<null>"
+                    append(name)
+                        .append(':')
+                        .append(text.length)
+                        .append(':')
+                        .append(text)
+                        .append('\n')
+                }
+
+                field(
+                    "schema",
+                    "vexstream.mass-download.quantum-snapshot/v1",
                 )
+                when (
+                    val hub =
+                        hubState
+                ) {
+                    VexStreamHubState.NotConfigured ->
+                        field(
+                            "hubState",
+                            "not-configured",
+                        )
+
+                    VexStreamHubState.Unreachable ->
+                        field(
+                            "hubState",
+                            "unreachable",
+                        )
+
+                    VexStreamHubState.PairingRequired ->
+                        field(
+                            "hubState",
+                            "pairing-required",
+                        )
+
+                    VexStreamHubState.AuthenticationRequired ->
+                        field(
+                            "hubState",
+                            "authentication-required",
+                        )
+
+                    VexStreamHubState.AuthorizationRequired ->
+                        field(
+                            "hubState",
+                            "authorization-required",
+                        )
+
+                    VexStreamHubState.Revoked ->
+                        field(
+                            "hubState",
+                            "revoked",
+                        )
+
+                    is VexStreamHubState.Ready -> {
+                        field(
+                            "hubState",
+                            "ready",
+                        )
+                        field(
+                            "hubRef",
+                            hub.hubRef,
+                        )
+                        field(
+                            "catalogRevision",
+                            hub.catalogRevision,
+                        )
+                    }
+                }
+
                 tracks
                     .sortedBy {
                         it.track.trackRef.value
                     }
                     .forEach { item ->
-                        append(item.track.trackRef.value)
-                            .append('|')
-                            .append(item.track.mediaSha256.value)
-                            .append('|')
-                            .append(item.track.mediaByteLength)
-                            .append('|')
-                            .append(item.hubAvailable)
-                            .append('|')
-                            .append(item.localCopy.snapshotValue())
-                            .append('\n')
+                        field(
+                            "trackRef",
+                            item.track.trackRef.value,
+                        )
+                        field(
+                            "mediaSha256",
+                            item.track.mediaSha256.value,
+                        )
+                        field(
+                            "mediaByteLength",
+                            item.track.mediaByteLength,
+                        )
+                        field(
+                            "hubAvailable",
+                            item.hubAvailable,
+                        )
+                        field(
+                            "localCopy",
+                            item.localCopy.snapshotValue(),
+                        )
                     }
             }
 
