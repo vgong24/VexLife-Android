@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="gallery_explainable_status_title">Explainable status icon</string>
-    <string name="gallery_explainable_status_body">A status icon can explain its current meaning without performing or disguising another product action.</string>
-    <string name="gallery_explainable_status_label">Home connection unavailable</string>
-    <string name="gallery_explainable_status_explanation_title">Can’t send right now</string>
-    <string name="gallery_explainable_status_explanation_body">VexLife can’t currently establish the Home connection required for this example. The represented product state stays unchanged while this explanation is open.</string>
-    <string name="gallery_explainable_status_hint">Tap or long-press for meaning.</string>
-</resources>
