@@ -123,13 +123,10 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                 VexStreamHubState.Unreachable,
             )
 
-            lateinit var jobs:
-                Map<String, Job>
-
             TestScope(
                 dispatcher,
             ).runTest {
-                jobs =
+                val jobs =
                     branches.associate { branch ->
                         branch.branchRef to
                             branch.connection.request(
@@ -260,6 +257,7 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             branches.forEach(
                 BranchWorld::close,
             )
+            scheduler.advanceUntilIdle()
         }
     }
 
