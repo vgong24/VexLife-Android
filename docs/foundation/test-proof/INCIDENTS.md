@@ -227,6 +227,28 @@ Record:
 
 `incidents/TF-INCIDENT-2026-10-19-002.md`
 
+### TF-INCIDENT-2026-10-19-003
+
+Repository health required a GitHub Actions workflow that the same PR had intentionally removed when
+proof execution moved back to repository-owned local/VexRelay commands.
+
+~~~text
+failureStatus = EXPLAINED
+failureRootCause =
+    health contract retained a deleted optional CI caller as required source
+
+observabilityGapRootCause = NONE
+
+hardeningRef =
+    PR #134 source correction after A014
+
+hardeningState = CANDIDATE
+~~~
+
+Record:
+
+`incidents/TF-INCIDENT-2026-10-19-003.md`
+
 ## DesignHistory relationship
 
 Test / Proof owns operational incident truth.
