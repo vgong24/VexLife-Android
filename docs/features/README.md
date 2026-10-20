@@ -32,7 +32,6 @@ ScreenCrawler, Android-host-proof, or provider manuals.
 7. Implement one real vertical slice before generalizing reusable abstractions.
 8. Prove each claim at its rightful proof owner.
 9. Reconcile the feature home, source, generated effects, and next real edge before calling it done.
-
 10. Before adding semantic KDoc/comments, follow the source-grounding rule in
     `../foundation/FEATURE-EXPERIENCE-LANGUAGE.md`. Behavior-family application lives in
     `../../architecture/behavior/VEX-BEHAVIOR-FAMILY-BLUEPRINT.md`; Compound Relay application lives
