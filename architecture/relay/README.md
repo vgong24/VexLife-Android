@@ -53,30 +53,13 @@ without reverse-engineering the reducer.
 Before authoring or documenting a Compound Relay, establish:
 
 ~~~text
-CANONICAL FEATURE SOURCE
-    feature README / practicum / current accepted semantic source
-
-RELATIONSHIP QUESTION
-    "What do A + B (+ C...) mean together?"
-
-WHY CONVERGENCE IS NEEDED
-    why no single participating State owner can answer that question alone
-
-INPUT OWNERS
-    who independently owns each participating truth
-
-OUTPUT MEANING
-    the relationship truth this Relay alone owns
-
-BOUNDED REQUEST
-    if reconciliation is needed, which rightful owner receives which Control/request
-
-WHOLE-HUMAN EXAMPLE
-    canonical Journey / Feature Walk when one exists
-    OR explicit current absence / proof debt
-
-FOCUSED EXAMPLE
-    exact relationship/session test that proves the narrower rule
+canonical feature source
+relationship question: "What do A + B (+ C...) mean together?"
+independent input owners
+output relationship this Relay alone owns
+bounded Control/request that may leave this owner
+whole-human Walk/Journey when present, otherwise explicit absence/hold
+focused proof of the narrower relationship
 ~~~
 
 Do not derive a whole product story from processStates() or from a focused test. When the feature
@@ -136,23 +119,10 @@ Then use process-stage comments only where they preserve meaning that the code s
 for example candidate identity versus presentation availability or foreign-route identity versus a
 Navigation phase.
 
-Current worked pressures:
-
-~~~text
-EventsConvergenceRelay
-    canonical purpose:
-        docs/foundation/EVENTS-CONVERGENCE-PRACTICUM.md
-    executable example:
-        EventsJourneys.externalAttention
-
-VexMaps Distribution Convergence
-    canonical purpose / question map:
-        app/.../screens/shared/maps/distribution/README.md
-    focused relationship proof:
-        *ConvergenceRelayTest
-    full Delivery Route human Walk:
-        explicitly still proof debt
-~~~
+This rule is intentionally compatible with both current pressures: Events has a canonical executable
+Journey, while VexMaps Distribution currently has focused relationship proof and an explicitly
+unclosed full Delivery Route human walk. The Relay must preserve whichever truth the feature owner
+actually supplies rather than normalizing both into the same documentation story.
 
 ### Declarative Compound dependencies
 

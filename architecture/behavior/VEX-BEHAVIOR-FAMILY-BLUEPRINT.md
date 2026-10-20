@@ -732,83 +732,6 @@ The repeating shape is durable.
 
 The number of families is not predetermined.
 
-# Ground the family before authoring SCAE
-
-A Behavior family is local semantic source. Its KDoc should not become the place where feature purpose
-is invented.
-
-Before defining State / Control / Act / Effect, recover:
-
-~~~text
-PURPOSE OWNER
-    feature README / practicum / current accepted semantic source
-
-BEHAVIORAL QUESTION
-    the exact human/domain question this family answers
-
-WHOLE HUMAN EXAMPLE
-    canonical Feature Walk / Journey / lived contract when one exists
-    OR explicit absence / hold
-
-FOCUSED EXAMPLE
-    exact Behavior test / relationship case
-
-BOUNDARY
-    what this family must not own
-~~~
-
-Then derive SCAE from that question:
-
-~~~text
-State
-    what can truthfully be true for this behavioral question?
-
-Control
-    what stable request/affordance exists?
-
-Act
-    what does that request mean from CURRENT truth?
-
-Effect
-    what transformation may runtime attempt?
-
-Behavior
-    which State + Act relationships are lawful,
-    and what State kind is immediately admitted?
-~~~
-
-## Source-comment pattern
-
-Use <Name>Docs.kt / package KDoc for the broad doorway:
-
-~~~text
-canonical feature-purpose source
--> exact behavioral question
--> accepted human example or explicit absence
--> source-navigation map
-~~~
-
-Use State / Control / Act / Effect / Behavior KDoc only for the consequence local to that role.
-Do not copy the whole feature story into every file.
-
-A useful Behavior comment explains why a relationship distinction matters to the owning question.
-A weak comment simply restates the DSL condition.
-
-~~~text
-weak:
-    "When hasNext is false, Wrap is selected."
-
-useful:
-    "At the end of the same playable queue, Next still means continue listening; the current
-     wrapAtEnd truth decides whether that request lawfully wraps or is unavailable."
-~~~
-
-The useful version is allowed only when that product meaning is grounded in the feature's accepted
-source. Do not invent an attractive rationale from the condition itself.
-
-Focused tests can illustrate one relationship after purpose is grounded. They do not become the
-family's product-purpose authority and do not prove a complete human Walk.
-
 # How to build a new family
 
 Start with the human question:
@@ -816,6 +739,27 @@ Start with the human question:
 What isolated behavioral question am I trying to make understandable?
 
 Then:
+
+## 0. Ground the question in feature source
+
+Before defining SCAE, recover only the context this family is allowed to summarize:
+
+~~~text
+purpose source
+    feature README / practicum / current accepted semantic owner
+
+whole-human example
+    canonical Feature Walk / Journey / lived contract
+    OR explicit absence / hold
+
+focused proof
+    exact Behavior test / relationship case
+
+boundary
+    what this family must not own or claim
+~~~
+
+Do not infer feature purpose from the Behavior conditions themselves.
 
 ## 1. Name the family
 
@@ -898,7 +842,19 @@ If ordinary callers repeatedly see the full generic equation, hide it behind mea
 
 Make the package searchable and traversable in the IDE.
 
-The Docs node should answer questions and link directly to source symbols.
+The Docs node should answer questions and link directly to source symbols. It is also the broad
+source-context doorway for the family:
+
+~~~text
+accepted feature-purpose source
+-> exact behavioral question
+-> canonical human example or explicit absence
+-> source-navigation map
+~~~
+
+State / Control / Act / Effect / Behavior KDoc should then document only the consequence local to
+that role. Do not copy the whole feature story into every file, and do not invent an attractive
+product rationale from a DSL condition merely to make the comment sound meaningful.
 
 # Prime implementation — VexStream Playback
 
