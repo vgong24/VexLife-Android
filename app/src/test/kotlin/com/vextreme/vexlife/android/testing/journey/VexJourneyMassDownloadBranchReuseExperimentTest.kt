@@ -16,7 +16,6 @@ import com.vextreme.vexlife.android.vexstream.offline.vexStreamOfflineCollection
 import java.security.MessageDigest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -169,8 +168,17 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
                 }.distinct().size,
             )
 
+            val evidenceByBranch =
+                evidence.associateBy(
+                    BranchEvidence::branchRef,
+                )
+
             val successPlan =
-                success.currentPlan()
+                evidenceByBranch
+                    .getValue(
+                        BRANCH_SUCCESS,
+                    )
+                    .finalPlan
             assertTrue(
                 successPlan.fullyOnDevice,
             )
@@ -192,7 +200,11 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             )
 
             val stalePlan =
-                stale.currentPlan()
+                evidenceByBranch
+                    .getValue(
+                        BRANCH_STALE,
+                    )
+                    .finalPlan
             assertEquals(
                 2,
                 stalePlan.onDeviceCount,
@@ -219,7 +231,11 @@ class VexJourneyMassDownloadBranchReuseExperimentTest {
             )
 
             val hubLossPlan =
-                hubLoss.currentPlan()
+                evidenceByBranch
+                    .getValue(
+                        BRANCH_HUB_LOSS,
+                    )
+                    .finalPlan
             assertEquals(
                 1,
                 hubLossPlan.onDeviceCount,
