@@ -65,6 +65,8 @@ internal class VexLifeSession(
                 logger = logger,
                 logPersistence = logPersistence,
                 toggleDarkMode = ::toggleDarkMode,
+                relays =
+                    relays,
             ),
         )
 
