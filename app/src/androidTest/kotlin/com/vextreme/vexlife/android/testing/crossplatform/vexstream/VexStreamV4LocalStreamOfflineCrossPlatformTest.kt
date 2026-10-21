@@ -1722,6 +1722,14 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                                 item
                                     .availability
                                     .name,
+                            "title" to
+                                item
+                                    .track
+                                    .title,
+                            "artist" to
+                                item
+                                    .track
+                                    .artist,
                         ),
                 )
 
@@ -2036,6 +2044,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             "playbackState" to observation.playbackState,
             "currentPositionMs" to observation.currentPositionMs,
             "isPlaying" to observation.isPlaying,
+            "mediaTitle" to observation.mediaTitle,
+            "mediaArtist" to observation.mediaArtist,
         )
     }
 
@@ -2063,6 +2073,16 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     controller.currentPosition,
                 isPlaying =
                     controller.isPlaying,
+                mediaTitle =
+                    item
+                        ?.mediaMetadata
+                        ?.title
+                        ?.toString(),
+                mediaArtist =
+                    item
+                        ?.mediaMetadata
+                        ?.artist
+                        ?.toString(),
             )
         }
 
@@ -2113,6 +2133,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         val playbackState: Int,
         val currentPositionMs: Long,
         val isPlaying: Boolean,
+        val mediaTitle: String?,
+        val mediaArtist: String?,
     )
 
     private fun trackRow(
