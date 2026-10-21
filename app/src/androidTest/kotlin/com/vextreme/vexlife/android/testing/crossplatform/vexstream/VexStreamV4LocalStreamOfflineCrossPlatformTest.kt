@@ -8,6 +8,8 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -2227,17 +2229,69 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
     private fun waitForTag(
         elementId: String,
     ) {
-        compose.waitUntil(
-            timeoutMillis =
-                UI_TIMEOUT_MS,
-        ) {
-            compose
-                .onAllNodesWithTag(
-                    elementId,
+        val failure =
+            runCatching {
+                compose.waitUntil(
+                    timeoutMillis =
+                        UI_TIMEOUT_MS,
+                ) {
+                    compose
+                        .onAllNodesWithTag(
+                            elementId,
+                        )
+                        .fetchSemanticsNodes()
+                        .isNotEmpty()
+                }
+            }.exceptionOrNull()
+                ?: return
+
+        val mergedTree =
+            runCatching {
+                compose
+                    .onRoot()
+                    .printToString(
+                        maxDepth = 12,
+                    )
+            }.getOrElse { treeFailure ->
+                "[merged semantics unavailable: " +
+                    "${treeFailure::class.simpleName}: " +
+                    "${treeFailure.message}]"
+            }
+        val unmergedTree =
+            runCatching {
+                compose
+                    .onRoot(
+                        useUnmergedTree = true,
+                    )
+                    .printToString(
+                        maxDepth = 12,
+                    )
+            }.getOrElse { treeFailure ->
+                "[unmerged semantics unavailable: " +
+                    "${treeFailure::class.simpleName}: " +
+                    "${treeFailure.message}]"
+            }
+
+        throw AssertionError(
+            buildString {
+                appendLine(
+                    "Timed out waiting for Vex semantic element: $elementId",
                 )
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+                appendLine(
+                    "Merged Compose semantics:",
+                )
+                appendLine(
+                    mergedTree,
+                )
+                appendLine(
+                    "Unmerged Compose semantics:",
+                )
+                appendLine(
+                    unmergedTree,
+                )
+            }.trimEnd(),
+            failure,
+        )
     }
 
     private enum class PairingMode {
