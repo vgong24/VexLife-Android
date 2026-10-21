@@ -8,6 +8,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
+ * Feature-facing read capability for the current Family Conversation projection.
+ *
+ * App composition exposes this contract rather than the private transport/client implementation.
+ * It deliberately contains no Send, route, bearer, pairing, or Home-authority vocabulary.
+ */
+interface VexFamilyConversationReadRepository :
+    VexConversationRepository {
+    suspend fun refreshOnlyCurrentFamilyRoom():
+        VexConversationThreadState
+}
+
+/**
  * Android-observed Conversation repository backed by the VCS-04 feature read client.
  *
  * The remote Home remains the canonical Family/Conversation writer. This repository owns only the
@@ -18,7 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 internal class VexFamilyConversationConnectedServiceRepository(
     private val client:
         VexFamilyConversationConnectedServiceClient,
-) : VexConversationRepository {
+) : VexFamilyConversationReadRepository {
     private val mutableState =
         MutableStateFlow(
             VexConversationState.Empty,
@@ -50,7 +62,7 @@ internal class VexFamilyConversationConnectedServiceRepository(
      * This exists for the first installed-read slice only. The client rejects zero/multiple rooms,
      * so product growth toward a room picker cannot silently preserve "first room wins" behavior.
      */
-    suspend fun refreshOnlyCurrentFamilyRoom():
+    override suspend fun refreshOnlyCurrentFamilyRoom():
         VexConversationThreadState =
         publish(
             client.readOnlyCurrentFamilyRoom(),
