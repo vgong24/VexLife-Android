@@ -3,9 +3,10 @@ package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 import android.content.ComponentName
 import android.content.Context
 import android.os.Looper
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -110,7 +111,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
     @get:Rule
     val compose =
-        createComposeRule()
+        createAndroidComposeRule<
+            ComponentActivity
+        >()
 
     @Test
     fun phaseAStreamQueueDownloadAndPlayLocalAfterDesktopStops() {
@@ -2267,6 +2270,24 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             }.exceptionOrNull()
                 ?: return
 
+        val hostState =
+            runCatching {
+                val activity =
+                    compose.activity
+                "lifecycle=" +
+                    activity.lifecycle.currentState +
+                    " finishing=" +
+                    activity.isFinishing +
+                    " destroyed=" +
+                    activity.isDestroyed +
+                    " windowFocus=" +
+                    activity.hasWindowFocus()
+            }.getOrElse { activityFailure ->
+                "[activity state unavailable: " +
+                    "${activityFailure::class.simpleName}: " +
+                    "${activityFailure.message}]"
+            }
+
         val mergedTree =
             runCatching {
                 compose
@@ -2298,6 +2319,12 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             buildString {
                 appendLine(
                     "Timed out waiting for Vex semantic element: $elementId",
+                )
+                appendLine(
+                    "Compose host activity:",
+                )
+                appendLine(
+                    hostState,
                 )
                 appendLine(
                     "Merged Compose semantics:",
