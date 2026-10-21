@@ -48,6 +48,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -73,6 +74,7 @@ import org.junit.runner.RunWith
  *
  *   Phase A
  *     existing pairing -> fixture catalog -> stream -> queue -> verified download
+ *     -> optional exact multi-track Download missing pressure
  *     -> Desktop stopped -> LOCAL_ONLY playback
  *
  *   HOST
@@ -136,6 +138,10 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             requireFixtureTrackRef(
                 evidence,
             )
+        val massDownloadTargets =
+            optionalMassDownloadTargets(
+                evidence,
+            )
 
         evidence.resetRunEvidence()
 
@@ -170,6 +176,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     "pairingMode" to pairingMode.name,
                     "deviceRef" to deviceRef,
                     "expectedMediaSha256" to expectedDigest,
+                    "massDownloadTargetCount" to
+                        massDownloadTargets.size,
                 ),
         )
 
@@ -619,6 +627,211 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 observedResultRef = "android.result.download-verified",
                 details = downloadDetails,
             )
+
+            if (
+                massDownloadTargets
+                    .isNotEmpty()
+            ) {
+                val expectedStates =
+                    massDownloadTargets.map { target ->
+                        requireNotNull(
+                            vexStream
+                                .state
+                                .value
+                                .track(
+                                    target.trackRef,
+                                ),
+                        ) {
+                            "MassDownload expected track is absent from the real Desktop catalog: " +
+                                target.trackRef.value
+                        }.also { state ->
+                            check(
+                                state.track.mediaSha256 ==
+                                    target.mediaSha256 &&
+                                    state.track.mediaByteLength ==
+                                    target.mediaByteLength &&
+                                    state.hubAvailable,
+                            ) {
+                                "MassDownload exact target identity drifted before activation: " +
+                                    target.trackRef.value
+                            }
+                        }
+                    }
+
+                val collectionArtist =
+                    (
+                        expectedStates
+                            .map {
+                                it.track.artist
+                            } +
+                            requireNotNull(
+                                vexStream
+                                    .state
+                                    .value
+                                    .track(
+                                        targetRef,
+                                    ),
+                            ).track.artist
+                    )
+                        .distinct()
+                        .single()
+                        .also { artist ->
+                            check(
+                                artist.isNotBlank(),
+                            ) {
+                                "MassDownload lived collection requires one non-blank shared artist"
+                            }
+                        }
+                val collectionKey =
+                    "artist:$collectionArtist"
+                val openCollectionRef =
+                    VexStreamPresentationRefs
+                        .collectionRowAction(
+                            collectionKey =
+                                collectionKey,
+                            action =
+                                VexStreamMusicScreen
+                                    .OpenCollection,
+                        )
+
+                tap(
+                    VexStreamMusicScreen
+                        .ArtistsTab
+                        .elementId,
+                )
+                waitForTag(
+                    openCollectionRef,
+                )
+                tap(
+                    openCollectionRef,
+                )
+                waitForTag(
+                    VexStreamPresentationRefs
+                        .collectionOfflineStatus(
+                            collectionKey,
+                        ),
+                )
+                waitForTag(
+                    VexStreamMusicScreen
+                        .DownloadMissing
+                        .elementId,
+                )
+
+                val massDownloadAction =
+                    evidence.beginWalkAction(
+                        walkRef =
+                            WALK_REF,
+                        actionRef =
+                            "android.action.download-collection-missing",
+                        expectedResultRef =
+                            "android.result.collection-offline-complete",
+                        details =
+                            mapOf(
+                                "collectionKey" to
+                                    collectionKey,
+                                "alreadyLocalTrackRef" to
+                                    targetRef.value,
+                                "missingTrackRefs" to
+                                    massDownloadTargets
+                                        .map {
+                                            it.trackRef.value
+                                        },
+                            ),
+                    )
+
+                tap(
+                    VexStreamMusicScreen
+                        .DownloadMissing
+                        .elementId,
+                )
+
+                compose.waitUntil(
+                    timeoutMillis =
+                        DOWNLOAD_TIMEOUT_MS,
+                ) {
+                    massDownloadTargets
+                        .all { target ->
+                            (
+                                vexStream
+                                    .state
+                                    .value
+                                    .track(
+                                        target.trackRef,
+                                    )
+                                    ?.localCopy as?
+                                    VexStreamLocalCopyState.Downloaded
+                            )?.let { local ->
+                                local.mediaSha256 ==
+                                    target.mediaSha256 &&
+                                    local.byteLength ==
+                                    target.mediaByteLength
+                            } == true
+                        }
+                }
+
+                val preservedFirst =
+                    vexStream
+                        .state
+                        .value
+                        .track(
+                            targetRef,
+                        )
+                        ?.localCopy
+                        as? VexStreamLocalCopyState.Downloaded
+                        ?: error(
+                            "MassDownload replaced or lost the already-downloaded first track",
+                        )
+                assertEquals(
+                    expectedDigest,
+                    preservedFirst
+                        .mediaSha256
+                        .value,
+                )
+
+                val completionDetails =
+                    mapOf(
+                        "collectionKey" to
+                            collectionKey,
+                        "onDeviceTrackRefs" to
+                            (
+                                listOf(
+                                    targetRef.value,
+                                ) +
+                                    massDownloadTargets.map {
+                                        it.trackRef.value
+                                    }
+                            ),
+                        "downloadedMissingCount" to
+                            massDownloadTargets.size,
+                    )
+                evidence.checkpoint(
+                    phaseRef =
+                        "android.mass-download.complete",
+                    status =
+                        "PASS",
+                    details =
+                        completionDetails,
+                )
+                evidence.completeWalkAction(
+                    action =
+                        massDownloadAction,
+                    observedResultRef =
+                        "android.result.collection-offline-complete",
+                    details =
+                        completionDetails,
+                )
+
+                tap(
+                    VexStreamMusicScreen
+                        .CollectionBack
+                        .elementId,
+                )
+                tap(
+                    VexStreamMusicScreen
+                        .SongsTab
+                        .elementId,
+                )
+            }
 
             evidence.checkpoint(
                 phaseRef = "android.awaiting-desktop-stop",
@@ -1367,6 +1580,78 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         }
     }
 
+    private data class MassDownloadTargetExpectation(
+        val trackRef: VexStreamTrackRef,
+        val mediaSha256: VexStreamMediaSha256,
+        val mediaByteLength: Long,
+    )
+
+    private fun optionalMassDownloadTargets(
+        evidence: VexCrossPlatformEvidence,
+    ): List<MassDownloadTargetExpectation> {
+        val encoded =
+            evidence.argument(
+                ARG_MASS_DOWNLOAD_TARGETS_JSON,
+            )
+                ?: return emptyList()
+        val array =
+            JSONArray(
+                encoded,
+            )
+        val targets =
+            buildList {
+                repeat(
+                    array.length(),
+                ) { index ->
+                    val item =
+                        array.getJSONObject(
+                            index,
+                        )
+                    add(
+                        MassDownloadTargetExpectation(
+                            trackRef =
+                                VexStreamTrackRef(
+                                    item.getString(
+                                        "trackRef",
+                                    ),
+                                ),
+                            mediaSha256 =
+                                VexStreamMediaSha256(
+                                    item.getString(
+                                        "mediaSha256",
+                                    ),
+                                ),
+                            mediaByteLength =
+                                item.getLong(
+                                    "mediaByteLength",
+                                ),
+                        ),
+                    )
+                }
+            }
+
+        check(
+            targets
+                .map {
+                    it.trackRef
+                }
+                .distinct()
+                .size ==
+                targets.size,
+        ) {
+            "MassDownload lived target refs must be unique"
+        }
+        check(
+            targets.all {
+                it.mediaByteLength > 0L
+            },
+        ) {
+            "MassDownload lived target byte lengths must be positive"
+        }
+
+        return targets
+    }
+
     private data class FixtureCatalogTarget(
         val trackRef: VexStreamTrackRef,
         val availability: VexStreamTrackAvailability,
@@ -1806,6 +2091,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
         private const val ARG_EXPECTED_TRACK_REF =
             "vexCrossPlatformExpectedTrackRef"
+
+        private const val ARG_MASS_DOWNLOAD_TARGETS_JSON =
+            "vexCrossPlatformMassDownloadTargetsJson"
 
         private const val ARG_PAIRING_MODE =
             "vexCrossPlatformPairingMode"
