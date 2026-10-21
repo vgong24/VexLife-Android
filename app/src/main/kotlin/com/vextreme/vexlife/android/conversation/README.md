@@ -18,8 +18,9 @@ mixed-provenance Conversation behavior + Lab availability overrides = ACCEPTED O
 Hybrid Name Ontology / code vocabulary = ACCEPTED ON MAIN / PR #107
 Family server bootstrap/history projection = CURRENT SOURCE
 VCS-04 Family Connected Services read client/repository = ACCEPTED ON MAIN / PR #137
-VCS-04 private Home Android transport realization = CURRENT SOURCE CANDIDATE / PR #145
-production Screen / app-session wiring = HELD OUTSIDE PR #77 CUSTODY
+VCS-04 private Home Android transport realization = ACCEPTED ON MAIN / PR #145
+VCS-04 installed read app/session/Screen composition = CURRENT SOURCE CANDIDATE
+lived private-route membership + installed canonical read = HELD FOR HOST/DEVICE PROOF
 authenticated Home/session server producer stack = TERMINAL_ACCEPTED_CURRENT
 ~~~
 
@@ -540,11 +541,10 @@ screens/shared/conversation/VexConversationRoomPreview.kt
     local raw composer is explicitly not the production action contract
 ~~~
 
-The room renderer is intentionally not a registered app Screen yet. A real Screen needs the same
-app/session-owned Conversation repository instance to cross the existing render bridge. Current
-shared app/data composition paths are being changed by other active Android work, so PR #99 keeps
-that exact integration effect held instead of constructing a Compose-owned repository or Debug
-singleton.
+The generic room renderer remains Screen-agnostic. The current VCS-04 installed-read candidate
+registers one VexFamilyConversationScreen that consumes the same session-owned Conversation
+repository and Hybrid Relay through the established render bridge. It does not construct a
+Compose-owned repository or Debug singleton.
 
 ~~~text
 FEATURE_LOCAL_CONSTRUCTION != APP_GRAPH_INTEGRATION
@@ -824,9 +824,42 @@ snapshot. It fails closed if those producer meanings are contradicted.
 The producer's `truncated` fact is preserved in [VexFamilyConversationThreadBinding.historyTruncated]
 so a bounded history window never looks complete.
 
-The server projection remains producer truth. PR #145 now source-places the Android-native
-authentication/session/private-gateway realization below the feature port without moving those
-mechanics into Conversation meaning. Installed app-session wiring remains separately held.
+The server projection remains producer truth. PR #145 is accepted/current and source-places the
+Android-native authentication/session/private-gateway realization below the feature port without
+moving those mechanics into Conversation meaning. The current installed-read candidate composes that
+accepted transport into the app session and registered Screen while leaving the lived route/membership
+effect to host proof.
+
+## VCS-04 installed read composition
+
+The post-PR145 Android composition is intentionally smaller than a generic pairing/runtime framework:
+
+~~~text
+last private HTTPS origin persisted as reachability only
+-> VexPrivateHomeGatewayEndpoint validation
+-> AndroidKeyStore device-possession signer
+-> in-memory remote authenticated session
+-> VexFamilyConversationPrivateGatewayPort
+-> VexFamilyConversationConnectedServiceRepository
+-> session-owned VexConversationHybridRelay
+-> registered VexFamilyConversationScreen
+-> ordinary Home navigation
+~~~
+
+The persisted route is not trusted identity, pairing, membership, a bearer, a capability lease or
+standing Home authority. The bearer remains memory-only and is rebuilt after process restart through
+the accepted possession/session path.
+
+The first installed doorway deliberately asks current server bootstrap for exactly one Family room.
+It does not persist channel or membership-generation coordinates and does not hard-code a Family
+space/thread ref. Zero or multiple current rooms fail closed until a real room-selection experience
+is earned.
+
+A host-only instrumentation bridge may seed the private HTTPS origin and expose only the public
+Android device identity needed for the accepted Home pairing semantic owner to form a bounded
+membership during lived proof. The Android private key never leaves AndroidKeyStore.
+
+Send, Companion/model response and restart/no-duplicate acceptance remain later VCS-04 stages.
 
 ## Testing / proof
 
@@ -859,34 +892,61 @@ VexConversationSurfaceProjectionTest
     generic surface projection
     Family-only Send eligibility
     Companion availability independence
+
+VexFamilyConversationInstalledReadTest
+    exactly-one bootstrap room selection
+    bootstrap-owned channel/generation retained
+    ambiguous current rooms fail before history read
+
+VexPrivateHomeGatewayHostBridgeTest
+    opt-in physical-host bridge
+    private HTTPS origin persists as reachability only
+    only public Android possession identity leaves the device
 ~~~
 
 No VexExecutionTestRule is used because no Conversation VexExecution consumer exists yet.
 
-## Production app integration held
+## Production app integration candidate
 
-The accepted Conversation foundation deliberately did not modify AppRepositories, VexLifeSession,
-TalkToVexScreen, TalkToVexJourneys, VexRuntime, or VexTestEngine.
+The current VCS-04 installed-read candidate now crosses the previously held app/session membrane
+without widening Conversation semantics:
 
-PR #99 landed the feature-local Lab / fixture / generic-room / Preview slice. The accepted
-feature-local Hybrid refinement keeps the same discipline: it reuses VexCompoundRelay and does
-not claim shared app/session/Debug ownership.
+~~~text
+AppRepositories
+    generic VexConversationRepository? production slot
 
-Shared app/data, Debug Menu and Journey integration remain separate. Parallel Android work still changes some of
-those composition paths.
+VexLifeRelays
+    one session-owned VexConversationHybridRelay
 
-When the exact shared paths reconcile, integrate one app/session-owned Conversation repository and
-the Debug Menu doorway through the established Screen/action-registration shape. Do not replay the
-feature locally through a second repository just to avoid coordination.
+AppScreens
+    one registered VexFamilyConversationScreen
+
+Home
+    one ordinary navigation doorway
+~~~
+
+It deliberately does not modify TalkToVex, generic/direct Conversation, Debug/Lab action wiring,
+VexRuntime internals, or Journey declarations. The existing Hybrid remains the sole relationship
+owner and the existing room renderer remains the visual owner.
+
+Source composition is not lived completion. The candidate must still prove a private route, bounded
+Home membership, fresh installed app process, and canonical server-backed room read before the
+installed-doorway hold is released.
 
 ## Deliberate holds
 
 ~~~text
 CURRENT SOURCE CANDIDATE:
-    Android Home-backed authenticated private transport / PR #145
+    VCS-04 installed private Family read composition
 WHY:
-    accepted server producers are terminal current; Android now owns its OS-backed key and native
-    transport realization, while endpoint provisioning/pairing and lived route proof remain separate
+    PR #145 transport source is terminal accepted/current; this candidate composes only reachability,
+    the existing private gateway client, the generic repository slot, Hybrid and one registered Screen
+
+HELD:
+    lived private route + bounded Home membership + installed canonical read
+WHY:
+    source composition cannot prove the host route, current Home membership or physical-device
+    server-backed read; those remain the next lived proof boundary
 
 HELD:
     generic/direct Conversation Send
@@ -894,16 +954,10 @@ WHY:
     no real direct write provider contract has been consumed
 
 HELD:
-    production Screen / app-session wiring
-WHY:
-    feature-local lab/room construction exists, but shared app/data composition must be reconciled
-    before one repository instance can reach the registered Screen render bridge
-
-HELD:
     Debug Menu Conversation Lab doorway
 WHY:
-    feature-specific lab semantics now exist; shared Debug/AppAction composition remains a separate
-    integration seam and must not absorb those semantics
+    the production installed-read doorway does not require Debug/Lab integration; keep that developer
+    surface separate until a concrete debugging or authoring need earns it
 
 HELD:
     Journey integration
@@ -943,13 +997,18 @@ A fresh worker should be able to answer:
 Current implementation edge:
 
 ~~~text
-prove PR #145 Android signer/private-gateway source
+prove this installed-read composition on exact Android source
 -> materialize one tailnet-only private route with no Funnel/public exposure
--> bind the accepted Connected Services repository into one path-clear VexLifeSession-owned runtime
--> register one real Conversation Screen over the accepted Hybrid output
--> connect Debug Menu doorway to the existing feature-owned Lab controls
--> add Journey/device proof only for the visible controls actually admitted
+-> expose only the Android public possession identity to the host proof
+-> form one bounded principal-bound Home membership through the accepted Home pairing semantic owner
+-> fresh app process
+-> Home -> Family Conversation
+-> current private bootstrap/history appears through the registered Screen
+-> release the installed-doorway Feature Walk hold only after that lived path is proven
 ~~~
+
+Send, Companion/model response, actual process restart and no-duplicate acceptance remain separate
+successor checkpoints. Debug/Lab integration is not required for this production read doorway.
 
 The feature-local Lab, mixed-provenance behavior, Hybrid Name Ontology and focused JVM/build proof are
 already accepted on main. Do not replay them merely because production app wiring remains held.
