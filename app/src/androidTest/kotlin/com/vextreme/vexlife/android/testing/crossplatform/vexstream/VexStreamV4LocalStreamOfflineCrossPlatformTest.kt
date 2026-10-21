@@ -1020,6 +1020,20 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 evidence,
             )
 
+        evidence.checkpoint(
+            phaseRef = "android.phase-b.started",
+            status = "PASS",
+            details =
+                mapOf(
+                    "expectedMediaSha256" to expectedDigest,
+                    "expectedTrackRef" to expectedTrackRef.value,
+                ),
+        )
+        val massDownloadTargets =
+            optionalMassDownloadTargets(
+                evidence,
+            )
+
         val vexStreamContext =
             pairingContext(
                 productContext = context,
@@ -1066,6 +1080,68 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     restored,
                 ),
         )
+
+        if (
+            massDownloadTargets
+                .isNotEmpty()
+        ) {
+            val restoredTargets =
+                massDownloadTargets.map { target ->
+                    requireNotNull(
+                        vexStream
+                            .state
+                            .value
+                            .track(
+                                target.trackRef,
+                            ),
+                    ) {
+                        "MassDownload restart did not restore ${target.trackRef.value}"
+                    }.also { state ->
+                        val local =
+                            state.localCopy as?
+                                VexStreamLocalCopyState.Downloaded
+                                ?: error(
+                                    "MassDownload restart local copy missing for ${target.trackRef.value}",
+                                )
+                        assertEquals(
+                            target.mediaSha256,
+                            local.mediaSha256,
+                        )
+                        assertEquals(
+                            target.mediaByteLength,
+                            local.byteLength,
+                        )
+                        assertEquals(
+                            VexStreamTrackAvailability.LOCAL_ONLY,
+                            state.availability,
+                        )
+                    }
+                }
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.mass-download.restart-restored",
+                status =
+                    "PASS",
+                details =
+                    mapOf(
+                        "restoredTrackRefs" to
+                            (
+                                listOf(
+                                    targetRef.value,
+                                ) +
+                                    restoredTargets.map {
+                                        it.track.trackRef.value
+                                    }
+                            ),
+                        "restoredCount" to
+                            (
+                                restoredTargets.size +
+                                    1
+                            ),
+                    ),
+            )
+        }
 
         withApp(
             vexStream = vexStream,
@@ -1225,6 +1301,68 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 VexStreamTrackAvailability.HUB_AND_LOCAL,
                 reconnected.availability,
             )
+
+            if (
+                massDownloadTargets
+                    .isNotEmpty()
+            ) {
+                val reconnectedTargets =
+                    massDownloadTargets.map { target ->
+                        requireNotNull(
+                            vexStream
+                                .state
+                                .value
+                                .track(
+                                    target.trackRef,
+                                ),
+                        ) {
+                            "MassDownload reconnect lost ${target.trackRef.value}"
+                        }.also { state ->
+                            val local =
+                                state.localCopy as?
+                                    VexStreamLocalCopyState.Downloaded
+                                    ?: error(
+                                        "MassDownload reconnect local copy missing for ${target.trackRef.value}",
+                                    )
+                            assertEquals(
+                                target.mediaSha256,
+                                local.mediaSha256,
+                            )
+                            assertEquals(
+                                target.mediaByteLength,
+                                local.byteLength,
+                            )
+                            assertEquals(
+                                VexStreamTrackAvailability.HUB_AND_LOCAL,
+                                state.availability,
+                            )
+                        }
+                    }
+                evidence.checkpoint(
+                    phaseRef =
+                        "android.mass-download.reconnected",
+                    status =
+                        "PASS",
+                    details =
+                        mapOf(
+                            "trackRefs" to
+                                (
+                                    listOf(
+                                        targetRef.value,
+                                    ) +
+                                        reconnectedTargets.map {
+                                            it.track.trackRef.value
+                                        }
+                                ),
+                            "count" to
+                                (
+                                    reconnectedTargets.size +
+                                        1
+                                ),
+                        ),
+                )
+            }
+
             evidence.completeWalkAction(
                 action = reconnectAction,
                 observedResultRef = "android.phase-b.result.hub-and-local",
@@ -1335,10 +1473,22 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     )
 
                 connectionStore.clear()
-                File(
-                    vexStreamContext.filesDir,
-                    "vexstream",
-                ).deleteRecursively()
+                val vexStreamRoot =
+                    File(
+                        vexStreamContext.filesDir,
+                        "vexstream",
+                    )
+                check(
+                    vexStreamRoot
+                        .deleteRecursively(),
+                ) {
+                    "failed to delete isolated VexStream test namespace"
+                }
+                check(
+                    !vexStreamRoot.exists(),
+                ) {
+                    "isolated VexStream test namespace remains after cleanup"
+                }
 
                 evidence.checkpoint(
                     phaseRef = "android.test-namespace.cleaned",
@@ -1347,6 +1497,11 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                         mapOf(
                             "deviceRef" to deviceRef,
                             "hostReceipt" to revokeReceipt,
+                            "massDownloadTrackCount" to
+                                (
+                                    massDownloadTargets.size +
+                                        1
+                                ),
                         ),
                 )
             }
