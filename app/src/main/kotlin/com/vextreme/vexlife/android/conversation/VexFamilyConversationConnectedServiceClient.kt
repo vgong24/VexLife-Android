@@ -95,9 +95,45 @@ internal class VexFamilyConversationConnectedServiceClient(
             "Family Conversation read target must resolve exactly one current bootstrap room"
         }
 
-        val room =
-            matchingRooms.single()
+        return readCurrentRoom(
+            bootstrap =
+                bootstrap,
+            room =
+                matchingRooms.single(),
+        )
+    }
 
+    /**
+     * First installed-read entry for a Home that currently exposes exactly one Family room.
+     *
+     * This deliberately fails closed when several rooms exist rather than inventing implicit room
+     * selection. A later room picker may call [readThread] with explicit human-selected identity.
+     */
+    suspend fun readOnlyCurrentFamilyRoom():
+        VexConversationThreadState {
+        val bootstrap =
+            port.bootstrap()
+
+        check(
+            bootstrap.rooms.size == 1,
+        ) {
+            "Installed Family Conversation read requires exactly one current room until room selection exists"
+        }
+
+        return readCurrentRoom(
+            bootstrap =
+                bootstrap,
+            room =
+                bootstrap.rooms.single(),
+        )
+    }
+
+    private suspend fun readCurrentRoom(
+        bootstrap:
+            VexFamilyConversationServerBootstrap,
+        room:
+            VexFamilyConversationServerRoom,
+    ): VexConversationThreadState {
         val history =
             port.readThreadHistory(
                 VexFamilyConversationThreadHistoryIntent(
