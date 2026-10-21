@@ -214,6 +214,53 @@ class VexPrivateHomeGatewayDiagnosticTransportTest {
         }
 
     @Test
+    fun authenticatedSessionUnavailablePassesThroughForConnectionInvalidation() =
+        runBlocking {
+            val failure =
+                VexPrivateHomeGatewayException(
+                    kind =
+                        VexPrivateHomeGatewayFailureKind
+                            .SessionUnavailable,
+                    statusCode =
+                        401,
+                    serverCode =
+                        "PRIVATE_SERVER_CODE",
+                )
+            val delegate =
+                FailingTransport(
+                    failure,
+                )
+            val transport =
+                DiagnosticVexPrivateHomeGatewayHttpTransport(
+                    delegate,
+                )
+
+            val observed =
+                try {
+                    transport.getJson(
+                        absolutePath =
+                            FAMILY_BOOTSTRAP,
+                        bearerSessionRef =
+                            BEARER_SESSION,
+                    )
+                    error(
+                        "Expected authenticated session failure",
+                    )
+                } catch (error: VexPrivateHomeGatewayException) {
+                    error
+                }
+
+            assertSame(
+                failure,
+                observed,
+            )
+            assertEquals(
+                1,
+                delegate.calls,
+            )
+        }
+
+    @Test
     fun cancellationPassesThroughWithoutDiagnosticWrappingOrRetry() =
         runBlocking {
             val cancellation =
@@ -257,6 +304,7 @@ class VexPrivateHomeGatewayDiagnosticTransportTest {
     private suspend fun diagnosticFrom(
         path: String,
         failure: Throwable,
+        bearerSessionRef: String? = null,
     ): VexPrivateHomeGatewayDiagnosticException {
         val delegate =
             FailingTransport(
@@ -273,6 +321,8 @@ class VexPrivateHomeGatewayDiagnosticTransportTest {
                     path,
                 body =
                     "{}",
+                bearerSessionRef =
+                    bearerSessionRef,
             )
             error(
                 "Expected diagnostic failure",
@@ -346,6 +396,8 @@ class VexPrivateHomeGatewayDiagnosticTransportTest {
             "/v1/home/family/bootstrap"
         const val FAMILY_CONVERSATION =
             "/v1/home/family/conversation"
+        const val BEARER_SESSION =
+            "session.vexlife.home-bridge.remote.SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
     }
 }
 
