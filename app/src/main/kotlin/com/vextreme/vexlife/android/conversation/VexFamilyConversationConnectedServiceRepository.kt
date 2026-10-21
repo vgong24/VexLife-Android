@@ -31,14 +31,26 @@ internal class VexFamilyConversationConnectedServiceRepository(
      * Existing thread ordering is preserved. Equal semantic refreshes retain the exact current State
      * instance so a network poll that learned nothing cannot manufacture an Android state change.
      */
+    suspend fun refreshSingleCurrentRoom():
+        VexConversationThreadState =
+        publish(
+            client.readSingleCurrentRoom(),
+        )
+
     suspend fun refresh(
         request:
             VexFamilyConversationReadRequest,
-    ): VexConversationThreadState {
-        val refreshed =
+    ): VexConversationThreadState =
+        publish(
             client.readThread(
                 request,
-            )
+            ),
+        )
+
+    private fun publish(
+        refreshed:
+            VexConversationThreadState,
+    ): VexConversationThreadState {
         val current =
             mutableState.value
         val existingIndex =

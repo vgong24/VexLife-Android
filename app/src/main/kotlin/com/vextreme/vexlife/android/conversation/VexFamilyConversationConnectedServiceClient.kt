@@ -73,6 +73,23 @@ internal class VexFamilyConversationConnectedServiceClient(
     private val port:
         VexFamilyConversationConnectedServicePort,
 ) {
+    suspend fun readSingleCurrentRoom():
+        VexConversationThreadState {
+        val bootstrap =
+            port.bootstrap()
+
+        check(
+            bootstrap.rooms.size == 1,
+        ) {
+            "Installed Family Conversation doorway requires exactly one current bootstrap room"
+        }
+
+        return readRoom(
+            bootstrap = bootstrap,
+            room = bootstrap.rooms.single(),
+        )
+    }
+
     suspend fun readThread(
         request:
             VexFamilyConversationReadRequest,
@@ -95,9 +112,18 @@ internal class VexFamilyConversationConnectedServiceClient(
             "Family Conversation read target must resolve exactly one current bootstrap room"
         }
 
-        val room =
-            matchingRooms.single()
+        return readRoom(
+            bootstrap = bootstrap,
+            room = matchingRooms.single(),
+        )
+    }
 
+    private suspend fun readRoom(
+        bootstrap:
+            VexFamilyConversationServerBootstrap,
+        room:
+            VexFamilyConversationServerRoom,
+    ): VexConversationThreadState {
         val history =
             port.readThreadHistory(
                 VexFamilyConversationThreadHistoryIntent(
