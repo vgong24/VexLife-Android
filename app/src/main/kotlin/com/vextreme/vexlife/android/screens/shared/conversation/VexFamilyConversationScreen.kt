@@ -7,6 +7,7 @@ import androidx.compose.ui.res.stringResource
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.conversation.VexConversationHomeAvailability
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.preview.VexPreviewHost
@@ -178,6 +179,14 @@ internal fun VexFamilyConversationScreenContent(
             stringResource(
                 R.string.family_conversation_you,
             ),
+        composerContent = {
+            VexButton(
+                element =
+                    VexFamilyConversationScreen.Refresh,
+                handler =
+                    runtime,
+            )
+        },
     )
 }
 
