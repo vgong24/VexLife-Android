@@ -72,6 +72,38 @@ repository-owned vexFoundationHealth / vexVerifyJvm / vexVerifyLocal
 Foundation health must verify those durable source/proof routes, not require an optional hosted CI
 caller merely because one existed historically.
 
+## Choose the proof surface from the claim
+
+Do not start from the test tool that is easiest to run. Start from the claim that must become true,
+then use the smallest proof surface that actually owns it. If the human outcome crosses another
+material boundary, a lower-layer PASS is a completed checkpoint—not permission to stop early.
+
+| Claim/question | Minimum truthful proof owner |
+|---|---|
+| Pure semantic relationship, reducer, planner or repository rule | focused JVM/domain test |
+| Known semantic/presentation state renders with the right Android identity/affordance | presentation/render contract |
+| A person can perform the declared interaction path through real Android UI/runtime | Journey instrumentation |
+| The whole feature outcome is complete and every required checkpoint is accounted for | Feature Walk + its bound Journey/focused/native proofs |
+| Android/device/provider reality owns the claim (storage, lifecycle, MediaSession, permissions, physical device) | native / connected-device proof |
+| The outcome crosses repositories, producer processes, hosts/devices, restart or network ownership | institutional EndToEnd proof in Vextreme-SDK |
+| Several already-proven descendants repeat one expensive reconstructable prefix | optional QuantumTest/Vroomba branch reuse |
+
+~~~text
+PROOF_SURFACE_FOLLOWS_CLAIM
+LOWER_LAYER_PASS != WHOLE_HUMAN_OUTCOME_PASS
+FEATURE_WALK_MAP != JOURNEY_EXECUTION
+ANDROID_JOURNEY_PASS != EXTERNAL_PRODUCER_ENDTOEND_PASS
+QUANTUM_REUSE != NEW_PRODUCT_PROOF
+~~~
+
+A fresh worker should therefore ask, after every PASS:
+
+> Does the claimed human outcome end at this boundary, or does it still cross a real owner/runtime/
+> device/provider boundary that has not executed yet?
+
+Climb only while the claim requires it. Do not rerun lower layers merely for ceremony, and do not
+skip a higher lived boundary merely because source confidence is high.
+
 ## Current proof topology
 
 ~~~text
