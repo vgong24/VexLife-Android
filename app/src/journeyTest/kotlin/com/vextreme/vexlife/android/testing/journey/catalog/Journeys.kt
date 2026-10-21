@@ -54,6 +54,7 @@ object Journeys {
     object vexStream : JourneyDomain() {
         val connectRefreshForget = JourneyPath()
         val downloadAndRemove = JourneyPath()
+        val downloadCollectionMissing = JourneyPath()
     }
 
     object talkToVex : JourneyDomain() {
@@ -133,6 +134,8 @@ private val journeyDomainBindings: List<JourneyDomainBinding> =
                     VexStreamJourneys.connectRefreshForget,
                 Journeys.vexStream.downloadAndRemove to
                     VexStreamJourneys.downloadAndRemove,
+                Journeys.vexStream.downloadCollectionMissing to
+                    VexStreamJourneys.downloadCollectionMissing,
             ),
         ),
         JourneyDomainBinding(
