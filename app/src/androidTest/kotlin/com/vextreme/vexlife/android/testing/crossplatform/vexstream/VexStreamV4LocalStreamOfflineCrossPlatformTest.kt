@@ -2215,12 +2215,15 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 action = action,
             )
 
-        waitForTag(
-            elementId,
-        )
+        val useUnmergedTree =
+            waitForTag(
+                elementId,
+            )
         compose
             .onNodeWithTag(
                 elementId,
+                useUnmergedTree =
+                    useUnmergedTree,
             )
             .performClick()
 
@@ -2230,14 +2233,17 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
     private fun tap(
         elementId: String,
     ) {
-        waitForTag(
-            elementId,
-        )
+        val useUnmergedTree =
+            waitForTag(
+                elementId,
+            )
 
         runCatching {
             compose
                 .onNodeWithTag(
                     elementId,
+                    useUnmergedTree =
+                        useUnmergedTree,
                 )
                 .performScrollTo()
         }
@@ -2245,30 +2251,88 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         compose
             .onNodeWithTag(
                 elementId,
+                useUnmergedTree =
+                    useUnmergedTree,
             )
             .performClick()
 
         compose.waitForIdle()
     }
 
+    /**
+     * Returns whether the exact Vex semantic element was found only in the unmerged tree.
+     *
+     * Popup/material boundaries may expose an exact testTag below a merged semantics owner. That is
+     * still the same Vex-owned semantic address, not a text/position fallback. Product action is
+     * invoked once through whichever exact tree actually owns the tag.
+     */
     private fun waitForTag(
         elementId: String,
-    ) {
+    ): Boolean {
+        var useUnmergedTree =
+            false
+
         val failure =
             runCatching {
                 compose.waitUntil(
                     timeoutMillis =
                         UI_TIMEOUT_MS,
                 ) {
-                    compose
-                        .onAllNodesWithTag(
-                            elementId,
-                        )
-                        .fetchSemanticsNodes()
-                        .isNotEmpty()
+                    val mergedPresent =
+                        compose
+                            .onAllNodesWithTag(
+                                elementId,
+                            )
+                            .fetchSemanticsNodes()
+                            .isNotEmpty()
+
+                    if (mergedPresent) {
+                        useUnmergedTree =
+                            false
+                        true
+                    } else {
+                        val unmergedPresent =
+                            compose
+                                .onAllNodesWithTag(
+                                    elementId,
+                                    useUnmergedTree = true,
+                                )
+                                .fetchSemanticsNodes()
+                                .isNotEmpty()
+
+                        if (unmergedPresent) {
+                            useUnmergedTree =
+                                true
+                        }
+                        unmergedPresent
+                    }
                 }
             }.exceptionOrNull()
-                ?: return
+                ?: return useUnmergedTree
+
+        val mergedCount =
+            runCatching {
+                compose
+                    .onAllNodesWithTag(
+                        elementId,
+                    )
+                    .fetchSemanticsNodes()
+                    .size
+            }.getOrDefault(
+                0,
+            )
+        val unmergedCount =
+            runCatching {
+                compose
+                    .onAllNodesWithTag(
+                        elementId,
+                        useUnmergedTree = true,
+                    )
+                    .fetchSemanticsNodes()
+                    .size
+            }.getOrDefault(
+                0,
+            )
 
         val hostState =
             runCatching {
@@ -2287,6 +2351,20 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     "${activityFailure::class.simpleName}: " +
                     "${activityFailure.message}]"
             }
+
+        activeEvidence
+            ?.screenshot(
+                phaseRef =
+                    "android.semantic-wait-failure",
+                details =
+                    mapOf(
+                        "elementId" to elementId,
+                        "mergedCount" to mergedCount,
+                        "unmergedCount" to
+                            unmergedCount,
+                        "hostState" to hostState,
+                    ),
+            )
 
         val mergedTree =
             runCatching {
@@ -2315,6 +2393,13 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     "${treeFailure.message}]"
             }
 
+        val compactFailure =
+            "VEX_SEMANTIC_WAIT_FAILURE " +
+                "elementId=$elementId " +
+                "mergedCount=$mergedCount " +
+                "unmergedCount=$unmergedCount " +
+                "host=$hostState"
+
         throw AssertionError(
             buildString {
                 appendLine(
@@ -2337,6 +2422,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 )
                 appendLine(
                     unmergedTree,
+                )
+                appendLine(
+                    compactFailure,
                 )
             }.trimEnd(),
             failure,
