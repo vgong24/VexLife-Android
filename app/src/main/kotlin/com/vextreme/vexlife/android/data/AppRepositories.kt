@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.data
 
 import android.content.Context
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationConnectedServiceRepository
+import com.vextreme.vexlife.android.conversation.VexFamilyConversationReadRepository
 import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
@@ -35,7 +36,7 @@ data class AppRepositories(
     val eventsAttention: EventsAttentionPreferenceRepository,
     val eventsAttentionLab: EventsAttentionLabRepository,
     val conversation:
-        VexFamilyConversationConnectedServiceRepository? =
+        VexFamilyConversationReadRepository? =
         null,
 )
 
