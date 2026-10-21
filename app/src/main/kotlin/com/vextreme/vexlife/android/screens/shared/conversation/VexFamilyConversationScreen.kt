@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.connectedservices.privateHomeGatewayDiagnosticRefOrNull
 import com.vextreme.vexlife.android.conversation.VexConversationHomeAvailability
 import com.vextreme.vexlife.android.conversation.VexConversationHybridRelay
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationConnectedServiceRepository
@@ -82,6 +83,14 @@ internal fun VexFamilyConversationScreenContent(
                 false,
             )
         }
+    var refreshDiagnosticRef by
+        remember(
+            repository,
+        ) {
+            mutableStateOf<String?>(
+                null,
+            )
+        }
 
     LaunchedEffect(
         repository,
@@ -112,13 +121,18 @@ internal fun VexFamilyConversationScreenContent(
             )
             refreshFailed =
                 false
-        }.onFailure {
+            refreshDiagnosticRef =
+                null
+        }.onFailure { error ->
             relay.homeAvailabilityObserved(
                 VexConversationHomeAvailability
                     .Unavailable,
             )
             refreshFailed =
                 true
+            refreshDiagnosticRef =
+                error.privateHomeGatewayDiagnosticRefOrNull()
+                    ?: FAMILY_CONVERSATION_REFRESH_UNCLASSIFIED_DIAGNOSTIC_REF
         }
     }
 
@@ -166,6 +180,18 @@ internal fun VexFamilyConversationScreenContent(
                     role =
                         TextRole.Supporting,
                 )
+                if (refreshFailed) {
+                    refreshDiagnosticRef
+                        ?.let { diagnosticRef ->
+                            VexText(
+                                id = "diagnostic",
+                                text =
+                                    diagnosticRef,
+                                role =
+                                    TextRole.Supporting,
+                            )
+                        }
+                }
             }
         }
         return
@@ -205,6 +231,9 @@ internal fun VexFamilyConversationScreenContent(
             },
     )
 }
+
+private const val FAMILY_CONVERSATION_REFRESH_UNCLASSIFIED_DIAGNOSTIC_REF =
+    "diagnostic.vexlife.connected-services.family-conversation.refresh.unclassified"
 
 @VexScreenPreviews
 @Composable
