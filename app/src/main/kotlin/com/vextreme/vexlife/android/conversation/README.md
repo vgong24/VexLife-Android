@@ -18,8 +18,9 @@ mixed-provenance Conversation behavior + Lab availability overrides = ACCEPTED O
 Hybrid Name Ontology / code vocabulary = ACCEPTED ON MAIN / PR #107
 Family server bootstrap/history projection = CURRENT SOURCE
 VCS-04 Family Connected Services read client/repository = ACCEPTED ON MAIN / PR #137
-VCS-04 private Home Android transport realization = CURRENT SOURCE CANDIDATE / PR #145
-production Screen / app-session wiring = HELD OUTSIDE PR #77 CUSTODY
+VCS-04 private Home Android transport realization = ACCEPTED ON MAIN / PR #145
+VCS-04 installed read app/session/Screen composition = CURRENT SOURCE CANDIDATE
+lived private-route membership + installed canonical read = HELD FOR HOST/DEVICE PROOF
 authenticated Home/session server producer stack = TERMINAL_ACCEPTED_CURRENT
 ~~~
 
@@ -540,11 +541,10 @@ screens/shared/conversation/VexConversationRoomPreview.kt
     local raw composer is explicitly not the production action contract
 ~~~
 
-The room renderer is intentionally not a registered app Screen yet. A real Screen needs the same
-app/session-owned Conversation repository instance to cross the existing render bridge. Current
-shared app/data composition paths are being changed by other active Android work, so PR #99 keeps
-that exact integration effect held instead of constructing a Compose-owned repository or Debug
-singleton.
+The generic room renderer remains Screen-agnostic. The current VCS-04 installed-read candidate
+registers one VexFamilyConversationScreen that consumes the same session-owned Conversation
+repository and Hybrid Relay through the established render bridge. It does not construct a
+Compose-owned repository or Debug singleton.
 
 ~~~text
 FEATURE_LOCAL_CONSTRUCTION != APP_GRAPH_INTEGRATION
@@ -824,9 +824,11 @@ snapshot. It fails closed if those producer meanings are contradicted.
 The producer's `truncated` fact is preserved in [VexFamilyConversationThreadBinding.historyTruncated]
 so a bounded history window never looks complete.
 
-The server projection remains producer truth. PR #145 now source-places the Android-native
-authentication/session/private-gateway realization below the feature port without moving those
-mechanics into Conversation meaning. Installed app-session wiring remains separately held.
+The server projection remains producer truth. PR #145 is accepted/current and source-places the
+Android-native authentication/session/private-gateway realization below the feature port without
+moving those mechanics into Conversation meaning. The current installed-read candidate composes that
+accepted transport into the app session and registered Screen while leaving the lived route/membership
+effect to host proof.
 
 ## VCS-04 installed read composition
 
