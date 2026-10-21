@@ -76,6 +76,56 @@ class InMemoryVexStreamMusicRepositoryTest {
     }
 
     @Test
+    fun exactMediaPreconditionRejectsReusedTrackRefWithChangedMedia() = runTest {
+        val trackRef =
+            VexStreamTrackRef(
+                "hub.track.changed",
+            )
+        val repository =
+            InMemoryVexStreamMusicRepository()
+
+        repository.publishCatalog(
+            catalog(
+                VexStreamHubTrackProjection(
+                    trackRef = trackRef,
+                    mediaSha256 =
+                        VexStreamMediaSha256(
+                            "b".repeat(64),
+                        ),
+                    mediaByteLength = 2_468,
+                    title = "Changed Media",
+                    artist = "Vex",
+                ),
+            ),
+        )
+
+        assertEquals(
+            VexStreamRepositoryResult.Rejected(
+                reason =
+                    VexStreamRepositoryRejection
+                        .MEDIA_NOT_AVAILABLE_FROM_HUB,
+                trackRef = trackRef,
+            ),
+            repository.downloadForOffline(
+                trackRef = trackRef,
+                expectedMediaSha256 =
+                    VexStreamMediaSha256(
+                        DIGEST,
+                    ),
+                expectedMediaByteLength = 1_234,
+            ),
+        )
+        assertTrue(
+            repository.state.value
+                .track(
+                    trackRef,
+                )
+                ?.localCopy ===
+                VexStreamLocalCopyState.NotDownloaded,
+        )
+    }
+
+    @Test
     fun pairingConfirmationRestoresRemoteTrackAvailability() = runTest {
         val trackRef =
             VexStreamTrackRef(

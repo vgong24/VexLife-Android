@@ -27,8 +27,20 @@ interface VexStreamMusicRepository {
 
     suspend fun refreshCatalog(): VexStreamRepositoryResult
 
+    /**
+     * Requests one exact current Hub media object for verified phone-local storage.
+     *
+     * [trackRef] is the current Hub address. When [expectedMediaSha256] and/or
+     * [expectedMediaByteLength] are supplied, the repository must compare those preconditions
+     * against the track it re-reads at its serialized operation boundary before admitting the copy.
+     *
+     * This keeps a rendered request from silently following a reused/moved track address to
+     * different bytes between UI/request formation and repository execution.
+     */
     suspend fun downloadForOffline(
         trackRef: VexStreamTrackRef,
+        expectedMediaSha256: VexStreamMediaSha256? = null,
+        expectedMediaByteLength: Long? = null,
     ): VexStreamRepositoryResult
 
     suspend fun removeOfflineCopy(
