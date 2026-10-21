@@ -48,7 +48,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
-import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -138,12 +137,23 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             requireFixtureTrackRef(
                 evidence,
             )
+
+        evidence.resetRunEvidence()
+        evidence.checkpoint(
+            phaseRef = "android.phase-a.started",
+            status = "PASS",
+            details =
+                mapOf(
+                    "pairingMode" to pairingMode.name,
+                    "expectedMediaSha256" to expectedDigest,
+                    "expectedTrackRef" to expectedTrackRef.value,
+                ),
+        )
+
         val massDownloadTargets =
             optionalMassDownloadTargets(
                 evidence,
             )
-
-        evidence.resetRunEvidence()
 
         val vexStreamContext =
             pairingContext(
@@ -1591,44 +1601,51 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
     ): List<MassDownloadTargetExpectation> {
         val encoded =
             evidence.argument(
-                ARG_MASS_DOWNLOAD_TARGETS_JSON,
+                ARG_MASS_DOWNLOAD_TARGETS,
             )
                 ?: return emptyList()
-        val array =
-            JSONArray(
-                encoded,
-            )
+
         val targets =
-            buildList {
-                repeat(
-                    array.length(),
-                ) { index ->
-                    val item =
-                        array.getJSONObject(
-                            index,
+            encoded
+                .split(
+                    ",",
+                )
+                .filter(
+                    String::isNotBlank,
+                )
+                .mapIndexed {
+                        index,
+                        token,
+                    ->
+                    val fields =
+                        token.split(
+                            ":",
                         )
-                    add(
-                        MassDownloadTargetExpectation(
-                            trackRef =
-                                VexStreamTrackRef(
-                                    item.getString(
-                                        "trackRef",
-                                    ),
-                                ),
-                            mediaSha256 =
-                                VexStreamMediaSha256(
-                                    item.getString(
-                                        "mediaSha256",
-                                    ),
-                                ),
-                            mediaByteLength =
-                                item.getLong(
-                                    "mediaByteLength",
-                                ),
-                        ),
+                    check(
+                        fields.size == 3,
+                    ) {
+                        "MassDownload target $index must be trackRef:sha256:byteLength"
+                    }
+                    val byteLength =
+                        fields[2]
+                            .toLongOrNull()
+                            ?: error(
+                                "MassDownload target $index byte length is invalid",
+                            )
+
+                    MassDownloadTargetExpectation(
+                        trackRef =
+                            VexStreamTrackRef(
+                                fields[0],
+                            ),
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                fields[1],
+                            ),
+                        mediaByteLength =
+                            byteLength,
                     )
                 }
-            }
 
         check(
             targets
@@ -2092,8 +2109,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         private const val ARG_EXPECTED_TRACK_REF =
             "vexCrossPlatformExpectedTrackRef"
 
-        private const val ARG_MASS_DOWNLOAD_TARGETS_JSON =
-            "vexCrossPlatformMassDownloadTargetsJson"
+        private const val ARG_MASS_DOWNLOAD_TARGETS =
+            "vexCrossPlatformMassDownloadTargets"
 
         private const val ARG_PAIRING_MODE =
             "vexCrossPlatformPairingMode"
