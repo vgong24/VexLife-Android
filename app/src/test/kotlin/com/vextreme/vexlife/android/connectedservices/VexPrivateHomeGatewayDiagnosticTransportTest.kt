@@ -10,6 +10,7 @@ import javax.net.ssl.SSLPeerUnverifiedException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class VexPrivateHomeGatewayDiagnosticTransportTest {
@@ -212,16 +213,59 @@ class VexPrivateHomeGatewayDiagnosticTransportTest {
             )
         }
 
+    @Test
+    fun cancellationPassesThroughWithoutDiagnosticWrappingOrRetry() =
+        runBlocking {
+            val cancellation =
+                java.util.concurrent.CancellationException(
+                    "cancel current request",
+                )
+            val delegate =
+                FailingTransport(
+                    cancellation,
+                )
+            val transport =
+                DiagnosticVexPrivateHomeGatewayHttpTransport(
+                    delegate,
+                )
+
+            val observed =
+                try {
+                    transport.postJson(
+                        absolutePath =
+                            SESSION_CHALLENGE,
+                        body =
+                            "{}",
+                    )
+                    error(
+                        "Expected cancellation",
+                    )
+                } catch (error: java.util.concurrent.CancellationException) {
+                    error
+                }
+
+            assertSame(
+                cancellation,
+                observed,
+            )
+            assertEquals(
+                1,
+                delegate.calls,
+            )
+        }
+
     private suspend fun diagnosticFrom(
         path: String,
         failure: Throwable,
     ): VexPrivateHomeGatewayDiagnosticException {
+        val delegate =
+            FailingTransport(
+                failure,
+            )
         val transport =
             DiagnosticVexPrivateHomeGatewayHttpTransport(
                 delegate =
-                    FailingTransport(
-                        failure,
-                    ),
+                    delegate,
             )
         return try {
             transport.postJson(
@@ -234,6 +278,10 @@ class VexPrivateHomeGatewayDiagnosticTransportTest {
                 "Expected diagnostic failure",
             )
         } catch (error: VexPrivateHomeGatewayDiagnosticException) {
+            assertEquals(
+                1,
+                delegate.calls,
+            )
             error
         }
     }
@@ -267,18 +315,26 @@ class VexPrivateHomeGatewayDiagnosticTransportTest {
     private class FailingTransport(
         private val failure: Throwable,
     ) : VexPrivateHomeGatewayHttpTransport {
+        var calls =
+            0
+            private set
+
         override suspend fun getJson(
             absolutePath: String,
             bearerSessionRef: String?,
-        ): String =
+        ): String {
+            calls += 1
             throw failure
+        }
 
         override suspend fun postJson(
             absolutePath: String,
             body: String,
             bearerSessionRef: String?,
-        ): String =
+        ): String {
+            calls += 1
             throw failure
+        }
     }
 
     private companion object {
