@@ -288,7 +288,7 @@ class VexFamilyConversationPrivateGatewayPortTest {
         const val COMPANION =
             "lineage.family.vcs04"
 
-        fun challengeJson(
+        private fun challengeJson(
             identity: VexHomeDevicePublicIdentity,
         ): String {
             val unsigned =
