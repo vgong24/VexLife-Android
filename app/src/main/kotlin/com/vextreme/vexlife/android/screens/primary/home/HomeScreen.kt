@@ -26,6 +26,7 @@ import com.vextreme.vexlife.android.preview.VexPreviewHost
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
+import com.vextreme.vexlife.android.screens.shared.conversation.VexFamilyConversationScreen
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -60,6 +61,13 @@ object HomeScreen : AppScreenBlueprint(
         intent = navigateTo(VexStreamMusicScreen),
     )
 
+    val FamilyConversation = buttonRef(
+        id = "body.systems.family-conversation",
+        labelRes = R.string.conversation_family_title,
+        style = VexElementStyles.SecondaryAction,
+        intent = navigateTo(VexFamilyConversationScreen),
+    )
+
     val VexMaps = buttonRef(
         id = "body.systems.vex-maps",
         labelRes = R.string.home_vexmaps,
@@ -88,6 +96,7 @@ object HomeScreen : AppScreenBlueprint(
                 element = SystemsSection,
                 style = VexElementStyles.RaisedSurface,
             ) {
+                button(FamilyConversation)
                 button(VexMaps)
                 button(TalkToVex)
             }
@@ -184,6 +193,10 @@ internal fun HomeScreenContent(
                     R.string.home_systems_title,
                 ),
                 style = MaterialTheme.typography.headlineSmall,
+            )
+            VexButton(
+                element = HomeScreen.FamilyConversation,
+                handler = runtime,
             )
             VexButton(
                 element = HomeScreen.VexMaps,

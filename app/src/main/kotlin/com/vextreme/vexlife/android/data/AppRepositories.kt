@@ -1,6 +1,14 @@
 package com.vextreme.vexlife.android.data
 
 import android.content.Context
+import com.vextreme.vexlife.android.connectedservices.AndroidKeyStoreVexHomeDevicePossessionSigner
+import com.vextreme.vexlife.android.connectedservices.HttpsVexPrivateHomeGatewayHttpTransport
+import com.vextreme.vexlife.android.connectedservices.VexPrivateHomeGatewayConnection
+import com.vextreme.vexlife.android.connectedservices.VexPrivateHomeGatewayRouteStore
+import com.vextreme.vexlife.android.conversation.VexConversationRepository
+import com.vextreme.vexlife.android.conversation.VexFamilyConversationConnectedServiceClient
+import com.vextreme.vexlife.android.conversation.VexFamilyConversationConnectedServiceRepository
+import com.vextreme.vexlife.android.conversation.VexFamilyConversationPrivateGatewayPort
 import com.vextreme.vexlife.android.data.events.EventsAttentionLabRepository
 import com.vextreme.vexlife.android.data.events.EventsAttentionPreferenceRepository
 import com.vextreme.vexlife.android.data.events.EventsRepository
@@ -33,6 +41,7 @@ data class AppRepositories(
     val events: EventsRepository,
     val eventsAttention: EventsAttentionPreferenceRepository,
     val eventsAttentionLab: EventsAttentionLabRepository,
+    val conversation: VexConversationRepository? = null,
 )
 
 /**
@@ -43,7 +52,37 @@ data class AppRepositories(
  */
 object AppRepositoryFactory {
     fun production(context: Context): AppRepositories {
-        val database = VexLifeDatabaseFactory.get(context)
+        val applicationContext =
+            context.applicationContext
+        val database =
+            VexLifeDatabaseFactory.get(
+                applicationContext,
+            )
+        val conversation =
+            VexPrivateHomeGatewayRouteStore(
+                applicationContext,
+            ).currentEndpoint()
+                ?.let { endpoint ->
+                    VexFamilyConversationConnectedServiceRepository(
+                        client =
+                            VexFamilyConversationConnectedServiceClient(
+                                port =
+                                    VexFamilyConversationPrivateGatewayPort(
+                                        gateway =
+                                            VexPrivateHomeGatewayConnection(
+                                                transport =
+                                                    HttpsVexPrivateHomeGatewayHttpTransport(
+                                                        endpoint,
+                                                    ),
+                                                signer =
+                                                    AndroidKeyStoreVexHomeDevicePossessionSigner(
+                                                        applicationContext,
+                                                    ),
+                                            ),
+                                    ),
+                            ),
+                    )
+                }
 
         return AppRepositories(
             logHistory = RoomLogHistoryRepository(
@@ -59,11 +98,12 @@ object AppRepositoryFactory {
                 dao = database.vexMapsDistributionDao(),
             ),
             vexStream = PairedVexStreamMusicRepository.production(
-                context = context,
+                context = applicationContext,
             ),
             events = RelayEventsRepository(),
             eventsAttention = RelayEventsAttentionPreferenceRepository(),
             eventsAttentionLab = RelayEventsAttentionLabRepository(),
+            conversation = conversation,
         )
     }
 }

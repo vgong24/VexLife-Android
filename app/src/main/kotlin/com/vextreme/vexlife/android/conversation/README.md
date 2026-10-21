@@ -828,6 +828,37 @@ The server projection remains producer truth. PR #145 now source-places the Andr
 authentication/session/private-gateway realization below the feature port without moving those
 mechanics into Conversation meaning. Installed app-session wiring remains separately held.
 
+## VCS-04 installed read composition
+
+The post-PR145 Android composition is intentionally smaller than a generic pairing/runtime framework:
+
+~~~text
+last private HTTPS origin persisted as reachability only
+-> VexPrivateHomeGatewayEndpoint validation
+-> AndroidKeyStore device-possession signer
+-> in-memory remote authenticated session
+-> VexFamilyConversationPrivateGatewayPort
+-> VexFamilyConversationConnectedServiceRepository
+-> session-owned VexConversationHybridRelay
+-> registered VexFamilyConversationScreen
+-> ordinary Home navigation
+~~~
+
+The persisted route is not trusted identity, pairing, membership, a bearer, a capability lease or
+standing Home authority. The bearer remains memory-only and is rebuilt after process restart through
+the accepted possession/session path.
+
+The first installed doorway deliberately asks current server bootstrap for exactly one Family room.
+It does not persist channel or membership-generation coordinates and does not hard-code a Family
+space/thread ref. Zero or multiple current rooms fail closed until a real room-selection experience
+is earned.
+
+A host-only instrumentation bridge may seed the private HTTPS origin and expose only the public
+Android device identity needed for the accepted Home pairing semantic owner to form a bounded
+membership during lived proof. The Android private key never leaves AndroidKeyStore.
+
+Send, Companion/model response and restart/no-duplicate acceptance remain later VCS-04 stages.
+
 ## Testing / proof
 
 Current focused proof:
@@ -943,13 +974,18 @@ A fresh worker should be able to answer:
 Current implementation edge:
 
 ~~~text
-prove PR #145 Android signer/private-gateway source
+prove this installed-read composition on exact Android source
 -> materialize one tailnet-only private route with no Funnel/public exposure
--> bind the accepted Connected Services repository into one path-clear VexLifeSession-owned runtime
--> register one real Conversation Screen over the accepted Hybrid output
--> connect Debug Menu doorway to the existing feature-owned Lab controls
--> add Journey/device proof only for the visible controls actually admitted
+-> expose only the Android public possession identity to the host proof
+-> form one bounded principal-bound Home membership through the accepted Home pairing semantic owner
+-> fresh app process
+-> Home -> Family Conversation
+-> current private bootstrap/history appears through the registered Screen
+-> release the installed-doorway Feature Walk hold only after that lived path is proven
 ~~~
+
+Send, Companion/model response, actual process restart and no-duplicate acceptance remain separate
+successor checkpoints. Debug/Lab integration is not required for this production read doorway.
 
 The feature-local Lab, mixed-provenance behavior, Hybrid Name Ontology and focused JVM/build proof are
 already accepted on main. Do not replay them merely because production app wiring remains held.
