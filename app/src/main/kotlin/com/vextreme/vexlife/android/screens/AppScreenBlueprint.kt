@@ -30,6 +30,9 @@ internal class ScreenActionContext(
     val logger: VexLogger,
     val logPersistence: LogHistoryPersistenceQueue,
     val toggleDarkMode: () -> Unit,
+    val relays:
+        VexLifeRelays? =
+        null,
 )
 
 /**
