@@ -7,7 +7,6 @@ import androidx.compose.ui.res.stringResource
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.conversation.VexConversationHomeAvailability
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.elements.ElementIcon
 import com.vextreme.vexlife.android.elements.VexElementStyles
 import com.vextreme.vexlife.android.elements.invoke
 import com.vextreme.vexlife.android.preview.VexPreviewHost
@@ -38,7 +37,6 @@ object VexFamilyConversationScreen : AppScreenBlueprint(
         id = "body.actions.refresh",
         labelRes = R.string.family_conversation_refresh,
         style = VexElementStyles.SecondaryAction,
-        icon = ElementIcon.Refresh,
         intent = invoke(
             AppActions.RefreshFamilyConversation,
         ),
@@ -54,14 +52,11 @@ object VexFamilyConversationScreen : AppScreenBlueprint(
                     textRes =
                         R.string.family_conversation_intro,
                 )
+                button(
+                    Refresh,
+                )
             }
         }
-
-    internal override val toolbarActions
-        get() =
-            listOf(
-                Refresh,
-            )
 
     internal override fun appActionRegistrations(
         context:
