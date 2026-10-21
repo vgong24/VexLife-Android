@@ -17,9 +17,10 @@ generic Conversation room renderer + Lab preview = ACCEPTED ON MAIN / PR #99
 mixed-provenance Conversation behavior + Lab availability overrides = ACCEPTED ON MAIN / PR #104
 Hybrid Name Ontology / code vocabulary = ACCEPTED ON MAIN / PR #107
 Family server bootstrap/history projection = CURRENT SOURCE
-VCS-04 Family Connected Services read client/repository = SOURCE-QUALIFIED / REAL TRANSPORT + APP GRAPH HELD
-production Screen / app-session wiring = HELD on shared composition paths
-authenticated Android Home/session producer stack = SOURCE CANDIDATES FORMED / LIFECYCLE ACCEPTANCE + REAL BINDING HELD
+VCS-04 Family Connected Services read client/repository = ACCEPTED ON MAIN / PR #137
+VCS-04 private Home Android transport realization = CURRENT SOURCE CANDIDATE / PR #145
+production Screen / app-session wiring = HELD OUTSIDE PR #77 CUSTODY
+authenticated Home/session server producer stack = TERMINAL_ACCEPTED_CURRENT
 ~~~
 
 Code-navigation root:
@@ -82,6 +83,7 @@ conversation/
 ├── VexFamilyConversationServerAdapter.kt
 ├── VexFamilyConversationConnectedServiceClient.kt
 ├── VexFamilyConversationConnectedServiceRepository.kt
+├── VexFamilyConversationPrivateGatewayPort.kt
 ├── InMemoryVexFamilyConversationRepository.kt
 ├── VexConversationSurfaceProjection.kt
 ├── VexConversationHybridRelay.kt
@@ -97,9 +99,20 @@ conversation/
         └── 2026-10-16-003-name-ontology-hybrid-relay.md
 ~~~
 
+Android Connected Services source used by Conversation:
+
+~~~text
+connectedservices/
+├── VexHomeDevicePossession.kt
+└── VexPrivateHomeGatewayConnection.kt
+~~~
+
 Tests:
 
 ~~~text
+VexHomeDevicePossessionSigningPayloadTest
+AndroidKeyStoreVexHomeDevicePossessionSignerTest
+VexFamilyConversationPrivateGatewayPortTest
 VexConversationStateTest
 VexFamilyConversationServerAdapterTest
 VexFamilyConversationConnectedServiceClientTest
@@ -130,16 +143,28 @@ human-selected spaceRef + threadRef
 -> existing VexConversationHybridRelay
 ~~~
 
-The client never receives a URL, bearer/session handle, HTTP header, Home lease or private-gateway
-implementation. Those remain with Connected Services/Home transport owners. The feature intent carries
-only `spaceRef`, `channelRef` and `expectedMembershipGeneration`, matching the current server
-capability contract.
+The feature client still never receives a URL, bearer/session handle, HTTP header, Home lease or
+private-gateway implementation. PR #145 realizes those mechanics below the feature port:
 
-This source slice is intentionally **not** app-graph integration. PR #77 still owns
-`AppRepositories.kt`, so the production repository/session instance and installed-screen wiring stay
-held until that custody is released/currentized. The current producer stack (#1873/#905/#906/#1878)
-also remains draft lifecycle source; focused fixture proof here does not relabel it accepted or prove
-the real private route.
+~~~text
+runtime-selected HTTPS private Home origin
++ stable Android deviceRef
++ non-exportable AndroidKeyStore P-256 signing key
+-> accepted Home device-possession challenge
+-> in-memory remote authenticated session
+-> authenticated private gateway JSON carriage
+-> VexFamilyConversationPrivateGatewayPort
+-> existing feature client/repository
+~~~
+
+The Android signer reproduces the accepted SDK canonical signing bytes and keeps private-key material
+inside AndroidKeyStore. The current bearer is memory-only. A route/session failure cannot re-pair,
+change device identity, or manufacture Home authority. No endpoint is hard-coded into source.
+
+PR #145 remains intentionally **not** app-graph integration. PR #77 still owns
+`AppRepositories.kt` and `VexLifeRelays.kt`; this slice does not touch either path. Production Screen
+and VexLifeSession wiring remain a separate path-clear successor after the transport source proves
+itself.
 
 Permanent:
 
@@ -689,7 +714,7 @@ real VEX_CORE -> Family session-authority adapter
     REAL_SESSION_AUTHORITY_RECONNECTED_CURRENT
 ~~~
 
-The real lived #481 proof traversed:
+The earlier lived #481 proof traversed:
 
 ~~~text
 Windows current-user verification
@@ -799,9 +824,9 @@ snapshot. It fails closed if those producer meanings are contradicted.
 The producer's `truncated` fact is preserved in [VexFamilyConversationThreadBinding.historyTruncated]
 so a bounded history window never looks complete.
 
-This is still projection only. Android has no generic Home/session transport owner yet, so HTTP,
-authentication/session realization and app-session repository wiring remain held rather than being
-invented inside Conversation.
+The server projection remains producer truth. PR #145 now source-places the Android-native
+authentication/session/private-gateway realization below the feature port without moving those
+mechanics into Conversation meaning. Installed app-session wiring remains separately held.
 
 ## Testing / proof
 
@@ -857,11 +882,11 @@ feature locally through a second repository just to avoid coordination.
 ## Deliberate holds
 
 ~~~text
-HELD:
-    production Home-backed Family Conversation repository / authenticated transport
+CURRENT SOURCE CANDIDATE:
+    Android Home-backed authenticated private transport / PR #145
 WHY:
-    the producer data contract is now accepted and projectable, but Android has no generic
-    Home/session transport owner and shared app-session composition paths remain under active work
+    accepted server producers are terminal current; Android now owns its OS-backed key and native
+    transport realization, while endpoint provisioning/pairing and lived route proof remain separate
 
 HELD:
     generic/direct Conversation Send
@@ -918,7 +943,9 @@ A fresh worker should be able to answer:
 Current implementation edge:
 
 ~~~text
-reconcile app/session repository ownership when the shared composition paths clear
+prove PR #145 Android signer/private-gateway source
+-> materialize one tailnet-only private route with no Funnel/public exposure
+-> bind the accepted Connected Services repository into one path-clear VexLifeSession-owned runtime
 -> register one real Conversation Screen over the accepted Hybrid output
 -> connect Debug Menu doorway to the existing feature-owned Lab controls
 -> add Journey/device proof only for the visible controls actually admitted
