@@ -1,5 +1,8 @@
 package com.vextreme.vexlife.android.conversation
 
+import android.content.Context
+import com.vextreme.vexlife.android.connectedservices.AndroidKeyStoreVexHomeDevicePossessionSigner
+import com.vextreme.vexlife.android.connectedservices.SharedPreferencesVexPrivateHomeGatewayRouteStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,11 +37,29 @@ internal class VexFamilyConversationConnectedServiceRepository(
     suspend fun refresh(
         request:
             VexFamilyConversationReadRequest,
-    ): VexConversationThreadState {
-        val refreshed =
+    ): VexConversationThreadState =
+        publish(
             client.readThread(
                 request,
-            )
+            ),
+        )
+
+    /**
+     * Refreshes the only currently advertised Family room.
+     *
+     * This exists for the first installed-read slice only. The client rejects zero/multiple rooms,
+     * so product growth toward a room picker cannot silently preserve "first room wins" behavior.
+     */
+    suspend fun refreshOnlyCurrentFamilyRoom():
+        VexConversationThreadState =
+        publish(
+            client.readOnlyCurrentFamilyRoom(),
+        )
+
+    private fun publish(
+        refreshed:
+            VexConversationThreadState,
+    ): VexConversationThreadState {
         val current =
             mutableState.value
         val existingIndex =
@@ -75,6 +96,40 @@ internal class VexFamilyConversationConnectedServiceRepository(
         }
 
         return refreshed
+    }
+
+    companion object {
+        /**
+         * Production Android composition.
+         *
+         * The route store carries reachability only. [VexFamilyConversationPrivateGatewayRuntimePort]
+         * reconstructs possession/session authentication from AndroidKeyStore for the current route.
+         */
+        fun production(
+            context:
+                Context,
+        ): VexFamilyConversationConnectedServiceRepository {
+            val routeStore =
+                SharedPreferencesVexPrivateHomeGatewayRouteStore(
+                    context,
+                )
+            val signer =
+                AndroidKeyStoreVexHomeDevicePossessionSigner(
+                    context,
+                )
+
+            return VexFamilyConversationConnectedServiceRepository(
+                client =
+                    VexFamilyConversationConnectedServiceClient(
+                        VexFamilyConversationPrivateGatewayRuntimePort(
+                            routeStore =
+                                routeStore,
+                            signer =
+                                signer,
+                        ),
+                    ),
+            )
+        }
     }
 }
 
