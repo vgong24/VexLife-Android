@@ -17,6 +17,15 @@ object VexStreamFeatureWalkRefs {
         "$DOWNLOAD_AND_REMOVE/P03"
     const val CATALOG_IDENTITY_PRESERVED: String =
         "$DOWNLOAD_AND_REMOVE/P04"
+
+    const val DOWNLOAD_COLLECTION_MISSING: String =
+        "$OFFLINE_DOWNLOAD/C02"
+    const val PARTIAL_COLLECTION_VISIBLE: String =
+        "$DOWNLOAD_COLLECTION_MISSING/P01"
+    const val DOWNLOAD_MISSING_ACTION: String =
+        "$DOWNLOAD_COLLECTION_MISSING/P02"
+    const val COLLECTION_AVAILABLE_OFFLINE: String =
+        "$DOWNLOAD_COLLECTION_MISSING/P03"
 }
 
 /**
@@ -72,6 +81,43 @@ internal object VexStreamFeatureWalks {
                 ),
         )
 
+    val downloadCollectionMissing =
+        VexFeatureWalkCase(
+            ref =
+                VexStreamFeatureWalkRefs.DOWNLOAD_COLLECTION_MISSING,
+            key =
+                "download-collection-missing",
+            title =
+                "Download only the missing songs from a VexStream collection",
+            checkpoints =
+                listOf(
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs.PARTIAL_COLLECTION_VISIBLE,
+                        key =
+                            "partial-collection-visible",
+                        title =
+                            "The collection remains browseable while only part of it is on this phone",
+                    ),
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs.DOWNLOAD_MISSING_ACTION,
+                        key =
+                            "download-missing-action",
+                        title =
+                            "The collection exposes one Download missing action for current missing media",
+                    ),
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs.COLLECTION_AVAILABLE_OFFLINE,
+                        key =
+                            "collection-available-offline",
+                        title =
+                            "After Download missing completes, every current collection track appears in Downloads",
+                    ),
+                ),
+        )
+
     val feature =
         VexFeatureWalkFeature(
             featureRef =
@@ -90,6 +136,7 @@ internal object VexStreamFeatureWalks {
                         cases =
                             listOf(
                                 downloadAndRemove,
+                                downloadCollectionMissing,
                             ),
                     ),
                 ),

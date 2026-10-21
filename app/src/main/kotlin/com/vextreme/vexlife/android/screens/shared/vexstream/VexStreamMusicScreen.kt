@@ -234,11 +234,26 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         ),
     )
 
+    val OpenCollection = buttonRef(
+        id = "body.collection.open",
+        labelRes = R.string.vexstream_music_open_collection,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
     val CollectionBack = buttonRef(
         id = "body.collection.back",
         labelRes = R.string.back,
         style = VexElementStyles.Navigation,
         icon = ElementIcon.Back,
+        intent = localEffect(),
+    )
+
+    val DownloadMissing = buttonRef(
+        id = "body.collection.download-missing",
+        labelRes = R.string.vexstream_music_download_missing,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Download,
         intent = localEffect(),
     )
 
@@ -437,7 +452,11 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 scrollableColumn(DownloadsPanel) {}
             }
 
-            button(CollectionBack)
+            row("collection-actions") {
+                button(OpenCollection)
+                button(CollectionBack)
+                button(DownloadMissing)
+            }
 
             column("track-actions") {
                 button(TrackMenu)
@@ -671,7 +690,7 @@ internal fun vexStreamPreviewState(): VexStreamMusicState {
             mediaByteLength = 4_000_000,
             title = "Take It With You",
             artist = "Vex",
-            album = "Offline",
+            album = "Desktop Hub",
             durationSeconds = 184.0,
         )
 

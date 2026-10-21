@@ -13,6 +13,19 @@ object VexStreamJourneyFixtures {
         VexStreamTrackRef(
             "journey.track.one",
         )
+
+    val TrackTwo =
+        VexStreamTrackRef(
+            "journey.track.two",
+        )
+
+    val TrackThree =
+        VexStreamTrackRef(
+            "journey.track.three",
+        )
+
+    const val AlbumName: String =
+        "Journey Album"
 }
 
 // [VXG RealForever]
