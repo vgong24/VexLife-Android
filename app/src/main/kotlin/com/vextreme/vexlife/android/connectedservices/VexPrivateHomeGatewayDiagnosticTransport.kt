@@ -131,6 +131,8 @@ internal class DiagnosticVexPrivateHomeGatewayHttpTransport(
         execute(
             absolutePath =
                 absolutePath,
+            bearerSessionRef =
+                bearerSessionRef,
         ) {
             delegate.getJson(
                 absolutePath =
@@ -148,6 +150,8 @@ internal class DiagnosticVexPrivateHomeGatewayHttpTransport(
         execute(
             absolutePath =
                 absolutePath,
+            bearerSessionRef =
+                bearerSessionRef,
         ) {
             delegate.postJson(
                 absolutePath =
@@ -161,6 +165,7 @@ internal class DiagnosticVexPrivateHomeGatewayHttpTransport(
 
     private suspend fun execute(
         absolutePath: String,
+        bearerSessionRef: String?,
         request: suspend () -> String,
     ): String =
         try {
@@ -170,6 +175,14 @@ internal class DiagnosticVexPrivateHomeGatewayHttpTransport(
         } catch (error: CancellationException) {
             throw error
         } catch (error: VexPrivateHomeGatewayException) {
+            if (
+                bearerSessionRef != null &&
+                    error.statusCode == 401
+            ) {
+                // The connection owner must observe authenticated 401s so it can invalidate the
+                // current in-memory session exactly as it did before this diagnostic decorator.
+                throw error
+            }
             throw VexPrivateHomeGatewayDiagnosticException(
                 diagnostic =
                     VexPrivateHomeGatewayDiagnostic(
