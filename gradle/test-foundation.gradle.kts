@@ -355,6 +355,38 @@ fun vexCoverageJsonString(
             "\\\"",
         )
 
+fun vexDeviceResultFailureIsAssumption(
+    failure: org.w3c.dom.Element,
+): Boolean {
+    val type =
+        failure
+            .getAttribute(
+                "type",
+            )
+            .trim()
+    val message =
+        buildString {
+            append(
+                failure.getAttribute(
+                    "message",
+                ),
+            )
+            append("\n")
+            append(
+                failure.textContent,
+            )
+        }
+
+    return type ==
+        "org.junit.AssumptionViolatedException" ||
+        type.endsWith(
+            ".AssumptionViolatedException",
+        ) ||
+        message.contains(
+            "org.junit.AssumptionViolatedException",
+        )
+}
+
 fun vexCoverageAwareness(
     linePercent: Double,
 ): String =
@@ -822,11 +854,22 @@ val verifyVexDeviceResults =
                         }
                     }
 
-                    if (skipped) {
+                    val assumptionSkipped =
+                        failureElement
+                            ?.let(
+                                ::vexDeviceResultFailureIsAssumption,
+                            ) == true
+                    if (
+                        skipped ||
+                        assumptionSkipped
+                    ) {
                         skippedTests += 1
                     }
 
-                    failureElement?.let { failure ->
+                    if (
+                        !skipped &&
+                        !assumptionSkipped
+                    ) failureElement?.let { failure ->
                         val className =
                             testCase
                                 .getAttribute(
