@@ -21,7 +21,7 @@ import com.vextreme.vexlife.android.elements.VexColumn
 import com.vextreme.vexlife.android.elements.VexComposeScope
 import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.elements.VexText
-import com.vextreme.vexlife.android.preview.VexPreviewHost
+import com.vextreme.vexlife.android.preview.VexRenderedScreenPreview
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
@@ -209,10 +209,8 @@ internal fun VexFamilyConversationScreenContent(
 @VexScreenPreviews
 @Composable
 private fun VexFamilyConversationScreenPreview() {
-    VexPreviewHost(
-        id = "family-conversation",
-        startScreen =
-            VexFamilyConversationScreen,
+    VexRenderedScreenPreview(
+        VexFamilyConversationScreen,
     )
 }
 
