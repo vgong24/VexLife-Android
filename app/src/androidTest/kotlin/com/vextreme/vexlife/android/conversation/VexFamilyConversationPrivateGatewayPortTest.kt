@@ -273,7 +273,7 @@ class VexFamilyConversationPrivateGatewayPortTest {
             "device.android.vcs04"
         const val CHALLENGE_REF =
             "challenge.vcs04.android.001"
-        const val FINGERPRINT =
+        val FINGERPRINT =
             "fingerprint.sha256.${"b".repeat(64)}"
         val SESSION_REF =
             "session.vexlife.home-bridge.remote.${"S".repeat(43)}"
