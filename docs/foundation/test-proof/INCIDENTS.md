@@ -280,6 +280,16 @@ recordRelation =
 knownCounterexample =
     A006 crossed the same queue edge and later reached three-track android.mass-download.complete
 
+currentSourceEvidence =
+    2026-10-22 accepted refs
+    -> 8 fresh isolated evaluable Queue runs
+    -> 8 exact queue occurrence #2 PASS
+    -> 0 matching recurrence
+
+currentExecutionPosture =
+    OPEN_UNEXPLAINED and paused at a checkpoint from foreground causal execution;
+    resume on matching recurrence or materially new causal evidence
+
 recurrenceRule =
     exact fixture playback PASS
     + exact fixture TrackMenu action
