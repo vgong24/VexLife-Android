@@ -33,9 +33,21 @@ internal class VexFamilyConversationConnectedServiceRepository(
      */
     suspend fun refreshSingleCurrentRoom():
         VexConversationThreadState =
-        publish(
-            client.readSingleCurrentRoom(),
+        refreshSingleCurrentRoomObservation()
+            .thread
+
+    suspend fun refreshSingleCurrentRoomObservation():
+        VexFamilyConversationCurrentRoomObservation {
+        val observation =
+            client.readSingleCurrentRoomObservation()
+
+        return observation.copy(
+            thread =
+                publish(
+                    observation.thread,
+                ),
         )
+    }
 
     suspend fun refresh(
         request:

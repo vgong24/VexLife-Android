@@ -14,6 +14,17 @@ internal data class VexFamilyConversationReadRequest(
 )
 
 /**
+ * One installed Family room plus the authenticated principal observed from the same Home bootstrap.
+ *
+ * Identity remains an independently observed surface input; this does not add authenticated identity
+ * to generic canonical Conversation state.
+ */
+internal data class VexFamilyConversationCurrentRoomObservation(
+    val thread: VexConversationThreadState,
+    val authenticatedParticipantRef: VexConversationParticipantRef,
+)
+
+/**
  * Exact semantic intent accepted by the current Family thread-history producer.
  *
  * Transport/session material deliberately does not belong here. A later private-gateway adapter may
@@ -132,7 +143,12 @@ internal class VexFamilyConversationConnectedServiceClient(
         VexFamilyConversationConnectedServicePort,
 ) {
     suspend fun readSingleCurrentRoom():
-        VexConversationThreadState {
+        VexConversationThreadState =
+        readSingleCurrentRoomObservation()
+            .thread
+
+    suspend fun readSingleCurrentRoomObservation():
+        VexFamilyConversationCurrentRoomObservation {
         val bootstrap =
             port.bootstrap()
 
@@ -142,9 +158,26 @@ internal class VexFamilyConversationConnectedServiceClient(
             "Installed Family Conversation doorway requires exactly one current bootstrap room"
         }
 
-        return readRoom(
-            bootstrap = bootstrap,
-            room = bootstrap.rooms.single(),
+        val thread =
+            readRoom(
+                bootstrap = bootstrap,
+                room = bootstrap.rooms.single(),
+            )
+        val authenticatedParticipantRef =
+            VexConversationParticipantRef(
+                bootstrap.currentPrincipalRef,
+            )
+        check(
+            authenticatedParticipantRef in
+                thread.currentAudienceRefs,
+        ) {
+            "Installed Family Conversation principal must belong to the current room audience"
+        }
+
+        return VexFamilyConversationCurrentRoomObservation(
+            thread = thread,
+            authenticatedParticipantRef =
+                authenticatedParticipantRef,
         )
     }
 
