@@ -287,7 +287,7 @@ currentSourceEvidence =
     -> 0 matching recurrence
 
 currentExecutionPosture =
-    OPEN_UNEXPLAINED but paused/parked from foreground causal execution;
+    OPEN_UNEXPLAINED and paused at a checkpoint from foreground causal execution;
     resume on matching recurrence or materially new causal evidence
 
 recurrenceRule =
