@@ -176,6 +176,11 @@ class VexFamilyConversationInstalledReadTest {
             VexFamilyConversationServerBootstrap =
             bootstrapValue
 
+        override suspend fun append(
+            intent: VexFamilyConversationAppendIntent,
+        ): VexFamilyConversationAppendResult =
+            error("installed-read fixture must not append")
+
         override suspend fun readThreadHistory(
             intent:
                 VexFamilyConversationThreadHistoryIntent,

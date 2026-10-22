@@ -2,14 +2,14 @@ package com.vextreme.vexlife.android.conversation
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class VexFamilyConversationConnectedServiceRepositoryTest {
     @Test
-    fun refreshPublishesServerProjectionWithoutBecomingTheSendRepository() =
+    fun refreshPublishesServerProjectionAndRepositoryOwnsFamilySend() =
         runBlocking {
             val repository =
                 repository(
@@ -36,7 +36,7 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
                         ),
                     ),
             )
-            assertFalse(
+            assertTrue(
                 repository as Any is
                     VexFamilyConversationRepository,
             )
@@ -398,6 +398,11 @@ class VexFamilyConversationConnectedServiceRepositoryTest {
         override suspend fun bootstrap():
             VexFamilyConversationServerBootstrap =
             bootstrapValue
+
+        override suspend fun append(
+            intent: VexFamilyConversationAppendIntent,
+        ): VexFamilyConversationAppendResult =
+            error("read-refresh fixture must not append")
 
         override suspend fun readThreadHistory(
             intent:

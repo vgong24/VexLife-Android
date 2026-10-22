@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 internal class VexFamilyConversationConnectedServiceRepository(
     private val client:
         VexFamilyConversationConnectedServiceClient,
-) : VexConversationRepository {
+) : VexFamilyConversationRepository {
     private val mutableState =
         MutableStateFlow(
             VexConversationState.Empty,
@@ -46,6 +46,53 @@ internal class VexFamilyConversationConnectedServiceRepository(
                 request,
             ),
         )
+
+    override suspend fun send(
+        request: VexFamilyConversationSendRequest,
+    ): VexFamilyConversationRepositoryResult {
+        val currentThread =
+            mutableState.value
+                .thread(
+                    request.threadRef,
+                )
+                ?: return VexFamilyConversationRepositoryResult.Rejected(
+                    VexFamilyConversationRepositoryRejection.THREAD_UNKNOWN,
+                )
+        val family =
+            currentThread.familyBinding
+                ?: return VexFamilyConversationRepositoryResult.Rejected(
+                    VexFamilyConversationRepositoryRejection.THREAD_NOT_FAMILY_BOUND,
+                )
+        if (
+            family.spaceRef != request.spaceRef ||
+            currentThread.currentChannelRef != request.expectedChannelRef ||
+            family.currentMembershipGeneration != request.expectedMembershipGeneration
+        ) {
+            return VexFamilyConversationRepositoryResult.Rejected(
+                VexFamilyConversationRepositoryRejection.CURRENTNESS_CHANGED,
+            )
+        }
+
+        return when (
+            val result = client.send(
+                request,
+            )
+        ) {
+            is VexFamilyConversationConnectedServiceSendResult.Accepted -> {
+                publish(
+                    result.refreshedThread,
+                )
+                VexFamilyConversationRepositoryResult.Accepted(
+                    result.messageRef,
+                )
+            }
+
+            is VexFamilyConversationConnectedServiceSendResult.Rejected ->
+                VexFamilyConversationRepositoryResult.Rejected(
+                    result.reason,
+                )
+        }
+    }
 
     private fun publish(
         refreshed:
@@ -90,4 +137,4 @@ internal class VexFamilyConversationConnectedServiceRepository(
     }
 }
 
-// [VXG RealForever][VEXLIFE-ANDROID][CONVERSATION][VCS-04][READ-REPOSITORY]
+// [VXG RealForever][VEXLIFE-ANDROID][CONVERSATION][VCS-04][READ-SEND-REPOSITORY]
