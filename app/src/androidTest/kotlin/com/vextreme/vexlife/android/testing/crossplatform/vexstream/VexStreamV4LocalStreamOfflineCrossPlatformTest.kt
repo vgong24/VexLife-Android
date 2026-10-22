@@ -3,11 +3,14 @@ package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 import android.content.ComponentName
 import android.content.Context
 import android.os.Looper
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -72,7 +75,9 @@ import org.junit.runner.RunWith
  * The real VexLife process restart is proved by two separate host-selected instrumentation phases:
  *
  *   Phase A
- *     existing pairing -> fixture catalog -> stream -> queue -> verified download
+ *     existing pairing -> fixture catalog -> stream
+ *     -> single-track local-stream/offline: queue -> verified download
+ *     -> MassDownload: verified first download -> exact collection Download missing
  *     -> Desktop stopped -> LOCAL_ONLY playback
  *
  *   HOST
@@ -81,6 +86,9 @@ import org.junit.runner.RunWith
  *   Phase B
  *     durable offline index restored -> local playback
  *     -> Desktop restarted -> reconnect -> remove fixture download -> catalog identity remains
+ *
+ * MassDownload is a narrower lived claim. Queue remains an independently preserved sibling claim of
+ * the broader local-stream/offline relationship and is not silently re-proved by MassDownload.
  *
  * Ordinary connected-device suites skip this proof unless the exact fixture and phase arguments are
  * supplied. Logical child paths remain sequential on one physical Android device.
@@ -107,7 +115,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
     @get:Rule
     val compose =
-        createComposeRule()
+        createAndroidComposeRule<
+            ComponentActivity
+        >()
 
     @Test
     fun phaseAStreamQueueDownloadAndPlayLocalAfterDesktopStops() {
@@ -138,6 +148,47 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             )
 
         evidence.resetRunEvidence()
+        evidence.checkpoint(
+            phaseRef = "android.phase-a.started",
+            status = "PASS",
+            details =
+                mapOf(
+                    "pairingMode" to pairingMode.name,
+                    "expectedMediaSha256" to expectedDigest,
+                    "expectedTrackRef" to expectedTrackRef.value,
+                ),
+        )
+
+        val massDownloadTargets =
+            optionalMassDownloadTargets(
+                evidence,
+            )
+        val massDownloadScenario =
+            massDownloadTargets
+                .isNotEmpty()
+        val queueClaim =
+            if (massDownloadScenario) {
+                "NOT_PART_OF_MASS_DOWNLOAD_E2E"
+            } else {
+                "REQUIRED"
+            }
+
+        evidence.checkpoint(
+            phaseRef = "android.scenario.scope",
+            status = "PASS",
+            details =
+                mapOf(
+                    "scenario" to
+                        if (massDownloadScenario) {
+                            "MASS_DOWNLOAD"
+                        } else {
+                            "LOCAL_STREAM_OFFLINE"
+                        },
+                    "queueClaim" to queueClaim,
+                    "massDownloadTargetCount" to
+                        massDownloadTargets.size,
+                ),
+        )
 
         val vexStreamContext =
             pairingContext(
@@ -170,6 +221,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     "pairingMode" to pairingMode.name,
                     "deviceRef" to deviceRef,
                     "expectedMediaSha256" to expectedDigest,
+                    "massDownloadTargetCount" to
+                        massDownloadTargets.size,
                 ),
         )
 
@@ -472,73 +525,77 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 details = streamPlaybackDetails,
             )
 
-            val addQueueAction =
-                evidence.beginWalkAction(
-                    walkRef = WALK_REF,
-                    actionRef = "android.action.add-to-queue",
-                    expectedResultRef = "android.result.queue-second-occurrence-visible",
-                    details =
-                        mapOf(
-                            "trackRef" to targetRef.value,
+            if (
+                !massDownloadScenario
+            ) {
+                val addQueueAction =
+                    evidence.beginWalkAction(
+                        walkRef = WALK_REF,
+                        actionRef = "android.action.add-to-queue",
+                        expectedResultRef = "android.result.queue-second-occurrence-visible",
+                        details =
+                            mapOf(
+                                "trackRef" to targetRef.value,
+                            ),
+                    )
+                tapTrackAction(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    targetRef = targetRef,
+                    action =
+                        VexStreamMusicScreen.TrackMenu,
+                )
+                tap(
+                    VexStreamPresentationRefs
+                        .trackMenuAction(
+                            scope =
+                                VexStreamTrackPresentationScope.Songs,
+                            trackRef = targetRef,
+                            action =
+                                VexStreamMusicScreen.AddTrackToQueue,
                         ),
                 )
-            tapTrackAction(
-                scope =
-                    VexStreamTrackPresentationScope.Songs,
-                targetRef = targetRef,
-                action =
-                    VexStreamMusicScreen.TrackMenu,
-            )
-            tap(
-                VexStreamPresentationRefs
-                    .trackMenuAction(
-                        scope =
-                            VexStreamTrackPresentationScope.Songs,
-                        trackRef = targetRef,
-                        action =
-                            VexStreamMusicScreen.AddTrackToQueue,
-                    ),
-            )
-            tap(
-                VexStreamMusicScreen
-                    .ShowQueue
-                    .elementId,
-            )
-
-            val secondOccurrence =
-                VexStreamPresentationRefs
-                    .queueEntryKey(
-                        mediaId =
-                            targetRef.value,
-                        occurrence = 2,
-                    )
-
-            waitForTag(
-                VexStreamPresentationRefs
-                    .queueEntry(
-                        secondOccurrence,
-                    ),
-            )
-            val queueDetails =
-                mapOf(
-                    "trackRef" to targetRef.value,
-                    "queueOccurrence" to 2,
+                tap(
+                    VexStreamMusicScreen
+                        .ShowQueue
+                        .elementId,
                 )
-            evidence.checkpoint(
-                phaseRef = "android.queue.fixture",
-                status = "PASS",
-                details = queueDetails,
-            )
-            evidence.completeWalkAction(
-                action = addQueueAction,
-                observedResultRef = "android.result.queue-second-occurrence-visible",
-                details = queueDetails,
-            )
-            tap(
-                VexStreamMusicScreen
-                    .CloseQueue
-                    .elementId,
-            )
+
+                val secondOccurrence =
+                    VexStreamPresentationRefs
+                        .queueEntryKey(
+                            mediaId =
+                                targetRef.value,
+                            occurrence = 2,
+                        )
+
+                waitForTag(
+                    VexStreamPresentationRefs
+                        .queueEntry(
+                            secondOccurrence,
+                        ),
+                )
+                val queueDetails =
+                    mapOf(
+                        "trackRef" to targetRef.value,
+                        "queueOccurrence" to 2,
+                    )
+                evidence.checkpoint(
+                    phaseRef = "android.queue.fixture",
+                    status = "PASS",
+                    details = queueDetails,
+                )
+                evidence.completeWalkAction(
+                    action = addQueueAction,
+                    observedResultRef = "android.result.queue-second-occurrence-visible",
+                    details = queueDetails,
+                )
+                tap(
+                    VexStreamMusicScreen
+                        .CloseQueue
+                        .elementId,
+                )
+            }
 
             val downloadAction =
                 evidence.beginWalkAction(
@@ -619,6 +676,212 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 observedResultRef = "android.result.download-verified",
                 details = downloadDetails,
             )
+
+            if (
+                massDownloadTargets
+                    .isNotEmpty()
+            ) {
+                val expectedStates =
+                    massDownloadTargets.map { target ->
+                        requireNotNull(
+                            vexStream
+                                .state
+                                .value
+                                .track(
+                                    target.trackRef,
+                                ),
+                        ) {
+                            "MassDownload expected track is absent from the real Desktop catalog: " +
+                                target.trackRef.value
+                        }.also { state ->
+                            check(
+                                state.track.mediaSha256 ==
+                                    target.mediaSha256 &&
+                                    state.track.mediaByteLength ==
+                                    target.mediaByteLength &&
+                                    state.hubAvailable,
+                            ) {
+                                "MassDownload exact target identity drifted before activation: " +
+                                    target.trackRef.value
+                            }
+                        }
+                    }
+
+                val collectionArtist =
+                    (
+                        expectedStates
+                            .map {
+                                it.track.artist
+                            } +
+                            requireNotNull(
+                                vexStream
+                                    .state
+                                    .value
+                                    .track(
+                                        targetRef,
+                                    ),
+                            ).track.artist
+                    )
+                        .distinct()
+                        .single()
+                        .also { artist ->
+                            check(
+                                artist.isNotBlank(),
+                            ) {
+                                "MassDownload lived collection requires one non-blank shared artist"
+                            }
+                        }
+                val collectionKey =
+                    "artist:$collectionArtist"
+                val openCollectionRef =
+                    VexStreamPresentationRefs
+                        .collectionRowAction(
+                            collectionKey =
+                                collectionKey,
+                            action =
+                                VexStreamMusicScreen
+                                    .OpenCollection,
+                        )
+
+                tap(
+                    VexStreamMusicScreen
+                        .ArtistsTab
+                        .elementId,
+                )
+                waitForTag(
+                    openCollectionRef,
+                )
+                tap(
+                    openCollectionRef,
+                )
+                waitForTag(
+                    VexStreamPresentationRefs
+                        .collectionOfflineStatus(
+                            collectionKey,
+                        ),
+                )
+                waitForTag(
+                    VexStreamMusicScreen
+                        .DownloadMissing
+                        .elementId,
+                )
+
+                val massDownloadAction =
+                    evidence.beginWalkAction(
+                        walkRef =
+                            WALK_REF,
+                        actionRef =
+                            "android.action.download-collection-missing",
+                        expectedResultRef =
+                            "android.result.collection-offline-complete",
+                        details =
+                            mapOf(
+                                "collectionKey" to
+                                    collectionKey,
+                                "alreadyLocalTrackRef" to
+                                    targetRef.value,
+                                "missingTrackRefs" to
+                                    massDownloadTargets
+                                        .map {
+                                            it.trackRef.value
+                                        },
+                            ),
+                    )
+
+                tap(
+                    VexStreamMusicScreen
+                        .DownloadMissing
+                        .elementId,
+                )
+
+                compose.waitUntil(
+                    timeoutMillis =
+                        DOWNLOAD_TIMEOUT_MS,
+                ) {
+                    massDownloadTargets
+                        .all { target ->
+                            (
+                                vexStream
+                                    .state
+                                    .value
+                                    .track(
+                                        target.trackRef,
+                                    )
+                                    ?.localCopy as?
+                                    VexStreamLocalCopyState.Downloaded
+                            )?.let { local ->
+                                local.mediaSha256 ==
+                                    target.mediaSha256 &&
+                                    local.byteLength ==
+                                    target.mediaByteLength
+                            } == true
+                        }
+                }
+
+                val preservedFirst =
+                    vexStream
+                        .state
+                        .value
+                        .track(
+                            targetRef,
+                        )
+                        ?.localCopy
+                        as? VexStreamLocalCopyState.Downloaded
+                        ?: error(
+                            "MassDownload replaced or lost the already-downloaded first track",
+                        )
+                assertEquals(
+                    expectedDigest,
+                    preservedFirst
+                        .mediaSha256
+                        .value,
+                )
+
+                val completionDetails =
+                    mapOf(
+                        "collectionKey" to
+                            collectionKey,
+                        "onDeviceTrackRefs" to
+                            (
+                                listOf(
+                                    targetRef.value,
+                                ) +
+                                    massDownloadTargets.map {
+                                        it.trackRef.value
+                                    }
+                            ),
+                        "downloadedMissingCount" to
+                            massDownloadTargets.size,
+                        "queueClaim" to queueClaim,
+                    )
+                evidence.checkpoint(
+                    phaseRef =
+                        "android.mass-download.complete",
+                    status =
+                        "PASS",
+                    details =
+                        completionDetails,
+                )
+                evidence.completeWalkAction(
+                    action =
+                        massDownloadAction,
+                    observedResultRef =
+                        "android.result.collection-offline-complete",
+                    details =
+                        completionDetails,
+                )
+
+                tap(
+                    VexStreamMusicScreen
+                        .CollectionBack
+                        .elementId,
+                )
+                tap(
+                    VexStreamMusicScreen
+                        .SongsTab
+                        .elementId,
+                )
+            }
 
             evidence.checkpoint(
                 phaseRef = "android.awaiting-desktop-stop",
@@ -764,6 +1027,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     mapOf(
                         "nextHostEffect" to
                             "FORCE_STOP_AND_START_PHASE_B",
+                        "queueClaim" to queueClaim,
                     ),
             )
         }
@@ -794,6 +1058,20 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             )
         val expectedTrackRef =
             requireFixtureTrackRef(
+                evidence,
+            )
+
+        evidence.checkpoint(
+            phaseRef = "android.phase-b.started",
+            status = "PASS",
+            details =
+                mapOf(
+                    "expectedMediaSha256" to expectedDigest,
+                    "expectedTrackRef" to expectedTrackRef.value,
+                ),
+        )
+        val massDownloadTargets =
+            optionalMassDownloadTargets(
                 evidence,
             )
 
@@ -843,6 +1121,68 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     restored,
                 ),
         )
+
+        if (
+            massDownloadTargets
+                .isNotEmpty()
+        ) {
+            val restoredTargets =
+                massDownloadTargets.map { target ->
+                    requireNotNull(
+                        vexStream
+                            .state
+                            .value
+                            .track(
+                                target.trackRef,
+                            ),
+                    ) {
+                        "MassDownload restart did not restore ${target.trackRef.value}"
+                    }.also { state ->
+                        val local =
+                            state.localCopy as?
+                                VexStreamLocalCopyState.Downloaded
+                                ?: error(
+                                    "MassDownload restart local copy missing for ${target.trackRef.value}",
+                                )
+                        assertEquals(
+                            target.mediaSha256,
+                            local.mediaSha256,
+                        )
+                        assertEquals(
+                            target.mediaByteLength,
+                            local.byteLength,
+                        )
+                        assertEquals(
+                            VexStreamTrackAvailability.LOCAL_ONLY,
+                            state.availability,
+                        )
+                    }
+                }
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.mass-download.restart-restored",
+                status =
+                    "PASS",
+                details =
+                    mapOf(
+                        "restoredTrackRefs" to
+                            (
+                                listOf(
+                                    targetRef.value,
+                                ) +
+                                    restoredTargets.map {
+                                        it.track.trackRef.value
+                                    }
+                            ),
+                        "restoredCount" to
+                            (
+                                restoredTargets.size +
+                                    1
+                            ),
+                    ),
+            )
+        }
 
         withApp(
             vexStream = vexStream,
@@ -1002,6 +1342,68 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 VexStreamTrackAvailability.HUB_AND_LOCAL,
                 reconnected.availability,
             )
+
+            if (
+                massDownloadTargets
+                    .isNotEmpty()
+            ) {
+                val reconnectedTargets =
+                    massDownloadTargets.map { target ->
+                        requireNotNull(
+                            vexStream
+                                .state
+                                .value
+                                .track(
+                                    target.trackRef,
+                                ),
+                        ) {
+                            "MassDownload reconnect lost ${target.trackRef.value}"
+                        }.also { state ->
+                            val local =
+                                state.localCopy as?
+                                    VexStreamLocalCopyState.Downloaded
+                                    ?: error(
+                                        "MassDownload reconnect local copy missing for ${target.trackRef.value}",
+                                    )
+                            assertEquals(
+                                target.mediaSha256,
+                                local.mediaSha256,
+                            )
+                            assertEquals(
+                                target.mediaByteLength,
+                                local.byteLength,
+                            )
+                            assertEquals(
+                                VexStreamTrackAvailability.HUB_AND_LOCAL,
+                                state.availability,
+                            )
+                        }
+                    }
+                evidence.checkpoint(
+                    phaseRef =
+                        "android.mass-download.reconnected",
+                    status =
+                        "PASS",
+                    details =
+                        mapOf(
+                            "trackRefs" to
+                                (
+                                    listOf(
+                                        targetRef.value,
+                                    ) +
+                                        reconnectedTargets.map {
+                                            it.track.trackRef.value
+                                        }
+                                ),
+                            "count" to
+                                (
+                                    reconnectedTargets.size +
+                                        1
+                                ),
+                        ),
+                )
+            }
+
             evidence.completeWalkAction(
                 action = reconnectAction,
                 observedResultRef = "android.phase-b.result.hub-and-local",
@@ -1112,10 +1514,22 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     )
 
                 connectionStore.clear()
-                File(
-                    vexStreamContext.filesDir,
-                    "vexstream",
-                ).deleteRecursively()
+                val vexStreamRoot =
+                    File(
+                        vexStreamContext.filesDir,
+                        "vexstream",
+                    )
+                check(
+                    vexStreamRoot
+                        .deleteRecursively(),
+                ) {
+                    "failed to delete isolated VexStream test namespace"
+                }
+                check(
+                    !vexStreamRoot.exists(),
+                ) {
+                    "isolated VexStream test namespace remains after cleanup"
+                }
 
                 evidence.checkpoint(
                     phaseRef = "android.test-namespace.cleaned",
@@ -1124,6 +1538,11 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                         mapOf(
                             "deviceRef" to deviceRef,
                             "hostReceipt" to revokeReceipt,
+                            "massDownloadTrackCount" to
+                                (
+                                    massDownloadTargets.size +
+                                        1
+                                ),
                         ),
                 )
             }
@@ -1342,6 +1761,14 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                                 item
                                     .availability
                                     .name,
+                            "title" to
+                                item
+                                    .track
+                                    .title,
+                            "artist" to
+                                item
+                                    .track
+                                    .artist,
                         ),
                 )
 
@@ -1365,6 +1792,85 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         ) {
             "exact VexStream fixture trackRef did not become available in Android catalog state"
         }
+    }
+
+    private data class MassDownloadTargetExpectation(
+        val trackRef: VexStreamTrackRef,
+        val mediaSha256: VexStreamMediaSha256,
+        val mediaByteLength: Long,
+    )
+
+    private fun optionalMassDownloadTargets(
+        evidence: VexCrossPlatformEvidence,
+    ): List<MassDownloadTargetExpectation> {
+        val encoded =
+            evidence.argument(
+                ARG_MASS_DOWNLOAD_TARGETS,
+            )
+                ?: return emptyList()
+
+        val targets =
+            encoded
+                .split(
+                    ",",
+                )
+                .filter(
+                    String::isNotBlank,
+                )
+                .mapIndexed {
+                        index,
+                        token,
+                    ->
+                    val fields =
+                        token.split(
+                            ":",
+                        )
+                    check(
+                        fields.size == 3,
+                    ) {
+                        "MassDownload target $index must be trackRef:sha256:byteLength"
+                    }
+                    val byteLength =
+                        fields[2]
+                            .toLongOrNull()
+                            ?: error(
+                                "MassDownload target $index byte length is invalid",
+                            )
+
+                    MassDownloadTargetExpectation(
+                        trackRef =
+                            VexStreamTrackRef(
+                                fields[0],
+                            ),
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                fields[1],
+                            ),
+                        mediaByteLength =
+                            byteLength,
+                    )
+                }
+
+        check(
+            targets
+                .map {
+                    it.trackRef
+                }
+                .distinct()
+                .size ==
+                targets.size,
+        ) {
+            "MassDownload lived target refs must be unique"
+        }
+        check(
+            targets.all {
+                it.mediaByteLength > 0L
+            },
+        ) {
+            "MassDownload lived target byte lengths must be positive"
+        }
+
+        return targets
     }
 
     private data class FixtureCatalogTarget(
@@ -1577,6 +2083,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             "playbackState" to observation.playbackState,
             "currentPositionMs" to observation.currentPositionMs,
             "isPlaying" to observation.isPlaying,
+            "mediaTitle" to observation.mediaTitle,
+            "mediaArtist" to observation.mediaArtist,
         )
     }
 
@@ -1604,6 +2112,16 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     controller.currentPosition,
                 isPlaying =
                     controller.isPlaying,
+                mediaTitle =
+                    item
+                        ?.mediaMetadata
+                        ?.title
+                        ?.toString(),
+                mediaArtist =
+                    item
+                        ?.mediaMetadata
+                        ?.artist
+                        ?.toString(),
             )
         }
 
@@ -1654,6 +2172,8 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         val playbackState: Int,
         val currentPositionMs: Long,
         val isPlaying: Boolean,
+        val mediaTitle: String?,
+        val mediaArtist: String?,
     )
 
     private fun trackRow(
@@ -1731,12 +2251,15 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 action = action,
             )
 
-        waitForTag(
-            elementId,
-        )
+        val useUnmergedTree =
+            waitForTag(
+                elementId,
+            )
         compose
             .onNodeWithTag(
                 elementId,
+                useUnmergedTree =
+                    useUnmergedTree,
             )
             .performClick()
 
@@ -1746,14 +2269,17 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
     private fun tap(
         elementId: String,
     ) {
-        waitForTag(
-            elementId,
-        )
+        val useUnmergedTree =
+            waitForTag(
+                elementId,
+            )
 
         runCatching {
             compose
                 .onNodeWithTag(
                     elementId,
+                    useUnmergedTree =
+                        useUnmergedTree,
                 )
                 .performScrollTo()
         }
@@ -1761,26 +2287,184 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         compose
             .onNodeWithTag(
                 elementId,
+                useUnmergedTree =
+                    useUnmergedTree,
             )
             .performClick()
 
         compose.waitForIdle()
     }
 
+    /**
+     * Returns whether the exact Vex semantic element was found only in the unmerged tree.
+     *
+     * Popup/material boundaries may expose an exact testTag below a merged semantics owner. That is
+     * still the same Vex-owned semantic address, not a text/position fallback. Product action is
+     * invoked once through whichever exact tree actually owns the tag.
+     */
     private fun waitForTag(
         elementId: String,
-    ) {
-        compose.waitUntil(
-            timeoutMillis =
-                UI_TIMEOUT_MS,
-        ) {
-            compose
-                .onAllNodesWithTag(
-                    elementId,
+    ): Boolean {
+        var useUnmergedTree =
+            false
+
+        val failure =
+            runCatching {
+                compose.waitUntil(
+                    timeoutMillis =
+                        UI_TIMEOUT_MS,
+                ) {
+                    val mergedPresent =
+                        compose
+                            .onAllNodesWithTag(
+                                elementId,
+                            )
+                            .fetchSemanticsNodes()
+                            .isNotEmpty()
+
+                    if (mergedPresent) {
+                        useUnmergedTree =
+                            false
+                        true
+                    } else {
+                        val unmergedPresent =
+                            compose
+                                .onAllNodesWithTag(
+                                    elementId,
+                                    useUnmergedTree = true,
+                                )
+                                .fetchSemanticsNodes()
+                                .isNotEmpty()
+
+                        if (unmergedPresent) {
+                            useUnmergedTree =
+                                true
+                        }
+                        unmergedPresent
+                    }
+                }
+            }.exceptionOrNull()
+                ?: return useUnmergedTree
+
+        val mergedCount =
+            runCatching {
+                compose
+                    .onAllNodesWithTag(
+                        elementId,
+                    )
+                    .fetchSemanticsNodes()
+                    .size
+            }.getOrDefault(
+                0,
+            )
+        val unmergedCount =
+            runCatching {
+                compose
+                    .onAllNodesWithTag(
+                        elementId,
+                        useUnmergedTree = true,
+                    )
+                    .fetchSemanticsNodes()
+                    .size
+            }.getOrDefault(
+                0,
+            )
+
+        val hostState =
+            runCatching {
+                val activity =
+                    compose.activity
+                "lifecycle=" +
+                    activity.lifecycle.currentState +
+                    " finishing=" +
+                    activity.isFinishing +
+                    " destroyed=" +
+                    activity.isDestroyed +
+                    " windowFocus=" +
+                    activity.hasWindowFocus()
+            }.getOrElse { activityFailure ->
+                "[activity state unavailable: " +
+                    "${activityFailure::class.simpleName}: " +
+                    "${activityFailure.message}]"
+            }
+
+        activeEvidence
+            ?.screenshot(
+                phaseRef =
+                    "android.semantic-wait-failure",
+                details =
+                    mapOf(
+                        "elementId" to elementId,
+                        "mergedCount" to mergedCount,
+                        "unmergedCount" to
+                            unmergedCount,
+                        "hostState" to hostState,
+                    ),
+            )
+
+        val mergedTree =
+            runCatching {
+                compose
+                    .onRoot()
+                    .printToString(
+                        maxDepth = 12,
+                    )
+            }.getOrElse { treeFailure ->
+                "[merged semantics unavailable: " +
+                    "${treeFailure::class.simpleName}: " +
+                    "${treeFailure.message}]"
+            }
+        val unmergedTree =
+            runCatching {
+                compose
+                    .onRoot(
+                        useUnmergedTree = true,
+                    )
+                    .printToString(
+                        maxDepth = 12,
+                    )
+            }.getOrElse { treeFailure ->
+                "[unmerged semantics unavailable: " +
+                    "${treeFailure::class.simpleName}: " +
+                    "${treeFailure.message}]"
+            }
+
+        val compactFailure =
+            "VEX_SEMANTIC_WAIT_FAILURE " +
+                "elementId=$elementId " +
+                "mergedCount=$mergedCount " +
+                "unmergedCount=$unmergedCount " +
+                "host=$hostState"
+
+        throw AssertionError(
+            buildString {
+                appendLine(
+                    "Timed out waiting for Vex semantic element: $elementId",
                 )
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
+                appendLine(
+                    "Compose host activity:",
+                )
+                appendLine(
+                    hostState,
+                )
+                appendLine(
+                    "Merged Compose semantics:",
+                )
+                appendLine(
+                    mergedTree,
+                )
+                appendLine(
+                    "Unmerged Compose semantics:",
+                )
+                appendLine(
+                    unmergedTree,
+                )
+                appendLine(
+                    compactFailure,
+                )
+            }.trimEnd(),
+            failure,
+        )
     }
 
     private enum class PairingMode {
@@ -1806,6 +2490,9 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
 
         private const val ARG_EXPECTED_TRACK_REF =
             "vexCrossPlatformExpectedTrackRef"
+
+        private const val ARG_MASS_DOWNLOAD_TARGETS =
+            "vexCrossPlatformMassDownloadTargets"
 
         private const val ARG_PAIRING_MODE =
             "vexCrossPlatformPairingMode"

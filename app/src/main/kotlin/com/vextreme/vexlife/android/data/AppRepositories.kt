@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.data
 
 import android.content.Context
 import com.vextreme.vexlife.android.connectedservices.AndroidKeyStoreVexHomeDevicePossessionSigner
+import com.vextreme.vexlife.android.connectedservices.DiagnosticVexPrivateHomeGatewayHttpTransport
 import com.vextreme.vexlife.android.connectedservices.HttpsVexPrivateHomeGatewayHttpTransport
 import com.vextreme.vexlife.android.connectedservices.VexPrivateHomeGatewayConnection
 import com.vextreme.vexlife.android.connectedservices.VexPrivateHomeGatewayRouteStore
@@ -71,8 +72,11 @@ object AppRepositoryFactory {
                                         gateway =
                                             VexPrivateHomeGatewayConnection(
                                                 transport =
-                                                    HttpsVexPrivateHomeGatewayHttpTransport(
-                                                        endpoint,
+                                                    DiagnosticVexPrivateHomeGatewayHttpTransport(
+                                                        delegate =
+                                                            HttpsVexPrivateHomeGatewayHttpTransport(
+                                                                endpoint,
+                                                            ),
                                                     ),
                                                 signer =
                                                     AndroidKeyStoreVexHomeDevicePossessionSigner(
