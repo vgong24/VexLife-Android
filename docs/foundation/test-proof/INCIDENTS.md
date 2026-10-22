@@ -249,6 +249,49 @@ Record:
 
 `incidents/TF-INCIDENT-2026-10-19-003.md`
 
+### TF-INCIDENT-2026-10-21-004
+
+VexStream Desktop V4 ↔ Android lived MassDownload proof intermittently failed after exact fixture
+playback when the test opened the exact fixture TrackMenu and waited for the exact Add-to-queue
+semantic action.
+
+~~~text
+failureStatus = OPEN_UNEXPLAINED
+failureRootCause = UNKNOWN
+
+observabilityGapRootCause =
+    failing runs did not compactly preserve whether the exact tag existed in merged versus
+    unmerged Compose semantics; verbose tree evidence was vulnerable to host log-tail truncation
+
+hardeningRef =
+    PR #148
+    finalReviewedHead 30ed30b0b8c93751bfa19caf5c172baee3c1514e
+    merge dc7845d51c65ace52b4eb0c47fd9eb603b6af499
+
+hardeningState = ACCEPTED_CURRENT
+
+workRef =
+    work.vexstream.mobile-library.track-menu-presentation-defect
+
+recordRelation =
+    merged record != incident closure;
+    provider state != canonical WorkState
+
+knownCounterexample =
+    A006 crossed the same queue edge and later reached three-track android.mass-download.complete
+
+recurrenceRule =
+    exact fixture playback PASS
+    + exact fixture TrackMenu action
+    + exact AddTrackToQueue semantic wait timeout
+    + compatible VexStream track-menu owner
+    -> likely recurrence
+~~~
+
+Record:
+
+`incidents/TF-INCIDENT-2026-10-21-004.md`
+
 ## DesignHistory relationship
 
 Test / Proof owns operational incident truth.
