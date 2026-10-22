@@ -75,8 +75,9 @@ import org.junit.runner.RunWith
  * The real VexLife process restart is proved by two separate host-selected instrumentation phases:
  *
  *   Phase A
- *     existing pairing -> fixture catalog -> stream -> queue -> verified download
- *     -> optional exact multi-track Download missing pressure
+ *     existing pairing -> fixture catalog -> stream
+ *     -> single-track local-stream/offline: queue -> verified download
+ *     -> MassDownload: verified first download -> exact collection Download missing
  *     -> Desktop stopped -> LOCAL_ONLY playback
  *
  *   HOST
@@ -85,6 +86,9 @@ import org.junit.runner.RunWith
  *   Phase B
  *     durable offline index restored -> local playback
  *     -> Desktop restarted -> reconnect -> remove fixture download -> catalog identity remains
+ *
+ * MassDownload is a narrower lived claim. Queue remains an independently preserved sibling claim of
+ * the broader local-stream/offline relationship and is not silently re-proved by MassDownload.
  *
  * Ordinary connected-device suites skip this proof unless the exact fixture and phase arguments are
  * supplied. Logical child paths remain sequential on one physical Android device.
@@ -159,6 +163,32 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             optionalMassDownloadTargets(
                 evidence,
             )
+        val massDownloadScenario =
+            massDownloadTargets
+                .isNotEmpty()
+        val queueClaim =
+            if (massDownloadScenario) {
+                "NOT_PART_OF_MASS_DOWNLOAD_E2E"
+            } else {
+                "REQUIRED"
+            }
+
+        evidence.checkpoint(
+            phaseRef = "android.scenario.scope",
+            status = "PASS",
+            details =
+                mapOf(
+                    "scenario" to
+                        if (massDownloadScenario) {
+                            "MASS_DOWNLOAD"
+                        } else {
+                            "LOCAL_STREAM_OFFLINE"
+                        },
+                    "queueClaim" to queueClaim,
+                    "massDownloadTargetCount" to
+                        massDownloadTargets.size,
+                ),
+        )
 
         val vexStreamContext =
             pairingContext(
@@ -495,73 +525,77 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 details = streamPlaybackDetails,
             )
 
-            val addQueueAction =
-                evidence.beginWalkAction(
-                    walkRef = WALK_REF,
-                    actionRef = "android.action.add-to-queue",
-                    expectedResultRef = "android.result.queue-second-occurrence-visible",
-                    details =
-                        mapOf(
-                            "trackRef" to targetRef.value,
+            if (
+                !massDownloadScenario
+            ) {
+                val addQueueAction =
+                    evidence.beginWalkAction(
+                        walkRef = WALK_REF,
+                        actionRef = "android.action.add-to-queue",
+                        expectedResultRef = "android.result.queue-second-occurrence-visible",
+                        details =
+                            mapOf(
+                                "trackRef" to targetRef.value,
+                            ),
+                    )
+                tapTrackAction(
+                    scope =
+                        VexStreamTrackPresentationScope.Songs,
+                    targetRef = targetRef,
+                    action =
+                        VexStreamMusicScreen.TrackMenu,
+                )
+                tap(
+                    VexStreamPresentationRefs
+                        .trackMenuAction(
+                            scope =
+                                VexStreamTrackPresentationScope.Songs,
+                            trackRef = targetRef,
+                            action =
+                                VexStreamMusicScreen.AddTrackToQueue,
                         ),
                 )
-            tapTrackAction(
-                scope =
-                    VexStreamTrackPresentationScope.Songs,
-                targetRef = targetRef,
-                action =
-                    VexStreamMusicScreen.TrackMenu,
-            )
-            tap(
-                VexStreamPresentationRefs
-                    .trackMenuAction(
-                        scope =
-                            VexStreamTrackPresentationScope.Songs,
-                        trackRef = targetRef,
-                        action =
-                            VexStreamMusicScreen.AddTrackToQueue,
-                    ),
-            )
-            tap(
-                VexStreamMusicScreen
-                    .ShowQueue
-                    .elementId,
-            )
-
-            val secondOccurrence =
-                VexStreamPresentationRefs
-                    .queueEntryKey(
-                        mediaId =
-                            targetRef.value,
-                        occurrence = 2,
-                    )
-
-            waitForTag(
-                VexStreamPresentationRefs
-                    .queueEntry(
-                        secondOccurrence,
-                    ),
-            )
-            val queueDetails =
-                mapOf(
-                    "trackRef" to targetRef.value,
-                    "queueOccurrence" to 2,
+                tap(
+                    VexStreamMusicScreen
+                        .ShowQueue
+                        .elementId,
                 )
-            evidence.checkpoint(
-                phaseRef = "android.queue.fixture",
-                status = "PASS",
-                details = queueDetails,
-            )
-            evidence.completeWalkAction(
-                action = addQueueAction,
-                observedResultRef = "android.result.queue-second-occurrence-visible",
-                details = queueDetails,
-            )
-            tap(
-                VexStreamMusicScreen
-                    .CloseQueue
-                    .elementId,
-            )
+
+                val secondOccurrence =
+                    VexStreamPresentationRefs
+                        .queueEntryKey(
+                            mediaId =
+                                targetRef.value,
+                            occurrence = 2,
+                        )
+
+                waitForTag(
+                    VexStreamPresentationRefs
+                        .queueEntry(
+                            secondOccurrence,
+                        ),
+                )
+                val queueDetails =
+                    mapOf(
+                        "trackRef" to targetRef.value,
+                        "queueOccurrence" to 2,
+                    )
+                evidence.checkpoint(
+                    phaseRef = "android.queue.fixture",
+                    status = "PASS",
+                    details = queueDetails,
+                )
+                evidence.completeWalkAction(
+                    action = addQueueAction,
+                    observedResultRef = "android.result.queue-second-occurrence-visible",
+                    details = queueDetails,
+                )
+                tap(
+                    VexStreamMusicScreen
+                        .CloseQueue
+                        .elementId,
+                )
+            }
 
             val downloadAction =
                 evidence.beginWalkAction(
@@ -818,6 +852,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                             ),
                         "downloadedMissingCount" to
                             massDownloadTargets.size,
+                        "queueClaim" to queueClaim,
                     )
                 evidence.checkpoint(
                     phaseRef =
@@ -992,6 +1027,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     mapOf(
                         "nextHostEffect" to
                             "FORCE_STOP_AND_START_PHASE_B",
+                        "queueClaim" to queueClaim,
                     ),
             )
         }
