@@ -265,9 +265,17 @@ observabilityGapRootCause =
 
 hardeningRef =
     PR #148
-    head 358bf6de2fcedb9948842b6da66372032cb296fb
+    finalReviewedHead 30ed30b0b8c93751bfa19caf5c172baee3c1514e
+    merge dc7845d51c65ace52b4eb0c47fd9eb603b6af499
 
-hardeningState = CANDIDATE
+hardeningState = ACCEPTED_CURRENT
+
+workRef =
+    work.vexstream.mobile-library.track-menu-presentation-defect
+
+recordRelation =
+    merged record != incident closure;
+    provider state != canonical WorkState
 
 knownCounterexample =
     A006 crossed the same queue edge and later reached three-track android.mass-download.complete
