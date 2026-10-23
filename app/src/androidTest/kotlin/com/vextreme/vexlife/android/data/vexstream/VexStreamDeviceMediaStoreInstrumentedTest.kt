@@ -8,6 +8,7 @@ import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
 import org.junit.Assert.assertArrayEquals
@@ -151,6 +152,108 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                     first.localCopy,
                 ),
             )
+        }
+    }
+
+    @Test
+    fun sharedCopySurvivesPrivateStagingLossAndFreshStoreInstance() {
+        assumeTrue(
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q,
+        )
+
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        val bytes =
+            "durable shared copy after private staging loss"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "fresh-store",
+            )
+        val privateRoot =
+            File(
+                context.cacheDir,
+                "vexstream-device-store-proof/" +
+                    System.nanoTime(),
+            )
+        val firstStore =
+            VexStreamMediaStore(
+                root = privateRoot,
+                deviceStore =
+                    VexStreamDeviceMediaStore(
+                        context,
+                    ),
+            )
+        val result =
+            firstStore.store(
+                expectedSha256 =
+                    track.mediaSha256,
+                expectedByteLength =
+                    track.mediaByteLength,
+                input =
+                    ByteArrayInputStream(
+                        bytes,
+                    ),
+                track = track,
+            ) as VexStreamMediaStoreResult.Stored
+
+        try {
+            assertTrue(
+                result.localCopy.localMediaRef
+                    .startsWith(
+                        "content://",
+                    ),
+            )
+
+            privateRoot.deleteRecursively()
+
+            val freshStore =
+                VexStreamMediaStore(
+                    root = privateRoot,
+                    deviceStore =
+                        VexStreamDeviceMediaStore(
+                            context,
+                        ),
+                )
+
+            assertTrue(
+                freshStore.verify(
+                    result.localCopy,
+                ),
+            )
+            freshStore.open(
+                result.localCopy,
+            ).use { input ->
+                assertArrayEquals(
+                    bytes,
+                    input.readBytes(),
+                )
+            }
+            assertEquals(
+                result.localCopy.localMediaRef,
+                freshStore.contentUriForPlayback(
+                    result.localCopy,
+                ),
+            )
+        } finally {
+            val cleanupStore =
+                VexStreamMediaStore(
+                    root = privateRoot,
+                    deviceStore =
+                        VexStreamDeviceMediaStore(
+                            context,
+                        ),
+                )
+            assertTrue(
+                cleanupStore.remove(
+                    result.localCopy,
+                ),
+            )
+            privateRoot.deleteRecursively()
         }
     }
 
