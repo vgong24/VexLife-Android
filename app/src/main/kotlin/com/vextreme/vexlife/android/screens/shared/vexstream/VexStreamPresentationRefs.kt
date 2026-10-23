@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.UIElement
@@ -60,6 +61,15 @@ internal object VexStreamPresentationRefs {
 
     const val QueueList =
         "element.vexstream-music.queue.entries"
+
+    private const val OrganizationArtistPrefix =
+        "element.vexstream-music.organization.artist"
+
+    private const val OrganizationGenrePrefix =
+        "element.vexstream-music.organization.genre"
+
+    private const val OrganizationAvailabilityPrefix =
+        "element.vexstream-music.organization.availability"
 
     fun trackRow(
         scope: VexStreamTrackPresentationScope,
@@ -183,6 +193,40 @@ internal object VexStreamPresentationRefs {
             instanceRef = stableKey,
         )
     }
+
+    fun organizationArtistOption(
+        artist: String,
+    ): String {
+        require(artist.isNotBlank()) {
+            "organization artist must not be blank"
+        }
+
+        return dynamicRef(
+            ownerRef = OrganizationArtistPrefix,
+            instanceRef = artist,
+        )
+    }
+
+    fun organizationGenreOption(
+        genre: String,
+    ): String {
+        require(genre.isNotBlank()) {
+            "organization genre must not be blank"
+        }
+
+        return dynamicRef(
+            ownerRef = OrganizationGenrePrefix,
+            instanceRef = genre,
+        )
+    }
+
+    fun organizationAvailabilityOption(
+        availability: VexStreamTrackAvailability,
+    ): String =
+        dynamicRef(
+            ownerRef = OrganizationAvailabilityPrefix,
+            instanceRef = availability.name,
+        )
 
     private fun trackAction(
         scope: VexStreamTrackPresentationScope,
