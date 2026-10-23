@@ -160,6 +160,90 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
     }
 
     @Test
+    fun rediscoveredVerifiedSharedCopyUsesFreshContentUriLookup() {
+        val instrumentation =
+            InstrumentationRegistry
+                .getInstrumentation()
+        val context =
+            instrumentation.targetContext
+
+        if (
+            Build.VERSION.SDK_INT <=
+            Build.VERSION_CODES.P
+        ) {
+            grantLegacyStoragePermission(
+                instrumentation = instrumentation,
+                packageName = context.packageName,
+            )
+        }
+
+        val bytes =
+            "rediscover durable vexstream device music"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "rediscovery",
+            )
+        val firstStore =
+            VexStreamDeviceMediaStore(
+                context,
+            )
+        val stored =
+            firstStore.store(
+                track = track,
+                input =
+                    ByteArrayInputStream(
+                        bytes,
+                    ),
+            ) as VexStreamMediaStoreResult.Stored
+
+        try {
+            assertEquals(
+                null,
+                VexStreamDeviceMediaStore(
+                    context,
+                ).rediscover(
+                    expectedSha256 =
+                        track.mediaSha256,
+                    expectedByteLength =
+                        track.mediaByteLength + 1L,
+                ),
+            )
+
+            val rediscovered =
+                requireNotNull(
+                    VexStreamDeviceMediaStore(
+                        context,
+                    ).rediscover(
+                        expectedSha256 =
+                            track.mediaSha256,
+                        expectedByteLength =
+                            track.mediaByteLength,
+                    ),
+                )
+
+            assertEquals(
+                stored.localCopy,
+                rediscovered,
+            )
+            assertTrue(
+                VexStreamDeviceMediaStore(
+                    context,
+                ).verify(
+                    rediscovered,
+                ),
+            )
+        } finally {
+            assertTrue(
+                firstStore.remove(
+                    stored.localCopy,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun sharedCopySurvivesPrivateStagingLossAndFreshStoreInstance() {
         assumeTrue(
             Build.VERSION.SDK_INT >=
