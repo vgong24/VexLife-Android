@@ -90,6 +90,60 @@ class VexStreamOfflineCopyTest {
         }
 
     @Test
+    fun deniedDownloadGateLeavesRepositoryTruthUntouched() =
+        runBlocking {
+            val ownerScope =
+                CoroutineScope(
+                    SupervisorJob() +
+                        Dispatchers.Unconfined,
+                )
+            val trackRef =
+                VexStreamTrackRef(
+                    "track.permission-denied",
+                )
+            val repository =
+                InMemoryVexStreamMusicRepository(
+                    initialState =
+                        state(
+                            trackRef,
+                        ),
+                )
+            val connection =
+                VexStreamOfflineCopyConnection(
+                    repository = repository,
+                    scope = ownerScope,
+                    beforeDownload = {
+                        false
+                    },
+                )
+
+            try {
+                connection
+                    .request(
+                        VexStreamOfflineCopyRequest(
+                            trackRef = trackRef,
+                            action =
+                                VexStreamOfflineCopyAction.Download,
+                        ),
+                    )
+                    .join()
+
+                assertTrue(
+                    repository
+                        .state
+                        .value
+                        .track(
+                            trackRef,
+                        )
+                        ?.localCopy ===
+                        VexStreamLocalCopyState.NotDownloaded,
+                )
+            } finally {
+                ownerScope.cancel()
+            }
+        }
+
+    @Test
     fun cancelledOwnerScopeCannotStartAnotherOfflineCopy() =
         runBlocking {
             val ownerScope =
