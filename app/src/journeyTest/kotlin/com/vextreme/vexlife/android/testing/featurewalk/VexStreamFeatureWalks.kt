@@ -26,6 +26,19 @@ object VexStreamFeatureWalkRefs {
         "$DOWNLOAD_COLLECTION_MISSING/P02"
     const val COLLECTION_AVAILABLE_OFFLINE: String =
         "$DOWNLOAD_COLLECTION_MISSING/P03"
+
+    const val LIBRARY_ORGANIZATION: String =
+        "$FEATURE/W02"
+    const val SORT_FILTER_PLAYBACK: String =
+        "$LIBRARY_ORGANIZATION/C01"
+    const val ORGANIZER_REACHABLE: String =
+        "$SORT_FILTER_PLAYBACK/P01"
+    const val FILTERED_MEMBERSHIP: String =
+        "$SORT_FILTER_PLAYBACK/P02"
+    const val FILTERED_PLAYBACK_CONTEXT: String =
+        "$SORT_FILTER_PLAYBACK/P03"
+    const val CLEAR_RESTORES_LIBRARY: String =
+        "$SORT_FILTER_PLAYBACK/P04"
 }
 
 /**
@@ -118,6 +131,55 @@ internal object VexStreamFeatureWalks {
                 ),
         )
 
+    val sortFilterPlayback =
+        VexFeatureWalkCase(
+            ref =
+                VexStreamFeatureWalkRefs.SORT_FILTER_PLAYBACK,
+            key =
+                "sort-filter-playback",
+            title =
+                "Organize the VexStream library before playback",
+            checkpoints =
+                listOf(
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs
+                                .ORGANIZER_REACHABLE,
+                        key =
+                            "organizer-reachable",
+                        title =
+                            "The library exposes one Sort and Filter organization surface",
+                    ),
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs
+                                .FILTERED_MEMBERSHIP,
+                        key =
+                            "filtered-membership",
+                        title =
+                            "Duration and categorical filters narrow the current playable library without admitting unknown duration",
+                    ),
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs
+                                .FILTERED_PLAYBACK_CONTEXT,
+                        key =
+                            "filtered-playback-context",
+                        title =
+                            "Visible rows and library Play or Shuffle use the same filtered listening membership",
+                    ),
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs
+                                .CLEAR_RESTORES_LIBRARY,
+                        key =
+                            "clear-restores-library",
+                        title =
+                            "Clearing filters restores ordinary playable library membership",
+                    ),
+                ),
+        )
+
     val feature =
         VexFeatureWalkFeature(
             featureRef =
@@ -137,6 +199,18 @@ internal object VexStreamFeatureWalks {
                             listOf(
                                 downloadAndRemove,
                                 downloadCollectionMissing,
+                            ),
+                    ),
+                    VexFeatureWalk(
+                        ref =
+                            VexStreamFeatureWalkRefs.LIBRARY_ORGANIZATION,
+                        key =
+                            "library-organization",
+                        title =
+                            "Library organization",
+                        cases =
+                            listOf(
+                                sortFilterPlayback,
                             ),
                     ),
                 ),
