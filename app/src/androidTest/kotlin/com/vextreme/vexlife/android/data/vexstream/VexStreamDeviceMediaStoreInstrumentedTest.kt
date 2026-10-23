@@ -622,36 +622,49 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 .getInstrumentation()
         val context =
             instrumentation.targetContext
-
-        revokeLegacyStoragePermission(
-            instrumentation = instrumentation,
-            packageName = context.packageName,
-        )
-
-        val bytes =
-            "legacy denied device storage"
-                .encodeToByteArray()
-        val track =
-            track(
-                bytes = bytes,
-                suffix = "legacy-denied",
+        val originalPermissions =
+            legacyStoragePermissionState(
+                context,
             )
 
-        assertEquals(
-            VexStreamMediaStoreResult.Rejected(
-                VexStreamMediaStoreRejection
-                    .PERMISSION_REQUIRED,
-            ),
-            VexStreamDeviceMediaStore(
-                context,
-            ).store(
-                track = track,
-                input =
-                    ByteArrayInputStream(
-                        bytes,
-                    ),
-            ),
-        )
+        try {
+            revokeLegacyStoragePermission(
+                instrumentation = instrumentation,
+                packageName = context.packageName,
+            )
+
+            val bytes =
+                "legacy denied device storage"
+                    .encodeToByteArray()
+            val track =
+                track(
+                    bytes = bytes,
+                    suffix = "legacy-denied",
+                )
+
+            assertEquals(
+                VexStreamMediaStoreResult.Rejected(
+                    VexStreamMediaStoreRejection
+                        .PERMISSION_REQUIRED,
+                ),
+                VexStreamDeviceMediaStore(
+                    context,
+                ).store(
+                    track = track,
+                    input =
+                        ByteArrayInputStream(
+                            bytes,
+                        ),
+                ),
+            )
+        } finally {
+            restoreLegacyStoragePermissions(
+                instrumentation = instrumentation,
+                packageName = context.packageName,
+                originalPermissions =
+                    originalPermissions,
+            )
+        }
     }
 
     @Test
@@ -667,96 +680,147 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 .getInstrumentation()
         val context =
             instrumentation.targetContext
-
-        grantLegacyStoragePermission(
-            instrumentation = instrumentation,
-            packageName = context.packageName,
-        )
-        assertEquals(
-            PackageManager.PERMISSION_GRANTED,
-            context.checkSelfPermission(
-                Manifest.permission
-                    .WRITE_EXTERNAL_STORAGE,
-            ),
-        )
-
-        val bytes =
-            "legacy durable vexstream music"
-                .encodeToByteArray()
-        val track =
-            track(
-                bytes = bytes,
-                suffix = "legacy-granted",
-            )
-        val store =
-            VexStreamDeviceMediaStore(
+        val originalPermissions =
+            legacyStoragePermissionState(
                 context,
             )
-        val result =
-            store.store(
-                track = track,
-                input =
-                    ByteArrayInputStream(
-                        bytes,
-                    ),
-            ) as VexStreamMediaStoreResult.Stored
 
         try {
-            assertTrue(
-                store.verify(
-                    result.localCopy,
+            grantLegacyStoragePermission(
+                instrumentation = instrumentation,
+                packageName = context.packageName,
+            )
+            assertEquals(
+                PackageManager.PERMISSION_GRANTED,
+                context.checkSelfPermission(
+                    Manifest.permission
+                        .WRITE_EXTERNAL_STORAGE,
                 ),
             )
 
-            context.contentResolver
-                .query(
-                    android.net.Uri.parse(
-                        result.localCopy.localMediaRef,
-                    ),
-                    arrayOf(
-                        MediaStore.Audio.Media.DATA,
-                        MediaStore.Audio.Media.DISPLAY_NAME,
-                        MediaStore.Audio.Media.MIME_TYPE,
-                    ),
-                    null,
-                    null,
-                    null,
+            val bytes =
+                "legacy durable vexstream music"
+                    .encodeToByteArray()
+            val track =
+                track(
+                    bytes = bytes,
+                    suffix = "legacy-granted",
                 )
-                ?.use { cursor ->
-                    assertTrue(
-                        cursor.moveToFirst(),
+            val store =
+                VexStreamDeviceMediaStore(
+                    context,
+                )
+            val result =
+                store.store(
+                    track = track,
+                    input =
+                        ByteArrayInputStream(
+                            bytes,
+                        ),
+                ) as VexStreamMediaStoreResult.Stored
+
+            try {
+                assertTrue(
+                    store.verify(
+                        result.localCopy,
+                    ),
+                )
+
+                context.contentResolver
+                    .query(
+                        android.net.Uri.parse(
+                            result.localCopy.localMediaRef,
+                        ),
+                        arrayOf(
+                            MediaStore.Audio.Media.DATA,
+                            MediaStore.Audio.Media.DISPLAY_NAME,
+                            MediaStore.Audio.Media.MIME_TYPE,
+                        ),
+                        null,
+                        null,
+                        null,
                     )
-                    val path =
-                        cursor.getString(
-                            cursor.getColumnIndexOrThrow(
-                                MediaStore.Audio.Media.DATA,
+                    ?.use { cursor ->
+                        assertTrue(
+                            cursor.moveToFirst(),
+                        )
+                        val path =
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.DATA,
+                                ),
+                            )
+                        assertTrue(
+                            path.endsWith(
+                                "/Music/VexStream/" +
+                                    track.mediaSha256.value +
+                                    ".mp3",
                             ),
                         )
-                    assertTrue(
-                        path.endsWith(
-                            "/Music/VexStream/" +
-                                track.mediaSha256.value +
-                                ".mp3",
-                        ),
-                    )
-                    assertEquals(
-                        "audio/mpeg",
-                        cursor.getString(
-                            cursor.getColumnIndexOrThrow(
-                                MediaStore.Audio.Media.MIME_TYPE,
+                        assertEquals(
+                            "audio/mpeg",
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.MIME_TYPE,
+                                ),
                             ),
-                        ),
+                        )
+                    }
+                    ?: error(
+                        "legacy MediaStore row was not readable",
                     )
-                }
-                ?: error(
-                    "legacy MediaStore row was not readable",
+            } finally {
+                assertTrue(
+                    store.remove(
+                        result.localCopy,
+                    ),
                 )
+            }
         } finally {
-            assertTrue(
-                store.remove(
-                    result.localCopy,
-                ),
+            restoreLegacyStoragePermissions(
+                instrumentation = instrumentation,
+                packageName = context.packageName,
+                originalPermissions =
+                    originalPermissions,
             )
+        }
+    }
+
+    private fun legacyStoragePermissionState(
+        context: android.content.Context,
+    ): Map<String, Boolean> =
+        listOf(
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        ).associateWith { permission ->
+            context.checkSelfPermission(
+                permission,
+            ) ==
+                PackageManager.PERMISSION_GRANTED
+        }
+
+    private fun restoreLegacyStoragePermissions(
+        instrumentation: android.app.Instrumentation,
+        packageName: String,
+        originalPermissions: Map<String, Boolean>,
+    ) {
+        originalPermissions.forEach {
+                permission,
+                wasGranted,
+            ->
+            instrumentation.uiAutomation
+                .executeShellCommand(
+                    "pm " +
+                        if (wasGranted) {
+                            "grant "
+                        } else {
+                            "revoke "
+                        } +
+                        packageName +
+                        " " +
+                        permission,
+                )
+                .close()
         }
     }
 
