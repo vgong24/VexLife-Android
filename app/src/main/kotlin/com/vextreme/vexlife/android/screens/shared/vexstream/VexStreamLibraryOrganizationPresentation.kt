@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
+import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexColumn
@@ -187,7 +188,6 @@ internal fun VexStreamLibraryOrganizationSheet(
                     ),
             ) {
                 SortButton(
-                    runtime = runtime,
                     handler = actionHandler,
                     element =
                         VexStreamMusicScreen.SortLibraryByTitle,
@@ -196,7 +196,6 @@ internal fun VexStreamLibraryOrganizationSheet(
                             VexStreamLibrarySort.TITLE,
                 )
                 SortButton(
-                    runtime = runtime,
                     handler = actionHandler,
                     element =
                         VexStreamMusicScreen.SortLibraryByArtist,
@@ -205,7 +204,6 @@ internal fun VexStreamLibraryOrganizationSheet(
                             VexStreamLibrarySort.ARTIST,
                 )
                 SortButton(
-                    runtime = runtime,
                     handler = actionHandler,
                     element =
                         VexStreamMusicScreen.SortLibraryByAlbum,
@@ -214,7 +212,6 @@ internal fun VexStreamLibraryOrganizationSheet(
                             VexStreamLibrarySort.ALBUM,
                 )
                 SortButton(
-                    runtime = runtime,
                     handler = actionHandler,
                     element =
                         VexStreamMusicScreen.SortLibraryByYear,
@@ -223,7 +220,6 @@ internal fun VexStreamLibraryOrganizationSheet(
                             VexStreamLibrarySort.YEAR,
                 )
                 SortButton(
-                    runtime = runtime,
                     handler = actionHandler,
                     element =
                         VexStreamMusicScreen
@@ -468,9 +464,8 @@ private fun OrganizationSectionLabel(
 
 @Composable
 private fun SortButton(
-    runtime: VexRuntime,
     handler: ElementActionHandler,
-    element: com.vextreme.vexlife.android.elements.ButtonElement,
+    element: ActionElement,
     selected: Boolean,
 ) {
     VexButton(
@@ -488,7 +483,7 @@ private fun SortButton(
 @Composable
 private fun FilterModeButton(
     handler: ElementActionHandler,
-    element: com.vextreme.vexlife.android.elements.ButtonElement,
+    element: ActionElement,
     selected: Boolean,
 ) {
     VexButton(
