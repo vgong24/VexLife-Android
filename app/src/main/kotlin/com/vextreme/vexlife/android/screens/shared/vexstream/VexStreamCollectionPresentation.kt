@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.ScrollableColumnElement
@@ -100,10 +101,7 @@ internal fun VexStreamAlbumsPane(
                                 ?.track
                                 ?.artist
                                 .orEmpty(),
-                        tracks =
-                            albumTracks.sortedBy {
-                                it.track.title.lowercase()
-                            },
+                        tracks = albumTracks,
                     )
                 }
                 .sortedBy {
@@ -161,10 +159,7 @@ internal fun VexStreamArtistsPane(
                             R.string.vexstream_music_track_count,
                             artistTracks.size,
                         ),
-                    tracks =
-                        artistTracks.sortedBy {
-                            it.track.title.lowercase()
-                        },
+                    tracks = artistTracks,
                 )
             }
             .sortedBy {
@@ -198,6 +193,7 @@ internal fun VexStreamArtistsPane(
 internal fun VexStreamPlaylistsPane(
     runtime: VexRuntime,
     state: VexStreamMusicState,
+    visibleTrackRefs: Set<VexStreamTrackRef>?,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver,
@@ -216,18 +212,29 @@ internal fun VexStreamPlaylistsPane(
     val rows =
         state.playlists
             .map { playlist ->
+                val visibleTracks =
+                    playlist.trackRefs
+                        .mapNotNull(
+                            tracksByRef::get,
+                        )
+                        .filter {
+                            visibleTrackRefs == null ||
+                                it.track.trackRef in
+                                visibleTrackRefs
+                        }
+
                 VexStreamCollectionRow(
                     key =
                         "playlist:" +
                             playlist.playlistRef.value,
                     title = playlist.name,
                     subtitle = sourceLabel,
-                    tracks =
-                        playlist.trackRefs
-                            .mapNotNull(
-                                tracksByRef::get,
-                            ),
+                    tracks = visibleTracks,
                 )
+            }
+            .filter {
+                visibleTrackRefs == null ||
+                    it.tracks.isNotEmpty()
             }
             .sortedBy {
                 it.title.lowercase()
