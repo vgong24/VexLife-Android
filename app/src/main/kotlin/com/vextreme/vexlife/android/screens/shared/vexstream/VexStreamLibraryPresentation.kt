@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
@@ -181,10 +182,6 @@ internal fun VexStreamSongsPane(
             controller = controller,
             resolver = resolver,
         )
-    val sorted =
-        remember(tracks) {
-            tracks.vexStreamSortedSongs()
-        }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -197,7 +194,7 @@ internal fun VexStreamSongsPane(
             )
         }
 
-        if (sorted.isEmpty()) {
+        if (tracks.isEmpty()) {
             item(
                 key = "songs-empty",
             ) {
@@ -210,7 +207,7 @@ internal fun VexStreamSongsPane(
             }
         } else {
             items(
-                items = sorted,
+                items = tracks,
                 key = { it.track.trackRef.value },
             ) { track ->
                 VexStreamTrackCard(
@@ -218,7 +215,7 @@ internal fun VexStreamSongsPane(
                     presentationScope =
                         VexStreamTrackPresentationScope.Songs,
                     state = track,
-                    contextTracks = sorted,
+                    contextTracks = tracks,
                     playbackConnection =
                         trackPlaybackConnection,
                     offlineCopyConnection =
@@ -246,7 +243,10 @@ internal fun VexStreamDownloadsPane(
         )
     val downloaded =
         remember(tracks) {
-            tracks.vexStreamSortedDownloads()
+            tracks.filter {
+                it.localCopy is
+                    VexStreamLocalCopyState.Downloaded
+            }
         }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
