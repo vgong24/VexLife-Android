@@ -42,10 +42,24 @@ sealed interface VexStreamMediaStoreResult {
  * The store never exposes a filesystem path as product identity. Higher layers receive either the
  * legacy opaque private reference or a verified MediaStore content URI owned by the device store.
  */
-class VexStreamMediaStore(
+class VexStreamMediaStore private constructor(
     private val root: File,
-    private val deviceStore: VexStreamDeviceMediaStore? = null,
+    private val deviceStore: VexStreamDeviceMediaStore?,
 ) {
+    constructor(
+        root: File,
+    ) : this(
+        root = root,
+        deviceStore = null,
+    )
+
+    internal constructor(
+        root: File,
+        deviceStore: VexStreamDeviceMediaStore,
+    ) : this(
+        root = root,
+        deviceStore = deviceStore,
+    )
     fun store(
         expectedSha256: VexStreamMediaSha256,
         expectedByteLength: Long,
