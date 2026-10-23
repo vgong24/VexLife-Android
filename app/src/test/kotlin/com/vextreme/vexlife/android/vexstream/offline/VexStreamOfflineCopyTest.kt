@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -90,7 +91,7 @@ class VexStreamOfflineCopyTest {
         }
 
     @Test
-    fun deniedDownloadGateLeavesRepositoryTruthUntouched() =
+    fun permissionHandoffDoesNotStartDownloadUntilGranted() =
         runBlocking {
             val ownerScope =
                 CoroutineScope(
@@ -99,7 +100,7 @@ class VexStreamOfflineCopyTest {
                 )
             val trackRef =
                 VexStreamTrackRef(
-                    "track.permission-denied",
+                    "track.permission-gate",
                 )
             val repository =
                 InMemoryVexStreamMusicRepository(
@@ -108,12 +109,20 @@ class VexStreamOfflineCopyTest {
                             trackRef,
                         ),
                 )
+            var granted =
+                false
+            var retry:
+                (() -> Unit)? =
+                null
             val connection =
                 VexStreamOfflineCopyConnection(
                     repository = repository,
                     scope = ownerScope,
-                    beforeDownload = {
-                        false
+                    canDownload = {
+                        granted
+                    },
+                    requestDownloadPermission = {
+                        retry = it
                     },
                 )
 
@@ -137,6 +146,26 @@ class VexStreamOfflineCopyTest {
                         )
                         ?.localCopy ===
                         VexStreamLocalCopyState.NotDownloaded,
+                )
+                assertNotNull(
+                    retry,
+                )
+
+                granted =
+                    true
+                requireNotNull(
+                    retry,
+                ).invoke()
+
+                assertTrue(
+                    repository
+                        .state
+                        .value
+                        .track(
+                            trackRef,
+                        )
+                        ?.localCopy is
+                        VexStreamLocalCopyState.Downloaded,
                 )
             } finally {
                 ownerScope.cancel()
