@@ -181,6 +181,73 @@ class VexStreamMediaStore private constructor(
                 expectedByteLength = expectedByteLength,
             )
 
+    fun migratePrivateCopy(
+        track: VexStreamTrack,
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): VexStreamMediaStoreResult {
+        val privateDigest =
+            digestFromLocalMediaRef(
+                localCopy.localMediaRef,
+            )
+                ?: return if (
+                    verify(
+                        localCopy,
+                    )
+                ) {
+                    VexStreamMediaStoreResult.Stored(
+                        localCopy,
+                    )
+                } else {
+                    VexStreamMediaStoreResult.Rejected(
+                        VexStreamMediaStoreRejection
+                            .EXISTING_COPY_INVALID,
+                    )
+                }
+
+        if (
+            privateDigest != track.mediaSha256 ||
+            localCopy.mediaSha256 != track.mediaSha256 ||
+            localCopy.byteLength != track.mediaByteLength ||
+            !verify(
+                localCopy,
+            )
+        ) {
+            return VexStreamMediaStoreResult.Rejected(
+                VexStreamMediaStoreRejection
+                    .EXISTING_COPY_INVALID,
+            )
+        }
+
+        val sharedStore =
+            deviceStore
+                ?: return VexStreamMediaStoreResult.Rejected(
+                    VexStreamMediaStoreRejection.IO_FAILURE,
+                )
+
+        val privateFile =
+            finalFile(
+                track.mediaSha256,
+            )
+        val sharedResult =
+            FileInputStream(
+                privateFile,
+            ).use { input ->
+                sharedStore.store(
+                    track = track,
+                    input = input,
+                )
+            }
+
+        if (
+            sharedResult is
+            VexStreamMediaStoreResult.Stored
+        ) {
+            privateFile.delete()
+        }
+
+        return sharedResult
+    }
+
     fun verify(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): Boolean {
