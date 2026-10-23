@@ -272,7 +272,7 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
             "expected vexstream bytes"
                 .encodeToByteArray()
         val actual =
-            "different vexstream bytes"
+            "different vexstream byte"
                 .encodeToByteArray()
         val track =
             track(
@@ -449,7 +449,7 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
     }
 
     @Test
-    fun sameBytesAtDeterministicPathWithWrongMimeAreAConflict() {
+    fun wrongMimeRowRespectsProviderNormalizedDeterministicIdentity() {
         assumeTrue(
             Build.VERSION.SDK_INT >=
                 Build.VERSION_CODES.Q,
@@ -467,6 +467,9 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 bytes = bytes,
                 suffix = "wrong-mime",
             )
+        val expectedDisplayName =
+            track.mediaSha256.value +
+                ".mp3"
         val collection =
             MediaStore.Audio.Media
                 .getContentUri(
@@ -479,8 +482,7 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                     ContentValues().apply {
                         put(
                             MediaStore.Audio.Media.DISPLAY_NAME,
-                            track.mediaSha256.value +
-                                ".mp3",
+                            expectedDisplayName,
                         )
                         put(
                             MediaStore.Audio.Media.RELATIVE_PATH,
@@ -538,49 +540,86 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 ),
             )
 
-            context.contentResolver
-                .query(
-                    uri,
-                    arrayOf(
-                        MediaStore.Audio.Media.MIME_TYPE,
-                    ),
-                    null,
-                    null,
-                    null,
-                )
-                ?.use { cursor ->
-                    assertTrue(
-                        cursor.moveToFirst(),
-                    )
-                    assertEquals(
-                        "audio/flac",
-                        cursor.getString(
-                            cursor.getColumnIndexOrThrow(
-                                MediaStore.Audio.Media.MIME_TYPE,
-                            ),
+            val providerIdentity =
+                context.contentResolver
+                    .query(
+                        uri,
+                        arrayOf(
+                            MediaStore.Audio.Media.DISPLAY_NAME,
+                            MediaStore.Audio.Media.MIME_TYPE,
                         ),
+                        null,
+                        null,
+                        null,
                     )
-                }
-                ?: error(
-                    "wrong-MIME conflict row was not readable",
-                )
+                    ?.use { cursor ->
+                        assertTrue(
+                            cursor.moveToFirst(),
+                        )
+                        Pair(
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.DISPLAY_NAME,
+                                ),
+                            ),
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.MIME_TYPE,
+                                ),
+                            ),
+                        )
+                    }
+                    ?: error(
+                        "wrong-MIME row was not readable",
+                    )
 
             assertEquals(
-                VexStreamMediaStoreResult.Rejected(
-                    VexStreamMediaStoreRejection
-                        .SHARED_COPY_CONFLICT,
-                ),
+                "audio/flac",
+                providerIdentity.second,
+            )
+
+            val store =
                 VexStreamDeviceMediaStore(
                     context,
-                ).store(
+                )
+            val storeResult =
+                store.store(
                     track = track,
                     input =
                         ByteArrayInputStream(
-                            "unused input after conflict"
-                                .encodeToByteArray(),
+                            bytes,
                         ),
-                ),
-            )
+                )
+
+            if (
+                providerIdentity.first ==
+                expectedDisplayName
+            ) {
+                assertEquals(
+                    VexStreamMediaStoreResult.Rejected(
+                        VexStreamMediaStoreRejection
+                            .SHARED_COPY_CONFLICT,
+                    ),
+                    storeResult,
+                )
+            } else {
+                val stored =
+                    storeResult
+                        as? VexStreamMediaStoreResult.Stored
+                        ?: error(
+                            "provider-renamed wrong-MIME row must not block the deterministic MP3",
+                        )
+                assertTrue(
+                    store.verify(
+                        stored.localCopy,
+                    ),
+                )
+                assertTrue(
+                    store.remove(
+                        stored.localCopy,
+                    ),
+                )
+            }
 
             context.contentResolver
                 .query(
@@ -594,12 +633,12 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 )
                 ?.use { cursor ->
                     assertTrue(
-                        "conflicting row must remain untouched",
+                        "provider-created row must remain untouched",
                         cursor.moveToFirst(),
                     )
                 }
                 ?: error(
-                    "conflicting row disappeared",
+                    "provider-created row disappeared",
                 )
         } finally {
             context.contentResolver.delete(
