@@ -860,6 +860,87 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
     }
 
     @Test
+    fun legacyDeniedMigrationPreservesVerifiedPrivateCopy() {
+        assumeTrue(
+            Build.VERSION.SDK_INT <=
+                Build.VERSION_CODES.P,
+        )
+
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        assumeTrue(
+            "legacy migration denial proof requires the fresh disposable target to begin with WRITE_EXTERNAL_STORAGE denied",
+            context.checkSelfPermission(
+                Manifest.permission
+                    .WRITE_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED,
+        )
+
+        val bytes =
+            "legacy denied migration private copy"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "legacy-migration-denied",
+            )
+        val privateRoot =
+            File(
+                context.cacheDir,
+                "vexstream-private-migration-denied/" +
+                    System.nanoTime(),
+            )
+        val privateStore =
+            VexStreamMediaStore(
+                privateRoot,
+            )
+        val privateCopy =
+            (
+                privateStore.store(
+                    expectedSha256 =
+                        track.mediaSha256,
+                    expectedByteLength =
+                        track.mediaByteLength,
+                    input =
+                        ByteArrayInputStream(
+                            bytes,
+                        ),
+                ) as VexStreamMediaStoreResult.Stored
+            ).localCopy
+
+        try {
+            val migrationStore =
+                VexStreamMediaStore(
+                    root = privateRoot,
+                    deviceStore =
+                        VexStreamDeviceMediaStore(
+                            context,
+                        ),
+                )
+
+            assertEquals(
+                VexStreamMediaStoreResult.Rejected(
+                    VexStreamMediaStoreRejection
+                        .PERMISSION_REQUIRED,
+                ),
+                migrationStore.migratePrivateCopy(
+                    track = track,
+                    localCopy = privateCopy,
+                ),
+            )
+            assertTrue(
+                privateStore.verify(
+                    privateCopy,
+                ),
+            )
+        } finally {
+            privateRoot.deleteRecursively()
+        }
+    }
+
+    @Test
     fun legacyDeniedPermissionFailsBeforeSharedWrite() {
         assumeTrue(
             Build.VERSION.SDK_INT <=
