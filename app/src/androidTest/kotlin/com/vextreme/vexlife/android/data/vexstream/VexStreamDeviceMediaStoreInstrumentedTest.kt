@@ -160,6 +160,128 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
     }
 
     @Test
+    fun migratedPrivateCopyPublishesDurablyWithoutRedownload() {
+        val instrumentation =
+            InstrumentationRegistry
+                .getInstrumentation()
+        val context =
+            instrumentation.targetContext
+
+        if (
+            Build.VERSION.SDK_INT <=
+            Build.VERSION_CODES.P
+        ) {
+            grantLegacyStoragePermission(
+                instrumentation = instrumentation,
+                packageName = context.packageName,
+            )
+        }
+
+        val bytes =
+            "migrate verified private vexstream music"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "migration",
+            )
+        val privateRoot =
+            File(
+                context.cacheDir,
+                "vexstream-private-migration-proof/" +
+                    System.nanoTime(),
+            )
+        val privateStore =
+            VexStreamMediaStore(
+                privateRoot,
+            )
+        val privateCopy =
+            (
+                privateStore.store(
+                    expectedSha256 =
+                        track.mediaSha256,
+                    expectedByteLength =
+                        track.mediaByteLength,
+                    input =
+                        ByteArrayInputStream(
+                            bytes,
+                        ),
+                ) as VexStreamMediaStoreResult.Stored
+            ).localCopy
+
+        val migrationStore =
+            VexStreamMediaStore(
+                root = privateRoot,
+                deviceStore =
+                    VexStreamDeviceMediaStore(
+                        context,
+                    ),
+            )
+
+        try {
+            assertEquals(
+                VexStreamMediaStoreResult.Rejected(
+                    VexStreamMediaStoreRejection
+                        .EXISTING_COPY_INVALID,
+                ),
+                migrationStore.migratePrivateCopy(
+                    track =
+                        track.copy(
+                            mediaByteLength =
+                                track.mediaByteLength + 1L,
+                        ),
+                    localCopy =
+                        privateCopy,
+                ),
+            )
+            assertTrue(
+                privateStore.verify(
+                    privateCopy,
+                ),
+            )
+
+            val migrated =
+                migrationStore.migratePrivateCopy(
+                    track = track,
+                    localCopy = privateCopy,
+                ) as VexStreamMediaStoreResult.Stored
+
+            assertTrue(
+                migrated.localCopy.localMediaRef
+                    .startsWith(
+                        "content://",
+                    ),
+            )
+            assertTrue(
+                migrationStore.verify(
+                    migrated.localCopy,
+                ),
+            )
+            assertFalse(
+                privateStore.verify(
+                    privateCopy,
+                ),
+            )
+            migrationStore.open(
+                migrated.localCopy,
+            ).use { input ->
+                assertArrayEquals(
+                    bytes,
+                    input.readBytes(),
+                )
+            }
+
+            assertTrue(
+                migrationStore.remove(
+                    migrated.localCopy,
+                ),
+            )
+        } finally {
+            privateRoot.deleteRecursively()
+        }
+    }
+
+    @Test
     fun rediscoveredVerifiedSharedCopyUsesFreshContentUriLookup() {
         val instrumentation =
             InstrumentationRegistry
