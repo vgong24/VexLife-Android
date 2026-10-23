@@ -25,6 +25,8 @@ WHAT MUSIC IS KNOWN?
 
 WHERE CAN MEDIA COME FROM?
     verified local copy
+      -> durable Android MediaStore content URI when device publication succeeded
+      -> legacy app-private copy only where current migration/compatibility truth still requires it
     paired VexStream desktop
     admitted remote routes
     -> repository/source-resolution/network owners
@@ -76,7 +78,8 @@ WHAT PROVES THE HUMAN WALK?
 ~~~text
 data/vexstream/
     catalog/library/source/offline/pairing truth and repositories
-    README.md preserves producer/consumer and security boundaries
+    verified private staging -> durable Android MediaStore publication
+    README.md preserves producer/consumer, storage and security boundaries
 
 vexstream/playback/
     human questions: Play / Pause + where should current media continue from?
@@ -146,11 +149,31 @@ rendered album / artist collection / playlist
 -> VexStreamOfflineCopyConnection cheaply skips already-invalid current targets
 -> repository downloadForOffline(...) re-checks exact media identity at serialized admission
 -> sequential copy attempt
--> repository observation changes local-copy truth
+-> exact bytes cross private integrity staging
+-> durable Android MediaStore publication + re-verification
+-> repository observation changes local-copy truth to the verified content:// ref
 -> collection plan/projection derives again
 ~~~
 
 This is deliberately one-shot. It does not yet mean "keep this collection synchronized forever."
+
+Current durable-device-storage distinction:
+
+```text
+DOWNLOAD COMPLETE
+= exact bytes verified
++ durable MediaStore object published/re-opened/verified
++ repository local-copy truth updated
+
+DOWNLOAD COMPLETE
+!= rediscovery after app-data loss
+!= migration of pre-existing private copies
+!= destructive Clear Data acceptance
+```
+
+API 24-28 requests the bounded legacy shared-storage permission only when a Download/Download missing
+request actually needs it. Denial starts no repository download. API 29+ uses scoped MediaStore
+publication without broad shared-storage permission.
 
 Held until independently earned:
 
@@ -159,7 +182,7 @@ persistent Keep available offline intention
 durable collection identity for album-like groupings
 background / process-death resumption
 whole-library download policy
-storage/free-space admission
+storage/free-space admission beyond the current per-object publication failure boundary
 bounded parallel transfer policy
 multi-select / mass removal
 ~~~

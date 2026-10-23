@@ -1,0 +1,704 @@
+package com.vextreme.vexlife.android.data.vexstream
+
+import android.Manifest
+import android.content.ContentResolver
+import android.content.ContentUris
+import android.content.ContentValues
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import androidx.core.content.ContextCompat
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.security.MessageDigest
+
+/**
+ * Android-native durable owner for VexStream audio that belongs in the device music library.
+ *
+ * Product identity remains [VexStreamMediaSha256] + exact byte length. MediaStore row IDs and
+ * content URIs are storage addresses only.
+ *
+ * Android 10+ writes through a pending MediaStore row and publishes only after the stored bytes are
+ * re-opened and verified. Android 7-9 uses the same MediaStore audio collection but requires the
+ * legacy storage permission and an exact public Music/VexStream path.
+ */
+internal class VexStreamDeviceMediaStore(
+    context: Context,
+) {
+    private val appContext =
+        context.applicationContext
+    private val contentResolver =
+        appContext.contentResolver
+
+    fun store(
+        track: VexStreamTrack,
+        input: InputStream,
+    ): VexStreamMediaStoreResult {
+        if (
+            Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
+            ContextCompat.checkSelfPermission(
+                appContext,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return VexStreamMediaStoreResult.Rejected(
+                VexStreamMediaStoreRejection.PERMISSION_REQUIRED,
+            )
+        }
+
+        return try {
+            val existing =
+                existingRow(
+                    track.mediaSha256,
+                )
+
+            if (existing != null) {
+                if (
+                    !isOwnedUri(
+                        uri = existing.uri,
+                        digest = track.mediaSha256,
+                    )
+                ) {
+                    return VexStreamMediaStoreResult.Rejected(
+                        VexStreamMediaStoreRejection.SHARED_COPY_CONFLICT,
+                    )
+                }
+
+                if (existing.pending) {
+                    if (contentResolver.delete(existing.uri, null, null) <= 0) {
+                        return VexStreamMediaStoreResult.Rejected(
+                            VexStreamMediaStoreRejection.IO_FAILURE,
+                        )
+                    }
+                } else {
+                    return if (
+                        verifyUri(
+                            uri = existing.uri,
+                            expectedSha256 = track.mediaSha256,
+                            expectedByteLength = track.mediaByteLength,
+                        ) == null
+                    ) {
+                        VexStreamMediaStoreResult.Stored(
+                            downloadedState(
+                                track = track,
+                                uri = existing.uri,
+                            ),
+                        )
+                    } else {
+                        VexStreamMediaStoreResult.Rejected(
+                            VexStreamMediaStoreRejection.SHARED_COPY_CONFLICT,
+                        )
+                    }
+                }
+            }
+
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                val parent =
+                    legacyFile(track.mediaSha256)
+                        .parentFile
+                if (
+                    parent != null &&
+                    !parent.isDirectory &&
+                    !parent.mkdirs()
+                ) {
+                    return VexStreamMediaStoreResult.Rejected(
+                        VexStreamMediaStoreRejection.IO_FAILURE,
+                    )
+                }
+            }
+
+            val uri =
+                contentResolver.insert(
+                    audioCollection(),
+                    contentValues(track),
+                )
+                    ?: return VexStreamMediaStoreResult.Rejected(
+                        VexStreamMediaStoreRejection.IO_FAILURE,
+                    )
+
+            val writeFailure =
+                writeAndVerify(
+                    uri = uri,
+                    expectedSha256 = track.mediaSha256,
+                    expectedByteLength = track.mediaByteLength,
+                    input = input,
+                )
+
+            if (writeFailure != null) {
+                contentResolver.delete(uri, null, null)
+                return VexStreamMediaStoreResult.Rejected(
+                    writeFailure,
+                )
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val publishValues =
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Audio.Media.IS_PENDING,
+                            0,
+                        )
+                    }
+                if (
+                    contentResolver.update(
+                        uri,
+                        publishValues,
+                        null,
+                        null,
+                    ) != 1
+                ) {
+                    contentResolver.delete(uri, null, null)
+                    return VexStreamMediaStoreResult.Rejected(
+                        VexStreamMediaStoreRejection.IO_FAILURE,
+                    )
+                }
+            }
+
+            VexStreamMediaStoreResult.Stored(
+                downloadedState(
+                    track = track,
+                    uri = uri,
+                ),
+            )
+        } catch (_: Exception) {
+            VexStreamMediaStoreResult.Rejected(
+                VexStreamMediaStoreRejection.IO_FAILURE,
+            )
+        }
+    }
+
+    fun verify(
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): Boolean {
+        val uri =
+            localCopy.contentUri()
+                ?: return false
+
+        if (
+            !isOwnedUri(
+                uri = uri,
+                digest = localCopy.mediaSha256,
+            )
+        ) {
+            return false
+        }
+
+        return verifyUri(
+            uri = uri,
+            expectedSha256 = localCopy.mediaSha256,
+            expectedByteLength = localCopy.byteLength,
+        ) == null
+    }
+
+    fun open(
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): InputStream {
+        val uri =
+            localCopy.contentUri()
+                ?: error("VexStream shared media reference is not a content URI")
+
+        check(
+            verify(localCopy),
+        ) {
+            "VexStream shared media copy is missing or failed verification"
+        }
+
+        return requireNotNull(
+            contentResolver.openInputStream(uri),
+        ) {
+            "VexStream shared media is unavailable"
+        }
+    }
+
+    fun playbackUri(
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): String? =
+        if (verify(localCopy)) {
+            localCopy.localMediaRef
+        } else {
+            null
+        }
+
+    fun remove(
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): Boolean {
+        val uri =
+            localCopy.contentUri()
+                ?: return false
+
+        return try {
+            if (
+                !isOwnedUri(
+                    uri = uri,
+                    digest = localCopy.mediaSha256,
+                )
+            ) {
+                false
+            } else {
+                contentResolver.delete(
+                    uri,
+                    null,
+                    null,
+                ) > 0
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun writeAndVerify(
+        uri: Uri,
+        expectedSha256: VexStreamMediaSha256,
+        expectedByteLength: Long,
+        input: InputStream,
+    ): VexStreamMediaStoreRejection? {
+        val digest =
+            MessageDigest.getInstance(
+                "SHA-256",
+            )
+        var byteCount = 0L
+
+        val descriptor =
+            contentResolver.openFileDescriptor(
+                uri,
+                "w",
+            )
+                ?: return VexStreamMediaStoreRejection.IO_FAILURE
+
+        descriptor.use { parcelFileDescriptor ->
+            FileOutputStream(
+                parcelFileDescriptor.fileDescriptor,
+            ).use { output ->
+                val buffer =
+                    ByteArray(
+                        DEFAULT_BUFFER_SIZE,
+                    )
+
+                while (true) {
+                    val read =
+                        input.read(
+                            buffer,
+                        )
+                    if (read < 0) {
+                        break
+                    }
+
+                    byteCount +=
+                        read.toLong()
+                    if (
+                        byteCount >
+                        expectedByteLength
+                    ) {
+                        return VexStreamMediaStoreRejection.LENGTH_MISMATCH
+                    }
+
+                    digest.update(
+                        buffer,
+                        0,
+                        read,
+                    )
+                    output.write(
+                        buffer,
+                        0,
+                        read,
+                    )
+                }
+
+                output.flush()
+                output.fd.sync()
+            }
+        }
+
+        if (
+            byteCount !=
+            expectedByteLength
+        ) {
+            return VexStreamMediaStoreRejection.LENGTH_MISMATCH
+        }
+
+        if (
+            digest.digest().toHex() !=
+            expectedSha256.value
+        ) {
+            return VexStreamMediaStoreRejection.DIGEST_MISMATCH
+        }
+
+        return verifyUri(
+            uri = uri,
+            expectedSha256 = expectedSha256,
+            expectedByteLength = expectedByteLength,
+        )
+    }
+
+    private fun verifyUri(
+        uri: Uri,
+        expectedSha256: VexStreamMediaSha256,
+        expectedByteLength: Long,
+    ): VexStreamMediaStoreRejection? =
+        try {
+            val input =
+                contentResolver.openInputStream(uri)
+                    ?: return VexStreamMediaStoreRejection.IO_FAILURE
+            val digest =
+                MessageDigest.getInstance(
+                    "SHA-256",
+                )
+            var byteCount = 0L
+
+            input.use {
+                val buffer =
+                    ByteArray(
+                        DEFAULT_BUFFER_SIZE,
+                    )
+                while (true) {
+                    val read =
+                        it.read(buffer)
+                    if (read < 0) {
+                        break
+                    }
+                    byteCount +=
+                        read.toLong()
+                    if (
+                        byteCount >
+                        expectedByteLength
+                    ) {
+                        return VexStreamMediaStoreRejection.LENGTH_MISMATCH
+                    }
+                    digest.update(
+                        buffer,
+                        0,
+                        read,
+                    )
+                }
+            }
+
+            when {
+                byteCount != expectedByteLength ->
+                    VexStreamMediaStoreRejection.LENGTH_MISMATCH
+
+                digest.digest().toHex() != expectedSha256.value ->
+                    VexStreamMediaStoreRejection.DIGEST_MISMATCH
+
+                else ->
+                    null
+            }
+        } catch (_: Exception) {
+            VexStreamMediaStoreRejection.IO_FAILURE
+        }
+
+    private fun isOwnedUri(
+        uri: Uri,
+        digest: VexStreamMediaSha256,
+    ): Boolean {
+        val projection =
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
+                arrayOf(
+                    MediaStore.Audio.Media.DISPLAY_NAME,
+                    MediaStore.Audio.Media.RELATIVE_PATH,
+                    MediaStore.Audio.Media.MIME_TYPE,
+                )
+            } else {
+                arrayOf(
+                    MediaStore.Audio.Media.DISPLAY_NAME,
+                    MediaStore.Audio.Media.DATA,
+                    MediaStore.Audio.Media.MIME_TYPE,
+                )
+            }
+
+        return try {
+            contentResolver.query(
+                uri,
+                projection,
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) {
+                    false
+                } else {
+                    val name =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.DISPLAY_NAME,
+                            ),
+                        )
+                    val mime =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.MIME_TYPE,
+                            ),
+                        )
+                    val locationMatches =
+                        if (
+                            Build.VERSION.SDK_INT >=
+                            Build.VERSION_CODES.Q
+                        ) {
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.RELATIVE_PATH,
+                                ),
+                            ) == RELATIVE_PATH
+                        } else {
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.DATA,
+                                ),
+                            ) ==
+                                legacyFile(
+                                    digest,
+                                ).absolutePath
+                        }
+
+                    name ==
+                        displayName(
+                            digest,
+                        ) &&
+                        mime == MIME_TYPE &&
+                        locationMatches
+                }
+            } ?: false
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun existingRow(
+        digest: VexStreamMediaSha256,
+    ): ExistingRow? {
+        val projection =
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
+                arrayOf(
+                    MediaStore.Audio.Media._ID,
+                    MediaStore.Audio.Media.IS_PENDING,
+                )
+            } else {
+                arrayOf(
+                    MediaStore.Audio.Media._ID,
+                )
+            }
+
+        val selection: String
+        val arguments: Array<String>
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.Q
+        ) {
+            selection =
+                MediaStore.Audio.Media.DISPLAY_NAME +
+                    " = ? AND " +
+                    MediaStore.Audio.Media.RELATIVE_PATH +
+                    " = ?"
+            arguments =
+                arrayOf(
+                    displayName(digest),
+                    RELATIVE_PATH,
+                )
+        } else {
+            selection =
+                MediaStore.Audio.Media.DATA +
+                    " = ?"
+            arguments =
+                arrayOf(
+                    legacyFile(digest)
+                        .absolutePath,
+                )
+        }
+
+        contentResolver.query(
+            audioCollection(),
+            projection,
+            selection,
+            arguments,
+            null,
+        )?.use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return null
+            }
+
+            val id =
+                cursor.getLong(
+                    cursor.getColumnIndexOrThrow(
+                        MediaStore.Audio.Media._ID,
+                    ),
+                )
+            val pending =
+                Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.Q &&
+                    cursor.getInt(
+                        cursor.getColumnIndexOrThrow(
+                            MediaStore.Audio.Media.IS_PENDING,
+                        ),
+                    ) != 0
+
+            return ExistingRow(
+                uri =
+                    ContentUris.withAppendedId(
+                        audioCollection(),
+                        id,
+                    ),
+                pending = pending,
+            )
+        }
+
+        return null
+    }
+
+    private fun contentValues(
+        track: VexStreamTrack,
+    ): ContentValues =
+        ContentValues().apply {
+            put(
+                MediaStore.Audio.Media.DISPLAY_NAME,
+                displayName(track.mediaSha256),
+            )
+            put(
+                MediaStore.Audio.Media.MIME_TYPE,
+                MIME_TYPE,
+            )
+            put(
+                MediaStore.Audio.Media.TITLE,
+                sanitizeMetadata(track.title),
+            )
+            put(
+                MediaStore.Audio.Media.ARTIST,
+                sanitizeMetadata(track.artist),
+            )
+            put(
+                MediaStore.Audio.Media.ALBUM,
+                sanitizeMetadata(track.album),
+            )
+            put(
+                MediaStore.Audio.Media.IS_MUSIC,
+                1,
+            )
+
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
+                put(
+                    MediaStore.Audio.Media.RELATIVE_PATH,
+                    RELATIVE_PATH,
+                )
+                put(
+                    MediaStore.Audio.Media.IS_PENDING,
+                    1,
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                put(
+                    MediaStore.Audio.Media.DATA,
+                    legacyFile(
+                        track.mediaSha256,
+                    ).absolutePath,
+                )
+            }
+        }
+
+    private fun audioCollection(): Uri =
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.Q
+        ) {
+            MediaStore.Audio.Media.getContentUri(
+                MediaStore.VOLUME_EXTERNAL_PRIMARY,
+            )
+        } else {
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        }
+
+    @Suppress("DEPRECATION")
+    private fun legacyFile(
+        digest: VexStreamMediaSha256,
+    ): File =
+        File(
+            File(
+                Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_MUSIC,
+                ),
+                DIRECTORY_NAME,
+            ),
+            displayName(digest),
+        )
+
+    private fun downloadedState(
+        track: VexStreamTrack,
+        uri: Uri,
+    ): VexStreamLocalCopyState.Downloaded =
+        VexStreamLocalCopyState.Downloaded(
+            mediaSha256 =
+                track.mediaSha256,
+            byteLength =
+                track.mediaByteLength,
+            localMediaRef =
+                uri.toString(),
+        )
+
+    private fun VexStreamLocalCopyState.Downloaded.contentUri(): Uri? =
+        runCatching {
+            Uri.parse(
+                localMediaRef,
+            )
+        }.getOrNull()
+            ?.takeIf {
+                it.scheme ==
+                    ContentResolver.SCHEME_CONTENT
+            }
+
+    private fun displayName(
+        digest: VexStreamMediaSha256,
+    ): String =
+        digest.value +
+            MEDIA_EXTENSION
+
+    private fun sanitizeMetadata(
+        value: String,
+    ): String =
+        value
+            .filterNot {
+                it.isISOControl()
+            }
+            .trim()
+            .take(
+                MAX_METADATA_LENGTH,
+            )
+
+    private fun ByteArray.toHex(): String =
+        joinToString(
+            separator = "",
+        ) { byte ->
+            "%02x".format(
+                byte,
+            )
+        }
+
+    private data class ExistingRow(
+        val uri: Uri,
+        val pending: Boolean,
+    )
+
+    companion object {
+        private const val DIRECTORY_NAME =
+            "VexStream"
+        private const val RELATIVE_PATH =
+            "Music/VexStream/"
+        private const val MEDIA_EXTENSION =
+            ".mp3"
+        private const val MIME_TYPE =
+            "audio/mpeg"
+        private const val MAX_METADATA_LENGTH =
+            512
+    }
+}
+
+// [VXG RealForever]

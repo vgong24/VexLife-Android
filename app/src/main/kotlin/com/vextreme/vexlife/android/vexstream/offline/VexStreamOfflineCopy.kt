@@ -1,12 +1,21 @@
 package com.vextreme.vexlife.android.vexstream.offline
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal enum class VexStreamOfflineCopyAction {
@@ -38,11 +47,34 @@ internal data class VexStreamOfflineCopyRequest(
 internal class VexStreamOfflineCopyConnection(
     private val repository: VexStreamMusicRepository,
     private val scope: CoroutineScope,
+    private val canDownload: () -> Boolean = { true },
+    private val requestDownloadPermission: (((() -> Unit)) -> Unit)? = null,
 ) {
     fun request(
         request: VexStreamOfflineCopyRequest,
-    ): Job =
-        scope.launch {
+    ): Job {
+        if (
+            request.action ==
+            VexStreamOfflineCopyAction.Download &&
+            !canDownload()
+        ) {
+            if (scope.isActive) {
+                requestDownloadPermission
+                    ?.invoke {
+                        if (scope.isActive) {
+                            request(
+                                request,
+                            )
+                        }
+                    }
+            }
+
+            return scope.launch {
+                // Permission handoff is intentionally not a hidden session-scoped wait.
+            }
+        }
+
+        return scope.launch {
             when (
                 request.action
             ) {
@@ -61,11 +93,32 @@ internal class VexStreamOfflineCopyConnection(
                     )
             }
         }
+    }
 
     fun request(
         request: VexStreamOfflineCollectionRequest,
-    ): Job =
-        scope.launch {
+    ): Job {
+        if (
+            request.targets.isNotEmpty() &&
+            !canDownload()
+        ) {
+            if (scope.isActive) {
+                requestDownloadPermission
+                    ?.invoke {
+                        if (scope.isActive) {
+                            request(
+                                request,
+                            )
+                        }
+                    }
+            }
+
+            return scope.launch {
+                // Permission handoff is intentionally not a hidden session-scoped wait.
+            }
+        }
+
+        return scope.launch {
             request.targets.forEach { target ->
                 val current =
                     repository
@@ -92,21 +145,98 @@ internal class VexStreamOfflineCopyConnection(
                 )
             }
         }
+    }
 }
 
 @Composable
 internal fun rememberVexStreamOfflineCopyConnection(
     repository: VexStreamMusicRepository,
     scope: CoroutineScope,
-): VexStreamOfflineCopyConnection =
-    remember(
+): VexStreamOfflineCopyConnection {
+    val context =
+        LocalContext.current
+    val pendingRetry =
+        remember {
+            mutableStateOf<
+                (() -> Unit)?
+            >(
+                null,
+            )
+        }
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .RequestMultiplePermissions(),
+        ) {
+                grants,
+            ->
+            val granted =
+                LEGACY_STORAGE_PERMISSIONS
+                    .all { permission ->
+                        grants[permission] == true ||
+                            ContextCompat
+                                .checkSelfPermission(
+                                    context,
+                                    permission,
+                                ) ==
+                            PackageManager
+                                .PERMISSION_GRANTED
+                    }
+            val retry =
+                pendingRetry.value
+            pendingRetry.value =
+                null
+
+            if (granted) {
+                retry?.invoke()
+            }
+        }
+
+    return remember(
         repository,
         scope,
+        context,
+        permissionLauncher,
     ) {
         VexStreamOfflineCopyConnection(
             repository = repository,
             scope = scope,
+            canDownload = {
+                Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.Q ||
+                    LEGACY_STORAGE_PERMISSIONS
+                        .all { permission ->
+                            ContextCompat
+                                .checkSelfPermission(
+                                    context,
+                                    permission,
+                                ) ==
+                            PackageManager
+                                .PERMISSION_GRANTED
+                        }
+            },
+            requestDownloadPermission = {
+                    retry,
+                ->
+                if (
+                    pendingRetry.value ==
+                    null
+                ) {
+                    pendingRetry.value =
+                        retry
+                    permissionLauncher.launch(
+                        LEGACY_STORAGE_PERMISSIONS,
+                    )
+                }
+            },
         )
     }
+}
+
+private val LEGACY_STORAGE_PERMISSIONS =
+    arrayOf(
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+    )
 
 // [VXG RealForever]

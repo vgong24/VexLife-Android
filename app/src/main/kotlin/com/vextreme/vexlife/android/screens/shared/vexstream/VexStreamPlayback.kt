@@ -22,7 +22,7 @@ internal class VexStreamPlaybackSourceResolver(
     VexStreamTrackMediaItemResolver {
     private val mediaStore =
         VexStreamMediaStore.production(
-            contextFilesDir = context.filesDir,
+            context = context,
         )
 
     override fun mediaItem(
@@ -33,8 +33,22 @@ internal class VexStreamPlaybackSourceResolver(
 
         val uri =
             localCopy
-                ?.let(mediaStore::fileForPlayback)
-                ?.let(Uri::fromFile)
+                ?.let { copy ->
+                    mediaStore
+                        .fileForPlayback(
+                            copy,
+                        )
+                        ?.let(
+                            Uri::fromFile,
+                        )
+                        ?: mediaStore
+                            .contentUriForPlayback(
+                                copy,
+                            )
+                            ?.let(
+                                Uri::parse,
+                            )
+                }
                 ?: if (state.hubAvailable) {
                     Uri.Builder()
                         .scheme("vexstream")

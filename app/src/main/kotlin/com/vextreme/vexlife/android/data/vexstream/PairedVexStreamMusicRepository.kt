@@ -935,6 +935,8 @@ class PairedVexStreamMusicRepository(
                             expectedByteLength =
                                 target.track.mediaByteLength,
                             input = it,
+                            track =
+                                target.track,
                         )
                     }
 
@@ -1385,7 +1387,7 @@ class PairedVexStreamMusicRepository(
         ): PairedVexStreamMusicRepository {
             val mediaStore =
                 VexStreamMediaStore.production(
-                    contextFilesDir = context.filesDir,
+                    context = context,
                 )
 
             return PairedVexStreamMusicRepository(
