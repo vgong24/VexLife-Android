@@ -171,6 +171,16 @@ class VexStreamMediaStore private constructor(
         }
     }
 
+    fun rediscoverDeviceCopy(
+        expectedSha256: VexStreamMediaSha256,
+        expectedByteLength: Long,
+    ): VexStreamLocalCopyState.Downloaded? =
+        deviceStore
+            ?.rediscover(
+                expectedSha256 = expectedSha256,
+                expectedByteLength = expectedByteLength,
+            )
+
     fun verify(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): Boolean {
