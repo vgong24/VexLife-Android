@@ -57,6 +57,17 @@ internal class VexStreamDeviceMediaStore(
                 )
 
             if (existing != null) {
+                if (
+                    !isOwnedUri(
+                        uri = existing.uri,
+                        digest = track.mediaSha256,
+                    )
+                ) {
+                    return VexStreamMediaStoreResult.Rejected(
+                        VexStreamMediaStoreRejection.SHARED_COPY_CONFLICT,
+                    )
+                }
+
                 if (existing.pending) {
                     if (contentResolver.delete(existing.uri, null, null) <= 0) {
                         return VexStreamMediaStoreResult.Rejected(
