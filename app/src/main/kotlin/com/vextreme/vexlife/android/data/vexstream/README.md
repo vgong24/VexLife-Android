@@ -140,9 +140,17 @@ boundary and leaves repository truth untouched when permission is denied.
 ```text
 MEDIASTORE_URI = STORAGE ADDRESS
 MEDIA_SHA256 + BYTE_LENGTH = PORTABLE MEDIA IDENTITY
-SHARED_DEVICE_STORAGE != REDISCOVERY_COMPLETE
-SHARED_DEVICE_STORAGE != CLEAR_DATA_ACCEPTED
+TRACK_REF = CURRENT HUB ADDRESS
+REDISCOVERED_SHARED_COPY + CURRENT_CATALOG -> CURRENT TRACK + LOCAL COPY
+REDISCOVERY != CLEAR_DATA_ACCEPTED
 ```
+
+The current rediscovery candidate never reconstructs `trackRef` from a filename. On catalog refresh,
+the repository asks the durable device store for the deterministic row matching each current
+`mediaSha256 + mediaByteLength`, requires the exact VexStream path/name/MIME contract, rejects
+pending rows, re-opens and verifies the bytes, and only then hands the resulting `content://` copy
+into the existing digest-based catalog merge. A changed path-derived Hub ref therefore follows the
+same verified bytes without making the old ref portable identity.
 
 Higher layers still consume `localMediaRef` opaquely. Playback re-verifies the retained row and uses
 its `content://` URI; filesystem paths remain implementation detail.
