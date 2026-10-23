@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.testing.featurewalk
 
 import com.vextreme.vexlife.android.conversation.vexConversationFeatureWalkProofBacklinks
 import com.vextreme.vexlife.android.screens.shared.maps.vexMapsFeatureWalkProofBacklinks
+import com.vextreme.vexlife.android.screens.shared.vexstream.vexStreamFeatureWalkProofBacklinks
 import com.vextreme.vexlife.android.testing.journey.VexJourney
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
 import com.vextreme.vexlife.android.testing.journey.VexJourneyShard
@@ -17,7 +18,8 @@ import org.junit.Test
 class VexFeatureWalkContractTest {
     private val proofBacklinks =
         vexConversationFeatureWalkProofBacklinks +
-            vexMapsFeatureWalkProofBacklinks
+            vexMapsFeatureWalkProofBacklinks +
+            vexStreamFeatureWalkProofBacklinks
 
     @Test
     fun stableHierarchyIsUniqueAndDirectlyAddressable() {
@@ -421,6 +423,12 @@ class VexFeatureWalkContractTest {
             report.contains(
                 "${VexStreamFeatureWalkRefs.DOWNLOAD_AND_REMOVE} status=ACTIVE " +
                     "journey=shared.vexstream/download-and-remove",
+            ),
+        )
+        assertTrue(
+            report.contains(
+                "${VexStreamFeatureWalkRefs.SORT_FILTER_PLAYBACK} status=ACTIVE " +
+                    "journey=shared.vexstream/sort-filter-playback",
             ),
         )
 
