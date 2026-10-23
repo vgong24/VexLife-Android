@@ -29,18 +29,18 @@ sealed interface VexStreamMediaStoreResult {
 /**
  * Verified media-byte owner for phone-local VexStream copies.
  *
- * Production should root this store under Android app-private storage. The class itself receives a
- * [File] so byte/integrity behavior remains ordinary JVM-testable and does not require broad Android
- * shared-storage permission.
+ * Downloads first cross the existing app-private integrity boundary so byte verification remains
+ * ordinary JVM-testable and a failed shared-media publication never destroys the verified staging
+ * copy. Production then promotes that exact verified file through [VexStreamDeviceMediaStore].
  *
- * A copy becomes visible only after:
+ * A private staging copy becomes eligible for promotion only after:
  * - exact expected byte count;
  * - exact expected SHA-256;
  * - output flush/sync;
- * - rename from a temporary file to the digest-addressed final file.
+ * - rename from a temporary file to the digest-addressed private file.
  *
- * The store never exposes its filesystem path as product identity. Higher layers receive an opaque
- * localMediaRef that can be resolved only by this owner.
+ * The store never exposes a filesystem path as product identity. Higher layers receive either the
+ * legacy opaque private reference or a verified MediaStore content URI owned by the device store.
  */
 class VexStreamMediaStore(
     private val root: File,
