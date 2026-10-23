@@ -170,6 +170,7 @@ internal fun VexStreamLibraryOrganizationSheet(
             )
 
             OrganizationSectionLabel(
+                id = "sort",
                 text =
                     stringResource(
                         R.string.vexstream_music_sort_by,
@@ -231,6 +232,7 @@ internal fun VexStreamLibraryOrganizationSheet(
             }
 
             OrganizationSectionLabel(
+                id = "duration",
                 text =
                     stringResource(
                         R.string.vexstream_music_filter_duration,
@@ -306,6 +308,7 @@ internal fun VexStreamLibraryOrganizationSheet(
 
             if (options.artists.isNotEmpty()) {
                 OrganizationSectionLabel(
+                    id = "artist",
                     text =
                         stringResource(
                             R.string.vexstream_music_filter_artist,
@@ -338,6 +341,7 @@ internal fun VexStreamLibraryOrganizationSheet(
 
             if (options.genres.isNotEmpty()) {
                 OrganizationSectionLabel(
+                    id = "genre",
                     text =
                         stringResource(
                             R.string.vexstream_music_filter_genre,
@@ -370,6 +374,7 @@ internal fun VexStreamLibraryOrganizationSheet(
 
             if (options.availability.isNotEmpty()) {
                 OrganizationSectionLabel(
+                    id = "availability",
                     text =
                         stringResource(
                             R.string.vexstream_music_filter_availability,
@@ -383,7 +388,7 @@ internal fun VexStreamLibraryOrganizationSheet(
                 ) {
                     items(
                         items = options.availability,
-                        key = VexStreamTrackAvailability::name,
+                        key = { it.name },
                     ) { availability ->
                         val ref =
                             VexStreamPresentationRefs
@@ -445,18 +450,11 @@ internal fun VexStreamLibraryOrganizationSheet(
 
 @Composable
 private fun OrganizationSectionLabel(
+    id: String,
     text: String,
 ) {
     VexText(
-        id =
-            "section-" +
-                text
-                    .lowercase()
-                    .replace(
-                        Regex("[^a-z0-9]+"),
-                        "-",
-                    )
-                    .trim('-'),
+        id = "section-$id",
         text = text,
         style = MaterialTheme.typography.titleMedium,
     )
