@@ -497,6 +497,40 @@ object VexStreamJourneys : VexJourneyShard {
         tap(
             VexStreamMusicScreen.OrganizeLibrary,
         )
+
+        // Exercise every static organization Control at least once while the accepted
+        // semantic coverage contract keeps the Journey catalog aligned with the Screen blueprint.
+        tap(
+            VexStreamMusicScreen.SortLibraryByArtist,
+        )
+        tap(
+            VexStreamMusicScreen.SortLibraryByAlbum,
+        )
+        tap(
+            VexStreamMusicScreen.SortLibraryByYear,
+        )
+        tap(
+            VexStreamMusicScreen.SortLibraryByDuration,
+        )
+        tap(
+            VexStreamMusicScreen.SortLibraryByTitle,
+        )
+        tap(
+            VexStreamMusicScreen.DurationFilterGreaterThan,
+        )
+        tap(
+            VexStreamMusicScreen.DurationFilterAny,
+        )
+
+        tapElementById(
+            elementId =
+                VexStreamPresentationRefs.organizationGenreOption(
+                    "Pop",
+                ),
+            behavesLike =
+                VexStreamMusicScreen.ToggleLibraryFilter,
+        )
+
         tap(
             VexStreamMusicScreen.DurationFilterLessThan,
         )
