@@ -369,6 +369,38 @@ class PairedVexStreamMusicRepository(
                 )
             }
 
+            val rediscovered =
+                withContext(
+                    Dispatchers.IO,
+                ) {
+                    mediaStore
+                        .rediscoverDeviceCopy(
+                            expectedSha256 =
+                                target.track.mediaSha256,
+                            expectedByteLength =
+                                target.track.mediaByteLength,
+                        )
+                }
+            if (rediscovered != null) {
+                updateLocalCopy(
+                    trackRef = trackRef,
+                    localCopy = rediscovered,
+                )
+                withContext(
+                    Dispatchers.IO,
+                ) {
+                    offlineIndex.persist(
+                        mutableState.value,
+                    )
+                }
+                return VexStreamRepositoryResult.Rejected(
+                    reason =
+                        VexStreamRepositoryRejection
+                            .ALREADY_DOWNLOADED,
+                    trackRef = trackRef,
+                )
+            }
+
             updateLocalCopy(
                 trackRef = trackRef,
                 localCopy =
