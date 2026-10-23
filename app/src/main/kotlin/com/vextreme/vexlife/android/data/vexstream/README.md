@@ -152,6 +152,18 @@ pending rows, re-opens and verifies the bytes, and only then hands the resulting
 into the existing digest-based catalog merge. A changed path-derived Hub ref therefore follows the
 same verified bytes without making the old ref portable identity.
 
+Retained pre-MediaStore private downloads use the same catalog refresh as a bounded migration
+opportunity. The private copy is verified again, published through the same device-store owner from
+its already-local bytes, and replaced with the durable `content://` reference only after shared
+publication succeeds. Any identity mismatch, permission denial or publication failure leaves the
+verified private copy untouched.
+
+```text
+MIGRATION != REDOWNLOAD
+MIGRATION_FAILURE -> KEEP_PRIVATE_COPY
+REDISCOVERY != MIGRATION
+```
+
 Higher layers still consume `localMediaRef` opaquely. Playback re-verifies the retained row and uses
 its `content://` URI; filesystem paths remain implementation detail.
 
