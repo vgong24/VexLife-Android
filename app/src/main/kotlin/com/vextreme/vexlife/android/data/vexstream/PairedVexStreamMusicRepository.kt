@@ -584,6 +584,10 @@ class PairedVexStreamMusicRepository(
                 parseCatalog(
                     body,
                 )
+            val migrationChanged =
+                migrateRetainedPrivateCopies(
+                    catalog,
+                )
             val rediscoveredLocalCopies =
                 catalog.tracks
                     .mapNotNull { projection ->
@@ -614,6 +618,12 @@ class PairedVexStreamMusicRepository(
                         ),
                 )
 
+            if (migrationChanged) {
+                offlineIndex.persist(
+                    mutableState.value,
+                )
+            }
+
             VexStreamRepositoryResult.Accepted()
         } catch (_: Exception) {
             mutableState.value = mutableState.value
@@ -631,6 +641,77 @@ class PairedVexStreamMusicRepository(
                 reason = VexStreamRepositoryRejection.HUB_NOT_READY,
             )
         }
+    }
+
+    private fun migrateRetainedPrivateCopies(
+        catalog: VexStreamHubCatalogProjection,
+    ): Boolean {
+        var current =
+            mutableState.value
+        var changed =
+            false
+
+        catalog.tracks.forEach { projection ->
+            val localCopy =
+                current.tracks
+                    .firstOrNull { state ->
+                        state.track.mediaSha256 ==
+                            projection.mediaSha256
+                    }
+                    ?.localCopy
+                    as? VexStreamLocalCopyState.Downloaded
+                    ?: return@forEach
+
+            if (
+                localCopy.byteLength !=
+                projection.mediaByteLength
+            ) {
+                return@forEach
+            }
+
+            val migrated =
+                mediaStore.migratePrivateCopy(
+                    track = projection.toTrack(),
+                    localCopy = localCopy,
+                ) as? VexStreamMediaStoreResult.Stored
+                    ?: return@forEach
+
+            if (
+                migrated.localCopy ==
+                localCopy
+            ) {
+                return@forEach
+            }
+
+            current =
+                current.copy(
+                    tracks =
+                        current.tracks.map { state ->
+                            if (
+                                state.track.mediaSha256 ==
+                                projection.mediaSha256 &&
+                                state.localCopy ==
+                                localCopy
+                            ) {
+                                state.copy(
+                                    localCopy =
+                                        migrated.localCopy,
+                                )
+                            } else {
+                                state
+                            }
+                        },
+                )
+            changed =
+                true
+        }
+
+        if (changed) {
+            mutableState.value =
+                current
+        }
+
+        return changed
     }
 
     private suspend fun readPairingInfo(
