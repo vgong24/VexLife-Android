@@ -154,16 +154,16 @@ internal fun VexStreamMusicState.toVexStreamLibraryOrganizationOptions():
                     it.track.artist.trim()
                 }
                 .filter(String::isNotBlank)
-                .distinctBy(String::lowercase)
-                .sortedBy(String::lowercase),
+                .distinctBy { it.lowercase() }
+                .sortedBy { it.lowercase() },
         genres =
             playable
                 .map {
                     it.track.genre.trim()
                 }
                 .filter(String::isNotBlank)
-                .distinctBy(String::lowercase)
-                .sortedBy(String::lowercase),
+                .distinctBy { it.lowercase() }
+                .sortedBy { it.lowercase() },
         availability =
             playable
                 .map {
