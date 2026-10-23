@@ -584,9 +584,28 @@ class PairedVexStreamMusicRepository(
                 parseCatalog(
                     body,
                 )
+            val rediscoveredLocalCopies =
+                catalog.tracks
+                    .mapNotNull { projection ->
+                        mediaStore
+                            .rediscoverDeviceCopy(
+                                expectedSha256 =
+                                    projection.mediaSha256,
+                                expectedByteLength =
+                                    projection.mediaByteLength,
+                            )
+                            ?.let { localCopy ->
+                                projection.mediaSha256 to
+                                    localCopy
+                            }
+                    }
+                    .toMap()
+
             mutableState.value = mutableState.value
                 .withHubCatalog(
-                    catalog,
+                    catalog = catalog,
+                    rediscoveredLocalCopies =
+                        rediscoveredLocalCopies,
                 )
                 .copy(
                     connectionState =
