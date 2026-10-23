@@ -22,7 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
-import com.vextreme.vexlife.android.elements.ActionElement
+import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexColumn
@@ -465,7 +465,7 @@ private fun OrganizationSectionLabel(
 @Composable
 private fun SortButton(
     handler: ElementActionHandler,
-    element: ActionElement,
+    element: ButtonElement,
     selected: Boolean,
 ) {
     VexButton(
@@ -483,7 +483,7 @@ private fun SortButton(
 @Composable
 private fun FilterModeButton(
     handler: ElementActionHandler,
-    element: ActionElement,
+    element: ButtonElement,
     selected: Boolean,
 ) {
     VexButton(
