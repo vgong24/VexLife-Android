@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -847,8 +848,9 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 permission,
                 wasGranted,
             ->
-            instrumentation.uiAutomation
-                .executeShellCommand(
+            executeShellCommandAndWait(
+                instrumentation = instrumentation,
+                command =
                     "pm " +
                         if (wasGranted) {
                             "grant "
@@ -858,8 +860,7 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                         packageName +
                         " " +
                         permission,
-                )
-                .close()
+            )
         }
     }
 
@@ -871,11 +872,11 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
         ).forEach { permission ->
-            instrumentation.uiAutomation
-                .executeShellCommand(
+            executeShellCommandAndWait(
+                instrumentation = instrumentation,
+                command =
                     "pm grant $packageName $permission",
-                )
-                .close()
+            )
         }
     }
 
@@ -883,13 +884,27 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
         instrumentation: android.app.Instrumentation,
         packageName: String,
     ) {
-        instrumentation.uiAutomation
-            .executeShellCommand(
+        executeShellCommandAndWait(
+            instrumentation = instrumentation,
+            command =
                 "pm revoke $packageName " +
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            )
-            .close()
+        )
     }
+
+    private fun executeShellCommandAndWait(
+        instrumentation: android.app.Instrumentation,
+        command: String,
+    ): String =
+        ParcelFileDescriptor.AutoCloseInputStream(
+            instrumentation.uiAutomation
+                .executeShellCommand(
+                    command,
+                ),
+        ).use { input ->
+            input.readBytes()
+                .decodeToString()
+        }
 
     private fun track(
         bytes: ByteArray,
