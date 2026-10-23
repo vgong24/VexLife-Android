@@ -448,22 +448,171 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
+    private val sortFilterPlaybackFeatureWalk =
+        vexFeatureWalkJourney(
+            featureWalkCase =
+                FeatureWalks
+                    .vexStream
+                    .libraryOrganization
+                    .sortFilterPlayback,
+        ) {
+        start(HomeScreen)
+        tap(HomeScreen.ConnectVexStreamMusic)
+        tap(VexStreamMusicScreen.FindNearby)
+        tap(VexStreamMusicScreen.ConfirmPairingCode)
+        tap(AppShell.Elements.Back)
+        tap(HomeScreen.VexStreamMusic)
+
+        externalCause(
+            repository =
+                getRepository(
+                    vexStreamJourneyRepository,
+                ),
+            causeRef =
+                "cause.vexstream.library-organization.catalog",
+        ) {
+            publishCatalog(
+                organizationCatalog(),
+            )
+        }
+
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures.TrackOne,
+            ),
+        )
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures
+                        .OrganizationLongTrack,
+            ),
+        )
+
+        tap(
+            VexStreamMusicScreen.OrganizeLibrary,
+        )
+        tap(
+            VexStreamMusicScreen.DurationFilterLessThan,
+        )
+        enterText(
+            VexStreamMusicScreen.DurationThresholdMinutes,
+            "10",
+        )
+        tap(
+            VexStreamMusicScreen.CloseOrganization,
+        )
+
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures.TrackOne,
+            ),
+        )
+        tapElementById(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.PlayTrack,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.PlayTrack,
+        )
+        tap(
+            VexStreamMusicScreen.ShuffleAll,
+        )
+
+        tap(
+            VexStreamMusicScreen.OrganizeLibrary,
+        )
+        tap(
+            VexStreamMusicScreen.ClearLibraryFilters,
+        )
+        tap(
+            VexStreamMusicScreen.CloseOrganization,
+        )
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures
+                        .OrganizationLongTrack,
+            ),
+        )
+
+        tap(AppShell.Elements.Back)
+    }
+
     val downloadCollectionMissing =
         downloadCollectionMissingFeatureWalk.journey
 
     val downloadAndRemove =
         downloadAndRemoveFeatureWalk.journey
 
+    val sortFilterPlayback =
+        sortFilterPlaybackFeatureWalk.journey
+
     override val journeys = listOf(
         connectRefreshForget,
         downloadAndRemove,
         downloadCollectionMissing,
+        sortFilterPlayback,
     )
 
     override val featureWalkJourneys =
         listOf(
             downloadAndRemoveFeatureWalk,
             downloadCollectionMissingFeatureWalk,
+            sortFilterPlaybackFeatureWalk,
+        )
+
+    private fun organizationCatalog(): VexStreamHubCatalogProjection =
+        VexStreamHubCatalogProjection(
+            hubRef = "hub.journey.library-organization",
+            sourceVersion = "journey",
+            catalogRevision =
+                "catalog.journey.library-organization.1",
+            tracks =
+                listOf(
+                    VexStreamHubTrackProjection(
+                        trackRef =
+                            VexStreamJourneyFixtures.TrackOne,
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                "1".repeat(64),
+                            ),
+                        mediaByteLength = 4_096L,
+                        title = "Journey Song",
+                        artist = "Journey Artist",
+                        album = "Journey Organization",
+                        genre = "Pop",
+                        year = "2026",
+                        durationSeconds = 8 * 60.0,
+                    ),
+                    VexStreamHubTrackProjection(
+                        trackRef =
+                            VexStreamJourneyFixtures
+                                .OrganizationLongTrack,
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                "4".repeat(64),
+                            ),
+                        mediaByteLength = 8_192L,
+                        title = "Journey Long Mix",
+                        artist = "Journey Artist",
+                        album = "Journey Organization",
+                        genre = "Mix",
+                        year = "2026",
+                        durationSeconds = 90 * 60.0,
+                    ),
+                ),
         )
 
     private fun massDownloadCatalog(): VexStreamHubCatalogProjection =
