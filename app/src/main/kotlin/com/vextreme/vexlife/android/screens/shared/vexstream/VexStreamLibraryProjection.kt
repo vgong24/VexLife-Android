@@ -281,7 +281,7 @@ private fun VexStreamTrackState.matchesVexStreamOrganization(
         ) &&
         (
             organization.availability.isEmpty() ||
-                track.availability in
+                availability in
                 organization.availability
         )
 }
