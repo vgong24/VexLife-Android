@@ -55,6 +55,11 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         labelRes = R.string.vexstream_music_search,
     )
 
+    val DurationThresholdMinutes = textFieldRef(
+        id = "body.library.organization.duration-minutes",
+        labelRes = R.string.vexstream_music_filter_duration_minutes,
+    )
+
     val SongsPanel = scrollableColumnRef("body.library.songs")
     val AlbumsPanel = scrollableColumnRef("body.library.albums")
     val ArtistsPanel = scrollableColumnRef("body.library.artists")
@@ -74,6 +79,10 @@ object VexStreamMusicScreen : AppScreenBlueprint(
 
     val SearchSheet = modalBottomSheetRef(
         id = "body.library.search-sheet",
+    )
+
+    val OrganizationSheet = modalBottomSheetRef(
+        id = "body.library.organization-sheet",
     )
 
     val SearchContent = columnRef(
@@ -127,6 +136,92 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         style = VexElementStyles.ToolbarIcon,
         icon = ElementIcon.Search,
         intent = open(SearchSheet),
+    )
+
+    val OrganizeLibrary = buttonRef(
+        id = "body.library.organization.open",
+        labelRes = R.string.vexstream_music_organize,
+        style = VexElementStyles.ToolbarIcon,
+        icon = ElementIcon.Menu,
+        intent = open(OrganizationSheet),
+    )
+
+    val SortLibraryByTitle = buttonRef(
+        id = "body.library.organization.sort.title",
+        labelRes = R.string.vexstream_music_sort_title,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val SortLibraryByArtist = buttonRef(
+        id = "body.library.organization.sort.artist",
+        labelRes = R.string.vexstream_music_sort_artist,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val SortLibraryByAlbum = buttonRef(
+        id = "body.library.organization.sort.album",
+        labelRes = R.string.vexstream_music_sort_album,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val SortLibraryByYear = buttonRef(
+        id = "body.library.organization.sort.year",
+        labelRes = R.string.vexstream_music_sort_year,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val SortLibraryByDuration = buttonRef(
+        id = "body.library.organization.sort.duration",
+        labelRes = R.string.vexstream_music_sort_duration,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val DurationFilterAny = buttonRef(
+        id = "body.library.organization.duration.any",
+        labelRes = R.string.vexstream_music_filter_any_duration,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val DurationFilterLessThan = buttonRef(
+        id = "body.library.organization.duration.less-than",
+        labelRes = R.string.vexstream_music_filter_less_than,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val DurationFilterGreaterThan = buttonRef(
+        id = "body.library.organization.duration.greater-than",
+        labelRes = R.string.vexstream_music_filter_greater_than,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val ToggleLibraryFilter = buttonRef(
+        id = "body.library.organization.filter.toggle",
+        labelRes = R.string.vexstream_music_filter_toggle,
+        style = VexElementStyles.Navigation,
+        intent = localEffect(),
+    )
+
+    val ClearLibraryFilters = buttonRef(
+        id = "body.library.organization.clear-filters",
+        labelRes = R.string.vexstream_music_filter_clear,
+        style = VexElementStyles.SecondaryAction,
+        intent = localEffect(),
+    )
+
+    val CloseOrganization = buttonRef(
+        id = "body.library.organization.close",
+        labelRes = R.string.close,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Close,
+        intent = close(OrganizationSheet),
     )
 
     val CloseSearch = buttonRef(
@@ -506,6 +601,23 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 }
             }
 
+            modalBottomSheet(OrganizationSheet) {
+                column("content") {
+                    button(SortLibraryByTitle)
+                    button(SortLibraryByArtist)
+                    button(SortLibraryByAlbum)
+                    button(SortLibraryByYear)
+                    button(SortLibraryByDuration)
+                    button(DurationFilterAny)
+                    button(DurationFilterLessThan)
+                    button(DurationFilterGreaterThan)
+                    textField(DurationThresholdMinutes)
+                    button(ToggleLibraryFilter)
+                    button(ClearLibraryFilters)
+                    button(CloseOrganization)
+                }
+            }
+
             modalBottomSheet(ConnectionMenuSheet) {
                 button(RefreshCatalog)
                 button(Reconnect)
@@ -524,6 +636,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         get() =
             listOf(
                 SearchLibrary,
+                OrganizeLibrary,
                 ManageConnection,
             )
 
