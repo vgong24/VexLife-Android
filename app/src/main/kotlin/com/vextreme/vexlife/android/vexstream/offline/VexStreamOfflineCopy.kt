@@ -1,10 +1,19 @@
 package com.vextreme.vexlife.android.vexstream.offline
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -38,6 +47,7 @@ internal data class VexStreamOfflineCopyRequest(
 internal class VexStreamOfflineCopyConnection(
     private val repository: VexStreamMusicRepository,
     private val scope: CoroutineScope,
+    private val beforeDownload: suspend () -> Boolean = { true },
 ) {
     fun request(
         request: VexStreamOfflineCopyRequest,
@@ -47,13 +57,15 @@ internal class VexStreamOfflineCopyConnection(
                 request.action
             ) {
                 VexStreamOfflineCopyAction.Download ->
-                    repository.downloadForOffline(
-                        trackRef = request.trackRef,
-                        expectedMediaSha256 =
-                            request.expectedMediaSha256,
-                        expectedMediaByteLength =
-                            request.expectedMediaByteLength,
-                    )
+                    if (beforeDownload()) {
+                        repository.downloadForOffline(
+                            trackRef = request.trackRef,
+                            expectedMediaSha256 =
+                                request.expectedMediaSha256,
+                            expectedMediaByteLength =
+                                request.expectedMediaByteLength,
+                        )
+                    }
 
                 VexStreamOfflineCopyAction.Remove ->
                     repository.removeOfflineCopy(
@@ -66,6 +78,13 @@ internal class VexStreamOfflineCopyConnection(
         request: VexStreamOfflineCollectionRequest,
     ): Job =
         scope.launch {
+            if (
+                request.targets.isNotEmpty() &&
+                !beforeDownload()
+            ) {
+                return@launch
+            }
+
             request.targets.forEach { target ->
                 val current =
                     repository
@@ -98,15 +117,97 @@ internal class VexStreamOfflineCopyConnection(
 internal fun rememberVexStreamOfflineCopyConnection(
     repository: VexStreamMusicRepository,
     scope: CoroutineScope,
-): VexStreamOfflineCopyConnection =
-    remember(
+): VexStreamOfflineCopyConnection {
+    val context =
+        LocalContext.current
+    val pendingPermission =
+        remember {
+            mutableStateOf<
+                CompletableDeferred<Boolean>?
+            >(
+                null,
+            )
+        }
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .RequestMultiplePermissions(),
+        ) {
+                grants,
+            ->
+            val granted =
+                LEGACY_STORAGE_PERMISSIONS
+                    .all { permission ->
+                        grants[permission] == true ||
+                            ContextCompat
+                                .checkSelfPermission(
+                                    context,
+                                    permission,
+                                ) ==
+                            PackageManager
+                                .PERMISSION_GRANTED
+                    }
+
+            pendingPermission
+                .value
+                ?.complete(
+                    granted,
+                )
+            pendingPermission.value =
+                null
+        }
+
+    return remember(
         repository,
         scope,
+        context,
+        permissionLauncher,
     ) {
         VexStreamOfflineCopyConnection(
             repository = repository,
             scope = scope,
+            beforeDownload = {
+                if (
+                    Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.Q
+                ) {
+                    true
+                } else if (
+                    LEGACY_STORAGE_PERMISSIONS
+                        .all { permission ->
+                            ContextCompat
+                                .checkSelfPermission(
+                                    context,
+                                    permission,
+                                ) ==
+                            PackageManager
+                                .PERMISSION_GRANTED
+                        }
+                ) {
+                    true
+                } else {
+                    val pending =
+                        pendingPermission.value
+                            ?: CompletableDeferred<Boolean>()
+                                .also {
+                                    pendingPermission.value =
+                                        it
+                                    permissionLauncher.launch(
+                                        LEGACY_STORAGE_PERMISSIONS,
+                                    )
+                                }
+
+                    pending.await()
+                }
+            },
         )
     }
+}
+
+private val LEGACY_STORAGE_PERMISSIONS =
+    arrayOf(
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+    )
 
 // [VXG RealForever]
