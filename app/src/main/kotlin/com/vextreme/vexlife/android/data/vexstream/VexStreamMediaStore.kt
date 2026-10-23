@@ -45,12 +45,15 @@ sealed interface VexStreamMediaStoreResult {
 class VexStreamMediaStore private constructor(
     private val root: File,
     private val deviceStore: VexStreamDeviceMediaStore?,
+    @Suppress("UNUSED_PARAMETER")
+    constructorMarker: Unit,
 ) {
     constructor(
         root: File,
     ) : this(
         root = root,
         deviceStore = null,
+        constructorMarker = Unit,
     )
 
     internal constructor(
@@ -59,6 +62,7 @@ class VexStreamMediaStore private constructor(
     ) : this(
         root = root,
         deviceStore = deviceStore,
+        constructorMarker = Unit,
     )
     fun store(
         expectedSha256: VexStreamMediaSha256,
