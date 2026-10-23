@@ -618,7 +618,11 @@ class PairedVexStreamMusicRepository(
                         ),
                 )
 
-            if (migrationChanged) {
+            if (
+                migrationChanged ||
+                rediscoveredLocalCopies
+                    .isNotEmpty()
+            ) {
                 offlineIndex.persist(
                     mutableState.value,
                 )
