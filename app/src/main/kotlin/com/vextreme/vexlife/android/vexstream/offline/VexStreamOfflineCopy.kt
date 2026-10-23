@@ -13,9 +13,9 @@ import androidx.core.content.ContextCompat
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal enum class VexStreamOfflineCopyAction {
@@ -47,25 +47,45 @@ internal data class VexStreamOfflineCopyRequest(
 internal class VexStreamOfflineCopyConnection(
     private val repository: VexStreamMusicRepository,
     private val scope: CoroutineScope,
-    private val beforeDownload: suspend () -> Boolean = { true },
+    private val canDownload: () -> Boolean = { true },
+    private val requestDownloadPermission: (((() -> Unit)) -> Unit)? = null,
 ) {
     fun request(
         request: VexStreamOfflineCopyRequest,
-    ): Job =
-        scope.launch {
+    ): Job {
+        if (
+            request.action ==
+            VexStreamOfflineCopyAction.Download &&
+            !canDownload()
+        ) {
+            if (scope.isActive) {
+                requestDownloadPermission
+                    ?.invoke {
+                        if (scope.isActive) {
+                            request(
+                                request,
+                            )
+                        }
+                    }
+            }
+
+            return scope.launch {
+                // Permission handoff is intentionally not a hidden session-scoped wait.
+            }
+        }
+
+        return scope.launch {
             when (
                 request.action
             ) {
                 VexStreamOfflineCopyAction.Download ->
-                    if (beforeDownload()) {
-                        repository.downloadForOffline(
-                            trackRef = request.trackRef,
-                            expectedMediaSha256 =
-                                request.expectedMediaSha256,
-                            expectedMediaByteLength =
-                                request.expectedMediaByteLength,
-                        )
-                    }
+                    repository.downloadForOffline(
+                        trackRef = request.trackRef,
+                        expectedMediaSha256 =
+                            request.expectedMediaSha256,
+                        expectedMediaByteLength =
+                            request.expectedMediaByteLength,
+                    )
 
                 VexStreamOfflineCopyAction.Remove ->
                     repository.removeOfflineCopy(
@@ -73,18 +93,32 @@ internal class VexStreamOfflineCopyConnection(
                     )
             }
         }
+    }
 
     fun request(
         request: VexStreamOfflineCollectionRequest,
-    ): Job =
-        scope.launch {
-            if (
-                request.targets.isNotEmpty() &&
-                !beforeDownload()
-            ) {
-                return@launch
+    ): Job {
+        if (
+            request.targets.isNotEmpty() &&
+            !canDownload()
+        ) {
+            if (scope.isActive) {
+                requestDownloadPermission
+                    ?.invoke {
+                        if (scope.isActive) {
+                            request(
+                                request,
+                            )
+                        }
+                    }
             }
 
+            return scope.launch {
+                // Permission handoff is intentionally not a hidden session-scoped wait.
+            }
+        }
+
+        return scope.launch {
             request.targets.forEach { target ->
                 val current =
                     repository
@@ -111,6 +145,7 @@ internal class VexStreamOfflineCopyConnection(
                 )
             }
         }
+    }
 }
 
 @Composable
@@ -120,10 +155,10 @@ internal fun rememberVexStreamOfflineCopyConnection(
 ): VexStreamOfflineCopyConnection {
     val context =
         LocalContext.current
-    val pendingPermission =
+    val pendingRetry =
         remember {
             mutableStateOf<
-                CompletableDeferred<Boolean>?
+                (() -> Unit)?
             >(
                 null,
             )
@@ -147,14 +182,14 @@ internal fun rememberVexStreamOfflineCopyConnection(
                             PackageManager
                                 .PERMISSION_GRANTED
                     }
-
-            pendingPermission
-                .value
-                ?.complete(
-                    granted,
-                )
-            pendingPermission.value =
+            val retry =
+                pendingRetry.value
+            pendingRetry.value =
                 null
+
+            if (granted) {
+                retry?.invoke()
+            }
         }
 
     return remember(
@@ -166,13 +201,9 @@ internal fun rememberVexStreamOfflineCopyConnection(
         VexStreamOfflineCopyConnection(
             repository = repository,
             scope = scope,
-            beforeDownload = {
-                if (
-                    Build.VERSION.SDK_INT >=
-                    Build.VERSION_CODES.Q
-                ) {
-                    true
-                } else if (
+            canDownload = {
+                Build.VERSION.SDK_INT >=
+                    Build.VERSION_CODES.Q ||
                     LEGACY_STORAGE_PERMISSIONS
                         .all { permission ->
                             ContextCompat
@@ -183,21 +214,19 @@ internal fun rememberVexStreamOfflineCopyConnection(
                             PackageManager
                                 .PERMISSION_GRANTED
                         }
+            },
+            requestDownloadPermission = {
+                    retry,
+                ->
+                if (
+                    pendingRetry.value ==
+                    null
                 ) {
-                    true
-                } else {
-                    val pending =
-                        pendingPermission.value
-                            ?: CompletableDeferred<Boolean>()
-                                .also {
-                                    pendingPermission.value =
-                                        it
-                                    permissionLauncher.launch(
-                                        LEGACY_STORAGE_PERMISSIONS,
-                                    )
-                                }
-
-                    pending.await()
+                    pendingRetry.value =
+                        retry
+                    permissionLauncher.launch(
+                        LEGACY_STORAGE_PERMISSIONS,
+                    )
                 }
             },
         )
