@@ -17,10 +17,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
+import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.runners.MethodSorters
 
 @RunWith(AndroidJUnit4::class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class VexStreamDeviceMediaStoreInstrumentedTest {
     @Test
     fun verifiedMp3PublishesToMusicVexStreamAndIsIdempotent() {
@@ -651,60 +654,48 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
     }
 
     @Test
-    fun legacyPermissionDenialFailsBeforeSharedWrite() {
+    fun legacyDeniedPermissionFailsBeforeSharedWrite() {
         assumeTrue(
             Build.VERSION.SDK_INT <=
                 Build.VERSION_CODES.P,
         )
 
-        val instrumentation =
+        val context =
             InstrumentationRegistry
                 .getInstrumentation()
-        val context =
-            instrumentation.targetContext
-        val originalPermissions =
-            legacyStoragePermissionState(
+                .targetContext
+        assumeTrue(
+            "legacy denial proof requires the fresh disposable target to begin with WRITE_EXTERNAL_STORAGE denied",
+            context.checkSelfPermission(
+                Manifest.permission
+                    .WRITE_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED,
+        )
+
+        val bytes =
+            "legacy denied device storage"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "legacy-denied",
+            )
+
+        assertEquals(
+            VexStreamMediaStoreResult.Rejected(
+                VexStreamMediaStoreRejection
+                    .PERMISSION_REQUIRED,
+            ),
+            VexStreamDeviceMediaStore(
                 context,
-            )
-
-        try {
-            revokeLegacyStoragePermission(
-                instrumentation = instrumentation,
-                packageName = context.packageName,
-            )
-
-            val bytes =
-                "legacy denied device storage"
-                    .encodeToByteArray()
-            val track =
-                track(
-                    bytes = bytes,
-                    suffix = "legacy-denied",
-                )
-
-            assertEquals(
-                VexStreamMediaStoreResult.Rejected(
-                    VexStreamMediaStoreRejection
-                        .PERMISSION_REQUIRED,
-                ),
-                VexStreamDeviceMediaStore(
-                    context,
-                ).store(
-                    track = track,
-                    input =
-                        ByteArrayInputStream(
-                            bytes,
-                        ),
-                ),
-            )
-        } finally {
-            restoreLegacyStoragePermissions(
-                instrumentation = instrumentation,
-                packageName = context.packageName,
-                originalPermissions =
-                    originalPermissions,
-            )
-        }
+            ).store(
+                track = track,
+                input =
+                    ByteArrayInputStream(
+                        bytes,
+                    ),
+            ),
+        )
     }
 
     @Test
@@ -720,16 +711,11 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 .getInstrumentation()
         val context =
             instrumentation.targetContext
-        val originalPermissions =
-            legacyStoragePermissionState(
-                context,
-            )
 
-        try {
-            grantLegacyStoragePermission(
-                instrumentation = instrumentation,
-                packageName = context.packageName,
-            )
+        grantLegacyStoragePermission(
+            instrumentation = instrumentation,
+            packageName = context.packageName,
+        )
             assertEquals(
                 PackageManager.PERMISSION_GRANTED,
                 context.checkSelfPermission(
@@ -816,54 +802,14 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                     ),
                 )
             }
-        } finally {
-            restoreLegacyStoragePermissions(
-                instrumentation = instrumentation,
-                packageName = context.packageName,
-                originalPermissions =
-                    originalPermissions,
-            )
-        }
     }
 
-    private fun legacyStoragePermissionState(
-        context: android.content.Context,
-    ): Map<String, Boolean> =
-        listOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        ).associateWith { permission ->
-            context.checkSelfPermission(
-                permission,
-            ) ==
-                PackageManager.PERMISSION_GRANTED
-        }
-
-    private fun restoreLegacyStoragePermissions(
-        instrumentation: android.app.Instrumentation,
-        packageName: String,
-        originalPermissions: Map<String, Boolean>,
-    ) {
-        originalPermissions.forEach {
-                permission,
-                wasGranted,
-            ->
-            executeShellCommandAndWait(
-                instrumentation = instrumentation,
-                command =
-                    "pm " +
-                        if (wasGranted) {
-                            "grant "
-                        } else {
-                            "revoke "
-                        } +
-                        packageName +
-                        " " +
-                        permission,
-            )
-        }
-    }
-
+    /*
+     * Runtime-permission revocation kills the application UID on legacy Android.
+     * The class orders the naturally denied case before the granted case, and
+     * native legacy proof runs on a disposable API-28 emulator. Do not revoke
+     * these permissions from inside the instrumentation process.
+     */
     private fun grantLegacyStoragePermission(
         instrumentation: android.app.Instrumentation,
         packageName: String,
@@ -878,18 +824,6 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                     "pm grant $packageName $permission",
             )
         }
-    }
-
-    private fun revokeLegacyStoragePermission(
-        instrumentation: android.app.Instrumentation,
-        packageName: String,
-    ) {
-        executeShellCommandAndWait(
-            instrumentation = instrumentation,
-            command =
-                "pm revoke $packageName " +
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
-        )
     }
 
     private fun executeShellCommandAndWait(
