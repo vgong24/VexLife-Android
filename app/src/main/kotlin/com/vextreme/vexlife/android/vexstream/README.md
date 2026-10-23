@@ -175,7 +175,17 @@ CURRENT-CATALOG REDISCOVERY
 
 CURRENT-CATALOG REDISCOVERY
 != synthetic trackRef recovery without a catalog
-!= migration of pre-existing private copies
+!= destructive Clear Data acceptance
+
+PRIVATE-COPY MIGRATION
+= verified legacy private localCopy
++ current catalog media identity
++ durable MediaStore publication from already-local bytes
+-> content:// localCopy
+-> redundant private file removed only after success
+
+PRIVATE-COPY MIGRATION
+!= redownload
 != destructive Clear Data acceptance
 ```
 
