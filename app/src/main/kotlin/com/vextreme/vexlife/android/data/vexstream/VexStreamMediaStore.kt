@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.data.vexstream
 
+import android.content.Context
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -10,6 +11,8 @@ enum class VexStreamMediaStoreRejection {
     LENGTH_MISMATCH,
     DIGEST_MISMATCH,
     EXISTING_COPY_INVALID,
+    PERMISSION_REQUIRED,
+    SHARED_COPY_CONFLICT,
     IO_FAILURE,
 }
 
@@ -41,11 +44,13 @@ sealed interface VexStreamMediaStoreResult {
  */
 class VexStreamMediaStore(
     private val root: File,
+    private val deviceStore: VexStreamDeviceMediaStore? = null,
 ) {
     fun store(
         expectedSha256: VexStreamMediaSha256,
         expectedByteLength: Long,
         input: InputStream,
+        track: VexStreamTrack? = null,
     ): VexStreamMediaStoreResult {
         require(expectedByteLength > 0L) {
             "expectedByteLength must be positive"
@@ -63,11 +68,11 @@ class VexStreamMediaStore(
                         expectedByteLength = expectedByteLength,
                     )
                 ) {
-                    return VexStreamMediaStoreResult.Stored(
-                        downloadedState(
-                            expectedSha256 = expectedSha256,
-                            expectedByteLength = expectedByteLength,
-                        ),
+                    return promoteOrPrivate(
+                        track = track,
+                        expectedSha256 = expectedSha256,
+                        expectedByteLength = expectedByteLength,
+                        finalFile = finalFile,
                     )
                 }
 
@@ -130,11 +135,11 @@ class VexStreamMediaStore(
                     )
                 }
 
-                VexStreamMediaStoreResult.Stored(
-                    downloadedState(
-                        expectedSha256 = expectedSha256,
-                        expectedByteLength = expectedByteLength,
-                    ),
+                promoteOrPrivate(
+                    track = track,
+                    expectedSha256 = expectedSha256,
+                    expectedByteLength = expectedByteLength,
+                    finalFile = finalFile,
                 )
             } finally {
                 if (tempFile.exists()) {
@@ -151,18 +156,34 @@ class VexStreamMediaStore(
     fun verify(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): Boolean {
-        val mediaRefDigest = digestFromLocalMediaRef(localCopy.localMediaRef)
-            ?: return false
+        val mediaRefDigest =
+            digestFromLocalMediaRef(
+                localCopy.localMediaRef,
+            )
 
-        if (mediaRefDigest != localCopy.mediaSha256) {
+        if (mediaRefDigest == null) {
+            return deviceStore
+                ?.verify(localCopy)
+                ?: false
+        }
+
+        if (
+            mediaRefDigest !=
+            localCopy.mediaSha256
+        ) {
             return false
         }
 
         return try {
             verifyFile(
-                file = finalFile(localCopy.mediaSha256),
-                expectedSha256 = localCopy.mediaSha256,
-                expectedByteLength = localCopy.byteLength,
+                file =
+                    finalFile(
+                        localCopy.mediaSha256,
+                    ),
+                expectedSha256 =
+                    localCopy.mediaSha256,
+                expectedByteLength =
+                    localCopy.byteLength,
             )
         } catch (_: Exception) {
             false
@@ -172,41 +193,157 @@ class VexStreamMediaStore(
     fun open(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): InputStream {
+        val privateDigest =
+            digestFromLocalMediaRef(
+                localCopy.localMediaRef,
+            )
+
+        if (privateDigest == null) {
+            val sharedStore =
+                requireNotNull(
+                    deviceStore,
+                ) {
+                    "VexStream shared media store is unavailable"
+                }
+            check(
+                sharedStore.verify(
+                    localCopy,
+                ),
+            ) {
+                "VexStream shared media copy is missing or failed verification"
+            }
+            return sharedStore.open(
+                localCopy,
+            )
+        }
+
         check(verify(localCopy)) {
             "VexStream local media copy is missing or failed verification"
         }
 
         return FileInputStream(
-            finalFile(localCopy.mediaSha256),
+            finalFile(
+                localCopy.mediaSha256,
+            ),
         )
     }
 
     /**
-     * Playback-only filesystem resolution after re-verifying the retained local copy.
+     * Playback-only filesystem resolution for legacy app-private copies.
      *
-     * The path remains an implementation detail and is never stored in VexStream product state.
+     * Durable MediaStore copies return null here and are resolved through [contentUriForPlayback].
      */
     fun fileForPlayback(
         localCopy: VexStreamLocalCopyState.Downloaded,
-    ): File? =
-        if (verify(localCopy)) {
-            finalFile(localCopy.mediaSha256)
+    ): File? {
+        if (
+            digestFromLocalMediaRef(
+                localCopy.localMediaRef,
+            ) == null
+        ) {
+            return null
+        }
+
+        return if (verify(localCopy)) {
+            finalFile(
+                localCopy.mediaSha256,
+            )
         } else {
             null
         }
+    }
+
+    fun contentUriForPlayback(
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): String? =
+        deviceStore
+            ?.playbackUri(
+                localCopy,
+            )
 
     fun remove(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): Boolean {
-        val digest = digestFromLocalMediaRef(localCopy.localMediaRef)
-            ?: return false
+        val digest =
+            digestFromLocalMediaRef(
+                localCopy.localMediaRef,
+            )
 
-        if (digest != localCopy.mediaSha256) {
+        if (digest == null) {
+            return deviceStore
+                ?.remove(localCopy)
+                ?: false
+        }
+
+        if (
+            digest !=
+            localCopy.mediaSha256
+        ) {
             return false
         }
 
-        val file = finalFile(localCopy.mediaSha256)
-        return !file.exists() || file.delete()
+        val file =
+            finalFile(
+                localCopy.mediaSha256,
+            )
+        return !file.exists() ||
+            file.delete()
+    }
+
+    private fun promoteOrPrivate(
+        track: VexStreamTrack?,
+        expectedSha256: VexStreamMediaSha256,
+        expectedByteLength: Long,
+        finalFile: File,
+    ): VexStreamMediaStoreResult {
+        val privateCopy =
+            downloadedState(
+                expectedSha256 =
+                    expectedSha256,
+                expectedByteLength =
+                    expectedByteLength,
+            )
+        val sharedStore =
+            deviceStore
+
+        if (
+            track == null ||
+            sharedStore == null
+        ) {
+            return VexStreamMediaStoreResult.Stored(
+                privateCopy,
+            )
+        }
+
+        require(
+            track.mediaSha256 ==
+                expectedSha256 &&
+                track.mediaByteLength ==
+                expectedByteLength,
+        ) {
+            "VexStream shared publication identity must match the verified private copy"
+        }
+
+        val sharedResult =
+            FileInputStream(
+                finalFile,
+            ).use { input ->
+                sharedStore.store(
+                    track = track,
+                    input = input,
+                )
+            }
+
+        if (
+            sharedResult is
+            VexStreamMediaStoreResult.Stored
+        ) {
+            // Shared verified media is now the durable owner. App-private cleanup is best-effort;
+            // failure to remove the redundant staging copy must not invalidate the published song.
+            finalFile.delete()
+        }
+
+        return sharedResult
     }
 
     private fun ensureRoot() {
@@ -293,7 +430,25 @@ class VexStreamMediaStore(
             contextFilesDir: File,
         ): VexStreamMediaStore =
             VexStreamMediaStore(
-                File(contextFilesDir, "vexstream/media"),
+                File(
+                    contextFilesDir,
+                    "vexstream/media",
+                ),
+            )
+
+        fun production(
+            context: Context,
+        ): VexStreamMediaStore =
+            VexStreamMediaStore(
+                root =
+                    File(
+                        context.filesDir,
+                        "vexstream/media",
+                    ),
+                deviceStore =
+                    VexStreamDeviceMediaStore(
+                        context.applicationContext,
+                    ),
             )
     }
 }
