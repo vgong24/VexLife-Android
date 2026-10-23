@@ -113,18 +113,39 @@ This separation lets streaming and offline copying be granted independently.
 
 ## Phone storage
 
-A real Android media store should default to app-private storage. The phone therefore does not need
-broad shared-storage ownership merely to keep VexStream offline copies.
+Verified VexStream downloads now cross two deliberately separate storage membranes:
 
-The local store owns:
+```text
+network bytes
+-> app-private integrity staging
+   exact byte length
+   exact SHA-256
+   fsync + atomic private promotion
+-> Android device media owner
+   API 29+: pending MediaStore.Audio row in Music/VexStream/
+   API 24-28: legacy MediaStore audio row + bounded runtime storage permission
+-> re-open + exact digest/length verification
+-> publish verified content:// localMediaRef
+```
 
-    expected media digest/length
-    download progress
-    atomic completion
-    verified local media ref
-    remove-local-copy
+The private staging store exists so a failed shared-media publication never destroys the already
+verified bytes. Production local-copy truth becomes the verified MediaStore content URI only after
+the shared row re-opens with the exact digest/length. A same-name row with different bytes fails
+closed; metadata never determines the storage path.
 
-Local paths remain implementation detail. Higher layers receive an opaque localMediaRef.
+Android 10+ requires no broad storage permission for this app-owned MediaStore publication. Android
+7-9 requests only the legacy READ/WRITE external-storage permissions at the user-triggered Download
+boundary and leaves repository truth untouched when permission is denied.
+
+```text
+MEDIASTORE_URI = STORAGE ADDRESS
+MEDIA_SHA256 + BYTE_LENGTH = PORTABLE MEDIA IDENTITY
+SHARED_DEVICE_STORAGE != REDISCOVERY_COMPLETE
+SHARED_DEVICE_STORAGE != CLEAR_DATA_ACCEPTED
+```
+
+Higher layers still consume `localMediaRef` opaquely. Playback re-verifies the retained row and uses
+its `content://` URI; filesystem paths remain implementation detail.
 
 ## Playback
 
@@ -144,7 +165,7 @@ LOCAL_ONLY tracks with the Hub unreachable.
 Already source-formed and/or observed:
 
 1. Android catalog/offline state + media-identity merge semantics.
-2. App-private verified media store + durable offline index.
+2. Verified private staging + durable Android MediaStore publication + app-private offline index.
 3. Journey-aware VexStream screen and feature-owned rendering.
 4. Media3 player/session ownership with phone-local-first playback resolution.
 5. VexStream-owned sanitized catalog + range-media producer.
@@ -195,10 +216,11 @@ The screen automatically attempts a catalog refresh. The expected progression is
 Desktop library connected
 -> sanitized track rows
 -> Play uses Media3 on the phone
--> Download verifies exact bytes into app-private storage
+-> Download verifies exact bytes through private staging
+-> publish + re-verify the shared Music/VexStream MediaStore object
 -> remove desktop transport / leave Hub unavailable
 -> downloaded row becomes LOCAL_ONLY
--> Play resolves the verified phone copy
+-> Play resolves the verified content:// phone copy
 -> app restart restores the verified offline index
 ```
 
