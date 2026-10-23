@@ -167,6 +167,15 @@ internal class VexStreamDeviceMediaStore(
             localCopy.contentUri()
                 ?: return false
 
+        if (
+            !isOwnedUri(
+                uri = uri,
+                digest = localCopy.mediaSha256,
+            )
+        ) {
+            return false
+        }
+
         return verifyUri(
             uri = uri,
             expectedSha256 = localCopy.mediaSha256,
@@ -180,6 +189,12 @@ internal class VexStreamDeviceMediaStore(
         val uri =
             localCopy.contentUri()
                 ?: error("VexStream shared media reference is not a content URI")
+
+        check(
+            verify(localCopy),
+        ) {
+            "VexStream shared media copy is missing or failed verification"
+        }
 
         return requireNotNull(
             contentResolver.openInputStream(uri),
@@ -205,8 +220,13 @@ internal class VexStreamDeviceMediaStore(
                 ?: return false
 
         return try {
-            if (!verify(localCopy)) {
-                true
+            if (
+                !isOwnedUri(
+                    uri = uri,
+                    digest = localCopy.mediaSha256,
+                )
+            ) {
+                false
             } else {
                 contentResolver.delete(
                     uri,
@@ -358,6 +378,85 @@ internal class VexStreamDeviceMediaStore(
         } catch (_: Exception) {
             VexStreamMediaStoreRejection.IO_FAILURE
         }
+
+    private fun isOwnedUri(
+        uri: Uri,
+        digest: VexStreamMediaSha256,
+    ): Boolean {
+        val projection =
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q
+            ) {
+                arrayOf(
+                    MediaStore.Audio.Media.DISPLAY_NAME,
+                    MediaStore.Audio.Media.RELATIVE_PATH,
+                    MediaStore.Audio.Media.MIME_TYPE,
+                )
+            } else {
+                arrayOf(
+                    MediaStore.Audio.Media.DISPLAY_NAME,
+                    MediaStore.Audio.Media.DATA,
+                    MediaStore.Audio.Media.MIME_TYPE,
+                )
+            }
+
+        return try {
+            contentResolver.query(
+                uri,
+                projection,
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) {
+                    false
+                } else {
+                    val name =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.DISPLAY_NAME,
+                            ),
+                        )
+                    val mime =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.MIME_TYPE,
+                            ),
+                        )
+                    val locationMatches =
+                        if (
+                            Build.VERSION.SDK_INT >=
+                            Build.VERSION_CODES.Q
+                        ) {
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.RELATIVE_PATH,
+                                ),
+                            ) == RELATIVE_PATH
+                        } else {
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.DATA,
+                                ),
+                            ) ==
+                                legacyFile(
+                                    digest,
+                                ).absolutePath
+                        }
+
+                    name ==
+                        displayName(
+                            digest,
+                        ) &&
+                        mime == MIME_TYPE &&
+                        locationMatches
+                }
+            } ?: false
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     private fun existingRow(
         digest: VexStreamMediaSha256,
