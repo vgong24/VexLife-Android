@@ -71,6 +71,11 @@ internal fun VexStreamLibrarySurface(
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
+    var organization by remember {
+        mutableStateOf(
+            VexStreamLibraryOrganization(),
+        )
+    }
     var artistVisitRequest by rememberSaveable {
         mutableStateOf<String?>(null)
     }
@@ -99,13 +104,21 @@ internal fun VexStreamLibrarySurface(
         remember(
             state.tracks,
             searchQuery,
+            organization,
         ) {
             state.toVexStreamLibraryProjection(
                 searchQuery = searchQuery,
+                organization = organization,
             )
         }
     val libraryTracks =
         libraryProjection.playableTracks
+    val organizationOptions =
+        remember(
+            state.tracks,
+        ) {
+            state.toVexStreamLibraryOrganizationOptions()
+        }
 
     LaunchedEffect(repository) {
         if (repository.state.value.connectionState is VexStreamConnectionState.Paired) {
@@ -213,6 +226,16 @@ internal fun VexStreamLibrarySurface(
                         VexStreamPlaylistsPane(
                             runtime = runtime,
                             state = state,
+                            visibleTrackRefs =
+                                if (organization.hasActiveFilters) {
+                                    libraryTracks
+                                        .map {
+                                            it.track.trackRef
+                                        }
+                                        .toSet()
+                                } else {
+                                    null
+                                },
                             offlineCopyConnection =
                                 offlineCopyConnection,
                             controller = controller,
@@ -273,6 +296,18 @@ internal fun VexStreamLibrarySurface(
                 searchQuery = it
             },
             onVisitArtist = ::visitArtist,
+        )
+    }
+
+    if (runtime.presentation.isOpen(VexStreamMusicScreen.OrganizationSheet)) {
+        VexStreamLibraryOrganizationSheet(
+            runtime = runtime,
+            organization = organization,
+            options = organizationOptions,
+            resultCount = libraryTracks.size,
+            onOrganizationChange = {
+                organization = it
+            },
         )
     }
 
