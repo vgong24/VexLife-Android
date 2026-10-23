@@ -346,6 +346,168 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
     }
 
     @Test
+    fun sameBytesAtDeterministicPathWithWrongMimeAreAConflict() {
+        assumeTrue(
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.Q,
+        )
+
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        val bytes =
+            "same bytes wrong mime"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "wrong-mime",
+            )
+        val collection =
+            MediaStore.Audio.Media
+                .getContentUri(
+                    MediaStore.VOLUME_EXTERNAL_PRIMARY,
+                )
+        val uri =
+            requireNotNull(
+                context.contentResolver.insert(
+                    collection,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Audio.Media.DISPLAY_NAME,
+                            track.mediaSha256.value +
+                                ".mp3",
+                        )
+                        put(
+                            MediaStore.Audio.Media.RELATIVE_PATH,
+                            "Music/VexStream/",
+                        )
+                        put(
+                            MediaStore.Audio.Media.MIME_TYPE,
+                            "audio/mpeg",
+                        )
+                        put(
+                            MediaStore.Audio.Media.IS_PENDING,
+                            1,
+                        )
+                    },
+                ),
+            )
+
+        try {
+            val descriptor =
+                requireNotNull(
+                    context.contentResolver
+                        .openFileDescriptor(
+                            uri,
+                            "w",
+                        ),
+                )
+            descriptor.use {
+                FileOutputStream(
+                    it.fileDescriptor,
+                ).use { output ->
+                    output.write(
+                        bytes,
+                    )
+                    output.flush()
+                    output.fd.sync()
+                }
+            }
+
+            assertEquals(
+                1,
+                context.contentResolver.update(
+                    uri,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Audio.Media.IS_PENDING,
+                            0,
+                        )
+                        put(
+                            MediaStore.Audio.Media.MIME_TYPE,
+                            "audio/flac",
+                        )
+                    },
+                    null,
+                    null,
+                ),
+            )
+
+            context.contentResolver
+                .query(
+                    uri,
+                    arrayOf(
+                        MediaStore.Audio.Media.MIME_TYPE,
+                    ),
+                    null,
+                    null,
+                    null,
+                )
+                ?.use { cursor ->
+                    assertTrue(
+                        cursor.moveToFirst(),
+                    )
+                    assertEquals(
+                        "audio/flac",
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.MIME_TYPE,
+                            ),
+                        ),
+                    )
+                }
+                ?: error(
+                    "wrong-MIME conflict row was not readable",
+                )
+
+            assertEquals(
+                VexStreamMediaStoreResult.Rejected(
+                    VexStreamMediaStoreRejection
+                        .SHARED_COPY_CONFLICT,
+                ),
+                VexStreamDeviceMediaStore(
+                    context,
+                ).store(
+                    track = track,
+                    input =
+                        ByteArrayInputStream(
+                            "unused input after conflict"
+                                .encodeToByteArray(),
+                        ),
+                ),
+            )
+
+            context.contentResolver
+                .query(
+                    uri,
+                    arrayOf(
+                        MediaStore.Audio.Media._ID,
+                    ),
+                    null,
+                    null,
+                    null,
+                )
+                ?.use { cursor ->
+                    assertTrue(
+                        "conflicting row must remain untouched",
+                        cursor.moveToFirst(),
+                    )
+                }
+                ?: error(
+                    "conflicting row disappeared",
+                )
+        } finally {
+            context.contentResolver.delete(
+                uri,
+                null,
+                null,
+            )
+        }
+    }
+
+    @Test
     fun legacyPermissionDenialFailsBeforeSharedWrite() {
         assumeTrue(
             Build.VERSION.SDK_INT <=
