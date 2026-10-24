@@ -72,7 +72,7 @@ internal data class VexStreamLibraryOrganization(
     ): VexStreamLibraryOrganization =
         copy(
             artists =
-                artists.toggled(
+                artists.toggledIgnoreCase(
                     artist,
                 ),
         )
@@ -82,7 +82,7 @@ internal data class VexStreamLibraryOrganization(
     ): VexStreamLibraryOrganization =
         copy(
             genres =
-                genres.toggled(
+                genres.toggledIgnoreCase(
                     genre,
                 ),
         )
@@ -306,6 +306,24 @@ private fun VexStreamTrackState.matchesVexStreamSearch(
             normalized,
             ignoreCase = true,
         )
+    }
+}
+
+private fun Set<String>.toggledIgnoreCase(
+    value: String,
+): Set<String> {
+    val matching =
+        filter {
+            it.equals(
+                value,
+                ignoreCase = true,
+            )
+        }.toSet()
+
+    return if (matching.isNotEmpty()) {
+        this - matching
+    } else {
+        this + value
     }
 }
 
