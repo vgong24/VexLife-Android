@@ -293,8 +293,9 @@ internal fun VexStreamLibrarySurface(
                         VexStreamDownloadsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
-                            libraryLoadState =
-                                libraryProjection.loadState,
+                            canShowTerminalEmptyState =
+                                libraryProjection
+                                    .canShowTerminalEmptyState,
                             offlineCopyConnection =
                                 offlineCopyConnection,
                             controller = controller,
@@ -306,8 +307,9 @@ internal fun VexStreamLibrarySurface(
                         VexStreamSongsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
-                            libraryLoadState =
-                                libraryProjection.loadState,
+                            canShowTerminalEmptyState =
+                                libraryProjection
+                                    .canShowTerminalEmptyState,
                             offlineCopyConnection =
                                 offlineCopyConnection,
                             controller = controller,
