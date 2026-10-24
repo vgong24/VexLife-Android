@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,12 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLibraryLoadState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexActionFab
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexElementStyles
+import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
 import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackRequest
@@ -87,6 +91,90 @@ internal fun VexStreamLibraryTabs(
                         },
                 )
             }
+        }
+    }
+}
+
+@Composable
+internal fun VexStreamLibraryLoadingStatus(
+    loadState: VexStreamLibraryLoadState,
+    modifier: Modifier = Modifier,
+) {
+    if (
+        loadState ==
+        VexStreamLibraryLoadState.READY
+    ) {
+        return
+    }
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 20.dp,
+                    vertical = 14.dp,
+                ),
+        horizontalArrangement =
+            Arrangement.spacedBy(
+                12.dp,
+            ),
+        verticalAlignment =
+            Alignment.CenterVertically,
+    ) {
+        CircularProgressIndicator(
+            modifier =
+                Modifier.size(
+                    20.dp,
+                ),
+            strokeWidth = 2.dp,
+        )
+        VexText(
+            element =
+                when (loadState) {
+                    VexStreamLibraryLoadState.RESTORING_LOCAL ->
+                        VexStreamMusicScreen
+                            .LibraryRestoringDownloads
+
+                    VexStreamLibraryLoadState.REFRESHING_CATALOG ->
+                        VexStreamMusicScreen
+                            .LibraryRefreshing
+
+                    VexStreamLibraryLoadState.READY ->
+                        error(
+                            "READY library state has no loading presentation",
+                        )
+                },
+        )
+    }
+}
+
+@Composable
+internal fun VexStreamLibraryLoadingPane(
+    runtime: VexRuntime,
+    loadState: VexStreamLibraryLoadState,
+) {
+    LazyColumn(
+        modifier =
+            Modifier.fillMaxSize(),
+        verticalArrangement =
+            Arrangement.spacedBy(
+                8.dp,
+            ),
+    ) {
+        item(
+            key = "library-loading-tabs",
+        ) {
+            VexStreamLibraryTabs(
+                runtime = runtime,
+            )
+        }
+        item(
+            key = "library-loading-status",
+        ) {
+            VexStreamLibraryLoadingStatus(
+                loadState = loadState,
+            )
         }
     }
 }
@@ -181,6 +269,7 @@ internal fun VexStreamLibraryFabActions(
 internal fun VexStreamSongsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
+    canShowTerminalEmptyState: Boolean = true,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
@@ -203,7 +292,10 @@ internal fun VexStreamSongsPane(
             )
         }
 
-        if (tracks.isEmpty()) {
+        if (
+            tracks.isEmpty() &&
+            canShowTerminalEmptyState
+        ) {
             item(
                 key = "songs-empty",
             ) {
@@ -214,7 +306,9 @@ internal fun VexStreamSongsPane(
                         ),
                 )
             }
-        } else {
+        } else if (
+            tracks.isNotEmpty()
+        ) {
             items(
                 items = tracks,
                 key = { it.track.trackRef.value },
@@ -240,6 +334,7 @@ internal fun VexStreamSongsPane(
 internal fun VexStreamDownloadsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
+    canShowTerminalEmptyState: Boolean = true,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
@@ -269,7 +364,10 @@ internal fun VexStreamDownloadsPane(
             )
         }
 
-        if (downloaded.isEmpty()) {
+        if (
+            downloaded.isEmpty() &&
+            canShowTerminalEmptyState
+        ) {
             item(
                 key = "downloads-empty",
             ) {
@@ -280,7 +378,9 @@ internal fun VexStreamDownloadsPane(
                         ),
                 )
             }
-        } else {
+        } else if (
+            downloaded.isNotEmpty()
+        ) {
             items(
                 items = downloaded,
                 key = { it.track.trackRef.value },

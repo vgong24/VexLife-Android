@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Surface
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -7,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLibraryLoadState
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -73,6 +75,47 @@ class VexStreamLibraryRenderTest {
                 "Albums",
             )
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun restoringDownloadsShowsProgressInsteadOfTerminalEmptyState() {
+        val runtime =
+            vexStreamRuntime()
+
+        compose.setContent {
+            VexLifeTheme(
+                darkTheme = true,
+            ) {
+                Surface {
+                    Column {
+                        VexStreamLibraryLoadingStatus(
+                            loadState =
+                                VexStreamLibraryLoadState.RESTORING_LOCAL,
+                        )
+                        VexStreamDownloadsPane(
+                            runtime = runtime,
+                            tracks = emptyList(),
+                            canShowTerminalEmptyState = false,
+                            offlineCopyConnection = null,
+                            controller = null,
+                            resolver = null,
+                            onVisitArtist = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        compose
+            .onNodeWithText(
+                "Restoring downloaded music…",
+            )
+            .assertIsDisplayed()
+        compose
+            .onNodeWithText(
+                "No downloaded songs yet.",
+            )
+            .assertDoesNotExist()
     }
 
     @Test

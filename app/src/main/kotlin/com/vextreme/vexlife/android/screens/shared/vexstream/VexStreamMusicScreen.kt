@@ -101,6 +101,18 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         role = TextRole.Supporting,
     )
 
+    val LibraryRestoringDownloads = textRef(
+        id = "body.library.loading.restore-local",
+        textRes = R.string.vexstream_music_restoring_downloads,
+        role = TextRole.Supporting,
+    )
+
+    val LibraryRefreshing = textRef(
+        id = "body.library.loading.refresh-catalog",
+        textRes = R.string.vexstream_music_refreshing_library,
+        role = TextRole.Supporting,
+    )
+
     val FiltersActive = textRef(
         id = "body.library.organization-status.active",
         textRes = R.string.vexstream_music_filters_active,

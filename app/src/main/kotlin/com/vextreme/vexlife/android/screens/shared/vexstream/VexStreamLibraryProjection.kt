@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLibraryLoadState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
@@ -113,7 +114,17 @@ internal data class VexStreamLibraryOrganizationOptions(
 internal data class VexStreamLibraryProjection(
     val playableTracks: List<VexStreamTrackState>,
     val searchResults: List<VexStreamTrackState>,
-)
+    val loadState: VexStreamLibraryLoadState,
+) {
+    val isLoading: Boolean
+        get() =
+            loadState !=
+                VexStreamLibraryLoadState.READY
+
+    val canShowTerminalEmptyState: Boolean
+        get() =
+            !isLoading
+}
 
 internal fun VexStreamMusicState.toVexStreamLibraryProjection(
     searchQuery: String,
@@ -139,6 +150,7 @@ internal fun VexStreamMusicState.toVexStreamLibraryProjection(
                     searchQuery,
                 )
             },
+        loadState = libraryLoadState,
     )
 }
 

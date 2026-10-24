@@ -69,6 +69,8 @@ class PairedVexStreamMusicRepository(
                     hubState = current.hubState,
                     connectionState =
                         current.connectionState,
+                    libraryLoadState =
+                        VexStreamLibraryLoadState.READY,
                 )
             persistedStateRestored = true
         }
@@ -495,17 +497,32 @@ class PairedVexStreamMusicRepository(
 
     private suspend fun refreshCatalogLocked(
         connection: VexStreamPairedConnection,
-    ): VexStreamRepositoryResult =
-        withContext(
-            Dispatchers.IO,
-        ) {
-            refreshCatalogBlocking(
-                connection =
-                    upgradeRemotePairingIfAvailable(
-                        connection,
-                    ),
+    ): VexStreamRepositoryResult {
+        mutableState.value =
+            mutableState.value.copy(
+                libraryLoadState =
+                    VexStreamLibraryLoadState.REFRESHING_CATALOG,
             )
+
+        return try {
+            withContext(
+                Dispatchers.IO,
+            ) {
+                refreshCatalogBlocking(
+                    connection =
+                        upgradeRemotePairingIfAvailable(
+                            connection,
+                        ),
+                )
+            }
+        } finally {
+            mutableState.value =
+                mutableState.value.copy(
+                    libraryLoadState =
+                        VexStreamLibraryLoadState.READY,
+                )
         }
+    }
 
     private fun upgradeRemotePairingIfAvailable(
         connection: VexStreamPairedConnection,
@@ -1511,7 +1528,10 @@ class PairedVexStreamMusicRepository(
             connectionStore.load()
 
         return if (connection == null) {
-            VexStreamMusicState.Empty
+            VexStreamMusicState.Empty.copy(
+                libraryLoadState =
+                    VexStreamLibraryLoadState.RESTORING_LOCAL,
+            )
         } else {
             VexStreamMusicState.Empty.copy(
                 connectionState =
@@ -1519,6 +1539,8 @@ class PairedVexStreamMusicRepository(
                         displayName = connection.displayName,
                     ),
                 hubState = VexStreamHubState.Unreachable,
+                libraryLoadState =
+                    VexStreamLibraryLoadState.RESTORING_LOCAL,
             )
         }
     }

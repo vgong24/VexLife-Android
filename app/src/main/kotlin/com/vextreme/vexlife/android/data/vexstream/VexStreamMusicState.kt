@@ -273,6 +273,19 @@ enum class VexStreamTrackAvailability {
     UNAVAILABLE,
 }
 
+/**
+ * Current library-loading truth owned by the VexStream repository.
+ *
+ * This is intentionally separate from Hub reachability and per-track download state. It answers
+ * only whether the repository is still reconciling durable local/library truth that presentation
+ * must not mistake for a terminal empty result.
+ */
+enum class VexStreamLibraryLoadState {
+    RESTORING_LOCAL,
+    REFRESHING_CATALOG,
+    READY,
+}
+
 data class VexStreamTrackState(
     val track: VexStreamTrack,
     val hubAvailable: Boolean,
@@ -293,6 +306,7 @@ data class VexStreamTrackState(
 data class VexStreamMusicState(
     val hubState: VexStreamHubState = VexStreamHubState.NotConfigured,
     val connectionState: VexStreamConnectionState = VexStreamConnectionState.NotPaired,
+    val libraryLoadState: VexStreamLibraryLoadState = VexStreamLibraryLoadState.READY,
     val tracks: List<VexStreamTrackState> = emptyList(),
     val playlists: List<VexStreamPlaylist> = emptyList(),
 ) {
