@@ -46,102 +46,175 @@ class VexStreamOfflineIndex(
                 ?.coerceAtLeast(0)
                 ?: 0
 
-            val tracks = buildList {
-                repeat(count) { index ->
-                    val prefix = "entry.$index."
-                    val digest = VexStreamMediaSha256(
-                        properties.require(prefix + "mediaSha256"),
-                    )
-                    val byteLength = properties.require(prefix + "mediaByteLength")
-                        .toLong()
-                    val receiptVersion =
-                        properties
-                            .getProperty(
-                                prefix +
-                                    "verificationMediaStoreVersion",
-                            )
-                            ?.takeIf {
-                                it.isNotBlank()
-                            }
-                    val receiptGeneration =
-                        properties
-                            .getProperty(
-                                prefix +
-                                    "verificationGenerationModified",
-                            )
-                            ?.toLongOrNull()
-                    val localCopy =
-                        VexStreamLocalCopyState.Downloaded(
-                            mediaSha256 = digest,
-                            byteLength = byteLength,
-                            localMediaRef =
+            val entries =
+                buildList {
+                    repeat(count) { index ->
+                        val prefix =
+                            "entry.$index."
+                        val digest =
+                            VexStreamMediaSha256(
                                 properties.require(
                                     prefix +
-                                        "localMediaRef",
+                                        "mediaSha256",
                                 ),
-                            verificationReceipt =
-                                if (
-                                    receiptVersion != null &&
-                                    receiptGeneration != null
-                                ) {
-                                    VexStreamLocalCopyVerificationReceipt(
-                                        mediaStoreVersion =
-                                            receiptVersion,
-                                        generationModified =
-                                            receiptGeneration,
-                                    )
-                                } else {
-                                    null
-                                },
-                        )
-
-                    val restoredCopy =
-                        mediaStore
-                            .restorePersistedCopy(
-                                localCopy,
                             )
-                            ?: return@repeat
+                        val byteLength =
+                            properties.require(
+                                prefix +
+                                    "mediaByteLength",
+                            ).toLong()
+                        val receiptVersion =
+                            properties
+                                .getProperty(
+                                    prefix +
+                                        "verificationMediaStoreVersion",
+                                )
+                                ?.takeIf {
+                                    it.isNotBlank()
+                                }
+                        val receiptGeneration =
+                            properties
+                                .getProperty(
+                                    prefix +
+                                        "verificationGenerationModified",
+                                )
+                                ?.toLongOrNull()
+                        val localCopy =
+                            VexStreamLocalCopyState.Downloaded(
+                                mediaSha256 = digest,
+                                byteLength = byteLength,
+                                localMediaRef =
+                                    properties.require(
+                                        prefix +
+                                            "localMediaRef",
+                                    ),
+                                verificationReceipt =
+                                    if (
+                                        receiptVersion !=
+                                            null &&
+                                        receiptGeneration !=
+                                            null
+                                    ) {
+                                        VexStreamLocalCopyVerificationReceipt(
+                                            mediaStoreVersion =
+                                                receiptVersion,
+                                            generationModified =
+                                                receiptGeneration,
+                                        )
+                                    } else {
+                                        null
+                                    },
+                            )
+                        val playbackEnd =
+                            properties
+                                .getProperty(
+                                    prefix +
+                                        "playbackEndSeconds",
+                                )
+                                ?.takeIf {
+                                    it.isNotBlank()
+                                }
+                                ?.toDouble()
+
+                        add(
+                            OfflineEntry(
+                                track =
+                                    VexStreamTrack(
+                                        trackRef =
+                                            VexStreamTrackRef(
+                                                properties.require(
+                                                    prefix +
+                                                        "trackRef",
+                                                ),
+                                            ),
+                                        mediaSha256 = digest,
+                                        mediaByteLength =
+                                            byteLength,
+                                        title =
+                                            properties.require(
+                                                prefix +
+                                                    "title",
+                                            ),
+                                        artist =
+                                            properties
+                                                .getProperty(
+                                                    prefix +
+                                                        "artist",
+                                                )
+                                                .orEmpty(),
+                                        album =
+                                            properties
+                                                .getProperty(
+                                                    prefix +
+                                                        "album",
+                                                )
+                                                .orEmpty(),
+                                        genre =
+                                            properties
+                                                .getProperty(
+                                                    prefix +
+                                                        "genre",
+                                                )
+                                                .orEmpty(),
+                                        year =
+                                            properties
+                                                .getProperty(
+                                                    prefix +
+                                                        "year",
+                                                )
+                                                .orEmpty(),
+                                        durationSeconds =
+                                            properties
+                                                .getProperty(
+                                                    prefix +
+                                                        "durationSeconds",
+                                                )
+                                                ?.toDoubleOrNull()
+                                                ?: 0.0,
+                                        playbackStartSeconds =
+                                            properties
+                                                .getProperty(
+                                                    prefix +
+                                                        "playbackStartSeconds",
+                                                )
+                                                ?.toDoubleOrNull()
+                                                ?: 0.0,
+                                        playbackEndSeconds =
+                                            playbackEnd,
+                                    ),
+                                localCopy =
+                                    localCopy,
+                            ),
+                        )
+                    }
+                }
+            val restoredCopies =
+                mediaStore
+                    .restorePersistedCopies(
+                        entries.map {
+                            it.localCopy
+                        },
+                    )
+            val tracks =
+                entries.mapNotNull { entry ->
+                    val restoredCopy =
+                        restoredCopies[
+                            entry.localCopy
+                                .localMediaRef
+                        ] ?: return@mapNotNull null
                     if (
                         restoredCopy !=
-                        localCopy
+                        entry.localCopy
                     ) {
                         migrationNeeded = true
                     }
 
-                    val playbackEnd = properties.getProperty(prefix + "playbackEndSeconds")
-                        ?.takeIf { it.isNotBlank() }
-                        ?.toDouble()
-
-                    val track = VexStreamTrack(
-                        trackRef = VexStreamTrackRef(
-                            properties.require(prefix + "trackRef"),
-                        ),
-                        mediaSha256 = digest,
-                        mediaByteLength = byteLength,
-                        title = properties.require(prefix + "title"),
-                        artist = properties.getProperty(prefix + "artist").orEmpty(),
-                        album = properties.getProperty(prefix + "album").orEmpty(),
-                        genre = properties.getProperty(prefix + "genre").orEmpty(),
-                        year = properties.getProperty(prefix + "year").orEmpty(),
-                        durationSeconds = properties.getProperty(prefix + "durationSeconds")
-                            ?.toDoubleOrNull()
-                            ?: 0.0,
-                        playbackStartSeconds =
-                            properties.getProperty(prefix + "playbackStartSeconds")
-                                ?.toDoubleOrNull()
-                                ?: 0.0,
-                        playbackEndSeconds = playbackEnd,
-                    )
-
-                    add(
-                        VexStreamTrackState(
-                            track = track,
-                            hubAvailable = false,
-                            localCopy = restoredCopy,
-                        ),
+                    VexStreamTrackState(
+                        track = entry.track,
+                        hubAvailable = false,
+                        localCopy = restoredCopy,
                     )
                 }
-            }
 
             val restored =
                 VexStreamMusicState(
@@ -268,6 +341,12 @@ class VexStreamOfflineIndex(
             )
     }
 }
+
+private data class OfflineEntry(
+    val track: VexStreamTrack,
+    val localCopy:
+        VexStreamLocalCopyState.Downloaded,
+)
 
 private fun Properties.require(
     key: String,

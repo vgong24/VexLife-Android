@@ -181,6 +181,52 @@ class VexStreamMediaStore private constructor(
                 expectedByteLength = expectedByteLength,
             )
 
+    fun restorePersistedCopies(
+        localCopies:
+            List<
+                VexStreamLocalCopyState.Downloaded
+            >,
+    ): Map<
+        String,
+        VexStreamLocalCopyState.Downloaded
+    > {
+        val shared =
+            localCopies.filter {
+                digestFromLocalMediaRef(
+                    it.localMediaRef,
+                ) == null
+            }
+        val restoredShared =
+            deviceStore
+                ?.restorePersisted(
+                    shared,
+                )
+                .orEmpty()
+
+        return buildMap {
+            putAll(
+                restoredShared,
+            )
+
+            localCopies
+                .filter {
+                    digestFromLocalMediaRef(
+                        it.localMediaRef,
+                    ) != null
+                }
+                .forEach { localCopy ->
+                    restorePersistedCopy(
+                        localCopy,
+                    )?.let { restored ->
+                        put(
+                            localCopy.localMediaRef,
+                            restored,
+                        )
+                    }
+                }
+        }
+    }
+
     fun restorePersistedCopy(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): VexStreamLocalCopyState.Downloaded? {
