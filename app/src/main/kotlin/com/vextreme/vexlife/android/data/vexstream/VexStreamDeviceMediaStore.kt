@@ -17,14 +17,8 @@ import java.io.InputStream
 import java.security.MessageDigest
 
 /**
- * Android-native durable owner for VexStream audio that belongs in the device music library.
- *
- * Product identity remains [VexStreamMediaSha256] + exact byte length. MediaStore row IDs and
- * content URIs are storage addresses only.
- *
- * Android 10+ writes through a pending MediaStore row and publishes only after the stored bytes are
- * re-opened and verified. Android 7-9 uses the same MediaStore audio collection but requires the
- * legacy storage permission and an exact public Music/VexStream path.
+ * Current owned-row snapshot used to reconcile one persisted shared copy without reading media
+ * bytes first.
  */
 internal data class VexStreamSharedCopySnapshot(
     val localMediaRef: String,
@@ -130,6 +124,16 @@ internal fun reconcilePersistedSharedCopies(
     )
 }
 
+/**
+ * Android-native durable owner for VexStream audio that belongs in the device music library.
+ *
+ * Product identity remains [VexStreamMediaSha256] + exact byte length. MediaStore row IDs and
+ * content URIs are storage addresses only.
+ *
+ * Android 10+ writes through a pending MediaStore row and publishes only after the stored bytes are
+ * re-opened and verified. Android 7-9 uses the same MediaStore audio collection but requires the
+ * legacy storage permission and an exact public Music/VexStream path.
+ */
 internal class VexStreamDeviceMediaStore(
     context: Context,
 ) {
