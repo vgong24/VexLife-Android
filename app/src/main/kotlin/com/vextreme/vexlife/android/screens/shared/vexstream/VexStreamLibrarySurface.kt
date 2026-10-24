@@ -105,6 +105,7 @@ internal fun VexStreamLibrarySurface(
     val libraryProjection =
         remember(
             state.tracks,
+            state.libraryLoadState,
             searchQuery,
             organization,
         ) {
@@ -115,6 +116,9 @@ internal fun VexStreamLibrarySurface(
         }
     val libraryTracks =
         libraryProjection.playableTracks
+    val hasKnownPlayableTracks =
+        state.playableTracks()
+            .isNotEmpty()
     val organizationOptions =
         remember(
             state.tracks,
@@ -192,6 +196,16 @@ internal fun VexStreamLibrarySurface(
                 )
             }
 
+            if (
+                libraryProjection.isLoading &&
+                hasKnownPlayableTracks
+            ) {
+                VexStreamLibraryLoadingStatus(
+                    loadState =
+                        libraryProjection.loadState,
+                )
+            }
+
             if (organization.hasActiveFilters) {
                 VexText(
                     element =
@@ -215,8 +229,17 @@ internal fun VexStreamLibrarySurface(
                     .fillMaxWidth()
                     .weight(1f),
             ) {
-                when (selected.elementId) {
-                    VexStreamMusicScreen.AlbumsPanel.elementId ->
+                when {
+                    libraryProjection.isLoading &&
+                        !hasKnownPlayableTracks ->
+                        VexStreamLibraryLoadingPane(
+                            runtime = runtime,
+                            loadState =
+                                libraryProjection.loadState,
+                        )
+
+                    selected.elementId ==
+                        VexStreamMusicScreen.AlbumsPanel.elementId ->
                         VexStreamAlbumsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
@@ -227,7 +250,8 @@ internal fun VexStreamLibrarySurface(
                             onVisitArtist = ::visitArtist,
                         )
 
-                    VexStreamMusicScreen.ArtistsPanel.elementId ->
+                    selected.elementId ==
+                        VexStreamMusicScreen.ArtistsPanel.elementId ->
                         VexStreamArtistsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
@@ -242,7 +266,8 @@ internal fun VexStreamLibrarySurface(
                             onVisitArtist = ::visitArtist,
                         )
 
-                    VexStreamMusicScreen.PlaylistsPanel.elementId ->
+                    selected.elementId ==
+                        VexStreamMusicScreen.PlaylistsPanel.elementId ->
                         VexStreamPlaylistsPane(
                             runtime = runtime,
                             state = state,
@@ -263,10 +288,13 @@ internal fun VexStreamLibrarySurface(
                             onVisitArtist = ::visitArtist,
                         )
 
-                    VexStreamMusicScreen.DownloadsPanel.elementId ->
+                    selected.elementId ==
+                        VexStreamMusicScreen.DownloadsPanel.elementId ->
                         VexStreamDownloadsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
+                            libraryLoadState =
+                                libraryProjection.loadState,
                             offlineCopyConnection =
                                 offlineCopyConnection,
                             controller = controller,
@@ -278,6 +306,8 @@ internal fun VexStreamLibrarySurface(
                         VexStreamSongsPane(
                             runtime = runtime,
                             tracks = libraryTracks,
+                            libraryLoadState =
+                                libraryProjection.loadState,
                             offlineCopyConnection =
                                 offlineCopyConnection,
                             controller = controller,
