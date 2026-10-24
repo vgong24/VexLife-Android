@@ -7,6 +7,8 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import com.vextreme.vexlife.android.vexstream.collection.VexStreamCollectionPlaybackOrder
+import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackPlayRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -184,6 +186,78 @@ class VexStreamLibraryProjectionTest {
                 unknownAmbient,
             ),
             state.playableTracks(),
+        )
+    }
+
+    @Test
+    fun filteredProjectionIsExactPlaybackMembershipForRowsPlayAllAndShuffleAll() {
+        val short =
+            track(
+                ref = "short-playback",
+                title = "Short",
+                artist = "Vex",
+                genre = "Pop",
+                durationSeconds = 8 * 60.0,
+            )
+        val long =
+            track(
+                ref = "long-playback",
+                title = "Long Mix",
+                artist = "Vex",
+                genre = "Mix",
+                durationSeconds = 90 * 60.0,
+            )
+        val projection =
+            VexStreamMusicState(
+                tracks =
+                    listOf(
+                        short,
+                        long,
+                    ),
+            ).toVexStreamLibraryProjection(
+                searchQuery = "",
+                organization =
+                    VexStreamLibraryOrganization(
+                        durationComparison =
+                            VexStreamDurationComparison.LESS_THAN,
+                        durationThresholdMinutes = 10,
+                    ),
+            )
+
+        assertEquals(
+            listOf(short),
+            projection.playableTracks,
+        )
+
+        val rowRequest =
+            VexStreamTrackPlayRequest(
+                selected = short,
+                contextTracks = projection.playableTracks,
+            )
+        val playAllRequest =
+            vexStreamLibraryPlaybackRequest(
+                tracks = projection.playableTracks,
+                order =
+                    VexStreamCollectionPlaybackOrder.Natural,
+            )
+        val shuffleAllRequest =
+            vexStreamLibraryPlaybackRequest(
+                tracks = projection.playableTracks,
+                order =
+                    VexStreamCollectionPlaybackOrder.Shuffled,
+            )
+
+        assertEquals(
+            listOf(short),
+            rowRequest.contextTracks,
+        )
+        assertEquals(
+            listOf(short),
+            playAllRequest.tracks,
+        )
+        assertEquals(
+            listOf(short),
+            shuffleAllRequest.tracks,
         )
     }
 
