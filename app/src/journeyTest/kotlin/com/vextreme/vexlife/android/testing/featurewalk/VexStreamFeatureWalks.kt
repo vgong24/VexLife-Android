@@ -27,6 +27,17 @@ object VexStreamFeatureWalkRefs {
     const val COLLECTION_AVAILABLE_OFFLINE: String =
         "$DOWNLOAD_COLLECTION_MISSING/P03"
 
+    const val MANAGE_LIBRARY_DOWNLOADS: String =
+        "$OFFLINE_DOWNLOAD/C03"
+    const val LIBRARY_DOWNLOAD_ACTIONS_REACHABLE: String =
+        "$MANAGE_LIBRARY_DOWNLOADS/P01"
+    const val LIBRARY_MISSING_DOWNLOADED: String =
+        "$MANAGE_LIBRARY_DOWNLOADS/P02"
+    const val LIBRARY_DOWNLOADS_REMOVED: String =
+        "$MANAGE_LIBRARY_DOWNLOADS/P03"
+    const val LIBRARY_CATALOG_PRESERVED_AFTER_REMOVE_ALL: String =
+        "$MANAGE_LIBRARY_DOWNLOADS/P04"
+
     const val LIBRARY_ORGANIZATION: String =
         "$FEATURE/W02"
     const val SORT_FILTER_PLAYBACK: String =
@@ -131,6 +142,55 @@ internal object VexStreamFeatureWalks {
                 ),
         )
 
+    val manageLibraryDownloads =
+        VexFeatureWalkCase(
+            ref =
+                VexStreamFeatureWalkRefs.MANAGE_LIBRARY_DOWNLOADS,
+            key =
+                "manage-library-downloads",
+            title =
+                "Manage all current Songs downloads from VexStream settings",
+            checkpoints =
+                listOf(
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs
+                                .LIBRARY_DOWNLOAD_ACTIONS_REACHABLE,
+                        key =
+                            "library-download-actions-reachable",
+                        title =
+                            "VexStream settings exposes Download all missing and Remove all downloaded for Songs",
+                    ),
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs
+                                .LIBRARY_MISSING_DOWNLOADED,
+                        key =
+                            "library-missing-downloaded",
+                        title =
+                            "Download all missing requests only current missing Songs and makes them local",
+                    ),
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs
+                                .LIBRARY_DOWNLOADS_REMOVED,
+                        key =
+                            "library-downloads-removed",
+                        title =
+                            "Remove all downloaded removes current local Song copies through repository truth",
+                    ),
+                    VexFeatureWalkCheckpoint(
+                        ref =
+                            VexStreamFeatureWalkRefs
+                                .LIBRARY_CATALOG_PRESERVED_AFTER_REMOVE_ALL,
+                        key =
+                            "library-catalog-preserved",
+                        title =
+                            "Bulk removal preserves the same VexStream catalog Songs",
+                    ),
+                ),
+        )
+
     val sortFilterPlayback =
         VexFeatureWalkCase(
             ref =
@@ -199,6 +259,7 @@ internal object VexStreamFeatureWalks {
                             listOf(
                                 downloadAndRemove,
                                 downloadCollectionMissing,
+                                manageLibraryDownloads,
                             ),
                     ),
                     VexFeatureWalk(
