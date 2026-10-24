@@ -127,6 +127,98 @@ class VexStreamMusicStateTest {
     }
 
     @Test
+    fun currentCatalogBindsRediscoveredDurableCopyByPortableIdentity() {
+        val rediscovered =
+            VexStreamLocalCopyState.Downloaded(
+                mediaSha256 =
+                    VexStreamMediaSha256(
+                        DIGEST_A,
+                    ),
+                byteLength = 4096,
+                localMediaRef =
+                    "content://media/external_primary/audio/media/42",
+            )
+
+        val next =
+            VexStreamMusicState.Empty
+                .withHubCatalog(
+                    catalog =
+                        catalog(
+                            VexStreamHubTrackProjection(
+                                trackRef =
+                                    VexStreamTrackRef(
+                                        "hub.path-derived.current",
+                                    ),
+                                mediaSha256 =
+                                    VexStreamMediaSha256(
+                                        DIGEST_A,
+                                    ),
+                                mediaByteLength = 4096,
+                                title = "Rediscovered",
+                                artist = "Vex",
+                            ),
+                        ),
+                    rediscoveredLocalCopies =
+                        mapOf(
+                            rediscovered.mediaSha256 to
+                                rediscovered,
+                        ),
+                )
+
+        assertEquals(
+            VexStreamTrackAvailability.HUB_AND_LOCAL,
+            next.tracks.single().availability,
+        )
+        assertEquals(
+            "hub.path-derived.current",
+            next.tracks.single().track.trackRef.value,
+        )
+        assertEquals(
+            rediscovered,
+            next.tracks.single().localCopy,
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rediscoveredDigestCannotBindContradictoryByteLength() {
+        val rediscovered =
+            VexStreamLocalCopyState.Downloaded(
+                mediaSha256 =
+                    VexStreamMediaSha256(
+                        DIGEST_A,
+                    ),
+                byteLength = 4097,
+                localMediaRef =
+                    "content://media/external_primary/audio/media/42",
+            )
+
+        VexStreamMusicState.Empty
+            .withHubCatalog(
+                catalog =
+                    catalog(
+                        VexStreamHubTrackProjection(
+                            trackRef =
+                                VexStreamTrackRef(
+                                    "hub.path-derived.current",
+                                ),
+                            mediaSha256 =
+                                VexStreamMediaSha256(
+                                    DIGEST_A,
+                                ),
+                            mediaByteLength = 4096,
+                            title = "Contradictory",
+                            artist = "Vex",
+                        ),
+                    ),
+                rediscoveredLocalCopies =
+                    mapOf(
+                        rediscovered.mediaSha256 to
+                            rediscovered,
+                    ),
+            )
+    }
+
+    @Test
     fun downloadedTrackMissingFromNewHubCatalogRemainsLocalOnly() {
         val localTrack = track(
             ref = "hub.old.only",

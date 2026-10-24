@@ -133,15 +133,55 @@ verified bytes. Production local-copy truth becomes the verified MediaStore cont
 the shared row re-opens with the exact digest/length. A same-name row with different bytes fails
 closed; metadata never determines the storage path.
 
-Android 10+ requires no broad storage permission for this app-owned MediaStore publication. Android
-7-9 requests only the legacy READ/WRITE external-storage permissions at the user-triggered Download
-boundary and leaves repository truth untouched when permission is denied.
+Android 10+ requires no broad storage permission for MediaStore publication while VexLife still
+owns the row. That publication fact is deliberately separate from fresh-state rediscovery.
+
+Clear Data removes VexLife's app-private index/pairing state and Android MediaProvider no longer
+treats the surviving public row as owned by the cleared package. A fresh VexLife state therefore
+needs the platform's read authority before it can inspect and re-verify that already-published
+shared audio:
+
+```text
+API 29-32 post-Clear-Data rediscovery
+-> READ_EXTERNAL_STORAGE
+
+API 33+ post-Clear-Data rediscovery
+-> READ_MEDIA_AUDIO
+```
+
+The existing Offline Copy permission handoff owns this Android consent seam. After fresh pairing
+establishes a current catalog, it requests the applicable shared-audio read permission once; grant
+triggers a catalog refresh so the existing digest/length rediscovery path can attach the surviving
+`content://` copy. Denial does not redownload, fabricate a local copy, or erase Hub truth.
+
+Android 7-9 still requests the bounded legacy READ/WRITE external-storage permissions at the
+user-triggered Download boundary and leaves repository truth untouched when permission is denied.
 
 ```text
 MEDIASTORE_URI = STORAGE ADDRESS
 MEDIA_SHA256 + BYTE_LENGTH = PORTABLE MEDIA IDENTITY
-SHARED_DEVICE_STORAGE != REDISCOVERY_COMPLETE
-SHARED_DEVICE_STORAGE != CLEAR_DATA_ACCEPTED
+TRACK_REF = CURRENT HUB ADDRESS
+REDISCOVERED_SHARED_COPY + CURRENT_CATALOG -> CURRENT TRACK + LOCAL COPY
+REDISCOVERY != CLEAR_DATA_ACCEPTED
+```
+
+The current rediscovery candidate never reconstructs `trackRef` from a filename. On catalog refresh,
+the repository asks the durable device store for the deterministic row matching each current
+`mediaSha256 + mediaByteLength`, requires the exact VexStream path/name/MIME contract, rejects
+pending rows, re-opens and verifies the bytes, and only then hands the resulting `content://` copy
+into the existing digest-based catalog merge. A changed path-derived Hub ref therefore follows the
+same verified bytes without making the old ref portable identity.
+
+Retained pre-MediaStore private downloads use the same catalog refresh as a bounded migration
+opportunity. The private copy is verified again, published through the same device-store owner from
+its already-local bytes, and replaced with the durable `content://` reference only after shared
+publication succeeds. Any identity mismatch, permission denial or publication failure leaves the
+verified private copy untouched.
+
+```text
+MIGRATION != REDOWNLOAD
+MIGRATION_FAILURE -> KEEP_PRIVATE_COPY
+REDISCOVERY != MIGRATION
 ```
 
 Higher layers still consume `localMediaRef` opaquely. Playback re-verifies the retained row and uses

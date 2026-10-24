@@ -171,6 +171,52 @@ internal class VexStreamDeviceMediaStore(
         }
     }
 
+    fun rediscover(
+        expectedSha256: VexStreamMediaSha256,
+        expectedByteLength: Long,
+    ): VexStreamLocalCopyState.Downloaded? {
+        if (
+            Build.VERSION.SDK_INT <= Build.VERSION_CODES.P &&
+            ContextCompat.checkSelfPermission(
+                appContext,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return null
+        }
+
+        return try {
+            val existing =
+                existingRow(
+                    expectedSha256,
+                )
+                    ?: return null
+
+            if (
+                existing.pending ||
+                !isOwnedUri(
+                    uri = existing.uri,
+                    digest = expectedSha256,
+                ) ||
+                verifyUri(
+                    uri = existing.uri,
+                    expectedSha256 = expectedSha256,
+                    expectedByteLength = expectedByteLength,
+                ) != null
+            ) {
+                return null
+            }
+
+            downloadedState(
+                expectedSha256 = expectedSha256,
+                expectedByteLength = expectedByteLength,
+                uri = existing.uri,
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     fun verify(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): Boolean {
@@ -635,13 +681,21 @@ internal class VexStreamDeviceMediaStore(
         track: VexStreamTrack,
         uri: Uri,
     ): VexStreamLocalCopyState.Downloaded =
+        downloadedState(
+            expectedSha256 = track.mediaSha256,
+            expectedByteLength = track.mediaByteLength,
+            uri = uri,
+        )
+
+    private fun downloadedState(
+        expectedSha256: VexStreamMediaSha256,
+        expectedByteLength: Long,
+        uri: Uri,
+    ): VexStreamLocalCopyState.Downloaded =
         VexStreamLocalCopyState.Downloaded(
-            mediaSha256 =
-                track.mediaSha256,
-            byteLength =
-                track.mediaByteLength,
-            localMediaRef =
-                uri.toString(),
+            mediaSha256 = expectedSha256,
+            byteLength = expectedByteLength,
+            localMediaRef = uri.toString(),
         )
 
     private fun VexStreamLocalCopyState.Downloaded.contentUri(): Uri? =

@@ -6,10 +6,16 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.core.content.ContextCompat
+import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
@@ -49,7 +55,34 @@ internal class VexStreamOfflineCopyConnection(
     private val scope: CoroutineScope,
     private val canDownload: () -> Boolean = { true },
     private val requestDownloadPermission: (((() -> Unit)) -> Unit)? = null,
+    private val canReadDeviceLibrary: () -> Boolean = { true },
+    private val requestDeviceLibraryReadPermission: (((() -> Unit)) -> Unit)? = null,
 ) {
+    /**
+     * Requests only the Android read authority needed to rediscover durable shared audio after
+     * VexLife loses MediaStore ownership (for example after Clear Data).
+     *
+     * Publication remains independently permissionless on API 29+ for rows this app owns.
+     */
+    fun ensureDeviceLibraryReadAccess(
+        onGranted: () -> Unit,
+    ): Boolean {
+        if (canReadDeviceLibrary()) {
+            return true
+        }
+
+        if (scope.isActive) {
+            requestDeviceLibraryReadPermission
+                ?.invoke {
+                    if (scope.isActive) {
+                        onGranted()
+                    }
+                }
+        }
+
+        return false
+    }
+
     fun request(
         request: VexStreamOfflineCopyRequest,
     ): Job {
@@ -155,6 +188,10 @@ internal fun rememberVexStreamOfflineCopyConnection(
 ): VexStreamOfflineCopyConnection {
     val context =
         LocalContext.current
+    val inspectionMode =
+        LocalInspectionMode.current
+    val state by
+        repository.state.collectAsState()
     val pendingRetry =
         remember {
             mutableStateOf<
@@ -192,13 +229,47 @@ internal fun rememberVexStreamOfflineCopyConnection(
             }
         }
 
-    return remember(
-        repository,
-        scope,
-        context,
-        permissionLauncher,
-    ) {
-        VexStreamOfflineCopyConnection(
+    val deviceLibraryReadPermission =
+        vexStreamDeviceLibraryReadPermission(
+            Build.VERSION.SDK_INT,
+        )
+    val deviceLibraryReadRetry =
+        remember {
+            mutableStateOf<
+                (() -> Unit)?
+            >(
+                null,
+            )
+        }
+    val deviceLibraryReadRequested =
+        remember {
+            mutableStateOf(false)
+        }
+    val deviceLibraryReadLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts
+                .RequestPermission(),
+        ) { granted ->
+            val retry =
+                deviceLibraryReadRetry.value
+            deviceLibraryReadRetry.value =
+                null
+
+            if (granted) {
+                retry?.invoke()
+            }
+        }
+
+    val connection =
+        remember(
+            repository,
+            scope,
+            context,
+            permissionLauncher,
+            deviceLibraryReadLauncher,
+            deviceLibraryReadPermission,
+        ) {
+            VexStreamOfflineCopyConnection(
             repository = repository,
             scope = scope,
             canDownload = {
@@ -229,9 +300,81 @@ internal fun rememberVexStreamOfflineCopyConnection(
                     )
                 }
             },
+            canReadDeviceLibrary = {
+                ContextCompat
+                    .checkSelfPermission(
+                        context,
+                        deviceLibraryReadPermission,
+                    ) ==
+                    PackageManager.PERMISSION_GRANTED
+            },
+            requestDeviceLibraryReadPermission = {
+                    retry,
+                ->
+                if (
+                    deviceLibraryReadRetry.value ==
+                    null
+                ) {
+                    deviceLibraryReadRetry.value =
+                        retry
+                    deviceLibraryReadLauncher.launch(
+                        deviceLibraryReadPermission,
+                    )
+                }
+            },
         )
     }
+
+    LaunchedEffect(
+        inspectionMode,
+        state.connectionState,
+        state.hubState,
+        connection,
+    ) {
+        if (inspectionMode) {
+            return@LaunchedEffect
+        }
+
+        if (
+            state.connectionState !is
+            VexStreamConnectionState.Paired
+        ) {
+            deviceLibraryReadRequested.value =
+                false
+            return@LaunchedEffect
+        }
+
+        if (
+            state.hubState !is
+            VexStreamHubState.Ready ||
+            deviceLibraryReadRequested.value
+        ) {
+            return@LaunchedEffect
+        }
+
+        deviceLibraryReadRequested.value =
+            true
+        connection.ensureDeviceLibraryReadAccess {
+            scope.launch {
+                repository.refreshCatalog()
+            }
+        }
+    }
+
+    return connection
 }
+
+internal fun vexStreamDeviceLibraryReadPermission(
+    apiLevel: Int,
+): String =
+    if (
+        apiLevel >=
+        Build.VERSION_CODES.TIRAMISU
+    ) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
 
 private val LEGACY_STORAGE_PERMISSIONS =
     arrayOf(

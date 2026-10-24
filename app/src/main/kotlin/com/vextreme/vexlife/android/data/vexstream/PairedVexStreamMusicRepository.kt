@@ -369,6 +369,38 @@ class PairedVexStreamMusicRepository(
                 )
             }
 
+            val rediscovered =
+                withContext(
+                    Dispatchers.IO,
+                ) {
+                    mediaStore
+                        .rediscoverDeviceCopy(
+                            expectedSha256 =
+                                target.track.mediaSha256,
+                            expectedByteLength =
+                                target.track.mediaByteLength,
+                        )
+                }
+            if (rediscovered != null) {
+                updateLocalCopy(
+                    trackRef = trackRef,
+                    localCopy = rediscovered,
+                )
+                withContext(
+                    Dispatchers.IO,
+                ) {
+                    offlineIndex.persist(
+                        mutableState.value,
+                    )
+                }
+                return VexStreamRepositoryResult.Rejected(
+                    reason =
+                        VexStreamRepositoryRejection
+                            .ALREADY_DOWNLOADED,
+                    trackRef = trackRef,
+                )
+            }
+
             updateLocalCopy(
                 trackRef = trackRef,
                 localCopy =
@@ -584,16 +616,56 @@ class PairedVexStreamMusicRepository(
                 parseCatalog(
                     body,
                 )
-            mutableState.value = mutableState.value
-                .withHubCatalog(
+            val migrationChanged =
+                migrateRetainedPrivateCopies(
                     catalog,
                 )
-                .copy(
-                    connectionState =
-                        VexStreamConnectionState.Paired(
-                            displayName = connection.displayName,
-                        ),
+            val rediscoveredLocalCopies =
+                catalog.tracks
+                    .mapNotNull { projection ->
+                        mediaStore
+                            .rediscoverDeviceCopy(
+                                expectedSha256 =
+                                    projection.mediaSha256,
+                                expectedByteLength =
+                                    projection.mediaByteLength,
+                            )
+                            ?.let { localCopy ->
+                                projection.mediaSha256 to
+                                    localCopy
+                            }
+                    }
+                    .toMap()
+
+            val nextState =
+                mutableState.value
+                    .withHubCatalog(
+                        catalog = catalog,
+                        rediscoveredLocalCopies =
+                            rediscoveredLocalCopies,
+                    )
+                    .copy(
+                        connectionState =
+                            VexStreamConnectionState.Paired(
+                                displayName = connection.displayName,
+                            ),
+                    )
+
+            if (
+                migrationChanged ||
+                rediscoveredLocalCopies
+                    .isNotEmpty()
+            ) {
+                offlineIndex.persist(
+                    nextState,
                 )
+            }
+
+            // Publish current local-copy truth only after the matching restart index write has
+            // completed. A collector must not observe HUB_AND_LOCAL in the gap before its private
+            // recovery index is rebuilt.
+            mutableState.value =
+                nextState
 
             VexStreamRepositoryResult.Accepted()
         } catch (_: Exception) {
@@ -612,6 +684,77 @@ class PairedVexStreamMusicRepository(
                 reason = VexStreamRepositoryRejection.HUB_NOT_READY,
             )
         }
+    }
+
+    private fun migrateRetainedPrivateCopies(
+        catalog: VexStreamHubCatalogProjection,
+    ): Boolean {
+        var current =
+            mutableState.value
+        var changed =
+            false
+
+        catalog.tracks.forEach { projection ->
+            val localCopy =
+                current.tracks
+                    .firstOrNull { state ->
+                        state.track.mediaSha256 ==
+                            projection.mediaSha256
+                    }
+                    ?.localCopy
+                    as? VexStreamLocalCopyState.Downloaded
+                    ?: return@forEach
+
+            if (
+                localCopy.byteLength !=
+                projection.mediaByteLength
+            ) {
+                return@forEach
+            }
+
+            val migrated =
+                mediaStore.migratePrivateCopy(
+                    track = projection.toTrack(),
+                    localCopy = localCopy,
+                ) as? VexStreamMediaStoreResult.Stored
+                    ?: return@forEach
+
+            if (
+                migrated.localCopy ==
+                localCopy
+            ) {
+                return@forEach
+            }
+
+            current =
+                current.copy(
+                    tracks =
+                        current.tracks.map { state ->
+                            if (
+                                state.track.mediaSha256 ==
+                                projection.mediaSha256 &&
+                                state.localCopy ==
+                                localCopy
+                            ) {
+                                state.copy(
+                                    localCopy =
+                                        migrated.localCopy,
+                                )
+                            } else {
+                                state
+                            }
+                        },
+                )
+            changed =
+                true
+        }
+
+        if (changed) {
+            mutableState.value =
+                current
+        }
+
+        return changed
     }
 
     private suspend fun readPairingInfo(

@@ -1,7 +1,10 @@
 package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -33,6 +36,8 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
+import com.vextreme.vexlife.android.data.vexstream.VexStreamRepositoryRejection
+import com.vextreme.vexlife.android.data.vexstream.VexStreamRepositoryResult
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
@@ -72,20 +77,32 @@ import org.junit.runner.RunWith
  * so pairing, Media3 playback, offline bytes and restart restoration share one isolated app sandbox
  * without clearing ordinary VexLife pairing/download state.
  *
- * The real VexLife process restart is proved by two separate host-selected instrumentation phases:
+ * The ordinary process-restart path is proved by host-selected Phase A -> Phase B.
+ * Clear Data durability uses the same isolated app identity with Phase A -> host pm clear -> Phase C.
  *
  *   Phase A
- *     existing pairing -> fixture catalog -> stream
- *     -> single-track local-stream/offline: queue -> verified download
+ *     fresh test pairing -> fixture catalog -> stream
+ *     -> single-track local-stream/offline: queue -> verified durable download
  *     -> MassDownload: verified first download -> exact collection Download missing
- *     -> Desktop stopped -> LOCAL_ONLY playback
+ *     -> Desktop stopped -> content:// LOCAL_ONLY playback
  *
- *   HOST
+ *   HOST / process-restart scenario
  *     force-stop VexLife -> verify stopped -> invoke Phase B in a fresh instrumentation process
  *
  *   Phase B
- *     durable offline index restored -> local playback
+ *     durable offline index restored -> content:// local playback
  *     -> Desktop restarted -> reconnect -> remove fixture download -> catalog identity remains
+ *
+ *   HOST / Clear Data scenario
+ *     retain Phase-A evidence -> pm clear isolated .crossplatform package only
+ *     -> verify app-private VexStream state is absent while shared media remains
+ *     -> restart Desktop + fresh test pairing -> invoke Phase C
+ *
+ *   Phase C
+ *     fresh app identity -> current catalog -> durable-copy rediscovery
+ *     -> ALREADY_DOWNLOADED without media transfer
+ *     -> rebuilt offline index -> Desktop stopped -> content:// local playback
+ *     -> run-owned shared media cleanup
  *
  * MassDownload is a narrower lived claim. Queue remains an independently preserved sibling claim of
  * the broader local-stream/offline relationship and is not silently re-proved by MassDownload.
@@ -1002,7 +1019,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             waitForPlayback(
                 controller = controller,
                 targetRef = targetRef,
-                expectedScheme = "file",
+                expectedScheme = "content",
             )
 
             val localPlaybackDetails =
@@ -1242,7 +1259,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
             waitForPlayback(
                 controller = controller,
                 targetRef = targetRef,
-                expectedScheme = "file",
+                expectedScheme = "content",
             )
 
             val restoredPlaybackDetails =
@@ -1552,6 +1569,574 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 status = "PASS",
                 details =
                     mapOf(
+                        "nextHostEffect" to
+                            "REMOVE_TEST_SOURCE_THEN_DELETE_FIXTURE_ROOT",
+                    ),
+            )
+        }
+    }
+
+    @Test
+    fun phaseCClearDataFreshPairRediscoverAndPlayLocalWithoutRedownload() {
+        val instrumentation =
+            InstrumentationRegistry
+                .getInstrumentation()
+        val context =
+            instrumentation
+                .targetContext
+        val evidence =
+            selectedEvidence(
+                expectedPhase = PHASE_C,
+            )
+        activeEvidence =
+            evidence
+
+        val pairingMode =
+            requirePairingMode(
+                evidence,
+            )
+        check(
+            pairingMode ==
+                PairingMode.FRESH_TEST_PAIRING_NAMESPACE,
+        ) {
+            "Clear Data durability requires the isolated fresh test pairing namespace"
+        }
+
+        val expectedDigest =
+            requireFixtureDigest(
+                evidence,
+            )
+        val expectedTrackRef =
+            requireFixtureTrackRef(
+                evidence,
+            )
+
+        evidence.resetRunEvidence()
+        evidence.checkpoint(
+            phaseRef = "android.phase-c.started",
+            status = "PASS",
+            details =
+                mapOf(
+                    "expectedMediaSha256" to expectedDigest,
+                    "expectedTrackRef" to expectedTrackRef.value,
+                    "clearDataPackage" to context.packageName,
+                ),
+        )
+
+        val deviceLibraryReadPermission =
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.TIRAMISU
+            ) {
+                Manifest.permission.READ_MEDIA_AUDIO
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+        if (
+            context.checkSelfPermission(
+                deviceLibraryReadPermission,
+            ) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            instrumentation.uiAutomation
+                .grantRuntimePermission(
+                    context.packageName,
+                    deviceLibraryReadPermission,
+                )
+        }
+        check(
+            context.checkSelfPermission(
+                deviceLibraryReadPermission,
+            ) ==
+                PackageManager.PERMISSION_GRANTED,
+        ) {
+            "Clear Data Phase C requires the platform shared-audio read permission after package ownership is lost"
+        }
+        evidence.checkpoint(
+            phaseRef =
+                "android.clear-data.device-library-read-permission",
+            status = "PASS",
+            details =
+                mapOf(
+                    "permission" to
+                        deviceLibraryReadPermission,
+                    "apiLevel" to
+                        Build.VERSION.SDK_INT,
+                ),
+        )
+
+        val vexStreamContext =
+            pairingContext(
+                productContext = context,
+                pairingMode = pairingMode,
+            )
+        val connectionStore =
+            VexStreamConnectionStore(
+                vexStreamContext,
+            )
+
+        check(
+            connectionStore.load() ==
+                null,
+        ) {
+            "Clear Data Phase C must start without retained pairing"
+        }
+        check(
+            !File(
+                vexStreamContext.filesDir,
+                "vexstream/offline-index.properties",
+            ).exists(),
+        ) {
+            "Clear Data Phase C must start without the app-private offline index"
+        }
+
+        resetFreshTestNamespace(
+            context = vexStreamContext,
+            connectionStore = connectionStore,
+        )
+        val deviceRef =
+            connectionStore.deviceRef()
+        val vexStream =
+            PairedVexStreamMusicRepository
+                .production(
+                    vexStreamContext,
+                )
+
+        check(
+            vexStream
+                .state
+                .value
+                .tracks
+                .isEmpty(),
+        ) {
+            "Clear Data Phase C must begin without restored app-private track state"
+        }
+
+        evidence.checkpoint(
+            phaseRef = "android.clear-data.private-state-empty",
+            status = "PASS",
+            details =
+                mapOf(
+                    "deviceRef" to deviceRef,
+                    "offlineIndexPresent" to false,
+                    "retainedTrackCount" to 0,
+                ),
+        )
+
+        withApp(
+            vexStream = vexStream,
+        ) { controller ->
+            tap(
+                HomeScreen
+                    .ConnectVexStreamMusic
+                    .elementId,
+            )
+            waitForTag(
+                VexStreamMusicScreen
+                    .FindNearby
+                    .elementId,
+            )
+            tap(
+                VexStreamMusicScreen
+                    .FindNearby
+                    .elementId,
+            )
+
+            compose.waitUntil(
+                timeoutMillis =
+                    DISCOVERY_TIMEOUT_MS,
+            ) {
+                vexStream
+                    .state
+                    .value
+                    .connectionState is
+                    VexStreamConnectionState.ConfirmCode ||
+                    vexStream
+                        .state
+                        .value
+                        .connectionState is
+                    VexStreamConnectionState.Failed
+            }
+
+            val confirmation =
+                vexStream
+                    .state
+                    .value
+                    .connectionState
+                    as? VexStreamConnectionState.ConfirmCode
+                    ?: error(
+                        "Clear Data fresh pairing did not reach code confirmation: " +
+                            vexStream
+                                .state
+                                .value
+                                .connectionState,
+                    )
+
+            evidence.checkpoint(
+                phaseRef = "android.clear-data.discovery.resolve",
+                status = "PASS",
+                details =
+                    mapOf(
+                        "displayName" to
+                            confirmation.displayName,
+                        "deviceRef" to deviceRef,
+                        "pairingCode" to
+                            confirmation.pairingCode,
+                    ),
+            )
+
+            tap(
+                VexStreamMusicScreen
+                    .ConfirmPairingCode
+                    .elementId,
+            )
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.pairing.requested",
+                status = "WAITING",
+                details =
+                    mapOf(
+                        "deviceRef" to deviceRef,
+                    ),
+            )
+
+            compose.waitUntil(
+                timeoutMillis =
+                    PAIRING_APPROVAL_TIMEOUT_MS,
+            ) {
+                val state =
+                    vexStream
+                        .state
+                        .value
+                (
+                    state.connectionState is
+                        VexStreamConnectionState.Paired &&
+                        state.hubState is
+                        VexStreamHubState.Ready
+                ) ||
+                    state.connectionState is
+                    VexStreamConnectionState.Failed
+            }
+
+            val ready =
+                vexStream
+                    .state
+                    .value
+            check(
+                ready.connectionState is
+                    VexStreamConnectionState.Paired &&
+                    ready.hubState is
+                    VexStreamHubState.Ready
+            ) {
+                "Clear Data fresh pairing/catalog did not become ready: " +
+                    ready.connectionState +
+                    " / " +
+                    ready.hubState
+            }
+
+            val recovered =
+                waitForFixtureCatalog(
+                    vexStream = vexStream,
+                    expectedTrackRef = expectedTrackRef,
+                    expectedDigest = expectedDigest,
+                )
+            val targetRef =
+                recovered.trackRef
+            val recoveredState =
+                requireNotNull(
+                    vexStream
+                        .state
+                        .value
+                        .track(
+                            targetRef,
+                        ),
+                )
+            val localCopy =
+                recoveredState.localCopy as?
+                    VexStreamLocalCopyState.Downloaded
+                    ?: error(
+                        "Clear Data catalog recovery did not rediscover the durable shared copy",
+                    )
+
+            assertEquals(
+                VexStreamTrackAvailability.HUB_AND_LOCAL,
+                recoveredState.availability,
+            )
+            assertTrue(
+                localCopy
+                    .localMediaRef
+                    .startsWith(
+                        "content://",
+                    ),
+            )
+            assertEquals(
+                expectedDigest,
+                localCopy
+                    .mediaSha256
+                    .value,
+            )
+            assertEquals(
+                recoveredState
+                    .track
+                    .mediaByteLength,
+                localCopy.byteLength,
+            )
+            assertTrue(
+                File(
+                    vexStreamContext.filesDir,
+                    "vexstream/offline-index.properties",
+                ).isFile,
+            )
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.rediscovered",
+                status = "PASS",
+                details =
+                    fixtureDetails(
+                        recoveredState,
+                    ) +
+                        mapOf(
+                            "localMediaRef" to
+                                localCopy.localMediaRef,
+                            "offlineIndexRebuilt" to true,
+                            "deviceRef" to deviceRef,
+                        ),
+            )
+
+            val repeatDownload =
+                runBlocking {
+                    vexStream
+                        .downloadForOffline(
+                            trackRef = targetRef,
+                            expectedMediaSha256 =
+                                recoveredState
+                                    .track
+                                    .mediaSha256,
+                            expectedMediaByteLength =
+                                recoveredState
+                                    .track
+                                    .mediaByteLength,
+                        )
+                }
+            val rejected =
+                repeatDownload as?
+                    VexStreamRepositoryResult.Rejected
+                    ?: error(
+                        "rediscovered durable copy unexpectedly admitted another download",
+                    )
+            assertEquals(
+                VexStreamRepositoryRejection
+                    .ALREADY_DOWNLOADED,
+                rejected.reason,
+            )
+            assertEquals(
+                targetRef,
+                rejected.trackRef,
+            )
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.no-redownload",
+                status = "PASS",
+                details =
+                    mapOf(
+                        "trackRef" to targetRef.value,
+                        "reason" to rejected.reason.name,
+                        "localMediaRef" to
+                            localCopy.localMediaRef,
+                    ),
+            )
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.awaiting-desktop-stop",
+                status = "WAITING",
+                details =
+                    mapOf(
+                        "trackRef" to targetRef.value,
+                        "hostMarkerRelativePath" to
+                            evidence
+                                .hostMarkerRelativePath(
+                                    HOST_MARKER_CLEAR_DATA_DESKTOP_STOPPED,
+                                ),
+                    ),
+            )
+
+            val hostStopReceipt =
+                evidence.waitForHostMarker(
+                    markerRef =
+                        HOST_MARKER_CLEAR_DATA_DESKTOP_STOPPED,
+                    timeoutMs =
+                        HOST_SYNC_TIMEOUT_MS,
+                )
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.desktop-stop-observed",
+                status = "PASS",
+                details =
+                    mapOf(
+                        "hostReceipt" to
+                            hostStopReceipt,
+                    ),
+            )
+
+            val refreshResult =
+                runBlocking {
+                    vexStream.refreshCatalog()
+                }
+            val refreshRejected =
+                refreshResult as?
+                    VexStreamRepositoryResult.Rejected
+                    ?: error(
+                        "Clear Data local-only proof expected the stopped Desktop refresh to fail closed",
+                    )
+            assertEquals(
+                VexStreamRepositoryRejection
+                    .HUB_NOT_READY,
+                refreshRejected.reason,
+            )
+
+            val localOnly =
+                requireNotNull(
+                    vexStream
+                        .state
+                        .value
+                        .track(
+                            targetRef,
+                        ),
+                )
+            val localOnlyCopy =
+                localOnly.localCopy as?
+                    VexStreamLocalCopyState.Downloaded
+                    ?: error(
+                        "Clear Data local-only state lost the rediscovered shared copy",
+                    )
+            assertEquals(
+                VexStreamTrackAvailability.LOCAL_ONLY,
+                localOnly.availability,
+            )
+            assertEquals(
+                localCopy.localMediaRef,
+                localOnlyCopy.localMediaRef,
+            )
+
+            tapTrackAction(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                targetRef = targetRef,
+                action =
+                    VexStreamMusicScreen.PlayTrack,
+            )
+            waitForPlayback(
+                controller = controller,
+                targetRef = targetRef,
+                expectedScheme = "content",
+            )
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.playback.local",
+                status = "PASS",
+                details =
+                    playbackDetails(
+                        controller,
+                    ) +
+                        mapOf(
+                            "localMediaRef" to
+                                localOnlyCopy.localMediaRef,
+                        ),
+            )
+
+            onMainThread {
+                controller.pause()
+                controller.clearMediaItems()
+            }
+
+            val removed =
+                runBlocking {
+                    vexStream
+                        .removeOfflineCopy(
+                            targetRef,
+                        )
+                }
+            val accepted =
+                removed as?
+                    VexStreamRepositoryResult.Accepted
+                    ?: error(
+                        "Clear Data proof could not remove its run-owned shared media",
+                    )
+            assertEquals(
+                targetRef,
+                accepted.trackRef,
+            )
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.shared-test-media.removed",
+                status = "PASS",
+                details =
+                    mapOf(
+                        "trackRef" to targetRef.value,
+                    ),
+            )
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.awaiting-test-pairing-revoke",
+                status = "WAITING",
+                details =
+                    mapOf(
+                        "deviceRef" to deviceRef,
+                        "hostMarkerRelativePath" to
+                            evidence
+                                .hostMarkerRelativePath(
+                                    HOST_MARKER_TEST_PAIRING_REVOKED,
+                                ),
+                    ),
+            )
+
+            val revokeReceipt =
+                evidence.waitForHostMarker(
+                    markerRef =
+                        HOST_MARKER_TEST_PAIRING_REVOKED,
+                    timeoutMs =
+                        HOST_SYNC_TIMEOUT_MS,
+                )
+
+            connectionStore.clear()
+            val vexStreamRoot =
+                File(
+                    vexStreamContext.filesDir,
+                    "vexstream",
+                )
+            check(
+                vexStreamRoot
+                    .deleteRecursively(),
+            ) {
+                "failed to delete Clear Data isolated VexStream test namespace"
+            }
+
+            evidence.checkpoint(
+                phaseRef =
+                    "android.clear-data.test-namespace.cleaned",
+                status = "PASS",
+                details =
+                    mapOf(
+                        "deviceRef" to deviceRef,
+                        "hostReceipt" to revokeReceipt,
+                    ),
+            )
+            evidence.checkpoint(
+                phaseRef = "android.phase-c.complete",
+                status = "PASS",
+                details =
+                    mapOf(
+                        "clearDataSurvived" to true,
+                        "rediscoveredWithoutRedownload" to true,
+                        "localPlaybackScheme" to "content",
                         "nextHostEffect" to
                             "REMOVE_TEST_SOURCE_THEN_DELETE_FIXTURE_ROOT",
                     ),
@@ -2509,11 +3094,17 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
         private const val PHASE_B =
             "B"
 
+        private const val PHASE_C =
+            "C"
+
         private const val HOST_MARKER_DESKTOP_STOPPED =
             "desktop-stopped"
 
         private const val HOST_MARKER_DESKTOP_RESTARTED =
             "desktop-restarted"
+
+        private const val HOST_MARKER_CLEAR_DATA_DESKTOP_STOPPED =
+            "clear-data-desktop-stopped"
 
         private const val HOST_MARKER_TEST_PAIRING_REVOKED =
             "test-pairing-revoked"

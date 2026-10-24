@@ -102,6 +102,11 @@ data class VexStreamHubTrackProjection(
  */
 fun VexStreamMusicState.withHubCatalog(
     catalog: VexStreamHubCatalogProjection,
+    rediscoveredLocalCopies:
+        Map<
+            VexStreamMediaSha256,
+            VexStreamLocalCopyState.Downloaded,
+        > = emptyMap(),
 ): VexStreamMusicState {
     val downloadedByDigest = tracks
         .mapNotNull { state ->
@@ -111,13 +116,40 @@ fun VexStreamMusicState.withHubCatalog(
         }
         .toMap()
 
+    rediscoveredLocalCopies.forEach {
+            digest,
+            localCopy,
+        ->
+        require(
+            localCopy.mediaSha256 == digest,
+        ) {
+            "rediscovered local copy digest key must match its mediaSha256"
+        }
+    }
+
     catalog.tracks.forEach { projection ->
-        val retainedLocal = downloadedByDigest[projection.mediaSha256]?.second
+        val retainedLocal =
+            downloadedByDigest[
+                projection.mediaSha256
+            ]?.second
+        val rediscoveredLocal =
+            rediscoveredLocalCopies[
+                projection.mediaSha256
+            ]
+
         require(
             retainedLocal == null ||
-                retainedLocal.byteLength == projection.mediaByteLength,
+                retainedLocal.byteLength ==
+                projection.mediaByteLength,
         ) {
             "same mediaSha256 cannot be rebound to a different mediaByteLength"
+        }
+        require(
+            rediscoveredLocal == null ||
+                rediscoveredLocal.byteLength ==
+                projection.mediaByteLength,
+        ) {
+            "rediscovered mediaSha256 cannot be rebound to a different mediaByteLength"
         }
     }
 
@@ -125,15 +157,24 @@ fun VexStreamMusicState.withHubCatalog(
         .map { it.mediaSha256 }
         .toSet()
 
-    val connectedTracks = catalog.tracks.map { projection ->
-        val retainedLocal = downloadedByDigest[projection.mediaSha256]?.second
+    val connectedTracks =
+        catalog.tracks.map { projection ->
+            val localCopy =
+                downloadedByDigest[
+                    projection.mediaSha256
+                ]?.second
+                    ?: rediscoveredLocalCopies[
+                        projection.mediaSha256
+                    ]
 
-        VexStreamTrackState(
-            track = projection.toTrack(),
-            hubAvailable = true,
-            localCopy = retainedLocal ?: VexStreamLocalCopyState.NotDownloaded,
-        )
-    }
+            VexStreamTrackState(
+                track = projection.toTrack(),
+                hubAvailable = true,
+                localCopy =
+                    localCopy
+                        ?: VexStreamLocalCopyState.NotDownloaded,
+            )
+        }
 
     val localOnlyTracks = downloadedByDigest
         .filterKeys { it !in currentDigests }
