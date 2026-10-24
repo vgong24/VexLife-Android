@@ -157,7 +157,7 @@ rendered album / artist collection / playlist
 
 This is deliberately one-shot. It does not yet mean "keep this collection synchronized forever."
 
-Current durable-device-storage / rediscovery distinction:
+Current durable-device-storage distinction:
 
 ```text
 DOWNLOAD COMPLETE
@@ -165,27 +165,9 @@ DOWNLOAD COMPLETE
 + durable MediaStore object published/re-opened/verified
 + repository local-copy truth updated
 
-CURRENT-CATALOG REDISCOVERY
-= current catalog mediaSha256 + byteLength
-+ exact deterministic MediaStore row
-+ owned path/name/MIME contract
-+ non-pending row
-+ re-opened exact digest/length verification
--> current trackRef receives the verified content:// local copy
-
-CURRENT-CATALOG REDISCOVERY
-!= synthetic trackRef recovery without a catalog
-!= destructive Clear Data acceptance
-
-PRIVATE-COPY MIGRATION
-= verified legacy private localCopy
-+ current catalog media identity
-+ durable MediaStore publication from already-local bytes
--> content:// localCopy
--> redundant private file removed only after success
-
-PRIVATE-COPY MIGRATION
-!= redownload
+DOWNLOAD COMPLETE
+!= rediscovery after app-data loss
+!= migration of pre-existing private copies
 != destructive Clear Data acceptance
 ```
 
