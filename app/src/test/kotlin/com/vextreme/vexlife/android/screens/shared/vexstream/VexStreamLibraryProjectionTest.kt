@@ -394,6 +394,46 @@ class VexStreamLibraryProjectionTest {
     }
 
     @Test
+    fun categoricalTogglesRemainRemovableAcrossMetadataCaseChanges() {
+        val selected =
+            VexStreamLibraryOrganization()
+                .toggleArtist(
+                    "Vex",
+                )
+                .toggleGenre(
+                    "Ambient",
+                )
+
+        assertEquals(
+            setOf("Vex"),
+            selected.artists,
+        )
+        assertEquals(
+            setOf("Ambient"),
+            selected.genres,
+        )
+
+        val refreshedCasing =
+            selected
+                .toggleArtist(
+                    "vex",
+                )
+                .toggleGenre(
+                    "ambient",
+                )
+
+        assertTrue(
+            refreshedCasing.artists.isEmpty(),
+        )
+        assertTrue(
+            refreshedCasing.genres.isEmpty(),
+        )
+        assertFalse(
+            refreshedCasing.hasActiveFilters,
+        )
+    }
+
+    @Test
     fun clearFiltersPreservesSelectedSortAndThreshold() {
         val organization =
             VexStreamLibraryOrganization(
