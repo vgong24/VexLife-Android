@@ -1497,15 +1497,12 @@ class PairedVexStreamMusicRepository(
         )
     }
 
-    private suspend fun <Result> withOperation(
-        operation: suspend () -> Result,
+    private suspend inline fun <Result> withOperation(
+        operation: () -> Result,
     ): Result {
         restorePersistedState()
-        operationMutex.lock()
-        return try {
+        return operationMutex.withLock {
             operation()
-        } finally {
-            operationMutex.unlock()
         }
     }
 
