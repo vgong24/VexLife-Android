@@ -17,6 +17,15 @@ internal val vexStreamFeatureWalkProofBacklinks =
         VexFeatureWalkProofBacklink(
             checkpointRef =
                 VexStreamFeatureWalkRefs
+                    .FILTERED_PLAYBACK_CONTEXT,
+            testClass =
+                VexStreamLibraryProjectionTest::class.java,
+            testMethodName =
+                "filteredProjectionIsExactPlaybackMembershipForRowsPlayAllAndShuffleAll",
+        ),
+        VexFeatureWalkProofBacklink(
+            checkpointRef =
+                VexStreamFeatureWalkRefs
                     .CLEAR_RESTORES_LIBRARY,
             testClass =
                 VexStreamLibraryProjectionTest::class.java,
