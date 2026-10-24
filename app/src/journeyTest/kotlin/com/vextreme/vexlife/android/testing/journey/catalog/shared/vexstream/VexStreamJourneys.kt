@@ -285,11 +285,13 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
-    val manageLibraryDownloads =
-        vexJourney(
-            id = "manage-library-downloads",
-            title =
-                "Download all missing Songs and remove all downloaded Songs from VexStream settings",
+    private val manageLibraryDownloadsFeatureWalk =
+        vexFeatureWalkJourney(
+            featureWalkCase =
+                FeatureWalks
+                    .vexStream
+                    .offlineDownload
+                    .manageLibraryDownloads,
         ) {
             start(HomeScreen)
             tap(HomeScreen.ConnectVexStreamMusic)
@@ -409,6 +411,9 @@ object VexStreamJourneys : VexJourneyShard {
             )
             tap(AppShell.Elements.Back)
         }
+
+    val manageLibraryDownloads =
+        manageLibraryDownloadsFeatureWalk.journey
 
     private val downloadAndRemoveFeatureWalk =
         vexFeatureWalkJourney(
@@ -782,6 +787,7 @@ object VexStreamJourneys : VexJourneyShard {
         listOf(
             downloadAndRemoveFeatureWalk,
             downloadCollectionMissingFeatureWalk,
+            manageLibraryDownloadsFeatureWalk,
             sortFilterPlaybackFeatureWalk,
         )
 
