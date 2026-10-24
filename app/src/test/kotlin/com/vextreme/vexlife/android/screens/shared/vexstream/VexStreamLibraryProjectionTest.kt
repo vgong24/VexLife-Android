@@ -4,9 +4,12 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexStreamLibraryProjectionTest {
@@ -74,19 +77,300 @@ class VexStreamLibraryProjectionTest {
     }
 
     @Test
-    fun songAndDownloadPresentationOrderingStayIndependent() {
+    fun durationFilterExcludesUnknownAndComposesWithSearchAndCategories() {
+        val shortAmbient =
+            track(
+                ref = "short",
+                title = "Short Ambient",
+                artist = "Vex",
+                genre = "Ambient",
+                durationSeconds = 8 * 60.0,
+                downloaded = true,
+            )
+        val mediumAmbient =
+            track(
+                ref = "medium",
+                title = "Medium Ambient",
+                artist = "Other",
+                genre = "Ambient",
+                durationSeconds = 25 * 60.0,
+            )
+        val longRock =
+            track(
+                ref = "long",
+                title = "Long Rock Mix",
+                artist = "Vex",
+                genre = "Rock",
+                durationSeconds = 45 * 60.0,
+            )
+        val unknownAmbient =
+            track(
+                ref = "unknown",
+                title = "Unknown Duration",
+                artist = "Vex",
+                genre = "Ambient",
+                durationSeconds = 0.0,
+            )
+        val state =
+            VexStreamMusicState(
+                tracks =
+                    listOf(
+                        shortAmbient,
+                        mediumAmbient,
+                        longRock,
+                        unknownAmbient,
+                    ),
+            )
+        val organization =
+            VexStreamLibraryOrganization(
+                durationComparison =
+                    VexStreamDurationComparison.LESS_THAN,
+                durationThresholdMinutes = 30,
+                artists = setOf("vex"),
+                genres = setOf("ambient"),
+                availability =
+                    setOf(
+                        VexStreamTrackAvailability.HUB_AND_LOCAL,
+                    ),
+            )
+
+        val projection =
+            state.toVexStreamLibraryProjection(
+                searchQuery = "short",
+                organization = organization,
+            )
+
+        assertEquals(
+            listOf(shortAmbient),
+            projection.playableTracks,
+        )
+        assertEquals(
+            listOf(shortAmbient),
+            projection.searchResults,
+        )
+        assertEquals(
+            emptyList<VexStreamTrackState>(),
+            state
+                .toVexStreamLibraryProjection(
+                    searchQuery = "unknown",
+                    organization =
+                        organization.copy(
+                            availability = emptySet(),
+                        ),
+                )
+                .searchResults,
+        )
+
+        val longProjection =
+            state.toVexStreamLibraryProjection(
+                searchQuery = "",
+                organization =
+                    VexStreamLibraryOrganization(
+                        durationComparison =
+                            VexStreamDurationComparison.GREATER_THAN,
+                        durationThresholdMinutes = 30,
+                    ),
+            )
+
+        assertEquals(
+            listOf(longRock),
+            longProjection.playableTracks,
+        )
+        assertEquals(
+            listOf(
+                shortAmbient,
+                mediumAmbient,
+                longRock,
+                unknownAmbient,
+            ),
+            state.playableTracks(),
+        )
+    }
+
+    @Test
+    fun sortChangesTraversalOrderWithoutChangingMembership() {
+        val unknown =
+            track(
+                ref = "unknown",
+                title = "Zeta",
+                artist = "Beta Artist",
+                durationSeconds = 0.0,
+            )
+        val medium =
+            track(
+                ref = "medium",
+                title = "Alpha",
+                artist = "Zeta Artist",
+                durationSeconds = 5 * 60.0,
+            )
+        val short =
+            track(
+                ref = "short",
+                title = "Beta",
+                artist = "Alpha Artist",
+                durationSeconds = 2 * 60.0,
+            )
+        val state =
+            VexStreamMusicState(
+                tracks =
+                    listOf(
+                        unknown,
+                        medium,
+                        short,
+                    ),
+            )
+
+        val byDuration =
+            state.toVexStreamLibraryProjection(
+                searchQuery = "",
+                organization =
+                    VexStreamLibraryOrganization(
+                        sort = VexStreamLibrarySort.DURATION,
+                    ),
+            )
+        val byArtist =
+            state.toVexStreamLibraryProjection(
+                searchQuery = "",
+                organization =
+                    VexStreamLibraryOrganization(
+                        sort = VexStreamLibrarySort.ARTIST,
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                short,
+                medium,
+                unknown,
+            ),
+            byDuration.playableTracks,
+        )
+        assertEquals(
+            listOf(
+                short,
+                unknown,
+                medium,
+            ),
+            byArtist.playableTracks,
+        )
+        assertEquals(
+            byDuration.playableTracks.toSet(),
+            byArtist.playableTracks.toSet(),
+        )
+    }
+
+    @Test
+    fun organizationOptionsComeOnlyFromCurrentPlayableTruth() {
+        val hub =
+            track(
+                ref = "hub",
+                title = "Hub",
+                artist = "Vex",
+                genre = "Ambient",
+            )
+        val local =
+            track(
+                ref = "local",
+                title = "Local",
+                artist = "Other",
+                genre = "Rock",
+                hubAvailable = false,
+                downloaded = true,
+            )
+        val unavailable =
+            track(
+                ref = "hidden",
+                title = "Hidden",
+                artist = "Hidden Artist",
+                genre = "Hidden Genre",
+                hubAvailable = false,
+            )
+
+        val options =
+            VexStreamMusicState(
+                tracks =
+                    listOf(
+                        hub,
+                        local,
+                        unavailable,
+                    ),
+            ).toVexStreamLibraryOrganizationOptions()
+
+        assertEquals(
+            listOf(
+                "Other",
+                "Vex",
+            ),
+            options.artists,
+        )
+        assertEquals(
+            listOf(
+                "Ambient",
+                "Rock",
+            ),
+            options.genres,
+        )
+        assertEquals(
+            listOf(
+                VexStreamTrackAvailability.HUB_ONLY,
+                VexStreamTrackAvailability.LOCAL_ONLY,
+            ),
+            options.availability,
+        )
+    }
+
+    @Test
+    fun clearFiltersPreservesSelectedSortAndThreshold() {
+        val organization =
+            VexStreamLibraryOrganization(
+                sort = VexStreamLibrarySort.DURATION,
+                durationComparison =
+                    VexStreamDurationComparison.GREATER_THAN,
+                durationThresholdMinutes = 120,
+                artists = setOf("Vex"),
+                genres = setOf("Ambient"),
+                availability =
+                    setOf(
+                        VexStreamTrackAvailability.HUB_ONLY,
+                    ),
+            )
+
+        assertTrue(
+            organization.hasActiveFilters,
+        )
+
+        val cleared =
+            organization.clearFilters()
+
+        assertFalse(
+            cleared.hasActiveFilters,
+        )
+        assertEquals(
+            VexStreamLibrarySort.DURATION,
+            cleared.sort,
+        )
+        assertEquals(
+            120,
+            cleared.durationThresholdMinutes,
+        )
+    }
+
+    @Test
+    fun songAndDownloadPresentationOrderingCanUseTheSameSortChoice() {
         val zeta =
             track(
                 ref = "zeta",
                 title = "Zeta",
                 artist = "Vex",
                 downloaded = true,
+                durationSeconds = 9 * 60.0,
             )
         val alpha =
             track(
                 ref = "alpha",
                 title = "alpha",
                 artist = "Vex",
+                durationSeconds = 2 * 60.0,
             )
         val beta =
             track(
@@ -94,6 +378,7 @@ class VexStreamLibraryProjectionTest {
                 title = "Beta",
                 artist = "Vex",
                 downloaded = true,
+                durationSeconds = 4 * 60.0,
             )
         val tracks =
             listOf(
@@ -115,7 +400,9 @@ class VexStreamLibraryProjectionTest {
                 beta,
                 zeta,
             ),
-            tracks.vexStreamSortedDownloads(),
+            tracks.vexStreamSortedDownloads(
+                VexStreamLibrarySort.DURATION,
+            ),
         )
     }
 
@@ -126,6 +413,7 @@ class VexStreamLibraryProjectionTest {
         album: String = "",
         genre: String = "",
         year: String = "",
+        durationSeconds: Double = 0.0,
         hubAvailable: Boolean = true,
         downloaded: Boolean = false,
     ): VexStreamTrackState {
@@ -141,6 +429,7 @@ class VexStreamLibraryProjectionTest {
                 album = album,
                 genre = genre,
                 year = year,
+                durationSeconds = durationSeconds,
             )
 
         return VexStreamTrackState(
