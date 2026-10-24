@@ -133,9 +133,29 @@ verified bytes. Production local-copy truth becomes the verified MediaStore cont
 the shared row re-opens with the exact digest/length. A same-name row with different bytes fails
 closed; metadata never determines the storage path.
 
-Android 10+ requires no broad storage permission for this app-owned MediaStore publication. Android
-7-9 requests only the legacy READ/WRITE external-storage permissions at the user-triggered Download
-boundary and leaves repository truth untouched when permission is denied.
+Android 10+ requires no broad storage permission for MediaStore publication while VexLife still
+owns the row. That publication fact is deliberately separate from fresh-state rediscovery.
+
+Clear Data removes VexLife's app-private index/pairing state and Android MediaProvider no longer
+treats the surviving public row as owned by the cleared package. A fresh VexLife state therefore
+needs the platform's read authority before it can inspect and re-verify that already-published
+shared audio:
+
+```text
+API 29-32 post-Clear-Data rediscovery
+-> READ_EXTERNAL_STORAGE
+
+API 33+ post-Clear-Data rediscovery
+-> READ_MEDIA_AUDIO
+```
+
+The existing Offline Copy permission handoff owns this Android consent seam. After fresh pairing
+establishes a current catalog, it requests the applicable shared-audio read permission once; grant
+triggers a catalog refresh so the existing digest/length rediscovery path can attach the surviving
+`content://` copy. Denial does not redownload, fabricate a local copy, or erase Hub truth.
+
+Android 7-9 still requests the bounded legacy READ/WRITE external-storage permissions at the
+user-triggered Download boundary and leaves repository truth untouched when permission is denied.
 
 ```text
 MEDIASTORE_URI = STORAGE ADDRESS

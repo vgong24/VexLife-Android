@@ -1,7 +1,10 @@
 package com.vextreme.vexlife.android.testing.crossplatform.vexstream
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -1617,6 +1620,48 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     "expectedMediaSha256" to expectedDigest,
                     "expectedTrackRef" to expectedTrackRef.value,
                     "clearDataPackage" to context.packageName,
+                ),
+        )
+
+        val deviceLibraryReadPermission =
+            if (
+                Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.TIRAMISU
+            ) {
+                Manifest.permission.READ_MEDIA_AUDIO
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+        if (
+            context.checkSelfPermission(
+                deviceLibraryReadPermission,
+            ) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            instrumentation.uiAutomation
+                .grantRuntimePermission(
+                    context.packageName,
+                    deviceLibraryReadPermission,
+                )
+        }
+        check(
+            context.checkSelfPermission(
+                deviceLibraryReadPermission,
+            ) ==
+                PackageManager.PERMISSION_GRANTED,
+        ) {
+            "Clear Data Phase C requires the platform shared-audio read permission after package ownership is lost"
+        }
+        evidence.checkpoint(
+            phaseRef =
+                "android.clear-data.device-library-read-permission",
+            status = "PASS",
+            details =
+                mapOf(
+                    "permission" to
+                        deviceLibraryReadPermission,
+                    "apiLevel" to
+                        Build.VERSION.SDK_INT,
                 ),
         )
 

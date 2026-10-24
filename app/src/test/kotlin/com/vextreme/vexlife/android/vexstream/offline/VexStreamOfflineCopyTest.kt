@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.offline
 
+import android.Manifest
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
@@ -13,6 +14,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -166,6 +169,93 @@ class VexStreamOfflineCopyTest {
                         )
                         ?.localCopy is
                         VexStreamLocalCopyState.Downloaded,
+                )
+            } finally {
+                ownerScope.cancel()
+            }
+        }
+
+    @Test
+    fun deviceLibraryReadPermissionTracksAndroidMediaPermissionSplit() {
+        assertEquals(
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            vexStreamDeviceLibraryReadPermission(28),
+        )
+        assertEquals(
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            vexStreamDeviceLibraryReadPermission(32),
+        )
+        assertEquals(
+            Manifest.permission.READ_MEDIA_AUDIO,
+            vexStreamDeviceLibraryReadPermission(33),
+        )
+        assertEquals(
+            Manifest.permission.READ_MEDIA_AUDIO,
+            vexStreamDeviceLibraryReadPermission(36),
+        )
+    }
+
+    @Test
+    fun deviceLibraryReadPermissionHandoffWaitsForConsent() =
+        runBlocking {
+            val ownerScope =
+                CoroutineScope(
+                    SupervisorJob() +
+                        Dispatchers.Unconfined,
+                )
+            val repository =
+                InMemoryVexStreamMusicRepository(
+                    initialState =
+                        state(
+                            VexStreamTrackRef(
+                                "track.device-library-read",
+                            ),
+                        ),
+                )
+            var granted =
+                false
+            var retry:
+                (() -> Unit)? =
+                null
+            var completionCalled =
+                false
+            val connection =
+                VexStreamOfflineCopyConnection(
+                    repository = repository,
+                    scope = ownerScope,
+                    canReadDeviceLibrary = {
+                        granted
+                    },
+                    requestDeviceLibraryReadPermission = {
+                        retry = it
+                    },
+                )
+
+            try {
+                assertFalse(
+                    connection.ensureDeviceLibraryReadAccess {
+                        completionCalled =
+                            true
+                    },
+                )
+                assertFalse(
+                    completionCalled,
+                )
+                assertNotNull(
+                    retry,
+                )
+
+                granted =
+                    true
+                requireNotNull(
+                    retry,
+                ).invoke()
+
+                assertTrue(
+                    completionCalled,
+                )
+                assertTrue(
+                    connection.ensureDeviceLibraryReadAccess {},
                 )
             } finally {
                 ownerScope.cancel()
