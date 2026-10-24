@@ -177,6 +177,11 @@ Duration filters deliberately exclude tracks whose duration is unknown (`duratio
 Clearing filters restores ordinary playable membership while preserving the listener's selected sort
 and duration threshold.
 
+Active filters remain visible after the organization sheet closes. A zero-result organized set says
+that no songs match the current filters rather than pretending the underlying library is empty.
+The organization sheet itself scrolls vertically so sort/filter controls remain reachable on
+constrained-height and large-font presentations.
+
 The ordered/filtered track list is the library playback context:
 
 ~~~text
