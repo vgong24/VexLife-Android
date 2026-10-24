@@ -89,6 +89,121 @@ class VexStreamOfflineIndexTest {
         }
     }
 
+    @Test
+    fun legacyV1IndexStillRestoresPreviouslyVerifiedPrivateCopy() {
+        val root =
+            Files.createTempDirectory(
+                "vexstream-offline-index-v1-test",
+            ).toFile()
+        try {
+            val mediaStore =
+                VexStreamMediaStore(
+                    root.resolve(
+                        "media",
+                    ),
+                )
+            val indexFile =
+                root.resolve(
+                    "offline-index.properties",
+                )
+            val index =
+                VexStreamOfflineIndex(
+                    indexFile = indexFile,
+                    mediaStore = mediaStore,
+                )
+            val bytes =
+                "legacy offline index media"
+                    .toByteArray()
+            val digest =
+                bytes.sha256()
+            val stored =
+                mediaStore.store(
+                    expectedSha256 = digest,
+                    expectedByteLength =
+                        bytes.size.toLong(),
+                    input =
+                        ByteArrayInputStream(
+                            bytes,
+                        ),
+                ) as VexStreamMediaStoreResult.Stored
+            val state =
+                VexStreamMusicState(
+                    tracks =
+                        listOf(
+                            VexStreamTrackState(
+                                track =
+                                    VexStreamTrack(
+                                        trackRef =
+                                            VexStreamTrackRef(
+                                                "hub.track.legacy",
+                                            ),
+                                        mediaSha256 =
+                                            digest,
+                                        mediaByteLength =
+                                            bytes.size.toLong(),
+                                        title =
+                                            "Legacy Index",
+                                        artist = "Vex",
+                                    ),
+                                hubAvailable = false,
+                                localCopy =
+                                    stored.localCopy,
+                            ),
+                        ),
+                )
+
+            assertTrue(
+                index.persist(
+                    state,
+                ),
+            )
+            indexFile.writeText(
+                indexFile.readText()
+                    .replace(
+                        "vexstream.android.offline-index/v2",
+                        "vexstream.android.offline-index/v1",
+                    ),
+            )
+
+            val restored =
+                index.load()
+
+            assertEquals(
+                1,
+                restored.tracks.size,
+            )
+            assertEquals(
+                VexStreamTrackAvailability.LOCAL_ONLY,
+                restored.tracks
+                    .single()
+                    .availability,
+            )
+            assertTrue(
+                indexFile
+                    .readText()
+                    .contains(
+                        "vexstream.android.offline-index/v2",
+                    ),
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun verificationReceiptRejectsInvalidGeneration() {
+        var failed = false
+        try {
+            VexStreamLocalCopyVerificationReceipt(
+                mediaStoreVersion = "version",
+                generationModified = -1L,
+            )
+        } catch (_: IllegalArgumentException) {
+            failed = true
+        }
+        assertTrue(failed)
+    }
+
     private fun withEnvironment(
         block: (
             VexStreamMediaStore,
