@@ -308,6 +308,23 @@ object VexStreamJourneys : VexJourneyShard {
                     VexStreamJourneyFixtures.TrackOne,
             ),
         )
+
+        // The duration predicate itself must exclude the long mix. Observe that through the
+        // existing Search projection rather than adding a Journey-foundation negative-visibility API.
+        tap(
+            VexStreamMusicScreen.SearchLibrary,
+        )
+        enterText(
+            VexStreamMusicScreen.SearchQuery,
+            "Long",
+        )
+        assertVisible(
+            VexStreamMusicScreen.SearchNoResults,
+        )
+        tap(
+            VexStreamMusicScreen.CloseSearch,
+        )
+
         tapElementById(
             elementId =
                 trackRowActionElementId(
@@ -531,6 +548,17 @@ object VexStreamJourneys : VexJourneyShard {
                 VexStreamMusicScreen.ToggleLibraryFilter,
         )
 
+        // Return the categorical filter to neutral so the duration acceptance case below owns
+        // the visible narrowing rather than borrowing it from genre selection.
+        tapElementById(
+            elementId =
+                VexStreamPresentationRefs.organizationGenreOption(
+                    "Pop",
+                ),
+            behavesLike =
+                VexStreamMusicScreen.ToggleLibraryFilter,
+        )
+
         tap(
             VexStreamMusicScreen.DurationFilterLessThan,
         )
@@ -558,6 +586,25 @@ object VexStreamJourneys : VexJourneyShard {
             behavesLike =
                 VexStreamMusicScreen.PlayTrack,
         )
+
+        // Row playback is formed from the visible filtered context. Observe the resulting short
+        // track occurrence through the ordinary Queue presentation.
+        tap(
+            VexStreamMusicScreen.ShowQueue,
+        )
+        assertVisibleById(
+            VexStreamPresentationRefs.queueEntry(
+                VexStreamPresentationRefs.queueEntryKey(
+                    mediaId =
+                        VexStreamJourneyFixtures.TrackOne.value,
+                    occurrence = 1,
+                ),
+            ),
+        )
+        tap(
+            VexStreamMusicScreen.CloseQueue,
+        )
+
         tap(
             VexStreamMusicScreen.ShuffleAll,
         )
