@@ -359,6 +359,11 @@ class VexFamilyConversationConnectedServiceClientTest {
             return bootstrapResult
         }
 
+        override suspend fun append(
+            intent: VexFamilyConversationAppendIntent,
+        ): VexFamilyConversationAppendResult =
+            error("read-client fixture must not append")
+
         override suspend fun readThreadHistory(
             intent:
                 VexFamilyConversationThreadHistoryIntent,
