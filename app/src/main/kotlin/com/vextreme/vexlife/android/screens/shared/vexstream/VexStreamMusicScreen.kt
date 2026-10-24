@@ -101,6 +101,18 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         role = TextRole.Supporting,
     )
 
+    val FiltersActive = textRef(
+        id = "body.library.organization-status.active",
+        textRes = R.string.vexstream_music_filters_active,
+        role = TextRole.Label,
+    )
+
+    val FiltersNoMatches = textRef(
+        id = "body.library.organization-status.no-matches",
+        textRes = R.string.vexstream_music_filters_no_matches,
+        role = TextRole.Supporting,
+    )
+
     val ConnectionMenuSheet = modalBottomSheetRef(
         id = "body.connection.menu",
     )
@@ -537,6 +549,11 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 button(ArtistsTab)
                 button(PlaylistsTab)
                 button(DownloadsTab)
+            }
+
+            column("library-organization-status") {
+                text(FiltersActive)
+                text(FiltersNoMatches)
             }
 
             swappable(LibraryContent) {
