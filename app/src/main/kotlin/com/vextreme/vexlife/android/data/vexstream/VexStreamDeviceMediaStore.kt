@@ -17,6 +17,114 @@ import java.io.InputStream
 import java.security.MessageDigest
 
 /**
+ * Current owned-row snapshot used to reconcile one persisted shared copy without reading media
+ * bytes first.
+ */
+internal data class VexStreamSharedCopySnapshot(
+    val localMediaRef: String,
+    val mediaSha256: VexStreamMediaSha256,
+    val byteLength: Long,
+    val pending: Boolean,
+    val verificationReceipt:
+        VexStreamLocalCopyVerificationReceipt,
+)
+
+internal data class VexStreamSharedCopyVerificationCandidate(
+    val localCopy:
+        VexStreamLocalCopyState.Downloaded,
+    val snapshot:
+        VexStreamSharedCopySnapshot,
+)
+
+internal data class VexStreamSharedCopyReconciliation(
+    val reusableCopies:
+        Map<
+            String,
+            VexStreamLocalCopyState.Downloaded
+        >,
+    val verificationCandidates:
+        List<
+            VexStreamSharedCopyVerificationCandidate
+        >,
+)
+
+/**
+ * Pure relationship calculation between persisted offline-index truth and one current MediaStore
+ * snapshot.
+ *
+ * Stable receipts are reusable immediately. Missing/stale receipts become bounded byte-verification
+ * candidates. Rows that are missing, pending, wrong-digest or wrong-length are rejected before any
+ * byte verification is attempted.
+ */
+internal fun reconcilePersistedSharedCopies(
+    localCopies:
+        List<
+            VexStreamLocalCopyState.Downloaded
+        >,
+    snapshots:
+        Map<
+            String,
+            VexStreamSharedCopySnapshot
+        >,
+): VexStreamSharedCopyReconciliation {
+    val reusable =
+        linkedMapOf<
+            String,
+            VexStreamLocalCopyState.Downloaded
+        >()
+    val verificationCandidates =
+        mutableListOf<
+            VexStreamSharedCopyVerificationCandidate
+        >()
+
+    localCopies.forEach { localCopy ->
+        val snapshot =
+            snapshots[
+                localCopy.localMediaRef
+            ] ?: return@forEach
+
+        if (
+            snapshot.mediaSha256 !=
+                localCopy.mediaSha256 ||
+            snapshot.byteLength !=
+                localCopy.byteLength ||
+            snapshot.pending
+        ) {
+            return@forEach
+        }
+
+        val recordedReceipt =
+            localCopy.verificationReceipt
+
+        if (
+            recordedReceipt != null &&
+            recordedReceipt ==
+                snapshot.verificationReceipt
+        ) {
+            reusable[
+                localCopy.localMediaRef
+            ] =
+                localCopy.copy(
+                    verificationReceipt =
+                        snapshot.verificationReceipt,
+                )
+        } else {
+            verificationCandidates +=
+                VexStreamSharedCopyVerificationCandidate(
+                    localCopy = localCopy,
+                    snapshot = snapshot,
+                )
+        }
+    }
+
+    return VexStreamSharedCopyReconciliation(
+        reusableCopies = reusable,
+        verificationCandidates =
+            verificationCandidates,
+    )
+}
+
+/**
  * Android-native durable owner for VexStream audio that belongs in the device music library.
  *
  * Product identity remains [VexStreamMediaSha256] + exact byte length. MediaStore row IDs and
@@ -217,12 +325,175 @@ internal class VexStreamDeviceMediaStore(
         }
     }
 
+    /**
+     * Restores a persisted shared-library set with one MediaStore collection query on API 30+.
+     *
+     * The returned map is keyed by the exact persisted content URI. Unchanged receipts require no
+     * media-byte reads; only rows whose stored receipt no longer matches fall back to exact SHA-256.
+     */
+    fun restorePersisted(
+        localCopies:
+            List<
+                VexStreamLocalCopyState.Downloaded
+            >,
+    ): Map<
+        String,
+        VexStreamLocalCopyState.Downloaded
+    > {
+        if (
+            localCopies.isEmpty()
+        ) {
+            return emptyMap()
+        }
+
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.R
+        ) {
+            return localCopies
+                .mapNotNull { localCopy ->
+                    restorePersisted(
+                        localCopy,
+                    )?.let { restored ->
+                        localCopy.localMediaRef to
+                            restored
+                    }
+                }
+                .toMap()
+        }
+
+        val snapshots =
+            currentOwnedSnapshots()
+        if (
+            snapshots.isEmpty()
+        ) {
+            return emptyMap()
+        }
+
+        val reconciliation =
+            reconcilePersistedSharedCopies(
+                localCopies = localCopies,
+                snapshots = snapshots,
+            )
+
+        return buildMap {
+            putAll(
+                reconciliation.reusableCopies,
+            )
+
+            reconciliation
+                .verificationCandidates
+                .forEach { candidate ->
+                    val localCopy =
+                        candidate.localCopy
+                    val snapshot =
+                        candidate.snapshot
+                    val uri =
+                        Uri.parse(
+                            snapshot.localMediaRef,
+                        )
+
+                    if (
+                        verifyUri(
+                            uri = uri,
+                            expectedSha256 =
+                                localCopy.mediaSha256,
+                            expectedByteLength =
+                                localCopy.byteLength,
+                        ) == null
+                    ) {
+                        put(
+                            localCopy.localMediaRef,
+                            localCopy.copy(
+                                verificationReceipt =
+                                    snapshot
+                                        .verificationReceipt,
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    /**
+     * Restores one copy recorded by the app-private offline index.
+     *
+     * API 30+ shared MediaStore copies reuse a prior cryptographic proof while the exact owned row,
+     * byte length, MediaStore version and row generation remain unchanged. A legacy v1 index has no
+     * prior MediaStore receipt, so its bytes are verified once before the v2 index may persist the
+     * first receipt. Any later generation/version change likewise falls back to full SHA-256
+     * verification before a refreshed receipt is admitted.
+     *
+     * Android 7-10 retain the earlier full-verification behavior.
+     */
+    fun restorePersisted(
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): VexStreamLocalCopyState.Downloaded? {
+        val uri =
+            localCopy.contentUri()
+                ?: return null
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val currentReceipt =
+                verificationReceipt(
+                    uri = uri,
+                    digest = localCopy.mediaSha256,
+                    expectedByteLength = localCopy.byteLength,
+                )
+                    ?: return null
+
+            val recordedReceipt =
+                localCopy.verificationReceipt
+            if (
+                recordedReceipt != null &&
+                recordedReceipt == currentReceipt
+            ) {
+                return localCopy.copy(
+                    verificationReceipt = currentReceipt,
+                )
+            }
+        }
+
+        if (
+            !isOwnedUri(
+                uri = uri,
+                digest = localCopy.mediaSha256,
+            ) ||
+            verifyUri(
+                uri = uri,
+                expectedSha256 = localCopy.mediaSha256,
+                expectedByteLength = localCopy.byteLength,
+            ) != null
+        ) {
+            return null
+        }
+
+        return downloadedState(
+            expectedSha256 = localCopy.mediaSha256,
+            expectedByteLength = localCopy.byteLength,
+            uri = uri,
+        )
+    }
+
     fun verify(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): Boolean {
         val uri =
             localCopy.contentUri()
                 ?: return false
+
+        val recordedReceipt =
+            localCopy.verificationReceipt
+        if (
+            recordedReceipt != null &&
+            verificationReceipt(
+                uri = uri,
+                digest = localCopy.mediaSha256,
+                expectedByteLength = localCopy.byteLength,
+            ) == recordedReceipt
+        ) {
+            return true
+        }
 
         if (
             !isOwnedUri(
@@ -435,6 +706,240 @@ internal class VexStreamDeviceMediaStore(
         } catch (_: Exception) {
             VexStreamMediaStoreRejection.IO_FAILURE
         }
+
+    private fun currentOwnedSnapshots():
+        Map<
+            String,
+            VexStreamSharedCopySnapshot
+        > {
+        if (
+            Build.VERSION.SDK_INT <
+            Build.VERSION_CODES.R
+        ) {
+            return emptyMap()
+        }
+
+        val projection =
+            arrayOf(
+                MediaStore.Audio.Media._ID,
+                MediaStore.Audio.Media.DISPLAY_NAME,
+                MediaStore.Audio.Media.RELATIVE_PATH,
+                MediaStore.Audio.Media.MIME_TYPE,
+                MediaStore.Audio.Media.SIZE,
+                MediaStore.Audio.Media.GENERATION_MODIFIED,
+                MediaStore.Audio.Media.IS_PENDING,
+            )
+        val mediaStoreVersion =
+            try {
+                MediaStore.getVersion(
+                    appContext,
+                    MediaStore.VOLUME_EXTERNAL_PRIMARY,
+                )
+            } catch (_: Exception) {
+                return emptyMap()
+            }
+
+        return try {
+            contentResolver.query(
+                audioCollection(),
+                projection,
+                MediaStore.Audio.Media.RELATIVE_PATH +
+                    " = ?",
+                arrayOf(
+                    RELATIVE_PATH,
+                ),
+                null,
+            )?.use { cursor ->
+                buildMap {
+                    while (
+                        cursor.moveToNext()
+                    ) {
+                        val name =
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.DISPLAY_NAME,
+                                ),
+                            )
+                        val digestText =
+                            name
+                                .takeIf {
+                                    it.endsWith(
+                                        MEDIA_EXTENSION,
+                                    )
+                                }
+                                ?.removeSuffix(
+                                    MEDIA_EXTENSION,
+                                )
+                                ?: continue
+                        val digest =
+                            runCatching {
+                                VexStreamMediaSha256(
+                                    digestText,
+                                )
+                            }.getOrNull()
+                                ?: continue
+                        val relativePath =
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.RELATIVE_PATH,
+                                ),
+                            )
+                        val mime =
+                            cursor.getString(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.MIME_TYPE,
+                                ),
+                            )
+                        if (
+                            relativePath !=
+                                RELATIVE_PATH ||
+                            mime != MIME_TYPE
+                        ) {
+                            continue
+                        }
+
+                        val id =
+                            cursor.getLong(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media._ID,
+                                ),
+                            )
+                        val uri =
+                            ContentUris
+                                .withAppendedId(
+                                    audioCollection(),
+                                    id,
+                                )
+                        val byteLength =
+                            cursor.getLong(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.SIZE,
+                                ),
+                            )
+                        val generation =
+                            cursor.getLong(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.GENERATION_MODIFIED,
+                                ),
+                            )
+                        val pending =
+                            cursor.getInt(
+                                cursor.getColumnIndexOrThrow(
+                                    MediaStore.Audio.Media.IS_PENDING,
+                                ),
+                            ) != 0
+
+                        val localMediaRef =
+                            uri.toString()
+                        put(
+                            localMediaRef,
+                            VexStreamSharedCopySnapshot(
+                                localMediaRef =
+                                    localMediaRef,
+                                mediaSha256 = digest,
+                                byteLength =
+                                    byteLength,
+                                pending = pending,
+                                verificationReceipt =
+                                    VexStreamLocalCopyVerificationReceipt(
+                                        mediaStoreVersion =
+                                            mediaStoreVersion,
+                                        generationModified =
+                                            generation,
+                                    ),
+                            ),
+                        )
+                    }
+                }
+            } ?: emptyMap()
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun verificationReceipt(
+        uri: Uri,
+        digest: VexStreamMediaSha256,
+        expectedByteLength: Long,
+    ): VexStreamLocalCopyVerificationReceipt? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return null
+        }
+
+        val projection =
+            arrayOf(
+                MediaStore.Audio.Media.DISPLAY_NAME,
+                MediaStore.Audio.Media.RELATIVE_PATH,
+                MediaStore.Audio.Media.MIME_TYPE,
+                MediaStore.Audio.Media.SIZE,
+                MediaStore.Audio.Media.GENERATION_MODIFIED,
+            )
+
+        return try {
+            contentResolver.query(
+                uri,
+                projection,
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) {
+                    null
+                } else {
+                    val name =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.DISPLAY_NAME,
+                            ),
+                        )
+                    val relativePath =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.RELATIVE_PATH,
+                            ),
+                        )
+                    val mime =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.MIME_TYPE,
+                            ),
+                        )
+                    val size =
+                        cursor.getLong(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.SIZE,
+                            ),
+                        )
+                    val generation =
+                        cursor.getLong(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.GENERATION_MODIFIED,
+                            ),
+                        )
+
+                    if (
+                        name != displayName(digest) ||
+                        relativePath != RELATIVE_PATH ||
+                        mime != MIME_TYPE ||
+                        size != expectedByteLength
+                    ) {
+                        null
+                    } else {
+                        VexStreamLocalCopyVerificationReceipt(
+                            mediaStoreVersion =
+                                MediaStore.getVersion(
+                                    appContext,
+                                    MediaStore.VOLUME_EXTERNAL_PRIMARY,
+                                ),
+                            generationModified = generation,
+                        )
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     private fun isOwnedUri(
         uri: Uri,
@@ -696,6 +1201,12 @@ internal class VexStreamDeviceMediaStore(
             mediaSha256 = expectedSha256,
             byteLength = expectedByteLength,
             localMediaRef = uri.toString(),
+            verificationReceipt =
+                verificationReceipt(
+                    uri = uri,
+                    digest = expectedSha256,
+                    expectedByteLength = expectedByteLength,
+                ),
         )
 
     private fun VexStreamLocalCopyState.Downloaded.contentUri(): Uri? =

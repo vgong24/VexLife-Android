@@ -160,6 +160,263 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
     }
 
     @Test
+    fun api30SharedCopyCarriesReusableVerificationReceipt() {
+        assumeTrue(
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.R,
+        )
+
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        val bytes =
+            "receipt-backed vexstream device music"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "receipt",
+            )
+        val store =
+            VexStreamDeviceMediaStore(
+                context,
+            )
+        val stored =
+            store.store(
+                track = track,
+                input =
+                    ByteArrayInputStream(
+                        bytes,
+                    ),
+            ) as VexStreamMediaStoreResult.Stored
+
+        try {
+            val receipt =
+                requireNotNull(
+                    stored.localCopy
+                        .verificationReceipt,
+                )
+            assertTrue(
+                receipt.mediaStoreVersion
+                    .isNotBlank(),
+            )
+            assertTrue(
+                receipt.generationModified >= 0L,
+            )
+
+            val adopted =
+                requireNotNull(
+                    store.restorePersisted(
+                        stored.localCopy.copy(
+                            verificationReceipt = null,
+                        ),
+                    ),
+                )
+            assertEquals(
+                stored.localCopy.localMediaRef,
+                adopted.localMediaRef,
+            )
+            assertEquals(
+                stored.localCopy.mediaSha256,
+                adopted.mediaSha256,
+            )
+            assertTrue(
+                adopted.verificationReceipt !=
+                    null,
+            )
+
+            assertEquals(
+                stored.localCopy.localMediaRef,
+                store.playbackUri(
+                    adopted,
+                ),
+            )
+        } finally {
+            assertTrue(
+                store.remove(
+                    stored.localCopy,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun missingReceiptCannotAdoptCorruptSameLengthBytes() {
+        assumeTrue(
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.R,
+        )
+
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        val bytes =
+            "legacy receipt bootstrap bytes"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "missing-receipt-corrupt",
+            )
+        val store =
+            VexStreamDeviceMediaStore(
+                context,
+            )
+        val stored =
+            store.store(
+                track = track,
+                input =
+                    ByteArrayInputStream(
+                        bytes,
+                    ),
+            ) as VexStreamMediaStoreResult.Stored
+        val uri =
+            android.net.Uri.parse(
+                stored.localCopy.localMediaRef,
+            )
+
+        try {
+            requireNotNull(
+                context.contentResolver
+                    .openFileDescriptor(
+                        uri,
+                        "w",
+                    ),
+            ).use { descriptor ->
+                FileOutputStream(
+                    descriptor.fileDescriptor,
+                ).use { output ->
+                    output.write(
+                        ByteArray(
+                            bytes.size,
+                        ) {
+                            0
+                        },
+                    )
+                    output.flush()
+                    output.fd.sync()
+                }
+            }
+
+            assertEquals(
+                null,
+                store.restorePersisted(
+                    stored.localCopy.copy(
+                        verificationReceipt = null,
+                    ),
+                ),
+            )
+        } finally {
+            context.contentResolver
+                .delete(
+                    uri,
+                    null,
+                    null,
+                )
+        }
+    }
+
+    @Test
+    fun staleReceiptFallsBackToExactBytesBeforeReadmission() {
+        assumeTrue(
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.R,
+        )
+
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        val bytes =
+            "stale receipt exact bytes"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "stale-receipt",
+            )
+        val store =
+            VexStreamDeviceMediaStore(
+                context,
+            )
+        val stored =
+            store.store(
+                track = track,
+                input =
+                    ByteArrayInputStream(
+                        bytes,
+                    ),
+            ) as VexStreamMediaStoreResult.Stored
+        val uri =
+            android.net.Uri.parse(
+                stored.localCopy.localMediaRef,
+            )
+
+        try {
+            advanceVerificationGeneration(
+                context = context,
+                uri = uri,
+            )
+
+            val refreshed =
+                requireNotNull(
+                    store.restorePersisted(
+                        stored.localCopy,
+                    ),
+                )
+            assertTrue(
+                refreshed.verificationReceipt !=
+                    stored.localCopy
+                        .verificationReceipt,
+            )
+
+            val corrupt =
+                ByteArray(
+                    bytes.size,
+                ) {
+                    0
+                }
+            requireNotNull(
+                context.contentResolver
+                    .openFileDescriptor(
+                        uri,
+                        "w",
+                    ),
+            ).use { descriptor ->
+                FileOutputStream(
+                    descriptor.fileDescriptor,
+                ).use { output ->
+                    output.write(
+                        corrupt,
+                    )
+                    output.flush()
+                    output.fd.sync()
+                }
+            }
+            advanceVerificationGeneration(
+                context = context,
+                uri = uri,
+            )
+
+            assertEquals(
+                null,
+                store.restorePersisted(
+                    refreshed,
+                ),
+            )
+        } finally {
+            context.contentResolver
+                .delete(
+                    uri,
+                    null,
+                    null,
+                )
+        }
+    }
+
+    @Test
     fun migratedPrivateCopyPublishesDurablyWithoutRedownload() {
         val instrumentation =
             InstrumentationRegistry
@@ -1090,6 +1347,83 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 )
             }
     }
+
+    private fun advanceVerificationGeneration(
+        context: android.content.Context,
+        uri: android.net.Uri,
+    ) {
+        val before =
+            generationModified(
+                context = context,
+                uri = uri,
+            )
+
+        assertEquals(
+            1,
+            context.contentResolver
+                .update(
+                    uri,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Audio.Media.IS_PENDING,
+                            1,
+                        )
+                    },
+                    null,
+                    null,
+                ),
+        )
+        assertEquals(
+            1,
+            context.contentResolver
+                .update(
+                    uri,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Audio.Media.IS_PENDING,
+                            0,
+                        )
+                    },
+                    null,
+                    null,
+                ),
+        )
+
+        assertTrue(
+            generationModified(
+                context = context,
+                uri = uri,
+            ) != before,
+        )
+    }
+
+    private fun generationModified(
+        context: android.content.Context,
+        uri: android.net.Uri,
+    ): Long =
+        requireNotNull(
+            context.contentResolver
+                .query(
+                    uri,
+                    arrayOf(
+                        MediaStore.Audio.Media.GENERATION_MODIFIED,
+                    ),
+                    null,
+                    null,
+                    null,
+                ),
+        ).use { cursor ->
+            check(
+                cursor.moveToFirst(),
+            ) {
+                "VexStream receipt test row disappeared"
+            }
+            cursor.getLong(
+                cursor.getColumnIndexOrThrow(
+                    MediaStore.Audio.Media.GENERATION_MODIFIED,
+                ),
+            )
+        }
 
     /*
      * Runtime-permission revocation kills the application UID on legacy Android.

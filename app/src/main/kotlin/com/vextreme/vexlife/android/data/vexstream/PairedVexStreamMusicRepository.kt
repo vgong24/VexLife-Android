@@ -34,6 +34,8 @@ class PairedVexStreamMusicRepository(
 ) : VexStreamMusicRepository {
 
     private val operationMutex = Mutex()
+    private val restoreMutex = Mutex()
+    private var persistedStateRestored = false
     private val remoteTransport =
         VexStreamRemoteTransport(
             connectionStore,
@@ -42,14 +44,38 @@ class PairedVexStreamMusicRepository(
 
     private val mutableState =
         MutableStateFlow(
-            initialState(),
+            initialConnectionState(),
         )
 
     override val state: StateFlow<VexStreamMusicState> =
         mutableState.asStateFlow()
 
+    override suspend fun restorePersistedState() {
+        restoreMutex.withLock {
+            if (persistedStateRestored) {
+                return@withLock
+            }
+
+            val restored =
+                withContext(
+                    Dispatchers.IO,
+                ) {
+                    offlineIndex.load()
+                }
+            val current =
+                mutableState.value
+            mutableState.value =
+                restored.copy(
+                    hubState = current.hubState,
+                    connectionState =
+                        current.connectionState,
+                )
+            persistedStateRestored = true
+        }
+    }
+
     override suspend fun findNearbyVexStream(): VexStreamRepositoryResult =
-        operationMutex.withLock {
+        withOperation {
             mutableState.value = mutableState.value
                 .withHubUnavailable(VexStreamHubState.NotConfigured)
                 .copy(
@@ -124,7 +150,7 @@ class PairedVexStreamMusicRepository(
         }
 
     override suspend fun reconnectPairedVexStream(): VexStreamRepositoryResult =
-        operationMutex.withLock {
+        withOperation {
             val remembered =
                 connectionStore.load()
                     ?: return VexStreamRepositoryResult.Rejected(
@@ -191,7 +217,7 @@ class PairedVexStreamMusicRepository(
         }
 
     override suspend fun confirmPairingCode(): VexStreamRepositoryResult =
-        operationMutex.withLock {
+        withOperation {
             val selected =
                 selectedService
                     ?: return VexStreamRepositoryResult.Rejected(
@@ -267,7 +293,7 @@ class PairedVexStreamMusicRepository(
         }
 
     override suspend fun forgetPairedVexStream(): VexStreamRepositoryResult =
-        operationMutex.withLock {
+        withOperation {
             connectionStore.load()?.let { connection ->
                 withContext(
                     Dispatchers.IO,
@@ -299,7 +325,7 @@ class PairedVexStreamMusicRepository(
         }
 
     override suspend fun refreshCatalog(): VexStreamRepositoryResult =
-        operationMutex.withLock {
+        withOperation {
             val connection =
                 connectionStore.load()
                     ?: return VexStreamRepositoryResult.Rejected(
@@ -316,7 +342,7 @@ class PairedVexStreamMusicRepository(
         expectedMediaSha256: VexStreamMediaSha256?,
         expectedMediaByteLength: Long?,
     ): VexStreamRepositoryResult =
-        operationMutex.withLock {
+        withOperation {
             val connection =
                 connectionStore.load()
                     ?: return VexStreamRepositoryResult.Rejected(
@@ -420,7 +446,7 @@ class PairedVexStreamMusicRepository(
     override suspend fun removeOfflineCopy(
         trackRef: VexStreamTrackRef,
     ): VexStreamRepositoryResult =
-        operationMutex.withLock {
+        withOperation {
             val target =
                 mutableState.value.track(trackRef)
                     ?: return VexStreamRepositoryResult.Rejected(
@@ -620,8 +646,23 @@ class PairedVexStreamMusicRepository(
                 migrateRetainedPrivateCopies(
                     catalog,
                 )
+            val retainedLocalDigests =
+                mutableState.value
+                    .tracks
+                    .mapNotNull { state ->
+                        (
+                            state.localCopy as?
+                                VexStreamLocalCopyState.Downloaded
+                        )
+                            ?.mediaSha256
+                    }
+                    .toSet()
             val rediscoveredLocalCopies =
                 catalog.tracks
+                    .filter { projection ->
+                        projection.mediaSha256 !in
+                            retainedLocalDigests
+                    }
                     .mapNotNull { projection ->
                         mediaStore
                             .rediscoverDeviceCopy(
@@ -1456,19 +1497,23 @@ class PairedVexStreamMusicRepository(
         )
     }
 
-    private fun initialState(): VexStreamMusicState {
-        val offline =
-            offlineIndex.load()
+    private suspend inline fun <Result> withOperation(
+        operation: () -> Result,
+    ): Result {
+        restorePersistedState()
+        return operationMutex.withLock {
+            operation()
+        }
+    }
+
+    private fun initialConnectionState(): VexStreamMusicState {
         val connection =
             connectionStore.load()
 
         return if (connection == null) {
-            offline.copy(
-                connectionState = VexStreamConnectionState.NotPaired,
-                hubState = VexStreamHubState.NotConfigured,
-            )
+            VexStreamMusicState.Empty
         } else {
-            offline.copy(
+            VexStreamMusicState.Empty.copy(
                 connectionState =
                     VexStreamConnectionState.Paired(
                         displayName = connection.displayName,

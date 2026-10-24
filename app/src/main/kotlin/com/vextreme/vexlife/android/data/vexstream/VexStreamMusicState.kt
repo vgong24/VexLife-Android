@@ -151,6 +151,28 @@ sealed interface VexStreamConnectionState {
  * [Downloaded] means the local bytes were verified against the expected digest/length by the
  * owning media-store implementation. It does not mean the Hub is currently reachable.
  */
+/**
+ * Durable receipt for one shared MediaStore copy that already crossed exact byte-length + SHA-256
+ * verification.
+ *
+ * Android's MediaStore generation is a change detector, not media identity. The receipt is useful
+ * only together with the exact [VexStreamMediaSha256], byte length and owned content URI preserved
+ * by [VexStreamLocalCopyState.Downloaded].
+ */
+data class VexStreamLocalCopyVerificationReceipt(
+    val mediaStoreVersion: String,
+    val generationModified: Long,
+) {
+    init {
+        require(mediaStoreVersion.isNotBlank()) {
+            "MediaStore version receipt must be non-blank"
+        }
+        require(generationModified >= 0L) {
+            "MediaStore generation receipt must be non-negative"
+        }
+    }
+}
+
 sealed interface VexStreamLocalCopyState {
     data object NotDownloaded : VexStreamLocalCopyState
 
@@ -175,6 +197,7 @@ sealed interface VexStreamLocalCopyState {
         val mediaSha256: VexStreamMediaSha256,
         val byteLength: Long,
         val localMediaRef: String,
+        val verificationReceipt: VexStreamLocalCopyVerificationReceipt? = null,
     ) : VexStreamLocalCopyState {
         init {
             require(byteLength > 0L) {

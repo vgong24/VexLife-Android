@@ -11,6 +11,15 @@ import kotlinx.coroutines.flow.StateFlow
 interface VexStreamMusicRepository {
     val state: StateFlow<VexStreamMusicState>
 
+    /**
+     * Restores durable local-copy truth after process creation.
+     *
+     * Production restoration can perform disk/media integrity work and therefore belongs behind an
+     * owned asynchronous execution boundary rather than repository construction on the UI thread.
+     * State-only fixture repositories have nothing to restore and inherit this no-op.
+     */
+    suspend fun restorePersistedState() = Unit
+
     suspend fun findNearbyVexStream(): VexStreamRepositoryResult
 
     /**
