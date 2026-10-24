@@ -569,6 +569,9 @@ object VexStreamJourneys : VexJourneyShard {
         tap(
             VexStreamMusicScreen.CloseOrganization,
         )
+        assertVisible(
+            VexStreamMusicScreen.FiltersActive,
+        )
 
         assertVisibleById(
             VexStreamPresentationRefs.trackRow(
