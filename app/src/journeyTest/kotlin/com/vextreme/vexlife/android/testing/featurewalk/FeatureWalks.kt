@@ -51,6 +51,12 @@ object FeatureWalks {
                 get() =
                     VexStreamFeatureWalks.downloadCollectionMissing
         }
+
+        object libraryOrganization {
+            val sortFilterPlayback: VexFeatureWalkCase
+                get() =
+                    VexStreamFeatureWalks.sortFilterPlayback
+        }
     }
 
     val features: List<VexFeatureWalkFeature> =
