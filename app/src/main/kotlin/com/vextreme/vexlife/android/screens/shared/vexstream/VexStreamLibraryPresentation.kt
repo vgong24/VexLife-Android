@@ -269,9 +269,7 @@ internal fun VexStreamLibraryFabActions(
 internal fun VexStreamSongsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
-    libraryLoadState:
-        VexStreamLibraryLoadState =
-        VexStreamLibraryLoadState.READY,
+    canShowTerminalEmptyState: Boolean = true,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
@@ -296,8 +294,7 @@ internal fun VexStreamSongsPane(
 
         if (
             tracks.isEmpty() &&
-            libraryLoadState ==
-                VexStreamLibraryLoadState.READY
+            canShowTerminalEmptyState
         ) {
             item(
                 key = "songs-empty",
@@ -337,9 +334,7 @@ internal fun VexStreamSongsPane(
 internal fun VexStreamDownloadsPane(
     runtime: VexRuntime,
     tracks: List<VexStreamTrackState>,
-    libraryLoadState:
-        VexStreamLibraryLoadState =
-        VexStreamLibraryLoadState.READY,
+    canShowTerminalEmptyState: Boolean = true,
     offlineCopyConnection: VexStreamOfflineCopyConnection?,
     controller: androidx.media3.session.MediaController?,
     resolver: VexStreamPlaybackSourceResolver?,
@@ -371,8 +366,7 @@ internal fun VexStreamDownloadsPane(
 
         if (
             downloaded.isEmpty() &&
-            libraryLoadState ==
-                VexStreamLibraryLoadState.READY
+            canShowTerminalEmptyState
         ) {
             item(
                 key = "downloads-empty",
