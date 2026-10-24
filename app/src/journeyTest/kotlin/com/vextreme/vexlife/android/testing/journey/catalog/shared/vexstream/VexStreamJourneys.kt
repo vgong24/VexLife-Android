@@ -578,6 +578,23 @@ object VexStreamJourneys : VexJourneyShard {
                     VexStreamJourneyFixtures.TrackOne,
             ),
         )
+
+        // Observe the duration narrowing through the existing Search projection: the long mix was
+        // visible before organization, but it cannot be found inside the < 10 minute listening set.
+        tap(
+            VexStreamMusicScreen.SearchLibrary,
+        )
+        enterText(
+            VexStreamMusicScreen.SearchQuery,
+            "Long",
+        )
+        assertVisible(
+            VexStreamMusicScreen.SearchNoResults,
+        )
+        tap(
+            VexStreamMusicScreen.CloseSearch,
+        )
+
         tapElementById(
             elementId =
                 trackRowActionElementId(
