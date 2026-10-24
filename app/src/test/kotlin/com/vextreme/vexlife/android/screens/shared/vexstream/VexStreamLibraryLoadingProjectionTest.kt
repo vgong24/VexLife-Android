@@ -25,6 +25,9 @@ class VexStreamLibraryLoadingProjectionTest {
         assertTrue(
             projection.isLoading,
         )
+        assertFalse(
+            projection.canShowTerminalEmptyState,
+        )
     }
 
     @Test
@@ -43,6 +46,9 @@ class VexStreamLibraryLoadingProjectionTest {
         )
         assertFalse(
             projection.isLoading,
+        )
+        assertTrue(
+            projection.canShowTerminalEmptyState,
         )
     }
 }
