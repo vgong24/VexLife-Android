@@ -96,8 +96,7 @@ class VexStreamLibraryRenderTest {
                         VexStreamDownloadsPane(
                             runtime = runtime,
                             tracks = emptyList(),
-                            libraryLoadState =
-                                VexStreamLibraryLoadState.RESTORING_LOCAL,
+                            canShowTerminalEmptyState = false,
                             offlineCopyConnection = null,
                             controller = null,
                             resolver = null,
