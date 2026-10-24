@@ -461,9 +461,10 @@ object VexStreamJourneys : VexJourneyShard {
         tap(HomeScreen.ConnectVexStreamMusic)
         tap(VexStreamMusicScreen.FindNearby)
         tap(VexStreamMusicScreen.ConfirmPairingCode)
-        tap(AppShell.Elements.Back)
-        tap(HomeScreen.VexStreamMusic)
 
+        // Pairing completes on the already-open VexStream screen. Stay in the feature and continue
+        // the human intention directly; Back-to-Home/re-entry belongs to connection-shell coverage,
+        // not to the Library organization Feature Walk.
         externalCause(
             repository =
                 getRepository(
