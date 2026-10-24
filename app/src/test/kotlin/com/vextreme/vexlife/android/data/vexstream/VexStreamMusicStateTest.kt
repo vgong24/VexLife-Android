@@ -424,6 +424,54 @@ class VexStreamMusicStateTest {
         )
     }
 
+    @Test
+    fun hubArtworkProjectionRemainsOptionalPresentationMetadata() {
+        val projected =
+            VexStreamHubTrackProjection(
+                trackRef =
+                    VexStreamTrackRef(
+                        "hub.track.artwork",
+                    ),
+                mediaSha256 =
+                    VexStreamMediaSha256(
+                        DIGEST_A,
+                    ),
+                mediaByteLength = 4096,
+                title = "Artwork",
+                artist = "Vex",
+                artworkUrl =
+                    "https://images.example.test/artwork.jpg",
+            ).toTrack()
+
+        assertEquals(
+            "https://images.example.test/artwork.jpg",
+            projected.artworkUrl,
+        )
+        assertEquals(
+            DIGEST_A,
+            projected.mediaSha256.value,
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun trackRejectsNonHttpsArtworkIdentity() {
+        VexStreamTrack(
+            trackRef =
+                VexStreamTrackRef(
+                    "hub.track.unsafe-artwork",
+                ),
+            mediaSha256 =
+                VexStreamMediaSha256(
+                    DIGEST_A,
+                ),
+            mediaByteLength = 4096,
+            title = "Unsafe Artwork",
+            artist = "Vex",
+            artworkUrl =
+                "file:///private/cover.jpg",
+        )
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun mediaDigestMustBeExactSha256() {
         VexStreamMediaSha256("not-a-digest")

@@ -44,6 +44,7 @@ WHAT IS PLAYBACK DOING?
     -> Play / Pause through Playback State / Control / Act / Effect
     -> Seek through typed mediaId + position request
     -> Media3 playback / seek Connections
+    -> provider read projection carries current optional artwork URI beside title/artist/progress
 
 HOW SHOULD THIS RENDERED COLLECTION START?
     vexstream/collection
@@ -319,6 +320,32 @@ collection truth.
 QuantumTest remains downstream proof optimization. Once this ordinary feature is proven, a partially
 downloaded collection becomes a useful reconstructable branch checkpoint; the Quantum experiment
 must consume the feature's truth rather than becoming a second MassDownload implementation.
+
+## Now Playing artwork is optional presentation metadata
+
+VexStream Desktop already owns optional source thumbnail metadata. Android does not infer or scrape
+cover art locally.
+
+The mobile path is:
+
+~~~text
+Desktop canonical Track.ThumbnailURL
+-> HTTPS-only mobile artworkUrl projection
+-> Android VexStreamTrack.artworkUrl
+-> Media3 MediaMetadata.artworkUri
+-> VexStreamPlaybackReadState.currentArtworkUri
+-> Mini Player / Full Player / App Widget presentation
+~~~
+
+Permanent:
+
+~~~text
+ARTWORK_URI != MEDIA_IDENTITY
+ARTWORK_ABSENT != TRACK_UNAVAILABLE
+WIDGET_OR_PLAYER != ARTWORK_SOURCE_OWNER
+~~~
+
+Filesystem paths and non-HTTPS artwork references are not admitted into the mobile projection.
 
 ## Playback and Queue are siblings, not one giant player State
 
