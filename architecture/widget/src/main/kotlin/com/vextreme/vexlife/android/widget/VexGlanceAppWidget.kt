@@ -69,7 +69,7 @@ value class VexWidgetActionRef(
                 value,
             ),
         ) {
-            "VexWidgetActionRef must be a lowercase dot-separated semantic ref"
+            "VexWidgetActionRef must be a lowercase semantic ref"
         }
     }
 
