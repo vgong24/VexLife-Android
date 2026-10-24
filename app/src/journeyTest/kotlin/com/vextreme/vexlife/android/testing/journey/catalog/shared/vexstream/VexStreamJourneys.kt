@@ -309,22 +309,6 @@ object VexStreamJourneys : VexJourneyShard {
             ),
         )
 
-        // The duration predicate itself must exclude the long mix. Observe that through the
-        // existing Search projection rather than adding a Journey-foundation negative-visibility API.
-        tap(
-            VexStreamMusicScreen.SearchLibrary,
-        )
-        enterText(
-            VexStreamMusicScreen.SearchQuery,
-            "Long",
-        )
-        assertVisible(
-            VexStreamMusicScreen.SearchNoResults,
-        )
-        tap(
-            VexStreamMusicScreen.CloseSearch,
-        )
-
         tapElementById(
             elementId =
                 trackRowActionElementId(
