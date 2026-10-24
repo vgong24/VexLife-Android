@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -226,7 +227,56 @@ class VexExecutionVirtualTimeUsageTest {
                 VexCoroutineStatus.FAILED,
                 handle.state.value.status,
             )
+
+            expectManagedFailure(
+                handle = handle,
+                failureClass =
+                    "IllegalStateException",
+                failureMessage =
+                    "restartable collector failed",
+            )
         }
+
+    @Test
+    fun unacknowledgedManagedFailureFailsTheScenarioWithoutRetry() {
+        val failure =
+            runCatching {
+                vexExecution.runTest {
+                    val handle =
+                        execution
+                            .observeRestartable()
+
+                    runCurrent()
+                    advanceTimeBy(
+                        1_000L,
+                    )
+                    runCurrent()
+
+                    assertEquals(
+                        VexCoroutineStatus.FAILED,
+                        handle.state.value.status,
+                    )
+                }
+            }.exceptionOrNull()
+
+        assertNotNull(
+            failure,
+        )
+        assertTrue(
+            failure
+                ?.message
+                .orEmpty()
+                .contains(
+                    "Unexpected managed FAILED executions",
+                ),
+        )
+        assertEquals(
+            2,
+            repository
+                .restartAttempts
+                .get(),
+        )
+    }
 
     @Test
     fun joinStopWaitsUntilStructuredCleanupActuallyFinishes() =

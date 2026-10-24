@@ -1,5 +1,9 @@
 package com.vextreme.vexlife.android.execution.testing
 
+import com.vextreme.vexlife.android.execution.VexCoroutineHandle
+import com.vextreme.vexlife.android.execution.VexCoroutineRef
+import com.vextreme.vexlife.android.execution.VexCoroutineState
+import com.vextreme.vexlife.android.execution.VexCoroutineStatus
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -114,12 +118,32 @@ class VexExecutionTestRule(
                     testScope = this,
                 )
 
+            var bodyFailure: Throwable? = null
+
             try {
                 scope.block()
+            } catch (
+                failure: Throwable,
+            ) {
+                bodyFailure = failure
             } finally {
                 root.joinStopAll(
                     "Vex execution test body finished",
                 )
+            }
+
+            val integrityFailure =
+                scope.executionIntegrityFailure()
+
+            bodyFailure?.let { failure ->
+                integrityFailure?.let(
+                    failure::addSuppressed,
+                )
+                throw failure
+            }
+
+            integrityFailure?.let {
+                throw it
             }
         }
     }
@@ -178,6 +202,170 @@ class VexExecutionTestScope internal constructor(
     val root: VexExecutionRoot,
     private val testScope: TestScope,
 ) {
+    private data class ExpectedManagedFailure(
+        val failureClass: String?,
+        val failureMessage: String?,
+    )
+
+    private val expectedManagedFailures =
+        linkedMapOf<
+            VexCoroutineRef,
+            ExpectedManagedFailure
+        >()
+
+    /**
+     * Declares one exact managed execution failure as intentional test evidence.
+     *
+     * The declaration never changes execution behavior and never permits a retry. The execution
+     * must still reach FAILED, and optional class/message predicates must match exactly.
+     */
+    fun expectManagedFailure(
+        handle: VexCoroutineHandle,
+        failureClass: String? = null,
+        failureMessage: String? = null,
+    ) {
+        check(
+            expectedManagedFailures.put(
+                handle.ref,
+                ExpectedManagedFailure(
+                    failureClass = failureClass,
+                    failureMessage = failureMessage,
+                ),
+            ) == null,
+        ) {
+            "managed execution failure already expected: ${handle.ref.value}"
+        }
+    }
+
+    internal fun executionIntegrityFailure():
+        AssertionError? {
+        val states =
+            root.executions.value
+
+        val failed =
+            states.filterValues { state ->
+                state.status ==
+                    VexCoroutineStatus.FAILED
+            }
+
+        val unexpected =
+            failed.filterKeys { ref ->
+                ref !in expectedManagedFailures
+            }
+
+        val missing =
+            expectedManagedFailures.filterKeys { ref ->
+                ref !in failed
+            }
+
+        val mismatched =
+            expectedManagedFailures.mapNotNull {
+                    (ref, expected),
+                ->
+                val state =
+                    failed[ref]
+                        ?: return@mapNotNull null
+
+                val classMismatch =
+                    expected.failureClass
+                        ?.let {
+                            it != state.failureClass
+                        }
+                        ?: false
+                val messageMismatch =
+                    expected.failureMessage
+                        ?.let {
+                            it != state.failureMessage
+                        }
+                        ?: false
+
+                if (
+                    classMismatch ||
+                    messageMismatch
+                ) {
+                    ref to state
+                } else {
+                    null
+                }
+            }
+                .toMap()
+
+        if (
+            unexpected.isEmpty() &&
+            missing.isEmpty() &&
+            mismatched.isEmpty()
+        ) {
+            return null
+        }
+
+        return AssertionError(
+            buildString {
+                appendLine(
+                    "Vex execution test integrity failed.",
+                )
+                if (unexpected.isNotEmpty()) {
+                    appendLine(
+                        "Unexpected managed FAILED executions:",
+                    )
+                    unexpected.forEach {
+                            (ref, state),
+                        ->
+                        appendLine(
+                            "  ${ref.value}: " +
+                                renderFailureState(
+                                    state,
+                                ),
+                        )
+                    }
+                }
+                if (missing.isNotEmpty()) {
+                    appendLine(
+                        "Expected managed failures not observed:",
+                    )
+                    missing.forEach {
+                            (ref, expected),
+                        ->
+                        appendLine(
+                            "  ${ref.value}: " +
+                                "class=${expected.failureClass ?: "*"} " +
+                                "message=${expected.failureMessage ?: "*"}",
+                        )
+                    }
+                }
+                if (mismatched.isNotEmpty()) {
+                    appendLine(
+                        "Managed failures did not match expectations:",
+                    )
+                    mismatched.forEach {
+                            (ref, state),
+                        ->
+                        val expected =
+                            requireNotNull(
+                                expectedManagedFailures[ref],
+                            )
+                        appendLine(
+                            "  ${ref.value}: expected " +
+                                "class=${expected.failureClass ?: "*"} " +
+                                "message=${expected.failureMessage ?: "*"}; " +
+                                "observed " +
+                                renderFailureState(
+                                    state,
+                                ),
+                        )
+                    }
+                }
+            }.trimEnd(),
+        )
+    }
+
+    private fun renderFailureState(
+        state: VexCoroutineState,
+    ): String =
+        "attempt=${state.attempt} " +
+            "restartCount=${state.restartCount} " +
+            "class=${state.failureClass ?: "UNKNOWN"} " +
+            "message=${state.failureMessage ?: "UNKNOWN"}"
+
     val currentTimeMillis: Long
         get() = testScope.testScheduler.currentTime
 

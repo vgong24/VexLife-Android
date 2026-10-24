@@ -284,6 +284,42 @@ Feature construction intentionally remains in the concrete test's `@Before`. Hid
 provider/fake, and real `VexExecution` construction behind a generic feature builder would shorten
 the file while making the architecture harder for a new human or AI to perceive.
 
+### Failed execution integrity in tests
+
+Production keeps managed failures as retained `VexCoroutineState.FAILED` so one supervised sibling
+does not crash unrelated work. The reusable test fixture closes the other half of that contract:
+an unexpected retained `FAILED` state fails the JUnit scenario after execution-tree teardown.
+
+A negative test that intentionally proves failure must acknowledge the exact handle:
+
+```kotlin
+expectManagedFailure(
+    handle = handle,
+    failureClass = "IllegalStateException",
+    failureMessage = "expected failure",
+)
+```
+
+That declaration is evidence expectation only. It never restarts the execution, never clears the
+failure, and fails itself if the expected failure does not occur or does not match. If the ordinary
+test body also throws, that body failure remains primary and the execution-integrity failure is
+attached as suppressed evidence.
+
+```text
+unexpected FAILED
+    -> test FAIL
+
+expected FAILED + exact match
+    -> accepted negative-test evidence
+
+expected FAILED missing/mismatched
+    -> test FAIL
+
+body exception + managed FAILED
+    -> body exception remains primary
+    -> managed failure retained as suppressed evidence
+```
+
 ### Virtual-time decision map
 
 Use the smallest scheduler action that matches the claim:
