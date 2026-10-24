@@ -620,8 +620,23 @@ class PairedVexStreamMusicRepository(
                 migrateRetainedPrivateCopies(
                     catalog,
                 )
+            val retainedLocalDigests =
+                mutableState.value
+                    .tracks
+                    .mapNotNull { state ->
+                        (
+                            state.localCopy as?
+                                VexStreamLocalCopyState.Downloaded
+                        )
+                            ?.mediaSha256
+                    }
+                    .toSet()
             val rediscoveredLocalCopies =
                 catalog.tracks
+                    .filter { projection ->
+                        projection.mediaSha256 !in
+                            retainedLocalDigests
+                    }
                     .mapNotNull { projection ->
                         mediaStore
                             .rediscoverDeviceCopy(

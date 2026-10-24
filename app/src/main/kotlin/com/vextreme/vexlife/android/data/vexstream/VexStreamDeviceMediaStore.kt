@@ -217,12 +217,85 @@ internal class VexStreamDeviceMediaStore(
         }
     }
 
+    /**
+     * Restores one copy recorded by the app-private offline index.
+     *
+     * API 30+ shared MediaStore copies reuse a prior cryptographic proof while the exact owned row,
+     * byte length, MediaStore version and row generation remain unchanged. A legacy v1 index has no
+     * receipt; its exact app-owned content-addressed row is adopted once without re-reading all
+     * bytes, then the v2 index persists the current receipt. Any later generation/version change
+     * falls back to full SHA-256 verification before a new receipt is admitted.
+     *
+     * Android 7-10 retain the earlier full-verification behavior.
+     */
+    fun restorePersisted(
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): VexStreamLocalCopyState.Downloaded? {
+        val uri =
+            localCopy.contentUri()
+                ?: return null
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val currentReceipt =
+                verificationReceipt(
+                    uri = uri,
+                    digest = localCopy.mediaSha256,
+                    expectedByteLength = localCopy.byteLength,
+                )
+                    ?: return null
+
+            val recordedReceipt =
+                localCopy.verificationReceipt
+            if (
+                recordedReceipt == null ||
+                recordedReceipt == currentReceipt
+            ) {
+                return localCopy.copy(
+                    verificationReceipt = currentReceipt,
+                )
+            }
+        }
+
+        if (
+            !isOwnedUri(
+                uri = uri,
+                digest = localCopy.mediaSha256,
+            ) ||
+            verifyUri(
+                uri = uri,
+                expectedSha256 = localCopy.mediaSha256,
+                expectedByteLength = localCopy.byteLength,
+            ) != null
+        ) {
+            return null
+        }
+
+        return downloadedState(
+            expectedSha256 = localCopy.mediaSha256,
+            expectedByteLength = localCopy.byteLength,
+            uri = uri,
+        )
+    }
+
     fun verify(
         localCopy: VexStreamLocalCopyState.Downloaded,
     ): Boolean {
         val uri =
             localCopy.contentUri()
                 ?: return false
+
+        val recordedReceipt =
+            localCopy.verificationReceipt
+        if (
+            recordedReceipt != null &&
+            verificationReceipt(
+                uri = uri,
+                digest = localCopy.mediaSha256,
+                expectedByteLength = localCopy.byteLength,
+            ) == recordedReceipt
+        ) {
+            return true
+        }
 
         if (
             !isOwnedUri(
@@ -435,6 +508,90 @@ internal class VexStreamDeviceMediaStore(
         } catch (_: Exception) {
             VexStreamMediaStoreRejection.IO_FAILURE
         }
+
+    private fun verificationReceipt(
+        uri: Uri,
+        digest: VexStreamMediaSha256,
+        expectedByteLength: Long,
+    ): VexStreamLocalCopyVerificationReceipt? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return null
+        }
+
+        val projection =
+            arrayOf(
+                MediaStore.Audio.Media.DISPLAY_NAME,
+                MediaStore.Audio.Media.RELATIVE_PATH,
+                MediaStore.Audio.Media.MIME_TYPE,
+                MediaStore.Audio.Media.SIZE,
+                MediaStore.Audio.Media.GENERATION_MODIFIED,
+            )
+
+        return try {
+            contentResolver.query(
+                uri,
+                projection,
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) {
+                    null
+                } else {
+                    val name =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.DISPLAY_NAME,
+                            ),
+                        )
+                    val relativePath =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.RELATIVE_PATH,
+                            ),
+                        )
+                    val mime =
+                        cursor.getString(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.MIME_TYPE,
+                            ),
+                        )
+                    val size =
+                        cursor.getLong(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.SIZE,
+                            ),
+                        )
+                    val generation =
+                        cursor.getLong(
+                            cursor.getColumnIndexOrThrow(
+                                MediaStore.Audio.Media.GENERATION_MODIFIED,
+                            ),
+                        )
+
+                    if (
+                        name != displayName(digest) ||
+                        relativePath != RELATIVE_PATH ||
+                        mime != MIME_TYPE ||
+                        size != expectedByteLength
+                    ) {
+                        null
+                    } else {
+                        VexStreamLocalCopyVerificationReceipt(
+                            mediaStoreVersion =
+                                MediaStore.getVersion(
+                                    appContext,
+                                    MediaStore.VOLUME_EXTERNAL_PRIMARY,
+                                ),
+                            generationModified = generation,
+                        )
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     private fun isOwnedUri(
         uri: Uri,
@@ -696,6 +853,12 @@ internal class VexStreamDeviceMediaStore(
             mediaSha256 = expectedSha256,
             byteLength = expectedByteLength,
             localMediaRef = uri.toString(),
+            verificationReceipt =
+                verificationReceipt(
+                    uri = uri,
+                    digest = expectedSha256,
+                    expectedByteLength = expectedByteLength,
+                ),
         )
 
     private fun VexStreamLocalCopyState.Downloaded.contentUri(): Uri? =

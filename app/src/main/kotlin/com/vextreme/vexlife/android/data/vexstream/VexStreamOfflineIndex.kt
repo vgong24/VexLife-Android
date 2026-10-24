@@ -27,9 +27,19 @@ class VexStreamOfflineIndex(
                 properties.load(input)
             }
 
-            check(properties.getProperty("schemaVersion") == SCHEMA_VERSION) {
+            val storedSchemaVersion =
+                properties.getProperty(
+                    "schemaVersion",
+                )
+            check(
+                storedSchemaVersion == SCHEMA_VERSION ||
+                    storedSchemaVersion == LEGACY_SCHEMA_VERSION
+            ) {
                 "unsupported VexStream offline index"
             }
+            var migrationNeeded =
+                storedSchemaVersion !=
+                    SCHEMA_VERSION
 
             val count = properties.getProperty("count")
                 ?.toIntOrNull()
@@ -44,14 +54,58 @@ class VexStreamOfflineIndex(
                     )
                     val byteLength = properties.require(prefix + "mediaByteLength")
                         .toLong()
-                    val localCopy = VexStreamLocalCopyState.Downloaded(
-                        mediaSha256 = digest,
-                        byteLength = byteLength,
-                        localMediaRef = properties.require(prefix + "localMediaRef"),
-                    )
+                    val receiptVersion =
+                        properties
+                            .getProperty(
+                                prefix +
+                                    "verificationMediaStoreVersion",
+                            )
+                            ?.takeIf {
+                                it.isNotBlank()
+                            }
+                    val receiptGeneration =
+                        properties
+                            .getProperty(
+                                prefix +
+                                    "verificationGenerationModified",
+                            )
+                            ?.toLongOrNull()
+                    val localCopy =
+                        VexStreamLocalCopyState.Downloaded(
+                            mediaSha256 = digest,
+                            byteLength = byteLength,
+                            localMediaRef =
+                                properties.require(
+                                    prefix +
+                                        "localMediaRef",
+                                ),
+                            verificationReceipt =
+                                if (
+                                    receiptVersion != null &&
+                                    receiptGeneration != null
+                                ) {
+                                    VexStreamLocalCopyVerificationReceipt(
+                                        mediaStoreVersion =
+                                            receiptVersion,
+                                        generationModified =
+                                            receiptGeneration,
+                                    )
+                                } else {
+                                    null
+                                },
+                        )
 
-                    if (!mediaStore.verify(localCopy)) {
-                        return@repeat
+                    val restoredCopy =
+                        mediaStore
+                            .restorePersistedCopy(
+                                localCopy,
+                            )
+                            ?: return@repeat
+                    if (
+                        restoredCopy !=
+                        localCopy
+                    ) {
+                        migrationNeeded = true
                     }
 
                     val playbackEnd = properties.getProperty(prefix + "playbackEndSeconds")
@@ -83,16 +137,25 @@ class VexStreamOfflineIndex(
                         VexStreamTrackState(
                             track = track,
                             hubAvailable = false,
-                            localCopy = localCopy,
+                            localCopy = restoredCopy,
                         ),
                     )
                 }
             }
 
-            VexStreamMusicState(
-                hubState = VexStreamHubState.NotConfigured,
-                tracks = tracks,
-            )
+            val restored =
+                VexStreamMusicState(
+                    hubState = VexStreamHubState.NotConfigured,
+                    tracks = tracks,
+                )
+
+            if (migrationNeeded) {
+                persist(
+                    restored,
+                )
+            }
+
+            restored
         }.getOrElse {
             VexStreamMusicState.Empty
         }
@@ -120,6 +183,20 @@ class VexStreamOfflineIndex(
                     setProperty(prefix + "mediaSha256", track.mediaSha256.value)
                     setProperty(prefix + "mediaByteLength", track.mediaByteLength.toString())
                     setProperty(prefix + "localMediaRef", local.localMediaRef)
+                    local.verificationReceipt
+                        ?.let { receipt ->
+                            setProperty(
+                                prefix +
+                                    "verificationMediaStoreVersion",
+                                receipt.mediaStoreVersion,
+                            )
+                            setProperty(
+                                prefix +
+                                    "verificationGenerationModified",
+                                receipt.generationModified
+                                    .toString(),
+                            )
+                        }
                     setProperty(prefix + "title", track.title)
                     setProperty(prefix + "artist", track.artist)
                     setProperty(prefix + "album", track.album)
@@ -173,7 +250,10 @@ class VexStreamOfflineIndex(
         }.getOrDefault(false)
 
     companion object {
-        private const val SCHEMA_VERSION = "vexstream.android.offline-index/v1"
+        private const val LEGACY_SCHEMA_VERSION =
+            "vexstream.android.offline-index/v1"
+        private const val SCHEMA_VERSION =
+            "vexstream.android.offline-index/v2"
 
         fun production(
             contextFilesDir: File,

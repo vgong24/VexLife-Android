@@ -181,6 +181,35 @@ class VexStreamMediaStore private constructor(
                 expectedByteLength = expectedByteLength,
             )
 
+    fun restorePersistedCopy(
+        localCopy: VexStreamLocalCopyState.Downloaded,
+    ): VexStreamLocalCopyState.Downloaded? {
+        val mediaRefDigest =
+            digestFromLocalMediaRef(
+                localCopy.localMediaRef,
+            )
+
+        if (mediaRefDigest == null) {
+            return deviceStore
+                ?.restorePersisted(
+                    localCopy,
+                )
+        }
+
+        if (
+            mediaRefDigest !=
+            localCopy.mediaSha256
+        ) {
+            return null
+        }
+
+        return localCopy.takeIf {
+            verify(
+                it,
+            )
+        }
+    }
+
     fun migratePrivateCopy(
         track: VexStreamTrack,
         localCopy: VexStreamLocalCopyState.Downloaded,
