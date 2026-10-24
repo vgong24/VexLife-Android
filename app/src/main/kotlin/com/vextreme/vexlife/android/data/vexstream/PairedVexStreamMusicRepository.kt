@@ -637,18 +637,19 @@ class PairedVexStreamMusicRepository(
                     }
                     .toMap()
 
-            mutableState.value = mutableState.value
-                .withHubCatalog(
-                    catalog = catalog,
-                    rediscoveredLocalCopies =
-                        rediscoveredLocalCopies,
-                )
-                .copy(
-                    connectionState =
-                        VexStreamConnectionState.Paired(
-                            displayName = connection.displayName,
-                        ),
-                )
+            val nextState =
+                mutableState.value
+                    .withHubCatalog(
+                        catalog = catalog,
+                        rediscoveredLocalCopies =
+                            rediscoveredLocalCopies,
+                    )
+                    .copy(
+                        connectionState =
+                            VexStreamConnectionState.Paired(
+                                displayName = connection.displayName,
+                            ),
+                    )
 
             if (
                 migrationChanged ||
@@ -656,9 +657,15 @@ class PairedVexStreamMusicRepository(
                     .isNotEmpty()
             ) {
                 offlineIndex.persist(
-                    mutableState.value,
+                    nextState,
                 )
             }
+
+            // Publish current local-copy truth only after the matching restart index write has
+            // completed. A collector must not observe HUB_AND_LOCAL in the gap before its private
+            // recovery index is rebuilt.
+            mutableState.value =
+                nextState
 
             VexStreamRepositoryResult.Accepted()
         } catch (_: Exception) {
