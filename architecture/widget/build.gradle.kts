@@ -27,6 +27,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(platform(libs.composeBom))
     implementation(libs.composeRuntime)
     implementation(libs.glance)
     implementation(libs.glanceAppwidget)
