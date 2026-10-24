@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,8 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.res.stringResource
-import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.elements.VexText
@@ -196,16 +193,11 @@ internal fun VexStreamLibrarySurface(
 
             if (organization.hasActiveFilters) {
                 VexText(
-                    id = "organization-active-filter-status",
-                    text =
+                    element =
                         if (libraryTracks.isEmpty()) {
-                            stringResource(
-                                R.string.vexstream_music_filters_no_matches,
-                            )
+                            VexStreamMusicScreen.FiltersNoMatches
                         } else {
-                            stringResource(
-                                R.string.vexstream_music_filters_active,
-                            )
+                            VexStreamMusicScreen.FiltersActive
                         },
                     modifier =
                         Modifier
@@ -214,8 +206,6 @@ internal fun VexStreamLibrarySurface(
                                 horizontal = 12.dp,
                                 vertical = 6.dp,
                             ),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 
