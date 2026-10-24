@@ -24,6 +24,11 @@ object VexStreamJourneyFixtures {
             "journey.track.three",
         )
 
+    val OrganizationLongTrack =
+        VexStreamTrackRef(
+            "journey.track.organization.long",
+        )
+
     const val AlbumName: String =
         "Journey Album"
 }
