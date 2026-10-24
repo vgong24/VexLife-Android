@@ -206,15 +206,19 @@ internal fun VexStreamConnectionMenuSheet(
             when (element) {
                 VexStreamMusicScreen.DownloadAllMissingSongs ->
                     downloadAllMissingRequest
-                        ?.let(
-                            offlineCopyConnection::request,
-                        )
+                        ?.let { request ->
+                            offlineCopyConnection.request(
+                                request,
+                            )
+                        }
 
                 VexStreamMusicScreen.RemoveAllDownloadedSongs ->
                     removeAllDownloadedRequest
-                        ?.let(
-                            offlineCopyConnection::request,
-                        )
+                        ?.let { request ->
+                            offlineCopyConnection.request(
+                                request,
+                            )
+                        }
 
                 else -> Unit
             }
