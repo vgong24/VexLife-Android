@@ -355,20 +355,9 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
             )
 
         try {
-            assertEquals(
-                1,
-                context.contentResolver
-                    .update(
-                        uri,
-                        ContentValues().apply {
-                            put(
-                                MediaStore.Audio.Media.TITLE,
-                                "Receipt metadata changed",
-                            )
-                        },
-                        null,
-                        null,
-                    ),
+            advanceVerificationGeneration(
+                context = context,
+                uri = uri,
             )
 
             val refreshed =
@@ -406,16 +395,9 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                     output.fd.sync()
                 }
             }
-            context.contentResolver.update(
-                uri,
-                ContentValues().apply {
-                    put(
-                        MediaStore.Audio.Media.TITLE,
-                        "Receipt bytes changed",
-                    )
-                },
-                null,
-                null,
+            advanceVerificationGeneration(
+                context = context,
+                uri = uri,
             )
 
             assertEquals(
@@ -1365,6 +1347,83 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
                 )
             }
     }
+
+    private fun advanceVerificationGeneration(
+        context: android.content.Context,
+        uri: android.net.Uri,
+    ) {
+        val before =
+            generationModified(
+                context = context,
+                uri = uri,
+            )
+
+        assertEquals(
+            1,
+            context.contentResolver
+                .update(
+                    uri,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Audio.Media.IS_PENDING,
+                            1,
+                        )
+                    },
+                    null,
+                    null,
+                ),
+        )
+        assertEquals(
+            1,
+            context.contentResolver
+                .update(
+                    uri,
+                    ContentValues().apply {
+                        put(
+                            MediaStore.Audio.Media.IS_PENDING,
+                            0,
+                        )
+                    },
+                    null,
+                    null,
+                ),
+        )
+
+        assertTrue(
+            generationModified(
+                context = context,
+                uri = uri,
+            ) != before,
+        )
+    }
+
+    private fun generationModified(
+        context: android.content.Context,
+        uri: android.net.Uri,
+    ): Long =
+        requireNotNull(
+            context.contentResolver
+                .query(
+                    uri,
+                    arrayOf(
+                        MediaStore.Audio.Media.GENERATION_MODIFIED,
+                    ),
+                    null,
+                    null,
+                    null,
+                ),
+        ).use { cursor ->
+            check(
+                cursor.moveToFirst(),
+            ) {
+                "VexStream receipt test row disappeared"
+            }
+            cursor.getLong(
+                cursor.getColumnIndexOrThrow(
+                    MediaStore.Audio.Media.GENERATION_MODIFIED,
+                ),
+            )
+        }
 
     /*
      * Runtime-permission revocation kills the application UID on legacy Android.
