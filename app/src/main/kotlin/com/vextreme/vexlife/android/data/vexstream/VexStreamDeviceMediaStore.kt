@@ -283,7 +283,7 @@ internal class VexStreamDeviceMediaStore(
                         .verificationReceipt
                 val restored =
                     if (
-                        recordedReceipt == null ||
+                        recordedReceipt != null &&
                         recordedReceipt ==
                         snapshot.receipt
                     ) {
@@ -323,9 +323,9 @@ internal class VexStreamDeviceMediaStore(
      *
      * API 30+ shared MediaStore copies reuse a prior cryptographic proof while the exact owned row,
      * byte length, MediaStore version and row generation remain unchanged. A legacy v1 index has no
-     * receipt; its exact app-owned content-addressed row is adopted once without re-reading all
-     * bytes, then the v2 index persists the current receipt. Any later generation/version change
-     * falls back to full SHA-256 verification before a new receipt is admitted.
+     * prior MediaStore receipt, so its bytes are verified once before the v2 index may persist the
+     * first receipt. Any later generation/version change likewise falls back to full SHA-256
+     * verification before a refreshed receipt is admitted.
      *
      * Android 7-10 retain the earlier full-verification behavior.
      */
@@ -348,7 +348,7 @@ internal class VexStreamDeviceMediaStore(
             val recordedReceipt =
                 localCopy.verificationReceipt
             if (
-                recordedReceipt == null ||
+                recordedReceipt != null &&
                 recordedReceipt == currentReceipt
             ) {
                 return localCopy.copy(

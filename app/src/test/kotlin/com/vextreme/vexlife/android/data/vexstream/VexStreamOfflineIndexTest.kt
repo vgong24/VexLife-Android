@@ -191,6 +191,147 @@ class VexStreamOfflineIndexTest {
     }
 
     @Test
+    fun legacyV1IndexIsNotRewrittenWhenRestoreIsPartial() {
+        val root =
+            Files.createTempDirectory(
+                "vexstream-offline-index-v1-partial-test",
+            ).toFile()
+        try {
+            val mediaStore =
+                VexStreamMediaStore(
+                    root.resolve(
+                        "media",
+                    ),
+                )
+            val indexFile =
+                root.resolve(
+                    "offline-index.properties",
+                )
+            val index =
+                VexStreamOfflineIndex(
+                    indexFile = indexFile,
+                    mediaStore = mediaStore,
+                )
+            val keptBytes =
+                "legacy kept media"
+                    .toByteArray()
+            val missingBytes =
+                "legacy missing media"
+                    .toByteArray()
+            val keptDigest =
+                keptBytes.sha256()
+            val missingDigest =
+                missingBytes.sha256()
+            val kept =
+                mediaStore.store(
+                    expectedSha256 =
+                        keptDigest,
+                    expectedByteLength =
+                        keptBytes.size.toLong(),
+                    input =
+                        ByteArrayInputStream(
+                            keptBytes,
+                        ),
+                ) as VexStreamMediaStoreResult.Stored
+            val missing =
+                mediaStore.store(
+                    expectedSha256 =
+                        missingDigest,
+                    expectedByteLength =
+                        missingBytes.size.toLong(),
+                    input =
+                        ByteArrayInputStream(
+                            missingBytes,
+                        ),
+                ) as VexStreamMediaStoreResult.Stored
+            val state =
+                VexStreamMusicState(
+                    tracks =
+                        listOf(
+                            VexStreamTrackState(
+                                track =
+                                    VexStreamTrack(
+                                        trackRef =
+                                            VexStreamTrackRef(
+                                                "hub.track.kept",
+                                            ),
+                                        mediaSha256 =
+                                            keptDigest,
+                                        mediaByteLength =
+                                            keptBytes.size.toLong(),
+                                        title = "Kept",
+                                        artist = "Vex",
+                                    ),
+                                hubAvailable = false,
+                                localCopy =
+                                    kept.localCopy,
+                            ),
+                            VexStreamTrackState(
+                                track =
+                                    VexStreamTrack(
+                                        trackRef =
+                                            VexStreamTrackRef(
+                                                "hub.track.missing",
+                                            ),
+                                        mediaSha256 =
+                                            missingDigest,
+                                        mediaByteLength =
+                                            missingBytes.size.toLong(),
+                                        title = "Missing",
+                                        artist = "Vex",
+                                    ),
+                                hubAvailable = false,
+                                localCopy =
+                                    missing.localCopy,
+                            ),
+                        ),
+                )
+
+            assertTrue(
+                index.persist(
+                    state,
+                ),
+            )
+            indexFile.writeText(
+                indexFile.readText()
+                    .replace(
+                        "vexstream.android.offline-index/v2",
+                        "vexstream.android.offline-index/v1",
+                    ),
+            )
+            assertTrue(
+                mediaStore.remove(
+                    missing.localCopy,
+                ),
+            )
+
+            val restored =
+                index.load()
+
+            assertEquals(
+                1,
+                restored.tracks.size,
+            )
+            assertEquals(
+                keptDigest,
+                restored.tracks
+                    .single()
+                    .track
+                    .mediaSha256,
+            )
+            assertTrue(
+                indexFile
+                    .readText()
+                    .contains(
+                        "vexstream.android.offline-index/v1",
+                    ),
+            )
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun verificationReceiptRejectsInvalidGeneration() {
         var failed = false
         try {

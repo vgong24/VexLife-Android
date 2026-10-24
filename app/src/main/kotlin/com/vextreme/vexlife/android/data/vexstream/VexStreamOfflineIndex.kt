@@ -222,7 +222,10 @@ class VexStreamOfflineIndex(
                     tracks = tracks,
                 )
 
-            if (migrationNeeded) {
+            if (
+                migrationNeeded &&
+                tracks.size == entries.size
+            ) {
                 persist(
                     restored,
                 )

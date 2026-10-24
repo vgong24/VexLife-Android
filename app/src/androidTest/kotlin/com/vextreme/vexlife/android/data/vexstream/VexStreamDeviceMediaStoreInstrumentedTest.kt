@@ -242,6 +242,83 @@ class VexStreamDeviceMediaStoreInstrumentedTest {
     }
 
     @Test
+    fun missingReceiptCannotAdoptCorruptSameLengthBytes() {
+        assumeTrue(
+            Build.VERSION.SDK_INT >=
+                Build.VERSION_CODES.R,
+        )
+
+        val context =
+            InstrumentationRegistry
+                .getInstrumentation()
+                .targetContext
+        val bytes =
+            "legacy receipt bootstrap bytes"
+                .encodeToByteArray()
+        val track =
+            track(
+                bytes = bytes,
+                suffix = "missing-receipt-corrupt",
+            )
+        val store =
+            VexStreamDeviceMediaStore(
+                context,
+            )
+        val stored =
+            store.store(
+                track = track,
+                input =
+                    ByteArrayInputStream(
+                        bytes,
+                    ),
+            ) as VexStreamMediaStoreResult.Stored
+        val uri =
+            android.net.Uri.parse(
+                stored.localCopy.localMediaRef,
+            )
+
+        try {
+            requireNotNull(
+                context.contentResolver
+                    .openFileDescriptor(
+                        uri,
+                        "w",
+                    ),
+            ).use { descriptor ->
+                FileOutputStream(
+                    descriptor.fileDescriptor,
+                ).use { output ->
+                    output.write(
+                        ByteArray(
+                            bytes.size,
+                        ) {
+                            0
+                        },
+                    )
+                    output.flush()
+                    output.fd.sync()
+                }
+            }
+
+            assertEquals(
+                null,
+                store.restorePersisted(
+                    stored.localCopy.copy(
+                        verificationReceipt = null,
+                    ),
+                ),
+            )
+        } finally {
+            context.contentResolver
+                .delete(
+                    uri,
+                    null,
+                    null,
+                )
+        }
+    }
+
+    @Test
     fun staleReceiptFallsBackToExactBytesBeforeReadmission() {
         assumeTrue(
             Build.VERSION.SDK_INT >=

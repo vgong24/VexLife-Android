@@ -9,6 +9,9 @@ import androidx.lifecycle.viewModelScope
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
@@ -16,6 +19,7 @@ import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 /**
  * One in-process VexLife app session.
@@ -90,8 +94,45 @@ internal class VexLifeSession(
 internal class VexLifeViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
-    val session = VexLifeSession(
-        repositories = AppRepositoryFactory.production(application),
-        scope = viewModelScope,
-    )
+    private val executionRoot =
+        VexExecutionRoot(
+            dispatcher = Dispatchers.IO,
+        )
+    private val repositories =
+        AppRepositoryFactory.production(
+            application,
+        )
+    private val vexStreamStartupExecution =
+        VexStreamStartupExecution(
+            executionRoot = executionRoot,
+            repository = repositories.vexStream,
+        ).also {
+            it.start()
+        }
+
+    val session =
+        VexLifeSession(
+            repositories = repositories,
+            scope = viewModelScope,
+        )
+
+    override fun onCleared() {
+        executionRoot.forceStopAll(
+            "VexLife ViewModel cleared",
+        )
+        super.onCleared()
+    }
+}
+
+private class VexStreamStartupExecution(
+    executionRoot: VexExecutionRoot,
+    private val repository: VexStreamMusicRepository,
+) : VexExecution(
+        executionRoot,
+    ) {
+    fun start() {
+        launchOnce(
+            repository::restorePersistedState,
+        )
+    }
 }
