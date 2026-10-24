@@ -120,6 +120,10 @@ internal data class VexStreamLibraryProjection(
         get() =
             loadState !=
                 VexStreamLibraryLoadState.READY
+
+    val canShowTerminalEmptyState: Boolean
+        get() =
+            !isLoading
 }
 
 internal fun VexStreamMusicState.toVexStreamLibraryProjection(
