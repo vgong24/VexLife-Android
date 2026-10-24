@@ -142,6 +142,8 @@
     <string name="vexstream_music_filter_unavailable">Unavailable</string>
     <string name="vexstream_music_filter_toggle">Toggle library filter</string>
     <string name="vexstream_music_filter_clear">Clear filters</string>
+    <string name="vexstream_music_filters_active">Filters active</string>
+    <string name="vexstream_music_filters_no_matches">No songs match these filters</string>
     <string name="vexstream_music_no_search_results">No matching music.</string>
     <string name="vexstream_music_albums">Albums</string>
     <string name="vexstream_music_artists">Artists</string>
