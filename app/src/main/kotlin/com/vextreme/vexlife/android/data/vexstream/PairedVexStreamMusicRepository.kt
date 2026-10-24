@@ -1403,6 +1403,16 @@ class PairedVexStreamMusicRepository(
                                 track.optString(
                                     "artist",
                                 ),
+                            artworkUrl =
+                                track.optString(
+                                    "artworkUrl",
+                                )
+                                    .trim()
+                                    .takeIf {
+                                        it.startsWith(
+                                            "https://",
+                                        )
+                                    },
                             album =
                                 track.optString(
                                     "album",
