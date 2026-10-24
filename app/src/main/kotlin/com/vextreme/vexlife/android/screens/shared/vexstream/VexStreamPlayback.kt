@@ -81,40 +81,26 @@ internal class VexStreamPlaybackSourceResolver(
             .setUri(uri)
             .setMimeType(MimeTypes.AUDIO_MPEG)
             .setMediaMetadata(
-                vexStreamMediaMetadata(
-                    state.track,
-                ),
+                MediaMetadata.Builder()
+                    .setTitle(state.track.title)
+                    .setArtist(state.track.artist)
+                    .setAlbumTitle(state.track.album)
+                    .apply {
+                        state.track.artworkUrl
+                            ?.let { artworkUrl ->
+                                setArtworkUri(
+                                    Uri.parse(
+                                        artworkUrl,
+                                    ),
+                                )
+                            }
+                    }
+                    .build(),
             )
             .setClippingConfiguration(clipping)
             .build()
     }
 }
-
-internal fun vexStreamMediaMetadata(
-    track:
-        com.vextreme.vexlife.android.data.vexstream.VexStreamTrack,
-): MediaMetadata =
-    MediaMetadata.Builder()
-        .setTitle(
-            track.title,
-        )
-        .setArtist(
-            track.artist,
-        )
-        .setAlbumTitle(
-            track.album,
-        )
-        .apply {
-            track.artworkUrl
-                ?.let { artworkUrl ->
-                    setArtworkUri(
-                        Uri.parse(
-                            artworkUrl,
-                        ),
-                    )
-                }
-        }
-        .build()
 
 internal fun formatVexStreamPlaybackTime(
     positionMs: Long,
