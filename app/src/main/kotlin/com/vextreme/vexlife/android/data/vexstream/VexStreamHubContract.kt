@@ -208,6 +208,7 @@ fun VexStreamMusicState.withHubCatalog(
             catalogRevision = catalog.catalogRevision,
         ),
         connectionState = connectionState,
+        libraryLoadState = libraryLoadState,
         tracks = connectedTracks + localOnlyTracks,
         playlists = playlists,
     )
