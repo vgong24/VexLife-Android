@@ -91,6 +91,15 @@ internal fun VexStreamLibraryTabs(
     }
 }
 
+internal fun vexStreamLibraryPlaybackRequest(
+    tracks: List<VexStreamTrackState>,
+    order: VexStreamCollectionPlaybackOrder,
+): VexStreamCollectionPlaybackRequest =
+    VexStreamCollectionPlaybackRequest(
+        tracks = tracks,
+        order = order,
+    )
+
 @Composable
 internal fun VexStreamLibraryFabActions(
     runtime: VexRuntime,
@@ -107,7 +116,7 @@ internal fun VexStreamLibraryFabActions(
         remember(
             tracks,
         ) {
-            VexStreamCollectionPlaybackRequest(
+            vexStreamLibraryPlaybackRequest(
                 tracks = tracks,
                 order =
                     VexStreamCollectionPlaybackOrder.Natural,
@@ -117,7 +126,7 @@ internal fun VexStreamLibraryFabActions(
         remember(
             tracks,
         ) {
-            VexStreamCollectionPlaybackRequest(
+            vexStreamLibraryPlaybackRequest(
                 tracks = tracks,
                 order =
                     VexStreamCollectionPlaybackOrder.Shuffled,
