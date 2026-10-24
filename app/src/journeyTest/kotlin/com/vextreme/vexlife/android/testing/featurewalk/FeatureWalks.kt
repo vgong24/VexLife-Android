@@ -50,6 +50,10 @@ object FeatureWalks {
             val downloadCollectionMissing: VexFeatureWalkCase
                 get() =
                     VexStreamFeatureWalks.downloadCollectionMissing
+
+            val manageLibraryDownloads: VexFeatureWalkCase
+                get() =
+                    VexStreamFeatureWalks.manageLibraryDownloads
         }
 
         object libraryOrganization {

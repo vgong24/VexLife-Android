@@ -285,6 +285,136 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
+    private val manageLibraryDownloadsFeatureWalk =
+        vexFeatureWalkJourney(
+            featureWalkCase =
+                FeatureWalks
+                    .vexStream
+                    .offlineDownload
+                    .manageLibraryDownloads,
+        ) {
+            start(HomeScreen)
+            tap(HomeScreen.ConnectVexStreamMusic)
+            tap(VexStreamMusicScreen.FindNearby)
+            tap(VexStreamMusicScreen.ConfirmPairingCode)
+
+            // Keep the fixture deliberately tiny: one verified local song plus two missing songs.
+            tapElementById(
+                elementId =
+                    trackRowActionElementId(
+                        VexStreamMusicScreen.DownloadTrack,
+                    ),
+                behavesLike =
+                    VexStreamMusicScreen.DownloadTrack,
+            )
+            externalCause(
+                repository =
+                    getRepository(
+                        vexStreamJourneyRepository,
+                    ),
+                causeRef =
+                    "cause.vexstream.library-bulk-download.catalog-expanded",
+            ) {
+                check(
+                    state.value
+                        .track(
+                            VexStreamJourneyFixtures.TrackOne,
+                        )
+                        ?.localCopy is
+                        VexStreamLocalCopyState.Downloaded,
+                ) {
+                    "Library bulk-download Journey requires TrackOne to be local before catalog expansion"
+                }
+
+                publishCatalog(
+                    massDownloadCatalog(),
+                )
+            }
+
+            tap(
+                VexStreamMusicScreen.ManageConnection,
+            )
+            assertVisible(
+                VexStreamMusicScreen.DownloadAllMissingSongs,
+            )
+            tap(
+                VexStreamMusicScreen.DownloadAllMissingSongs,
+            )
+            tap(
+                VexStreamMusicScreen.CloseConnectionMenu,
+            )
+
+            tap(
+                VexStreamMusicScreen.DownloadsTab,
+            )
+            listOf(
+                VexStreamJourneyFixtures.TrackOne,
+                VexStreamJourneyFixtures.TrackTwo,
+                VexStreamJourneyFixtures.TrackThree,
+            ).forEach { trackRef ->
+                assertVisibleById(
+                    VexStreamPresentationRefs.trackRow(
+                        scope =
+                            VexStreamTrackPresentationScope.Downloads,
+                        trackRef = trackRef,
+                    ),
+                )
+            }
+
+            tap(
+                VexStreamMusicScreen.SongsTab,
+            )
+            tap(
+                VexStreamMusicScreen.ManageConnection,
+            )
+            assertVisible(
+                VexStreamMusicScreen.RemoveAllDownloadedSongs,
+            )
+            tap(
+                VexStreamMusicScreen.RemoveAllDownloadedSongs,
+            )
+            tap(
+                VexStreamMusicScreen.CloseConnectionMenu,
+            )
+
+            // Bulk removal deletes local copies, not catalog membership. The exact three Songs remain.
+            listOf(
+                VexStreamJourneyFixtures.TrackOne,
+                VexStreamJourneyFixtures.TrackTwo,
+                VexStreamJourneyFixtures.TrackThree,
+            ).forEach { trackRef ->
+                assertVisibleById(
+                    VexStreamPresentationRefs.trackRow(
+                        scope =
+                            VexStreamTrackPresentationScope.Songs,
+                        trackRef = trackRef,
+                    ),
+                )
+            }
+
+            // TrackOne is downloadable again, which makes the bulk-removal result directly visible.
+            tapElementById(
+                elementId =
+                    trackRowActionElementId(
+                        VexStreamMusicScreen.TrackMenu,
+                    ),
+                behavesLike =
+                    VexStreamMusicScreen.TrackMenu,
+            )
+            tapElementById(
+                elementId =
+                    trackMenuActionElementId(
+                        VexStreamMusicScreen.DownloadTrack,
+                    ),
+                behavesLike =
+                    VexStreamMusicScreen.DownloadTrack,
+            )
+            tap(AppShell.Elements.Back)
+        }
+
+    val manageLibraryDownloads =
+        manageLibraryDownloadsFeatureWalk.journey
+
     private val downloadAndRemoveFeatureWalk =
         vexFeatureWalkJourney(
             featureWalkCase =
@@ -647,6 +777,7 @@ object VexStreamJourneys : VexJourneyShard {
 
     override val journeys = listOf(
         connectRefreshForget,
+        manageLibraryDownloads,
         downloadAndRemove,
         downloadCollectionMissing,
         sortFilterPlayback,
@@ -656,6 +787,7 @@ object VexStreamJourneys : VexJourneyShard {
         listOf(
             downloadAndRemoveFeatureWalk,
             downloadCollectionMissingFeatureWalk,
+            manageLibraryDownloadsFeatureWalk,
             sortFilterPlaybackFeatureWalk,
         )
 

@@ -63,10 +63,12 @@ IS REPEAT ACTIVE FOR THIS PLAYBACK CONTEXT?
     -> Repeat State / Control / Act / Effect
     -> Media3VexStreamRepeatConnection
 
-HOW MUCH OF THIS COLLECTION IS ON THIS PHONE?
+HOW MUCH OF THIS COLLECTION OR SONGS LIBRARY IS ON THIS PHONE?
     vexstream/offline
-    -> current collection offline plan from repository-owned per-track copy truth
+    -> current collection/Songs offline plan from repository-owned per-track copy truth
     -> exact Download missing request over only requestable current media
+    -> VexStream settings can apply that same one-shot plan to the canonical playable Songs library
+    -> Remove all downloaded songs reuses repository remove truth and never deletes catalog membership
 
 WHAT DOES THE LISTENER SEE?
     screens/shared/vexstream
@@ -263,6 +265,23 @@ rendered album / artist collection / playlist
 
 This is deliberately one-shot. It does not yet mean "keep this collection synchronized forever."
 
+Library-wide Songs management now reuses those same semantics from the VexStream settings sheet:
+
+~~~text
+canonical playable Songs library
+-> current local-copy plan
+-> Download all missing songs
+   exact missing targets only
+   no already-downloaded replay
+-> Remove all downloaded songs
+   current verified local copies only
+   catalog membership preserved
+~~~
+
+The word **all** is intentionally library-scoped rather than Sort/Filter-view-scoped: a temporary
+filter must not silently turn "Download all missing songs" into "download only the currently visible
+subset."
+
 Current durable-device-storage distinction:
 
 ```text
@@ -287,10 +306,10 @@ Held until independently earned:
 persistent Keep available offline intention
 durable collection identity for album-like groupings
 background / process-death resumption
-whole-library download policy
+persistent whole-library keep-offline policy
 storage/free-space admission beyond the current per-object publication failure boundary
 bounded parallel transfer policy
-multi-select / mass removal
+multi-select / selective bulk removal
 ~~~
 
 Do not call the one-shot relationship "synced" merely because all current members happen to be local.

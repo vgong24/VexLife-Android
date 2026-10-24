@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.core.content.ContextCompat
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
@@ -179,6 +180,32 @@ internal class VexStreamOfflineCopyConnection(
             }
         }
     }
+
+    fun request(
+        request: VexStreamOfflineCollectionRemovalRequest,
+    ): Job =
+        scope.launch {
+            request.trackRefs.forEach { trackRef ->
+                val current =
+                    repository
+                        .state
+                        .value
+                        .track(
+                            trackRef,
+                        )
+
+                if (
+                    current?.localCopy !is
+                    VexStreamLocalCopyState.Downloaded
+                ) {
+                    return@forEach
+                }
+
+                repository.removeOfflineCopy(
+                    trackRef,
+                )
+            }
+        }
 }
 
 @Composable

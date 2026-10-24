@@ -259,6 +259,24 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = invoke(AppActions.ReconnectVexStream),
     )
 
+    val DownloadAllMissingSongs = buttonRef(
+        id = "body.connection.library.download-all-missing",
+        labelRes =
+            R.string.vexstream_music_download_all_missing,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Download,
+        intent = localEffect(),
+    )
+
+    val RemoveAllDownloadedSongs = buttonRef(
+        id = "body.connection.library.remove-all-downloaded",
+        labelRes =
+            R.string.vexstream_music_remove_all_downloaded,
+        style = VexElementStyles.DangerAction,
+        icon = ElementIcon.RemoveDownload,
+        intent = localEffect(),
+    )
+
     val RequestForgetPaired = buttonRef(
         id = "body.connection.forget.request",
         labelRes = R.string.vexstream_music_forget,
@@ -638,6 +656,8 @@ object VexStreamMusicScreen : AppScreenBlueprint(
             modalBottomSheet(ConnectionMenuSheet) {
                 button(RefreshCatalog)
                 button(Reconnect)
+                button(DownloadAllMissingSongs)
+                button(RemoveAllDownloadedSongs)
                 button(RequestForgetPaired)
                 button(CloseConnectionMenu)
             }

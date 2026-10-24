@@ -335,6 +335,8 @@ internal fun VexStreamLibrarySurface(
         VexStreamConnectionMenuSheet(
             state = state,
             runtime = runtime,
+            offlineCopyConnection =
+                offlineCopyConnection,
         )
     }
 
