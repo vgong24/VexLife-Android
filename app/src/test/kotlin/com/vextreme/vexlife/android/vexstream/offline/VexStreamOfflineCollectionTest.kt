@@ -99,6 +99,56 @@ class VexStreamOfflineCollectionTest {
     }
 
     @Test
+    fun removalRequestTargetsOnlyVerifiedDownloadedSongs() {
+        val downloaded =
+            track(
+                ref = "downloaded",
+                digestChar = 'a',
+                localCopy =
+                    VexStreamLocalCopyState.Downloaded(
+                        mediaSha256 = digest('a'),
+                        byteLength = BYTE_LENGTH,
+                        localMediaRef = "local.downloaded",
+                    ),
+            )
+        val missing =
+            track(
+                ref = "missing",
+                digestChar = 'b',
+            )
+        val downloading =
+            track(
+                ref = "downloading",
+                digestChar = 'c',
+                localCopy =
+                    VexStreamLocalCopyState.Downloading(
+                        bytesDownloaded = 1,
+                        totalBytes = BYTE_LENGTH,
+                    ),
+            )
+
+        val request =
+            vexStreamOfflineCollectionRemovalRequest(
+                listOf(
+                    downloaded,
+                    missing,
+                    downloading,
+                ),
+            )
+
+        assertEquals(
+            listOf(
+                VexStreamTrackRef(
+                    "downloaded",
+                ),
+            ),
+            requireNotNull(
+                request,
+            ).trackRefs,
+        )
+    }
+
+    @Test
     fun collectionRequestDownloadsOnlyCurrentMissingTargetsAndConvergesToFullyOnDevice() {
         val outcome =
             runCanonicalScenario(

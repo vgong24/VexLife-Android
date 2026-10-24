@@ -94,6 +94,114 @@ class VexStreamOfflineCopyTest {
         }
 
     @Test
+    fun libraryBulkDownloadAndRemoveUsesOnlyThreeSongFixtureAndPreservesCatalog() =
+        runBlocking {
+            val ownerScope =
+                CoroutineScope(
+                    SupervisorJob() +
+                        Dispatchers.Unconfined,
+                )
+            val repository =
+                InMemoryVexStreamMusicRepository(
+                    initialState =
+                        threeSongPartialOfflineState(),
+                )
+            val connection =
+                VexStreamOfflineCopyConnection(
+                    repository = repository,
+                    scope = ownerScope,
+                )
+            val originalRefs =
+                repository
+                    .state
+                    .value
+                    .tracks
+                    .map {
+                        it.track.trackRef
+                    }
+
+            try {
+                val plan =
+                    vexStreamOfflineCollectionPlan(
+                        repository
+                            .state
+                            .value
+                            .playableTracks(),
+                    )
+
+                assertEquals(
+                    1,
+                    plan.onDeviceCount,
+                )
+                assertEquals(
+                    2,
+                    plan.downloadableMissingCount,
+                )
+
+                connection
+                    .request(
+                        requireNotNull(
+                            plan.requestOrNull(),
+                        ),
+                    )
+                    .join()
+
+                assertEquals(
+                    3,
+                    repository
+                        .state
+                        .value
+                        .tracks
+                        .count {
+                            it.localCopy is
+                                VexStreamLocalCopyState.Downloaded
+                        },
+                )
+
+                val removalRequest =
+                    requireNotNull(
+                        vexStreamOfflineCollectionRemovalRequest(
+                            repository
+                                .state
+                                .value
+                                .playableTracks(),
+                        ),
+                    )
+
+                assertEquals(
+                    3,
+                    removalRequest.trackRefs.size,
+                )
+
+                connection
+                    .request(
+                        removalRequest,
+                    )
+                    .join()
+
+                val finalState =
+                    repository
+                        .state
+                        .value
+
+                assertEquals(
+                    originalRefs,
+                    finalState.tracks.map {
+                        it.track.trackRef
+                    },
+                )
+                assertTrue(
+                    finalState.tracks.all {
+                        it.localCopy ===
+                            VexStreamLocalCopyState.NotDownloaded
+                    },
+                )
+            } finally {
+                ownerScope.cancel()
+            }
+        }
+
+    @Test
     fun permissionHandoffDoesNotStartDownloadUntilGranted() =
         runBlocking {
             val ownerScope =
@@ -313,6 +421,64 @@ class VexStreamOfflineCopyTest {
                     VexStreamLocalCopyState.NotDownloaded,
             )
         }
+
+    private fun threeSongPartialOfflineState():
+        VexStreamMusicState {
+        val states =
+            listOf(
+                "one" to 'a',
+                "two" to 'b',
+                "three" to 'c',
+            ).mapIndexed { index, (ref, digestChar) ->
+                val track =
+                    VexStreamTrack(
+                        trackRef =
+                            VexStreamTrackRef(
+                                "track.bulk.$ref",
+                            ),
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                digestChar.toString()
+                                    .repeat(
+                                        64,
+                                    ),
+                            ),
+                        mediaByteLength =
+                            1_000L +
+                                index,
+                        title = "Bulk $ref",
+                        artist = "Vex",
+                    )
+
+                VexStreamTrackState(
+                    track = track,
+                    hubAvailable = true,
+                    localCopy =
+                        if (index == 0) {
+                            VexStreamLocalCopyState.Downloaded(
+                                mediaSha256 =
+                                    track.mediaSha256,
+                                byteLength =
+                                    track.mediaByteLength,
+                                localMediaRef =
+                                    "local.bulk.one",
+                            )
+                        } else {
+                            VexStreamLocalCopyState.NotDownloaded
+                        },
+                )
+            }
+
+        return VexStreamMusicState(
+            hubState =
+                VexStreamHubState.Ready(
+                    hubRef = "hub.bulk.test",
+                    catalogRevision =
+                        "catalog.bulk.test",
+                ),
+            tracks = states,
+        )
+    }
 
     private fun state(
         trackRef: VexStreamTrackRef,

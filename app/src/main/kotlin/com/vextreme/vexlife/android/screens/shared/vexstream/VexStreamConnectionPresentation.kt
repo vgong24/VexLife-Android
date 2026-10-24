@@ -7,12 +7,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
+import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.TextRole
 import com.vextreme.vexlife.android.elements.VexAlertDialog
 import com.vextreme.vexlife.android.elements.VexButton
@@ -23,12 +25,16 @@ import com.vextreme.vexlife.android.elements.VexModalBottomSheet
 import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
+import com.vextreme.vexlife.android.vexstream.offline.vexStreamOfflineCollectionPlan
+import com.vextreme.vexlife.android.vexstream.offline.vexStreamOfflineCollectionRemovalRequest
 
 /**
- * Connection/pairing presentation for VexStream Android.
+ * Connection/settings presentation for VexStream Android.
  *
- * This file owns only the human-visible NotPaired/Search/Confirm/Paired management surfaces.
- * Repository pairing, authorization, transport and Hub truth remain outside presentation.
+ * This file owns the human-visible NotPaired/Search/Confirm/Paired management surfaces plus bounded
+ * library-wide local-copy actions that reuse the existing Offline Copy owner. Repository pairing,
+ * catalog, storage, authorization, transport and Hub truth remain outside presentation.
  */
 @Composable
 internal fun VexStreamConnectionSetup(
@@ -165,9 +171,54 @@ internal fun VexStreamConnectionSetup(
 internal fun VexStreamConnectionMenuSheet(
     state: VexStreamMusicState,
     runtime: VexRuntime,
+    offlineCopyConnection: VexStreamOfflineCopyConnection,
 ) {
     val paired =
         state.connectionState as? VexStreamConnectionState.Paired
+    val songsOfflinePlan =
+        remember(
+            state.tracks,
+        ) {
+            vexStreamOfflineCollectionPlan(
+                state.playableTracks(),
+            )
+        }
+    val downloadAllMissingRequest =
+        remember(
+            songsOfflinePlan.targets,
+        ) {
+            songsOfflinePlan.requestOrNull()
+        }
+    val removeAllDownloadedRequest =
+        remember(
+            state.tracks,
+        ) {
+            vexStreamOfflineCollectionRemovalRequest(
+                state.playableTracks(),
+            )
+        }
+    val libraryActionHandler =
+        ElementActionHandler { element ->
+            runtime.activate(
+                element,
+            )
+
+            when (element) {
+                VexStreamMusicScreen.DownloadAllMissingSongs ->
+                    downloadAllMissingRequest
+                        ?.let(
+                            offlineCopyConnection::request,
+                        )
+
+                VexStreamMusicScreen.RemoveAllDownloadedSongs ->
+                    removeAllDownloadedRequest
+                        ?.let(
+                            offlineCopyConnection::request,
+                        )
+
+                else -> Unit
+            }
+        }
 
     VexModalBottomSheet(
         element = VexStreamMusicScreen.ConnectionMenuSheet,
@@ -238,6 +289,42 @@ internal fun VexStreamConnectionMenuSheet(
                         VexModifier.fillMaxWidth(),
                 )
             }
+
+            VexText(
+                id = "library-download-status",
+                text =
+                    stringResource(
+                        R.string.vexstream_music_library_download_summary,
+                        songsOfflinePlan.onDeviceCount,
+                        songsOfflinePlan.totalCount,
+                        songsOfflinePlan.downloadableMissingCount,
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color =
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            VexButton(
+                element =
+                    VexStreamMusicScreen
+                        .DownloadAllMissingSongs,
+                handler = libraryActionHandler,
+                modifier =
+                    VexModifier.fillMaxWidth(),
+                enabled =
+                    downloadAllMissingRequest != null,
+            )
+
+            VexButton(
+                element =
+                    VexStreamMusicScreen
+                        .RemoveAllDownloadedSongs,
+                handler = libraryActionHandler,
+                modifier =
+                    VexModifier.fillMaxWidth(),
+                enabled =
+                    removeAllDownloadedRequest != null,
+            )
 
             VexButton(
                 element = VexStreamMusicScreen.RequestForgetPaired,
