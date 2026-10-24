@@ -309,7 +309,7 @@ background / process-death resumption
 persistent whole-library keep-offline policy
 storage/free-space admission beyond the current per-object publication failure boundary
 bounded parallel transfer policy
-multi-select / mass removal
+multi-select / selective bulk removal
 ~~~
 
 Do not call the one-shot relationship "synced" merely because all current members happen to be local.
