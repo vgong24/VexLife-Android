@@ -23,6 +23,14 @@ WHAT MUSIC IS KNOWN?
     data/vexstream
     -> VexStreamMusicRepository + track/collection state
 
+HOW DO I ORGANIZE WHAT I AM ABOUT TO LISTEN TO?
+    screens/shared/vexstream
+    -> VexStreamLibraryOrganization
+    -> VexStreamLibraryProjection
+    -> one current ordered / filtered playable track set
+    -> Songs / Albums / Artists / Downloads / filtered Playlist views
+    -> row playback context + library Play All / Shuffle All
+
 WHERE CAN MEDIA COME FROM?
     verified local copy
       -> durable Android MediaStore content URI when device publication succeeded
@@ -128,6 +136,104 @@ journeyTest/.../vexstream/
 
 The folders are not required to be symmetrical. A source area exists when its human/product question
 and owner are real.
+
+## Library organization — current slice
+
+The current library now has one compact **Sort / Filter** organization surface.
+
+Human meaning:
+
+~~~text
+Sort by
+    changes traversal/presentation order
+    does not change membership
+
+Filter by
+    changes membership in the current listening set
+    does not mutate catalog, playlist, download, Queue, or Playback truth
+
+Search
+    evaluates inside that same organized set
+~~~
+
+Current Android-owned dimensions:
+
+~~~text
+Sort
+    Title
+    Artist
+    Album
+    Year
+    Duration
+
+Filter
+    Duration: Any / Less than / Greater than + minute threshold
+    Artist: one-or-more current playable artists
+    Genre: one-or-more current playable genres
+    Availability: desktop-only / desktop+device / device-only
+~~~
+
+Duration filters deliberately exclude tracks whose duration is unknown (`durationSeconds == 0.0`).
+Clearing filters restores ordinary playable membership while preserving the listener's selected sort
+and duration threshold.
+
+Active filters remain visible after the organization sheet closes. A zero-result organized set says
+that no songs match the current filters rather than pretending the underlying library is empty.
+The organization sheet itself scrolls vertically so sort/filter controls remain reachable on
+constrained-height and large-font presentations.
+
+The ordered/filtered track list is the library playback context:
+
+~~~text
+current repository playable truth
++ Screen-local organization
+        ↓
+VexStreamLibraryProjection.playableTracks
+        ↓
+Songs rows
+Search results
+Albums / Artists grouped from filtered membership
+Downloads filtered from the same ordered membership
+Playlist views narrow visible members while preserving canonical playlist order
+library Play All / Shuffle All
+track-row contextTracks
+~~~
+
+Permanent distinctions:
+
+~~~text
+SORT != FILTER
+FILTER != SEARCH
+FILTERED_VIEW != CATALOG_MUTATION
+FILTERED_PLAYLIST_VIEW != PLAYLIST_MEMBERSHIP_MUTATION
+SORTED_LIBRARY != PLAYLIST_REORDER
+ORGANIZATION_STATE != SAVED_STATION
+~~~
+
+VexStream Music Desktop already carries source `tags[]` / `categories[]`, but the current mobile
+catalog does not project them. Imported tag/category filtering is therefore an explicit later
+extension seam, not hidden Android-local metadata.
+
+User-authored tags and dynamic stations/smart playlists remain separate future product questions.
+They must not overwrite imported/source classification merely to reuse this UI.
+
+Completion traceability:
+
+~~~text
+feature.vexstream/W02
+    Library organization
+
+feature.vexstream/W02/C01
+    Organize the VexStream library before playback
+        P01 organizer reachable
+        P02 filtered membership
+        P03 filtered playback context
+        P04 clear restores library
+~~~
+
+Focused projection tests own the membership law. `VexStreamJourneys.sortFilterPlayback` owns the
+human walk through the installed Android presentation. Neither surface substitutes for provider/device
+proof when a later organization dimension introduces one.
 
 ## MassDownload / collection offline download — current slice
 

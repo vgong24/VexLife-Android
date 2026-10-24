@@ -17,8 +17,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.unit.dp
 import com.vextreme.vexlife.android.data.vexstream.VexStreamConnectionState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
+import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.vexstream.offline.VexStreamOfflineCopyConnection
@@ -71,6 +73,11 @@ internal fun VexStreamLibrarySurface(
     var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
+    var organization by remember {
+        mutableStateOf(
+            VexStreamLibraryOrganization(),
+        )
+    }
     var artistVisitRequest by rememberSaveable {
         mutableStateOf<String?>(null)
     }
@@ -99,13 +106,21 @@ internal fun VexStreamLibrarySurface(
         remember(
             state.tracks,
             searchQuery,
+            organization,
         ) {
             state.toVexStreamLibraryProjection(
                 searchQuery = searchQuery,
+                organization = organization,
             )
         }
     val libraryTracks =
         libraryProjection.playableTracks
+    val organizationOptions =
+        remember(
+            state.tracks,
+        ) {
+            state.toVexStreamLibraryOrganizationOptions()
+        }
 
     LaunchedEffect(repository) {
         if (repository.state.value.connectionState is VexStreamConnectionState.Paired) {
@@ -177,6 +192,24 @@ internal fun VexStreamLibrarySurface(
                 )
             }
 
+            if (organization.hasActiveFilters) {
+                VexText(
+                    element =
+                        if (libraryTracks.isEmpty()) {
+                            VexStreamMusicScreen.FiltersNoMatches
+                        } else {
+                            VexStreamMusicScreen.FiltersActive
+                        },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 12.dp,
+                                vertical = 6.dp,
+                            ),
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -213,6 +246,16 @@ internal fun VexStreamLibrarySurface(
                         VexStreamPlaylistsPane(
                             runtime = runtime,
                             state = state,
+                            visibleTrackRefs =
+                                if (organization.hasActiveFilters) {
+                                    libraryTracks
+                                        .map {
+                                            it.track.trackRef
+                                        }
+                                        .toSet()
+                                } else {
+                                    null
+                                },
                             offlineCopyConnection =
                                 offlineCopyConnection,
                             controller = controller,
@@ -273,6 +316,18 @@ internal fun VexStreamLibrarySurface(
                 searchQuery = it
             },
             onVisitArtist = ::visitArtist,
+        )
+    }
+
+    if (runtime.presentation.isOpen(VexStreamMusicScreen.OrganizationSheet)) {
+        VexStreamLibraryOrganizationSheet(
+            runtime = runtime,
+            organization = organization,
+            options = organizationOptions,
+            resultCount = libraryTracks.size,
+            onOrganizationChange = {
+                organization = it
+            },
         )
     }
 

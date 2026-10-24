@@ -308,6 +308,7 @@ object VexStreamJourneys : VexJourneyShard {
                     VexStreamJourneyFixtures.TrackOne,
             ),
         )
+
         tapElementById(
             elementId =
                 trackRowActionElementId(
@@ -448,22 +449,256 @@ object VexStreamJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
+    private val sortFilterPlaybackFeatureWalk =
+        vexFeatureWalkJourney(
+            featureWalkCase =
+                FeatureWalks
+                    .vexStream
+                    .libraryOrganization
+                    .sortFilterPlayback,
+        ) {
+        start(HomeScreen)
+        tap(HomeScreen.ConnectVexStreamMusic)
+        tap(VexStreamMusicScreen.FindNearby)
+        tap(VexStreamMusicScreen.ConfirmPairingCode)
+
+        // Pairing completes on the already-open VexStream screen. Stay in the feature and continue
+        // the human intention directly; Back-to-Home/re-entry belongs to connection-shell coverage,
+        // not to the Library organization Feature Walk.
+        externalCause(
+            repository =
+                getRepository(
+                    vexStreamJourneyRepository,
+                ),
+            causeRef =
+                "cause.vexstream.library-organization.catalog",
+        ) {
+            publishCatalog(
+                organizationCatalog(),
+            )
+        }
+
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures.TrackOne,
+            ),
+        )
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures
+                        .OrganizationLongTrack,
+            ),
+        )
+
+        tap(
+            VexStreamMusicScreen.OrganizeLibrary,
+        )
+
+        // Exercise every static organization Control at least once while the accepted
+        // semantic coverage contract keeps the Journey catalog aligned with the Screen blueprint.
+        tap(
+            VexStreamMusicScreen.SortLibraryByArtist,
+        )
+        tap(
+            VexStreamMusicScreen.SortLibraryByAlbum,
+        )
+        tap(
+            VexStreamMusicScreen.SortLibraryByYear,
+        )
+        tap(
+            VexStreamMusicScreen.SortLibraryByDuration,
+        )
+        tap(
+            VexStreamMusicScreen.SortLibraryByTitle,
+        )
+        tap(
+            VexStreamMusicScreen.DurationFilterGreaterThan,
+        )
+        tap(
+            VexStreamMusicScreen.DurationFilterAny,
+        )
+
+        tapElementById(
+            elementId =
+                VexStreamPresentationRefs.organizationGenreOption(
+                    "Pop",
+                ),
+            behavesLike =
+                VexStreamMusicScreen.ToggleLibraryFilter,
+        )
+
+        // Return the categorical filter to neutral so the duration acceptance case below owns
+        // the visible narrowing rather than borrowing it from genre selection.
+        tapElementById(
+            elementId =
+                VexStreamPresentationRefs.organizationGenreOption(
+                    "Pop",
+                ),
+            behavesLike =
+                VexStreamMusicScreen.ToggleLibraryFilter,
+        )
+
+        tap(
+            VexStreamMusicScreen.DurationFilterLessThan,
+        )
+        enterText(
+            VexStreamMusicScreen.DurationThresholdMinutes,
+            "10",
+        )
+        tap(
+            VexStreamMusicScreen.CloseOrganization,
+        )
+        assertVisible(
+            VexStreamMusicScreen.FiltersActive,
+        )
+
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures.TrackOne,
+            ),
+        )
+
+        // Observe the duration narrowing through the existing Search projection: the long mix was
+        // visible before organization, but it cannot be found inside the < 10 minute listening set.
+        tap(
+            VexStreamMusicScreen.SearchLibrary,
+        )
+        enterText(
+            VexStreamMusicScreen.SearchQuery,
+            "Long",
+        )
+        assertVisible(
+            VexStreamMusicScreen.SearchNoResults,
+        )
+        tap(
+            VexStreamMusicScreen.CloseSearch,
+        )
+
+        tapElementById(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.PlayTrack,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.PlayTrack,
+        )
+
+        // Row playback is formed from the visible filtered context. Observe the resulting short
+        // track occurrence through the ordinary Queue presentation.
+        tap(
+            VexStreamMusicScreen.ShowQueue,
+        )
+        assertVisibleById(
+            VexStreamPresentationRefs.queueEntry(
+                VexStreamPresentationRefs.queueEntryKey(
+                    mediaId =
+                        VexStreamJourneyFixtures.TrackOne.value,
+                    occurrence = 1,
+                ),
+            ),
+        )
+        tap(
+            VexStreamMusicScreen.CloseQueue,
+        )
+
+        tap(
+            VexStreamMusicScreen.ShuffleAll,
+        )
+
+        tap(
+            VexStreamMusicScreen.OrganizeLibrary,
+        )
+        tap(
+            VexStreamMusicScreen.ClearLibraryFilters,
+        )
+        tap(
+            VexStreamMusicScreen.CloseOrganization,
+        )
+        assertVisibleById(
+            VexStreamPresentationRefs.trackRow(
+                scope =
+                    VexStreamTrackPresentationScope.Songs,
+                trackRef =
+                    VexStreamJourneyFixtures
+                        .OrganizationLongTrack,
+            ),
+        )
+
+        tap(AppShell.Elements.Back)
+    }
+
     val downloadCollectionMissing =
         downloadCollectionMissingFeatureWalk.journey
 
     val downloadAndRemove =
         downloadAndRemoveFeatureWalk.journey
 
+    val sortFilterPlayback =
+        sortFilterPlaybackFeatureWalk.journey
+
     override val journeys = listOf(
         connectRefreshForget,
         downloadAndRemove,
         downloadCollectionMissing,
+        sortFilterPlayback,
     )
 
     override val featureWalkJourneys =
         listOf(
             downloadAndRemoveFeatureWalk,
             downloadCollectionMissingFeatureWalk,
+            sortFilterPlaybackFeatureWalk,
+        )
+
+    private fun organizationCatalog(): VexStreamHubCatalogProjection =
+        VexStreamHubCatalogProjection(
+            hubRef = "hub.journey.library-organization",
+            sourceVersion = "journey",
+            catalogRevision =
+                "catalog.journey.library-organization.1",
+            tracks =
+                listOf(
+                    VexStreamHubTrackProjection(
+                        trackRef =
+                            VexStreamJourneyFixtures.TrackOne,
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                "1".repeat(64),
+                            ),
+                        mediaByteLength = 4_096L,
+                        title = "Journey Song",
+                        artist = "Journey Artist",
+                        album = "Journey Organization",
+                        genre = "Pop",
+                        year = "2026",
+                        durationSeconds = 8 * 60.0,
+                    ),
+                    VexStreamHubTrackProjection(
+                        trackRef =
+                            VexStreamJourneyFixtures
+                                .OrganizationLongTrack,
+                        mediaSha256 =
+                            VexStreamMediaSha256(
+                                "4".repeat(64),
+                            ),
+                        mediaByteLength = 8_192L,
+                        title = "Journey Long Mix",
+                        artist = "Journey Artist",
+                        album = "Journey Organization",
+                        genre = "Mix",
+                        year = "2026",
+                        durationSeconds = 90 * 60.0,
+                    ),
+                ),
         )
 
     private fun massDownloadCatalog(): VexStreamHubCatalogProjection =
