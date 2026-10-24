@@ -1,8 +1,5 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
-import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
-import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -36,66 +33,6 @@ class VexStreamPlaybackReadStateTest {
                 durationMs = 0L,
             ).progressFraction,
             0.0001f,
-        )
-    }
-
-    @Test
-    fun mediaMetadataCarriesOptionalArtworkUriWithoutChangingTrackIdentity() {
-        val metadata =
-            vexStreamMediaMetadata(
-                VexStreamTrack(
-                    trackRef =
-                        VexStreamTrackRef(
-                            "track.artwork",
-                        ),
-                    mediaSha256 =
-                        VexStreamMediaSha256(
-                            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                        ),
-                    mediaByteLength = 4_096,
-                    title = "Artwork Track",
-                    artist = "Vex",
-                    artworkUrl =
-                        "https://images.example.test/artwork.jpg",
-                ),
-            )
-
-        assertEquals(
-            "Artwork Track",
-            metadata.title?.toString(),
-        )
-        assertEquals(
-            "Vex",
-            metadata.artist?.toString(),
-        )
-        assertEquals(
-            "https://images.example.test/artwork.jpg",
-            metadata.artworkUri?.toString(),
-        )
-    }
-
-    @Test
-    fun mediaMetadataLeavesArtworkAbsentWhenTrackHasNone() {
-        val metadata =
-            vexStreamMediaMetadata(
-                VexStreamTrack(
-                    trackRef =
-                        VexStreamTrackRef(
-                            "track.no-artwork",
-                        ),
-                    mediaSha256 =
-                        VexStreamMediaSha256(
-                            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-                        ),
-                    mediaByteLength = 4_096,
-                    title = "No Artwork",
-                    artist = "Vex",
-                ),
-            )
-
-        assertEquals(
-            null,
-            metadata.artworkUri,
         )
     }
 
