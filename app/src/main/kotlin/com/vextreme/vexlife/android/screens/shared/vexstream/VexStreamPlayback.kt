@@ -85,6 +85,16 @@ internal class VexStreamPlaybackSourceResolver(
                     .setTitle(state.track.title)
                     .setArtist(state.track.artist)
                     .setAlbumTitle(state.track.album)
+                    .apply {
+                        state.track.artworkUrl
+                            ?.let { artworkUrl ->
+                                setArtworkUri(
+                                    Uri.parse(
+                                        artworkUrl,
+                                    ),
+                                )
+                            }
+                    }
                     .build(),
             )
             .setClippingConfiguration(clipping)
