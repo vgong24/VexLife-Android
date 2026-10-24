@@ -26,6 +26,110 @@ import java.security.MessageDigest
  * re-opened and verified. Android 7-9 uses the same MediaStore audio collection but requires the
  * legacy storage permission and an exact public Music/VexStream path.
  */
+internal data class VexStreamSharedCopySnapshot(
+    val localMediaRef: String,
+    val mediaSha256: VexStreamMediaSha256,
+    val byteLength: Long,
+    val pending: Boolean,
+    val verificationReceipt:
+        VexStreamLocalCopyVerificationReceipt,
+)
+
+internal data class VexStreamSharedCopyVerificationCandidate(
+    val localCopy:
+        VexStreamLocalCopyState.Downloaded,
+    val snapshot:
+        VexStreamSharedCopySnapshot,
+)
+
+internal data class VexStreamSharedCopyReconciliation(
+    val reusableCopies:
+        Map<
+            String,
+            VexStreamLocalCopyState.Downloaded
+        >,
+    val verificationCandidates:
+        List<
+            VexStreamSharedCopyVerificationCandidate
+        >,
+)
+
+/**
+ * Pure relationship calculation between persisted offline-index truth and one current MediaStore
+ * snapshot.
+ *
+ * Stable receipts are reusable immediately. Missing/stale receipts become bounded byte-verification
+ * candidates. Rows that are missing, pending, wrong-digest or wrong-length are rejected before any
+ * byte verification is attempted.
+ */
+internal fun reconcilePersistedSharedCopies(
+    localCopies:
+        List<
+            VexStreamLocalCopyState.Downloaded
+        >,
+    snapshots:
+        Map<
+            String,
+            VexStreamSharedCopySnapshot
+        >,
+): VexStreamSharedCopyReconciliation {
+    val reusable =
+        linkedMapOf<
+            String,
+            VexStreamLocalCopyState.Downloaded
+        >()
+    val verificationCandidates =
+        mutableListOf<
+            VexStreamSharedCopyVerificationCandidate
+        >()
+
+    localCopies.forEach { localCopy ->
+        val snapshot =
+            snapshots[
+                localCopy.localMediaRef
+            ] ?: return@forEach
+
+        if (
+            snapshot.mediaSha256 !=
+                localCopy.mediaSha256 ||
+            snapshot.byteLength !=
+                localCopy.byteLength ||
+            snapshot.pending
+        ) {
+            return@forEach
+        }
+
+        val recordedReceipt =
+            localCopy.verificationReceipt
+
+        if (
+            recordedReceipt != null &&
+            recordedReceipt ==
+                snapshot.verificationReceipt
+        ) {
+            reusable[
+                localCopy.localMediaRef
+            ] =
+                localCopy.copy(
+                    verificationReceipt =
+                        snapshot.verificationReceipt,
+                )
+        } else {
+            verificationCandidates +=
+                VexStreamSharedCopyVerificationCandidate(
+                    localCopy = localCopy,
+                    snapshot = snapshot,
+                )
+        }
+    }
+
+    return VexStreamSharedCopyReconciliation(
+        reusableCopies = reusable,
+        verificationCandidates =
+            verificationCandidates,
+    )
+}
+
 internal class VexStreamDeviceMediaStore(
     context: Context,
 ) {
@@ -262,59 +366,48 @@ internal class VexStreamDeviceMediaStore(
             return emptyMap()
         }
 
-        return buildMap {
-            localCopies.forEach { localCopy ->
-                val snapshot =
-                    snapshots[
-                        localCopy.localMediaRef
-                    ] ?: return@forEach
-                if (
-                    snapshot.digest !=
-                        localCopy.mediaSha256 ||
-                    snapshot.byteLength !=
-                        localCopy.byteLength ||
-                    snapshot.pending
-                ) {
-                    return@forEach
-                }
+        val reconciliation =
+            reconcilePersistedSharedCopies(
+                localCopies = localCopies,
+                snapshots = snapshots,
+            )
 
-                val recordedReceipt =
-                    localCopy
-                        .verificationReceipt
-                val restored =
-                    if (
-                        recordedReceipt != null &&
-                        recordedReceipt ==
-                        snapshot.receipt
-                    ) {
-                        localCopy.copy(
-                            verificationReceipt =
-                                snapshot.receipt,
+        return buildMap {
+            putAll(
+                reconciliation.reusableCopies,
+            )
+
+            reconciliation
+                .verificationCandidates
+                .forEach { candidate ->
+                    val localCopy =
+                        candidate.localCopy
+                    val snapshot =
+                        candidate.snapshot
+                    val uri =
+                        Uri.parse(
+                            snapshot.localMediaRef,
                         )
-                    } else if (
+
+                    if (
                         verifyUri(
-                            uri = snapshot.uri,
+                            uri = uri,
                             expectedSha256 =
                                 localCopy.mediaSha256,
                             expectedByteLength =
                                 localCopy.byteLength,
                         ) == null
                     ) {
-                        localCopy.copy(
-                            verificationReceipt =
-                                snapshot.receipt,
+                        put(
+                            localCopy.localMediaRef,
+                            localCopy.copy(
+                                verificationReceipt =
+                                    snapshot
+                                        .verificationReceipt,
+                            ),
                         )
-                    } else {
-                        null
                     }
-
-                if (restored != null) {
-                    put(
-                        localCopy.localMediaRef,
-                        restored,
-                    )
                 }
-            }
         }
     }
 
@@ -613,7 +706,7 @@ internal class VexStreamDeviceMediaStore(
     private fun currentOwnedSnapshots():
         Map<
             String,
-            CurrentOwnedSnapshot
+            VexStreamSharedCopySnapshot
         > {
         if (
             Build.VERSION.SDK_INT <
@@ -732,15 +825,18 @@ internal class VexStreamDeviceMediaStore(
                                 ),
                             ) != 0
 
+                        val localMediaRef =
+                            uri.toString()
                         put(
-                            uri.toString(),
-                            CurrentOwnedSnapshot(
-                                uri = uri,
-                                digest = digest,
+                            localMediaRef,
+                            VexStreamSharedCopySnapshot(
+                                localMediaRef =
+                                    localMediaRef,
+                                mediaSha256 = digest,
                                 byteLength =
                                     byteLength,
                                 pending = pending,
-                                receipt =
+                                verificationReceipt =
                                     VexStreamLocalCopyVerificationReceipt(
                                         mediaStoreVersion =
                                             mediaStoreVersion,
@@ -1146,15 +1242,6 @@ internal class VexStreamDeviceMediaStore(
                 byte,
             )
         }
-
-    private data class CurrentOwnedSnapshot(
-        val uri: Uri,
-        val digest: VexStreamMediaSha256,
-        val byteLength: Long,
-        val pending: Boolean,
-        val receipt:
-            VexStreamLocalCopyVerificationReceipt,
-    )
 
     private data class ExistingRow(
         val uri: Uri,
