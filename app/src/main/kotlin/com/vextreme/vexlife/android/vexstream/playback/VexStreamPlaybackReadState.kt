@@ -21,6 +21,7 @@ internal data class VexStreamPlaybackReadState(
     val currentMediaId: String? = null,
     val currentTitle: String = "",
     val currentArtist: String = "",
+    val currentArtworkUri: String? = null,
     val queueMediaIds:
         List<String> =
         emptyList(),
@@ -224,6 +225,11 @@ private fun Player
                 ?.artist
                 ?.toString()
                 .orEmpty(),
+        currentArtworkUri =
+            current
+                ?.mediaMetadata
+                ?.artworkUri
+                ?.toString(),
         queueMediaIds =
             (0 until mediaItemCount)
                 .map { index ->
