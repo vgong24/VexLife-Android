@@ -522,7 +522,7 @@ internal fun VexStreamFullPlayerSheet(
                                 contentDescription =
                                     stringResource(
                                         R.string
-                                            .vexstream_music_artwork,
+                                            .vexstream_music_now_playing,
                                     ),
                                 modifier =
                                     artworkModifier,
@@ -550,7 +550,7 @@ internal fun VexStreamFullPlayerSheet(
                                     contentDescription =
                                         stringResource(
                                             R.string
-                                                .vexstream_music_artwork,
+                                                .vexstream_music_now_playing,
                                         ),
                                 )
                             }
