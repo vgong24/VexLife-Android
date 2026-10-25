@@ -12,9 +12,10 @@ import java.security.MessageDigest
  * Audio bytes keep their existing verified MediaStore owner. Artwork is ancillary presentation
  * data: a missing or corrupt artwork file must never invalidate an otherwise verified audio copy.
  *
- * One exact admitted HTTPS artwork source maps to one local asset. Multiple downloaded songs may
- * therefore share one album/cover file without duplicating the same image per MP3. The source digest
- * is a stable local association key, not a claim that the URL itself is immutable content identity.
+ * One exact admitted artwork source maps to one local asset. Existing external HTTPS sources keep
+ * their URL-derived cache identity; Desktop-embedded artwork uses its opaque paired-producer ref.
+ * Multiple tracks may share one source without duplicating the same image per MP3. The source digest
+ * is a stable local association key, not media identity and not an authorization credential.
  */
 class VexStreamArtworkStore(
     private val root: File,
