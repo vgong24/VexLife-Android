@@ -205,6 +205,19 @@ open class TextElement(
 ) : UIElement(elementId, "Text", textRes, style)
 
 /**
+ * Stable semantic text identity whose displayed value is supplied by runtime state.
+ *
+ * This is the dynamic counterpart to [TextElement]: identity/role/style live in the Blueprint,
+ * while the actual string stays with the current Screen/domain projection. The element deliberately
+ * stores no runtime value and no fake fallback resource.
+ */
+open class DynamicTextElement(
+    elementId: String,
+    val role: TextRole = TextRole.Body,
+    style: ElementStyleKey = VexElementStyles.Default,
+) : UIElement(elementId, "DynamicText", labelRes = null, style = style)
+
+/**
  * Blueprint identity for an editable/read-only text field.
  *
  * The element owns label/identity, not the actual typed value. Screen/runtime state supplies the value
