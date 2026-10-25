@@ -552,10 +552,6 @@ internal fun VexStreamFullPlayerSheet(
                                             R.string
                                                 .vexstream_music_artwork,
                                         ),
-                                    modifier =
-                                        VexModifier.size(
-                                            72.dp,
-                                        ),
                                 )
                             }
                         }
