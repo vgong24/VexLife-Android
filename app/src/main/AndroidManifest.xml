@@ -31,6 +31,18 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".widget.vexstream.VexStreamPlaybackWidgetReceiver"
+            android:exported="true"
+            android:label="@string/vexstream_music_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/vexstream_playback_widget_info" />
+        </receiver>
+
         <service
             android:name=".screens.shared.maps.VexMapsNavigationService"
             android:exported="false"
