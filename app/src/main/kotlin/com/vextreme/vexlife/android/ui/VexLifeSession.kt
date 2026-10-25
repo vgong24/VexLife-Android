@@ -10,6 +10,7 @@ import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
@@ -167,8 +168,7 @@ private class VexStreamArtworkExecution(
                 VexStreamHubState.Ready &&
                 state.tracks.any {
                     it.localCopy is
-                        com.vextreme.vexlife.android.data.vexstream
-                            .VexStreamLocalCopyState.Downloaded
+                        VexStreamLocalCopyState.Downloaded
                 }
             ) {
                 repository
