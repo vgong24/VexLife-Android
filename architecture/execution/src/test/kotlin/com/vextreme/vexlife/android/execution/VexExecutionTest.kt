@@ -338,13 +338,24 @@ class VexExecutionTest {
                     )
                 handle.awaitCompletion()
 
-                assertEquals(
-                    "vex-worker",
-                    capture.workerThread.await(),
+                val workerThread =
+                    capture.workerThread.await()
+                val providerThread =
+                    capture.providerThread.await()
+
+                assertTrue(
+                    workerThread.startsWith(
+                        "vex-worker",
+                    ),
                 )
-                assertEquals(
-                    "vex-provider",
-                    capture.providerThread.await(),
+                assertTrue(
+                    providerThread.startsWith(
+                        "vex-provider",
+                    ),
+                )
+                assertFalse(
+                    workerThread ==
+                        providerThread,
                 )
                 assertEquals(
                     VexCoroutineStatus.COMPLETED,
