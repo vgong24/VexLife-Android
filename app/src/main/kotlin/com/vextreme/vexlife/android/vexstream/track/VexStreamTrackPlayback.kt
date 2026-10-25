@@ -454,11 +454,6 @@ private data class ResolvedTrackPlay(
     val selectedIndex: Int,
 )
 
-private data class ResolvedTrackQueue(
-    val item: MediaItem,
-    val target: VexStreamTrackQueueTarget,
-)
-
 internal fun vexStreamTrackPlayTargetIndex(
     request: VexStreamTrackPlayRequest,
     resolvedMediaIds: List<String>,
@@ -480,8 +475,10 @@ internal fun vexStreamTrackPlayTargetIndex(
  * Cheap presentation projection only.
  *
  * This intentionally does not verify local bytes. Local-file digest verification and final source
- * resolution remain activation-time work in [VexStreamTrackMediaItemResolver], so list composition
- * never hashes media merely to decide whether an action should look available.
+ * resolution remain activation-time work in [VexStreamTrackMediaItemResolver], but Track activation
+ * now runs that blocking preparation under VexExecution on IO rather than inside the Compose input
+ * callback. List composition therefore stays cheap and Media3 mutation remains on its provider
+ * looper.
  */
 internal fun vexStreamTrackSourceProjectedAvailable(
     state: VexStreamTrackState,
