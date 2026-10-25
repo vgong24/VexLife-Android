@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -185,6 +186,45 @@ class VexStreamPresentationRefsTest {
         assertTrue(
             ref.endsWith(
                 stableKey.utf8Hex(),
+            ),
+        )
+    }
+
+    @Test
+    fun fullPlayerControlAddressDistinguishesExpandedSurfaceFromMiniPlayer() {
+        val ref =
+            VexStreamPresentationRefs.fullPlayerAction(
+                VexStreamMusicScreen.ShowQueue,
+            )
+
+        assertTrue(
+            ref.startsWith(
+                "element.vexstream-music.full-player.action.dynamic.utf8hex.",
+            ),
+        )
+        assertTrue(
+            ref.endsWith(
+                VexStreamMusicScreen.ShowQueue.elementId.utf8Hex(),
+            ),
+        )
+        assertNotEquals(
+            VexStreamMusicScreen.ShowQueue.elementId,
+            ref,
+        )
+    }
+
+    @Test
+    fun fullPlayerSwipeAddressKeepsQueueControlMeaningExplicit() {
+        assertEquals(
+            "presentation.vexstream.full-player.swipe.previous",
+            VexStreamPresentationRefs.fullPlayerSwipe(
+                VexStreamQueueControl.Previous,
+            ),
+        )
+        assertEquals(
+            "presentation.vexstream.full-player.swipe.next",
+            VexStreamPresentationRefs.fullPlayerSwipe(
+                VexStreamQueueControl.Next,
             ),
         )
     }
