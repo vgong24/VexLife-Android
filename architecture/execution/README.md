@@ -134,6 +134,59 @@ as a decorative label while unrelated work runs in a second lambda.
 for source/subscription failure. A failure thrown while consuming a valid emitted value becomes
 `FAILED` with no automatic resubscription. Intentional cancellation never restarts.
 
+## Worker preparation and provider-affine commit
+
+Some finite operations have two materially different execution contexts:
+
+```text
+human interaction
+-> expensive / blocking preparation
+-> thread-affine provider commit
+```
+
+Do not solve that by moving the provider itself onto a worker thread. Keep one semantic operation in
+one managed Vex execution and make the thread boundary explicit:
+
+```kotlin
+internal suspend fun playForExecution(
+    request: PlayRequest,
+) {
+    val prepared =
+        preparePlayback(
+            request,
+        )
+
+    handoff(
+        mediaControllerDispatcher,
+    ) {
+        commitPlayback(
+            prepared,
+        )
+    }
+}
+```
+
+`launchOnce(::playForExecution, request)` owns the whole operation. The root dispatcher owns the
+ordinary worker phase. `handoff(dispatcher) { ... }` is only a structured context switch inside that
+same managed Job; it does not create another execution ref, retry boundary, detached coroutine or
+lifetime owner.
+
+The target dispatcher belongs to the provider/thread-affinity owner. Do not globally equate
+"foreground" with `Dispatchers.Main`: Android Media3, a native provider, a serial device API or a
+test double may each have a more exact required dispatcher/looper.
+
+Use this shape only when a real boundary exists. StateFlow/Compose consumers do not need a main-thread
+handoff merely to observe immutable state; publisher/consumer machinery already owns that delivery.
+The handoff exists for an actual thread-affine commit.
+
+```text
+BACKGROUND_PREPARATION != PROVIDER_COMMIT
+HANDOFF != NEW_JOB
+HANDOFF != NEW_OPERATION
+HANDOFF != RETRY_POLICY
+PROVIDER_AFFINITY != ALWAYS_MAIN
+```
+
 ## Source-derived execution identity
 
 The runtime ref is derived from:
