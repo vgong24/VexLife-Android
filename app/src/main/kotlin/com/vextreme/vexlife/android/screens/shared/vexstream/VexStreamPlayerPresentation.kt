@@ -318,9 +318,23 @@ internal fun VexStreamFullPlayerSheet(
         )
     val handler =
         ElementActionHandler { element ->
-            runtime.activate(
-                element,
-            )
+            if (
+                element ==
+                VexStreamMusicScreen.CloseFullPlayer
+            ) {
+                runtime.activate(
+                    element,
+                )
+            } else {
+                runtime.activateDynamic(
+                    element = element,
+                    subjectRef =
+                        VexStreamPresentationRefs
+                            .fullPlayerAction(
+                                element,
+                            ),
+                )
+            }
             when (element) {
                 VexStreamMusicScreen.PreviousTrack ->
                     queueExperience.activate(
@@ -599,16 +613,19 @@ internal fun VexStreamFullPlayerSheet(
                     }
                 }
 
+                val fullPlayerSeekRef =
+                    VexStreamPresentationRefs
+                        .fullPlayerAction(
+                            VexStreamMusicScreen
+                                .SeekPlayback,
+                        )
                 VexStreamPlaybackTimeline(
                     playback = playback,
                     seekConnection = seekConnection,
                     runtime = runtime,
-                    semanticRef =
-                        VexStreamPresentationRefs
-                            .fullPlayerAction(
-                                VexStreamMusicScreen
-                                    .SeekPlayback,
-                            ),
+                    semanticRef = fullPlayerSeekRef,
+                    activationSubjectRef =
+                        fullPlayerSeekRef,
                     idPrefix = "full",
                 )
 
@@ -748,6 +765,7 @@ private fun VexStreamPlaybackTimeline(
     seekConnection: VexStreamPlaybackSeekConnection?,
     runtime: VexRuntime,
     semanticRef: String,
+    activationSubjectRef: String? = null,
     idPrefix: String,
 ) {
     var scrubFraction by remember(
@@ -807,9 +825,18 @@ private fun VexStreamPlaybackTimeline(
                             playback.durationMs,
                     )
                 scrubFraction = null
-                runtime.activate(
-                    VexStreamMusicScreen.SeekPlayback,
-                )
+                activationSubjectRef
+                    ?.let { subjectRef ->
+                        runtime.activateDynamic(
+                            element =
+                                VexStreamMusicScreen
+                                    .SeekPlayback,
+                            subjectRef = subjectRef,
+                        )
+                    }
+                    ?: runtime.activate(
+                        VexStreamMusicScreen.SeekPlayback,
+                    )
                 seekConnection?.seek(
                     VexStreamPlaybackSeekRequest(
                         mediaId =
