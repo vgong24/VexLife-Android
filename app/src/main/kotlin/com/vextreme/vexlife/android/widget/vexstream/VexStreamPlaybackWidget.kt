@@ -61,6 +61,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -343,9 +344,9 @@ internal object VexStreamPlaybackWidget :
                     )
                     .padding(
                         horizontal =
-                            12.dp,
-                        vertical =
                             10.dp,
+                        vertical =
+                            8.dp,
                     ),
             verticalAlignment =
                 Alignment.CenterVertically,
@@ -354,10 +355,10 @@ internal object VexStreamPlaybackWidget :
                 modifier =
                     GlanceModifier
                         .size(
-                            54.dp,
+                            VEXSTREAM_WIDGET_ARTWORK_SIZE_DP.dp,
                         )
                         .cornerRadius(
-                            12.dp,
+                            14.dp,
                         )
                         .clickable(
                             contentAction,
@@ -382,7 +383,7 @@ internal object VexStreamPlaybackWidget :
                                 GlanceModifier
                                     .fillMaxSize()
                                     .cornerRadius(
-                                        12.dp,
+                                        14.dp,
                                     ),
                             contentScale =
                                 ContentScale.Crop,
@@ -426,6 +427,8 @@ internal object VexStreamPlaybackWidget :
                         ),
                 verticalAlignment =
                     Alignment.CenterVertically,
+                horizontalAlignment =
+                    Alignment.CenterHorizontally,
             ) {
                 Text(
                     text =
@@ -453,69 +456,85 @@ internal object VexStreamPlaybackWidget :
                         maxLines = 1,
                     )
                 }
-            }
 
-            Spacer(
-                modifier =
-                    GlanceModifier
-                        .width(
-                            6.dp,
-                        ),
-            )
+                Spacer(
+                    modifier =
+                        GlanceModifier
+                            .height(
+                                6.dp,
+                            ),
+                )
 
-            Row(
-                verticalAlignment =
-                    Alignment.CenterVertically,
-            ) {
-                VexStreamWidgetControl(
-                    symbol = "⏮",
-                    contentDescription =
-                        context.getString(
-                            R.string
-                                .vexstream_music_previous,
-                        ),
-                    enabled =
-                        projection
-                            .previousEnabled,
-                    actionRef =
-                        VexStreamPlaybackWidgetActions
-                            .Previous,
-                )
-                VexStreamWidgetControl(
-                    symbol =
-                        if (
-                            projection.showPause
-                        ) {
-                            "⏸"
-                        } else {
-                            "▶"
-                        },
-                    contentDescription =
-                        context.getString(
-                            R.string
-                                .vexstream_music_play_pause,
-                        ),
-                    enabled =
-                        projection
-                            .playPauseEnabled,
-                    actionRef =
-                        VexStreamPlaybackWidgetActions
-                            .PlayPause,
-                )
-                VexStreamWidgetControl(
-                    symbol = "⏭",
-                    contentDescription =
-                        context.getString(
-                            R.string
-                                .vexstream_music_next,
-                        ),
-                    enabled =
-                        projection
-                            .nextEnabled,
-                    actionRef =
-                        VexStreamPlaybackWidgetActions
-                            .Next,
-                )
+                Row(
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally,
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                ) {
+                    VexStreamWidgetControl(
+                        symbol = "⏮",
+                        contentDescription =
+                            context.getString(
+                                R.string
+                                    .vexstream_music_previous,
+                            ),
+                        enabled =
+                            projection
+                                .previousEnabled,
+                        actionRef =
+                            VexStreamPlaybackWidgetActions
+                                .Previous,
+                    )
+                    Spacer(
+                        modifier =
+                            GlanceModifier
+                                .width(
+                                    VEXSTREAM_WIDGET_CONTROL_GAP_DP.dp,
+                                ),
+                    )
+                    VexStreamWidgetControl(
+                        symbol =
+                            if (
+                                projection.showPause
+                            ) {
+                                "⏸"
+                            } else {
+                                "▶"
+                            },
+                        contentDescription =
+                            context.getString(
+                                R.string
+                                    .vexstream_music_play_pause,
+                            ),
+                        enabled =
+                            projection
+                                .playPauseEnabled,
+                        actionRef =
+                            VexStreamPlaybackWidgetActions
+                                .PlayPause,
+                    )
+                    Spacer(
+                        modifier =
+                            GlanceModifier
+                                .width(
+                                    VEXSTREAM_WIDGET_CONTROL_GAP_DP.dp,
+                                ),
+                    )
+                    VexStreamWidgetControl(
+                        symbol = "⏭",
+                        contentDescription =
+                            context.getString(
+                                R.string
+                                    .vexstream_music_next,
+                            ),
+                        enabled =
+                            projection
+                                .nextEnabled,
+                        actionRef =
+                            VexStreamPlaybackWidgetActions
+                                .Next,
+                    )
+                }
             }
         }
     }
@@ -531,10 +550,10 @@ private fun VexStreamWidgetControl(
     val baseModifier =
         GlanceModifier
             .size(
-                38.dp,
+                VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP.dp,
             )
             .cornerRadius(
-                19.dp,
+                (VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP / 2).dp,
             )
             .semantics {
                 this.contentDescription =
@@ -596,7 +615,7 @@ private fun VexStreamWidgetControl(
                             )
                         },
                     fontSize =
-                        19.sp,
+                        VEXSTREAM_WIDGET_CONTROL_SYMBOL_SP.sp,
                 ),
         )
     }
@@ -650,11 +669,9 @@ class VexStreamPlaybackWidgetActionCallback :
             }
         }
 
-        VexStreamPlaybackWidget
-            .update(
-                context,
-                glanceId,
-            )
+        updateVexStreamPlaybackWidgets(
+            context,
+        )
     }
 }
 
@@ -759,7 +776,16 @@ private suspend fun <
     }
 }
 
-internal suspend fun updateVexStreamPlaybackWidgets(
+internal suspend fun convergeVexStreamPlaybackWidgetProjection(
+    refresh: suspend () -> Unit,
+    awaitProviderConvergence: suspend () -> Unit,
+) {
+    refresh()
+    awaitProviderConvergence()
+    refresh()
+}
+
+private suspend fun renderVexStreamPlaybackWidgets(
     context: Context,
 ) {
     try {
@@ -770,8 +796,30 @@ internal suspend fun updateVexStreamPlaybackWidgets(
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (_: Exception) {
-        // Launcher/RemoteViews failure is not playback failure. A later player event may retry.
+        // Launcher/RemoteViews failure is not playback failure. The bounded convergence pass retries.
     }
+}
+
+internal suspend fun updateVexStreamPlaybackWidgets(
+    context: Context,
+) {
+    /*
+     * Media3 control requests settle asynchronously. Render current truth immediately, then perform
+     * one bounded provider re-read at the same 250 ms cadence used by the Full Player while playing.
+     * This is not widget-owned State: each pass reconnects to the canonical MediaSession provider.
+     */
+    convergeVexStreamPlaybackWidgetProjection(
+        refresh = {
+            renderVexStreamPlaybackWidgets(
+                context,
+            )
+        },
+        awaitProviderConvergence = {
+            delay(
+                VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS,
+            )
+        },
+    )
 }
 
 private fun decodeWidgetArtwork(
@@ -818,6 +866,17 @@ private fun decodeWidgetArtwork(
         },
     )
 }
+
+internal const val VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP =
+    48
+internal const val VEXSTREAM_WIDGET_CONTROL_SYMBOL_SP =
+    24
+internal const val VEXSTREAM_WIDGET_CONTROL_GAP_DP =
+    6
+internal const val VEXSTREAM_WIDGET_ARTWORK_SIZE_DP =
+    60
+internal const val VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS =
+    250L
 
 private const val CONTROLLER_CONNECT_TIMEOUT_MS =
     2_000L
