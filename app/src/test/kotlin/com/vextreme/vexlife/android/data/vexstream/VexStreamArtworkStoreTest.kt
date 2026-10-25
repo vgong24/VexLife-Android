@@ -11,10 +11,14 @@ import org.junit.Test
 class VexStreamArtworkStoreTest {
 
     @Test
-    fun artworkPersistsByMediaAndExactSourceUrl() {
+    fun artworkPersistsByExactSourceUrl() {
         withStore { store ->
             val track =
                 track(
+                    digest =
+                        "a".repeat(
+                            64,
+                        ),
                     artworkUrl =
                         "https://images.example.test/album-a.jpg",
                 )
@@ -57,6 +61,73 @@ class VexStreamArtworkStoreTest {
     }
 
     @Test
+    fun sameArtworkSourceIsSharedAcrossDifferentDownloadedMedia() {
+        withStore { store ->
+            val artworkUrl =
+                "https://images.example.test/shared-album.jpg"
+            val first =
+                track(
+                    digest =
+                        "a".repeat(
+                            64,
+                        ),
+                    artworkUrl =
+                        artworkUrl,
+                )
+            val second =
+                track(
+                    digest =
+                        "b".repeat(
+                            64,
+                        ),
+                    artworkUrl =
+                        artworkUrl,
+                )
+            val firstFile =
+                requireNotNull(
+                    store.store(
+                        first,
+                        ByteArrayInputStream(
+                            byteArrayOf(
+                                1,
+                                2,
+                                3,
+                            ),
+                        ),
+                    ),
+                )
+
+            assertEquals(
+                firstFile,
+                store.fileFor(
+                    second,
+                ),
+            )
+            assertEquals(
+                firstFile,
+                store.store(
+                    second,
+                    ByteArrayInputStream(
+                        byteArrayOf(
+                            9,
+                            9,
+                            9,
+                        ),
+                    ),
+                ),
+            )
+            assertArrayEquals(
+                byteArrayOf(
+                    1,
+                    2,
+                    3,
+                ),
+                firstFile.readBytes(),
+            )
+        }
+    }
+
+    @Test
     fun oversizedArtworkFailsClosedWithoutAUsablePartialFile() {
         val root =
             Files.createTempDirectory(
@@ -70,6 +141,10 @@ class VexStreamArtworkStoreTest {
                 )
             val track =
                 track(
+                    digest =
+                        "a".repeat(
+                            64,
+                        ),
                     artworkUrl =
                         "https://images.example.test/large.jpg",
                 )
@@ -107,22 +182,41 @@ class VexStreamArtworkStoreTest {
     }
 
     @Test
-    fun removingMediaArtworkCleansEveryArtworkRevisionForThatMedia() {
+    fun pruneKeepsSharedReferencedArtworkAndRemovesUnreferencedArtwork() {
         withStore { store ->
-            val first =
+            val sharedUrl =
+                "https://images.example.test/shared.jpg"
+            val keptFirst =
                 track(
+                    digest =
+                        "a".repeat(
+                            64,
+                        ),
                     artworkUrl =
-                        "https://images.example.test/first.jpg",
+                        sharedUrl,
                 )
-            val second =
-                first.copy(
+            val keptSecond =
+                track(
+                    digest =
+                        "b".repeat(
+                            64,
+                        ),
                     artworkUrl =
-                        "https://images.example.test/second.jpg",
+                        sharedUrl,
+                )
+            val removed =
+                track(
+                    digest =
+                        "c".repeat(
+                            64,
+                        ),
+                    artworkUrl =
+                        "https://images.example.test/removed.jpg",
                 )
 
             assertTrue(
                 store.store(
-                    first,
+                    keptFirst,
                     ByteArrayInputStream(
                         byteArrayOf(
                             1,
@@ -134,7 +228,7 @@ class VexStreamArtworkStoreTest {
             )
             assertTrue(
                 store.store(
-                    second,
+                    removed,
                     ByteArrayInputStream(
                         byteArrayOf(
                             4,
@@ -146,18 +240,25 @@ class VexStreamArtworkStoreTest {
             )
 
             assertTrue(
-                store.remove(
-                    first.mediaSha256,
+                store.pruneTo(
+                    listOf(
+                        keptSecond,
+                    ),
                 ),
+            )
+            assertTrue(
+                store.fileFor(
+                    keptFirst,
+                ) != null,
+            )
+            assertTrue(
+                store.fileFor(
+                    keptSecond,
+                ) != null,
             )
             assertNull(
                 store.fileFor(
-                    first,
-                ),
-            )
-            assertNull(
-                store.fileFor(
-                    second,
+                    removed,
                 ),
             )
         }
@@ -184,18 +285,20 @@ class VexStreamArtworkStoreTest {
     }
 
     private fun track(
+        digest: String,
         artworkUrl: String,
     ): VexStreamTrack =
         VexStreamTrack(
             trackRef =
                 VexStreamTrackRef(
-                    "track.artwork",
+                    "track.artwork." +
+                        digest.take(
+                            8,
+                        ),
                 ),
             mediaSha256 =
                 VexStreamMediaSha256(
-                    "a".repeat(
-                        64,
-                    ),
+                    digest,
                 ),
             mediaByteLength =
                 4_096L,
