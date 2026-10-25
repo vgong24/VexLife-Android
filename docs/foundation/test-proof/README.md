@@ -386,6 +386,25 @@ A retry PASS does **not** erase an earlier intermittent failure. Durable recurre
 [INCIDENTS.md](INCIDENTS.md); use it to distinguish a first occurrence from a
 known unresolved/intermittent proof symptom.
 
+Connected proof is **data-preserving by default** for the already-installed debug app. Current AGP
+supports `android.injected.androidTest.leaveApksInstalledAfterRun`; this repository sets it to
+`true` so Gradle's test teardown does not uninstall the target APK and erase app-private
+SharedPreferences / Android Keystore identity after a proof run.
+
+This protects ordinary lived continuity such as an already-paired VexStream Desktop connection. It
+does not make instrumentation state immutable: a test that explicitly clears product data still owns
+that effect and must isolate/restore it truthfully.
+
+~~~text
+CONNECTED_DEVICE_PROOF
+!=
+PERMISSION_TO_CLEAR_LIVED_APP_DATA
+
+TEST_TEARDOWN
+!=
+PRODUCT_FORGET / CLEAR_DATA
+~~~
+
 Android Studio is not required: Android Gradle Plugin discovers the connected emulator/physical
 device and drives the instrumentation/adb path. ADB remains useful for device discovery,
 install/launch, Logcat and native/device diagnostics, but ScreenCrawler screenshot retrieval stays
