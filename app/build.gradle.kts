@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.composeMaterial3)
     implementation(libs.composeMaterialIconsExtended)
     implementation(libs.composeUiToolingPreview)
+    implementation(libs.coilCompose)
+    implementation(libs.coilNetworkOkhttp)
     debugImplementation(libs.composeUiTooling)
     debugImplementation(libs.composeUiTestManifest)
 
