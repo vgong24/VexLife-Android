@@ -421,40 +421,49 @@ internal object VexStreamPlaybackWidget :
             Column(
                 modifier =
                     GlanceModifier
-                        .defaultWeight()
-                        .clickable(
-                            contentAction,
-                        ),
+                        .defaultWeight(),
                 verticalAlignment =
                     Alignment.CenterVertically,
                 horizontalAlignment =
                     Alignment.CenterHorizontally,
             ) {
-                Text(
-                    text =
-                        projection.title,
-                    style =
-                        primaryText,
-                    maxLines = 1,
-                )
-                if (
-                    projection.artist
-                        .isNotBlank()
+                Column(
+                    modifier =
+                        GlanceModifier
+                            .clickable(
+                                contentAction,
+                            ),
+                    verticalAlignment =
+                        Alignment.CenterVertically,
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally,
                 ) {
-                    Spacer(
-                        modifier =
-                            GlanceModifier
-                                .height(
-                                    2.dp,
-                                ),
-                    )
                     Text(
                         text =
-                            projection.artist,
+                            projection.title,
                         style =
-                            secondaryText,
+                            primaryText,
                         maxLines = 1,
                     )
+                    if (
+                        projection.artist
+                            .isNotBlank()
+                    ) {
+                        Spacer(
+                            modifier =
+                                GlanceModifier
+                                    .height(
+                                        2.dp,
+                                    ),
+                        )
+                        Text(
+                            text =
+                                projection.artist,
+                            style =
+                                secondaryText,
+                            maxLines = 1,
+                        )
+                    }
                 }
 
                 Spacer(
