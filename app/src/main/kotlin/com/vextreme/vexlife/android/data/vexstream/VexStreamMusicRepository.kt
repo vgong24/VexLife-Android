@@ -20,6 +20,15 @@ interface VexStreamMusicRepository {
      */
     suspend fun restorePersistedState() = Unit
 
+    /**
+     * Best-effort persistence of currently admitted artwork for downloaded tracks.
+     *
+     * Production may perform network/filesystem work and therefore requires an owned asynchronous
+     * execution boundary. Artwork remains ancillary: this operation never upgrades or invalidates
+     * audio download truth. State-only fixtures inherit the no-op.
+     */
+    suspend fun backfillOfflineArtwork() = Unit
+
     suspend fun findNearbyVexStream(): VexStreamRepositoryResult
 
     /**

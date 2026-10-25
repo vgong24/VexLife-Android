@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.AppRepositoryFactory
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
+import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
@@ -109,6 +111,13 @@ internal class VexLifeViewModel(
         ).also {
             it.start()
         }
+    private val vexStreamArtworkExecution =
+        VexStreamArtworkExecution(
+            executionRoot = executionRoot,
+            repository = repositories.vexStream,
+        ).also {
+            it.start()
+        }
 
     val session =
         VexLifeSession(
@@ -134,5 +143,37 @@ private class VexStreamStartupExecution(
         launchOnce(
             repository::restorePersistedState,
         )
+    }
+}
+
+/**
+ * Session-owned background custody for ancillary downloaded artwork.
+ *
+ * The repository owns which current downloaded tracks need artwork and how those bytes are stored.
+ * This Execution only gives that finite network/filesystem work an explicit non-UI lifetime whenever
+ * current Hub/catalog truth becomes available.
+ */
+private class VexStreamArtworkExecution(
+    executionRoot: VexExecutionRoot,
+    private val repository: VexStreamMusicRepository,
+) : VexExecution(
+        executionRoot,
+    ) {
+    fun start() {
+        launchForCollect(
+            repository::state,
+        ) { state ->
+            if (
+                state.hubState is
+                VexStreamHubState.Ready &&
+                state.tracks.any {
+                    it.localCopy is
+                        VexStreamLocalCopyState.Downloaded
+                }
+            ) {
+                repository
+                    .backfillOfflineArtwork()
+            }
+        }
     }
 }

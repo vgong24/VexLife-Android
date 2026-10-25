@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -284,6 +285,37 @@ internal fun VexStreamFullPlayerSheet(
         playbackExperience
             .displayState
             .playback
+    val context =
+        LocalContext.current
+    val currentTrack =
+        remember(
+            state.tracks,
+            playback.currentMediaId,
+        ) {
+            state.tracks
+                .firstOrNull {
+                    it.track
+                        .trackRef
+                        .value ==
+                        playback.currentMediaId
+                }
+        }
+    val artworkModel =
+        remember(
+            currentTrack,
+            playback.currentArtworkUri,
+            context.filesDir,
+        ) {
+            currentTrack
+                ?.vexStreamArtworkModel(
+                    context.filesDir,
+                )
+                ?: playback
+                    .currentArtworkUri
+                    ?.takeIf {
+                        it.isNotBlank()
+                    }
+        }
     val playbackProjection =
         playbackExperience
             .displayState
@@ -526,13 +558,10 @@ internal fun VexStreamFullPlayerSheet(
                                     .FullPlayerArtwork,
                             )
 
-                    playback.currentArtworkUri
-                        ?.takeIf {
-                            it.isNotBlank()
-                        }
-                        ?.let { artworkUri ->
+                    artworkModel
+                        ?.let { model ->
                             AsyncImage(
-                                model = artworkUri,
+                                model = model,
                                 contentDescription =
                                     stringResource(
                                         R.string

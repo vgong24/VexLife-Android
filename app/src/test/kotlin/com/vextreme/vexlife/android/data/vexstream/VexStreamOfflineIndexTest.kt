@@ -57,6 +57,80 @@ class VexStreamOfflineIndexTest {
     }
 
     @Test
+    fun artworkSourceRestoresWithDownloadedTrackMetadata() {
+        withEnvironment { mediaStore, index ->
+            val bytes =
+                "offline media with artwork"
+                    .toByteArray()
+            val digest =
+                bytes.sha256()
+            val stored =
+                mediaStore.store(
+                    expectedSha256 =
+                        digest,
+                    expectedByteLength =
+                        bytes.size.toLong(),
+                    input =
+                        ByteArrayInputStream(
+                            bytes,
+                        ),
+                ) as VexStreamMediaStoreResult.Stored
+            val artworkUrl =
+                "https://images.example.test/offline-cover.jpg"
+            val state =
+                VexStreamMusicState(
+                    tracks =
+                        listOf(
+                            VexStreamTrackState(
+                                track =
+                                    VexStreamTrack(
+                                        trackRef =
+                                            VexStreamTrackRef(
+                                                "hub.track.artwork",
+                                            ),
+                                        mediaSha256 =
+                                            digest,
+                                        mediaByteLength =
+                                            bytes.size.toLong(),
+                                        title =
+                                            "Offline Artwork",
+                                        artist =
+                                            "Vex",
+                                        artworkUrl =
+                                            artworkUrl,
+                                    ),
+                                hubAvailable =
+                                    true,
+                                localCopy =
+                                    stored.localCopy,
+                            ),
+                        ),
+                )
+
+            assertTrue(
+                index.persist(
+                    state,
+                ),
+            )
+
+            val restored =
+                index.load()
+                    .tracks
+                    .single()
+
+            assertEquals(
+                artworkUrl,
+                restored.track
+                    .artworkUrl,
+            )
+            assertEquals(
+                VexStreamTrackAvailability.LOCAL_ONLY,
+                restored.availability,
+            )
+        }
+    }
+
+    @Test
     fun indexNeverRestoresMissingOrCorruptMediaAsDownloaded() {
         withEnvironment { mediaStore, index ->
             val bytes = "media".toByteArray()
@@ -160,7 +234,7 @@ class VexStreamOfflineIndexTest {
             indexFile.writeText(
                 indexFile.readText()
                     .replace(
-                        "vexstream.android.offline-index/v2",
+                        "vexstream.android.offline-index/v3",
                         "vexstream.android.offline-index/v1",
                     ),
             )
@@ -182,7 +256,7 @@ class VexStreamOfflineIndexTest {
                 indexFile
                     .readText()
                     .contains(
-                        "vexstream.android.offline-index/v2",
+                        "vexstream.android.offline-index/v3",
                     ),
             )
         } finally {
@@ -295,7 +369,7 @@ class VexStreamOfflineIndexTest {
             indexFile.writeText(
                 indexFile.readText()
                     .replace(
-                        "vexstream.android.offline-index/v2",
+                        "vexstream.android.offline-index/v3",
                         "vexstream.android.offline-index/v1",
                     ),
             )

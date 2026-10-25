@@ -128,6 +128,10 @@ network bytes
 -> publish verified content:// localMediaRef
 ```
 
+Artwork is deliberately outside that audio membrane. Optional cover images are held in persistent
+app-private files rather than Coil's cache and never participate in media SHA-256 / byte-length
+verification.
+
 The private staging store exists so a failed shared-media publication never destroys the already
 verified bytes. Production local-copy truth becomes the verified MediaStore content URI only after
 the shared row re-opens with the exact digest/length. A same-name row with different bytes fails
@@ -521,12 +525,45 @@ When unpaired, connection setup remains prominent because connection is the curr
 Search is contextual presentation rather than a permanently mounted large field. SearchQuery remains
 the same registered editable semantic identity and is realized only while the Search sheet is open.
 
-The track list adds an artwork slot without inventing artwork data. The current VexStream catalog
-contract carries music metadata and media identity but no admitted cover-art reference or bytes, so
-Android uses a music placeholder until that producer/consumer contract is deliberately extended.
+The track list artwork slot now consumes the admitted optional HTTPS `artworkUrl` carried by the
+current VexStream mobile catalog. Downloaded tracks also keep a bounded app-private companion copy
+under `filesDir/vexstream/artwork/` when that source is reachable. The offline index persists the
+source URL so restart/local-only truth retains the association, while presentation resolves:
+
+```text
+durable local companion artwork
+-> admitted remote HTTPS artwork
+-> music placeholder
+```
+
+Artwork remains ancillary to audio integrity. Its local file key is a digest of the exact admitted
+artwork URL, so tracks that share one album/cover source also share one durable device asset instead
+of duplicating the image per MP3. That source key is an association address, not a claim that URL
+bytes are immutable content identity. Missing/failed artwork therefore never turns a verified audio
+copy into a failed download.
+
+Artwork acquisition is also outside the audio-download and catalog-refresh transactions. A
+session-owned `VexExecution` observes current Hub/catalog truth and runs the finite deduplicated
+artwork fill on the existing IO execution root. Existing large offline libraries may therefore walk
+their distinct missing cover sources in the background without adding image I/O to first draw,
+catalog publication, or the MP3 success path.
+
+The backfill re-checks current Hub readiness before every request, checks coroutine cancellation
+between requests, and stops one run after three consecutive artwork failures. An in-memory rotating
+candidate offset advances after every attempt, so a few permanently bad sources cannot pin every
+later cover behind them on the next State-triggered run. The whole execution is force-stopped with
+the owning ViewModel.
+
+The app-private artwork store survives ordinary process/device restart but is intentionally removed by
+VexLife Clear Data/uninstall. The shared MediaStore audio object keeps its separate durability
+contract. If product requirements later demand cover art to survive Clear Data like public audio,
+that is a new storage-policy decision rather than a reason to publish decorative images into the
+user's gallery silently.
 
 YOUTUBE_MUSIC_LAYOUT_CUE != YOUTUBE_MUSIC_PRODUCT_COPY
-ARTWORK_SLOT != FABRICATED_ARTWORK_SOURCE
+REMOTE_ARTWORK_URL != LOCAL_ARTWORK_ASSET
+COIL_CACHE != OFFLINE_ARTWORK_TRUTH
+ARTWORK_FAILURE != AUDIO_DOWNLOAD_FAILURE
 SCREEN_TOOLBAR_ACTION != SHELL_FEATURE_OWNERSHIP
 SONG_ROW_TAP = PLAY_INTENT
 SECONDARY_SONG_ACTIONS -> LABELED_MENU
