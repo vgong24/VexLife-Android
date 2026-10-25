@@ -9,6 +9,8 @@ import com.vextreme.vexlife.android.widget.VexWidgetActionRef
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class VexStreamPlaybackWidgetTest {
@@ -58,6 +60,50 @@ class VexStreamPlaybackWidgetTest {
             ),
         )
     }
+
+    @Test
+    fun widgetProviderRefreshPerformsOneBoundedConvergenceRead() =
+        runTest {
+            val observations =
+                mutableListOf<String>()
+
+            convergeVexStreamPlaybackWidgetProjection(
+                refresh = {
+                    observations +=
+                        "refresh"
+                },
+                awaitProviderConvergence = {
+                    observations +=
+                        "provider-convergence"
+                },
+            )
+
+            assertEquals(
+                listOf(
+                    "refresh",
+                    "provider-convergence",
+                    "refresh",
+                ),
+                observations,
+            )
+        }
+
+    @Test
+    fun widgetTransportControlsMeetMinimumTouchTarget() {
+        assertTrue(
+            VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP >=
+                48,
+        )
+        assertTrue(
+            VEXSTREAM_WIDGET_ARTWORK_SIZE_DP >=
+                VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP,
+        )
+        assertTrue(
+            VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS >
+                0L,
+        )
+    }
+
 }
 
 // [VXG RealForever]
