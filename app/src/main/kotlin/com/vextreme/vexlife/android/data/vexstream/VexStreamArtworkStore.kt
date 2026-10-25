@@ -119,6 +119,10 @@ class VexStreamArtworkStore(
             ?.let(
                 ::fileForArtworkUrl,
             )
+            ?: track.artworkRef
+                ?.let(
+                    ::fileForArtworkRef,
+                )
 
     /**
      * Resolves one already-persisted artwork asset directly from the admitted source URL.
@@ -143,6 +147,89 @@ class VexStreamArtworkStore(
             )
 
         return file.takeIf {
+            it.isFile &&
+                it.length() in
+                1L..maxBytes
+        }
+    }
+
+    /**
+     * Resolves one already-persisted embedded-artwork asset from its opaque producer ref.
+     *
+     * The ref is not a network URL and carries no credential. Fetching remains repository-owned.
+     */
+    fun fileForArtworkRef(
+        artworkRef: String,
+    ): File? {
+        if (
+            artworkRef.isBlank() ||
+            artworkRef.contains('/') ||
+            artworkRef.contains('\\')
+        ) {
+            return null
+        }
+
+        val file =
+            targetFileForArtworkRef(
+                artworkRef,
+            )
+
+        return file.takeIf {
+            it.isFile &&
+                it.length() in
+                1L..maxBytes
+        }
+    }
+
+    /**
+     * Resolves the current Media3 artwork URI without giving widget/presentation network authority.
+     *
+     * HTTPS continues to map through the admitted source URL. file:// is accepted only when it
+     * points directly at this store's own root.
+     */
+    fun fileForPlaybackArtworkUri(
+        artworkUri: String,
+    ): File? {
+        if (
+            artworkUri.startsWith(
+                "https://",
+            )
+        ) {
+            return fileForArtworkUrl(
+                artworkUri,
+            )
+        }
+        if (
+            !artworkUri.startsWith(
+                "file:",
+            )
+        ) {
+            return null
+        }
+
+        val candidate =
+            runCatching {
+                File(
+                    java.net.URI(
+                        artworkUri,
+                    ),
+                ).canonicalFile
+            }.getOrNull()
+                ?: return null
+        val canonicalRoot =
+            runCatching {
+                root.canonicalFile
+            }.getOrNull()
+                ?: return null
+
+        if (
+            candidate.parentFile !=
+            canonicalRoot
+        ) {
+            return null
+        }
+
+        return candidate.takeIf {
             it.isFile &&
                 it.length() in
                 1L..maxBytes
@@ -215,6 +302,10 @@ class VexStreamArtworkStore(
             ?.let(
                 ::targetFile,
             )
+            ?: track.artworkRef
+                ?.let(
+                    ::targetFileForArtworkRef,
+                )
 
     private fun targetFile(
         artworkUrl: String,
@@ -223,6 +314,18 @@ class VexStreamArtworkStore(
             root,
             sourceDigest(
                 artworkUrl,
+            ) +
+                ARTWORK_EXTENSION,
+        )
+
+    private fun targetFileForArtworkRef(
+        artworkRef: String,
+    ): File =
+        File(
+            root,
+            sourceDigest(
+                EMBEDDED_ARTWORK_KEY_PREFIX +
+                    artworkRef,
             ) +
                 ARTWORK_EXTENSION,
         )
@@ -271,6 +374,8 @@ class VexStreamArtworkStore(
 
         private const val ARTWORK_EXTENSION =
             ".artwork"
+        private const val EMBEDDED_ARTWORK_KEY_PREFIX =
+            "vexstream.embedded-artwork:"
 
         fun production(
             contextFilesDir: File,
