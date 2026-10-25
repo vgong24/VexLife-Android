@@ -264,6 +264,11 @@ The host script is execution glue, not proof authority. Keep it small and defens
   upstream SIGPIPE could turn a truthful match into a false failure; use a non-pipeline predicate
   when the distinction matters;
 - record device wake/keyguard facts before classifying a Compose-host failure as product behavior;
+- keep connected proof data-preserving for an already-installed lived app; current source binds
+  `android.injected.androidTest.leaveApksInstalledAfterRun=true` so AGP teardown does not uninstall
+  the target APK and erase app-private pairing / Android Keystore identity;
+- if a proof genuinely needs destructive app-data isolation, give it an isolated package/variant or
+  explicitly admitted cleanup boundary rather than borrowing Victor's lived pairing state;
 - restore temporary host/device settings that the task changed;
 - never let a later carrier/collection failure erase already-completed semantic proof.
 
