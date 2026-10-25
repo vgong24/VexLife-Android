@@ -69,20 +69,25 @@ class PairedVexStreamMusicRepository(
                     mutableState.value,
                 )
                     .filter {
-                        it.artworkUrl != null &&
+                        (
+                            it.artworkUrl != null ||
+                                it.artworkRef != null
+                        ) &&
                             store.fileFor(
                                 it,
                             ) == null
                     }
                     .distinctBy {
                         it.artworkUrl
+                            ?: "embedded:" +
+                                it.artworkRef
                     }
 
             if (candidates.isEmpty()) {
                 artworkBackfillOffset =
                     0
                 store.pruneTo(
-                    downloadedTracks(
+                    artworkReferencedTracks(
                         mutableState.value,
                     ),
                 )
@@ -149,9 +154,38 @@ class PairedVexStreamMusicRepository(
             currentCoroutineContext()
                 .ensureActive()
             store.pruneTo(
-                downloadedTracks(
+                artworkReferencedTracks(
                     mutableState.value,
                 ),
+            )
+        }
+    }
+
+    override suspend fun preparePlaybackArtwork(
+        trackRef: VexStreamTrackRef,
+        expectedMediaSha256: VexStreamMediaSha256,
+    ) {
+        restorePersistedState()
+
+        val currentTrack =
+            operationMutex.withLock {
+                mutableState.value
+                    .track(
+                        trackRef,
+                    )
+                    ?.track
+                    ?.takeIf {
+                        it.mediaSha256 ==
+                            expectedMediaSha256
+                    }
+            }
+                ?: return
+
+        withContext(
+            Dispatchers.IO,
+        ) {
+            cacheArtworkBestEffort(
+                currentTrack,
             )
         }
     }
@@ -847,17 +881,12 @@ class PairedVexStreamMusicRepository(
             mutableState.value =
                 nextState
 
-            if (
-                offlineBeforeRefresh !=
-                offlineAfterRefresh
-            ) {
-                artworkStore
-                    ?.pruneTo(
-                        downloadedTracks(
-                            nextState,
-                        ),
-                    )
-            }
+            artworkStore
+                ?.pruneTo(
+                    artworkReferencedTracks(
+                        nextState,
+                    ),
+                )
 
             VexStreamRepositoryResult.Accepted()
         } catch (_: Exception) {
@@ -1485,11 +1514,6 @@ class PairedVexStreamMusicRepository(
             artworkStore
                 ?: return false
         if (
-            track.artworkUrl == null
-        ) {
-            return false
-        }
-        if (
             store.fileFor(
                 track,
             ) != null
@@ -1497,10 +1521,37 @@ class PairedVexStreamMusicRepository(
             return true
         }
 
+        return when {
+            track.artworkUrl != null ->
+                cacheExternalArtworkBestEffort(
+                    track = track,
+                    artworkUrl =
+                        track.artworkUrl,
+                    store = store,
+                )
+
+            track.artworkRef != null ->
+                cacheEmbeddedArtworkBestEffort(
+                    track = track,
+                    artworkRef =
+                        track.artworkRef,
+                    store = store,
+                )
+
+            else ->
+                false
+        }
+    }
+
+    private fun cacheExternalArtworkBestEffort(
+        track: VexStreamTrack,
+        artworkUrl: String,
+        store: VexStreamArtworkStore,
+    ): Boolean {
         return runCatching {
             var current =
                 URL(
-                    track.artworkUrl,
+                    artworkUrl,
                 )
 
             for (
@@ -1629,6 +1680,103 @@ class PairedVexStreamMusicRepository(
         )
     }
 
+    private fun cacheEmbeddedArtworkBestEffort(
+        track: VexStreamTrack,
+        artworkRef: String,
+        store: VexStreamArtworkStore,
+    ): Boolean {
+        val paired =
+            connectionStore.load()
+                ?: return false
+        val encodedRef =
+            URLEncoder.encode(
+                artworkRef,
+                Charsets.UTF_8.name(),
+            ).replace(
+                "+",
+                "%20",
+            )
+
+        return runCatching {
+            val connection =
+                authorizedConnection(
+                    connection = paired,
+                    path =
+                        "v1/artwork/" +
+                            encodedRef,
+                )
+            try {
+                connection.connectTimeout =
+                    ARTWORK_CONNECT_TIMEOUT_MS
+                connection.readTimeout =
+                    ARTWORK_READ_TIMEOUT_MS
+                connection.setRequestProperty(
+                    "Accept",
+                    "image/*",
+                )
+
+                if (
+                    connection.responseCode !=
+                    HttpURLConnection.HTTP_OK
+                ) {
+                    return@runCatching false
+                }
+
+                val contentType =
+                    connection.contentType
+                        ?.substringBefore(
+                            ';',
+                        )
+                        ?.trim()
+                        ?.lowercase()
+                if (
+                    contentType == null ||
+                    !contentType.startsWith(
+                        "image/",
+                    )
+                ) {
+                    return@runCatching false
+                }
+
+                val advertisedLength =
+                    connection.contentLengthLong
+                if (
+                    advertisedLength <= 0L ||
+                    advertisedLength >
+                    VexStreamArtworkStore
+                        .MAX_ARTWORK_BYTES
+                ) {
+                    return@runCatching false
+                }
+
+                connection
+                    .inputStream
+                    .use { input ->
+                        store.store(
+                            track = track,
+                            input = input,
+                        ) != null
+                    }
+            } finally {
+                connection.disconnect()
+            }
+        }.getOrDefault(
+            false,
+        )
+    }
+
+    private fun artworkReferencedTracks(
+        state: VexStreamMusicState,
+    ): List<VexStreamTrack> =
+        state.tracks
+            .map {
+                it.track
+            }
+            .filter {
+                it.artworkUrl != null ||
+                    it.artworkRef != null
+            }
+
     private fun downloadedTracks(
         state: VexStreamMusicState,
     ): List<VexStreamTrack> =
@@ -1738,6 +1886,16 @@ class PairedVexStreamMusicRepository(
                                         it.startsWith(
                                             "https://",
                                         )
+                                    },
+                            artworkRef =
+                                track.optString(
+                                    "artworkRef",
+                                )
+                                    .trim()
+                                    .takeIf {
+                                        it.isNotBlank() &&
+                                            !it.contains('/') &&
+                                            !it.contains('\\')
                                     },
                             album =
                                 track.optString(

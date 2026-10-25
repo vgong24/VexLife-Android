@@ -71,7 +71,7 @@ import kotlinx.coroutines.withContext
 private data class VexStreamPlaybackWidgetProviderRead(
     val title: String,
     val artist: String,
-    val artworkUrl: String?,
+    val artworkUri: String?,
     val previousEnabled: Boolean,
     val playPauseEnabled: Boolean,
     val showPause: Boolean,
@@ -197,14 +197,12 @@ internal object VexStreamPlaybackWidget :
                                 ?.artist
                                 ?.toString()
                                 .orEmpty(),
-                        artworkUrl =
+                        artworkUri =
                             metadata
                                 ?.artworkUri
                                 ?.toString()
                                 ?.takeIf {
-                                    it.startsWith(
-                                        "https://",
-                                    )
+                                    it.isNotBlank()
                                 },
                         previousEnabled =
                             queueProjection[
@@ -242,14 +240,14 @@ internal object VexStreamPlaybackWidget :
                 Dispatchers.IO,
             ) {
                 providerRead
-                    .artworkUrl
-                    ?.let { artworkUrl ->
+                    .artworkUri
+                    ?.let { artworkUri ->
                         VexStreamArtworkStore
                             .production(
                                 context.filesDir,
                             )
-                            .fileForArtworkUrl(
-                                artworkUrl,
+                            .fileForPlaybackArtworkUri(
+                                artworkUri,
                             )
                     }
                     ?.let(

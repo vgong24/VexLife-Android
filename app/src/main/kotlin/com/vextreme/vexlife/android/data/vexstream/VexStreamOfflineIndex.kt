@@ -153,6 +153,18 @@ class VexStreamOfflineIndex(
                                                 ?.takeIf {
                                                     it.isNotBlank()
                                                 },
+                                        artworkRef =
+                                            properties
+                                                .getProperty(
+                                                    prefix +
+                                                        "artworkRef",
+                                                )
+                                                ?.trim()
+                                                ?.takeIf {
+                                                    it.isNotBlank() &&
+                                                        !it.contains('/') &&
+                                                        !it.contains('\\')
+                                                },
                                         album =
                                             properties
                                                 .getProperty(
@@ -291,6 +303,13 @@ class VexStreamOfflineIndex(
                             setProperty(
                                 prefix + "artworkUrl",
                                 artworkUrl,
+                            )
+                        }
+                    track.artworkRef
+                        ?.let { artworkRef ->
+                            setProperty(
+                                prefix + "artworkRef",
+                                artworkRef,
                             )
                         }
                     setProperty(prefix + "album", track.album)

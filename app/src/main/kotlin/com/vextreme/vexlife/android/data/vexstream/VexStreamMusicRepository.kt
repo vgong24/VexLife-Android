@@ -29,6 +29,17 @@ interface VexStreamMusicRepository {
      */
     suspend fun backfillOfflineArtwork() = Unit
 
+    /**
+     * Best-effort preparation of artwork for the exact track about to become playback-relevant.
+     *
+     * The repository revalidates current catalog/media identity before any network effect. Missing
+     * or failed artwork never blocks audio playback. Fixtures inherit the no-op.
+     */
+    suspend fun preparePlaybackArtwork(
+        trackRef: VexStreamTrackRef,
+        expectedMediaSha256: VexStreamMediaSha256,
+    ) = Unit
+
     suspend fun findNearbyVexStream(): VexStreamRepositoryResult
 
     /**
