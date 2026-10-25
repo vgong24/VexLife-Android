@@ -37,7 +37,6 @@ class PairedVexStreamMusicRepository(
 ) : VexStreamMusicRepository {
 
     private val operationMutex = Mutex()
-    private var artworkBackfillOffset = 0
     private val restoreMutex = Mutex()
     private var persistedStateRestored = false
     private val remoteTransport =
@@ -53,6 +52,38 @@ class PairedVexStreamMusicRepository(
 
     override val state: StateFlow<VexStreamMusicState> =
         mutableState.asStateFlow()
+
+    override suspend fun backfillOfflineArtwork() {
+        val store =
+            artworkStore
+                ?: return
+
+        withContext(
+            Dispatchers.IO,
+        ) {
+            downloadedTracks(
+                mutableState.value,
+            )
+                .filter {
+                    it.artworkUrl != null &&
+                        store.fileFor(
+                            it,
+                        ) == null
+                }
+                .distinctBy {
+                    it.artworkUrl
+                }
+                .forEach(
+                    ::cacheArtworkBestEffort,
+                )
+
+            store.pruneTo(
+                downloadedTracks(
+                    mutableState.value,
+                ),
+            )
+        }
+    }
 
     override suspend fun restorePersistedState() {
         restoreMutex.withLock {
@@ -421,9 +452,6 @@ class PairedVexStreamMusicRepository(
                 withContext(
                     Dispatchers.IO,
                 ) {
-                    cacheArtworkBestEffort(
-                        target.track,
-                    )
                     offlineIndex.persist(
                         mutableState.value,
                     )
@@ -759,10 +787,6 @@ class PairedVexStreamMusicRepository(
                         ),
                     )
             }
-
-            backfillDownloadedArtworkBestEffort(
-                nextState,
-            )
 
             VexStreamRepositoryResult.Accepted()
         } catch (_: Exception) {
@@ -1186,9 +1210,6 @@ class PairedVexStreamMusicRepository(
                             trackRef,
                             stored.localCopy,
                         )
-                        cacheArtworkBestEffort(
-                            target.track,
-                        )
                         if (
                             !offlineIndex.persist(
                                 mutableState.value,
@@ -1379,64 +1400,6 @@ class PairedVexStreamMusicRepository(
             method = method,
             token = connection.token,
         )
-
-    private fun backfillDownloadedArtworkBestEffort(
-        state: VexStreamMusicState,
-    ) {
-        val store =
-            artworkStore
-                ?: return
-        val candidates =
-            downloadedTracks(
-                state,
-            )
-                .filter {
-                    it.artworkUrl != null &&
-                        store.fileFor(
-                            it,
-                        ) == null
-                }
-                .distinctBy {
-                    it.artworkUrl
-                }
-
-        if (candidates.isEmpty()) {
-            artworkBackfillOffset =
-                0
-            return
-        }
-
-        val start =
-            artworkBackfillOffset %
-                candidates.size
-        val attemptCount =
-            minOf(
-                ARTWORK_BACKFILL_BATCH_SIZE,
-                candidates.size,
-            )
-
-        repeat(
-            attemptCount,
-        ) { attempt ->
-            cacheArtworkBestEffort(
-                candidates[
-                    (
-                        start +
-                            attempt
-                    ) %
-                        candidates.size
-                ],
-            )
-        }
-
-        // A failing source must not permanently pin every later cover behind the first batch.
-        artworkBackfillOffset =
-            (
-                start +
-                    attemptCount
-            ) %
-                candidates.size
-    }
 
     /**
      * Artwork is a best-effort companion to verified audio, never a download-integrity predicate.
@@ -1884,7 +1847,6 @@ class PairedVexStreamMusicRepository(
         private const val PAIRING_POLL_MS = 750L
         private const val PAIRING_APPROVAL_TIMEOUT_MS = 5 * 60 * 1000L
         private const val RECONNECT_DISCOVERY_TIMEOUT_MS = 8_000L
-        private const val ARTWORK_BACKFILL_BATCH_SIZE = 4
         private const val ARTWORK_MAX_REDIRECTS = 3
         private const val ARTWORK_CONNECT_TIMEOUT_MS = 2_000
         private const val ARTWORK_READ_TIMEOUT_MS = 3_000
