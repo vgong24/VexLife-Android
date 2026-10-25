@@ -77,6 +77,8 @@ class VexStreamOfflineIndexTest {
                 ) as VexStreamMediaStoreResult.Stored
             val artworkUrl =
                 "https://images.example.test/offline-cover.jpg"
+            val artworkRef =
+                "hub.track.artwork"
             val state =
                 VexStreamMusicState(
                     tracks =
@@ -98,6 +100,8 @@ class VexStreamOfflineIndexTest {
                                             "Vex",
                                         artworkUrl =
                                             artworkUrl,
+                                        artworkRef =
+                                            artworkRef,
                                     ),
                                 hubAvailable =
                                     true,
@@ -122,6 +126,11 @@ class VexStreamOfflineIndexTest {
                 artworkUrl,
                 restored.track
                     .artworkUrl,
+            )
+            assertEquals(
+                artworkRef,
+                restored.track
+                    .artworkRef,
             )
             assertEquals(
                 VexStreamTrackAvailability.LOCAL_ONLY,
