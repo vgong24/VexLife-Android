@@ -33,7 +33,8 @@ class VexStreamOfflineIndex(
                 )
             check(
                 storedSchemaVersion == SCHEMA_VERSION ||
-                    storedSchemaVersion == LEGACY_SCHEMA_VERSION
+                    storedSchemaVersion == LEGACY_SCHEMA_VERSION_V2 ||
+                    storedSchemaVersion == LEGACY_SCHEMA_VERSION_V1
             ) {
                 "unsupported VexStream offline index"
             }
@@ -142,6 +143,16 @@ class VexStreamOfflineIndex(
                                                         "artist",
                                                 )
                                                 .orEmpty(),
+                                        artworkUrl =
+                                            properties
+                                                .getProperty(
+                                                    prefix +
+                                                        "artworkUrl",
+                                                )
+                                                ?.trim()
+                                                ?.takeIf {
+                                                    it.isNotBlank()
+                                                },
                                         album =
                                             properties
                                                 .getProperty(
@@ -275,6 +286,13 @@ class VexStreamOfflineIndex(
                         }
                     setProperty(prefix + "title", track.title)
                     setProperty(prefix + "artist", track.artist)
+                    track.artworkUrl
+                        ?.let { artworkUrl ->
+                            setProperty(
+                                prefix + "artworkUrl",
+                                artworkUrl,
+                            )
+                        }
                     setProperty(prefix + "album", track.album)
                     setProperty(prefix + "genre", track.genre)
                     setProperty(prefix + "year", track.year)
@@ -326,10 +344,12 @@ class VexStreamOfflineIndex(
         }.getOrDefault(false)
 
     companion object {
-        private const val LEGACY_SCHEMA_VERSION =
+        private const val LEGACY_SCHEMA_VERSION_V1 =
             "vexstream.android.offline-index/v1"
-        private const val SCHEMA_VERSION =
+        private const val LEGACY_SCHEMA_VERSION_V2 =
             "vexstream.android.offline-index/v2"
+        private const val SCHEMA_VERSION =
+            "vexstream.android.offline-index/v3"
 
         fun production(
             contextFilesDir: File,
