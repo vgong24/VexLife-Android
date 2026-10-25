@@ -259,6 +259,68 @@ The feature remains the owner of runtime instance identity; Vex Compose owns onl
 presentation-continuity law. Do not invent a generic dynamic-ID registry merely to make these two
 systems look symmetrical.
 
+## Deterministic semantic projection
+
+`UIBlueprintRegistry.semanticProjection()` exposes the declared UI lattice as immutable data without
+making the Elements module own a transport format.
+
+Current projection includes:
+
+~~~text
+screens
+  screenRef
+  rootElementRef
+  stable-ref-sorted owned element refs
+
+elements
+  semanticRef
+  kind
+  resolved semantic style
+  owner Screen
+  parent
+  declaration-ordered children
+  semantic icon
+  text role
+  text-field readOnly
+  swappable default child
+  typed intent projection
+
+shell element refs
+~~~
+
+Top-level screen/element collections are stable-ref sorted for deterministic transport diffs.
+Structural child order and Sequence intent order remain authored order because order is meaning.
+
+The projection is deliberately serialization-neutral:
+
+~~~text
+UIBlueprintRegistry
+-> UIBlueprintProjection
+-> app/tooling encoder
+-> JSON / VexBoard / diagnostics / another consumer
+~~~
+
+Do not add a JSON dependency to the portable Elements foundation merely to satisfy one consumer.
+The app/tooling edge that knows source revision, localized human labels, current runtime state, and
+target-specific adoption facts owns the transport envelope.
+
+Permanent:
+
+~~~text
+DECLARED_SEMANTIC_PROJECTION
+!=
+RUNTIME_NAVIGATION_STATE
+!=
+RESOLVED_PIXEL_LAYOUT
+!=
+OBSERVED_SCREENSHOT_EVIDENCE
+!=
+WIRE_FORMAT
+~~~
+
+Dynamic domain occurrences remain feature-owned runtime presentation refs. The registry projection
+does not invent them as fake static elements.
+
 ## Repository shape
 
 ~~~text
