@@ -536,11 +536,13 @@ durable local companion artwork
 -> music placeholder
 ```
 
-Artwork remains ancillary to audio integrity. Its file key combines the portable media digest with a
-digest of the exact artwork URL only as a stable association address; it does not redefine the
-audio digest as artwork identity. Missing/failed artwork therefore never turns a verified audio copy
-into a failed download. Existing downloaded libraries backfill only a bounded number of missing
-artwork companions per catalog refresh so artwork acquisition cannot scale startup work with the full
+Artwork remains ancillary to audio integrity. Its local file key is a digest of the exact admitted
+artwork URL, so tracks that share one album/cover source also share one durable device asset instead
+of duplicating the image per MP3. That source key is an association address, not a claim that URL
+bytes are immutable content identity. Missing/failed artwork therefore never turns a verified audio
+copy into a failed download. Existing downloaded libraries backfill only a bounded number of distinct
+missing artwork sources per catalog refresh, rotating the bounded window so one failed source cannot
+permanently hide later covers. Artwork acquisition therefore cannot scale startup work with the full
 offline library size.
 
 The app-private artwork store survives ordinary process/device restart but is intentionally removed by
