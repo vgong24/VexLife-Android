@@ -162,6 +162,7 @@
     <string name="vexstream_music_play_next">Play next</string>
     <string name="vexstream_music_add_queue">Add to queue</string>
     <string name="vexstream_music_now_playing">Now playing</string>
+    <string name="vexstream_music_artwork">Current track artwork</string>
     <string name="vexstream_music_pause">Pause</string>
     <string name="vexstream_music_play_pause">Play / Pause</string>
     <string name="vexstream_music_previous">Previous</string>
