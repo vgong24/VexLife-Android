@@ -213,6 +213,52 @@ rotation) keeps the same semantic Screen and open modal state.
 That is NOT a process-death restoration claim. Screen-local Compose-only state must still explicitly
 choose rememberSaveable or another rightful longer-lived owner when it needs that behavior.
 
+## Static identity with runtime text value
+
+Some visible text is a stable product object even though its displayed string changes with current state.
+
+Examples from Home:
+
+~~~text
+element.home.body.vexstream.status
+  identity / role / style = stable Blueprint meaning
+  value = current VexStream connection / Hub projection
+
+element.home.body.vexstream.body
+  identity / role / style = stable Blueprint meaning
+  value = disconnected or paired explanatory copy
+~~~
+
+Use `DynamicTextElement` for this boundary.
+
+~~~text
+TextElement
+  stable identity
+  + static localized resource
+
+DynamicTextElement
+  stable identity
+  + semantic TextRole / style
+  + NO stored runtime value
+  + current value supplied by Screen/runtime projection
+~~~
+
+`VexText(element = dynamicElement, text = currentValue)` attaches the registered element identity to
+the rendered Compose text. The generic `VexElementTree` accepts a `dynamicTextValue` resolver for
+ordinary Blueprint-rendered Screens; custom Screens may supply the current value directly while
+keeping the same registered identity.
+
+Permanent:
+
+~~~text
+TEXT_IDENTITY != TEXT_VALUE
+DYNAMIC_RUNTIME_TEXT != ANONYMOUS_COMPOSE_TEXT
+BLUEPRINT_REGISTRATION != RUNTIME_STATE_STORAGE
+~~~
+
+Do not create fake string resources merely to make runtime text registerable, and do not put current
+repository/session values into the static Blueprint.
+
 ## Form interactions
 
 Editable fields keep draft values as presentation state. Keystrokes are not semantic runtime actions
