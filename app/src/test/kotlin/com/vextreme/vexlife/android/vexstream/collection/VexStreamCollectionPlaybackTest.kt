@@ -8,7 +8,9 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackMediaItemResolver
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.runBlocking
@@ -235,6 +237,147 @@ class VexStreamCollectionPlaybackTest {
                     }.startsWith(
                         "commit:track.alpha,track.beta:vex-collection-provider",
                     ),
+                )
+            } finally {
+                execution.shutdown()
+                root.joinStopAll(
+                    "test complete",
+                )
+                workerDispatcher.close()
+                providerDispatcher.close()
+                workerExecutor.shutdownNow()
+                providerExecutor.shutdownNow()
+            }
+        }
+
+    @Test
+    fun newerCollectionPlaySupersedesOlderArtworkPreparation(): Unit =
+        runBlocking {
+            val workerExecutor =
+                Executors.newSingleThreadExecutor()
+            val providerExecutor =
+                Executors.newSingleThreadExecutor()
+            val workerDispatcher =
+                workerExecutor.asCoroutineDispatcher()
+            val providerDispatcher =
+                providerExecutor.asCoroutineDispatcher()
+            val root =
+                VexExecutionRoot(
+                    dispatcher =
+                        workerDispatcher,
+                )
+            val firstPreparationEntered =
+                CountDownLatch(
+                    1,
+                )
+            val releaseFirstPreparation =
+                CountDownLatch(
+                    1,
+                )
+            val committed =
+                CopyOnWriteArrayList<String>()
+            val execution =
+                VexStreamCollectionPlaybackExecution(
+                    root = root,
+                    providerDispatcher =
+                        providerDispatcher,
+                    resolver =
+                        object :
+                            VexStreamTrackMediaItemResolver {
+                            override fun mediaItem(
+                                state: VexStreamTrackState,
+                            ): MediaItem =
+                                MediaItem.Builder()
+                                    .setMediaId(
+                                        state.track
+                                            .trackRef
+                                            .value,
+                                    )
+                                    .build()
+
+                            override suspend fun prepareArtwork(
+                                state: VexStreamTrackState,
+                            ) {
+                                if (
+                                    state.track
+                                        .trackRef
+                                        .value ==
+                                    "track.first"
+                                ) {
+                                    firstPreparationEntered
+                                        .countDown()
+                                    check(
+                                        releaseFirstPreparation.await(
+                                            2,
+                                            TimeUnit.SECONDS,
+                                        ),
+                                    )
+                                }
+                            }
+                        },
+                    commitPlay = { resolved ->
+                        committed +=
+                            resolved.items
+                                .first()
+                                .mediaId
+                        true
+                    },
+                )
+
+            try {
+                assertTrue(
+                    execution.play(
+                        VexStreamCollectionPlaybackRequest(
+                            tracks =
+                                listOf(
+                                    track(
+                                        "track.first",
+                                    ),
+                                ),
+                            order =
+                                VexStreamCollectionPlaybackOrder.Natural,
+                        ),
+                    ),
+                )
+                assertTrue(
+                    firstPreparationEntered.await(
+                        2,
+                        TimeUnit.SECONDS,
+                    ),
+                )
+
+                assertTrue(
+                    execution.play(
+                        VexStreamCollectionPlaybackRequest(
+                            tracks =
+                                listOf(
+                                    track(
+                                        "track.second",
+                                    ),
+                                ),
+                            order =
+                                VexStreamCollectionPlaybackOrder.Natural,
+                        ),
+                    ),
+                )
+                releaseFirstPreparation
+                    .countDown()
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        committed.isEmpty()
+                    ) {
+                        yield()
+                    }
+                }
+
+                assertEquals(
+                    listOf(
+                        "track.second",
+                    ),
+                    committed.toList(),
                 )
             } finally {
                 execution.shutdown()
