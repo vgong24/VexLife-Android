@@ -166,6 +166,180 @@ class VexStreamTrackPlaybackTest {
         }
 
     @Test
+    fun selectedTrackArtworkPreparesOnWorkerBeforeProviderCommit(): Unit =
+        runBlocking {
+            val workerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "vex-artwork-worker",
+                    )
+                }
+            val providerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "vex-artwork-provider",
+                    )
+                }
+            val workerDispatcher =
+                workerExecutor.asCoroutineDispatcher()
+            val providerDispatcher =
+                providerExecutor.asCoroutineDispatcher()
+            val root =
+                VexExecutionRoot(
+                    dispatcher =
+                        workerDispatcher,
+                )
+            val events =
+                CopyOnWriteArrayList<String>()
+            val execution =
+                VexStreamTrackPlaybackExecution(
+                    root = root,
+                    providerDispatcher =
+                        providerDispatcher,
+                    resolver =
+                        object :
+                            VexStreamTrackMediaItemResolver {
+                            override fun mediaItem(
+                                state: VexStreamTrackState,
+                            ): MediaItem {
+                                events +=
+                                    "resolve:" +
+                                        state.track
+                                            .trackRef
+                                            .value +
+                                        ":" +
+                                        Thread.currentThread()
+                                            .name
+                                return MediaItem.Builder()
+                                    .setMediaId(
+                                        state.track
+                                            .trackRef
+                                            .value,
+                                    )
+                                    .build()
+                            }
+
+                            override suspend fun prepareArtwork(
+                                state: VexStreamTrackState,
+                            ) {
+                                events +=
+                                    "prepare:" +
+                                        state.track
+                                            .trackRef
+                                            .value +
+                                        ":" +
+                                        Thread.currentThread()
+                                            .name
+                            }
+                        },
+                    commitPlay = { resolved ->
+                        events +=
+                            "commit:" +
+                                resolved.items[
+                                    resolved.selectedIndex
+                                ].mediaId +
+                                ":" +
+                                Thread.currentThread()
+                                    .name
+                        true
+                    },
+                    commitQueue = { _, _ ->
+                        true
+                    },
+                )
+            val alpha =
+                track(
+                    "track.alpha",
+                )
+            val beta =
+                track(
+                    "track.beta",
+                )
+
+            try {
+                assertTrue(
+                    execution.play(
+                        VexStreamTrackPlayRequest(
+                            selected = beta,
+                            contextTracks =
+                                listOf(
+                                    alpha,
+                                    beta,
+                                ),
+                        ),
+                    ),
+                )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        events.none {
+                            it.startsWith(
+                                "commit:",
+                            )
+                        }
+                    ) {
+                        yield()
+                    }
+                }
+
+                val prepareEvents =
+                    events.filter {
+                        it.startsWith(
+                            "prepare:",
+                        )
+                    }
+                assertEquals(
+                    1,
+                    prepareEvents.size,
+                )
+                assertTrue(
+                    prepareEvents.single()
+                        .startsWith(
+                            "prepare:track.beta:vex-artwork-worker",
+                        ),
+                )
+
+                val commitIndex =
+                    events.indexOfFirst {
+                        it.startsWith(
+                            "commit:",
+                        )
+                    }
+                val prepareIndex =
+                    events.indexOfFirst {
+                        it.startsWith(
+                            "prepare:",
+                        )
+                    }
+                assertTrue(
+                    prepareIndex in
+                        0 until
+                            commitIndex,
+                )
+                assertTrue(
+                    events[
+                        commitIndex
+                    ].startsWith(
+                        "commit:track.beta:vex-artwork-provider",
+                    ),
+                )
+            } finally {
+                execution.shutdown()
+                root.joinStopAll(
+                    "test complete",
+                )
+                workerDispatcher.close()
+                providerDispatcher.close()
+                workerExecutor.shutdownNow()
+                providerExecutor.shutdownNow()
+            }
+        }
+
+    @Test
     fun newerPlaySelectionSupersedesPreparedOlderSelection(): Unit =
         runBlocking {
             val workerExecutor =
