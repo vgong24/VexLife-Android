@@ -72,7 +72,7 @@ import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExpe
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun VexStreamQueueSheet(
+internal fun VexStreamQueueContent(
     state: VexStreamMusicState,
     playback: VexStreamPlaybackReadState,
     controller: androidx.media3.session.MediaController?,
@@ -154,10 +154,6 @@ internal fun VexStreamQueueSheet(
         dragMoved = false
     }
 
-    val sheetState =
-        rememberModalBottomSheetState(
-            skipPartiallyExpanded = false,
-        )
     val handler =
         ElementActionHandler { element ->
             when (element) {
@@ -195,27 +191,16 @@ internal fun VexStreamQueueSheet(
             }
         }
 
-    VexModalBottomSheet(
-        element = VexStreamMusicScreen.QueueSheet,
+    VexColumn(
+        element = VexStreamMusicScreen.QueuePanel,
         modifier =
-            VexModifier.fillMaxHeight(),
-        onDismissRequest = {
-            runtime.dismissPresentation(
-                VexStreamMusicScreen.QueueSheet,
-            )
-        },
-        sheetState = sheetState,
+            VexModifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        VexColumn(
-            id = "content",
-            modifier =
-                VexModifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
             VexText(
                 id = "title",
                 text =
@@ -627,12 +612,17 @@ VexStreamPresentationRefs
                 }
             }
 
-            VexButton(
-                element = VexStreamMusicScreen.CloseQueue,
-                handler = handler,
-                modifier = VexModifier.fillMaxWidth(),
-            )
-        }
+        VexButton(
+            element = VexStreamMusicScreen.ShowNowPlaying,
+            handler = handler,
+            modifier = VexModifier.fillMaxWidth(),
+        )
+
+        VexButton(
+            element = VexStreamMusicScreen.CloseQueue,
+            handler = handler,
+            modifier = VexModifier.fillMaxWidth(),
+        )
     }
 }
 
