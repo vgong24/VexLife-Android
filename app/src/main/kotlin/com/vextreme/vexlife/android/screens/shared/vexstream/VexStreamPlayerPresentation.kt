@@ -285,13 +285,11 @@ internal fun VexStreamFullPlayerSheet(
             .displayState
             .playback
     val playbackProjection =
-        requireNotNull(
-            playbackExperience
-                .displayState
-                .projection,
-        )
+        playbackExperience
+            .displayState
+            .projection
     val playPause =
-        playbackProjection.present(
+        playbackProjection?.present(
             VexStreamPlaybackControl.PlayPause,
         )
     val queueExperience =
@@ -646,8 +644,11 @@ internal fun VexStreamFullPlayerSheet(
                             VexStreamMusicScreen
                                 .TogglePlayback,
                         handler = handler,
-                        enabled = playPause.enabled,
-                        iconOverride = playPause.icon,
+                        enabled =
+                            playPause?.enabled == true,
+                        iconOverride =
+                            playPause?.icon
+                                ?: ElementIcon.PlayPause,
                         semanticRef =
                             VexStreamPresentationRefs
                                 .fullPlayerAction(
