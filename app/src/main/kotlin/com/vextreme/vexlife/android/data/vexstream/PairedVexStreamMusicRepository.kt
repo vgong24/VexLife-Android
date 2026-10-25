@@ -37,6 +37,7 @@ class PairedVexStreamMusicRepository(
 ) : VexStreamMusicRepository {
 
     private val operationMutex = Mutex()
+    private var artworkBackfillOffset = 0
     private val restoreMutex = Mutex()
     private var persistedStateRestored = false
     private val remoteTransport =
@@ -494,21 +495,12 @@ class PairedVexStreamMusicRepository(
                 offlineIndex.persist(
                     mutableState.value,
                 )
-                val sameMediaStillDownloaded =
-                    mutableState.value
-                        .tracks
-                        .any { state ->
-                            state.track.mediaSha256 ==
-                                target.track.mediaSha256 &&
-                                state.localCopy is
-                                    VexStreamLocalCopyState.Downloaded
-                        }
-                if (!sameMediaStillDownloaded) {
-                    artworkStore
-                        ?.remove(
-                            target.track.mediaSha256,
-                        )
-                }
+                artworkStore
+                    ?.pruneTo(
+                        downloadedTracks(
+                            mutableState.value,
+                        ),
+                    )
             }
 
             VexStreamRepositoryResult.Accepted(
@@ -755,6 +747,18 @@ class PairedVexStreamMusicRepository(
             // recovery index is rebuilt.
             mutableState.value =
                 nextState
+
+            if (
+                offlineBeforeRefresh !=
+                offlineAfterRefresh
+            ) {
+                artworkStore
+                    ?.pruneTo(
+                        downloadedTracks(
+                            nextState,
+                        ),
+                    )
+            }
 
             backfillDownloadedArtworkBestEffort(
                 nextState,
@@ -1382,28 +1386,56 @@ class PairedVexStreamMusicRepository(
         val store =
             artworkStore
                 ?: return
+        val candidates =
+            downloadedTracks(
+                state,
+            )
+                .filter {
+                    it.artworkUrl != null &&
+                        store.fileFor(
+                            it,
+                        ) == null
+                }
+                .distinctBy {
+                    it.artworkUrl
+                }
 
-        state.tracks
-            .asSequence()
-            .filter {
-                it.localCopy is
-                    VexStreamLocalCopyState.Downloaded
-            }
-            .map {
-                it.track
-            }
-            .filter {
-                it.artworkUrl != null &&
-                    store.fileFor(
-                        it,
-                    ) == null
-            }
-            .take(
+        if (candidates.isEmpty()) {
+            artworkBackfillOffset =
+                0
+            return
+        }
+
+        val start =
+            artworkBackfillOffset %
+                candidates.size
+        val attemptCount =
+            minOf(
                 ARTWORK_BACKFILL_BATCH_SIZE,
+                candidates.size,
             )
-            .forEach(
-                ::cacheArtworkBestEffort,
+
+        repeat(
+            attemptCount,
+        ) { attempt ->
+            cacheArtworkBestEffort(
+                candidates[
+                    (
+                        start +
+                            attempt
+                    ) %
+                        candidates.size
+                ],
             )
+        }
+
+        // A failing source must not permanently pin every later cover behind the first batch.
+        artworkBackfillOffset =
+            (
+                start +
+                    attemptCount
+            ) %
+                candidates.size
     }
 
     /**
@@ -1553,6 +1585,21 @@ class PairedVexStreamMusicRepository(
             }
         }
     }
+
+    private fun downloadedTracks(
+        state: VexStreamMusicState,
+    ): List<VexStreamTrack> =
+        state.tracks
+            .mapNotNull { item ->
+                if (
+                    item.localCopy is
+                    VexStreamLocalCopyState.Downloaded
+                ) {
+                    item.track
+                } else {
+                    null
+                }
+            }
 
     private fun offlineSnapshot(
         state: VexStreamMusicState,
