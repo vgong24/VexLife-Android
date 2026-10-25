@@ -546,8 +546,13 @@ Artwork acquisition is also outside the audio-download and catalog-refresh trans
 session-owned `VexExecution` observes current Hub/catalog truth and runs the finite deduplicated
 artwork fill on the existing IO execution root. Existing large offline libraries may therefore walk
 their distinct missing cover sources in the background without adding image I/O to first draw,
-catalog publication, or the MP3 success path. The job checks cancellation between bounded requests
-and is force-stopped with the owning ViewModel.
+catalog publication, or the MP3 success path.
+
+The backfill re-checks current Hub readiness before every request, checks coroutine cancellation
+between requests, and stops one run after three consecutive artwork failures. An in-memory rotating
+candidate offset advances after every attempt, so a few permanently bad sources cannot pin every
+later cover behind them on the next State-triggered run. The whole execution is force-stopped with
+the owning ViewModel.
 
 The app-private artwork store survives ordinary process/device restart but is intentionally removed by
 VexLife Clear Data/uninstall. The shared MediaStore audio object keeps its separate durability
