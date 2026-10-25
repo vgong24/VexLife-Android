@@ -511,6 +511,10 @@ val vexFoundationHealth =
                             "vexVerifyLocal",
                             "vexVerifyDevice",
                         ),
+                    "gradle.properties" to
+                        listOf(
+                            "android.injected.androidTest.leaveApksInstalledAfterRun=true",
+                        ),
                 )
 
             requiredSources.forEach {
