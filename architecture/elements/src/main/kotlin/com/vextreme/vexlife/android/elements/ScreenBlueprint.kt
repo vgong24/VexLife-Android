@@ -100,6 +100,17 @@ abstract class ScreenBlueprint(
             style = style,
         )
 
+    protected fun dynamicTextRef(
+        id: String,
+        role: TextRole = TextRole.Body,
+        style: ElementStyleKey = VexElementStyles.Default,
+    ): DynamicTextElement =
+        DynamicTextElement(
+            elementId = elementId(id),
+            role = role,
+            style = style,
+        )
+
     protected fun columnRef(id: String): ColumnElement =
         ColumnElement(elementId(id))
 
@@ -195,6 +206,14 @@ class ScreenLayoutScope internal constructor(
         style,
     )
 
+    fun dynamicText(
+        element: DynamicTextElement,
+        style: ElementStyleKey? = null,
+    ) = place(
+        element,
+        style,
+    )
+
     fun text(
         id: String,
         @StringRes textRes: Int,
@@ -204,6 +223,20 @@ class ScreenLayoutScope internal constructor(
             elementId = screen.elementId(childPath(id)),
             textRes = textRes,
             role = role,
+        )
+        place(element)
+        return element
+    }
+
+    fun dynamicText(
+        id: String,
+        role: TextRole = TextRole.Body,
+        style: ElementStyleKey = VexElementStyles.Default,
+    ): DynamicTextElement {
+        val element = DynamicTextElement(
+            elementId = screen.elementId(childPath(id)),
+            role = role,
+            style = style,
         )
         place(element)
         return element
