@@ -55,7 +55,19 @@ class MainActivity : ComponentActivity() {
         intent: Intent?,
     ) {
         val action =
-            intent?.action
+            intent
+                ?.action
+                ?: intent
+                    ?.getStringExtra(
+                        VEXSTREAM_WIDGET_DESTINATION_EXTRA,
+                    )
+                    ?.takeIf {
+                        it ==
+                            VEXSTREAM_WIDGET_DESTINATION_FULL_PLAYER
+                    }
+                    ?.let {
+                        ACTION_OPEN_VEXSTREAM_FULL_PLAYER
+                    }
         val screen =
             resolveVexLifeExternalScreen(
                 action,
@@ -141,5 +153,10 @@ class MainActivity : ComponentActivity() {
             "presentation.vexmaps.navigation.notification"
         internal const val VEXSTREAM_WIDGET_NOW_PLAYING_REF =
             "presentation.vexstream.playback-widget.now-playing"
+
+        internal const val VEXSTREAM_WIDGET_DESTINATION_EXTRA =
+            "vexstream.widget.destination"
+        internal const val VEXSTREAM_WIDGET_DESTINATION_FULL_PLAYER =
+            "full-player"
     }
 }
