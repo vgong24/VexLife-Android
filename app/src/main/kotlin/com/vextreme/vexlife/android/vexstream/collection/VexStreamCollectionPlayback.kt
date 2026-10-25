@@ -14,6 +14,7 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueShuffleTargetOrder
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackMediaItemResolver
 import com.vextreme.vexlife.android.vexstream.track.prepareVexStreamTrackArtworkBestEffort
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.random.Random
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -213,9 +214,19 @@ internal class VexStreamCollectionPlaybackExecution(
     VexExecution(
         root,
     ) {
+    private data class PlayIntent(
+        val sequence: Long,
+        val request:
+            VexStreamCollectionPlaybackRequest,
+    )
+
+    private val playSequence =
+        AtomicLong(
+            0L,
+        )
     private val requests =
         Channel<
-            VexStreamCollectionPlaybackRequest
+            PlayIntent
         >(
             capacity =
                 Channel.CONFLATED,
@@ -227,9 +238,9 @@ internal class VexStreamCollectionPlaybackExecution(
                 ::requestsForExecution,
             restartOnSourceFailure =
                 false,
-        ) { request ->
+        ) { intent ->
             resolveForExecution(
-                request,
+                intent,
             )
         }
     }
@@ -239,7 +250,11 @@ internal class VexStreamCollectionPlaybackExecution(
     ): Boolean =
         requests
             .trySend(
-                request,
+                PlayIntent(
+                    sequence =
+                        playSequence.incrementAndGet(),
+                    request = request,
+                ),
             )
             .isSuccess
 
@@ -249,16 +264,17 @@ internal class VexStreamCollectionPlaybackExecution(
 
     private fun requestsForExecution():
         Flow<
-            VexStreamCollectionPlaybackRequest
+            PlayIntent
         > =
         requests.receiveAsFlow()
 
     private suspend fun resolveForExecution(
-        request: VexStreamCollectionPlaybackRequest,
+        intent: PlayIntent,
     ) {
         var resolved =
             resolveVexStreamCollectionPlayback(
-                request = request,
+                request =
+                    intent.request,
                 resolver = resolver,
             )
                 ?: return
@@ -291,12 +307,24 @@ internal class VexStreamCollectionPlaybackExecution(
             }
         }
 
+        if (
+            playSequence.get() !=
+            intent.sequence
+        ) {
+            return
+        }
+
         handoff(
             providerDispatcher,
         ) {
-            commitPlay(
-                resolved,
-            )
+            if (
+                playSequence.get() ==
+                intent.sequence
+            ) {
+                commitPlay(
+                    resolved,
+                )
+            }
         }
     }
 }
