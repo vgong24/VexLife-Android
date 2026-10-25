@@ -233,6 +233,7 @@ data class VexStreamTrack(
     val mediaByteLength: Long,
     val title: String,
     val artist: String,
+    val artworkUrl: String? = null,
     val album: String = "",
     val genre: String = "",
     val year: String = "",
@@ -246,6 +247,14 @@ data class VexStreamTrack(
         }
         require(title.isNotBlank()) {
             "title must be non-blank"
+        }
+        require(
+            artworkUrl == null ||
+                artworkUrl.startsWith(
+                    "https://",
+                ),
+        ) {
+            "artworkUrl must be HTTPS when present"
         }
         require(durationSeconds >= 0.0) {
             "durationSeconds must be non-negative"
