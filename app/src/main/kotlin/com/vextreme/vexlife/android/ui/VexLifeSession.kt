@@ -20,6 +20,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.widget.vexstream.updateVexStreamPlaybackWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -115,6 +116,7 @@ internal class VexLifeViewModel(
         VexStreamArtworkExecution(
             executionRoot = executionRoot,
             repository = repositories.vexStream,
+            context = application.applicationContext,
         ).also {
             it.start()
         }
@@ -156,6 +158,7 @@ private class VexStreamStartupExecution(
 private class VexStreamArtworkExecution(
     executionRoot: VexExecutionRoot,
     private val repository: VexStreamMusicRepository,
+    private val context: android.content.Context,
 ) : VexExecution(
         executionRoot,
     ) {
@@ -173,6 +176,9 @@ private class VexStreamArtworkExecution(
             ) {
                 repository
                     .backfillOfflineArtwork()
+                updateVexStreamPlaybackWidgets(
+                    context,
+                )
             }
         }
     }
