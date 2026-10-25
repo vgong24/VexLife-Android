@@ -112,7 +112,19 @@ object VexStreamJourneys : VexJourneyShard {
             behavesLike =
                 VexStreamMusicScreen.PlayTrack,
         )
-        tap(VexStreamMusicScreen.ShowQueue)
+        // Mini Player expands into one Full Player sheet. Queue is a presentation mode inside
+        // that same sheet rather than a second modal/player owner.
+        tap(
+            VexStreamMusicScreen.OpenFullPlayer,
+        )
+        tapElementById(
+            elementId =
+                VexStreamPresentationRefs.fullPlayerAction(
+                    VexStreamMusicScreen.ShowQueue,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.ShowQueue,
+        )
         assertVisibleById(
             VexStreamPresentationRefs.queueEntry(
                 VexStreamPresentationRefs.queueEntryKey(
@@ -132,7 +144,12 @@ object VexStreamJourneys : VexJourneyShard {
             behavesLike =
                 VexStreamMusicScreen.QueuePlay,
         )
-        tap(VexStreamMusicScreen.CloseQueue)
+        tap(
+            VexStreamMusicScreen.ShowNowPlaying,
+        )
+        tap(
+            VexStreamMusicScreen.CloseFullPlayer,
+        )
 
         tapElementById(
             elementId =
