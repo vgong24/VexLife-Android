@@ -12,9 +12,9 @@ import java.security.MessageDigest
  * Audio bytes keep their existing verified MediaStore owner. Artwork is ancillary presentation
  * data: a missing or corrupt artwork file must never invalidate an otherwise verified audio copy.
  *
- * The local filename binds the portable media digest together with the exact admitted HTTPS artwork
- * URL. The media digest is an association address here, not artwork identity; changing the artwork
- * URL intentionally selects a different local asset.
+ * One exact admitted HTTPS artwork source maps to one local asset. Multiple downloaded songs may
+ * therefore share one album/cover file without duplicating the same image per MP3. The source digest
+ * is a stable local association key, not a claim that the URL itself is immutable content identity.
  */
 class VexStreamArtworkStore(
     private val root: File,
@@ -30,6 +30,11 @@ class VexStreamArtworkStore(
         track: VexStreamTrack,
         input: InputStream,
     ): File? {
+        fileFor(track)
+            ?.let {
+                return it
+            }
+
         val target =
             targetFile(track)
                 ?: return null
@@ -87,7 +92,7 @@ class VexStreamArtworkStore(
 
             if (target.exists()) {
                 check(target.delete()) {
-                    "Unable to replace prior VexStream artwork"
+                    "Unable to replace invalid prior VexStream artwork"
                 }
             }
             check(
@@ -130,78 +135,91 @@ class VexStreamArtworkStore(
             )
 
     /**
-     * Removes every artwork snapshot associated with one exact media object.
+     * Removes artwork files no downloaded track still references.
      *
-     * This is intentionally broader than one source URL so stale artwork revisions do not accumulate
-     * after the final local copy for that media object is removed.
+     * Cleanup is driven by the current downloaded-track set rather than one song's media identity so
+     * shared album art survives removing any one of several songs that still use it.
      */
-    fun remove(
-        mediaSha256: VexStreamMediaSha256,
+    fun pruneTo(
+        downloadedTracks: Iterable<VexStreamTrack>,
     ): Boolean {
         if (!root.isDirectory) {
             return true
         }
 
-        val prefix =
-            mediaSha256.value +
-                "-"
-        return root
-            .listFiles()
+        val retainedNames =
+            downloadedTracks
+                .mapNotNull(
+                    ::targetFile,
+                )
+                .map {
+                    it.name
+                }
+                .toSet()
+
+        var success = true
+        root.listFiles()
             .orEmpty()
             .filter {
-                it.name.startsWith(
-                    prefix,
-                ) &&
-                    (
-                        it.name.endsWith(
-                            ARTWORK_EXTENSION,
-                        ) ||
-                            it.name.endsWith(
-                                ARTWORK_EXTENSION +
-                                    ".tmp",
-                            )
+                (
+                    it.name.endsWith(
+                        ARTWORK_EXTENSION,
+                    ) &&
+                        it.name !in
+                        retainedNames
+                ) ||
+                    it.name.endsWith(
+                        ARTWORK_EXTENSION +
+                            ".tmp",
                     )
             }
-            .all {
-                !it.exists() ||
-                    it.delete()
+            .forEach {
+                if (
+                    it.exists() &&
+                    !it.delete()
+                ) {
+                    success = false
+                }
             }
+
+        return success
     }
 
     private fun targetFile(
         track: VexStreamTrack,
-    ): File? {
-        val artworkUrl =
-            track.artworkUrl
-                ?: return null
-
-        val urlDigest =
-            MessageDigest
-                .getInstance(
-                    "SHA-256",
+    ): File? =
+        track.artworkUrl
+            ?.let(
+                ::sourceDigest,
+            )
+            ?.let { digest ->
+                File(
+                    root,
+                    digest +
+                        ARTWORK_EXTENSION,
                 )
-                .digest(
-                    artworkUrl
-                        .toByteArray(
-                            Charsets.UTF_8,
-                        ),
-                )
-                .joinToString(
-                    separator = "",
-                ) { byte ->
-                    "%02x".format(
-                        byte,
-                    )
-                }
+            }
 
-        return File(
-            root,
-            track.mediaSha256.value +
-                "-" +
-                urlDigest +
-                ARTWORK_EXTENSION,
-        )
-    }
+    private fun sourceDigest(
+        artworkUrl: String,
+    ): String =
+        MessageDigest
+            .getInstance(
+                "SHA-256",
+            )
+            .digest(
+                artworkUrl
+                    .toByteArray(
+                        Charsets.UTF_8,
+                    ),
+            )
+            .joinToString(
+                separator = "",
+            ) { byte ->
+                "%02x".format(
+                    byte,
+                )
+            }
 
     private fun ensureRoot() {
         if (root.exists()) {
