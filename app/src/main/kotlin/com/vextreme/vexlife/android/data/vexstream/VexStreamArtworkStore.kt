@@ -129,6 +129,14 @@ class VexStreamArtworkStore(
     fun fileForArtworkUrl(
         artworkUrl: String,
     ): File? {
+        if (
+            !artworkUrl.startsWith(
+                "https://",
+            )
+        ) {
+            return null
+        }
+
         val file =
             targetFile(
                 artworkUrl,
