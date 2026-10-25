@@ -82,6 +82,70 @@ class VexStreamArtworkPresentationTest {
         }
     }
 
+
+    @Test
+    fun streamedTrackUsesPreparedEmbeddedArtworkWithoutDownloadState() {
+        val filesDir =
+            Files.createTempDirectory(
+                "vexstream-streamed-artwork-presentation-test",
+            ).toFile()
+        try {
+            val track =
+                VexStreamTrack(
+                    trackRef =
+                        VexStreamTrackRef(
+                            "track.streaming.embedded",
+                        ),
+                    mediaSha256 =
+                        VexStreamMediaSha256(
+                            "c".repeat(
+                                64,
+                            ),
+                        ),
+                    mediaByteLength =
+                        4_096L,
+                    title =
+                        "Streaming artwork",
+                    artist =
+                        "Vex",
+                    artworkRef =
+                        "track.streaming.embedded",
+                )
+            val state =
+                VexStreamTrackState(
+                    track = track,
+                    hubAvailable = true,
+                )
+            val stored =
+                requireNotNull(
+                    VexStreamArtworkStore
+                        .production(
+                            filesDir,
+                        )
+                        .store(
+                            track = track,
+                            input =
+                                ByteArrayInputStream(
+                                    byteArrayOf(
+                                        9,
+                                        8,
+                                        7,
+                                    ),
+                                ),
+                        ),
+                )
+
+            assertEquals(
+                stored,
+                state.vexStreamArtworkModel(
+                    filesDir,
+                ),
+            )
+        } finally {
+            filesDir.deleteRecursively()
+        }
+    }
+
     private fun downloadedState():
         VexStreamTrackState {
         val digest =
