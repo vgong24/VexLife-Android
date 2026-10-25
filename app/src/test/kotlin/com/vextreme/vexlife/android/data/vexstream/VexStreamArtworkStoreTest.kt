@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -301,6 +302,138 @@ class VexStreamArtworkStoreTest {
         }
     }
 
+
+    @Test
+    fun embeddedArtworkPersistsByOpaqueRefAndResolvesFromOwnedFileUri() {
+        withStore { store ->
+            val track =
+                track(
+                    digest =
+                        "e".repeat(
+                            64,
+                        ),
+                    artworkUrl = null,
+                    artworkRef =
+                        "track.embedded.cover",
+                )
+            val bytes =
+                byteArrayOf(
+                    11,
+                    12,
+                    13,
+                )
+
+            val stored =
+                requireNotNull(
+                    store.store(
+                        track = track,
+                        input =
+                            ByteArrayInputStream(
+                                bytes,
+                            ),
+                    ),
+                )
+
+            assertEquals(
+                stored,
+                store.fileFor(
+                    track,
+                ),
+            )
+            assertEquals(
+                stored,
+                store.fileForArtworkRef(
+                    "track.embedded.cover",
+                ),
+            )
+            assertEquals(
+                stored,
+                store.fileForPlaybackArtworkUri(
+                    stored.toURI()
+                        .toString(),
+                ),
+            )
+            assertArrayEquals(
+                bytes,
+                stored.readBytes(),
+            )
+
+            val outside =
+                Files.createTempFile(
+                    "vexstream-artwork-outside",
+                    ".artwork",
+                ).toFile()
+            try {
+                outside.writeBytes(
+                    byteArrayOf(
+                        1,
+                    ),
+                )
+                assertNull(
+                    store.fileForPlaybackArtworkUri(
+                        outside.toURI()
+                            .toString(),
+                    ),
+                )
+            } finally {
+                outside.delete()
+            }
+        }
+    }
+
+    @Test
+    fun externalAndEmbeddedArtworkUseIndependentCacheKeys() {
+        withStore { store ->
+            val external =
+                track(
+                    digest =
+                        "f".repeat(
+                            64,
+                        ),
+                    artworkUrl =
+                        "https://images.example.test/same-label.jpg",
+                )
+            val embedded =
+                track(
+                    digest =
+                        "f".repeat(
+                            64,
+                        ),
+                    artworkUrl = null,
+                    artworkRef =
+                        "https://images.example.test/same-label.jpg",
+                )
+
+            val externalFile =
+                requireNotNull(
+                    store.store(
+                        external,
+                        ByteArrayInputStream(
+                            byteArrayOf(
+                                1,
+                            ),
+                        ),
+                    ),
+                )
+            val embeddedFile =
+                requireNotNull(
+                    store.store(
+                        embedded,
+                        ByteArrayInputStream(
+                            byteArrayOf(
+                                2,
+                            ),
+                        ),
+                    ),
+                )
+
+            assertNotEquals(
+                externalFile,
+                embeddedFile,
+            )
+        }
+    }
+
     private fun withStore(
         block: (
             VexStreamArtworkStore,
@@ -323,7 +456,8 @@ class VexStreamArtworkStoreTest {
 
     private fun track(
         digest: String,
-        artworkUrl: String,
+        artworkUrl: String? = null,
+        artworkRef: String? = null,
     ): VexStreamTrack =
         VexStreamTrack(
             trackRef =
@@ -345,6 +479,8 @@ class VexStreamArtworkStoreTest {
                 "Vex",
             artworkUrl =
                 artworkUrl,
+            artworkRef =
+                artworkRef,
         )
 }
 
