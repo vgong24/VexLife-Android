@@ -15,12 +15,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -42,7 +40,6 @@ import com.vextreme.vexlife.android.elements.ElementActionHandler
 import com.vextreme.vexlife.android.elements.VexButton
 import com.vextreme.vexlife.android.elements.VexColumn
 import com.vextreme.vexlife.android.elements.VexIconButton
-import com.vextreme.vexlife.android.elements.VexModalBottomSheet
 import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.elements.VexRow
 import com.vextreme.vexlife.android.elements.VexText
@@ -70,7 +67,6 @@ import com.vextreme.vexlife.android.vexstream.repeat.rememberVexStreamRepeatExpe
  * Android presentation mechanics that were previously embedded in VexStreamLibrarySurface, giving
  * the earned Queue semantic question one source neighborhood without changing its behavior.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VexStreamQueueContent(
     state: VexStreamMusicState,
