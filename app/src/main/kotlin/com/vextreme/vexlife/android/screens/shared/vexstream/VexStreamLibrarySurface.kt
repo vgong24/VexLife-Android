@@ -64,9 +64,13 @@ internal fun VexStreamLibrarySurface(
         playbackDisplayState
             .playback
     val resolver =
-        remember(context.filesDir) {
+        remember(
+            context.filesDir,
+            repository,
+        ) {
             VexStreamPlaybackSourceResolver(
                 context = context,
+                repository = repository,
             )
         }
 

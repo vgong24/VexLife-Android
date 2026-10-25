@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
+import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLibraryLoadState
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
@@ -126,9 +127,14 @@ class VexStreamLibraryRenderTest {
             vexStreamRuntime()
         val resolver =
             VexStreamPlaybackSourceResolver(
-                InstrumentationRegistry
-                    .getInstrumentation()
-                    .targetContext,
+                context =
+                    InstrumentationRegistry
+                        .getInstrumentation()
+                        .targetContext,
+                repository =
+                    InMemoryVexStreamMusicRepository(
+                        initialState = state,
+                    ),
             )
 
         compose.setContent {

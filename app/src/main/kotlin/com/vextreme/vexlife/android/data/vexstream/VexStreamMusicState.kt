@@ -234,6 +234,7 @@ data class VexStreamTrack(
     val title: String,
     val artist: String,
     val artworkUrl: String? = null,
+    val artworkRef: String? = null,
     val album: String = "",
     val genre: String = "",
     val year: String = "",
@@ -255,6 +256,16 @@ data class VexStreamTrack(
                 ),
         ) {
             "artworkUrl must be HTTPS when present"
+        }
+        require(
+            artworkRef == null ||
+                (
+                    artworkRef.isNotBlank() &&
+                        !artworkRef.contains('/') &&
+                        !artworkRef.contains('\\')
+                )
+        ) {
+            "artworkRef must be a non-blank opaque path segment when present"
         }
         require(durationSeconds >= 0.0) {
             "durationSeconds must be non-negative"

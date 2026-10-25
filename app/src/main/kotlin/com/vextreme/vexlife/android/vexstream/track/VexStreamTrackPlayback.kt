@@ -13,6 +13,7 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.android.asCoroutineDispatcher
@@ -80,6 +81,16 @@ internal fun interface VexStreamTrackMediaItemResolver {
     fun mediaItem(
         state: VexStreamTrackState,
     ): MediaItem?
+
+    /**
+     * Best-effort preparation for ancillary artwork before [mediaItem] publishes metadata.
+     *
+     * Ordinary resolver fixtures inherit the no-op. Production may cross its repository/network
+     * boundary here because Track execution already owns an IO worker.
+     */
+    suspend fun prepareArtwork(
+        state: VexStreamTrackState,
+    ) = Unit
 }
 
 /**
@@ -478,6 +489,13 @@ internal class VexStreamTrackPlaybackExecution(
     private suspend fun resolvePlayForExecution(
         intent: PlayIntent,
     ) {
+        prepareVexStreamTrackArtworkBestEffort(
+            resolver = resolver,
+            state =
+                intent.request
+                    .selected,
+        )
+
         val resolved =
             resolveVexStreamTrackPlay(
                 request =
@@ -512,6 +530,11 @@ internal class VexStreamTrackPlaybackExecution(
         request:
             VexStreamTrackQueueRequest,
     ) {
+        prepareVexStreamTrackArtworkBestEffort(
+            resolver = resolver,
+            state = request.track,
+        )
+
         val item =
             resolver.mediaItem(
                 request.track,
@@ -526,6 +549,21 @@ internal class VexStreamTrackPlaybackExecution(
                 item,
             )
         }
+    }
+}
+
+internal suspend fun prepareVexStreamTrackArtworkBestEffort(
+    resolver: VexStreamTrackMediaItemResolver,
+    state: VexStreamTrackState,
+) {
+    try {
+        resolver.prepareArtwork(
+            state,
+        )
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        // Artwork is ancillary. Playback source resolution must remain available.
     }
 }
 

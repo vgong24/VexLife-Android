@@ -12,9 +12,10 @@ import java.security.MessageDigest
  * Audio bytes keep their existing verified MediaStore owner. Artwork is ancillary presentation
  * data: a missing or corrupt artwork file must never invalidate an otherwise verified audio copy.
  *
- * One exact admitted HTTPS artwork source maps to one local asset. Multiple downloaded songs may
- * therefore share one album/cover file without duplicating the same image per MP3. The source digest
- * is a stable local association key, not a claim that the URL itself is immutable content identity.
+ * One exact admitted artwork source maps to one local asset. Existing external HTTPS sources keep
+ * their URL-derived cache identity; Desktop-embedded artwork uses its opaque paired-producer ref.
+ * Multiple tracks may share one source without duplicating the same image per MP3. The source digest
+ * is a stable local association key, not media identity and not an authorization credential.
  */
 class VexStreamArtworkStore(
     private val root: File,
@@ -119,6 +120,10 @@ class VexStreamArtworkStore(
             ?.let(
                 ::fileForArtworkUrl,
             )
+            ?: track.artworkRef
+                ?.let(
+                    ::fileForArtworkRef,
+                )
 
     /**
      * Resolves one already-persisted artwork asset directly from the admitted source URL.
@@ -143,6 +148,108 @@ class VexStreamArtworkStore(
             )
 
         return file.takeIf {
+            it.isFile &&
+                it.length() in
+                1L..maxBytes
+        }
+    }
+
+    /**
+     * Resolves one already-persisted embedded-artwork asset from its opaque producer ref.
+     *
+     * The ref is not a network URL and carries no credential. Fetching remains repository-owned.
+     */
+    fun fileForArtworkRef(
+        artworkRef: String,
+    ): File? {
+        if (
+            artworkRef.isBlank() ||
+            artworkRef.contains('/') ||
+            artworkRef.contains('\\')
+        ) {
+            return null
+        }
+
+        val file =
+            targetFileForArtworkRef(
+                artworkRef,
+            )
+
+        return file.takeIf {
+            it.isFile &&
+                it.length() in
+                1L..maxBytes
+        }
+    }
+
+    /**
+     * Resolves the current Media3 artwork URI without giving widget/presentation network authority.
+     *
+     * HTTPS continues to map through the admitted source URL. file:// is accepted only when it
+     * points directly at this store's own root.
+     */
+    fun fileForPlaybackArtworkUri(
+        artworkUri: String,
+    ): File? {
+        if (
+            artworkUri.startsWith(
+                "https://",
+            )
+        ) {
+            return fileForArtworkUrl(
+                artworkUri,
+            )
+        }
+        if (
+            !artworkUri.startsWith(
+                "file:",
+            )
+        ) {
+            return null
+        }
+
+        val requestedFile =
+            runCatching {
+                File(
+                    java.net.URI(
+                        artworkUri,
+                    ),
+                )
+            }.getOrNull()
+                ?: return null
+        val canonicalCandidate =
+            runCatching {
+                requestedFile.canonicalFile
+            }.getOrNull()
+                ?: return null
+        val canonicalRoot =
+            runCatching {
+                root.canonicalFile
+            }.getOrNull()
+                ?: return null
+
+        if (
+            canonicalCandidate.parentFile !=
+            canonicalRoot
+        ) {
+            return null
+        }
+
+        val ownedFile =
+            File(
+                root,
+                canonicalCandidate.name,
+            )
+        if (
+            runCatching {
+                ownedFile.canonicalFile
+            }.getOrNull() !=
+            canonicalCandidate
+        ) {
+            return null
+        }
+
+        return ownedFile.takeIf {
             it.isFile &&
                 it.length() in
                 1L..maxBytes
@@ -215,6 +322,10 @@ class VexStreamArtworkStore(
             ?.let(
                 ::targetFile,
             )
+            ?: track.artworkRef
+                ?.let(
+                    ::targetFileForArtworkRef,
+                )
 
     private fun targetFile(
         artworkUrl: String,
@@ -223,6 +334,18 @@ class VexStreamArtworkStore(
             root,
             sourceDigest(
                 artworkUrl,
+            ) +
+                ARTWORK_EXTENSION,
+        )
+
+    private fun targetFileForArtworkRef(
+        artworkRef: String,
+    ): File =
+        File(
+            root,
+            sourceDigest(
+                EMBEDDED_ARTWORK_KEY_PREFIX +
+                    artworkRef,
             ) +
                 ARTWORK_EXTENSION,
         )
@@ -271,6 +394,8 @@ class VexStreamArtworkStore(
 
         private const val ARTWORK_EXTENSION =
             ".artwork"
+        private const val EMBEDDED_ARTWORK_KEY_PREFIX =
+            "vexstream.embedded-artwork:"
 
         fun production(
             contextFilesDir: File,

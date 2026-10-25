@@ -310,6 +310,26 @@ class LoopbackVexStreamMusicRepository(
                         mediaByteLength = track.getLong("mediaByteLength"),
                         title = track.getString("title"),
                         artist = track.optString("artist"),
+                        artworkUrl =
+                            track.optString(
+                                "artworkUrl",
+                            )
+                                .trim()
+                                .takeIf {
+                                    it.startsWith(
+                                        "https://",
+                                    )
+                                },
+                        artworkRef =
+                            track.optString(
+                                "artworkRef",
+                            )
+                                .trim()
+                                .takeIf {
+                                    it.isNotBlank() &&
+                                        !it.contains('/') &&
+                                        !it.contains('\\')
+                                },
                         album = track.optString("album"),
                         genre = track.optString("genre"),
                         year = track.optString("year"),
