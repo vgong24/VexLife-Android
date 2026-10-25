@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -271,6 +272,7 @@ internal fun VexStreamMiniPlayer(
  * Now Playing and Queue are presentation modes inside one modal sheet. Playback, Queue and Repeat
  * remain independent semantic owners and Media3 remains the runtime/provider realization.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VexStreamFullPlayerSheet(
     state: com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState,
