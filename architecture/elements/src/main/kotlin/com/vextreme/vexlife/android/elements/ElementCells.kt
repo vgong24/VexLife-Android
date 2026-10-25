@@ -514,10 +514,10 @@ fun VexElementTree(
     handler: ElementActionHandler,
     modifier: Modifier = VexModifier,
     toggleChecked: (ToggleElement) -> Boolean = { false },
-    dynamicTextValue: (DynamicTextElement) -> String = { "" },
     textFieldValue: (TextFieldElement) -> String = { "" },
     onTextFieldValueChange: (TextFieldElement, String) -> Unit = { _, _ -> },
     selectedChild: (SwappableContainerElement) -> UIElement = { it.defaultChild },
+    dynamicTextValue: (DynamicTextElement) -> String = { "" },
 ) {
     val element = placement.element
     val style = registry.styleOf(element)
