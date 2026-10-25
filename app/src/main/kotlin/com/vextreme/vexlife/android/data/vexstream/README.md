@@ -540,10 +540,14 @@ Artwork remains ancillary to audio integrity. Its local file key is a digest of 
 artwork URL, so tracks that share one album/cover source also share one durable device asset instead
 of duplicating the image per MP3. That source key is an association address, not a claim that URL
 bytes are immutable content identity. Missing/failed artwork therefore never turns a verified audio
-copy into a failed download. Existing downloaded libraries backfill only a bounded number of distinct
-missing artwork sources per catalog refresh, rotating the bounded window so one failed source cannot
-permanently hide later covers. Artwork acquisition therefore cannot scale startup work with the full
-offline library size.
+copy into a failed download.
+
+Artwork acquisition is also outside the audio-download and catalog-refresh transactions. A
+session-owned `VexExecution` observes current Hub/catalog truth and runs the finite deduplicated
+artwork fill on the existing IO execution root. Existing large offline libraries may therefore walk
+their distinct missing cover sources in the background without adding image I/O to first draw,
+catalog publication, or the MP3 success path. The job checks cancellation between bounded requests
+and is force-stopped with the owning ViewModel.
 
 The app-private artwork store survives ordinary process/device restart but is intentionally removed by
 VexLife Clear Data/uninstall. The shared MediaStore audio object keeps its separate durability
