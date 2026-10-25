@@ -103,17 +103,36 @@ class VexStreamTrackPlaybackTest {
                 handle.awaitCompletion()
 
                 assertEquals(
-                    listOf(
-                        "vex-track-worker",
-                        "vex-track-worker",
-                    ),
-                    resolverThreads.toList(),
+                    2,
+                    resolverThreads.size,
+                )
+                assertTrue(
+                    resolverThreads.all {
+                        it.startsWith(
+                            "vex-track-worker",
+                        )
+                    },
                 )
                 assertEquals(
-                    listOf(
-                        "vex-media-provider",
-                    ),
-                    commitThreads.toList(),
+                    1,
+                    commitThreads.size,
+                )
+                assertTrue(
+                    commitThreads.all {
+                        it.startsWith(
+                            "vex-media-provider",
+                        )
+                    },
+                )
+                assertFalse(
+                    resolverThreads.any {
+                        workerThread ->
+                            commitThreads.any {
+                                providerThread ->
+                                workerThread ==
+                                    providerThread
+                            }
+                    },
                 )
                 assertEquals(
                     listOf(
