@@ -1,5 +1,11 @@
 package com.vextreme.vexlife.android.vexstream.track
 
+import androidx.media3.common.MediaItem
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
@@ -11,6 +17,122 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexStreamTrackPlaybackTest {
+    @Test
+    fun trackExecutionResolvesOnWorkerAndCommitsOnProviderDispatcher(): Unit =
+        runBlocking {
+            val workerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "vex-track-worker",
+                    )
+                }
+            val providerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "vex-media-provider",
+                    )
+                }
+            val workerDispatcher =
+                workerExecutor.asCoroutineDispatcher()
+            val providerDispatcher =
+                providerExecutor.asCoroutineDispatcher()
+            val root =
+                VexExecutionRoot(
+                    dispatcher =
+                        workerDispatcher,
+                )
+            val resolverThreads =
+                CopyOnWriteArrayList<String>()
+            val committedMediaIds =
+                CopyOnWriteArrayList<String>()
+            val commitThreads =
+                CopyOnWriteArrayList<String>()
+            val execution =
+                VexStreamTrackPlaybackExecution(
+                    root = root,
+                    providerDispatcher =
+                        providerDispatcher,
+                    resolver =
+                        VexStreamTrackMediaItemResolver { state ->
+                            resolverThreads +=
+                                Thread.currentThread().name
+                            MediaItem.Builder()
+                                .setMediaId(
+                                    state.track
+                                        .trackRef
+                                        .value,
+                                )
+                                .build()
+                        },
+                    commitPlay = { resolved ->
+                        commitThreads +=
+                            Thread.currentThread().name
+                        committedMediaIds +=
+                            resolved.items.map {
+                                it.mediaId
+                            }
+                        true
+                    },
+                    commitQueue = { _, _ ->
+                        true
+                    },
+                )
+            val alpha =
+                track(
+                    "track.alpha",
+                )
+            val beta =
+                track(
+                    "track.beta",
+                )
+
+            try {
+                val handle =
+                    execution.play(
+                        VexStreamTrackPlayRequest(
+                            selected = beta,
+                            contextTracks =
+                                listOf(
+                                    alpha,
+                                    beta,
+                                ),
+                        ),
+                    )
+                handle.awaitCompletion()
+
+                assertEquals(
+                    listOf(
+                        "vex-track-worker",
+                        "vex-track-worker",
+                    ),
+                    resolverThreads.toList(),
+                )
+                assertEquals(
+                    listOf(
+                        "vex-media-provider",
+                    ),
+                    commitThreads.toList(),
+                )
+                assertEquals(
+                    listOf(
+                        "track.alpha",
+                        "track.beta",
+                    ),
+                    committedMediaIds.toList(),
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+                workerDispatcher.close()
+                providerDispatcher.close()
+                workerExecutor.shutdownNow()
+                providerExecutor.shutdownNow()
+            }
+        }
+
     @Test
     fun playTargetFollowsResolvedContextInsteadOfRenderedIndex() {
         val alpha = track("track.alpha")
