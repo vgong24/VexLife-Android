@@ -347,6 +347,48 @@ WIDGET_OR_PLAYER != ARTWORK_SOURCE_OWNER
 
 Filesystem paths and non-HTTPS artwork references are not admitted into the mobile projection.
 
+## Full Player is one transient Now Playing / Queue surface
+
+The Android listening surface expands the accepted Mini Player into one full-height modal bottom
+sheet owned by VexStream Screen presentation state.
+
+~~~text
+Mini Player
+    -> FullPlayerSheet
+
+FullPlayerSheet / Now Playing
+    optional current artwork
+    title + artist
+    progress / seek
+    Previous / Play-Pause / Next
+    Shuffle / Repeat
+    broad horizontal swipe -> existing Queue Previous / Next
+
+FullPlayerSheet / Queue
+    current queue occurrences
+    play occurrence
+    adjacent reorder
+    shuffle / repeat / clear
+    return to Now Playing
+~~~
+
+Now Playing and Queue are presentation modes inside the same sheet, not a combined Player state
+machine. Playback, Queue and Repeat remain sibling owners. Horizontal player gestures resolve only to
+current Queue Previous/Next Controls; vertical row drag remains the existing typed Queue reorder
+request.
+
+The sheet is not another app Screen. Back/scrim/Close dismiss transient presentation and return to the
+VexStream library while `VexStreamPlaybackService` retains playback lifetime. Mini Player and Full
+Player may render the same Controls, but surface-specific presentation refs keep Journey/diagnostic
+identity unambiguous.
+
+~~~text
+FULL_PLAYER_SHEET != PLAYBACK_OWNER
+FULL_PLAYER_SHEET != QUEUE_OWNER
+FULL_PLAYER_SHEET != REPEAT_OWNER
+GESTURE != EFFECT
+~~~
+
 ## Playback and Queue are siblings, not one giant player State
 
 Playback asks:

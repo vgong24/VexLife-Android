@@ -1,7 +1,15 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
+import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
+import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexStreamPlaybackReadStateTest {
@@ -37,6 +45,128 @@ class VexStreamPlaybackReadStateTest {
     }
 
     @Test
+    fun fullPlayerSwipeMapsOnlyBroadHorizontalGesturesToQueueControls() {
+        assertEquals(
+            VexStreamQueueControl.Previous,
+            vexStreamFullPlayerSwipeControl(
+                dragDistancePx = 120f,
+                thresholdPx = 72f,
+            ),
+        )
+        assertEquals(
+            VexStreamQueueControl.Next,
+            vexStreamFullPlayerSwipeControl(
+                dragDistancePx = -120f,
+                thresholdPx = 72f,
+            ),
+        )
+        assertEquals(
+            null,
+            vexStreamFullPlayerSwipeControl(
+                dragDistancePx = 40f,
+                thresholdPx = 72f,
+            ),
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun fullPlayerSwipeRejectsNonPositiveThreshold() {
+        vexStreamFullPlayerSwipeControl(
+            dragDistancePx = 10f,
+            thresholdPx = 0f,
+        )
+    }
+
+    @Test
+    fun fullPlayerControlAddressDistinguishesExpandedSurfaceFromMiniPlayer() {
+        val ref =
+            VexStreamPresentationRefs.fullPlayerAction(
+                VexStreamMusicScreen.ShowQueue,
+            )
+
+        assertTrue(
+            ref.startsWith(
+                "element.vexstream-music.full-player.action.dynamic.utf8hex.",
+            ),
+        )
+        assertNotEquals(
+            VexStreamMusicScreen.ShowQueue.elementId,
+            ref,
+        )
+    }
+
+    @Test
+    fun fullPlayerSwipeAddressKeepsQueueControlMeaningExplicit() {
+        assertEquals(
+            "presentation.vexstream.full-player.swipe.previous",
+            VexStreamPresentationRefs.fullPlayerSwipe(
+                VexStreamQueueControl.Previous,
+            ),
+        )
+        assertEquals(
+            "presentation.vexstream.full-player.swipe.next",
+            VexStreamPresentationRefs.fullPlayerSwipe(
+                VexStreamQueueControl.Next,
+            ),
+        )
+    }
+
+    @Test
+    fun sharedPlaybackRefReusesAdmittedDownloadedTruthWhenIdentityStillMatches() {
+        val state =
+            playbackState(
+                localMediaRef =
+                    "content://media/external_primary/audio/media/42",
+            )
+
+        assertEquals(
+            "content://media/external_primary/audio/media/42",
+            vexStreamAdmittedSharedPlaybackRef(
+                state,
+            ),
+        )
+    }
+
+    @Test
+    fun sharedPlaybackRefRejectsMismatchedOrLegacyLocalIdentity() {
+        val matched =
+            playbackState(
+                localMediaRef =
+                    "content://media/external_primary/audio/media/42",
+            )
+
+        assertEquals(
+            null,
+            vexStreamAdmittedSharedPlaybackRef(
+                matched.copy(
+                    localCopy =
+                        (
+                            matched.localCopy as
+                                VexStreamLocalCopyState.Downloaded
+                        ).copy(
+                            byteLength =
+                                matched.track
+                                    .mediaByteLength +
+                                    1L,
+                        ),
+                ),
+            ),
+        )
+        assertEquals(
+            null,
+            vexStreamAdmittedSharedPlaybackRef(
+                playbackState(
+                    localMediaRef =
+                        "vexstream.local.sha256." +
+                            "a".repeat(
+                                64,
+                            ),
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun playbackTimeFormatsCompactPhoneDurations() {
         assertEquals(
             "0:00",
@@ -49,6 +179,46 @@ class VexStreamPlaybackReadStateTest {
         assertEquals(
             "1:01:01",
             formatVexStreamPlaybackTime(3_661_000L),
+        )
+    }
+    private fun playbackState(
+        localMediaRef: String,
+    ): VexStreamTrackState {
+        val digest =
+            VexStreamMediaSha256(
+                "a".repeat(
+                    64,
+                ),
+            )
+        val track =
+            VexStreamTrack(
+                trackRef =
+                    VexStreamTrackRef(
+                        "track.playback-ref",
+                    ),
+                mediaSha256 =
+                    digest,
+                mediaByteLength =
+                    4_096L,
+                title =
+                    "Playback ref",
+                artist =
+                    "Vex",
+            )
+        return VexStreamTrackState(
+            track =
+                track,
+            hubAvailable =
+                false,
+            localCopy =
+                VexStreamLocalCopyState.Downloaded(
+                    mediaSha256 =
+                        digest,
+                    byteLength =
+                        track.mediaByteLength,
+                    localMediaRef =
+                        localMediaRef,
+                ),
         )
     }
 }

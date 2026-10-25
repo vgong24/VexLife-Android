@@ -16,6 +16,7 @@ androidxTestExtJunit = "1.3.0"
 espresso = "3.7.0"
 androidxTestServices = "1.6.0"
 media3 = "1.11.1"
+coil = "3.6.3"
 glance = "1.2.0"
 maplibre = "13.5.3"
 valhallaMobile = "0.6.4"
@@ -53,6 +54,8 @@ androidxTestServices = { module = "androidx.test.services:test-services", versio
 media3Common = { module = "androidx.media3:media3-common", version.ref = "media3" }
 media3Exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 media3Session = { module = "androidx.media3:media3-session", version.ref = "media3" }
+coilCompose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coilNetworkOkhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 glance = { module = "androidx.glance:glance", version.ref = "glance" }
 glanceAppwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 maplibreAndroid = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }

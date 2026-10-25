@@ -112,7 +112,19 @@ object VexStreamJourneys : VexJourneyShard {
             behavesLike =
                 VexStreamMusicScreen.PlayTrack,
         )
-        tap(VexStreamMusicScreen.ShowQueue)
+        // Mini Player expands into one Full Player sheet. Queue is a presentation mode inside
+        // that same sheet rather than a second modal/player owner.
+        tap(
+            VexStreamMusicScreen.OpenFullPlayer,
+        )
+        tapElementById(
+            elementId =
+                VexStreamPresentationRefs.fullPlayerAction(
+                    VexStreamMusicScreen.ShowQueue,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.ShowQueue,
+        )
         assertVisibleById(
             VexStreamPresentationRefs.queueEntry(
                 VexStreamPresentationRefs.queueEntryKey(
@@ -132,7 +144,12 @@ object VexStreamJourneys : VexJourneyShard {
             behavesLike =
                 VexStreamMusicScreen.QueuePlay,
         )
-        tap(VexStreamMusicScreen.CloseQueue)
+        tap(
+            VexStreamMusicScreen.ShowNowPlaying,
+        )
+        tap(
+            VexStreamMusicScreen.CloseFullPlayer,
+        )
 
         tapElementById(
             elementId =
@@ -775,7 +792,59 @@ object VexStreamJourneys : VexJourneyShard {
     val sortFilterPlayback =
         sortFilterPlaybackFeatureWalk.journey
 
+    val fullPlayerQueue = vexJourney(
+        id = "full-player-queue",
+        title = "VexStream Full Player Now Playing and Queue",
+    ) {
+        start(HomeScreen)
+        tap(HomeScreen.ConnectVexStreamMusic)
+        tap(VexStreamMusicScreen.FindNearby)
+        tap(VexStreamMusicScreen.ConfirmPairingCode)
+
+        tapElementById(
+            elementId =
+                trackRowActionElementId(
+                    VexStreamMusicScreen.PlayTrack,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.PlayTrack,
+        )
+        tap(
+            VexStreamMusicScreen.OpenFullPlayer,
+        )
+        assertVisible(
+            VexStreamMusicScreen.FullPlayerSheet,
+        )
+        tapElementById(
+            elementId =
+                VexStreamPresentationRefs.fullPlayerAction(
+                    VexStreamMusicScreen.ShowQueue,
+                ),
+            behavesLike =
+                VexStreamMusicScreen.ShowQueue,
+        )
+        assertVisibleById(
+            VexStreamPresentationRefs.queueEntry(
+                VexStreamPresentationRefs.queueEntryKey(
+                    mediaId =
+                        VexStreamJourneyFixtures
+                            .TrackOne
+                            .value,
+                    occurrence = 1,
+                ),
+            ),
+        )
+        tap(
+            VexStreamMusicScreen.ShowNowPlaying,
+        )
+        tap(
+            VexStreamMusicScreen.CloseFullPlayer,
+        )
+        tap(AppShell.Elements.Back)
+    }
+
     override val journeys = listOf(
+        fullPlayerQueue,
         connectRefreshForget,
         manageLibraryDownloads,
         downloadAndRemove,

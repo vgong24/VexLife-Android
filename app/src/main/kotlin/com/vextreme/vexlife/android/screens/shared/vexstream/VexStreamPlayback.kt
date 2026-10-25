@@ -32,23 +32,34 @@ internal class VexStreamPlaybackSourceResolver(
             state.localCopy as? VexStreamLocalCopyState.Downloaded
 
         val uri =
-            localCopy
-                ?.let { copy ->
-                    mediaStore
-                        .fileForPlayback(
-                            copy,
-                        )
-                        ?.let(
-                            Uri::fromFile,
-                        )
-                        ?: mediaStore
-                            .contentUriForPlayback(
+            vexStreamAdmittedSharedPlaybackRef(
+                state,
+            )
+                ?.let(
+                    Uri::parse,
+                )
+                ?: localCopy
+                    ?.takeIf { copy ->
+                        copy.mediaSha256 ==
+                            state.track.mediaSha256 &&
+                            copy.byteLength ==
+                            state.track.mediaByteLength
+                    }
+                    ?.let { copy ->
+                        /*
+                         * Legacy app-private copies retain activation-time verification. Durable
+                         * shared MediaStore copies already crossed media-store verification before
+                         * the repository admitted Downloaded truth and therefore take the cheap
+                         * content-ref projection above.
+                         */
+                        mediaStore
+                            .fileForPlayback(
                                 copy,
                             )
                             ?.let(
-                                Uri::parse,
+                                Uri::fromFile,
                             )
-                }
+                    }
                 ?: if (state.hubAvailable) {
                     Uri.Builder()
                         .scheme("vexstream")
@@ -100,6 +111,41 @@ internal class VexStreamPlaybackSourceResolver(
             .setClippingConfiguration(clipping)
             .build()
     }
+}
+
+/**
+ * Cheap playback projection for current shared local truth.
+ *
+ * Downloaded is admitted only after the media-store owner has verified exact digest + byte length.
+ * Playback therefore reuses that admitted content reference when it still matches the current Track
+ * identity instead of re-querying/re-hashing the same shared object for every item on every Play.
+ *
+ * Legacy app-private refs deliberately return null so their existing activation-time verification
+ * path remains intact.
+ */
+internal fun vexStreamAdmittedSharedPlaybackRef(
+    state: VexStreamTrackState,
+): String? {
+    val localCopy =
+        state.localCopy as?
+            VexStreamLocalCopyState.Downloaded
+            ?: return null
+
+    if (
+        localCopy.mediaSha256 !=
+            state.track.mediaSha256 ||
+        localCopy.byteLength !=
+            state.track.mediaByteLength
+    ) {
+        return null
+    }
+
+    return localCopy.localMediaRef
+        .takeIf {
+            it.startsWith(
+                "content://",
+            )
+        }
 }
 
 internal fun formatVexStreamPlaybackTime(

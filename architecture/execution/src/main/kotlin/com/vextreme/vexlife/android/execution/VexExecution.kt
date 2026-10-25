@@ -7,7 +7,9 @@ import kotlin.reflect.KProperty0
 import kotlin.reflect.KSuspendFunction0
 import kotlin.reflect.KSuspendFunction1
 import kotlin.reflect.KSuspendFunction2
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 /**
  * Mandatory meta-pattern for Vex-owned coroutine execution.
@@ -151,6 +153,26 @@ abstract class VexExecution protected constructor(
             },
             onEach = onEach,
         )
+
+    /**
+     * Temporarily hands the current managed execution to a caller-owned dispatcher.
+     *
+     * This is a structured context switch inside the same VexCoroutineHandle, not a second launch
+     * surface and not a new execution identity. Use it when expensive preparation belongs on the
+     * root's worker dispatcher but the final provider commit has an exact thread/looper affinity.
+     *
+     * The caller remains responsible for choosing the rightful dispatcher. VexExecution does not
+     * assume that every "foreground" effect belongs to Dispatchers.Main.
+     */
+    protected suspend fun <Result> handoff(
+        dispatcher: CoroutineDispatcher,
+        action: suspend () -> Result,
+    ): Result =
+        withContext(
+            dispatcher,
+        ) {
+            action()
+        }
 
     protected fun forceStop(
         reference: KCallable<*>,
