@@ -552,7 +552,7 @@ internal class VexStreamTrackPlaybackExecution(
     }
 }
 
-private suspend fun prepareVexStreamTrackArtworkBestEffort(
+internal suspend fun prepareVexStreamTrackArtworkBestEffort(
     resolver: VexStreamTrackMediaItemResolver,
     state: VexStreamTrackState,
 ) {
