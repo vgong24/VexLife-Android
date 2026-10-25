@@ -382,21 +382,24 @@ internal fun VexStreamTrackCard(
                             .colorScheme
                             .surfaceContainerHigh,
                 ) {
-                    if (artworkModel != null) {
-                        AsyncImage(
-                            model = artworkModel,
-                            contentDescription = null,
-                            modifier =
-                                Modifier.fillMaxSize(),
-                            contentScale =
-                                ContentScale.Crop,
-                        )
-                    } else {
-                        VexBox(
-                            id = "artwork",
-                            contentAlignment =
-                                Alignment.Center,
-                        ) {
+                    VexBox(
+                        id = "artwork",
+                        modifier =
+                            VexModifier.fillMaxSize(),
+                        contentAlignment =
+                            Alignment.Center,
+                    ) {
+                        if (artworkModel != null) {
+                            AsyncImage(
+                                model = artworkModel,
+                                contentDescription =
+                                    null,
+                                modifier =
+                                    Modifier.fillMaxSize(),
+                                contentScale =
+                                    ContentScale.Crop,
+                            )
+                        } else {
                             VexIcon(
                                 icon =
                                     ElementIcon.Music,
