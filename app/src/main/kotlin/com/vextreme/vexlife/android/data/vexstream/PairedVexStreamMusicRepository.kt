@@ -3,7 +3,9 @@ package com.vextreme.vexlife.android.data.vexstream
 import android.content.Context
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.URL
 import java.net.URLEncoder
+import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +33,7 @@ class PairedVexStreamMusicRepository(
     private val offlineIndex: VexStreamOfflineIndex,
     private val connectionStore: VexStreamConnectionStore,
     private val nearbyDiscovery: VexStreamNearbyDiscovery,
+    private val artworkStore: VexStreamArtworkStore? = null,
 ) : VexStreamMusicRepository {
 
     private val operationMutex = Mutex()
@@ -417,6 +420,9 @@ class PairedVexStreamMusicRepository(
                 withContext(
                     Dispatchers.IO,
                 ) {
+                    cacheArtworkBestEffort(
+                        target.track,
+                    )
                     offlineIndex.persist(
                         mutableState.value,
                     )
@@ -488,6 +494,21 @@ class PairedVexStreamMusicRepository(
                 offlineIndex.persist(
                     mutableState.value,
                 )
+                val sameMediaStillDownloaded =
+                    mutableState.value
+                        .tracks
+                        .any { state ->
+                            state.track.mediaSha256 ==
+                                target.track.mediaSha256 &&
+                                state.localCopy is
+                                    VexStreamLocalCopyState.Downloaded
+                        }
+                if (!sameMediaStillDownloaded) {
+                    artworkStore
+                        ?.remove(
+                            target.track.mediaSha256,
+                        )
+                }
             }
 
             VexStreamRepositoryResult.Accepted(
@@ -659,6 +680,10 @@ class PairedVexStreamMusicRepository(
                 parseCatalog(
                     body,
                 )
+            val offlineBeforeRefresh =
+                offlineSnapshot(
+                    mutableState.value,
+                )
             val migrationChanged =
                 migrateRetainedPrivateCopies(
                     catalog,
@@ -709,10 +734,16 @@ class PairedVexStreamMusicRepository(
                             ),
                     )
 
+            val offlineAfterRefresh =
+                offlineSnapshot(
+                    nextState,
+                )
             if (
                 migrationChanged ||
                 rediscoveredLocalCopies
-                    .isNotEmpty()
+                    .isNotEmpty() ||
+                offlineBeforeRefresh !=
+                    offlineAfterRefresh
             ) {
                 offlineIndex.persist(
                     nextState,
@@ -724,6 +755,10 @@ class PairedVexStreamMusicRepository(
             // recovery index is rebuilt.
             mutableState.value =
                 nextState
+
+            backfillDownloadedArtworkBestEffort(
+                nextState,
+            )
 
             VexStreamRepositoryResult.Accepted()
         } catch (_: Exception) {
@@ -1147,6 +1182,9 @@ class PairedVexStreamMusicRepository(
                             trackRef,
                             stored.localCopy,
                         )
+                        cacheArtworkBestEffort(
+                            target.track,
+                        )
                         if (
                             !offlineIndex.persist(
                                 mutableState.value,
@@ -1337,6 +1375,205 @@ class PairedVexStreamMusicRepository(
             method = method,
             token = connection.token,
         )
+
+    private fun backfillDownloadedArtworkBestEffort(
+        state: VexStreamMusicState,
+    ) {
+        val store =
+            artworkStore
+                ?: return
+
+        state.tracks
+            .asSequence()
+            .filter {
+                it.localCopy is
+                    VexStreamLocalCopyState.Downloaded
+            }
+            .map {
+                it.track
+            }
+            .filter {
+                it.artworkUrl != null &&
+                    store.fileFor(
+                        it,
+                    ) == null
+            }
+            .take(
+                ARTWORK_BACKFILL_BATCH_SIZE,
+            )
+            .forEach(
+                ::cacheArtworkBestEffort,
+            )
+    }
+
+    /**
+     * Artwork is a best-effort companion to verified audio, never a download-integrity predicate.
+     *
+     * Only HTTPS sources admitted by [VexStreamTrack] are followed, redirects may not downgrade
+     * transport, response bytes stay bounded, and any failure leaves the verified audio copy intact.
+     */
+    private fun cacheArtworkBestEffort(
+        track: VexStreamTrack,
+    ) {
+        val store =
+            artworkStore
+                ?: return
+        if (
+            track.artworkUrl == null ||
+            store.fileFor(
+                track,
+            ) != null
+        ) {
+            return
+        }
+
+        runCatching {
+            var current =
+                URL(
+                    track.artworkUrl,
+                )
+
+            for (
+                redirectCount in
+                0..ARTWORK_MAX_REDIRECTS
+            ) {
+                if (
+                    !current.protocol.equals(
+                        "https",
+                        ignoreCase = true,
+                    )
+                ) {
+                    return@runCatching
+                }
+
+                val connection =
+                    current.openConnection()
+                        as? HttpsURLConnection
+                        ?: return@runCatching
+                try {
+                    connection.instanceFollowRedirects =
+                        false
+                    connection.connectTimeout =
+                        ARTWORK_CONNECT_TIMEOUT_MS
+                    connection.readTimeout =
+                        ARTWORK_READ_TIMEOUT_MS
+                    connection.requestMethod =
+                        "GET"
+                    connection.setRequestProperty(
+                        "Accept",
+                        "image/*",
+                    )
+
+                    when (
+                        val status =
+                            connection.responseCode
+                    ) {
+                        HttpURLConnection.HTTP_MOVED_PERM,
+                        HttpURLConnection.HTTP_MOVED_TEMP,
+                        HttpURLConnection.HTTP_SEE_OTHER,
+                        HTTP_TEMPORARY_REDIRECT,
+                        HTTP_PERMANENT_REDIRECT,
+                        -> {
+                            if (
+                                redirectCount ==
+                                ARTWORK_MAX_REDIRECTS
+                            ) {
+                                return@runCatching
+                            }
+
+                            val location =
+                                connection
+                                    .getHeaderField(
+                                        "Location",
+                                    )
+                                    ?.trim()
+                                    ?.takeIf {
+                                        it.isNotBlank()
+                                    }
+                                    ?: return@runCatching
+                            current =
+                                URL(
+                                    current,
+                                    location,
+                                )
+                            if (
+                                !current.protocol.equals(
+                                    "https",
+                                    ignoreCase = true,
+                                )
+                            ) {
+                                return@runCatching
+                            }
+                            continue
+                        }
+
+                        HttpURLConnection.HTTP_OK -> Unit
+
+                        else ->
+                            return@runCatching
+                    }
+
+                    val contentType =
+                        connection.contentType
+                            ?.substringBefore(
+                                ';',
+                            )
+                            ?.trim()
+                            ?.lowercase()
+                    if (
+                        contentType == null ||
+                        !contentType.startsWith(
+                            "image/",
+                        )
+                    ) {
+                        return@runCatching
+                    }
+
+                    val advertisedLength =
+                        connection.contentLengthLong
+                    if (
+                        advertisedLength == 0L ||
+                        advertisedLength >
+                        VexStreamArtworkStore
+                            .MAX_ARTWORK_BYTES
+                    ) {
+                        return@runCatching
+                    }
+
+                    connection.inputStream
+                        .use { input ->
+                            store.store(
+                                track = track,
+                                input = input,
+                            )
+                        }
+                    return@runCatching
+                } finally {
+                    connection.disconnect()
+                }
+            }
+        }
+    }
+
+    private fun offlineSnapshot(
+        state: VexStreamMusicState,
+    ): List<
+        Pair<
+            VexStreamTrack,
+            VexStreamLocalCopyState.Downloaded,
+        >
+    > =
+        state.tracks
+            .mapNotNull { item ->
+                val local =
+                    item.localCopy as?
+                        VexStreamLocalCopyState.Downloaded
+                        ?: return@mapNotNull null
+                item.track to local
+            }
+            .sortedBy {
+                it.first.mediaSha256.value
+            }
 
     private fun updateLocalCopy(
         trackRef: VexStreamTrackRef,
@@ -1601,6 +1838,12 @@ class PairedVexStreamMusicRepository(
         private const val PAIRING_POLL_MS = 750L
         private const val PAIRING_APPROVAL_TIMEOUT_MS = 5 * 60 * 1000L
         private const val RECONNECT_DISCOVERY_TIMEOUT_MS = 8_000L
+        private const val ARTWORK_BACKFILL_BATCH_SIZE = 4
+        private const val ARTWORK_MAX_REDIRECTS = 3
+        private const val ARTWORK_CONNECT_TIMEOUT_MS = 2_000
+        private const val ARTWORK_READ_TIMEOUT_MS = 3_000
+        private const val HTTP_TEMPORARY_REDIRECT = 307
+        private const val HTTP_PERMANENT_REDIRECT = 308
 
         fun production(
             context: Context,
@@ -1624,6 +1867,10 @@ class PairedVexStreamMusicRepository(
                 nearbyDiscovery =
                     VexStreamNearbyDiscovery(
                         context,
+                    ),
+                artworkStore =
+                    VexStreamArtworkStore.production(
+                        context.filesDir,
                     ),
             )
         }
