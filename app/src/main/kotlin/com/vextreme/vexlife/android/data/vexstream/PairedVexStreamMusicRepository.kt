@@ -40,6 +40,7 @@ class PairedVexStreamMusicRepository(
 
     private val operationMutex = Mutex()
     private val restoreMutex = Mutex()
+    private var artworkBackfillOffset = 0
     private var persistedStateRestored = false
     private val remoteTransport =
         VexStreamRemoteTransport(
@@ -77,12 +78,72 @@ class PairedVexStreamMusicRepository(
                         it.artworkUrl
                     }
 
-            candidates.forEach { track ->
+            if (candidates.isEmpty()) {
+                artworkBackfillOffset =
+                    0
+                store.pruneTo(
+                    downloadedTracks(
+                        mutableState.value,
+                    ),
+                )
+                return@withContext
+            }
+
+            val startOffset =
+                artworkBackfillOffset %
+                    candidates.size
+            var consecutiveFailures =
+                0
+
+            repeat(
+                candidates.size,
+            ) { attempt ->
                 currentCoroutineContext()
                     .ensureActive()
-                cacheArtworkBestEffort(
-                    track,
-                )
+
+                if (
+                    mutableState.value
+                        .hubState !is
+                    VexStreamHubState.Ready
+                ) {
+                    return@withContext
+                }
+
+                val index =
+                    (
+                        startOffset +
+                            attempt
+                    ) %
+                        candidates.size
+                val track =
+                    candidates[
+                        index
+                    ]
+
+                artworkBackfillOffset =
+                    (
+                        index +
+                            1
+                    ) %
+                        candidates.size
+
+                if (
+                    cacheArtworkBestEffort(
+                        track,
+                    )
+                ) {
+                    consecutiveFailures =
+                        0
+                } else {
+                    consecutiveFailures +=
+                        1
+                    if (
+                        consecutiveFailures >=
+                        ARTWORK_BACKFILL_CONSECUTIVE_FAILURE_LIMIT
+                    ) {
+                        return@withContext
+                    }
+                }
             }
 
             currentCoroutineContext()
@@ -1419,20 +1480,24 @@ class PairedVexStreamMusicRepository(
      */
     private fun cacheArtworkBestEffort(
         track: VexStreamTrack,
-    ) {
+    ): Boolean {
         val store =
             artworkStore
-                ?: return
+                ?: return false
         if (
-            track.artworkUrl == null ||
+            track.artworkUrl == null
+        ) {
+            return false
+        }
+        if (
             store.fileFor(
                 track,
             ) != null
         ) {
-            return
+            return true
         }
 
-        runCatching {
+        return runCatching {
             var current =
                 URL(
                     track.artworkUrl,
@@ -1448,13 +1513,13 @@ class PairedVexStreamMusicRepository(
                         ignoreCase = true,
                     )
                 ) {
-                    return@runCatching
+                    return@runCatching false
                 }
 
                 val connection =
                     current.openConnection()
                         as? HttpsURLConnection
-                        ?: return@runCatching
+                        ?: return@runCatching false
                 try {
                     connection.instanceFollowRedirects =
                         false
@@ -1482,7 +1547,7 @@ class PairedVexStreamMusicRepository(
                                 redirectCount ==
                                 ARTWORK_MAX_REDIRECTS
                             ) {
-                                return@runCatching
+                                return@runCatching false
                             }
 
                             val location =
@@ -1494,7 +1559,7 @@ class PairedVexStreamMusicRepository(
                                     ?.takeIf {
                                         it.isNotBlank()
                                     }
-                                    ?: return@runCatching
+                                    ?: return@runCatching false
                             current =
                                 URL(
                                     current,
@@ -1506,15 +1571,16 @@ class PairedVexStreamMusicRepository(
                                     ignoreCase = true,
                                 )
                             ) {
-                                return@runCatching
+                                return@runCatching false
                             }
                             continue
                         }
 
-                        HttpURLConnection.HTTP_OK -> Unit
+                        HttpURLConnection.HTTP_OK ->
+                            Unit
 
                         else ->
-                            return@runCatching
+                            return@runCatching false
                     }
 
                     val contentType =
@@ -1530,7 +1596,7 @@ class PairedVexStreamMusicRepository(
                             "image/",
                         )
                     ) {
-                        return@runCatching
+                        return@runCatching false
                     }
 
                     val advertisedLength =
@@ -1541,22 +1607,26 @@ class PairedVexStreamMusicRepository(
                         VexStreamArtworkStore
                             .MAX_ARTWORK_BYTES
                     ) {
-                        return@runCatching
+                        return@runCatching false
                     }
 
-                    connection.inputStream
+                    return@runCatching connection
+                        .inputStream
                         .use { input ->
                             store.store(
                                 track = track,
                                 input = input,
-                            )
+                            ) != null
                         }
-                    return@runCatching
                 } finally {
                     connection.disconnect()
                 }
             }
-        }
+
+            false
+        }.getOrDefault(
+            false,
+        )
     }
 
     private fun downloadedTracks(
@@ -1857,6 +1927,7 @@ class PairedVexStreamMusicRepository(
         private const val PAIRING_POLL_MS = 750L
         private const val PAIRING_APPROVAL_TIMEOUT_MS = 5 * 60 * 1000L
         private const val RECONNECT_DISCOVERY_TIMEOUT_MS = 8_000L
+        private const val ARTWORK_BACKFILL_CONSECUTIVE_FAILURE_LIMIT = 3
         private const val ARTWORK_MAX_REDIRECTS = 3
         private const val ARTWORK_CONNECT_TIMEOUT_MS = 2_000
         private const val ARTWORK_READ_TIMEOUT_MS = 3_000
