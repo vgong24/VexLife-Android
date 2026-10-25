@@ -7,10 +7,12 @@ import androidx.compose.runtime.remember
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.execution.VexCoroutineHandle
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.android.asCoroutineDispatcher
 
@@ -146,9 +148,15 @@ internal class Media3VexStreamTrackPlaybackConnection(
     private val execution by lazy {
         VexStreamTrackPlaybackExecution(
             root = executionRoot,
-            controller = controller,
+            providerDispatcher =
+                Handler(
+                    controller.applicationLooper,
+                ).asCoroutineDispatcher(
+                    "VexStream Media3",
+                ),
             resolver = resolver,
-            connection = this,
+            commitPlay = ::commitPlay,
+            commitQueue = ::commitQueue,
         )
     }
 
@@ -171,9 +179,11 @@ internal class Media3VexStreamTrackPlaybackConnection(
             return false
         }
 
-        return execution.play(
-            request,
-        )
+        return runCatching {
+            execution.play(
+                request,
+            )
+        }.isSuccess
     }
 
     override fun isQueueAvailable(
@@ -193,9 +203,11 @@ internal class Media3VexStreamTrackPlaybackConnection(
             return false
         }
 
-        return execution.queue(
-            request,
-        )
+        return runCatching {
+            execution.queue(
+                request,
+            )
+        }.isSuccess
     }
 
     internal fun commitPlay(
@@ -346,43 +358,38 @@ internal class Media3VexStreamTrackPlaybackConnection(
     }
 }
 
-private class VexStreamTrackPlaybackExecution(
+internal class VexStreamTrackPlaybackExecution(
     root: VexExecutionRoot,
-    controller: MediaController,
+    private val providerDispatcher:
+        CoroutineDispatcher,
     private val resolver:
         VexStreamTrackMediaItemResolver,
-    private val connection:
-        Media3VexStreamTrackPlaybackConnection,
+    private val commitPlay:
+        (ResolvedTrackPlay) -> Boolean,
+    private val commitQueue:
+        (
+            VexStreamTrackQueueRequest,
+            MediaItem,
+        ) -> Boolean,
 ) :
     VexExecution(
         root,
     ) {
-    private val providerDispatcher =
-        Handler(
-            controller.applicationLooper,
-        ).asCoroutineDispatcher(
-            "VexStream Media3",
-        )
-
     fun play(
         request: VexStreamTrackPlayRequest,
-    ): Boolean =
-        runCatching {
-            launchOnce(
-                ::playForExecution,
-                request,
-            )
-        }.isSuccess
+    ): VexCoroutineHandle =
+        launchOnce(
+            ::playForExecution,
+            request,
+        )
 
     fun queue(
         request: VexStreamTrackQueueRequest,
-    ): Boolean =
-        runCatching {
-            launchOnce(
-                ::queueForExecution,
-                request,
-            )
-        }.isSuccess
+    ): VexCoroutineHandle =
+        launchOnce(
+            ::queueForExecution,
+            request,
+        )
 
     private suspend fun playForExecution(
         request: VexStreamTrackPlayRequest,
@@ -397,7 +404,7 @@ private class VexStreamTrackPlaybackExecution(
         handoff(
             providerDispatcher,
         ) {
-            connection.commitPlay(
+            commitPlay(
                 resolved,
             )
         }
@@ -415,15 +422,15 @@ private class VexStreamTrackPlaybackExecution(
         handoff(
             providerDispatcher,
         ) {
-            connection.commitQueue(
-                request = request,
-                item = item,
+            commitQueue(
+                request,
+                item,
             )
         }
     }
 }
 
-private fun resolveVexStreamTrackPlay(
+internal fun resolveVexStreamTrackPlay(
     request: VexStreamTrackPlayRequest,
     resolver: VexStreamTrackMediaItemResolver,
 ): ResolvedTrackPlay? {
@@ -449,7 +456,7 @@ private fun resolveVexStreamTrackPlay(
     )
 }
 
-private data class ResolvedTrackPlay(
+internal data class ResolvedTrackPlay(
     val items: List<MediaItem>,
     val selectedIndex: Int,
 )
