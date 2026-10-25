@@ -208,13 +208,18 @@ class VexStreamArtworkStore(
             return null
         }
 
-        val candidate =
+        val requestedFile =
             runCatching {
                 File(
                     java.net.URI(
                         artworkUri,
                     ),
-                ).canonicalFile
+                )
+            }.getOrNull()
+                ?: return null
+        val canonicalCandidate =
+            runCatching {
+                requestedFile.canonicalFile
             }.getOrNull()
                 ?: return null
         val canonicalRoot =
@@ -224,13 +229,27 @@ class VexStreamArtworkStore(
                 ?: return null
 
         if (
-            candidate.parentFile !=
+            canonicalCandidate.parentFile !=
             canonicalRoot
         ) {
             return null
         }
 
-        return candidate.takeIf {
+        val ownedFile =
+            File(
+                root,
+                canonicalCandidate.name,
+            )
+        if (
+            runCatching {
+                ownedFile.canonicalFile
+            }.getOrNull() !=
+            canonicalCandidate
+        ) {
+            return null
+        }
+
+        return ownedFile.takeIf {
             it.isFile &&
                 it.length() in
                 1L..maxBytes
