@@ -5,8 +5,10 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import com.vextreme.vexlife.android.data.vexstream.VexStreamArtworkStore
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaStore
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackMediaItemResolver
 
@@ -18,12 +20,28 @@ import com.vextreme.vexlife.android.vexstream.track.VexStreamTrackMediaItemResol
  */
 internal class VexStreamPlaybackSourceResolver(
     context: Context,
+    private val repository: VexStreamMusicRepository,
 ) :
     VexStreamTrackMediaItemResolver {
     private val mediaStore =
         VexStreamMediaStore.production(
             context = context,
         )
+    private val artworkStore =
+        VexStreamArtworkStore.production(
+            context.filesDir,
+        )
+
+    override suspend fun prepareArtwork(
+        state: VexStreamTrackState,
+    ) {
+        repository.preparePlaybackArtwork(
+            trackRef =
+                state.track.trackRef,
+            expectedMediaSha256 =
+                state.track.mediaSha256,
+        )
+    }
 
     override fun mediaItem(
         state: VexStreamTrackState,
@@ -87,6 +105,20 @@ internal class VexStreamPlaybackSourceResolver(
                 }
                 .build()
 
+        val artworkUri =
+            artworkStore
+                .fileFor(
+                    state.track,
+                )
+                ?.let(
+                    Uri::fromFile,
+                )
+                ?: state.track
+                    .artworkUrl
+                    ?.let(
+                        Uri::parse,
+                    )
+
         return MediaItem.Builder()
             .setMediaId(state.track.trackRef.value)
             .setUri(uri)
@@ -97,14 +129,9 @@ internal class VexStreamPlaybackSourceResolver(
                     .setArtist(state.track.artist)
                     .setAlbumTitle(state.track.album)
                     .apply {
-                        state.track.artworkUrl
-                            ?.let { artworkUrl ->
-                                setArtworkUri(
-                                    Uri.parse(
-                                        artworkUrl,
-                                    ),
-                                )
-                            }
+                        artworkUri?.let(
+                            ::setArtworkUri,
+                        )
                     }
                     .build(),
             )
