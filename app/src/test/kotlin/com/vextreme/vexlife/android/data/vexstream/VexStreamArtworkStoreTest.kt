@@ -61,6 +61,43 @@ class VexStreamArtworkStoreTest {
     }
 
     @Test
+    fun persistedArtworkCanBeResolvedDirectlyFromItsAdmittedSourceUrl() {
+        withStore { store ->
+            val artworkUrl =
+                "https://images.example.test/widget-cover.jpg"
+            val track =
+                track(
+                    digest =
+                        "d".repeat(
+                            64,
+                        ),
+                    artworkUrl =
+                        artworkUrl,
+                )
+            val stored =
+                requireNotNull(
+                    store.store(
+                        track,
+                        ByteArrayInputStream(
+                            byteArrayOf(
+                                7,
+                                8,
+                                9,
+                            ),
+                        ),
+                    ),
+                )
+
+            assertEquals(
+                stored,
+                store.fileForArtworkUrl(
+                    artworkUrl,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun sameArtworkSourceIsSharedAcrossDifferentDownloadedMedia() {
         withStore { store ->
             val artworkUrl =
