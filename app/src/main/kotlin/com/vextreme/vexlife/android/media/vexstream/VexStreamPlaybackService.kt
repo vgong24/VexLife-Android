@@ -1,10 +1,14 @@
 package com.vextreme.vexlife.android.media.vexstream
 
+import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
+import kotlinx.coroutines.Dispatchers
 
 /**
  * Android-native owner for VexStream audio playback lifetime.
@@ -15,6 +19,31 @@ import androidx.media3.session.MediaSessionService
  */
 class VexStreamPlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
+    private val widgetExecutionRoot =
+        VexExecutionRoot(
+            dispatcher =
+                Dispatchers.Default,
+        )
+    private val widgetUpdateExecution by
+        lazy {
+            VexStreamPlaybackWidgetUpdateExecution(
+                root =
+                    widgetExecutionRoot,
+                context =
+                    applicationContext,
+            )
+        }
+    private val widgetPlayerListener =
+        object :
+            Player.Listener {
+            override fun onEvents(
+                player: Player,
+                events: Player.Events,
+            ) {
+                widgetUpdateExecution
+                    .requestUpdate()
+            }
+        }
 
     override fun onCreate() {
         super.onCreate()
@@ -39,11 +68,18 @@ class VexStreamPlaybackService : MediaSessionService() {
                 )
                 .build()
 
+        player.addListener(
+            widgetPlayerListener,
+        )
+
         mediaSession =
             MediaSession.Builder(
                 this,
                 player,
             ).build()
+
+        widgetUpdateExecution
+            .requestUpdate()
     }
 
     override fun onGetSession(
@@ -53,10 +89,18 @@ class VexStreamPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         mediaSession?.let { session ->
+            session.player
+                .removeListener(
+                    widgetPlayerListener,
+                )
             session.player.release()
             session.release()
         }
         mediaSession = null
+        widgetExecutionRoot
+            .forceStopAll(
+                "VexStream PlaybackService destroyed",
+            )
 
         super.onDestroy()
     }

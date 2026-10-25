@@ -70,6 +70,7 @@ dependencies {
     implementation(project(":architecture:execution"))
     implementation(project(":architecture:logging"))
     implementation(project(":architecture:relay"))
+    implementation(project(":architecture:widget"))
 
     implementation(libs.activityCompose)
     implementation(platform(libs.composeBom))
@@ -79,6 +80,8 @@ dependencies {
     implementation(libs.composeUiToolingPreview)
     implementation(libs.coilCompose)
     implementation(libs.coilNetworkOkhttp)
+    implementation(libs.glance)
+    implementation(libs.glanceAppwidget)
     debugImplementation(libs.composeUiTooling)
     debugImplementation(libs.composeUiTestManifest)
 

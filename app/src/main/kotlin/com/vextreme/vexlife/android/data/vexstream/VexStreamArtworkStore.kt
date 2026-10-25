@@ -114,10 +114,33 @@ class VexStreamArtworkStore(
 
     fun fileFor(
         track: VexStreamTrack,
+    ): File? =
+        track.artworkUrl
+            ?.let(
+                ::fileForArtworkUrl,
+            )
+
+    /**
+     * Resolves one already-persisted artwork asset directly from the admitted source URL.
+     *
+     * Widget/playback projections may know the current Media3 artwork URI without reconstructing a
+     * full [VexStreamTrack]. This remains a read-only lookup; it never fetches or creates artwork.
+     */
+    fun fileForArtworkUrl(
+        artworkUrl: String,
     ): File? {
+        if (
+            !artworkUrl.startsWith(
+                "https://",
+            )
+        ) {
+            return null
+        }
+
         val file =
-            targetFile(track)
-                ?: return null
+            targetFile(
+                artworkUrl,
+            )
 
         return file.takeIf {
             it.isFile &&
@@ -190,15 +213,19 @@ class VexStreamArtworkStore(
     ): File? =
         track.artworkUrl
             ?.let(
-                ::sourceDigest,
+                ::targetFile,
             )
-            ?.let { digest ->
-                File(
-                    root,
-                    digest +
-                        ARTWORK_EXTENSION,
-                )
-            }
+
+    private fun targetFile(
+        artworkUrl: String,
+    ): File =
+        File(
+            root,
+            sourceDigest(
+                artworkUrl,
+            ) +
+                ARTWORK_EXTENSION,
+        )
 
     private fun sourceDigest(
         artworkUrl: String,
