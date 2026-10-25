@@ -7,7 +7,9 @@ import java.net.URL
 import java.net.URLEncoder
 import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,22 +63,30 @@ class PairedVexStreamMusicRepository(
         withContext(
             Dispatchers.IO,
         ) {
-            downloadedTracks(
-                mutableState.value,
-            )
-                .filter {
-                    it.artworkUrl != null &&
-                        store.fileFor(
-                            it,
-                        ) == null
-                }
-                .distinctBy {
-                    it.artworkUrl
-                }
-                .forEach(
-                    ::cacheArtworkBestEffort,
+            val candidates =
+                downloadedTracks(
+                    mutableState.value,
                 )
+                    .filter {
+                        it.artworkUrl != null &&
+                            store.fileFor(
+                                it,
+                            ) == null
+                    }
+                    .distinctBy {
+                        it.artworkUrl
+                    }
 
+            candidates.forEach { track ->
+                currentCoroutineContext()
+                    .ensureActive()
+                cacheArtworkBestEffort(
+                    track,
+                )
+            }
+
+            currentCoroutineContext()
+                .ensureActive()
             store.pruneTo(
                 downloadedTracks(
                     mutableState.value,
