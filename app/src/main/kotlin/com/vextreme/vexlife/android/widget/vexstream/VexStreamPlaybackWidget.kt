@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.widget.vexstream
 
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Handler
@@ -16,6 +15,8 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.Text
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.appWidgetBackground
@@ -87,6 +88,12 @@ internal data class VexStreamPlaybackWidgetProjection(
     val showPause: Boolean,
     val nextEnabled: Boolean,
 ) : VexWidgetProjection
+
+private val VexStreamWidgetDestinationKey =
+    ActionParameters.Key<String>(
+        MainActivity
+            .VEXSTREAM_WIDGET_DESTINATION_EXTRA,
+    )
 
 internal object VexStreamPlaybackWidgetActions {
     val Previous =
@@ -275,22 +282,15 @@ internal object VexStreamPlaybackWidget :
     ) {
         val context =
             LocalContext.current
-        val contentIntent =
-            Intent(
-                context,
-                MainActivity::class.java,
-            ).apply {
-                action =
-                    MainActivity
-                        .ACTION_OPEN_VEXSTREAM_FULL_PLAYER
-                addFlags(
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP,
-                )
-            }
         val contentAction =
-            actionStartActivity(
-                contentIntent,
+            actionStartActivity<
+                MainActivity
+            >(
+                actionParametersOf(
+                    VexStreamWidgetDestinationKey to
+                        MainActivity
+                            .VEXSTREAM_WIDGET_DESTINATION_FULL_PLAYER,
+                ),
             )
         val primaryText =
             TextStyle(
