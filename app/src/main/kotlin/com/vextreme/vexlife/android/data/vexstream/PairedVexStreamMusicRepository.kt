@@ -87,7 +87,7 @@ class PairedVexStreamMusicRepository(
                 artworkBackfillOffset =
                     0
                 store.pruneTo(
-                    downloadedTracks(
+                    artworkReferencedTracks(
                         mutableState.value,
                     ),
                 )
@@ -154,7 +154,7 @@ class PairedVexStreamMusicRepository(
             currentCoroutineContext()
                 .ensureActive()
             store.pruneTo(
-                downloadedTracks(
+                artworkReferencedTracks(
                     mutableState.value,
                 ),
             )
@@ -881,17 +881,12 @@ class PairedVexStreamMusicRepository(
             mutableState.value =
                 nextState
 
-            if (
-                offlineBeforeRefresh !=
-                offlineAfterRefresh
-            ) {
-                artworkStore
-                    ?.pruneTo(
-                        downloadedTracks(
-                            nextState,
-                        ),
-                    )
-            }
+            artworkStore
+                ?.pruneTo(
+                    artworkReferencedTracks(
+                        nextState,
+                    ),
+                )
 
             VexStreamRepositoryResult.Accepted()
         } catch (_: Exception) {
@@ -1769,6 +1764,18 @@ class PairedVexStreamMusicRepository(
             false,
         )
     }
+
+    private fun artworkReferencedTracks(
+        state: VexStreamMusicState,
+    ): List<VexStreamTrack> =
+        state.tracks
+            .map {
+                it.track
+            }
+            .filter {
+                it.artworkUrl != null ||
+                    it.artworkRef != null
+            }
 
     private fun downloadedTracks(
         state: VexStreamMusicState,
