@@ -4,6 +4,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.UIElement
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 
 /**
  * One current VexStream track-presentation neighborhood.
@@ -61,6 +62,12 @@ internal object VexStreamPresentationRefs {
 
     const val QueueList =
         "element.vexstream-music.queue.entries"
+
+    const val FullPlayerArtwork =
+        "presentation.vexstream.full-player.artwork"
+
+    const val FullPlayerGestureRegion =
+        "presentation.vexstream.full-player.gesture-region"
 
     private const val OrganizationArtistPrefix =
         "element.vexstream-music.organization.artist"
@@ -193,6 +200,27 @@ internal object VexStreamPresentationRefs {
             instanceRef = stableKey,
         )
     }
+
+    fun fullPlayerAction(
+        action: ActionElement,
+    ): String {
+        val uiElement =
+            action as? UIElement
+                ?: error("ActionElement must also be a UIElement")
+
+        return dynamicRef(
+            ownerRef =
+                "element.vexstream-music.full-player.action",
+            instanceRef =
+                uiElement.elementId,
+        )
+    }
+
+    fun fullPlayerSwipe(
+        control: VexStreamQueueControl,
+    ): String =
+        "presentation.vexstream.full-player.swipe." +
+            control.name.lowercase()
 
     fun organizationArtistOption(
         artist: String,

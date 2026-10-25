@@ -1,7 +1,10 @@
 package com.vextreme.vexlife.android.screens.shared.vexstream
 
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexStreamPlaybackReadStateTest {
@@ -33,6 +36,73 @@ class VexStreamPlaybackReadStateTest {
                 durationMs = 0L,
             ).progressFraction,
             0.0001f,
+        )
+    }
+
+    @Test
+    fun fullPlayerSwipeMapsOnlyBroadHorizontalGesturesToQueueControls() {
+        assertEquals(
+            VexStreamQueueControl.Previous,
+            vexStreamFullPlayerSwipeControl(
+                dragDistancePx = 120f,
+                thresholdPx = 72f,
+            ),
+        )
+        assertEquals(
+            VexStreamQueueControl.Next,
+            vexStreamFullPlayerSwipeControl(
+                dragDistancePx = -120f,
+                thresholdPx = 72f,
+            ),
+        )
+        assertEquals(
+            null,
+            vexStreamFullPlayerSwipeControl(
+                dragDistancePx = 40f,
+                thresholdPx = 72f,
+            ),
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun fullPlayerSwipeRejectsNonPositiveThreshold() {
+        vexStreamFullPlayerSwipeControl(
+            dragDistancePx = 10f,
+            thresholdPx = 0f,
+        )
+    }
+
+    @Test
+    fun fullPlayerControlAddressDistinguishesExpandedSurfaceFromMiniPlayer() {
+        val ref =
+            VexStreamPresentationRefs.fullPlayerAction(
+                VexStreamMusicScreen.ShowQueue,
+            )
+
+        assertTrue(
+            ref.startsWith(
+                "element.vexstream-music.full-player.action.dynamic.utf8hex.",
+            ),
+        )
+        assertNotEquals(
+            VexStreamMusicScreen.ShowQueue.elementId,
+            ref,
+        )
+    }
+
+    @Test
+    fun fullPlayerSwipeAddressKeepsQueueControlMeaningExplicit() {
+        assertEquals(
+            "presentation.vexstream.full-player.swipe.previous",
+            VexStreamPresentationRefs.fullPlayerSwipe(
+                VexStreamQueueControl.Previous,
+            ),
+        )
+        assertEquals(
+            "presentation.vexstream.full-player.swipe.next",
+            VexStreamPresentationRefs.fullPlayerSwipe(
+                VexStreamQueueControl.Next,
+            ),
         )
     }
 

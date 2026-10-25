@@ -321,11 +321,16 @@ internal fun VexStreamLibrarySurface(
         }
     }
 
-    if (runtime.presentation.isOpen(VexStreamMusicScreen.QueueSheet)) {
-        VexStreamQueueSheet(
+    if (
+        runtime.presentation.isOpen(
+            VexStreamMusicScreen.FullPlayerSheet,
+        ) &&
+        playbackExperience != null
+    ) {
+        VexStreamFullPlayerSheet(
             state = state,
-            playback = playback,
             controller = controller,
+            playbackExperience = playbackExperience,
             runtime = runtime,
         )
     }
