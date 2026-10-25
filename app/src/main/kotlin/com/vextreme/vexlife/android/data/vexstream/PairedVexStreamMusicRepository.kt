@@ -1472,8 +1472,7 @@ class PairedVexStreamMusicRepository(
                         HttpURLConnection.HTTP_MOVED_TEMP,
                         HttpURLConnection.HTTP_SEE_OTHER,
                         HTTP_TEMPORARY_REDIRECT,
-                        HTTP_PERMANENT_REDIRECT,
-                        -> {
+                        HTTP_PERMANENT_REDIRECT -> {
                             if (
                                 redirectCount ==
                                 ARTWORK_MAX_REDIRECTS
