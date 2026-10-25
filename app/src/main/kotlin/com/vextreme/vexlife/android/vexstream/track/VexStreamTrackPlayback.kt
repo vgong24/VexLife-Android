@@ -1,12 +1,24 @@
 package com.vextreme.vexlife.android.vexstream.track
 
+import android.os.Handler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.execution.VexCoroutineHandle
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.android.asCoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
  * Request to play one exact rendered Track inside the ordered Track context the listener acted on.
@@ -98,29 +110,65 @@ internal interface VexStreamTrackPlaybackConnection {
 internal fun rememberVexStreamTrackPlaybackConnection(
     controller: MediaController?,
     resolver: VexStreamTrackMediaItemResolver?,
-): VexStreamTrackPlaybackConnection? =
-    remember(
-        controller,
-        resolver,
-    ) {
-        if (
-            controller == null ||
-            resolver == null
+): VexStreamTrackPlaybackConnection? {
+    val connection =
+        remember(
+            controller,
+            resolver,
         ) {
-            null
-        } else {
-            Media3VexStreamTrackPlaybackConnection(
-                controller = controller,
-                resolver = resolver,
-            )
+            if (
+                controller == null ||
+                resolver == null
+            ) {
+                null
+            } else {
+                Media3VexStreamTrackPlaybackConnection(
+                    controller = controller,
+                    resolver = resolver,
+                )
+            }
+        }
+
+    DisposableEffect(
+        connection,
+    ) {
+        onDispose {
+            connection?.shutdown()
         }
     }
+
+    return connection
+}
 
 internal class Media3VexStreamTrackPlaybackConnection(
     private val controller: MediaController,
     private val resolver: VexStreamTrackMediaItemResolver,
 ) :
     VexStreamTrackPlaybackConnection {
+    private val executionRoot =
+        VexExecutionRoot(
+            dispatcher = Dispatchers.IO,
+        )
+    private val executionDelegate =
+        lazy {
+            VexStreamTrackPlaybackExecution(
+            root = executionRoot,
+            providerDispatcher =
+                Handler(
+                    controller.applicationLooper,
+                ).asCoroutineDispatcher(
+                    "VexStream Media3",
+                ),
+            resolver = resolver,
+            commitPlay = ::commitPlay,
+                commitQueue = ::commitQueue,
+            )
+        }
+    private val execution:
+        VexStreamTrackPlaybackExecution
+        get() =
+            executionDelegate.value
+
     override fun isPlayAvailable(
         request: VexStreamTrackPlayRequest,
     ): Boolean =
@@ -129,15 +177,47 @@ internal class Media3VexStreamTrackPlaybackConnection(
         ) &&
             playCommandsAvailable()
 
+    /**
+     * Admits the human Play request immediately, then performs source resolution under managed IO
+     * execution. Media3 mutation is handed back only to the controller's application looper.
+     */
     override fun play(
         request: VexStreamTrackPlayRequest,
     ): Boolean {
-        val resolved =
-            resolvePlay(
-                request,
-            )
-                ?: return false
+        if (!isPlayAvailable(request)) {
+            return false
+        }
 
+        return execution.play(
+            request,
+        )
+    }
+
+    override fun isQueueAvailable(
+        request: VexStreamTrackQueueRequest,
+    ): Boolean =
+        vexStreamTrackSourceProjectedAvailable(
+            request.track,
+        ) &&
+            queueTarget(
+                request,
+            ) != null
+
+    override fun queue(
+        request: VexStreamTrackQueueRequest,
+    ): Boolean {
+        if (!isQueueAvailable(request)) {
+            return false
+        }
+
+        return execution.queue(
+            request,
+        )
+    }
+
+    internal fun commitPlay(
+        resolved: ResolvedTrackPlay,
+    ): Boolean {
         if (
             !playCommandsAvailable()
         ) {
@@ -162,74 +242,40 @@ internal class Media3VexStreamTrackPlaybackConnection(
         return true
     }
 
-    override fun isQueueAvailable(
+    internal fun commitQueue(
         request: VexStreamTrackQueueRequest,
-    ): Boolean =
-        vexStreamTrackSourceProjectedAvailable(
-            request.track,
-        ) &&
-            queueTarget(
-                request,
-            ) != null
-
-    override fun queue(
-        request: VexStreamTrackQueueRequest,
+        item: MediaItem,
     ): Boolean {
-        val resolved =
-            resolveQueue(
+        return when (
+            val target = queueTarget(
                 request,
             )
                 ?: return false
-
-        when (
-            val target = resolved.target
         ) {
             VexStreamTrackQueueTarget.StartPlayback -> {
                 controller.setMediaItem(
-                    resolved.item,
+                    item,
                 )
                 controller.prepare()
                 controller.play()
+                true
             }
 
-            is VexStreamTrackQueueTarget.Insert ->
+            is VexStreamTrackQueueTarget.Insert -> {
                 controller.addMediaItem(
                     target.index,
-                    resolved.item,
+                    item,
                 )
+                true
+            }
 
-            VexStreamTrackQueueTarget.Append ->
+            VexStreamTrackQueueTarget.Append -> {
                 controller.addMediaItem(
-                    resolved.item,
+                    item,
                 )
+                true
+            }
         }
-
-        return true
-    }
-
-    private fun resolvePlay(
-        request: VexStreamTrackPlayRequest,
-    ): ResolvedTrackPlay? {
-        val items =
-            request.contextTracks
-                .mapNotNull(
-                    resolver::mediaItem,
-                )
-
-        val selectedIndex =
-            vexStreamTrackPlayTargetIndex(
-                request = request,
-                resolvedMediaIds =
-                    items.map {
-                        it.mediaId
-                    },
-            )
-                ?: return null
-
-        return ResolvedTrackPlay(
-            items = items,
-            selectedIndex = selectedIndex,
-        )
     }
 
     private fun playCommandsAvailable(): Boolean =
@@ -253,27 +299,6 @@ internal class Media3VexStreamTrackPlaybackConnection(
                     Player.COMMAND_SET_SHUFFLE_MODE,
                 ),
         )
-
-    private fun resolveQueue(
-        request: VexStreamTrackQueueRequest,
-    ): ResolvedTrackQueue? {
-        val item =
-            resolver.mediaItem(
-                request.track,
-            )
-                ?: return null
-
-        val target =
-            queueTarget(
-                request,
-            )
-                ?: return null
-
-        return ResolvedTrackQueue(
-            item = item,
-            target = target,
-        )
-    }
 
     private fun queueTarget(
         request: VexStreamTrackQueueRequest,
@@ -330,16 +355,209 @@ internal class Media3VexStreamTrackPlaybackConnection(
                 ),
         )
     }
+
+    fun shutdown() {
+        if (executionDelegate.isInitialized()) {
+            execution.shutdown()
+        }
+        executionRoot.forceStopAll(
+            "VexStream Track playback presentation disposed",
+        )
+    }
 }
 
-private data class ResolvedTrackPlay(
+internal class VexStreamTrackPlaybackExecution(
+    root: VexExecutionRoot,
+    private val providerDispatcher:
+        CoroutineDispatcher,
+    private val resolver:
+        VexStreamTrackMediaItemResolver,
+    private val commitPlay:
+        (ResolvedTrackPlay) -> Boolean,
+    private val commitQueue:
+        (
+            VexStreamTrackQueueRequest,
+            MediaItem,
+        ) -> Boolean,
+) :
+    VexExecution(
+        root,
+    ) {
+    private data class PlayIntent(
+        val sequence: Long,
+        val request:
+            VexStreamTrackPlayRequest,
+    )
+
+    private val playSequence =
+        AtomicLong(
+            0L,
+        )
+    private val playRequests =
+        Channel<PlayIntent>(
+            capacity =
+                Channel.CONFLATED,
+        )
+    private val queueRequests =
+        Channel<
+            VexStreamTrackQueueRequest
+        >(
+            capacity =
+                Channel.UNLIMITED,
+        )
+
+    init {
+        launchForCollect(
+            source =
+                ::playRequestsForExecution,
+            restartOnSourceFailure =
+                false,
+        ) { intent ->
+            resolvePlayForExecution(
+                intent,
+            )
+        }
+        launchForCollect(
+            source =
+                ::queueRequestsForExecution,
+            restartOnSourceFailure =
+                false,
+        ) { request ->
+            resolveQueueForExecution(
+                request,
+            )
+        }
+    }
+
+    /**
+     * Play is a selection intent. While source preparation is running, a newer Play replaces any
+     * pending selection and prevents the superseded preparation from committing to Media3.
+     */
+    fun play(
+        request: VexStreamTrackPlayRequest,
+    ): Boolean {
+        val intent =
+            PlayIntent(
+                sequence =
+                    playSequence.incrementAndGet(),
+                request =
+                    request,
+            )
+        return playRequests
+            .trySend(
+                intent,
+            )
+            .isSuccess
+    }
+
+    /**
+     * Queue actions are additive intent, not selection. Preserve every admitted request in order.
+     */
+    fun queue(
+        request: VexStreamTrackQueueRequest,
+    ): Boolean =
+        queueRequests
+            .trySend(
+                request,
+            )
+            .isSuccess
+
+    fun shutdown() {
+        playRequests.close()
+        queueRequests.close()
+    }
+
+    private fun playRequestsForExecution():
+        Flow<PlayIntent> =
+        playRequests.receiveAsFlow()
+
+    private fun queueRequestsForExecution():
+        Flow<VexStreamTrackQueueRequest> =
+        queueRequests.receiveAsFlow()
+
+    private suspend fun resolvePlayForExecution(
+        intent: PlayIntent,
+    ) {
+        val resolved =
+            resolveVexStreamTrackPlay(
+                request =
+                    intent.request,
+                resolver =
+                    resolver,
+            )
+                ?: return
+
+        if (
+            playSequence.get() !=
+            intent.sequence
+        ) {
+            return
+        }
+
+        handoff(
+            providerDispatcher,
+        ) {
+            if (
+                playSequence.get() ==
+                intent.sequence
+            ) {
+                commitPlay(
+                    resolved,
+                )
+            }
+        }
+    }
+
+    private suspend fun resolveQueueForExecution(
+        request:
+            VexStreamTrackQueueRequest,
+    ) {
+        val item =
+            resolver.mediaItem(
+                request.track,
+            )
+                ?: return
+
+        handoff(
+            providerDispatcher,
+        ) {
+            commitQueue(
+                request,
+                item,
+            )
+        }
+    }
+}
+
+internal fun resolveVexStreamTrackPlay(
+    request: VexStreamTrackPlayRequest,
+    resolver: VexStreamTrackMediaItemResolver,
+): ResolvedTrackPlay? {
+    val items =
+        request.contextTracks
+            .mapNotNull(
+                resolver::mediaItem,
+            )
+
+    val selectedIndex =
+        vexStreamTrackPlayTargetIndex(
+            request = request,
+            resolvedMediaIds =
+                items.map {
+                    it.mediaId
+                },
+        )
+            ?: return null
+
+    return ResolvedTrackPlay(
+        items = items,
+        selectedIndex = selectedIndex,
+    )
+}
+
+internal data class ResolvedTrackPlay(
     val items: List<MediaItem>,
     val selectedIndex: Int,
-)
-
-private data class ResolvedTrackQueue(
-    val item: MediaItem,
-    val target: VexStreamTrackQueueTarget,
 )
 
 internal fun vexStreamTrackPlayTargetIndex(
@@ -363,8 +581,10 @@ internal fun vexStreamTrackPlayTargetIndex(
  * Cheap presentation projection only.
  *
  * This intentionally does not verify local bytes. Local-file digest verification and final source
- * resolution remain activation-time work in [VexStreamTrackMediaItemResolver], so list composition
- * never hashes media merely to decide whether an action should look available.
+ * resolution remain activation-time work in [VexStreamTrackMediaItemResolver], but Track activation
+ * now runs that blocking preparation under VexExecution on IO rather than inside the Compose input
+ * callback. List composition therefore stays cheap and Media3 mutation remains on its provider
+ * looper.
  */
 internal fun vexStreamTrackSourceProjectedAvailable(
     state: VexStreamTrackState,

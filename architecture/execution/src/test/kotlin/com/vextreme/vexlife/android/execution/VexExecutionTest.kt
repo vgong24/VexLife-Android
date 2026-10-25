@@ -1,9 +1,12 @@
 package com.vextreme.vexlife.android.execution
 
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -115,9 +118,19 @@ class VexExecutionTest {
             }
     }
 
+    private data class HandoffCapture(
+        val workerThread:
+            CompletableDeferred<String>,
+        val providerThread:
+            CompletableDeferred<String>,
+    )
+
     private class TestExecution(
         root: VexExecutionRoot,
         private val repository: TestRepository,
+        private val handoffDispatcher:
+            CoroutineDispatcher? =
+            null,
     ) : VexExecution(root) {
         fun runOnce(): VexCoroutineHandle =
             launchOnce(repository::once)
@@ -130,6 +143,31 @@ class VexExecutionTest {
 
         fun runStructured(): VexCoroutineHandle =
             launchOnce(repository::structuredWork)
+
+        fun runHandoff(
+            capture: HandoffCapture,
+        ): VexCoroutineHandle =
+            launchOnce(
+                ::handoffForExecution,
+                capture,
+            )
+
+        private suspend fun handoffForExecution(
+            capture: HandoffCapture,
+        ) {
+            capture.workerThread.complete(
+                Thread.currentThread().name,
+            )
+            handoff(
+                requireNotNull(
+                    handoffDispatcher,
+                ),
+            ) {
+                capture.providerThread.complete(
+                    Thread.currentThread().name,
+                )
+            }
+        }
 
         fun observeStates(
             values: MutableList<Int>,
@@ -248,6 +286,98 @@ class VexExecutionTest {
                 assertEquals(4, repository.argumentTotal)
             } finally {
                 root.joinStopAll("test complete")
+            }
+        }
+
+    @Test
+    fun handoffSwitchesProviderContextWithoutCreatingAnotherExecution(): Unit =
+        runBlocking {
+            val workerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "vex-worker",
+                    )
+                }
+            val providerExecutor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(
+                        runnable,
+                        "vex-provider",
+                    )
+                }
+            val workerDispatcher =
+                workerExecutor.asCoroutineDispatcher()
+            val providerDispatcher =
+                providerExecutor.asCoroutineDispatcher()
+            val root =
+                VexExecutionRoot(
+                    dispatcher =
+                        workerDispatcher,
+                )
+            val execution =
+                TestExecution(
+                    root = root,
+                    repository =
+                        TestRepository(),
+                    handoffDispatcher =
+                        providerDispatcher,
+                )
+            val capture =
+                HandoffCapture(
+                    workerThread =
+                        CompletableDeferred(),
+                    providerThread =
+                        CompletableDeferred(),
+                )
+
+            try {
+                val handle =
+                    execution.runHandoff(
+                        capture,
+                    )
+                handle.awaitCompletion()
+
+                val workerThread =
+                    capture.workerThread.await()
+                val providerThread =
+                    capture.providerThread.await()
+
+                assertTrue(
+                    workerThread.startsWith(
+                        "vex-worker",
+                    ),
+                )
+                assertTrue(
+                    providerThread.startsWith(
+                        "vex-provider",
+                    ),
+                )
+                assertFalse(
+                    workerThread ==
+                        providerThread,
+                )
+                assertEquals(
+                    VexCoroutineStatus.COMPLETED,
+                    handle.state.value.status,
+                )
+                assertEquals(
+                    1,
+                    root.executions.value
+                        .keys
+                        .count {
+                            it ==
+                                handle.ref
+                        },
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+                workerDispatcher.close()
+                providerDispatcher.close()
+                workerExecutor.shutdownNow()
+                providerExecutor.shutdownNow()
             }
         }
 
