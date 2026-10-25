@@ -73,8 +73,25 @@ object VexStreamMusicScreen : AppScreenBlueprint(
 
     val PlayerSection = columnRef("body.player")
 
-    val QueueSheet = modalBottomSheetRef(
-        id = "body.queue.sheet",
+    val FullPlayerSheet = modalBottomSheetRef(
+        id = "body.player.sheet",
+    )
+
+    val FullPlayerNowPlayingPanel = columnRef(
+        "body.player.sheet.content.now-playing",
+    )
+
+    /**
+     * Preserves the already-addressed Queue presentation neighborhood while moving its visual host
+     * inside FullPlayerSheet. Queue semantics remain owned by vexstream/queue.
+     */
+    val QueuePanel = columnRef(
+        "body.queue.sheet",
+    )
+
+    val FullPlayerContent = swappableRef(
+        id = "body.player.sheet.content",
+        defaultChild = FullPlayerNowPlayingPanel,
     )
 
     val SearchSheet = modalBottomSheetRef(
@@ -542,12 +559,48 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         intent = localEffect(),
     )
 
+    val OpenFullPlayer = buttonRef(
+        id = "body.player.open",
+        labelRes = R.string.vexstream_music_now_playing,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Music,
+        intent =
+            swapTo(
+                container = FullPlayerContent,
+                child = FullPlayerNowPlayingPanel,
+            ).then(
+                open(
+                    FullPlayerSheet,
+                ),
+            ),
+    )
+
     val ShowQueue = buttonRef(
         id = "body.player.queue.show",
         labelRes = R.string.vexstream_music_queue,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Queue,
-        intent = open(QueueSheet),
+        intent =
+            swapTo(
+                container = FullPlayerContent,
+                child = QueuePanel,
+            ).then(
+                open(
+                    FullPlayerSheet,
+                ),
+            ),
+    )
+
+    val ShowNowPlaying = buttonRef(
+        id = "body.queue.sheet.now-playing",
+        labelRes = R.string.vexstream_music_now_playing,
+        style = VexElementStyles.Navigation,
+        icon = ElementIcon.Music,
+        intent =
+            swapTo(
+                container = FullPlayerContent,
+                child = FullPlayerNowPlayingPanel,
+            ),
     )
 
     val CloseQueue = buttonRef(
@@ -555,7 +608,15 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         labelRes = R.string.close,
         style = VexElementStyles.SecondaryAction,
         icon = ElementIcon.Close,
-        intent = close(QueueSheet),
+        intent = close(FullPlayerSheet),
+    )
+
+    val CloseFullPlayer = buttonRef(
+        id = "body.player.sheet.close",
+        labelRes = R.string.close,
+        style = VexElementStyles.SecondaryAction,
+        icon = ElementIcon.Close,
+        intent = close(FullPlayerSheet),
     )
 
     override val content = layout {
@@ -620,6 +681,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 element = PlayerSection,
                 style = VexElementStyles.RaisedSurface,
             ) {
+                button(OpenFullPlayer)
                 button(SeekPlayback)
 
                 row("controls") {
@@ -630,13 +692,20 @@ object VexStreamMusicScreen : AppScreenBlueprint(
                 }
             }
 
-            modalBottomSheet(QueueSheet) {
-                button(QueueShuffle)
-                button(ToggleRepeat)
-                button(ClearQueue)
-                button(QueuePlay)
-                button(QueueReorder)
-                button(CloseQueue)
+            modalBottomSheet(FullPlayerSheet) {
+                swappable(FullPlayerContent) {
+                    column(FullPlayerNowPlayingPanel) {}
+                    column(QueuePanel) {
+                        button(QueueShuffle)
+                        button(ToggleRepeat)
+                        button(ClearQueue)
+                        button(QueuePlay)
+                        button(QueueReorder)
+                        button(ShowNowPlaying)
+                        button(CloseQueue)
+                    }
+                }
+                button(CloseFullPlayer)
             }
 
             modalBottomSheet(SearchSheet) {
