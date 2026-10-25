@@ -24,7 +24,7 @@ import androidx.glance.appwidget.background
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.updateAll
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.action.actionStartActivity
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
