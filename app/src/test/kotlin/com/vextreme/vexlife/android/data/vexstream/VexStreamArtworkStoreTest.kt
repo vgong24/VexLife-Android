@@ -401,7 +401,7 @@ class VexStreamArtworkStoreTest {
                         ),
                     artworkUrl = null,
                     artworkRef =
-                        "https://images.example.test/same-label.jpg",
+                        "track.same-label",
                 )
 
             val externalFile =
