@@ -39,7 +39,6 @@ import androidx.glance.layout.width
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.MainActivity
@@ -294,7 +293,7 @@ internal object VexStreamPlaybackWidget :
         val primaryText =
             TextStyle(
                 color =
-                    ColorProvider(
+                    androidx.glance.color.ColorProvider(
                         day =
                             Color(
                                 0xFF181818,
@@ -310,7 +309,7 @@ internal object VexStreamPlaybackWidget :
         val secondaryText =
             TextStyle(
                 color =
-                    ColorProvider(
+                    androidx.glance.color.ColorProvider(
                         day =
                             Color(
                                 0xFF5A5A5A,
@@ -394,7 +393,7 @@ internal object VexStreamPlaybackWidget :
                         style =
                             TextStyle(
                                 color =
-                                    ColorProvider(
+                                    androidx.glance.color.ColorProvider(
                                         day =
                                             Color(
                                                 0xFF5A5A5A,
@@ -574,7 +573,7 @@ private fun VexStreamWidgetControl(
                         if (
                             enabled
                         ) {
-                            ColorProvider(
+                            androidx.glance.color.ColorProvider(
                                 day =
                                     Color(
                                         0xFF181818,
@@ -585,7 +584,7 @@ private fun VexStreamWidgetControl(
                                     ),
                             )
                         } else {
-                            ColorProvider(
+                            androidx.glance.color.ColorProvider(
                                 day =
                                     Color(
                                         0xFFAAAAAA,
