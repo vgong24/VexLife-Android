@@ -60,12 +60,23 @@ import com.vextreme.vexlife.android.widget.VexWidgetProjection
 import com.vextreme.vexlife.android.widget.vexWidgetActionParameters
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.withContext
+
+private data class VexStreamPlaybackWidgetProviderRead(
+    val title: String,
+    val artist: String,
+    val artworkUrl: String?,
+    val previousEnabled: Boolean,
+    val playPauseEnabled: Boolean,
+    val showPause: Boolean,
+    val nextEnabled: Boolean,
+)
 
 internal data class VexStreamPlaybackWidgetProjection(
     val title: String,
@@ -140,100 +151,122 @@ internal object VexStreamPlaybackWidget :
                 R.string.vexstream_music_title,
             )
 
-        return withVexStreamWidgetController(
-            context,
-        ) { controller ->
-            val playbackConnection =
-                Media3VexStreamPlaybackConnection(
-                    controller,
-                )
-            try {
-                val playbackProjection =
-                    playbackConnection
-                        .projections
-                        .value
-                val queueProjection =
-                    Media3VexStreamQueueConnection(
+        val providerRead =
+            withVexStreamWidgetController(
+                context,
+            ) { controller ->
+                val playbackConnection =
+                    Media3VexStreamPlaybackConnection(
                         controller,
-                    ).currentProjection
-                val current =
-                    controller
-                        .currentMediaItem
-                val metadata =
-                    current
-                        ?.mediaMetadata
-                val playPause =
-                    playbackProjection[
-                        VexStreamPlaybackControl.PlayPause
-                    ]
-                val artwork =
-                    metadata
-                        ?.artworkUri
-                        ?.toString()
-                        ?.takeIf {
-                            it.startsWith(
-                                "https://",
-                            )
-                        }
-                        ?.let { artworkUrl ->
-                            VexStreamArtworkStore
-                                .production(
-                                    context.filesDir,
-                                )
-                                .fileForArtworkUrl(
-                                    artworkUrl,
-                                )
-                        }
-                        ?.let(
-                            ::decodeWidgetArtwork,
-                        )
+                    )
+                try {
+                    val playbackProjection =
+                        playbackConnection
+                            .projections
+                            .value
+                    val queueProjection =
+                        Media3VexStreamQueueConnection(
+                            controller,
+                        ).currentProjection
+                    val metadata =
+                        controller
+                            .currentMediaItem
+                            ?.mediaMetadata
+                    val playPause =
+                        playbackProjection[
+                            VexStreamPlaybackControl.PlayPause
+                        ]
 
-                VexStreamPlaybackWidgetProjection(
-                    title =
-                        metadata
-                            ?.title
-                            ?.toString()
-                            ?.takeIf {
-                                it.isNotBlank()
-                            }
-                            ?: fallbackTitle,
-                    artist =
-                        metadata
-                            ?.artist
-                            ?.toString()
-                            .orEmpty(),
-                    artwork =
-                        artwork,
-                    previousEnabled =
-                        queueProjection[
-                            VexStreamQueueControl.Previous
-                        ].isAvailable,
-                    playPauseEnabled =
-                        playPause
-                            .isAvailable,
-                    showPause =
-                        playPause
-                            .act is
-                            VexStreamPlaybackAct.Pause,
-                    nextEnabled =
-                        queueProjection[
-                            VexStreamQueueControl.Next
-                        ].isAvailable,
-                )
-            } finally {
-                playbackConnection
-                    .close()
+                    VexStreamPlaybackWidgetProviderRead(
+                        title =
+                            metadata
+                                ?.title
+                                ?.toString()
+                                ?.takeIf {
+                                    it.isNotBlank()
+                                }
+                                ?: fallbackTitle,
+                        artist =
+                            metadata
+                                ?.artist
+                                ?.toString()
+                                .orEmpty(),
+                        artworkUrl =
+                            metadata
+                                ?.artworkUri
+                                ?.toString()
+                                ?.takeIf {
+                                    it.startsWith(
+                                        "https://",
+                                    )
+                                },
+                        previousEnabled =
+                            queueProjection[
+                                VexStreamQueueControl.Previous
+                            ].isAvailable,
+                        playPauseEnabled =
+                            playPause
+                                .isAvailable,
+                        showPause =
+                            playPause
+                                .act is
+                                VexStreamPlaybackAct.Pause,
+                        nextEnabled =
+                            queueProjection[
+                                VexStreamQueueControl.Next
+                            ].isAvailable,
+                    )
+                } finally {
+                    playbackConnection
+                        .close()
+                }
             }
-        }
-            ?: VexStreamPlaybackWidgetProjection(
-                title = fallbackTitle,
-                artist = "",
-                artwork = null,
-                previousEnabled = false,
-                playPauseEnabled = false,
-                showPause = false,
-                nextEnabled = false,
-            )
+                ?: return VexStreamPlaybackWidgetProjection(
+                    title = fallbackTitle,
+                    artist = "",
+                    artwork = null,
+                    previousEnabled = false,
+                    playPauseEnabled = false,
+                    showPause = false,
+                    nextEnabled = false,
+                )
+
+        val artwork =
+            withContext(
+                Dispatchers.IO,
+            ) {
+                providerRead
+                    .artworkUrl
+                    ?.let { artworkUrl ->
+                        VexStreamArtworkStore
+                            .production(
+                                context.filesDir,
+                            )
+                            .fileForArtworkUrl(
+                                artworkUrl,
+                            )
+                    }
+                    ?.let(
+                        ::decodeWidgetArtwork,
+                    )
+            }
+
+        return VexStreamPlaybackWidgetProjection(
+            title =
+                providerRead.title,
+            artist =
+                providerRead.artist,
+            artwork =
+                artwork,
+            previousEnabled =
+                providerRead.previousEnabled,
+            playPauseEnabled =
+                providerRead.playPauseEnabled,
+            showPause =
+                providerRead.showPause,
+            nextEnabled =
+                providerRead.nextEnabled,
+        )
     }
 
     @Composable
@@ -573,7 +606,8 @@ private fun VexStreamWidgetControl(
 
 class VexStreamPlaybackWidgetReceiver :
     GlanceAppWidgetReceiver() {
-    override val glanceAppWidget =
+    override val glanceAppWidget:
+        androidx.glance.appwidget.GlanceAppWidget =
         VexStreamPlaybackWidget
 }
 
@@ -649,10 +683,9 @@ internal class VexStreamPlaybackWidgetUpdateExecution(
             source =
                 ::requestsForExecution,
         ) {
-            VexStreamPlaybackWidget
-                .updateAll(
-                    context,
-                )
+            updateVexStreamPlaybackWidgets(
+                context,
+            )
         }
     }
 
@@ -717,12 +750,29 @@ private suspend fun <
                 controller,
             )
         }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
     } catch (_: Exception) {
         null
     } finally {
         MediaController.releaseFuture(
             controllerFuture,
         )
+    }
+}
+
+internal suspend fun updateVexStreamPlaybackWidgets(
+    context: Context,
+) {
+    try {
+        VexStreamPlaybackWidget
+            .updateAll(
+                context.applicationContext,
+            )
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        // Launcher/RemoteViews failure is not playback failure. A later player event may retry.
     }
 }
 
