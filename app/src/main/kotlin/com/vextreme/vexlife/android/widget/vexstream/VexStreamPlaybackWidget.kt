@@ -1130,12 +1130,14 @@ internal suspend fun updateVexStreamPlaybackWidgets(
         ids = glanceIds,
         hasRetainedProjection = { glanceId ->
             runCatching {
-                getAppWidgetState<
-                    Preferences
-                >(
-                    appContext,
-                    glanceId,
-                ).vexStreamPlaybackWidgetProviderReadOrNull() !=
+                VexStreamPlaybackWidget
+                    .getAppWidgetState<
+                        Preferences
+                    >(
+                        appContext,
+                        glanceId,
+                    )
+                    .vexStreamPlaybackWidgetProviderReadOrNull() !=
                     null
             }.getOrDefault(
                 false,
