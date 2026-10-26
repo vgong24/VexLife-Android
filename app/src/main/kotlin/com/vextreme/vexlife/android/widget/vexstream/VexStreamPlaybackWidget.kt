@@ -46,7 +46,6 @@ import androidx.glance.layout.width
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.TextStyle
-import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.vextreme.vexlife.android.MainActivity
@@ -56,12 +55,12 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamPlaybackConnection
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackAct
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
-import com.vextreme.vexlife.android.vexstream.playback.toVexStreamPlaybackProjection
+import com.vextreme.vexlife.android.vexstream.playback.toVexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.queue.Media3VexStreamQueueConnection
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
-import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueProjection
 import com.vextreme.vexlife.android.widget.VexGlanceAppWidget
 import com.vextreme.vexlife.android.widget.VexWidgetActionCallback
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
@@ -73,9 +72,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.android.asCoroutineDispatcher
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.withContext
 
 internal data class VexStreamPlaybackWidgetProviderRead(
@@ -277,60 +274,49 @@ internal fun vexStreamPlaybackWidgetCommand(
     }
 
 internal fun vexStreamPlaybackWidgetProviderRead(
-    context: Context,
-    player: Player,
+    fallbackTitle: String,
+    observation:
+        VexStreamCurrentPlaybackObservation,
 ): VexStreamPlaybackWidgetProviderRead {
-    val playbackProjection =
-        player.toVexStreamPlaybackProjection()
-    val queueProjection =
-        player.toVexStreamQueueProjection()
-    val metadata =
-        player
-            .currentMediaItem
-            ?.mediaMetadata
+    val readState =
+        observation.readState
     val playPause =
-        playbackProjection[
-            VexStreamPlaybackControl.PlayPause
-        ]
+        observation
+            .playbackProjection[
+                VexStreamPlaybackControl.PlayPause
+            ]
 
     return VexStreamPlaybackWidgetProviderRead(
         title =
-            metadata
-                ?.title
-                ?.toString()
-                ?.takeIf {
+            readState
+                .currentTitle
+                .takeIf {
                     it.isNotBlank()
                 }
-                ?: context.getString(
-                    R.string.vexstream_music_title,
-                ),
+                ?: fallbackTitle,
         artist =
-            metadata
-                ?.artist
-                ?.toString()
-                .orEmpty(),
+            readState.currentArtist,
         artworkUri =
-            metadata
-                ?.artworkUri
-                ?.toString()
+            readState
+                .currentArtworkUri
                 ?.takeIf {
                     it.isNotBlank()
                 },
         previousEnabled =
-            queueProjection[
-                VexStreamQueueControl.Previous
-            ].isAvailable,
+            observation
+                .queueProjection[
+                    VexStreamQueueControl.Previous
+                ].isAvailable,
         playPauseEnabled =
-            playPause
-                .isAvailable,
+            playPause.isAvailable,
         showPause =
-            playPause
-                .act is
+            playPause.act is
                 VexStreamPlaybackAct.Pause,
         nextEnabled =
-            queueProjection[
-                VexStreamQueueControl.Next
-            ].isAvailable,
+            observation
+                .queueProjection[
+                    VexStreamQueueControl.Next
+                ].isAvailable,
     )
 }
 
@@ -396,6 +382,10 @@ internal object VexStreamPlaybackWidget :
     ): VexStreamPlaybackWidgetProjection {
         val appContext =
             context.applicationContext
+        val fallbackTitle =
+            appContext.getString(
+                R.string.vexstream_music_title,
+            )
         val retained =
             runCatching {
                 getAppWidgetState<
@@ -411,8 +401,11 @@ internal object VexStreamPlaybackWidget :
                     appContext,
                 ) { controller ->
                     vexStreamPlaybackWidgetProviderRead(
-                        appContext,
-                        controller,
+                        fallbackTitle =
+                            fallbackTitle,
+                        observation =
+                            controller
+                                .toVexStreamCurrentPlaybackObservation(),
                     )
                 }
             } else {
@@ -835,61 +828,50 @@ class VexStreamPlaybackWidgetActionCallback :
                     )
             }
         }
-
-        updateVexStreamPlaybackWidgets(
-            context,
-        )
     }
 }
 
 /**
- * MediaSessionService-owned widget projection publication loop.
+ * MediaSessionService-owned widget publication sink.
  *
- * The Media3 listener derives an immutable provider projection while already on the Player looper,
- * then enqueues only that value here. Managed worker execution never dereferences Player.
+ * Exactly one ordered provider observation stream feeds this execution. Widget callbacks only issue
+ * Controls; they never become a second playback read/publication producer.
  */
 internal class VexStreamPlaybackWidgetUpdateExecution(
     root: VexExecutionRoot,
     private val context: Context,
+    private val observations:
+        Flow<
+            VexStreamCurrentPlaybackObservation
+        >,
 ) : VexExecution(
         root,
     ) {
-    private val requests =
-        Channel<
-            VexStreamPlaybackWidgetProviderRead
-        >(
-            capacity =
-                Channel.CONFLATED,
-        )
-
     init {
         launchForCollect(
             source =
-                ::requestsForExecution,
-        ) { providerRead ->
+                ::observationsForExecution,
+        ) { observation ->
             updateVexStreamPlaybackWidgets(
                 context = context,
-                providerRead = providerRead,
+                providerRead =
+                    vexStreamPlaybackWidgetProviderRead(
+                        fallbackTitle =
+                            context.getString(
+                                R.string.vexstream_music_title,
+                            ),
+                        observation =
+                            observation,
+                    ),
             )
         }
     }
 
-    fun requestUpdate(
-        providerRead:
-            VexStreamPlaybackWidgetProviderRead,
-    ): Boolean =
-        requests
-            .trySend(
-                providerRead,
-            )
-            .isSuccess
-
-    private fun requestsForExecution():
+    private fun observationsForExecution():
         Flow<
-            VexStreamPlaybackWidgetProviderRead
+            VexStreamCurrentPlaybackObservation
         > =
-        requests
-            .receiveAsFlow()
+        observations
 }
 
 private suspend fun <
@@ -949,15 +931,6 @@ private suspend fun <
             controllerFuture,
         )
     }
-}
-
-internal suspend fun convergeVexStreamPlaybackWidgetProjection(
-    refresh: suspend () -> Unit,
-    awaitProviderConvergence: suspend () -> Unit,
-) {
-    refresh()
-    awaitProviderConvergence()
-    refresh()
 }
 
 private suspend fun publishVexStreamPlaybackWidgetProviderRead(
@@ -1135,56 +1108,8 @@ internal suspend fun updateVexStreamPlaybackWidgets(
         },
         awaitRetry = {
             delay(
-                VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS,
+                VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS,
             )
-        },
-    )
-}
-
-internal suspend fun updateVexStreamPlaybackWidgets(
-    context: Context,
-    providerRead:
-        suspend () ->
-        VexStreamPlaybackWidgetProviderRead?,
-) {
-    /*
-     * Each pass first publishes canonical provider-derived presentation truth into widget-specific
-     * Glance state, then asks the launcher to render that exact desired revision. The second pass is
-     * still a bounded Media3-settlement retry, but desired-vs-rendered revision state now makes
-     * currentness explicit instead of treating retry timing as convergence itself.
-     */
-    convergeVexStreamPlaybackWidgetProjection(
-        refresh = {
-            providerRead()
-                ?.let { current ->
-                    publishVexStreamPlaybackWidgetProviderRead(
-                        context = context,
-                        providerRead = current,
-                    )
-                }
-        },
-        awaitProviderConvergence = {
-            delay(
-                VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS,
-            )
-        },
-    )
-}
-
-internal suspend fun updateVexStreamPlaybackWidgets(
-    context: Context,
-) {
-    updateVexStreamPlaybackWidgets(
-        context = context,
-        providerRead = {
-            withVexStreamWidgetController(
-                context,
-            ) { controller ->
-                vexStreamPlaybackWidgetProviderRead(
-                    context.applicationContext,
-                    controller,
-                )
-            }
         },
     )
 }
@@ -1242,7 +1167,7 @@ internal const val VEXSTREAM_WIDGET_CONTROL_GAP_DP =
     6
 internal const val VEXSTREAM_WIDGET_ARTWORK_SIZE_DP =
     60
-internal const val VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS =
+internal const val VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS =
     250L
 
 private const val CONTROLLER_CONNECT_TIMEOUT_MS =

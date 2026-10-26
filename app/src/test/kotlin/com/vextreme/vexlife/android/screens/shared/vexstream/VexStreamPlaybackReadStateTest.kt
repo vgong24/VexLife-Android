@@ -5,10 +5,19 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
+import androidx.media3.common.Player
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackBehavior
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackControls
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueBehavior
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueControls
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -41,6 +50,69 @@ class VexStreamPlaybackReadStateTest {
                 durationMs = 0L,
             ).progressFraction,
             0.0001f,
+        )
+    }
+
+    @Test
+    fun currentPlaybackObservationCarriesProviderReadAndExistingSemanticProjectionsTogether() {
+        val readState =
+            VexStreamPlaybackReadState(
+                currentMediaId =
+                    "track.current",
+                currentTitle =
+                    "Current",
+                currentArtist =
+                    "Artist",
+                currentIndex = 0,
+            )
+        val observation =
+            VexStreamCurrentPlaybackObservation(
+                readState =
+                    readState,
+                playbackProjection =
+                    vexStreamPlaybackBehavior()
+                        .vexStreamPlaybackControls()
+                        .projection(
+                            vexStreamPlaybackState(
+                                mediaItemCount = 1,
+                                playWhenReady = false,
+                                playbackState =
+                                    Player.STATE_READY,
+                                playPauseAvailable = true,
+                                restartAvailable = true,
+                            ),
+                        ),
+                queueProjection =
+                    vexStreamQueueBehavior()
+                        .vexStreamQueueControls()
+                        .projection(
+                            vexStreamQueueState(
+                                mediaItemCount = 1,
+                                previousAvailable = false,
+                                nextAvailable = false,
+                                shuffleAvailable = false,
+                                clearAvailable = true,
+                            ),
+                        ),
+            )
+
+        assertSame(
+            readState,
+            observation.readState,
+        )
+        assertTrue(
+            observation
+                .playbackProjection[
+                    com.vextreme.vexlife.android.vexstream.playback
+                        .VexStreamPlaybackControl.PlayPause
+                ].isAvailable,
+        )
+        assertEquals(
+            false,
+            observation
+                .queueProjection[
+                    VexStreamQueueControl.Next
+                ].isAvailable,
         )
     }
 

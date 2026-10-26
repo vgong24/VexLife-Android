@@ -3,8 +3,17 @@ package com.vextreme.vexlife.android.widget.vexstream
 import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.resolveVexLifeExternalScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
+import androidx.media3.common.Player
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackControl
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackBehavior
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackControls
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackState
 import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueControl
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueBehavior
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueControls
+import com.vextreme.vexlife.android.vexstream.queue.vexStreamQueueState
 import com.vextreme.vexlife.android.widget.VexWidgetActionRef
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -63,33 +72,122 @@ class VexStreamPlaybackWidgetTest {
     }
 
     @Test
-    fun widgetProviderRefreshPerformsOneBoundedConvergenceRead() =
-        runTest {
-            val observations =
-                mutableListOf<String>()
-
-            convergeVexStreamPlaybackWidgetProjection(
-                refresh = {
-                    observations +=
-                        "refresh"
-                },
-                awaitProviderConvergence = {
-                    observations +=
-                        "provider-convergence"
-                },
+    fun widgetProjectionMapsOneProviderObservationWithoutAnotherRead() {
+        val providerRead =
+            vexStreamPlaybackWidgetProviderRead(
+                fallbackTitle = "VexStream",
+                observation =
+                    VexStreamCurrentPlaybackObservation(
+                        readState =
+                            VexStreamPlaybackReadState(
+                                currentMediaId =
+                                    "track.little-bit",
+                                currentTitle =
+                                    "Little Bit",
+                                currentArtist =
+                                    "The Main Squeeze",
+                                currentArtworkUri =
+                                    "file:///cover.jpg",
+                                currentIndex = 1,
+                            ),
+                        playbackProjection =
+                            vexStreamPlaybackBehavior()
+                                .vexStreamPlaybackControls()
+                                .projection(
+                                    vexStreamPlaybackState(
+                                        mediaItemCount = 2,
+                                        playWhenReady = true,
+                                        playbackState =
+                                            Player.STATE_READY,
+                                        playPauseAvailable = true,
+                                        restartAvailable = true,
+                                    ),
+                                ),
+                        queueProjection =
+                            vexStreamQueueBehavior()
+                                .vexStreamQueueControls()
+                                .projection(
+                                    vexStreamQueueState(
+                                        mediaItemCount = 2,
+                                        previousAvailable = true,
+                                        nextAvailable = false,
+                                        shuffleAvailable = true,
+                                        clearAvailable = true,
+                                    ),
+                                ),
+                    ),
             )
 
-            assertEquals(
-                listOf(
-                    "refresh",
-                    "provider-convergence",
-                    "refresh",
-                ),
-                observations,
-            )
-        }
+        assertEquals(
+            "Little Bit",
+            providerRead.title,
+        )
+        assertEquals(
+            "The Main Squeeze",
+            providerRead.artist,
+        )
+        assertEquals(
+            "file:///cover.jpg",
+            providerRead.artworkUri,
+        )
+        assertTrue(
+            providerRead.previousEnabled,
+        )
+        assertTrue(
+            providerRead.playPauseEnabled,
+        )
+        assertTrue(
+            providerRead.showPause,
+        )
+        assertFalse(
+            providerRead.nextEnabled,
+        )
+    }
 
     @Test
+    fun blankProviderTitleUsesOnlyTheSuppliedSurfaceFallback() {
+        val observation =
+            VexStreamCurrentPlaybackObservation(
+                readState =
+                    VexStreamPlaybackReadState(),
+                playbackProjection =
+                    vexStreamPlaybackBehavior()
+                        .vexStreamPlaybackControls()
+                        .projection(
+                            vexStreamPlaybackState(
+                                mediaItemCount = 0,
+                                playWhenReady = false,
+                                playbackState =
+                                    Player.STATE_IDLE,
+                                playPauseAvailable = false,
+                                restartAvailable = false,
+                            ),
+                        ),
+                queueProjection =
+                    vexStreamQueueBehavior()
+                        .vexStreamQueueControls()
+                        .projection(
+                            vexStreamQueueState(
+                                mediaItemCount = 0,
+                                previousAvailable = false,
+                                nextAvailable = false,
+                                shuffleAvailable = false,
+                                clearAvailable = false,
+                            ),
+                        ),
+            )
+
+        assertEquals(
+            "VexStream",
+            vexStreamPlaybackWidgetProviderRead(
+                fallbackTitle = "VexStream",
+                observation = observation,
+            ).title,
+        )
+    }
+
+    @Test
+    fun failedWidgetPublicationGetsOneBoundedRetry() =    @Test
     fun failedWidgetPublicationGetsOneBoundedRetry() =
         runTest {
             val observations =
@@ -262,7 +360,7 @@ class VexStreamPlaybackWidgetTest {
                 VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP,
         )
         assertTrue(
-            VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS >
+            VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS >
                 0L,
         )
     }

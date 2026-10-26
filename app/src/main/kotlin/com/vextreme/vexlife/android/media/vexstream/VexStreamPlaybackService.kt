@@ -1,14 +1,14 @@
 package com.vextreme.vexlife.android.media.vexstream
 
-import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
-import com.vextreme.vexlife.android.widget.vexstream.vexStreamPlaybackWidgetProviderRead
 import kotlinx.coroutines.Dispatchers
 
 /**
@@ -25,36 +25,12 @@ class VexStreamPlaybackService : MediaSessionService() {
             dispatcher =
                 Dispatchers.Default,
         )
-    private val widgetUpdateExecution by
-        lazy {
-            VexStreamPlaybackWidgetUpdateExecution(
-                root =
-                    widgetExecutionRoot,
-                context =
-                    applicationContext,
-            )
-        }
-    private val widgetPlayerListener =
-        object :
-            Player.Listener {
-            override fun onEvents(
-                player: Player,
-                events: Player.Events,
-            ) {
-                runCatching {
-                    vexStreamPlaybackWidgetProviderRead(
-                        applicationContext,
-                        player,
-                    )
-                }.getOrNull()
-                    ?.let { providerRead ->
-                        widgetUpdateExecution
-                            .requestUpdate(
-                                providerRead,
-                            )
-                    }
-            }
-        }
+    private var currentPlaybackObserver:
+        VexStreamCurrentPlaybackObserver? =
+        null
+    private var widgetUpdateExecution:
+        VexStreamPlaybackWidgetUpdateExecution? =
+        null
 
     override fun onCreate() {
         super.onCreate()
@@ -79,22 +55,27 @@ class VexStreamPlaybackService : MediaSessionService() {
                 )
                 .build()
 
-        player.addListener(
-            widgetPlayerListener,
-        )
-
         mediaSession =
             MediaSession.Builder(
                 this,
                 player,
             ).build()
 
-        widgetUpdateExecution
-            .requestUpdate(
-                vexStreamPlaybackWidgetProviderRead(
+        val playbackObserver =
+            Media3VexStreamCurrentPlaybackObserver(
+                player,
+            )
+        currentPlaybackObserver =
+            playbackObserver
+        widgetUpdateExecution =
+            VexStreamPlaybackWidgetUpdateExecution(
+                root =
+                    widgetExecutionRoot,
+                context =
                     applicationContext,
-                    player,
-                ),
+                observations =
+                    playbackObserver
+                        .observations,
             )
     }
 
@@ -104,11 +85,14 @@ class VexStreamPlaybackService : MediaSessionService() {
         mediaSession
 
     override fun onDestroy() {
+        currentPlaybackObserver
+            ?.close()
+        currentPlaybackObserver =
+            null
+        widgetUpdateExecution =
+            null
+
         mediaSession?.let { session ->
-            session.player
-                .removeListener(
-                    widgetPlayerListener,
-                )
             session.player.release()
             session.release()
         }
