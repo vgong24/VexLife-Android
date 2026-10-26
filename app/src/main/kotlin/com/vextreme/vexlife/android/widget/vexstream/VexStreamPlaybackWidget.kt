@@ -1111,15 +1111,16 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
     )
 
     for (glanceId in glanceIds) {
+        var targetRevision =
+            0L
+        var previousDesiredRevision =
+            0L
+        var previousRenderedRevision =
+            0L
+        var shouldRender =
+            true
+
         try {
-            var targetRevision =
-                0L
-            var previousDesiredRevision =
-                0L
-            var previousRenderedRevision =
-                0L
-            var shouldRender =
-                true
             updateAppWidgetState(
                 appContext,
                 glanceId,
