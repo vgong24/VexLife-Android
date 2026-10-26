@@ -22,7 +22,7 @@ class BlueprintProjectionTest {
         textRes = 4,
         role = TextRole.Title,
     )
-    private object HomeStatus : DynamicTextElement(
+    private object HomeStatus : TextElement(
         elementId = "element.home.body.status",
         role = TextRole.Supporting,
     )
@@ -67,7 +67,7 @@ class BlueprintProjectionTest {
                             Home,
                             column(HomeRoot) {
                                 text(HomeTitle)
-                                dynamicText(HomeStatus)
+                                text(HomeStatus)
                                 swappable(Content) {
                                     column(PanelA) {}
                                     column(PanelB) {}
@@ -142,20 +142,28 @@ class BlueprintProjectionTest {
     }
 
     @Test
-    fun projectionKeepsOwnerParentStyleAndDynamicTextMeaning() {
+    fun projectionKeepsOwnerParentStyleAndTextValueSourceMeaning() {
         val projection = registry().semanticProjection()
 
-        val dynamicText =
+        val runtimeBoundText =
             projection.elements.single {
                 it.semanticRef == HomeStatus.elementId
             }
 
-        assertEquals("DynamicText", dynamicText.kind)
-        assertEquals(VexElementStyles.Default.value, dynamicText.styleRef)
-        assertEquals(Home.screenId, dynamicText.ownerScreenRefOrNull)
-        assertEquals(HomeRoot.elementId, dynamicText.parentSemanticRefOrNull)
-        assertEquals(TextRole.Supporting.name, dynamicText.textRoleOrNull)
-        assertNull(dynamicText.intentOrNull)
+        assertEquals("Text", runtimeBoundText.kind)
+        assertEquals(VexElementStyles.Default.value, runtimeBoundText.styleRef)
+        assertEquals(Home.screenId, runtimeBoundText.ownerScreenRefOrNull)
+        assertEquals(HomeRoot.elementId, runtimeBoundText.parentSemanticRefOrNull)
+        assertEquals(TextRole.Supporting.name, runtimeBoundText.textRoleOrNull)
+        assertNull(runtimeBoundText.textResourceIdOrNull)
+        assertNull(runtimeBoundText.intentOrNull)
+
+        val resourceMappedText =
+            projection.elements.single {
+                it.semanticRef == HomeTitle.elementId
+            }
+        assertEquals("Text", resourceMappedText.kind)
+        assertEquals(4, resourceMappedText.textResourceIdOrNull)
 
         val shellHelp =
             projection.elements.single {
