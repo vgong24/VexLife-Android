@@ -1,11 +1,12 @@
 package com.vextreme.vexlife.android.elements
 
 /**
- * Deterministic semantic projection of the registered UI Blueprint.
+ * Deterministic semantic projection of the registered Android UI Blueprint realization.
  *
- * This is deliberately serialization-neutral. The Elements foundation owns stable meaning and
- * relationships; an app/tooling boundary may encode this projection as JSON, logs, VexBoard import,
- * or another transport without making the portable element module depend on that transport.
+ * This is deliberately serialization-neutral. The Elements foundation owns Android-side registered
+ * meaning and relationships; an app/tooling boundary may encode this projection as JSON, logs,
+ * VexBoard import, or another transport without making the portable element module depend on that
+ * transport. Projection does not make Android the portable Origin owner.
  */
 data class UIBlueprintProjection(
     val screens: List<UIBlueprintScreenProjection>,
@@ -28,6 +29,7 @@ data class UIBlueprintElementProjection(
     val childSemanticRefs: List<String>,
     val iconRefOrNull: String?,
     val textRoleOrNull: String?,
+    val textResourceIdOrNull: Int?,
     val readOnlyOrNull: Boolean?,
     val defaultChildSemanticRefOrNull: String?,
     val intentOrNull: UIBlueprintIntentProjection?,
@@ -93,16 +95,12 @@ fun UIBlueprintRegistry.semanticProjection(): UIBlueprintProjection {
                                 null
                         },
                     textRoleOrNull =
-                        when (element) {
-                            is TextElement ->
-                                element.role.name
-
-                            is DynamicTextElement ->
-                                element.role.name
-
-                            else ->
-                                null
-                        },
+                        (element as? TextElement)
+                            ?.role
+                            ?.name,
+                    textResourceIdOrNull =
+                        (element as? TextElement)
+                            ?.textRes,
                     readOnlyOrNull =
                         (element as? TextFieldElement)
                             ?.readOnly,
@@ -190,4 +188,4 @@ private fun ElementIntent.semanticProjection(): UIBlueprintIntentProjection =
             )
     }
 
-// [VXG RealForever][UI-BLUEPRINT][SEMANTIC-PROJECTION]
+// [VXG RealForever][UI-BLUEPRINT][ORIGIN-REALIZATION][SEMANTIC-PROJECTION]
