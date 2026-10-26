@@ -12,13 +12,22 @@ The first real consumer is VexStream playback, but this module does not contain 
 ## Current architecture
 
 ```text
-product-owned State / provider read truth
+product-owned State / provider truth
+        |
+        | feature-owned pure mapping
+        v
+typed VexWidgetSurfaceState
+        |
+        | foundation-owned persistence + structural equality
+        v
+Glance Preferences
+        |
+        | currentState() inside the active composition
+        v
+SurfaceState -> suspend Projection transform
         |
         v
-feature-owned widget Projection
-        |
-        v
-VexGlanceAppWidget<Projection>
+VexWidgetProjection
         |
         v
 Jetpack Glance / RemoteViews host
@@ -40,11 +49,12 @@ Permanent:
 
 ```text
 APP_WIDGET != PRODUCT_STATE_OWNER
-APP_WIDGET != PLAYER
+WIDGET_SURFACE_STATE != DOMAIN_STATE
 GLANCE_STATE != DOMAIN_STATE
 WIDGET_ACTION_REF != ACT
 WIDGET_ACTION_REF != EFFECT
 CALLBACK != LONG_RUNNING_WORK_OWNER
+UPDATE_REQUESTED != LAUNCHER_RENDERED
 ```
 
 ## Why Glance
@@ -53,19 +63,75 @@ The Android platform still hosts App Widgets through AppWidget/RemoteViews mecha
 is the Compose-first authoring layer over that platform and keeps this repository aligned with its
 existing Compose-first UI direction.
 
-Current source pins the stable Glance 1.2.0 line. Do not move to an alpha merely for novelty.
+Current source pins stable Glance 1.2.0. Its active composition remains alive across update requests;
+therefore durable widget state must be observed inside `provideContent` rather than captured once
+before composition.
 
-The foundation intentionally does not wrap every Glance primitive. Product widgets should use normal
-Glance Row/Column/Image/Text/action APIs directly unless a repeated semantic invariant earns another
+The foundation intentionally does not wrap every Glance primitive. Product widgets use ordinary
+Glance Row/Column/Image/Text/action APIs unless a repeated lifecycle/currentness invariant earns a
 shared helper.
+
+## Surface-state lifecycle
+
+`VexWidgetSurfaceState`
+: typed, structurally comparable remote-surface snapshot. It is the smallest durable value needed to
+reproduce a widget after process/session loss. It is not SCAE/domain State.
+
+`VexWidgetPreferenceCodec<State>`
+: feature-owned mapping between typed surface state and Glance Preferences keys.
+
+`VexGlanceAppWidget<State, Projection>`
+: foundation-owned Preferences persistence, active-composition observation, suspendable
+State-to-Projection recomputation and bounded update fan-out.
+
+`publish(...)` / `publishAll(...)`
+: compare exact current durable state to the proposed state using value equality, persist only real
+changes, and request Glance update only for changed instances.
+
+`transformAll(...)`
+: mutate already-persisted surface state for presentation-owned changes outside the main product
+observation stream, without inventing product truth. Example: an artwork asset becoming locally
+available changes one surface-state field and naturally triggers the same update path.
+
+There is deliberately no revision counter, Boolean invalidation toggle or hash surrogate. If
+`A -> B -> A`, both transitions are real because each new value is compared to the exact current
+surface value. Exact duplicate `A -> A` is suppressed.
+
+## SCAE relationship
+
+The widget foundation sits downstream of SCAE rather than becoming another family:
+
+```text
+CURRENT product State + Controls
+-> existing Behavior Projection
+
+provider/read truth + existing Projection(s)
+-> feature-owned widget SurfaceState
+
+SurfaceState
+-> widget Projection
+-> RemoteViews
+```
+
+Controls still return through the rightful product family. SurfaceState is remote presentation
+custody only.
 
 ## Source roles
 
-`VexWidgetProjection`
-: marker for already-derived widget-facing facts; it is not another State machine.
+`VexWidgetSurfaceState`
+: marker for typed durable widget surface snapshots.
 
-`VexGlanceAppWidget<Projection>`
-: requires projection to be obtained before the Glance composable receives it.
+`VexWidgetPreferenceCodec`
+: persistence adapter for one feature-owned surface-state shape.
+
+`VexWidgetPublishResult`
+: bounded receipt for persistence/update requests; never claims launcher rendering.
+
+`VexWidgetProjection`
+: already-derived render-facing facts.
+
+`VexGlanceAppWidget<State, Projection>`
+: reusable state observation/transformation/update lifecycle.
 
 `VexWidgetActionRef`
 : stable identity for which widget doorway was activated.
@@ -83,14 +149,15 @@ does not become the operation lifetime.
 
 ## Patient zero — VexStream
 
-The first intended consumer is deliberately compact:
+The first consumer remains deliberately compact:
 
 ```text
 artwork | title/artist | previous | play/pause | next
 ```
 
-One horizontal row is the visual reference. No stacked mini-app card, queue list, lyrics/comments,
-or music-specific controls belong in this foundation.
+VexStream maps Media3/provider truth + existing Playback/Queue projections into one typed widget
+SurfaceState. Artwork availability is presentation truth, so artwork backfill uses `transformAll`
+to change that exact field rather than forcing a synthetic revision.
 
 VexStream-specific meaning remains with:
 
@@ -102,14 +169,11 @@ screens/shared/vexstream
 media/vexstream
 ```
 
-The VexStream widget should consume the existing Playback/Queue projections, use optional canonical
-artwork metadata, and deep-link into the VexStream full-player Screen.
-
 ## Proof
 
 ```text
 :architecture:widget:test
-    stable callback/action identity
+    action identity + surface-state equality laws
 
 vexVerifyJvm
     includes :architecture:widget:test
@@ -118,6 +182,6 @@ vexVerifyLocal
     proves module + app integration/source build
 ```
 
-A launcher-hosted widget appearance/update claim still needs Android/device or lived proof.
+A launcher-hosted appearance/update claim still needs Android/device or lived proof.
 
 <!-- [VXG RealForever][ANDROID][APP-WIDGET][GLANCE][SCAE] -->
