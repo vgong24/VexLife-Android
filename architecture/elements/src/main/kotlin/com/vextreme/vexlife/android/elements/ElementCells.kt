@@ -67,40 +67,57 @@ fun interface ElementActionHandler {
 }
 
 /**
- * Registered [TextElement] realization through the Vex Compose front door.
+ * Registered Android-resource realization of one [TextElement] identity.
  *
- * The element owns one stable semantic identity / role / style. Its current text may come from the
- * Android target-resource mapping ([TextElement.textRes]) or from a caller-supplied value projected
- * from current State/data. Value source is therefore a realization/binding concern, not a second
- * element type.
+ * The element owns stable semantic identity / role / style. [TextElement.textRes] is the Android
+ * target-resource mapping used by this overload; it is not the portable content Origin.
  *
- * [style] / [color] remain optional target-realization overrides so accepted Origin design can map
- * exact native typography/color without dropping semantic identity.
+ * This signature intentionally remains source-compatible with the established VexText API.
  */
 @Composable
 fun VexText(
     element: TextElement,
-    text: String? = null,
     modifier: Modifier = VexModifier,
     style: TextStyle? = null,
     color: Color = Color.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
 ) {
-    val resolvedText =
-        if (text != null) {
-            text
-        } else {
-            val textRes =
-                requireNotNull(element.textRes) {
-                    "${element.elementId} requires an Android text resource mapping or supplied text value"
-                }
-            stringResource(textRes)
+    val textRes =
+        requireNotNull(element.textRes) {
+            "${element.elementId} requires an Android text resource mapping or supplied text value"
         }
-
     VexTextContent(
         element = element,
-        text = resolvedText,
+        text = stringResource(textRes),
+        role = element.role,
+        modifier = modifier,
+        style = style,
+        color = color,
+        maxLines = maxLines,
+        overflow = overflow,
+    )
+}
+
+/**
+ * Runtime-bound realization of the same [TextElement] identity.
+ *
+ * [text] is the current value supplied by the rightful Screen/domain projection. Value source is a
+ * binding/realization concern; it does not create another semantic element type.
+ */
+@Composable
+fun VexText(
+    element: TextElement,
+    text: String,
+    modifier: Modifier = VexModifier,
+    style: TextStyle? = null,
+    color: Color = Color.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+) {
+    VexTextContent(
+        element = element,
+        text = text,
         role = element.role,
         modifier = modifier,
         style = style,
@@ -648,11 +665,21 @@ fun VexElementTree(
             modifier = modifier,
         )
 
-        is TextElement -> VexText(
-            element = element,
-            text = textValue(element),
-            modifier = modifier,
-        )
+        is TextElement -> {
+            val currentValue = textValue(element)
+            if (currentValue != null) {
+                VexText(
+                    element = element,
+                    text = currentValue,
+                    modifier = modifier,
+                )
+            } else {
+                VexText(
+                    element = element,
+                    modifier = modifier,
+                )
+            }
+        }
 
         is ImageElement -> Unit
 
