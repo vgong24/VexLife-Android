@@ -33,8 +33,10 @@ import com.vextreme.vexlife.android.vexstream.offline.vexStreamOfflineCollection
  * Connection/settings presentation for VexStream Android.
  *
  * This file owns the human-visible NotPaired/Search/Confirm/Paired management surfaces plus bounded
- * library-wide local-copy actions that reuse the existing Offline Copy owner. Repository pairing,
- * catalog, storage, authorization, transport and Hub truth remain outside presentation.
+ * library-wide one-shot update/removal actions that reuse the existing repository and Offline Copy
+ * owners. "Download missing" composes catalog refresh, exact missing-audio download, and ancillary
+ * artwork reconciliation without creating persistent Keep Offline state. Repository pairing,
+ * storage, authorization, transport and Hub truth remain outside presentation.
  */
 @Composable
 internal fun VexStreamConnectionSetup(
@@ -183,12 +185,6 @@ internal fun VexStreamConnectionMenuSheet(
                 state.playableTracks(),
             )
         }
-    val downloadAllMissingRequest =
-        remember(
-            songsOfflinePlan.targets,
-        ) {
-            songsOfflinePlan.requestOrNull()
-        }
     val removeAllDownloadedRequest =
         remember(
             state.tracks,
@@ -205,12 +201,8 @@ internal fun VexStreamConnectionMenuSheet(
 
             when (element) {
                 VexStreamMusicScreen.DownloadAllMissingSongs ->
-                    downloadAllMissingRequest
-                        ?.let { request ->
-                            offlineCopyConnection.request(
-                                request,
-                            )
-                        }
+                    offlineCopyConnection
+                        .requestLibraryReconciliation()
 
                 VexStreamMusicScreen.RemoveAllDownloadedSongs ->
                     removeAllDownloadedRequest
@@ -316,7 +308,8 @@ internal fun VexStreamConnectionMenuSheet(
                 modifier =
                     VexModifier.fillMaxWidth(),
                 enabled =
-                    downloadAllMissingRequest != null,
+                    state.hubState is
+                        VexStreamHubState.Ready,
             )
 
             VexButton(
