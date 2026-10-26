@@ -50,12 +50,12 @@ object HomeScreen : AppScreenBlueprint(
         role = TextRole.Title,
     )
 
-    val VexStreamStatus = dynamicTextRef(
+    val VexStreamStatus = textRef(
         id = "body.vexstream.status",
         role = TextRole.Body,
     )
 
-    val VexStreamBody = dynamicTextRef(
+    val VexStreamBody = textRef(
         id = "body.vexstream.body",
         role = TextRole.Body,
     )
@@ -112,8 +112,8 @@ object HomeScreen : AppScreenBlueprint(
                 style = VexElementStyles.RaisedSurface,
             ) {
                 text(VexStreamTitle)
-                dynamicText(VexStreamStatus)
-                dynamicText(VexStreamBody)
+                text(VexStreamStatus)
+                text(VexStreamBody)
                 button(ConnectVexStreamMusic)
                 button(VexStreamMusic)
             }

@@ -195,27 +195,18 @@ open class ToggleElement(
 ) : UIElement(elementId, "Toggle", labelRes, style), ActionElement
 
 /**
- * Static localized text identity whose [role] communicates typographic meaning to the renderer.
+ * Stable semantic text identity whose [role] communicates typographic meaning to the renderer.
+ *
+ * [textRes] is an optional Android target-resource mapping, not the semantic identity of the text.
+ * When it is null, the current value is supplied by the Screen/runtime projection while this same
+ * TextElement continues to own the registered element identity, role and style.
  */
 open class TextElement(
     elementId: String,
-    @StringRes val textRes: Int,
+    @StringRes val textRes: Int? = null,
     val role: TextRole = TextRole.Body,
     style: ElementStyleKey = VexElementStyles.Default,
 ) : UIElement(elementId, "Text", textRes, style)
-
-/**
- * Stable semantic text identity whose displayed value is supplied by runtime state.
- *
- * This is the dynamic counterpart to [TextElement]: identity/role/style live in the Blueprint,
- * while the actual string stays with the current Screen/domain projection. The element deliberately
- * stores no runtime value and no fake fallback resource.
- */
-open class DynamicTextElement(
-    elementId: String,
-    val role: TextRole = TextRole.Body,
-    style: ElementStyleKey = VexElementStyles.Default,
-) : UIElement(elementId, "DynamicText", labelRes = null, style = style)
 
 /**
  * Blueprint identity for an editable/read-only text field.

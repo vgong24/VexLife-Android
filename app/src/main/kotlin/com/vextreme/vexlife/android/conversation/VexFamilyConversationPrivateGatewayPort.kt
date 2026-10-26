@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.conversation
 
 import com.vextreme.vexlife.android.connectedservices.VexPrivateHomeGatewayConnection
+import com.vextreme.vexlife.android.connectedservices.VexPrivateHomeGatewayException
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -71,6 +72,104 @@ internal class VexFamilyConversationPrivateGatewayPort(
                 currentPrincipalRef,
             rooms =
                 rooms,
+        )
+    }
+
+    override suspend fun append(
+        intent: VexFamilyConversationAppendIntent,
+    ): VexFamilyConversationAppendResult {
+        val body =
+            JSONObject()
+                .put(
+                    "operation",
+                    "APPEND",
+                )
+                .put(
+                    "intent",
+                    JSONObject()
+                        .put(
+                            "spaceRef",
+                            intent.spaceRef,
+                        )
+                        .put(
+                            "channelRef",
+                            intent.channelRef,
+                        )
+                        .put(
+                            "content",
+                            intent.content,
+                        )
+                        .put(
+                            "expectedMembershipGeneration",
+                            intent.expectedMembershipGeneration,
+                        )
+                        .put(
+                            "idempotencyKey",
+                            intent.idempotencyKey,
+                        ),
+                )
+                .toString()
+        val responseText =
+            try {
+                gateway.authenticatedPostJson(
+                    absolutePath = FAMILY_CONVERSATION_PATH,
+                    body = body,
+                )
+            } catch (error: VexPrivateHomeGatewayException) {
+                when (error.statusCode) {
+                    404 ->
+                        throw VexFamilyConversationConnectedServiceException(
+                            VexFamilyConversationConnectedServiceFailureKind.NOT_FOUND,
+                            error,
+                        )
+
+                    409 ->
+                        throw VexFamilyConversationConnectedServiceException(
+                            VexFamilyConversationConnectedServiceFailureKind.CONFLICT,
+                            error,
+                        )
+
+                    else ->
+                        throw error
+                }
+            }
+        val response =
+            JSONObject(
+                responseText,
+            )
+        val state =
+            when (
+                response.getString(
+                    "state",
+                )
+            ) {
+                "APPENDED" ->
+                    VexFamilyConversationAppendState.APPENDED
+
+                "IDEMPOTENT_CURRENT" ->
+                    VexFamilyConversationAppendState.IDEMPOTENT_CURRENT
+
+                else ->
+                    error(
+                        "Family append response state is unsupported",
+                    )
+            }
+        val messageRef =
+            response
+                .getJSONObject(
+                    "message",
+                )
+                .getString(
+                    "messageRef",
+                )
+        require(
+            messageRef.isNotBlank(),
+        ) {
+            "Family append response messageRef must be non-blank"
+        }
+        return VexFamilyConversationAppendResult(
+            state = state,
+            messageRef = messageRef,
         )
     }
 
@@ -303,4 +402,4 @@ internal class VexFamilyConversationPrivateGatewayPort(
     }
 }
 
-// [VXG RealForever][VEXLIFE-ANDROID][CONVERSATION][VCS-04][PRIVATE-GATEWAY-PORT]
+// [VXG RealForever][VEXLIFE-ANDROID][CONVERSATION][VCS-04][PRIVATE-GATEWAY-READ-SEND-PORT]
