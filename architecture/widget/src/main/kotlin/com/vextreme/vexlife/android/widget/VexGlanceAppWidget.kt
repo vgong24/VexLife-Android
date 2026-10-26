@@ -2,6 +2,8 @@ package com.vextreme.vexlife.android.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -31,6 +33,18 @@ abstract class VexGlanceAppWidget<
         glanceId: GlanceId,
     ): Projection
 
+    /**
+     * Optional durable revision observed inside the active Glance composition.
+     *
+     * Glance keeps provideContent sessions alive across update() calls. Subclasses backed by
+     * persistent widget state should return a revision that changes whenever projection inputs
+     * change so the suspendable projection is recomputed without waiting for session restart.
+     */
+    @Composable
+    protected open fun projectionRevision():
+        Long? =
+        null
+
     @Composable
     protected abstract fun Content(
         projection: Projection,
@@ -40,13 +54,33 @@ abstract class VexGlanceAppWidget<
         context: Context,
         id: GlanceId,
     ) {
-        val current =
+        val initial =
             projection(
                 context = context,
                 glanceId = id,
             )
 
         provideContent {
+            val revision =
+                projectionRevision()
+            val current by
+                produceState(
+                    initialValue =
+                        initial,
+                    key1 =
+                        revision,
+                ) {
+                    if (
+                        revision != null
+                    ) {
+                        value =
+                            projection(
+                                context = context,
+                                glanceId = id,
+                            )
+                    }
+                }
+
             Content(
                 projection = current,
             )

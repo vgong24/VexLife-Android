@@ -317,7 +317,7 @@ class VexStreamPlaybackWidgetTest {
     }
 
     @Test
-    fun desiredRevisionAdvancesOnlyWhenProviderTruthChanges() {
+    fun projectionRevisionAdvancesOnlyWhenProviderTruthChanges() {
         val first =
             VexStreamPlaybackWidgetProviderRead(
                 title = "Song one",
@@ -335,7 +335,7 @@ class VexStreamPlaybackWidgetTest {
 
         assertEquals(
             1L,
-            nextVexStreamPlaybackWidgetDesiredRevision(
+            nextVexStreamPlaybackWidgetProjectionRevision(
                 current = null,
                 currentRevision = 0L,
                 next = first,
@@ -343,7 +343,7 @@ class VexStreamPlaybackWidgetTest {
         )
         assertEquals(
             1L,
-            nextVexStreamPlaybackWidgetDesiredRevision(
+            nextVexStreamPlaybackWidgetProjectionRevision(
                 current = first,
                 currentRevision = 1L,
                 next = first,
@@ -351,7 +351,7 @@ class VexStreamPlaybackWidgetTest {
         )
         assertEquals(
             2L,
-            nextVexStreamPlaybackWidgetDesiredRevision(
+            nextVexStreamPlaybackWidgetProjectionRevision(
                 current = first,
                 currentRevision = 1L,
                 next = second,
@@ -360,24 +360,18 @@ class VexStreamPlaybackWidgetTest {
     }
 
     @Test
-    fun renderedCurrentnessRequiresExactDesiredRevision() {
-        assertTrue(
-            VexStreamPlaybackWidgetCurrentness(
-                desiredRevision = 7L,
-                renderedRevision = 7L,
-            ).isConverged,
+    fun presentationRefreshAlwaysAdvancesProjectionRevision() {
+        assertEquals(
+            1L,
+            forceNextVexStreamPlaybackWidgetProjectionRevision(
+                0L,
+            ),
         )
-        assertFalse(
-            VexStreamPlaybackWidgetCurrentness(
-                desiredRevision = 7L,
-                renderedRevision = 6L,
-            ).isConverged,
-        )
-        assertFalse(
-            VexStreamPlaybackWidgetCurrentness(
-                desiredRevision = 0L,
-                renderedRevision = 0L,
-            ).isConverged,
+        assertEquals(
+            8L,
+            forceNextVexStreamPlaybackWidgetProjectionRevision(
+                7L,
+            ),
         )
     }
 

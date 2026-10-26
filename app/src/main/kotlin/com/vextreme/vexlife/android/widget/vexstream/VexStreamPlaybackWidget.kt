@@ -18,6 +18,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.currentState
 import androidx.glance.text.Text
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -86,25 +87,10 @@ internal data class VexStreamPlaybackWidgetProviderRead(
     val nextEnabled: Boolean,
 )
 
-internal data class VexStreamPlaybackWidgetCurrentness(
-    val desiredRevision: Long,
-    val renderedRevision: Long,
-) {
-    val isConverged: Boolean
-        get() =
-            desiredRevision > 0L &&
-                desiredRevision ==
-                renderedRevision
-}
-
 private object VexStreamPlaybackWidgetStateKeys {
-    val DesiredRevision =
+    val ProjectionRevision =
         longPreferencesKey(
             "vexstream.widget.desired-revision",
-        )
-    val RenderedRevision =
-        longPreferencesKey(
-            "vexstream.widget.rendered-revision",
         )
     val Title =
         stringPreferencesKey(
@@ -137,17 +123,8 @@ private object VexStreamPlaybackWidgetStateKeys {
 }
 
 private fun Preferences.vexStreamPlaybackWidgetProviderReadOrNull():
-    VexStreamPlaybackWidgetProviderRead? {
-    val desiredRevision =
-        this[
-            VexStreamPlaybackWidgetStateKeys
-                .DesiredRevision
-        ] ?: return null
-    if (desiredRevision <= 0L) {
-        return null
-    }
-
-    return VexStreamPlaybackWidgetProviderRead(
+    VexStreamPlaybackWidgetProviderRead? =
+    VexStreamPlaybackWidgetProviderRead(
         title =
             this[
                 VexStreamPlaybackWidgetStateKeys
@@ -184,9 +161,8 @@ private fun Preferences.vexStreamPlaybackWidgetProviderReadOrNull():
                     .NextEnabled
             ] ?: false,
     )
-}
 
-internal fun nextVexStreamPlaybackWidgetDesiredRevision(
+internal fun nextVexStreamPlaybackWidgetProjectionRevision(
     current: VexStreamPlaybackWidgetProviderRead?,
     currentRevision: Long,
     next: VexStreamPlaybackWidgetProviderRead,
@@ -200,6 +176,11 @@ internal fun nextVexStreamPlaybackWidgetDesiredRevision(
     } else {
         currentRevision + 1L
     }
+
+internal fun forceNextVexStreamPlaybackWidgetProjectionRevision(
+    currentRevision: Long,
+): Long =
+    currentRevision + 1L
 
 internal fun selectVexStreamPlaybackWidgetProviderRead(
     retained: VexStreamPlaybackWidgetProviderRead?,
@@ -377,6 +358,16 @@ internal object VexStreamPlaybackWidget :
     override val stateDefinition =
         PreferencesGlanceStateDefinition
 
+    @Composable
+    override fun projectionRevision():
+        Long =
+        currentState<
+            Preferences
+        >()[
+            VexStreamPlaybackWidgetStateKeys
+                .ProjectionRevision
+        ] ?: 0L
+
     override suspend fun projection(
         context: Context,
         glanceId: GlanceId,
@@ -412,13 +403,7 @@ internal object VexStreamPlaybackWidget :
                 retainedPreferences
                     ?.get(
                         VexStreamPlaybackWidgetStateKeys
-                            .DesiredRevision,
-                    ),
-            renderedRevision =
-                retainedPreferences
-                    ?.get(
-                        VexStreamPlaybackWidgetStateKeys
-                            .RenderedRevision,
+                            .ProjectionRevision,
                     ),
             detail =
                 "retained=${retained != null}",
@@ -1096,7 +1081,7 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
         ).getGlanceIds(
             VexStreamPlaybackWidget::class.java,
         )
-    var allConverged =
+    var allRequested =
         true
 
     VexStreamPlaybackTrace.record(
@@ -1111,16 +1096,14 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
     )
 
     for (glanceId in glanceIds) {
-        var targetRevision =
-            0L
-        var previousDesiredRevision =
-            0L
-        var previousRenderedRevision =
-            0L
-        var shouldRender =
-            true
-
         try {
+            var targetRevision =
+                0L
+            var previousRevision =
+                0L
+            var shouldUpdate =
+                true
+
             updateAppWidgetState(
                 appContext,
                 glanceId,
@@ -1128,35 +1111,21 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
                 val current =
                     preferences
                         .vexStreamPlaybackWidgetProviderReadOrNull()
-                val currentRevision =
+                previousRevision =
                     preferences[
                         VexStreamPlaybackWidgetStateKeys
-                            .DesiredRevision
-                    ] ?: 0L
-                previousDesiredRevision =
-                    currentRevision
-                previousRenderedRevision =
-                    preferences[
-                        VexStreamPlaybackWidgetStateKeys
-                            .RenderedRevision
+                            .ProjectionRevision
                     ] ?: 0L
                 targetRevision =
-                    nextVexStreamPlaybackWidgetDesiredRevision(
+                    nextVexStreamPlaybackWidgetProjectionRevision(
                         current = current,
                         currentRevision =
-                            currentRevision,
+                            previousRevision,
                         next = providerRead,
                     )
-                shouldRender =
-                    !VexStreamPlaybackWidgetCurrentness(
-                        desiredRevision =
-                            targetRevision,
-                        renderedRevision =
-                            preferences[
-                                VexStreamPlaybackWidgetStateKeys
-                                    .RenderedRevision
-                            ] ?: 0L,
-                    ).isConverged
+                shouldUpdate =
+                    targetRevision !=
+                        previousRevision
 
                 preferences[
                     VexStreamPlaybackWidgetStateKeys
@@ -1203,7 +1172,7 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
                     providerRead.nextEnabled
                 preferences[
                     VexStreamPlaybackWidgetStateKeys
-                        .DesiredRevision
+                        .ProjectionRevision
                 ] =
                     targetRevision
             }
@@ -1219,40 +1188,36 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
                     glanceId.toString(),
                 desiredRevision =
                     targetRevision,
-                renderedRevision =
-                    previousRenderedRevision,
                 detail =
-                    "previousDesired=$previousDesiredRevision " +
-                        "shouldRender=$shouldRender",
+                    "previousRevision=$previousRevision " +
+                        "shouldUpdate=$shouldUpdate",
             )
 
-            if (!shouldRender) {
+            if (
+                !shouldUpdate
+            ) {
                 VexStreamPlaybackTrace.record(
                     stage =
-                        "widget.render.skip-converged",
+                        "widget.update.skip-unchanged",
                     title =
                         providerRead.title,
                     glanceId =
                         glanceId.toString(),
                     desiredRevision =
                         targetRevision,
-                    renderedRevision =
-                        previousRenderedRevision,
                 )
                 continue
             }
 
             VexStreamPlaybackTrace.record(
                 stage =
-                    "widget.render.request",
+                    "widget.update.request",
                 title =
                     providerRead.title,
                 glanceId =
                     glanceId.toString(),
                 desiredRevision =
                     targetRevision,
-                renderedRevision =
-                    previousRenderedRevision,
             )
             VexStreamPlaybackWidget
                 .update(
@@ -1261,93 +1226,33 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
                 )
             VexStreamPlaybackTrace.record(
                 stage =
-                    "widget.render.returned",
+                    "widget.update.returned",
                 title =
                     providerRead.title,
                 glanceId =
                     glanceId.toString(),
                 desiredRevision =
                     targetRevision,
-            )
-
-            var markedRendered =
-                false
-            var observedDesiredRevision =
-                0L
-            updateAppWidgetState(
-                appContext,
-                glanceId,
-            ) { preferences ->
-                val desiredRevision =
-                    preferences[
-                        VexStreamPlaybackWidgetStateKeys
-                            .DesiredRevision
-                    ] ?: 0L
-                observedDesiredRevision =
-                    desiredRevision
-                if (
-                    desiredRevision ==
-                    targetRevision
-                ) {
-                    preferences[
-                        VexStreamPlaybackWidgetStateKeys
-                            .RenderedRevision
-                    ] =
-                        targetRevision
-                    markedRendered =
-                        true
-                } else {
-                    allConverged =
-                        false
-                }
-            }
-            VexStreamPlaybackTrace.record(
-                stage =
-                    "widget.render.marked",
-                title =
-                    providerRead.title,
-                glanceId =
-                    glanceId.toString(),
-                desiredRevision =
-                    observedDesiredRevision,
-                renderedRevision =
-                    if (
-                        markedRendered
-                    ) {
-                        targetRevision
-                    } else {
-                        previousRenderedRevision
-                    },
-                detail =
-                    "marked=$markedRendered",
             )
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
             VexStreamPlaybackTrace.record(
                 stage =
-                    "widget.render.failure",
+                    "widget.update.failure",
                 title =
                     providerRead.title,
                 glanceId =
                     glanceId.toString(),
-                desiredRevision =
-                    targetRevision,
-                renderedRevision =
-                    previousRenderedRevision,
                 detail =
                     "${failure::class.simpleName}:${failure.message.orEmpty()}",
             )
-            /*
-             * Desired provider truth, when already persisted, remains available to the next pass.
-             * A launcher/state failure is widget-currentness failure, not playback failure.
-             */
-            allConverged =
+            allRequested =
                 false
         }
     }
 
-    return allConverged
+    return allRequested
 }
 
 internal suspend fun retryVexStreamPlaybackWidgetPublication(
@@ -1412,11 +1317,33 @@ internal suspend fun updateVexStreamPlaybackWidgets(
             )
         },
         render = { glanceId ->
+            var projectionRevision =
+                0L
+            updateAppWidgetState(
+                appContext,
+                glanceId,
+            ) { preferences ->
+                projectionRevision =
+                    forceNextVexStreamPlaybackWidgetProjectionRevision(
+                        preferences[
+                            VexStreamPlaybackWidgetStateKeys
+                                .ProjectionRevision
+                        ] ?: 0L,
+                    )
+                preferences[
+                    VexStreamPlaybackWidgetStateKeys
+                        .ProjectionRevision
+                ] =
+                    projectionRevision
+            }
+
             VexStreamPlaybackTrace.record(
                 stage =
                     "widget.presentation-rerender.request",
                 glanceId =
                     glanceId.toString(),
+                desiredRevision =
+                    projectionRevision,
             )
             try {
                 VexStreamPlaybackWidget
