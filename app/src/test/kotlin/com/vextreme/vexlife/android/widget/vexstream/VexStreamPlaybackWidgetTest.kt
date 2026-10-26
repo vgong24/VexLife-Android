@@ -90,6 +90,65 @@ class VexStreamPlaybackWidgetTest {
         }
 
     @Test
+    fun failedWidgetPublicationGetsOneBoundedRetry() =
+        runTest {
+            val observations =
+                mutableListOf<String>()
+            var attempts =
+                0
+
+            retryVexStreamPlaybackWidgetPublication(
+                publish = {
+                    attempts +=
+                        1
+                    observations +=
+                        "publish-$attempts"
+                    attempts >
+                        1
+                },
+                awaitRetry = {
+                    observations +=
+                        "retry-wait"
+                },
+            )
+
+            assertEquals(
+                listOf(
+                    "publish-1",
+                    "retry-wait",
+                    "publish-2",
+                ),
+                observations,
+            )
+        }
+
+    @Test
+    fun convergedWidgetPublicationDoesNotRetry() =
+        runTest {
+            val observations =
+                mutableListOf<String>()
+
+            retryVexStreamPlaybackWidgetPublication(
+                publish = {
+                    observations +=
+                        "publish"
+                    true
+                },
+                awaitRetry = {
+                    observations +=
+                        "retry-wait"
+                },
+            )
+
+            assertEquals(
+                listOf(
+                    "publish",
+                ),
+                observations,
+            )
+        }
+
+    @Test
     fun retainedProviderTruthSurvivesFailedRenderBootstrap() {
         val retained =
             VexStreamPlaybackWidgetProviderRead(

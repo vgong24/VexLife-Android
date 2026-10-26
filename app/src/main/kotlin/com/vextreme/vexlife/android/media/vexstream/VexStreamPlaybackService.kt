@@ -32,18 +32,6 @@ class VexStreamPlaybackService : MediaSessionService() {
                     widgetExecutionRoot,
                 context =
                     applicationContext,
-                providerRead = {
-                    mediaSession
-                        ?.player
-                        ?.let { player ->
-                            runCatching {
-                                vexStreamPlaybackWidgetProviderRead(
-                                    applicationContext,
-                                    player,
-                                )
-                            }.getOrNull()
-                        }
-                },
             )
         }
     private val widgetPlayerListener =
@@ -53,8 +41,18 @@ class VexStreamPlaybackService : MediaSessionService() {
                 player: Player,
                 events: Player.Events,
             ) {
-                widgetUpdateExecution
-                    .requestUpdate()
+                runCatching {
+                    vexStreamPlaybackWidgetProviderRead(
+                        applicationContext,
+                        player,
+                    )
+                }.getOrNull()
+                    ?.let { providerRead ->
+                        widgetUpdateExecution
+                            .requestUpdate(
+                                providerRead,
+                            )
+                    }
             }
         }
 
@@ -92,7 +90,12 @@ class VexStreamPlaybackService : MediaSessionService() {
             ).build()
 
         widgetUpdateExecution
-            .requestUpdate()
+            .requestUpdate(
+                vexStreamPlaybackWidgetProviderRead(
+                    applicationContext,
+                    player,
+                ),
+            )
     }
 
     override fun onGetSession(

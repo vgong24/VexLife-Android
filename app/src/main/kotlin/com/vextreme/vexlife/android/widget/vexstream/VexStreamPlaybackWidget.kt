@@ -843,22 +843,21 @@ class VexStreamPlaybackWidgetActionCallback :
 }
 
 /**
- * MediaSessionService-owned update loop.
+ * MediaSessionService-owned widget projection publication loop.
  *
- * Player events only enqueue one conflated widget refresh request. Rendering/MediaController reads
- * happen inside the managed VexExecution child rather than inside the Player listener callback.
+ * The Media3 listener derives an immutable provider projection while already on the Player looper,
+ * then enqueues only that value here. Managed worker execution never dereferences Player.
  */
 internal class VexStreamPlaybackWidgetUpdateExecution(
     root: VexExecutionRoot,
     private val context: Context,
-    private val providerRead:
-        suspend () ->
-        VexStreamPlaybackWidgetProviderRead?,
 ) : VexExecution(
         root,
     ) {
     private val requests =
-        Channel<Unit>(
+        Channel<
+            VexStreamPlaybackWidgetProviderRead
+        >(
             capacity =
                 Channel.CONFLATED,
         )
@@ -867,7 +866,7 @@ internal class VexStreamPlaybackWidgetUpdateExecution(
         launchForCollect(
             source =
                 ::requestsForExecution,
-        ) {
+        ) { providerRead ->
             updateVexStreamPlaybackWidgets(
                 context = context,
                 providerRead = providerRead,
@@ -875,15 +874,20 @@ internal class VexStreamPlaybackWidgetUpdateExecution(
         }
     }
 
-    fun requestUpdate(): Boolean =
+    fun requestUpdate(
+        providerRead:
+            VexStreamPlaybackWidgetProviderRead,
+    ): Boolean =
         requests
             .trySend(
-                Unit,
+                providerRead,
             )
             .isSuccess
 
     private fun requestsForExecution():
-        Flow<Unit> =
+        Flow<
+            VexStreamPlaybackWidgetProviderRead
+        > =
         requests
             .receiveAsFlow()
 }
@@ -959,7 +963,7 @@ internal suspend fun convergeVexStreamPlaybackWidgetProjection(
 private suspend fun publishVexStreamPlaybackWidgetProviderRead(
     context: Context,
     providerRead: VexStreamPlaybackWidgetProviderRead,
-) {
+): Boolean {
     val appContext =
         context.applicationContext
     val glanceIds =
@@ -968,133 +972,173 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
         ).getGlanceIds(
             VexStreamPlaybackWidget::class.java,
         )
+    var allConverged =
+        true
 
     for (glanceId in glanceIds) {
-        var targetRevision =
-            0L
-        var shouldRender =
-            true
-        updateAppWidgetState(
-            appContext,
-            glanceId,
-        ) { preferences ->
-            val current =
-                preferences
-                    .vexStreamPlaybackWidgetProviderReadOrNull()
-            val currentRevision =
+        try {
+            var targetRevision =
+                0L
+            var shouldRender =
+                true
+            updateAppWidgetState(
+                appContext,
+                glanceId,
+            ) { preferences ->
+                val current =
+                    preferences
+                        .vexStreamPlaybackWidgetProviderReadOrNull()
+                val currentRevision =
+                    preferences[
+                        VexStreamPlaybackWidgetStateKeys
+                            .DesiredRevision
+                    ] ?: 0L
+                targetRevision =
+                    nextVexStreamPlaybackWidgetDesiredRevision(
+                        current = current,
+                        currentRevision =
+                            currentRevision,
+                        next = providerRead,
+                    )
+                shouldRender =
+                    !VexStreamPlaybackWidgetCurrentness(
+                        desiredRevision =
+                            targetRevision,
+                        renderedRevision =
+                            preferences[
+                                VexStreamPlaybackWidgetStateKeys
+                                    .RenderedRevision
+                            ] ?: 0L,
+                    ).isConverged
+
+                preferences[
+                    VexStreamPlaybackWidgetStateKeys
+                        .Title
+                ] =
+                    providerRead.title
+                preferences[
+                    VexStreamPlaybackWidgetStateKeys
+                        .Artist
+                ] =
+                    providerRead.artist
+                providerRead
+                    .artworkUri
+                    ?.let { artworkUri ->
+                        preferences[
+                            VexStreamPlaybackWidgetStateKeys
+                                .ArtworkUri
+                        ] =
+                            artworkUri
+                    }
+                    ?: preferences.remove(
+                        VexStreamPlaybackWidgetStateKeys
+                            .ArtworkUri,
+                    )
+                preferences[
+                    VexStreamPlaybackWidgetStateKeys
+                        .PreviousEnabled
+                ] =
+                    providerRead.previousEnabled
+                preferences[
+                    VexStreamPlaybackWidgetStateKeys
+                        .PlayPauseEnabled
+                ] =
+                    providerRead.playPauseEnabled
+                preferences[
+                    VexStreamPlaybackWidgetStateKeys
+                        .ShowPause
+                ] =
+                    providerRead.showPause
+                preferences[
+                    VexStreamPlaybackWidgetStateKeys
+                        .NextEnabled
+                ] =
+                    providerRead.nextEnabled
                 preferences[
                     VexStreamPlaybackWidgetStateKeys
                         .DesiredRevision
-                ] ?: 0L
-            targetRevision =
-                nextVexStreamPlaybackWidgetDesiredRevision(
-                    current = current,
-                    currentRevision =
-                        currentRevision,
-                    next = providerRead,
-                )
-            shouldRender =
-                !VexStreamPlaybackWidgetCurrentness(
-                    desiredRevision =
-                        targetRevision,
-                    renderedRevision =
-                        preferences[
-                            VexStreamPlaybackWidgetStateKeys
-                                .RenderedRevision
-                        ] ?: 0L,
-                ).isConverged
+                ] =
+                    targetRevision
+            }
 
-            preferences[
-                VexStreamPlaybackWidgetStateKeys
-                    .Title
-            ] =
-                providerRead.title
-            preferences[
-                VexStreamPlaybackWidgetStateKeys
-                    .Artist
-            ] =
-                providerRead.artist
-            providerRead
-                .artworkUri
-                ?.let { artworkUri ->
-                    preferences[
-                        VexStreamPlaybackWidgetStateKeys
-                            .ArtworkUri
-                    ] =
-                        artworkUri
-                }
-                ?: preferences.remove(
-                    VexStreamPlaybackWidgetStateKeys
-                        .ArtworkUri,
-                )
-            preferences[
-                VexStreamPlaybackWidgetStateKeys
-                    .PreviousEnabled
-            ] =
-                providerRead.previousEnabled
-            preferences[
-                VexStreamPlaybackWidgetStateKeys
-                    .PlayPauseEnabled
-            ] =
-                providerRead.playPauseEnabled
-            preferences[
-                VexStreamPlaybackWidgetStateKeys
-                    .ShowPause
-            ] =
-                providerRead.showPause
-            preferences[
-                VexStreamPlaybackWidgetStateKeys
-                    .NextEnabled
-            ] =
-                providerRead.nextEnabled
-            preferences[
-                VexStreamPlaybackWidgetStateKeys
-                    .DesiredRevision
-            ] =
-                targetRevision
-        }
+            if (!shouldRender) {
+                continue
+            }
 
-        if (!shouldRender) {
-            continue
-        }
-
-        try {
             VexStreamPlaybackWidget
                 .update(
                     appContext,
                     glanceId,
                 )
+
+            updateAppWidgetState(
+                appContext,
+                glanceId,
+            ) { preferences ->
+                val desiredRevision =
+                    preferences[
+                        VexStreamPlaybackWidgetStateKeys
+                            .DesiredRevision
+                    ] ?: 0L
+                if (
+                    desiredRevision ==
+                    targetRevision
+                ) {
+                    preferences[
+                        VexStreamPlaybackWidgetStateKeys
+                            .RenderedRevision
+                    ] =
+                        targetRevision
+                } else {
+                    allConverged =
+                        false
+                }
+            }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
             /*
-             * Desired provider truth remains durable and renderedRevision remains behind. The
-             * bounded convergence pass may retry without replacing provider truth with fallback.
+             * Desired provider truth, when already persisted, remains available to the next pass.
+             * A launcher/state failure is widget-currentness failure, not playback failure.
              */
-            continue
-        }
-
-        updateAppWidgetState(
-            appContext,
-            glanceId,
-        ) { preferences ->
-            val desiredRevision =
-                preferences[
-                    VexStreamPlaybackWidgetStateKeys
-                        .DesiredRevision
-                ] ?: 0L
-            if (
-                desiredRevision ==
-                targetRevision
-            ) {
-                preferences[
-                    VexStreamPlaybackWidgetStateKeys
-                        .RenderedRevision
-                ] =
-                    targetRevision
-            }
+            allConverged =
+                false
         }
     }
+
+    return allConverged
+}
+
+internal suspend fun retryVexStreamPlaybackWidgetPublication(
+    publish: suspend () -> Boolean,
+    awaitRetry: suspend () -> Unit,
+) {
+    if (publish()) {
+        return
+    }
+
+    awaitRetry()
+    publish()
+}
+
+internal suspend fun updateVexStreamPlaybackWidgets(
+    context: Context,
+    providerRead:
+        VexStreamPlaybackWidgetProviderRead,
+) {
+    retryVexStreamPlaybackWidgetPublication(
+        publish = {
+            publishVexStreamPlaybackWidgetProviderRead(
+                context = context,
+                providerRead = providerRead,
+            )
+        },
+        awaitRetry = {
+            delay(
+                VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS,
+            )
+        },
+    )
 }
 
 internal suspend fun updateVexStreamPlaybackWidgets(
