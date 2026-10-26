@@ -88,13 +88,15 @@ fun VexText(
     overflow: TextOverflow = TextOverflow.Clip,
 ) {
     val resolvedText =
-        text
-            ?: element.textRes?.let { textRes ->
-                stringResource(textRes)
-            }
-            ?: error(
-                "${element.elementId} requires an Android text resource mapping or supplied text value",
-            )
+        if (text != null) {
+            text
+        } else {
+            val textRes =
+                requireNotNull(element.textRes) {
+                    "${element.elementId} requires an Android text resource mapping or supplied text value"
+                }
+            stringResource(textRes)
+        }
 
     VexTextContent(
         element = element,
