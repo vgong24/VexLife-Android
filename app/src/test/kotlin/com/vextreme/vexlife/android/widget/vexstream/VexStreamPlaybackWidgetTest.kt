@@ -187,7 +187,6 @@ class VexStreamPlaybackWidgetTest {
     }
 
     @Test
-    fun failedWidgetPublicationGetsOneBoundedRetry() =    @Test
     fun failedWidgetPublicationGetsOneBoundedRetry() =
         runTest {
             val observations =
