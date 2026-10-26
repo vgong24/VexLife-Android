@@ -187,6 +187,39 @@ class VexStreamPlaybackWidgetTest {
     }
 
     @Test
+    fun presentationRefreshRerendersOnlyWidgetsWithRetainedProviderProjection() =
+        runTest {
+            val rendered =
+                mutableListOf<String>()
+
+            rerenderRetainedVexStreamPlaybackWidgetProjections(
+                ids =
+                    listOf(
+                        "retained",
+                        "missing",
+                        "retained-2",
+                    ),
+                hasRetainedProjection = { id ->
+                    id.startsWith(
+                        "retained",
+                    )
+                },
+                render = { id ->
+                    rendered +=
+                        id
+                },
+            )
+
+            assertEquals(
+                listOf(
+                    "retained",
+                    "retained-2",
+                ),
+                rendered,
+            )
+        }
+
+    @Test
     fun failedWidgetPublicationGetsOneBoundedRetry() =
         runTest {
             val observations =

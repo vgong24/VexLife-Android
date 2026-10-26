@@ -1094,6 +1094,72 @@ internal suspend fun retryVexStreamPlaybackWidgetPublication(
     publish()
 }
 
+internal suspend fun <Id> rerenderRetainedVexStreamPlaybackWidgetProjections(
+    ids: Iterable<Id>,
+    hasRetainedProjection:
+        suspend (Id) -> Boolean,
+    render:
+        suspend (Id) -> Unit,
+) {
+    for (id in ids) {
+        if (
+            hasRetainedProjection(
+                id,
+            )
+        ) {
+            render(
+                id,
+            )
+        }
+    }
+}
+
+internal suspend fun updateVexStreamPlaybackWidgets(
+    context: Context,
+) {
+    val appContext =
+        context.applicationContext
+    val glanceIds =
+        GlanceAppWidgetManager(
+            appContext,
+        ).getGlanceIds(
+            VexStreamPlaybackWidget::class.java,
+        )
+
+    rerenderRetainedVexStreamPlaybackWidgetProjections(
+        ids = glanceIds,
+        hasRetainedProjection = { glanceId ->
+            runCatching {
+                getAppWidgetState<
+                    Preferences
+                >(
+                    appContext,
+                    glanceId,
+                ).vexStreamPlaybackWidgetProviderReadOrNull() !=
+                    null
+            }.getOrDefault(
+                false,
+            )
+        },
+        render = { glanceId ->
+            try {
+                VexStreamPlaybackWidget
+                    .update(
+                        appContext,
+                        glanceId,
+                    )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                /*
+                 * Presentation-only re-render is best-effort. The retained provider projection
+                 * remains authoritative for the next ordinary provider publication.
+                 */
+            }
+        },
+    )
+}
+
 internal suspend fun updateVexStreamPlaybackWidgets(
     context: Context,
     providerRead:
