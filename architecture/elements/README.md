@@ -281,6 +281,7 @@ elements
   declaration-ordered children
   semantic icon
   text role
+  optional Android text resource id
   text-field readOnly
   swappable default child
   typed intent projection
@@ -303,6 +304,27 @@ UIBlueprintRegistry
 Do not add a JSON dependency to the portable Elements foundation merely to satisfy one consumer.
 The app/tooling edge that knows source revision, localized human labels, current runtime state, and
 target-specific adoption facts owns the transport envelope.
+
+This projection is an Android realization projection, not a portable Origin registry. In particular:
+
+~~~text
+TextElement
+  textResourceIdOrNull != null
+    -> Android target-resource mapping exists
+
+  textResourceIdOrNull == null
+    -> current value must be supplied by the rightful Screen/runtime binding when rendered
+
+both
+  -> kind = Text
+  -> same element identity model
+~~~
+
+An app/tooling exporter that has Android Resources access may turn the numeric resource id into an exact
+symbolic target coordinate such as `R.string.home_vexstream_music`. That symbolic Android coordinate
+can then be mapped to the corresponding content Origin during reverse adoption or forward construction.
+The Elements module should not import VexBoard or a universal content registry merely to make that
+mapping.
 
 Permanent:
 
