@@ -60,6 +60,44 @@ class VexFamilyConversationInstalledReadTest {
         }
 
     @Test
+    fun installedObservationCarriesTheAuthenticatedBootstrapPrincipal() =
+        runBlocking {
+            val repository =
+                VexFamilyConversationConnectedServiceRepository(
+                    VexFamilyConversationConnectedServiceClient(
+                        RecordingPort(
+                            bootstrapValue =
+                                bootstrap(
+                                    listOf(
+                                        room(),
+                                    ),
+                                ),
+                            historyValue =
+                                history(),
+                        ),
+                    ),
+                )
+
+            val observation =
+                repository
+                    .refreshSingleCurrentRoomObservation()
+
+            assertEquals(
+                VICTOR,
+                observation
+                    .authenticatedParticipantRef
+                    .value,
+            )
+            assertEquals(
+                THREAD,
+                observation
+                    .thread
+                    .threadRef
+                    .value,
+            )
+        }
+
+    @Test
     fun multipleCurrentRoomsFailBeforeAndroidGuessesOne() =
         runBlocking {
             val port =
@@ -175,6 +213,11 @@ class VexFamilyConversationInstalledReadTest {
         override suspend fun bootstrap():
             VexFamilyConversationServerBootstrap =
             bootstrapValue
+
+        override suspend fun append(
+            intent: VexFamilyConversationAppendIntent,
+        ): VexFamilyConversationAppendResult =
+            error("installed-read fixture must not append")
 
         override suspend fun readThreadHistory(
             intent:

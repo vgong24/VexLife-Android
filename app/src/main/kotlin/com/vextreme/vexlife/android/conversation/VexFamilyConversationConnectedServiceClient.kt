@@ -14,6 +14,17 @@ internal data class VexFamilyConversationReadRequest(
 )
 
 /**
+ * One installed Family room plus the authenticated principal observed from the same Home bootstrap.
+ *
+ * Identity remains an independently observed surface input; this does not add authenticated identity
+ * to generic canonical Conversation state.
+ */
+internal data class VexFamilyConversationCurrentRoomObservation(
+    val thread: VexConversationThreadState,
+    val authenticatedParticipantRef: VexConversationParticipantRef,
+)
+
+/**
  * Exact semantic intent accepted by the current Family thread-history producer.
  *
  * Transport/session material deliberately does not belong here. A later private-gateway adapter may
@@ -45,9 +56,67 @@ internal data class VexFamilyConversationThreadHistoryIntent(
  * Family Conversation read operations. Home/session authentication and private-gateway mechanics
  * remain outside this feature contract.
  */
+internal data class VexFamilyConversationAppendIntent(
+    val spaceRef: String,
+    val channelRef: String,
+    val expectedMembershipGeneration: Long,
+    val idempotencyKey: String,
+    val content: String,
+) {
+    init {
+        require(spaceRef.isNotBlank()) { "Family Conversation append spaceRef must be non-blank" }
+        require(channelRef.isNotBlank()) { "Family Conversation append channelRef must be non-blank" }
+        require(expectedMembershipGeneration > 0L) {
+            "Family Conversation append membership generation must be positive"
+        }
+        require(idempotencyKey.isNotBlank()) { "Family Conversation append idempotency key must be non-blank" }
+        require(content.isNotBlank()) { "Family Conversation append content must be non-blank" }
+    }
+}
+
+internal enum class VexFamilyConversationAppendState {
+    APPENDED,
+    IDEMPOTENT_CURRENT,
+}
+
+internal data class VexFamilyConversationAppendResult(
+    val state: VexFamilyConversationAppendState,
+    val messageRef: String,
+) {
+    init {
+        require(messageRef.isNotBlank()) { "Family Conversation append messageRef must be non-blank" }
+    }
+}
+
+internal enum class VexFamilyConversationConnectedServiceFailureKind {
+    NOT_FOUND,
+    CONFLICT,
+}
+
+internal class VexFamilyConversationConnectedServiceException(
+    val failureKind: VexFamilyConversationConnectedServiceFailureKind,
+    cause: Throwable? = null,
+) : IllegalStateException("Family Conversation Connected Services request failed: $failureKind", cause)
+
+internal sealed interface VexFamilyConversationConnectedServiceSendResult {
+    data class Accepted(
+        val messageRef: VexConversationMessageRef,
+        val refreshedThread: VexConversationThreadState,
+        val appendState: VexFamilyConversationAppendState,
+    ) : VexFamilyConversationConnectedServiceSendResult
+
+    data class Rejected(
+        val reason: VexFamilyConversationRepositoryRejection,
+    ) : VexFamilyConversationConnectedServiceSendResult
+}
+
 internal interface VexFamilyConversationConnectedServicePort {
     suspend fun bootstrap():
         VexFamilyConversationServerBootstrap
+
+    suspend fun append(
+        intent: VexFamilyConversationAppendIntent,
+    ): VexFamilyConversationAppendResult
 
     suspend fun readThreadHistory(
         intent:
@@ -74,7 +143,12 @@ internal class VexFamilyConversationConnectedServiceClient(
         VexFamilyConversationConnectedServicePort,
 ) {
     suspend fun readSingleCurrentRoom():
-        VexConversationThreadState {
+        VexConversationThreadState =
+        readSingleCurrentRoomObservation()
+            .thread
+
+    suspend fun readSingleCurrentRoomObservation():
+        VexFamilyConversationCurrentRoomObservation {
         val bootstrap =
             port.bootstrap()
 
@@ -84,9 +158,26 @@ internal class VexFamilyConversationConnectedServiceClient(
             "Installed Family Conversation doorway requires exactly one current bootstrap room"
         }
 
-        return readRoom(
-            bootstrap = bootstrap,
-            room = bootstrap.rooms.single(),
+        val thread =
+            readRoom(
+                bootstrap = bootstrap,
+                room = bootstrap.rooms.single(),
+            )
+        val authenticatedParticipantRef =
+            VexConversationParticipantRef(
+                bootstrap.currentPrincipalRef,
+            )
+        check(
+            authenticatedParticipantRef in
+                thread.currentAudienceRefs,
+        ) {
+            "Installed Family Conversation principal must belong to the current room audience"
+        }
+
+        return VexFamilyConversationCurrentRoomObservation(
+            thread = thread,
+            authenticatedParticipantRef =
+                authenticatedParticipantRef,
         )
     }
 
@@ -115,6 +206,117 @@ internal class VexFamilyConversationConnectedServiceClient(
         return readRoom(
             bootstrap = bootstrap,
             room = matchingRooms.single(),
+        )
+    }
+
+    suspend fun send(
+        request: VexFamilyConversationSendRequest,
+    ): VexFamilyConversationConnectedServiceSendResult {
+        val bootstrap =
+            port.bootstrap()
+        val matchingRooms =
+            bootstrap.rooms
+                .filter { room ->
+                    room.spaceRef == request.spaceRef.value &&
+                        room.threadRef == request.threadRef.value
+                }
+
+        if (matchingRooms.isEmpty()) {
+            return VexFamilyConversationConnectedServiceSendResult.Rejected(
+                VexFamilyConversationRepositoryRejection.THREAD_UNKNOWN,
+            )
+        }
+        check(matchingRooms.size == 1) {
+            "Family Conversation Send target must resolve exactly one current bootstrap room"
+        }
+        val room =
+            matchingRooms.single()
+        if (
+            room.channelRef != request.expectedChannelRef.value ||
+            room.membershipGeneration != request.expectedMembershipGeneration
+        ) {
+            return VexFamilyConversationConnectedServiceSendResult.Rejected(
+                VexFamilyConversationRepositoryRejection.CURRENTNESS_CHANGED,
+            )
+        }
+
+        val append =
+            try {
+                port.append(
+                    VexFamilyConversationAppendIntent(
+                        spaceRef = room.spaceRef,
+                        channelRef = room.channelRef,
+                        expectedMembershipGeneration = room.membershipGeneration,
+                        idempotencyKey = request.idempotencyKey.value,
+                        content = request.content,
+                    ),
+                )
+            } catch (error: VexFamilyConversationConnectedServiceException) {
+                return when (error.failureKind) {
+                    VexFamilyConversationConnectedServiceFailureKind.NOT_FOUND ->
+                        VexFamilyConversationConnectedServiceSendResult.Rejected(
+                            VexFamilyConversationRepositoryRejection.THREAD_UNKNOWN,
+                        )
+
+                    VexFamilyConversationConnectedServiceFailureKind.CONFLICT ->
+                        classifyConflict(
+                            request,
+                        )
+                }
+            }
+
+        val refreshed =
+            readThread(
+                VexFamilyConversationReadRequest(
+                    spaceRef = request.spaceRef,
+                    threadRef = request.threadRef,
+                ),
+            )
+        val messageRef =
+            VexConversationMessageRef(
+                append.messageRef,
+            )
+        check(
+            refreshed.messages.any { message ->
+                message.messageRef == messageRef
+            },
+        ) {
+            "Family Conversation canonical refresh must contain the accepted append message"
+        }
+        return VexFamilyConversationConnectedServiceSendResult.Accepted(
+            messageRef = messageRef,
+            refreshedThread = refreshed,
+            appendState = append.state,
+        )
+    }
+
+    private suspend fun classifyConflict(
+        request: VexFamilyConversationSendRequest,
+    ): VexFamilyConversationConnectedServiceSendResult.Rejected {
+        val bootstrap =
+            port.bootstrap()
+        val matchingRooms =
+            bootstrap.rooms
+                .filter { room ->
+                    room.spaceRef == request.spaceRef.value &&
+                        room.threadRef == request.threadRef.value
+                }
+        if (matchingRooms.size != 1) {
+            return VexFamilyConversationConnectedServiceSendResult.Rejected(
+                VexFamilyConversationRepositoryRejection.CURRENTNESS_CHANGED,
+            )
+        }
+        val room =
+            matchingRooms.single()
+        return VexFamilyConversationConnectedServiceSendResult.Rejected(
+            if (
+                room.channelRef != request.expectedChannelRef.value ||
+                room.membershipGeneration != request.expectedMembershipGeneration
+            ) {
+                VexFamilyConversationRepositoryRejection.CURRENTNESS_CHANGED
+            } else {
+                VexFamilyConversationRepositoryRejection.IDEMPOTENCY_CONFLICT
+            },
         )
     }
 
@@ -158,4 +360,4 @@ internal class VexFamilyConversationConnectedServiceClient(
     }
 }
 
-// [VXG RealForever][VEXLIFE-ANDROID][CONVERSATION][VCS-04][READ-CLIENT]
+// [VXG RealForever][VEXLIFE-ANDROID][CONVERSATION][VCS-04][READ-SEND-CLIENT]
