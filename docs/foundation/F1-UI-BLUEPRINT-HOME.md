@@ -213,51 +213,74 @@ rotation) keeps the same semantic Screen and open modal state.
 That is NOT a process-death restoration claim. Screen-local Compose-only state must still explicitly
 choose rememberSaveable or another rightful longer-lived owner when it needs that behavior.
 
-## Static identity with runtime text value
+## Stable text identity with mapped or bound value
 
-Some visible text is a stable product object even though its displayed string changes with current state.
+Some visible text is one stable product object even though its displayed value may come from different
+sources.
 
 Examples from Home:
 
 ~~~text
+element.home.body.vexstream.title
+  identity / role / style = stable semantic meaning
+  Android value mapping = R.string.home_vexstream_music
+
 element.home.body.vexstream.status
-  identity / role / style = stable Blueprint meaning
-  value = current VexStream connection / Hub projection
+  identity / role / style = stable semantic meaning
+  current value = VexStream connection / Hub projection
 
 element.home.body.vexstream.body
-  identity / role / style = stable Blueprint meaning
-  value = disconnected or paired explanatory copy
+  identity / role / style = stable semantic meaning
+  current value = disconnected or paired explanatory copy
 ~~~
 
-Use `DynamicTextElement` for this boundary.
+These are all `TextElement` identities.
 
 ~~~text
 TextElement
-  stable identity
-  + static localized resource
+  stable elementId
+  semantic TextRole / style
+  optional Android textRes mapping
+  no runtime/domain value storage
 
-DynamicTextElement
-  stable identity
-  + semantic TextRole / style
-  + NO stored runtime value
-  + current value supplied by Screen/runtime projection
+VexText(element)
+  uses element.textRes when a target-resource mapping exists
+
+VexText(element, text = currentValue)
+  realizes the same element identity from current State/data
 ~~~
 
-`VexText(element = dynamicElement, text = currentValue)` attaches the registered element identity to
-the rendered Compose text. The generic `VexElementTree` accepts a `dynamicTextValue` resolver for
-ordinary Blueprint-rendered Screens; custom Screens may supply the current value directly while
-keeping the same registered identity.
+The generic `VexElementTree` accepts a nullable `textValue(TextElement)` resolver. Returning null
+means the Android resource mapping remains the value source; returning a value means the current
+Screen/runtime projection supplies that occurrence's rendered value.
+
+This is an Android realization of the broader Origin rule:
+
+~~~text
+TEXT_IDENTITY != CONTENT_ORIGIN
+CONTENT_ORIGIN != ANDROID_RESOURCE_ID
+TEXT_VALUE_SOURCE != TEXT_ELEMENT_TYPE
+
+one semantic text identity
++ target resource mapping OR runtime binding
+-> one Android TextElement realization
+~~~
+
+Android `R.string.*` remains a target-native resource coordinate. It is not the portable content
+Origin merely because Android currently stores the accepted wording there during reverse adoption.
 
 Permanent:
 
 ~~~text
 TEXT_IDENTITY != TEXT_VALUE
-DYNAMIC_RUNTIME_TEXT != ANONYMOUS_COMPOSE_TEXT
-BLUEPRINT_REGISTRATION != RUNTIME_STATE_STORAGE
+VALUE_BINDING != ELEMENT_IDENTITY
+ANDROID_RESOURCE_MAPPING != PORTABLE_CONTENT_IDENTITY
+SCREEN_BLUEPRINT_REGISTRATION != RUNTIME_STATE_STORAGE
 ~~~
 
-Do not create fake string resources merely to make runtime text registerable, and do not put current
-repository/session values into the static Blueprint.
+Do not create fake string resources merely to make runtime text registerable, do not mint a
+`DynamicTextElement` merely because State chooses the current value, and do not put current
+repository/session values into the static Screen Blueprint.
 
 ## Form interactions
 
