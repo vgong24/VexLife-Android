@@ -31,6 +31,7 @@ dependencies {
     implementation(libs.composeRuntime)
     implementation(libs.glance)
     implementation(libs.glanceAppwidget)
+    implementation("androidx.datastore:datastore-preferences-core:1.2.1")
 
     testImplementation(libs.junit)
 }

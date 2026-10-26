@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.vexstream.playback
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -9,7 +10,13 @@ import androidx.compose.runtime.remember
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import com.vextreme.vexlife.android.vexstream.queue.VexStreamQueueProjection
+import com.vextreme.vexlife.android.vexstream.queue.toVexStreamQueueProjection
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Provider-derived Playback read data used by view-facing DisplayState.
@@ -76,6 +83,334 @@ internal data class VexStreamPlaybackReadState(
     }
 }
 
+/**
+ * One provider-observed playback snapshot.
+ *
+ * Media3 Player / MediaSession remains canonical truth. This value only composes the read facts and
+ * existing Playback / Queue projections that remote or in-app surfaces need to render one moment.
+ */
+internal data class VexStreamCurrentPlaybackObservation(
+    val readState:
+        VexStreamPlaybackReadState,
+    val playbackProjection:
+        VexStreamPlaybackProjection,
+    val queueProjection:
+        VexStreamQueueProjection,
+)
+
+/**
+ * Feature-local live diagnostic trace for the current-playback projection chain.
+ *
+ * VexLogger remains canonical semantic user-action history. These Logcat breadcrumbs expose
+ * provider/widget transport boundaries so lived debugging can identify the first stale handoff.
+ */
+internal object VexStreamPlaybackTrace {
+    const val TAG =
+        "VexStreamPlayback"
+
+    private val nextSequence =
+        AtomicLong(
+            1L,
+        )
+
+    fun record(
+        stage: String,
+        mediaId: String? = null,
+        title: String? = null,
+        artist: String? = null,
+        glanceId: String? = null,
+        desiredRevision: Long? = null,
+        renderedRevision: Long? = null,
+        detail: String? = null,
+    ) {
+        val sequence =
+            nextSequence
+                .getAndIncrement()
+
+        try {
+            Log.i(
+                TAG,
+                message(
+                    sequence = sequence,
+                    stage = stage,
+                    mediaId = mediaId,
+                    title = title,
+                    artist = artist,
+                    glanceId = glanceId,
+                    desiredRevision =
+                        desiredRevision,
+                    renderedRevision =
+                        renderedRevision,
+                    detail = detail,
+                ),
+            )
+        } catch (_: Throwable) {
+            // Logcat diagnostics must never affect playback or widget behavior.
+        }
+    }
+
+    internal fun message(
+        sequence: Long,
+        stage: String,
+        mediaId: String? = null,
+        title: String? = null,
+        artist: String? = null,
+        glanceId: String? = null,
+        desiredRevision: Long? = null,
+        renderedRevision: Long? = null,
+        detail: String? = null,
+    ): String {
+        require(
+            stage.isNotBlank(),
+        ) {
+            "trace stage must not be blank"
+        }
+
+        return buildString {
+            append(
+                "seq=",
+            )
+            append(
+                sequence,
+            )
+            append(
+                " stage=",
+            )
+            append(
+                clean(
+                    stage,
+                ),
+            )
+            mediaId?.let {
+                appendField(
+                    "mediaId",
+                    it,
+                )
+            }
+            title?.let {
+                appendField(
+                    "title",
+                    it,
+                )
+            }
+            artist?.let {
+                appendField(
+                    "artist",
+                    it,
+                )
+            }
+            glanceId?.let {
+                appendField(
+                    "glanceId",
+                    it,
+                )
+            }
+            desiredRevision?.let {
+                append(
+                    " desired=",
+                )
+                append(
+                    it,
+                )
+            }
+            renderedRevision?.let {
+                append(
+                    " rendered=",
+                )
+                append(
+                    it,
+                )
+            }
+            detail
+                ?.takeIf {
+                    it.isNotBlank()
+                }
+                ?.let {
+                    appendField(
+                        "detail",
+                        it,
+                    )
+                }
+        }
+    }
+
+    private fun StringBuilder.appendField(
+        name: String,
+        value: String,
+    ) {
+        append(
+            " ",
+        )
+        append(
+            name,
+        )
+        append(
+            "=",
+        )
+        append(
+            clean(
+                value,
+            ),
+        )
+    }
+
+    private fun clean(
+        value: String,
+    ): String =
+        value
+            .replace(
+                '\n',
+                ' ',
+            )
+            .replace(
+                '\r',
+                ' ',
+            )
+            .replace(
+                ' ',
+                '~',
+            )
+            .take(
+                180,
+            )
+}
+
+/**
+ * Playback-lifetime observation interface.
+ *
+ * Consumers depend on the immutable observation stream rather than independently timing provider
+ * reads. The observer owns only Media3 listener registration; it does not own playback State.
+ */
+internal interface VexStreamCurrentPlaybackObserver :
+    AutoCloseable {
+    val observations:
+        StateFlow<
+            VexStreamCurrentPlaybackObservation
+        >
+}
+
+/**
+ * Media3 realization of the current-playback observer.
+ *
+ * Player.Listener callbacks run on the Player application looper. Projecting the complete
+ * observation from onEvents therefore preserves Media3's ordering/thread contract before values
+ * cross into other execution surfaces.
+ */
+internal class Media3VexStreamCurrentPlaybackObserver(
+    private val player: Player,
+) :
+    VexStreamCurrentPlaybackObserver {
+    private val mutableObservations =
+        MutableStateFlow(
+            player
+                .toVexStreamCurrentPlaybackObservation(),
+        )
+
+    override val observations:
+        StateFlow<
+            VexStreamCurrentPlaybackObservation
+        > =
+        mutableObservations
+            .asStateFlow()
+
+    private val listener =
+        object :
+            Player.Listener {
+            override fun onEvents(
+                player: Player,
+                events: Player.Events,
+            ) {
+                val observed =
+                    player
+                        .toVexStreamCurrentPlaybackObservation()
+                val changed =
+                    mutableObservations.value !=
+                        observed
+
+                VexStreamPlaybackTrace.record(
+                    stage =
+                        "observer.event",
+                    mediaId =
+                        observed.readState
+                            .currentMediaId,
+                    title =
+                        observed.readState
+                            .currentTitle,
+                    artist =
+                        observed.readState
+                            .currentArtist,
+                    detail =
+                        "changed=$changed " +
+                            "index=${observed.readState.currentIndex} " +
+                            "playerState=${player.playbackState} " +
+                            "playWhenReady=${player.playWhenReady}",
+                )
+
+                if (
+                    changed
+                ) {
+                    mutableObservations.value =
+                        observed
+                    VexStreamPlaybackTrace.record(
+                        stage =
+                            "observer.emit",
+                        mediaId =
+                            observed.readState
+                                .currentMediaId,
+                        title =
+                            observed.readState
+                                .currentTitle,
+                        artist =
+                            observed.readState
+                                .currentArtist,
+                    )
+                }
+            }
+        }
+
+    init {
+        val initial =
+            mutableObservations.value
+        VexStreamPlaybackTrace.record(
+            stage =
+                "observer.start",
+            mediaId =
+                initial.readState
+                    .currentMediaId,
+            title =
+                initial.readState
+                    .currentTitle,
+            artist =
+                initial.readState
+                    .currentArtist,
+        )
+        player.addListener(
+            listener,
+        )
+    }
+
+    override fun close() {
+        VexStreamPlaybackTrace.record(
+            stage =
+                "observer.close",
+        )
+        player.removeListener(
+            listener,
+        )
+    }
+}
+
+internal fun Player.toVexStreamCurrentPlaybackObservation():
+    VexStreamCurrentPlaybackObservation =
+    VexStreamCurrentPlaybackObservation(
+        readState =
+            toVexStreamPlaybackReadState(),
+        playbackProjection =
+            toVexStreamPlaybackProjection(),
+        queueProjection =
+            toVexStreamQueueProjection(),
+    )
+
 @Composable
 internal fun rememberVexStreamPlaybackReadState(
     controller:
@@ -115,9 +450,23 @@ internal fun rememberVexStreamPlaybackReadState(
                     events:
                         Player.Events,
                 ) {
-                    projected.value =
+                    val current =
                         player
                             .toVexStreamPlaybackReadState()
+                    projected.value =
+                        current
+                    VexStreamPlaybackTrace.record(
+                        stage =
+                            "full-player.event",
+                        mediaId =
+                            current.currentMediaId,
+                        title =
+                            current.currentTitle,
+                        artist =
+                            current.currentArtist,
+                        detail =
+                            "index=${current.currentIndex}",
+                    )
                 }
             }
 
@@ -164,7 +513,7 @@ internal fun rememberVexStreamPlaybackReadState(
     return projected
 }
 
-private fun Player
+internal fun Player
     .toVexStreamPlaybackReadState():
     VexStreamPlaybackReadState {
     val current =

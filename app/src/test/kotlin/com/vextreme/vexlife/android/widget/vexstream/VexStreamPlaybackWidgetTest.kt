@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.widget.vexstream
 
+import android.content.Intent
 import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.resolveVexLifeExternalScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -52,6 +53,20 @@ class VexStreamPlaybackWidgetTest {
     }
 
     @Test
+    fun widgetEntryReusesTheExistingMainActivityTask() {
+        assertTrue(
+            VEXSTREAM_WIDGET_ENTRY_ACTIVITY_FLAGS and
+                Intent.FLAG_ACTIVITY_CLEAR_TOP !=
+                0,
+        )
+        assertTrue(
+            VEXSTREAM_WIDGET_ENTRY_ACTIVITY_FLAGS and
+                Intent.FLAG_ACTIVITY_SINGLE_TOP !=
+                0,
+        )
+    }
+
+    @Test
     fun widgetContentEntryUsesTheRegisteredVexStreamScreen() {
         assertSame(
             VexStreamMusicScreen,
@@ -63,31 +78,51 @@ class VexStreamPlaybackWidgetTest {
     }
 
     @Test
-    fun widgetProviderRefreshPerformsOneBoundedConvergenceRead() =
-        runTest {
-            val observations =
-                mutableListOf<String>()
+    fun widgetHeadlineKeepsArtistOnTheSameLineAsTitle() {
+        assertEquals(
+            "My Lovely Man — Red Hot Chili Peppers",
+            vexStreamPlaybackWidgetHeadline(
+                title =
+                    "My Lovely Man",
+                artist =
+                    "Red Hot Chili Peppers",
+            ),
+        )
+        assertEquals(
+            "Instrumental",
+            vexStreamPlaybackWidgetHeadline(
+                title =
+                    "Instrumental",
+                artist = "",
+            ),
+        )
+    }
 
-            convergeVexStreamPlaybackWidgetProjection(
-                refresh = {
-                    observations +=
-                        "refresh"
-                },
-                awaitProviderConvergence = {
-                    observations +=
-                        "provider-convergence"
-                },
+    @Test
+    fun widgetSurfaceStateIncludesArtworkAvailabilityInStructuralEquality() {
+        val missing =
+            VexStreamPlaybackWidgetSurfaceState(
+                title = "Song",
+                artist = "Artist",
+                artworkUri =
+                    "file:///artwork",
+                artworkAvailable = false,
+                previousEnabled = true,
+                playPauseEnabled = true,
+                showPause = true,
+                nextEnabled = true,
+            )
+        val available =
+            missing.copy(
+                artworkAvailable =
+                    true,
             )
 
-            assertEquals(
-                listOf(
-                    "refresh",
-                    "provider-convergence",
-                    "refresh",
-                ),
-                observations,
-            )
-        }
+        assertFalse(
+            missing ==
+                available,
+        )
+    }
 
     @Test
     fun failedWidgetPublicationGetsOneBoundedRetry() =
@@ -149,120 +184,21 @@ class VexStreamPlaybackWidgetTest {
         }
 
     @Test
-    fun retainedProviderTruthSurvivesFailedRenderBootstrap() {
-        val retained =
-            VexStreamPlaybackWidgetProviderRead(
-                title = "Current song",
-                artist = "Current artist",
-                artworkUri = "file:///current-artwork",
-                previousEnabled = true,
-                playPauseEnabled = true,
-                showPause = true,
-                nextEnabled = true,
-            )
-
-        assertSame(
-            retained,
-            selectVexStreamPlaybackWidgetProviderRead(
-                retained = retained,
-                bootstrap = null,
-            ),
-        )
-        assertSame(
-            retained,
-            selectVexStreamPlaybackWidgetProviderRead(
-                retained = retained,
-                bootstrap =
-                    retained.copy(
-                        title = "Stale bootstrap",
-                    ),
-            ),
-        )
-        assertNull(
-            selectVexStreamPlaybackWidgetProviderRead(
-                retained = null,
-                bootstrap = null,
-            ),
-        )
-    }
-
-    @Test
-    fun desiredRevisionAdvancesOnlyWhenProviderTruthChanges() {
-        val first =
-            VexStreamPlaybackWidgetProviderRead(
-                title = "Song one",
-                artist = "Artist",
-                artworkUri = null,
-                previousEnabled = false,
-                playPauseEnabled = true,
-                showPause = false,
-                nextEnabled = true,
-            )
-        val second =
-            first.copy(
-                title = "Song two",
-            )
-
-        assertEquals(
-            1L,
-            nextVexStreamPlaybackWidgetDesiredRevision(
-                current = null,
-                currentRevision = 0L,
-                next = first,
-            ),
-        )
-        assertEquals(
-            1L,
-            nextVexStreamPlaybackWidgetDesiredRevision(
-                current = first,
-                currentRevision = 1L,
-                next = first,
-            ),
-        )
-        assertEquals(
-            2L,
-            nextVexStreamPlaybackWidgetDesiredRevision(
-                current = first,
-                currentRevision = 1L,
-                next = second,
-            ),
-        )
-    }
-
-    @Test
-    fun renderedCurrentnessRequiresExactDesiredRevision() {
-        assertTrue(
-            VexStreamPlaybackWidgetCurrentness(
-                desiredRevision = 7L,
-                renderedRevision = 7L,
-            ).isConverged,
-        )
-        assertFalse(
-            VexStreamPlaybackWidgetCurrentness(
-                desiredRevision = 7L,
-                renderedRevision = 6L,
-            ).isConverged,
-        )
-        assertFalse(
-            VexStreamPlaybackWidgetCurrentness(
-                desiredRevision = 0L,
-                renderedRevision = 0L,
-            ).isConverged,
-        )
-    }
-
-    @Test
     fun widgetTransportControlsMeetMinimumTouchTarget() {
         assertTrue(
             VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP >=
-                48,
+                56,
+        )
+        assertTrue(
+            VEXSTREAM_WIDGET_CONTROL_SYMBOL_SP >=
+                28,
         )
         assertTrue(
             VEXSTREAM_WIDGET_ARTWORK_SIZE_DP >=
                 VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP,
         )
         assertTrue(
-            VEXSTREAM_WIDGET_PROVIDER_CONVERGENCE_MILLIS >
+            VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS >
                 0L,
         )
     }
