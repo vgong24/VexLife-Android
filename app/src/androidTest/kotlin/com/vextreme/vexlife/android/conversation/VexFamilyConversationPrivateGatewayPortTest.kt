@@ -117,6 +117,89 @@ class VexFamilyConversationPrivateGatewayPortTest {
             )
         }
 
+    @Test
+    fun appendCarriesOnlySemanticFamilyIntentAndReturnsCanonicalMessageIdentity() =
+        runBlocking {
+            val signer =
+                RecordingSigner()
+            val transport =
+                RecordingGatewayTransport(
+                    signer.identity,
+                )
+            val port =
+                VexFamilyConversationPrivateGatewayPort(
+                    VexPrivateHomeGatewayConnection(
+                        transport = transport,
+                        signer = signer,
+                        nowEpochMillis = { T0 },
+                    ),
+                )
+
+            val result =
+                port.append(
+                    VexFamilyConversationAppendIntent(
+                        spaceRef = SPACE,
+                        channelRef = CHANNEL,
+                        expectedMembershipGeneration = 2L,
+                        idempotencyKey = "send.vcs04.android.001",
+                        content = "Durable human Send.",
+                    ),
+                )
+
+            assertEquals(
+                VexFamilyConversationAppendState.APPENDED,
+                result.state,
+            )
+            assertEquals(
+                "message.family.vcs04.append.001",
+                result.messageRef,
+            )
+            val request =
+                JSONObject(
+                    transport.lastFamilyConversationBody,
+                )
+            assertEquals(
+                "APPEND",
+                request.getString(
+                    "operation",
+                ),
+            )
+            val intent =
+                request.getJSONObject(
+                    "intent",
+                )
+            assertEquals(
+                setOf(
+                    "spaceRef",
+                    "channelRef",
+                    "content",
+                    "expectedMembershipGeneration",
+                    "idempotencyKey",
+                ),
+                intent.keys()
+                    .asSequence()
+                    .toSet(),
+            )
+            assertEquals(
+                SPACE,
+                intent.getString(
+                    "spaceRef",
+                ),
+            )
+            assertEquals(
+                CHANNEL,
+                intent.getString(
+                    "channelRef",
+                ),
+            )
+            assertFalse(
+                transport.lastFamilyConversationBody
+                    .contains(
+                        SESSION_REF,
+                    ),
+            )
+        }
+
     private class RecordingSigner : VexHomeDevicePossessionSigner {
         val identity =
             VexHomeDevicePublicIdentity(
@@ -249,13 +332,22 @@ class VexFamilyConversationPrivateGatewayPortTest {
                         JSONObject(
                             body,
                         )
-                    assertEquals(
-                        "READ_THREAD_HISTORY",
+                    when (
                         request.getString(
                             "operation",
-                        ),
-                    )
-                    historyJson()
+                        )
+                    ) {
+                        "APPEND" ->
+                            appendJson()
+
+                        "READ_THREAD_HISTORY" ->
+                            historyJson()
+
+                        else ->
+                            error(
+                                "Unexpected Family Conversation operation",
+                            )
+                    }
                 }
 
                 else ->
@@ -431,6 +523,22 @@ class VexFamilyConversationPrivateGatewayPortTest {
                                 )
                                 .put("familyCompanionLineageRef", COMPANION)
                                 .put("familyCompanionIncluded", true),
+                        ),
+                )
+                .toString()
+
+        fun appendJson(): String =
+            JSONObject()
+                .put(
+                    "state",
+                    "APPENDED",
+                )
+                .put(
+                    "message",
+                    JSONObject()
+                        .put(
+                            "messageRef",
+                            "message.family.vcs04.append.001",
                         ),
                 )
                 .toString()
