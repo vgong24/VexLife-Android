@@ -20,6 +20,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.vexstream.playback.convergeVexStreamCurrentPlaybackArtwork
 import com.vextreme.vexlife.android.widget.vexstream.updateVexStreamPlaybackWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -168,16 +169,26 @@ private class VexStreamArtworkExecution(
         ) { state ->
             if (
                 state.hubState is
-                VexStreamHubState.Ready &&
-                state.tracks.any {
-                    it.localCopy is
-                        VexStreamLocalCopyState.Downloaded
-                }
+                VexStreamHubState.Ready
             ) {
-                repository
-                    .backfillOfflineArtwork()
-                updateVexStreamPlaybackWidgets(
-                    context,
+                if (
+                    state.tracks.any {
+                        it.localCopy is
+                            VexStreamLocalCopyState.Downloaded
+                    }
+                ) {
+                    repository
+                        .backfillOfflineArtwork()
+                    updateVexStreamPlaybackWidgets(
+                        context,
+                    )
+                }
+
+                convergeVexStreamCurrentPlaybackArtwork(
+                    context =
+                        context,
+                    repository =
+                        repository,
                 )
             }
         }
