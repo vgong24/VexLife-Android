@@ -19,6 +19,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
+import com.vextreme.vexlife.android.data.vexstream.VexStreamRepositoryResult
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -153,31 +154,100 @@ internal class VexStreamOfflineCopyConnection(
         }
 
         return scope.launch {
-            request.targets.forEach { target ->
-                val current =
+            downloadCollection(
+                request,
+            )
+        }
+    }
+
+    /**
+     * One deliberate "make the phone current" pass over already-owned VexStream truth.
+     *
+     * This is not persistent Keep Offline / Sync. Each invocation first refreshes the current Desktop
+     * catalog, then downloads only exact currently-missing audio targets, then asks the repository to
+     * cache only admitted artwork that is still missing. Already-downloaded audio is never replayed,
+     * and artwork remains ancillary to verified audio truth.
+     *
+     * On legacy Android, missing shared-storage permission holds only the audio portion. Existing
+     * artwork reconciliation may still run before the permission handoff, and a granted retry
+     * re-reads the refreshed catalog before forming exact download targets again.
+     */
+    fun requestLibraryReconciliation(): Job =
+        scope.launch {
+            val refresh =
+                repository
+                    .refreshCatalog()
+            if (
+                refresh !is
+                VexStreamRepositoryResult.Accepted
+            ) {
+                return@launch
+            }
+
+            val downloadRequest =
+                vexStreamOfflineCollectionPlan(
                     repository
                         .state
                         .value
-                        .track(
-                            target.trackRef,
-                        )
+                        .playableTracks(),
+                ).requestOrNull()
 
-                if (
-                    !target.isCurrentlyDownloadable(
-                        current,
+            if (
+                downloadRequest != null &&
+                !canDownload()
+            ) {
+                repository
+                    .backfillOfflineArtwork()
+
+                if (scope.isActive) {
+                    requestDownloadPermission
+                        ?.invoke {
+                            if (scope.isActive) {
+                                requestLibraryReconciliation()
+                            }
+                        }
+                }
+                return@launch
+            }
+
+            downloadRequest
+                ?.let {
+                    downloadCollection(
+                        it,
                     )
-                ) {
-                    return@forEach
                 }
 
-                repository.downloadForOffline(
-                    trackRef = target.trackRef,
-                    expectedMediaSha256 =
-                        target.mediaSha256,
-                    expectedMediaByteLength =
-                        target.mediaByteLength,
+            repository
+                .backfillOfflineArtwork()
+        }
+
+    private suspend fun downloadCollection(
+        request: VexStreamOfflineCollectionRequest,
+    ) {
+        request.targets.forEach { target ->
+            val current =
+                repository
+                    .state
+                    .value
+                    .track(
+                        target.trackRef,
+                    )
+
+            if (
+                !target.isCurrentlyDownloadable(
+                    current,
                 )
+            ) {
+                return@forEach
             }
+
+            repository.downloadForOffline(
+                trackRef = target.trackRef,
+                expectedMediaSha256 =
+                    target.mediaSha256,
+                expectedMediaByteLength =
+                    target.mediaByteLength,
+            )
         }
     }
 
