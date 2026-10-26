@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class BlueprintProjectionTest {
+class UIRealizationProjectionTest {
     private object Home : ScreenElement("screen.home", 1)
     private object Help : ScreenElement("screen.help", 2)
 
@@ -87,8 +87,8 @@ class BlueprintProjectionTest {
 
     @Test
     fun projectionIsDeterministicAndKeepsStructuralOrder() {
-        val first = registry().semanticProjection()
-        val second = registry().semanticProjection()
+        val first = registry().realizationProjection()
+        val second = registry().realizationProjection()
 
         assertEquals(first, second)
         assertEquals(
@@ -143,7 +143,7 @@ class BlueprintProjectionTest {
 
     @Test
     fun projectionKeepsOwnerParentStyleAndTextValueSourceMeaning() {
-        val projection = registry().semanticProjection()
+        val projection = registry().realizationProjection()
 
         val runtimeBoundText =
             projection.elements.single {
@@ -178,14 +178,14 @@ class BlueprintProjectionTest {
 
     @Test
     fun projectionKeepsTypedIntentRelationshipsWithoutRuntimeState() {
-        val projection = registry().semanticProjection()
+        val projection = registry().realizationProjection()
 
         val shellHelp =
             projection.elements.single {
                 it.semanticRef == ShellHelp.elementId
             }
         assertEquals(
-            UIBlueprintIntentProjection(
+            UIIntentRealization(
                 kind = "NAVIGATE_TO",
                 screenRefs = listOf(Help.screenId),
             ),
@@ -197,7 +197,7 @@ class BlueprintProjectionTest {
                 it.semanticRef == ShowPanelB.elementId
             }
         assertEquals(
-            UIBlueprintIntentProjection(
+            UIIntentRealization(
                 kind = "SWAP_TO",
                 elementRefs =
                     listOf(
@@ -239,4 +239,4 @@ class BlueprintProjectionTest {
     }
 }
 
-// [VXG RealForever][UI-BLUEPRINT][SEMANTIC-PROJECTION]
+// [VXG RealForever][UI-REALIZATION][PROJECTION]

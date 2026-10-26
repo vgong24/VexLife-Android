@@ -259,9 +259,9 @@ The feature remains the owner of runtime instance identity; Vex Compose owns onl
 presentation-continuity law. Do not invent a generic dynamic-ID registry merely to make these two
 systems look symmetrical.
 
-## Deterministic semantic projection
+## Deterministic UI realization projection
 
-`UIBlueprintRegistry.semanticProjection()` exposes the declared UI lattice as immutable data without
+`UIBlueprintRegistry.realizationProjection()` exposes the declared Android UI realization lattice as immutable data without
 making the Elements module own a transport format.
 
 Current projection includes:
@@ -296,7 +296,7 @@ The projection is deliberately serialization-neutral:
 
 ~~~text
 UIBlueprintRegistry
--> UIBlueprintProjection
+-> UIRealizationProjection
 -> app/tooling encoder
 -> JSON / VexBoard / diagnostics / another consumer
 ~~~
@@ -329,7 +329,7 @@ mapping.
 Permanent:
 
 ~~~text
-DECLARED_SEMANTIC_PROJECTION
+DECLARED_UI_REALIZATION_PROJECTION
 !=
 RUNTIME_NAVIGATION_STATE
 !=
