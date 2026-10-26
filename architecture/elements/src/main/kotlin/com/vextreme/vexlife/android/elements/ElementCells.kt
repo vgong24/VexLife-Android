@@ -67,52 +67,38 @@ fun interface ElementActionHandler {
 }
 
 /**
- * Registered static localized [TextElement] realization through the Vex Compose front door.
+ * Registered [TextElement] realization through the Vex Compose front door.
  *
- * [style] / [color] remain optional target-realization overrides. Identity and the ordinary text role
- * still come from the registered element; callers do not fall back to anonymous Compose Text merely
- * because the accepted design needs a more specific native typography/color role.
+ * The element owns one stable semantic identity / role / style. Its current text may come from the
+ * Android target-resource mapping ([TextElement.textRes]) or from a caller-supplied value projected
+ * from current State/data. Value source is therefore a realization/binding concern, not a second
+ * element type.
+ *
+ * [style] / [color] remain optional target-realization overrides so accepted Origin design can map
+ * exact native typography/color without dropping semantic identity.
  */
 @Composable
 fun VexText(
     element: TextElement,
+    text: String? = null,
     modifier: Modifier = VexModifier,
     style: TextStyle? = null,
     color: Color = Color.Unspecified,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
 ) {
-    VexTextContent(
-        element = element,
-        text = stringResource(element.textRes),
-        role = element.role,
-        modifier = modifier,
-        style = style,
-        color = color,
-        maxLines = maxLines,
-        overflow = overflow,
-    )
-}
+    val resolvedText =
+        text
+            ?: element.textRes?.let { textRes ->
+                stringResource(textRes)
+            }
+            ?: error(
+                "${element.elementId} requires an Android text resource mapping or supplied text value",
+            )
 
-/**
- * Registered dynamic text realization.
- *
- * The element owns stable semantic identity / role / style. [text] is the current runtime value and
- * is intentionally not stored in the static Blueprint.
- */
-@Composable
-fun VexText(
-    element: DynamicTextElement,
-    text: String,
-    modifier: Modifier = VexModifier,
-    style: TextStyle? = null,
-    color: Color = Color.Unspecified,
-    maxLines: Int = Int.MAX_VALUE,
-    overflow: TextOverflow = TextOverflow.Clip,
-) {
     VexTextContent(
         element = element,
-        text = text,
+        text = resolvedText,
         role = element.role,
         modifier = modifier,
         style = style,
@@ -517,7 +503,7 @@ fun VexElementTree(
     textFieldValue: (TextFieldElement) -> String = { "" },
     onTextFieldValueChange: (TextFieldElement, String) -> Unit = { _, _ -> },
     selectedChild: (SwappableContainerElement) -> UIElement = { it.defaultChild },
-    dynamicTextValue: (DynamicTextElement) -> String = { "" },
+    textValue: (TextElement) -> String? = { null },
 ) {
     val element = placement.element
     val style = registry.styleOf(element)
@@ -538,7 +524,7 @@ fun VexElementTree(
                     handler = handler,
                     modifier = modifier,
                     toggleChecked = toggleChecked,
-                    dynamicTextValue = dynamicTextValue,
+                    textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
                     selectedChild = selectedChild,
@@ -555,7 +541,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
-                dynamicTextValue,
+                textValue,
                 textFieldValue,
                 onTextFieldValueChange,
                 selectedChild,
@@ -572,7 +558,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
-                dynamicTextValue,
+                textValue,
                 textFieldValue,
                 onTextFieldValueChange,
                 selectedChild,
@@ -588,7 +574,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
-                dynamicTextValue,
+                textValue,
                 textFieldValue,
                 onTextFieldValueChange,
                 selectedChild,
@@ -605,7 +591,7 @@ fun VexElementTree(
                     registry,
                     handler,
                     toggleChecked = toggleChecked,
-                    dynamicTextValue = dynamicTextValue,
+                    textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
                     selectedChild = selectedChild,
@@ -622,7 +608,7 @@ fun VexElementTree(
                     registry,
                     handler,
                     toggleChecked = toggleChecked,
-                    dynamicTextValue = dynamicTextValue,
+                    textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
                     selectedChild = selectedChild,
@@ -660,14 +646,9 @@ fun VexElementTree(
             modifier = modifier,
         )
 
-        is DynamicTextElement -> VexText(
-            element = element,
-            text = dynamicTextValue(element),
-            modifier = modifier,
-        )
-
         is TextElement -> VexText(
             element = element,
+            text = textValue(element),
             modifier = modifier,
         )
 
@@ -683,7 +664,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
-                dynamicTextValue,
+                textValue,
                 textFieldValue,
                 onTextFieldValueChange,
                 selectedChild,
@@ -698,7 +679,7 @@ private fun ColumnScope.RenderChildren(
     registry: UIBlueprintRegistry,
     handler: ElementActionHandler,
     toggleChecked: (ToggleElement) -> Boolean,
-    dynamicTextValue: (DynamicTextElement) -> String,
+    textValue: (TextElement) -> String?,
     textFieldValue: (TextFieldElement) -> String,
     onTextFieldValueChange: (TextFieldElement, String) -> Unit,
     selectedChild: (SwappableContainerElement) -> UIElement,
@@ -709,7 +690,7 @@ private fun ColumnScope.RenderChildren(
             registry = registry,
             handler = handler,
             toggleChecked = toggleChecked,
-            dynamicTextValue = dynamicTextValue,
+            textValue = textValue,
             textFieldValue = textFieldValue,
             onTextFieldValueChange = onTextFieldValueChange,
             selectedChild = selectedChild,
