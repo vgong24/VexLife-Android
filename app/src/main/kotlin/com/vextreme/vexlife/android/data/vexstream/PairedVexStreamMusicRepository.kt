@@ -21,6 +21,30 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /**
+ * Repository-owned single-flight gate for artwork cache preparation.
+ *
+ * Rechecking local cache presence only after entering the gate prevents a session backfill, explicit
+ * library reconciliation and playback preparation from independently fetching/writing the same
+ * admitted artwork source at the same time. The gate is held for one source attempt only, not for an
+ * entire library backfill, so playback-relevant artwork is not queued behind hundreds of tracks.
+ */
+internal class VexStreamArtworkSingleFlight {
+    private val mutex = Mutex()
+
+    suspend fun cacheIfMissing(
+        isCached: () -> Boolean,
+        fetch: suspend () -> Boolean,
+    ): Boolean =
+        mutex.withLock {
+            if (isCached()) {
+                true
+            } else {
+                fetch()
+            }
+        }
+}
+
+/**
  * Product-shaped same-Wi-Fi VexStream consumer.
  *
  * Discovery is human-mediated by Android where available. The selected service advertises its exact
@@ -40,6 +64,8 @@ class PairedVexStreamMusicRepository(
 
     private val operationMutex = Mutex()
     private val restoreMutex = Mutex()
+    private val artworkSingleFlight =
+        VexStreamArtworkSingleFlight()
     private var artworkBackfillOffset = 0
     private var persistedStateRestored = false
     private val remoteTransport =
@@ -1507,40 +1533,43 @@ class PairedVexStreamMusicRepository(
      * Only HTTPS sources admitted by [VexStreamTrack] are followed, redirects may not downgrade
      * transport, response bytes stay bounded, and any failure leaves the verified audio copy intact.
      */
-    private fun cacheArtworkBestEffort(
+    private suspend fun cacheArtworkBestEffort(
         track: VexStreamTrack,
     ): Boolean {
         val store =
             artworkStore
                 ?: return false
-        if (
-            store.fileFor(
-                track,
-            ) != null
-        ) {
-            return true
-        }
 
-        return when {
-            track.artworkUrl != null ->
-                cacheExternalArtworkBestEffort(
-                    track = track,
-                    artworkUrl =
-                        track.artworkUrl,
-                    store = store,
-                )
+        return artworkSingleFlight
+            .cacheIfMissing(
+                isCached = {
+                    store.fileFor(
+                        track,
+                    ) != null
+                },
+                fetch = {
+                    when {
+                        track.artworkUrl != null ->
+                            cacheExternalArtworkBestEffort(
+                                track = track,
+                                artworkUrl =
+                                    track.artworkUrl,
+                                store = store,
+                            )
 
-            track.artworkRef != null ->
-                cacheEmbeddedArtworkBestEffort(
-                    track = track,
-                    artworkRef =
-                        track.artworkRef,
-                    store = store,
-                )
+                        track.artworkRef != null ->
+                            cacheEmbeddedArtworkBestEffort(
+                                track = track,
+                                artworkRef =
+                                    track.artworkRef,
+                                store = store,
+                            )
 
-            else ->
-                false
-        }
+                        else ->
+                            false
+                    }
+                },
+            )
     }
 
     private fun cacheExternalArtworkBestEffort(
