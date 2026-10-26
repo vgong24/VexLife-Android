@@ -123,8 +123,10 @@ class AppBlueprintTest {
 
         assertSame(HomeScreen, registry.ownerScreenOf(HomeScreen.VexStreamStatus))
         assertSame(HomeScreen, registry.ownerScreenOf(HomeScreen.VexStreamBody))
-        assertEquals("DynamicText", HomeScreen.VexStreamStatus.kind)
-        assertEquals("DynamicText", HomeScreen.VexStreamBody.kind)
+        assertEquals("Text", HomeScreen.VexStreamStatus.kind)
+        assertEquals("Text", HomeScreen.VexStreamBody.kind)
+        assertNull(HomeScreen.VexStreamStatus.textRes)
+        assertNull(HomeScreen.VexStreamBody.textRes)
         assertNull(HomeScreen.VexStreamStatus.labelRes)
         assertNull(HomeScreen.VexStreamBody.labelRes)
     }
