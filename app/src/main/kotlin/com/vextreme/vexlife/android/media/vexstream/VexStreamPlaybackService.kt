@@ -8,6 +8,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
+import com.vextreme.vexlife.android.widget.vexstream.vexStreamPlaybackWidgetProviderRead
 import kotlinx.coroutines.Dispatchers
 
 /**
@@ -40,8 +41,18 @@ class VexStreamPlaybackService : MediaSessionService() {
                 player: Player,
                 events: Player.Events,
             ) {
-                widgetUpdateExecution
-                    .requestUpdate()
+                runCatching {
+                    vexStreamPlaybackWidgetProviderRead(
+                        applicationContext,
+                        player,
+                    )
+                }.getOrNull()
+                    ?.let { providerRead ->
+                        widgetUpdateExecution
+                            .requestUpdate(
+                                providerRead,
+                            )
+                    }
             }
         }
 
@@ -79,7 +90,12 @@ class VexStreamPlaybackService : MediaSessionService() {
             ).build()
 
         widgetUpdateExecution
-            .requestUpdate()
+            .requestUpdate(
+                vexStreamPlaybackWidgetProviderRead(
+                    applicationContext,
+                    player,
+                ),
+            )
     }
 
     override fun onGetSession(
