@@ -8,6 +8,7 @@ import androidx.media3.session.MediaSessionService
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.vexstream.playback.Media3VexStreamCurrentPlaybackObserver
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObserver
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.widget.vexstream.VexStreamPlaybackWidgetUpdateExecution
 import kotlinx.coroutines.Dispatchers
 
@@ -61,6 +62,13 @@ class VexStreamPlaybackService : MediaSessionService() {
                 player,
             ).build()
 
+        VexStreamPlaybackTrace.record(
+            stage =
+                "service.session.ready",
+            detail =
+                "looper=${player.applicationLooper.thread.name}",
+        )
+
         val playbackObserver =
             Media3VexStreamCurrentPlaybackObserver(
                 player,
@@ -77,6 +85,10 @@ class VexStreamPlaybackService : MediaSessionService() {
                     playbackObserver
                         .observations,
             )
+        VexStreamPlaybackTrace.record(
+            stage =
+                "service.widget-observer.attached",
+        )
     }
 
     override fun onGetSession(
@@ -85,6 +97,10 @@ class VexStreamPlaybackService : MediaSessionService() {
         mediaSession
 
     override fun onDestroy() {
+        VexStreamPlaybackTrace.record(
+            stage =
+                "service.destroy",
+        )
         currentPlaybackObserver
             ?.close()
         currentPlaybackObserver =

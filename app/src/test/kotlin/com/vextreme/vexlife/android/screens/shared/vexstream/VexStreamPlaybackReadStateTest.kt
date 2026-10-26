@@ -8,6 +8,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
 import androidx.media3.common.Player
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamCurrentPlaybackObservation
 import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackReadState
+import com.vextreme.vexlife.android.vexstream.playback.VexStreamPlaybackTrace
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackBehavior
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackControls
 import com.vextreme.vexlife.android.vexstream.playback.vexStreamPlaybackState
@@ -50,6 +51,35 @@ class VexStreamPlaybackReadStateTest {
                 durationMs = 0L,
             ).progressFraction,
             0.0001f,
+        )
+    }
+
+    @Test
+    fun playbackTraceMessageKeepsProjectionBreadcrumbsCompactAndSingleLine() {
+        assertEquals(
+            "seq=7 stage=widget.state.persisted " +
+                "mediaId=track.2 title=Little~Bit " +
+                "artist=The~Main~Squeeze glanceId=AppWidgetId(4) " +
+                "desired=9 rendered=8 detail=shouldRender=true~next~line",
+            VexStreamPlaybackTrace.message(
+                sequence = 7L,
+                stage =
+                    "widget.state.persisted",
+                mediaId =
+                    "track.2",
+                title =
+                    "Little Bit",
+                artist =
+                    "The Main Squeeze",
+                glanceId =
+                    "AppWidgetId(4)",
+                desiredRevision =
+                    9L,
+                renderedRevision =
+                    8L,
+                detail =
+                    "shouldRender=true\nnext line",
+            ),
         )
     }
 
