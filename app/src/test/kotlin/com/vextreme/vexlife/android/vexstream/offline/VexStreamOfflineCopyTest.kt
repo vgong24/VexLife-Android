@@ -5,7 +5,9 @@ import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicReposit
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMediaSha256
+import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicState
+import com.vextreme.vexlife.android.data.vexstream.VexStreamRepositoryResult
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrack
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackState
@@ -195,6 +197,87 @@ class VexStreamOfflineCopyTest {
                         it.localCopy ===
                             VexStreamLocalCopyState.NotDownloaded
                     },
+                )
+            } finally {
+                ownerScope.cancel()
+            }
+        }
+
+    @Test
+    fun libraryReconciliationRefreshesDownloadsOnlyMissingAndStillRunsArtworkWhenAudioIsComplete() =
+        runBlocking {
+            val ownerScope =
+                CoroutineScope(
+                    SupervisorJob() +
+                        Dispatchers.Unconfined,
+                )
+            val recordingRepository =
+                RecordingVexStreamMusicRepository(
+                    InMemoryVexStreamMusicRepository(
+                        initialState =
+                            threeSongPartialOfflineState(),
+                    ),
+                )
+            val connection =
+                VexStreamOfflineCopyConnection(
+                    repository =
+                        recordingRepository,
+                    scope = ownerScope,
+                )
+
+            try {
+                connection
+                    .requestLibraryReconciliation()
+                    .join()
+
+                assertEquals(
+                    1,
+                    recordingRepository.refreshCalls,
+                )
+                assertEquals(
+                    listOf(
+                        VexStreamTrackRef(
+                            "track.bulk.two",
+                        ),
+                        VexStreamTrackRef(
+                            "track.bulk.three",
+                        ),
+                    ),
+                    recordingRepository.downloadCalls,
+                )
+                assertEquals(
+                    1,
+                    recordingRepository.backfillCalls,
+                )
+                assertTrue(
+                    recordingRepository
+                        .state
+                        .value
+                        .tracks
+                        .all {
+                            it.localCopy is
+                                VexStreamLocalCopyState.Downloaded
+                        },
+                )
+
+                recordingRepository.resetCalls()
+
+                connection
+                    .requestLibraryReconciliation()
+                    .join()
+
+                assertEquals(
+                    1,
+                    recordingRepository.refreshCalls,
+                )
+                assertTrue(
+                    recordingRepository
+                        .downloadCalls
+                        .isEmpty(),
+                )
+                assertEquals(
+                    1,
+                    recordingRepository.backfillCalls,
                 )
             } finally {
                 ownerScope.cancel()
@@ -509,6 +592,50 @@ class VexStreamOfflineCopyTest {
                     ),
                 ),
         )
+    }
+}
+
+private class RecordingVexStreamMusicRepository(
+    private val delegate:
+        InMemoryVexStreamMusicRepository,
+) : VexStreamMusicRepository by delegate {
+    var refreshCalls: Int = 0
+        private set
+    var backfillCalls: Int = 0
+        private set
+    val downloadCalls =
+        mutableListOf<VexStreamTrackRef>()
+
+    override suspend fun refreshCatalog():
+        VexStreamRepositoryResult {
+        refreshCalls += 1
+        return delegate.refreshCatalog()
+    }
+
+    override suspend fun backfillOfflineArtwork() {
+        backfillCalls += 1
+    }
+
+    override suspend fun downloadForOffline(
+        trackRef: VexStreamTrackRef,
+        expectedMediaSha256:
+            VexStreamMediaSha256?,
+        expectedMediaByteLength: Long?,
+    ): VexStreamRepositoryResult {
+        downloadCalls += trackRef
+        return delegate.downloadForOffline(
+            trackRef = trackRef,
+            expectedMediaSha256 =
+                expectedMediaSha256,
+            expectedMediaByteLength =
+                expectedMediaByteLength,
+        )
+    }
+
+    fun resetCalls() {
+        refreshCalls = 0
+        backfillCalls = 0
+        downloadCalls.clear()
     }
 }
 
