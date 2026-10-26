@@ -199,6 +199,14 @@ internal class Media3VexStreamPlaybackConnection(
     }
 }
 
+internal fun Player.toVexStreamPlaybackProjection():
+    VexStreamPlaybackProjection =
+    vexStreamPlaybackBehavior()
+        .vexStreamPlaybackControls()
+        .projection(
+            toVexStreamPlaybackState(),
+        )
+
 private fun Player.toVexStreamPlaybackState():
     VexStreamPlaybackState =
     vexStreamPlaybackState(
