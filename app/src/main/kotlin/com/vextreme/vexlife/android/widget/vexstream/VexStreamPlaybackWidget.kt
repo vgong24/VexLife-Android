@@ -27,6 +27,7 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.background
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.appwidget.action.actionRunCallback
@@ -971,6 +972,8 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
     for (glanceId in glanceIds) {
         var targetRevision =
             0L
+        var shouldRender =
+            true
         updateAppWidgetState(
             appContext,
             glanceId,
@@ -990,6 +993,16 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
                         currentRevision,
                     next = providerRead,
                 )
+            shouldRender =
+                !VexStreamPlaybackWidgetCurrentness(
+                    desiredRevision =
+                        targetRevision,
+                    renderedRevision =
+                        preferences[
+                            VexStreamPlaybackWidgetStateKeys
+                                .RenderedRevision
+                        ] ?: 0L,
+                ).isConverged
 
             preferences[
                 VexStreamPlaybackWidgetStateKeys
@@ -1039,6 +1052,10 @@ private suspend fun publishVexStreamPlaybackWidgetProviderRead(
                     .DesiredRevision
             ] =
                 targetRevision
+        }
+
+        if (!shouldRender) {
+            continue
         }
 
         try {
