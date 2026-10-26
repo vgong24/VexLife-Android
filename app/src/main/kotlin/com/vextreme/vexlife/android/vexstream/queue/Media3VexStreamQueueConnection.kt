@@ -70,6 +70,14 @@ internal class Media3VexStreamQueueConnection(
     }
 }
 
+internal fun Player.toVexStreamQueueProjection():
+    VexStreamQueueProjection =
+    vexStreamQueueBehavior()
+        .vexStreamQueueControls()
+        .projection(
+            toVexStreamQueueState(),
+        )
+
 private fun Player.toVexStreamQueueState():
     VexStreamQueueState =
     vexStreamQueueState(
