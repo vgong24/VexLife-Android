@@ -428,7 +428,10 @@ internal object VexStreamPlaybackWidget :
         VexStreamPlaybackWidgetSurfaceState,
         VexStreamPlaybackWidgetProjection
     >() {
-    override val stateCodec =
+    override val stateCodec:
+        VexWidgetPreferenceCodec<
+            VexStreamPlaybackWidgetSurfaceState
+        > =
         VexStreamPlaybackWidgetSurfaceStateCodec
 
     override suspend fun initialSurfaceState(
