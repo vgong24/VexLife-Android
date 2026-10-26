@@ -2,6 +2,10 @@ package com.vextreme.vexlife.android.data.vexstream
 
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -10,6 +14,80 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexStreamArtworkStoreTest {
+
+    @Test
+    fun concurrentArtworkPreparationFetchesOneSourceOnlyOnce() =
+        runBlocking {
+            val singleFlight =
+                VexStreamArtworkSingleFlight()
+            var cached =
+                false
+            var fetchCount =
+                0
+            val releaseFirstFetch =
+                CompletableDeferred<Unit>()
+
+            val first =
+                async(
+                    start =
+                        CoroutineStart.UNDISPATCHED,
+                ) {
+                    singleFlight
+                        .cacheIfMissing(
+                            isCached = {
+                                cached
+                            },
+                            fetch = {
+                                fetchCount += 1
+                                releaseFirstFetch.await()
+                                cached = true
+                                true
+                            },
+                        )
+                }
+
+            assertEquals(
+                1,
+                fetchCount,
+            )
+
+            val second =
+                async(
+                    start =
+                        CoroutineStart.UNDISPATCHED,
+                ) {
+                    singleFlight
+                        .cacheIfMissing(
+                            isCached = {
+                                cached
+                            },
+                            fetch = {
+                                fetchCount += 1
+                                true
+                            },
+                        )
+                }
+
+            assertEquals(
+                1,
+                fetchCount,
+            )
+
+            releaseFirstFetch.complete(
+                Unit,
+            )
+
+            assertTrue(
+                first.await(),
+            )
+            assertTrue(
+                second.await(),
+            )
+            assertEquals(
+                1,
+                fetchCount,
+            )
+        }
 
     @Test
     fun artworkPersistsByExactSourceUrl() {
