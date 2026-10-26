@@ -259,6 +259,90 @@ The feature remains the owner of runtime instance identity; Vex Compose owns onl
 presentation-continuity law. Do not invent a generic dynamic-ID registry merely to make these two
 systems look symmetrical.
 
+## Deterministic UI realization projection
+
+`UIBlueprintRegistry.realizationProjection()` exposes the declared Android UI realization lattice as immutable data without
+making the Elements module own a transport format.
+
+Current projection includes:
+
+~~~text
+screens
+  screenRef
+  rootElementRef
+  stable-ref-sorted owned element refs
+
+elements
+  semanticRef
+  kind
+  resolved semantic style
+  owner Screen
+  parent
+  declaration-ordered children
+  semantic icon
+  text role
+  optional Android text resource id
+  text-field readOnly
+  swappable default child
+  typed intent projection
+
+shell element refs
+~~~
+
+Top-level screen/element collections are stable-ref sorted for deterministic transport diffs.
+Structural child order and Sequence intent order remain authored order because order is meaning.
+
+The projection is deliberately serialization-neutral:
+
+~~~text
+UIBlueprintRegistry
+-> UIRealizationProjection
+-> app/tooling encoder
+-> JSON / VexBoard / diagnostics / another consumer
+~~~
+
+Do not add a JSON dependency to the portable Elements foundation merely to satisfy one consumer.
+The app/tooling edge that knows source revision, localized human labels, current runtime state, and
+target-specific adoption facts owns the transport envelope.
+
+This projection is an Android realization projection, not a portable Origin registry. In particular:
+
+~~~text
+TextElement
+  textResourceIdOrNull != null
+    -> Android target-resource mapping exists
+
+  textResourceIdOrNull == null
+    -> current value must be supplied by the rightful Screen/runtime binding when rendered
+
+both
+  -> kind = Text
+  -> same element identity model
+~~~
+
+An app/tooling exporter that has Android Resources access may turn the numeric resource id into an exact
+symbolic target coordinate such as `R.string.home_vexstream_music`. That symbolic Android coordinate
+can then be mapped to the corresponding content Origin during reverse adoption or forward construction.
+The Elements module should not import VexBoard or a universal content registry merely to make that
+mapping.
+
+Permanent:
+
+~~~text
+DECLARED_UI_REALIZATION_PROJECTION
+!=
+RUNTIME_NAVIGATION_STATE
+!=
+RESOLVED_PIXEL_LAYOUT
+!=
+OBSERVED_SCREENSHOT_EVIDENCE
+!=
+WIRE_FORMAT
+~~~
+
+Dynamic domain occurrences remain feature-owned runtime presentation refs. The registry projection
+does not invent them as fake static elements.
+
 ## Repository shape
 
 ~~~text
