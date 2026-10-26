@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.widget.vexstream
 
+import android.content.Intent
 import com.vextreme.vexlife.android.MainActivity
 import com.vextreme.vexlife.android.resolveVexLifeExternalScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -48,6 +49,20 @@ class VexStreamPlaybackWidgetTest {
                     "vexstream.widget.unknown",
                 ),
             ),
+        )
+    }
+
+    @Test
+    fun widgetEntryReusesTheExistingMainActivityTask() {
+        assertTrue(
+            VEXSTREAM_WIDGET_ENTRY_ACTIVITY_FLAGS and
+                Intent.FLAG_ACTIVITY_CLEAR_TOP !=
+                0,
+        )
+        assertTrue(
+            VEXSTREAM_WIDGET_ENTRY_ACTIVITY_FLAGS and
+                Intent.FLAG_ACTIVITY_SINGLE_TOP !=
+                0,
         )
     }
 

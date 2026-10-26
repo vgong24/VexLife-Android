@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.widget.vexstream
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Handler
@@ -19,15 +20,13 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.text.Text
-import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.background
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.action.actionStartActivity
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -234,12 +233,6 @@ internal data class VexStreamPlaybackWidgetProjection(
     val showPause: Boolean,
     val nextEnabled: Boolean,
 ) : VexWidgetProjection
-
-private val VexStreamWidgetDestinationKey =
-    ActionParameters.Key<String>(
-        MainActivity
-            .VEXSTREAM_WIDGET_DESTINATION_EXTRA,
-    )
 
 internal object VexStreamPlaybackWidgetActions {
     val Previous =
@@ -517,14 +510,17 @@ internal object VexStreamPlaybackWidget :
         val context =
             LocalContext.current
         val contentAction =
-            actionStartActivity<
-                MainActivity
-            >(
-                actionParametersOf(
-                    VexStreamWidgetDestinationKey to
+            actionStartActivity(
+                Intent(
+                    context,
+                    MainActivity::class.java,
+                ).apply {
+                    action =
                         MainActivity
-                            .VEXSTREAM_WIDGET_DESTINATION_FULL_PLAYER,
-                ),
+                            .ACTION_OPEN_VEXSTREAM_FULL_PLAYER
+                    flags =
+                        VEXSTREAM_WIDGET_ENTRY_ACTIVITY_FLAGS
+                },
             )
         val primaryText =
             TextStyle(
@@ -1205,6 +1201,10 @@ private fun decodeWidgetArtwork(
         },
     )
 }
+
+internal const val VEXSTREAM_WIDGET_ENTRY_ACTIVITY_FLAGS =
+    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+        Intent.FLAG_ACTIVITY_SINGLE_TOP
 
 internal const val VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP =
     56
