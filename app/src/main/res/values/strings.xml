@@ -20,6 +20,8 @@
     <string name="conversation_empty">No messages yet.</string>
     <string name="conversation_authenticated_suffix">you</string>
     <string name="conversation_home_unavailable">Private Home connection unavailable</string>
+    <string name="conversation_message">Message</string>
+    <string name="conversation_send">Send</string>
 
     <string name="home_preview_title">Home preview</string>
     <string name="home_preview_body">Sample preview only. This body is intentionally light while the reusable Android element, placement, navigation, and logging foundations are being learned.</string>
