@@ -103,9 +103,14 @@ private val VexTypography = Typography(
  */
 @Composable
 fun VexLifeTheme(
-    darkTheme: Boolean,
+    themeMode: ThemeMode,
     content: @Composable () -> Unit,
 ) {
+    val darkTheme =
+        ThemeModeBooleanAdapter.toDarkTheme(
+            themeMode,
+        )
+
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = VexTypography,
@@ -137,6 +142,26 @@ fun VexLifeTheme(
             content = content,
         )
     }
+}
+
+/**
+ * Temporary compatibility entry for callers that still expose the current Android Boolean.
+ *
+ * New semantic callers should pass [ThemeMode]. Keeping this bridge here allows migration to happen
+ * one owner at a time without making Boolean state the theme renderer's canonical public meaning.
+ */
+@Composable
+fun VexLifeTheme(
+    darkTheme: Boolean,
+    content: @Composable () -> Unit,
+) {
+    VexLifeTheme(
+        themeMode =
+            ThemeModeBooleanAdapter.fromDarkTheme(
+                darkTheme,
+            ),
+        content = content,
+    )
 }
 
 private tailrec fun Context.findActivity(): Activity? =
