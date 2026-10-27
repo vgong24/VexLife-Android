@@ -212,6 +212,42 @@ class VexStreamPlaybackWidgetTest {
     }
 
     @Test
+    fun widgetArtworkSamplingStaysSharpAndBoundsExtremeAspectRatios() {
+        assertEquals(
+            8,
+            vexStreamPlaybackWidgetArtworkSampleSize(
+                sourceWidth = 2048,
+                sourceHeight = 2048,
+                targetPx = 256,
+            ),
+        )
+        assertEquals(
+            8,
+            vexStreamPlaybackWidgetArtworkSampleSize(
+                sourceWidth = 4096,
+                sourceHeight = 256,
+                targetPx = 256,
+            ),
+        )
+        assertEquals(
+            8,
+            vexStreamPlaybackWidgetArtworkSampleSize(
+                sourceWidth = 256,
+                sourceHeight = 4096,
+                targetPx = 256,
+            ),
+        )
+        assertEquals(
+            1,
+            vexStreamPlaybackWidgetArtworkSampleSize(
+                sourceWidth = 192,
+                sourceHeight = 192,
+                targetPx = 192,
+            ),
+        )
+    }
+
+    @Test
     fun widgetTransportControlsMeetMinimumTouchTarget() {
         assertTrue(
             VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP >=
