@@ -83,6 +83,9 @@ class AppBlueprintTest {
         assertEquals("element.home.body", root.elementId)
         assertEquals(
             setOf(
+                HomeScreen.VexStreamTitle.elementId,
+                HomeScreen.VexStreamStatus.elementId,
+                HomeScreen.VexStreamBody.elementId,
                 HomeScreen.ConnectVexStreamMusic.elementId,
                 HomeScreen.VexStreamMusic.elementId,
             ),
@@ -90,12 +93,42 @@ class AppBlueprintTest {
         )
         assertEquals(
             setOf(
+                HomeScreen.SystemsTitle.elementId,
                 HomeScreen.FamilyConversation.elementId,
                 HomeScreen.VexMaps.elementId,
                 HomeScreen.TalkToVex.elementId,
             ),
             registry.childrenOf(systems).map { it.elementId }.toSet(),
         )
+    }
+
+    @Test
+    fun homeRuntimeCopyKeepsStableRegisteredIdentityWithoutOwningItsValue() {
+        assertSame(
+            HomeScreen.VexStreamSection,
+            registry.parentOf(HomeScreen.VexStreamTitle),
+        )
+        assertSame(
+            HomeScreen.VexStreamSection,
+            registry.parentOf(HomeScreen.VexStreamStatus),
+        )
+        assertSame(
+            HomeScreen.VexStreamSection,
+            registry.parentOf(HomeScreen.VexStreamBody),
+        )
+        assertSame(
+            HomeScreen.SystemsSection,
+            registry.parentOf(HomeScreen.SystemsTitle),
+        )
+
+        assertSame(HomeScreen, registry.ownerScreenOf(HomeScreen.VexStreamStatus))
+        assertSame(HomeScreen, registry.ownerScreenOf(HomeScreen.VexStreamBody))
+        assertEquals("Text", HomeScreen.VexStreamStatus.kind)
+        assertEquals("Text", HomeScreen.VexStreamBody.kind)
+        assertNull(HomeScreen.VexStreamStatus.textRes)
+        assertNull(HomeScreen.VexStreamBody.textRes)
+        assertNull(HomeScreen.VexStreamStatus.labelRes)
+        assertNull(HomeScreen.VexStreamBody.labelRes)
     }
 
     @Test
