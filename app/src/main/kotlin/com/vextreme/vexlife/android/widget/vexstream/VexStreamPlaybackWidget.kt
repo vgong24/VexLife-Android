@@ -401,9 +401,17 @@ private suspend fun VexStreamPlaybackWidgetSurfaceState.toWidgetProjection(
                             uri,
                         )
                 }
-                ?.let(
-                    ::decodeWidgetArtwork,
-                )
+                ?.let { file ->
+                    decodeWidgetArtwork(
+                        file = file,
+                        targetPx =
+                            vexStreamPlaybackWidgetArtworkTargetPx(
+                                context.resources
+                                    .displayMetrics
+                                    .density,
+                            ),
+                    )
+                }
         }
 
     return VexStreamPlaybackWidgetProjection(
@@ -1225,9 +1233,37 @@ internal suspend fun updateVexStreamPlaybackWidgets(
     )
 }
 
+internal fun vexStreamPlaybackWidgetArtworkTargetPx(
+    density: Float,
+): Int {
+    require(
+        density >
+            0f,
+    ) {
+        "widget display density must be positive"
+    }
+
+    return (
+        VEXSTREAM_WIDGET_ARTWORK_SIZE_DP *
+            density
+    ).toInt()
+        .coerceIn(
+            VEXSTREAM_WIDGET_ARTWORK_SIZE_DP,
+            WIDGET_ARTWORK_MAX_DECODE_PX,
+        )
+}
+
 private fun decodeWidgetArtwork(
     file: File,
+    targetPx: Int,
 ): Bitmap? {
+    require(
+        targetPx >
+            0,
+    ) {
+        "widget artwork targetPx must be positive"
+    }
+
     val bounds =
         BitmapFactory.Options().apply {
             inJustDecodeBounds =
@@ -1249,11 +1285,11 @@ private fun decodeWidgetArtwork(
         1
     while (
         bounds.outWidth /
-        sampleSize >
-        WIDGET_ARTWORK_MAX_PX ||
+        (sampleSize * 2) >=
+        targetPx &&
         bounds.outHeight /
-        sampleSize >
-        WIDGET_ARTWORK_MAX_PX
+        (sampleSize * 2) >=
+        targetPx
     ) {
         sampleSize *=
             2
@@ -1287,7 +1323,7 @@ internal const val VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS =
 
 private const val CONTROLLER_CONNECT_TIMEOUT_MS =
     2_000L
-private const val WIDGET_ARTWORK_MAX_PX =
-    128
+private const val WIDGET_ARTWORK_MAX_DECODE_PX =
+    512
 
 // [VXG RealForever]
