@@ -13,6 +13,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -1540,36 +1541,52 @@ class PairedVexStreamMusicRepository(
             artworkStore
                 ?: return false
 
-        return artworkSingleFlight
-            .cacheIfMissing(
-                isCached = {
-                    store.fileFor(
-                        track,
-                    ) != null
-                },
-                fetch = {
-                    when {
-                        track.artworkUrl != null ->
-                            cacheExternalArtworkBestEffort(
-                                track = track,
-                                artworkUrl =
-                                    track.artworkUrl,
-                                store = store,
-                            )
+        var cacheCreated =
+            false
+        val available =
+            artworkSingleFlight
+                .cacheIfMissing(
+                    isCached = {
+                        store.fileFor(
+                            track,
+                        ) != null
+                    },
+                    fetch = {
+                        when {
+                            track.artworkUrl != null ->
+                                cacheExternalArtworkBestEffort(
+                                    track = track,
+                                    artworkUrl =
+                                        track.artworkUrl,
+                                    store = store,
+                                )
 
-                        track.artworkRef != null ->
-                            cacheEmbeddedArtworkBestEffort(
-                                track = track,
-                                artworkRef =
-                                    track.artworkRef,
-                                store = store,
-                            )
+                            track.artworkRef != null ->
+                                cacheEmbeddedArtworkBestEffort(
+                                    track = track,
+                                    artworkRef =
+                                        track.artworkRef,
+                                    store = store,
+                                )
 
-                        else ->
-                            false
-                    }
-                },
-            )
+                            else ->
+                                false
+                        }.also { stored ->
+                            cacheCreated =
+                                stored
+                        }
+                    },
+                )
+
+        if (cacheCreated) {
+            mutableState.update { current ->
+                current.withArtworkCacheMutation(
+                    track,
+                )
+            }
+        }
+
+        return available
     }
 
     private fun cacheExternalArtworkBestEffort(

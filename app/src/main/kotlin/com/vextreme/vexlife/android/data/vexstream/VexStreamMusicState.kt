@@ -310,7 +310,20 @@ data class VexStreamTrackState(
     val track: VexStreamTrack,
     val hubAvailable: Boolean,
     val localCopy: VexStreamLocalCopyState = VexStreamLocalCopyState.NotDownloaded,
+    /**
+     * Opaque presentation invalidation only.
+     *
+     * Artwork bytes and availability remain owned by [VexStreamArtworkStore]. This revision changes
+     * only when the repository actually creates a new local artwork cache file for this durable media
+     * identity, so existing Compose consumers that already key artwork lookup by TrackState re-resolve
+     * the canonical store without duplicating artwork truth here.
+     */
+    val artworkPresentationRevision: Long = 0L,
 ) {
+    init {
+        require(artworkPresentationRevision >= 0L)
+    }
+
     val availability: VexStreamTrackAvailability
         get() {
             val local = localCopy is VexStreamLocalCopyState.Downloaded
@@ -321,6 +334,54 @@ data class VexStreamTrackState(
                 else -> VexStreamTrackAvailability.UNAVAILABLE
             }
         }
+}
+
+/**
+ * Publish that the canonical local artwork projection changed for one durable media identity.
+ *
+ * Track refs may legitimately change across catalog refreshes while the verified media bytes remain
+ * the same, so the notification follows SHA-256 + byte length rather than path-derived catalog ref.
+ * The token carries no artwork value; presentation re-reads [VexStreamArtworkStore].
+ */
+internal fun VexStreamMusicState.withArtworkCacheMutation(
+    track: VexStreamTrack,
+): VexStreamMusicState {
+    var changed =
+        false
+    val nextTracks =
+        tracks.map { state ->
+            if (
+                state.track.mediaSha256 ==
+                    track.mediaSha256 &&
+                state.track.mediaByteLength ==
+                    track.mediaByteLength
+            ) {
+                changed =
+                    true
+                state.copy(
+                    artworkPresentationRevision =
+                        if (
+                            state.artworkPresentationRevision ==
+                            Long.MAX_VALUE
+                        ) {
+                            0L
+                        } else {
+                            state.artworkPresentationRevision +
+                                1L
+                        },
+                )
+            } else {
+                state
+            }
+        }
+
+    return if (changed) {
+        copy(
+            tracks = nextTracks,
+        )
+    } else {
+        this
+    }
 }
 
 data class VexStreamMusicState(
