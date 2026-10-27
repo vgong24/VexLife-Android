@@ -66,6 +66,37 @@ class VexStreamCurrentArtworkConvergenceTest {
     }
 
     @Test
+    fun widgetRefreshFollowsOnlyConvergedMedia3ArtworkTruth() {
+        assertEquals(
+            true,
+            VexStreamCurrentArtworkConvergence
+                .UPDATED
+                .shouldRefreshWidgetProjection,
+        )
+        assertEquals(
+            true,
+            VexStreamCurrentArtworkConvergence
+                .ALREADY_CURRENT
+                .shouldRefreshWidgetProjection,
+        )
+        listOf(
+            VexStreamCurrentArtworkConvergence.NO_CURRENT_ITEM,
+            VexStreamCurrentArtworkConvergence.TRACK_NOT_FOUND,
+            VexStreamCurrentArtworkConvergence.NO_ARTWORK_SOURCE,
+            VexStreamCurrentArtworkConvergence.ARTWORK_UNAVAILABLE,
+            VexStreamCurrentArtworkConvergence.PLAYER_CHANGED,
+            VexStreamCurrentArtworkConvergence.COMMAND_UNAVAILABLE,
+            VexStreamCurrentArtworkConvergence.CONTROLLER_UNAVAILABLE,
+        ).forEach { result ->
+            assertEquals(
+                result.name,
+                false,
+                result.shouldRefreshWidgetProjection,
+            )
+        }
+    }
+
+    @Test
     fun providerCommandAvailabilityStillOwnsPlaylistMutation() {
         assertEquals(
             VexStreamCurrentArtworkCommitPlan.COMMAND_UNAVAILABLE,

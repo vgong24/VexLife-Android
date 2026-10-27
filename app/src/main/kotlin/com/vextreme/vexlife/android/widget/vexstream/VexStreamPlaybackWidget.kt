@@ -1075,6 +1075,65 @@ private suspend fun <
     }
 }
 
+/**
+ * Re-project every widget from fresh Media3 current-playback truth.
+ *
+ * This is intentionally a read/publish boundary only. Artwork fetch/cache remains repository-owned;
+ * the widget merely re-reads Media3 after current-artwork convergence and resolves any already-local
+ * cache bytes through VexStreamArtworkStore.
+ */
+internal suspend fun refreshVexStreamPlaybackWidgetsFromCurrentPlayback(
+    context: Context,
+) {
+    val appContext =
+        context.applicationContext
+    val observation =
+        withVexStreamWidgetController(
+            appContext,
+        ) { controller ->
+            controller
+                .toVexStreamCurrentPlaybackObservation()
+        } ?: return
+
+    VexStreamPlaybackTrace.record(
+        stage =
+            "widget.current-playback.refresh",
+        mediaId =
+            observation.readState
+                .currentMediaId,
+        title =
+            observation.readState
+                .currentTitle,
+        artist =
+            observation.readState
+                .currentArtist,
+        detail =
+            "artworkUri=" +
+                observation.readState
+                    .currentArtworkUri
+                    .orEmpty(),
+    )
+
+    val surfaceState =
+        vexStreamPlaybackWidgetSurfaceState(
+            context =
+                appContext,
+            fallbackTitle =
+                appContext.getString(
+                    R.string.vexstream_music_title,
+                ),
+            observation =
+                observation,
+        )
+
+    updateVexStreamPlaybackWidgets(
+        context =
+            appContext,
+        surfaceState =
+            surfaceState,
+    )
+}
+
 internal suspend fun retryVexStreamPlaybackWidgetPublication(
     publish: suspend () -> Boolean,
     awaitRetry: suspend () -> Unit,

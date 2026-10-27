@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import androidx.media3.common.MediaItem
+import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -14,6 +15,9 @@ import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -41,6 +45,18 @@ internal enum class VexStreamCurrentArtworkCommitPlan {
     PLAYER_CHANGED,
     COMMAND_UNAVAILABLE,
 }
+
+/**
+ * Widget republishing is warranted only when Media3 now owns the desired artwork URI.
+ *
+ * UPDATED means this convergence call just committed it. ALREADY_CURRENT matters too because a
+ * service/widget observation may have missed the earlier metadata event; a fresh projection can
+ * safely re-read the same canonical Media3 truth without becoming another artwork owner.
+ */
+internal val VexStreamCurrentArtworkConvergence.shouldRefreshWidgetProjection: Boolean
+    get() =
+        this == VexStreamCurrentArtworkConvergence.UPDATED ||
+            this == VexStreamCurrentArtworkConvergence.ALREADY_CURRENT
 
 /**
  * Pure final-commit decision after artwork preparation may have crossed IO/network boundaries.
@@ -83,6 +99,105 @@ private data class VexStreamCurrentArtworkSnapshot(
     val mediaId: String,
     val index: Int,
 )
+
+/**
+ * Playback-side trigger for current artwork convergence.
+ *
+ * Repository changes already trigger convergence through VexLifeSession. This companion stream
+ * closes the other half of the composition: an existing Media3 queue can advance to an item whose
+ * metadata was formed before artwork became available. Media3 remains the current-item truth; this
+ * stream emits only that the current item changed and carries no artwork bytes or repository state.
+ */
+internal fun vexStreamCurrentPlaybackArtworkTriggers(
+    context: Context,
+): Flow<Unit> =
+    callbackFlow {
+        val appContext =
+            context.applicationContext
+        val controllerFuture =
+            MediaController.Builder(
+                appContext,
+                SessionToken(
+                    appContext,
+                    ComponentName(
+                        appContext,
+                        VexStreamPlaybackService::class.java,
+                    ),
+                ),
+            ).buildAsync()
+
+        var controller: MediaController? =
+            null
+        var listener: Player.Listener? =
+            null
+
+        controllerFuture.addListener(
+            {
+                val connected =
+                    runCatching {
+                        controllerFuture.get()
+                    }.getOrNull()
+                        ?: return@addListener
+
+                controller =
+                    connected
+                val playbackListener =
+                    object : Player.Listener {
+                        override fun onMediaItemTransition(
+                            mediaItem: MediaItem?,
+                            reason: Int,
+                        ) {
+                            VexStreamPlaybackTrace.record(
+                                stage =
+                                    "artwork.current.playback-trigger",
+                                mediaId =
+                                    mediaItem?.mediaId,
+                                detail =
+                                    "reason=$reason",
+                            )
+                            trySend(Unit)
+                        }
+                    }
+                listener =
+                    playbackListener
+                connected.addListener(
+                    playbackListener,
+                )
+
+                // Cover an already-current item when this observer first connects.
+                trySend(Unit)
+            },
+            ContextCompat.getMainExecutor(
+                appContext,
+            ),
+        )
+
+        awaitClose {
+            val connected =
+                controller
+            val playbackListener =
+                listener
+
+            if (
+                connected != null &&
+                playbackListener != null
+            ) {
+                Handler(
+                    connected.applicationLooper,
+                ).post {
+                    runCatching {
+                        connected.removeListener(
+                            playbackListener,
+                        )
+                    }
+                }
+            }
+
+            MediaController.releaseFuture(
+                controllerFuture,
+            )
+        }
+    }
 
 /**
  * Converge artwork for the exact Media3 item that is current now.
