@@ -507,7 +507,9 @@ fun VexScrollableColumn(
  * - wrong reusable cell appearance -> inspect the matching VexButton/VexContainer/etc above;
  * - wrong click consequence -> breakpoint the supplied [handler] (normally VexRuntime.activate);
  * - wrong swappable child (for example Gallery Elements/AppGraph) -> inspect [selectedChild] and
- *   PresentationState.selectedByContainer rather than adding screen-specific branches here.
+ *   PresentationState.selectedByContainer rather than adding screen-specific branches here;
+ * - wrong current Button emphasis -> inspect [buttonStyleOverride]; current domain state may project
+ *   presentation without being stored in the static ButtonElement.
  *
  * Do not add feature names such as Home/Settings/Gallery to this renderer. If a visual need cannot
  * be described by the element vocabulary, improve the reusable cell/placement grammar instead.
@@ -519,6 +521,7 @@ fun VexElementTree(
     handler: ElementActionHandler,
     modifier: Modifier = VexModifier,
     toggleChecked: (ToggleElement) -> Boolean = { false },
+    buttonStyleOverride: (ButtonElement) -> ElementStyleKey? = { null },
     textFieldValue: (TextFieldElement) -> String = { "" },
     onTextFieldValueChange: (TextFieldElement, String) -> Unit = { _, _ -> },
     selectedChild: (SwappableContainerElement) -> UIElement = { it.defaultChild },
@@ -543,6 +546,7 @@ fun VexElementTree(
                     handler = handler,
                     modifier = modifier,
                     toggleChecked = toggleChecked,
+                    buttonStyleOverride = buttonStyleOverride,
                     textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
@@ -560,6 +564,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
+                buttonStyleOverride,
                 textValue,
                 textFieldValue,
                 onTextFieldValueChange,
@@ -577,6 +582,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
+                buttonStyleOverride,
                 textValue,
                 textFieldValue,
                 onTextFieldValueChange,
@@ -593,6 +599,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
+                buttonStyleOverride,
                 textValue,
                 textFieldValue,
                 onTextFieldValueChange,
@@ -610,6 +617,7 @@ fun VexElementTree(
                     registry,
                     handler,
                     toggleChecked = toggleChecked,
+                    buttonStyleOverride = buttonStyleOverride,
                     textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
@@ -627,6 +635,7 @@ fun VexElementTree(
                     registry,
                     handler,
                     toggleChecked = toggleChecked,
+                    buttonStyleOverride = buttonStyleOverride,
                     textValue = textValue,
                     textFieldValue = textFieldValue,
                     onTextFieldValueChange = onTextFieldValueChange,
@@ -639,7 +648,7 @@ fun VexElementTree(
             element = element,
             handler = handler,
             modifier = modifier,
-            style = style,
+            style = buttonStyleOverride(element) ?: style,
         )
 
         is FabElement -> VexFab(
@@ -693,6 +702,7 @@ fun VexElementTree(
                 registry,
                 handler,
                 toggleChecked,
+                buttonStyleOverride,
                 textValue,
                 textFieldValue,
                 onTextFieldValueChange,
@@ -708,6 +718,7 @@ private fun ColumnScope.RenderChildren(
     registry: UIBlueprintRegistry,
     handler: ElementActionHandler,
     toggleChecked: (ToggleElement) -> Boolean,
+    buttonStyleOverride: (ButtonElement) -> ElementStyleKey?,
     textValue: (TextElement) -> String?,
     textFieldValue: (TextFieldElement) -> String,
     onTextFieldValueChange: (TextFieldElement, String) -> Unit,
@@ -719,6 +730,7 @@ private fun ColumnScope.RenderChildren(
             registry = registry,
             handler = handler,
             toggleChecked = toggleChecked,
+            buttonStyleOverride = buttonStyleOverride,
             textValue = textValue,
             textFieldValue = textFieldValue,
             onTextFieldValueChange = onTextFieldValueChange,
