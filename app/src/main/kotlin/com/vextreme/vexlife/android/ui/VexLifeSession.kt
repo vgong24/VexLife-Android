@@ -197,11 +197,10 @@ private class VexStreamArtworkExecution(
         }
 
         launchForCollect(
-            source = {
-                vexStreamCurrentPlaybackArtworkTriggers(
-                    context,
-                )
-            },
+            source =
+                ::vexStreamCurrentPlaybackArtworkTriggers,
+            argument =
+                context,
         ) {
             if (
                 repository.state.value.hubState is
