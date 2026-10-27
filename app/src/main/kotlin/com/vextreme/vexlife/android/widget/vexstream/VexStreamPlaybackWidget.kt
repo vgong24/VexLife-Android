@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -1021,7 +1022,11 @@ private suspend fun <
                     VexStreamPlaybackService::class.java,
                 ),
             ),
-        ).buildAsync()
+        )
+            .setApplicationLooper(
+                Looper.getMainLooper(),
+            )
+            .buildAsync()
 
     return try {
         val controller =
@@ -1069,9 +1074,13 @@ private suspend fun <
             stage =
                 "widget.controller.release",
         )
-        MediaController.releaseFuture(
-            controllerFuture,
-        )
+        Handler(
+            Looper.getMainLooper(),
+        ).post {
+            MediaController.releaseFuture(
+                controllerFuture,
+            )
+        }
     }
 }
 

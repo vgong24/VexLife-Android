@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
 import android.os.Handler
+import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
@@ -124,7 +125,11 @@ internal fun vexStreamCurrentPlaybackArtworkTriggers(
                         VexStreamPlaybackService::class.java,
                     ),
                 ),
-            ).buildAsync()
+            )
+                .setApplicationLooper(
+                    Looper.getMainLooper(),
+                )
+                .buildAsync()
 
         var controller: MediaController? =
             null
@@ -178,24 +183,24 @@ internal fun vexStreamCurrentPlaybackArtworkTriggers(
             val playbackListener =
                 listener
 
-            if (
-                connected != null &&
-                playbackListener != null
-            ) {
-                Handler(
-                    connected.applicationLooper,
-                ).post {
+            Handler(
+                Looper.getMainLooper(),
+            ).post {
+                if (
+                    connected != null &&
+                    playbackListener != null
+                ) {
                     runCatching {
                         connected.removeListener(
                             playbackListener,
                         )
                     }
                 }
-            }
 
-            MediaController.releaseFuture(
-                controllerFuture,
-            )
+                MediaController.releaseFuture(
+                    controllerFuture,
+                )
+            }
         }
     }
 
@@ -222,7 +227,11 @@ internal suspend fun convergeVexStreamCurrentPlaybackArtwork(
                     VexStreamPlaybackService::class.java,
                 ),
             ),
-        ).buildAsync()
+        )
+            .setApplicationLooper(
+                Looper.getMainLooper(),
+            )
+            .buildAsync()
 
     return try {
         val controller =
@@ -391,9 +400,13 @@ internal suspend fun convergeVexStreamCurrentPlaybackArtwork(
         VexStreamCurrentArtworkConvergence
             .CONTROLLER_UNAVAILABLE
     } finally {
-        MediaController.releaseFuture(
-            controllerFuture,
-        )
+        Handler(
+            Looper.getMainLooper(),
+        ).post {
+            MediaController.releaseFuture(
+                controllerFuture,
+            )
+        }
     }
 }
 
