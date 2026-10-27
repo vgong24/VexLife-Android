@@ -101,7 +101,7 @@
     <string name="vexstream_music_restoring_downloads">Restoring downloaded music…</string>
     <string name="vexstream_music_refreshing_library">Refreshing your VexStream library…</string>
     <string name="vexstream_music_library_download_summary">%1$d of %2$d songs on this phone · %3$d ready to download</string>
-    <string name="vexstream_music_download_all_missing">Download all missing songs</string>
+    <string name="vexstream_music_download_all_missing">Download missing songs &amp; artwork</string>
     <string name="vexstream_music_remove_all_downloaded">Remove all downloaded songs</string>
     <string name="vexstream_music_status_not_configured">Connect to your VexStream computer</string>
     <string name="vexstream_music_status_searching">Choose your VexStream computer</string>

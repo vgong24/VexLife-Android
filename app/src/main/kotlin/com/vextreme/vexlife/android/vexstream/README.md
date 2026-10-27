@@ -266,22 +266,39 @@ rendered album / artist collection / playlist
 
 This is deliberately one-shot. It does not yet mean "keep this collection synchronized forever."
 
-Library-wide Songs management now reuses those same semantics from the VexStream settings sheet:
+Library-wide Songs management now reuses those same semantics from the VexStream settings sheet.
+
+The one-shot update action deliberately composes two independent missing-content checks without
+collapsing audio and artwork identity:
 
 ~~~text
+current paired Desktop
+-> refresh current sanitized catalog
+
 canonical playable Songs library
 -> current local-copy plan
--> Download all missing songs
-   exact missing targets only
-   no already-downloaded replay
+-> Download missing songs & artwork
+   audio:
+     exact missing targets only
+     per-target identity re-check before download
+     already-downloaded audio is never replayed
+   artwork:
+     repository-owned best-effort backfill
+     admitted artwork source + local companion absent -> fetch/cache
+     existing local companion -> keep
+     no admitted artwork source -> ordinary placeholder
 -> Remove all downloaded songs
    current verified local copies only
    catalog membership preserved
 ~~~
 
-The word **all** is intentionally library-scoped rather than Sort/Filter-view-scoped: a temporary
-filter must not silently turn "Download all missing songs" into "download only the currently visible
-subset."
+The update action remains **one-shot reconciliation**, not persistent Keep Offline / Sync. Pressing it
+later intentionally re-reads current Desktop catalog truth and forms a fresh exact missing-audio plan.
+If all audio is already local, the same action can still repair missing admitted artwork without
+redownloading music.
+
+The word **all** remains library-scoped rather than Sort/Filter-view-scoped: a temporary filter must
+not silently turn the update into "only the currently visible subset."
 
 Current durable-device-storage distinction:
 
