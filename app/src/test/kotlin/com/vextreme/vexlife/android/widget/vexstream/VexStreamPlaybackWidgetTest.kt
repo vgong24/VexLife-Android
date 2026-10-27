@@ -184,6 +184,34 @@ class VexStreamPlaybackWidgetTest {
         }
 
     @Test
+    fun widgetArtworkDecodeTargetTracksDisplayDensityWithinBoundedMemory() {
+        assertEquals(
+            64,
+            vexStreamPlaybackWidgetArtworkTargetPx(
+                1f,
+            ),
+        )
+        assertEquals(
+            192,
+            vexStreamPlaybackWidgetArtworkTargetPx(
+                3f,
+            ),
+        )
+        assertEquals(
+            256,
+            vexStreamPlaybackWidgetArtworkTargetPx(
+                4f,
+            ),
+        )
+        assertEquals(
+            512,
+            vexStreamPlaybackWidgetArtworkTargetPx(
+                10f,
+            ),
+        )
+    }
+
+    @Test
     fun widgetTransportControlsMeetMinimumTouchTarget() {
         assertTrue(
             VEXSTREAM_WIDGET_CONTROL_TOUCH_TARGET_DP >=
