@@ -339,9 +339,10 @@ data class VexStreamTrackState(
 /**
  * Publish that the canonical local artwork projection changed for one durable media identity.
  *
- * Track refs may legitimately change across catalog refreshes while the verified media bytes remain
- * the same, so the notification follows SHA-256 + byte length rather than path-derived catalog ref.
- * The token carries no artwork value; presentation re-reads [VexStreamArtworkStore].
+ * One canonical artwork file may be consumed by several tracks that admit the same artwork URL/ref,
+ * so every current consumer of that source is invalidated together. The same durable media identity
+ * is also invalidated across a path-derived track-ref change. The token carries no artwork value;
+ * presentation re-reads [VexStreamArtworkStore].
  */
 internal fun VexStreamMusicState.withArtworkCacheMutation(
     track: VexStreamTrack,
@@ -350,11 +351,26 @@ internal fun VexStreamMusicState.withArtworkCacheMutation(
         false
     val nextTracks =
         tracks.map { state ->
-            if (
+            val sameDurableMedia =
                 state.track.mediaSha256 ==
                     track.mediaSha256 &&
-                state.track.mediaByteLength ==
+                    state.track.mediaByteLength ==
                     track.mediaByteLength
+            val sameArtworkSource =
+                (
+                    track.artworkUrl != null &&
+                        state.track.artworkUrl ==
+                        track.artworkUrl
+                ) ||
+                    (
+                        track.artworkRef != null &&
+                            state.track.artworkRef ==
+                            track.artworkRef
+                    )
+
+            if (
+                sameDurableMedia ||
+                sameArtworkSource
             ) {
                 changed =
                     true
