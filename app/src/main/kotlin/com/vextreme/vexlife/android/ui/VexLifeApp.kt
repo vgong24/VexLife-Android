@@ -81,6 +81,10 @@ internal fun VexLifeApp(
     val relays = session.relays
     val sessionScope = session.scope
     val darkTheme = session.darkTheme
+    val themeMode =
+        ThemeModeBooleanAdapter.fromDarkTheme(
+            darkTheme,
+        )
 
     LaunchedEffect(runtime) {
         runtime.appOpened()
@@ -101,7 +105,7 @@ internal fun VexLifeApp(
         )
     }
 
-    VexLifeTheme(darkTheme = darkTheme) {
+    VexLifeTheme(themeMode = themeMode) {
         VexLifeScaffold(
             runtime = runtime,
             repositories = repositories,
