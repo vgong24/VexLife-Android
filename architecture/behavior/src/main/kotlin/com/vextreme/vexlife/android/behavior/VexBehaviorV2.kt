@@ -351,9 +351,6 @@ class VexBehaviorV2<
     }
 }
 
-@OptIn(
-    kotlin.experimental.ExperimentalTypeInference::class,
-)
 fun <
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
@@ -361,7 +358,6 @@ fun <
 > vexBehaviorV2(
     family: Family,
     behaviorRef: String,
-    @kotlin.BuilderInference
     block:
         VexBehaviorV2Builder<
             Family,
