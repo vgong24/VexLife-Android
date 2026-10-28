@@ -6,12 +6,18 @@ import kotlin.reflect.KClass
  * V2 construction scope that mirrors the current Origin-Walk ThemeMode circuit.
  */
 class VexBehaviorV2Builder<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-    Act : VexBehaviorFamily.Act<Family>,
+    Family,
+    State,
+    Control,
+    Act,
 > internal constructor(
     private val behaviorRef: String,
-) {
+)
+    where Family : VexBehaviorFamily<Family>,
+          State : VexBehaviorFamily.State<Family>,
+          Control : Enum<Control>,
+          Control : VexBehaviorFamily.Control<Family>,
+          Act : VexBehaviorFamily.Act<Family> {
     @PublishedApi
     internal val stateTypes =
         linkedSetOf<
@@ -148,11 +154,24 @@ class VexBehaviorV2Builder<
             relationship
     }
 
-    internal fun build():
+    internal fun build(
+        family: Family,
+    ):
         VexBehaviorV2<
             Family,
             State,
+            Control,
             Act
+        >
+        where Family : VexBehaviorFamily.Members<
+            Family,
+            State,
+            Control,
+            Act,
+            VexBehaviorV2Begin<
+                Family,
+                State
+            >
         > {
         require(
             pendingRelationships
@@ -167,6 +186,8 @@ class VexBehaviorV2Builder<
         }
 
         return VexBehaviorV2(
+            family =
+                family,
             behaviorRef =
                 behaviorRef,
             states =
