@@ -50,7 +50,10 @@ interface VexBehaviorFamily<
               State : VexBehaviorFamily.State<Family>,
               Control : VexBehaviorFamily.Control<Family>,
               Act : VexBehaviorFamily.Act<Family>,
-              Effect : VexBehaviorFamily.Effect<Family>
+              Effect : VexBehaviorFamily.Effect<Family> {
+        /** Complete Control vocabulary for the Family when a consumer needs exhaustive binding. */
+        val controls: Set<Control>
+    }
 }
 
 // [VXG RealForever]
