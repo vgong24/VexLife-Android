@@ -341,6 +341,58 @@ name. Nested classifiers are declarations, not virtual type members. Therefore t
 `Family.State / Family.Control / Family.Act` source shape is authored by the concrete Family itself,
 while generic type bounds and builder inference protect use of those members.
 
+### Family Behavior owns the semantic input circuit
+
+The current V2 proof no longer requires a Connection/caller to manually join a Control resolver and an
+Act resolver.
+
+The Family owns one Behavior value:
+
+~~~kotlin
+ThemeModeFamily.Behavior.resolve(
+    current = ThemeModeFamily.State.Light,
+    control = ThemeModeFamily.Control.Toggle,
+)
+~~~
+
+and that single call preserves both semantic equations internally:
+
+~~~text
+Control + CURRENT State
+-> Act
+
+CURRENT State + Act
+-> Effect + immediate State disposition
+~~~
+
+The focused contract test proves:
+
+~~~text
+State.Light
++ Control.Toggle
+-> Act.SelectDark
+-> begin(Replaceable) { Save(State.Dark) }
+-> admit State.Dark
+~~~
+
+The runtime Connection remains the reality/currentness boundary. Its semantic job can therefore reduce
+toward:
+
+~~~text
+receive Control
+-> read CURRENT State
+-> Family.Behavior.resolve(State, Control)
+-> realize returned Effect
+-> observe/reconcile reality
+~~~
+
+rather than manually stitching separate ControlBlueprint and BehaviorBlueprint resolution layers.
+
+The current Control-to-Act mapper is value-based rather than enum-registration-based, so a later
+parameterized Control such as `Click(songId)` can preserve its payload when producing an Act. The exact
+parameterized authoring DSL remains an Origin-Walk pressure point; this ThemeMode test does not claim that
+syntax is settled.
+
 ### Direct Origin mapping
 
 ~~~text
