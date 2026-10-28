@@ -633,3 +633,22 @@ This is not yet production Playback architecture. Concurrency/serialization, pro
 execution, Compose observation and async-result staleness remain open.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PROVIDER-ADMISSION-CANDIDATE] -->
+
+
+### V2 Behavior Origin Walk — StateRelay currentness pressure
+
+The third Playback pressure reference now includes a test-only `StateRelay` candidate using the
+accepted V1 `VexRelay` law.
+
+~~~text
+newer semantic intent becomes CURRENT
+-> older async completion arrives
+-> completion is reevaluated against CURRENT State inside one serialized Relay boundary
+-> stale completion cannot regress semantic State
+~~~
+
+This does not yet make StateRelay a foundation member. The candidate intentionally leaves open whether
+Behavior Family State should implement `VexState`/deepCopy or whether both Relay forms should share a
+smaller current-state custody primitive.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-PRESSURE] -->

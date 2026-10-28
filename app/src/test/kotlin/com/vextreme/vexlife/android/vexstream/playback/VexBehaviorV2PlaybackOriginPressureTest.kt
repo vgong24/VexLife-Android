@@ -5,6 +5,8 @@ import com.vextreme.vexlife.android.behavior.VexBehaviorV2Family
 import com.vextreme.vexlife.android.behavior.VexFamilyLogger
 import com.vextreme.vexlife.android.behavior.vexActs
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.relay.VexRelay
+import com.vextreme.vexlife.android.relay.VexState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -34,9 +36,13 @@ import org.junit.Test
  *     runtime payload Control
  *       now materializes an Act from actual CURRENT State + actual Control payload
  *
- * This class still does NOT solve provider observation/reconciliation or production Seek execution.
- * Production Playback stays on its current accepted architecture until those remaining pressures can
- * be expressed without losing provider ownership, currentness, payload identity or UI availability.
+ * The class now also carries a StateRelay candidate using the accepted V1 VexRelay law: competing
+ * semantic causes enter one serialized current-State boundary and an older completion is evaluated
+ * against CURRENT meaning instead of directly overwriting it.
+ *
+ * StateRelay is still a pressure candidate, not a confirmed Family member. In particular, this test
+ * uses a VexState/deep-copyable fixture while current production Playback State does not yet implement
+ * VexState. Production Playback stays unchanged.
  */
 class VexBehaviorV2PlaybackOriginPressureTest {
     @Test
@@ -302,6 +308,107 @@ class VexBehaviorV2PlaybackOriginPressureTest {
     }
 
     @Test
+    fun stateRelayReevaluatesOlderCompletionAgainstCurrentSemanticState() {
+        val relay =
+            StateRelay(
+                initialState =
+                    StateRelayPressureState.Pending(
+                        intentRef =
+                            "intent.old",
+                        semanticValue =
+                            "old-intent",
+                    ),
+            )
+
+        /*
+         * A newer human/semantic intent enters first.
+         *
+         * This is intentionally sequential rather than a thread-race test: V1 VexRelay already owns
+         * the concurrency proof that update(...) is serialized. The Origin question here is what the
+         * serialized boundary should DO with a completion that was authored against older meaning.
+         */
+        relay.admit { current ->
+            when (current) {
+                is StateRelayPressureState.Pending ->
+                    StateRelayPressureState.Pending(
+                        intentRef =
+                            "intent.new",
+                        semanticValue =
+                            "new-intent",
+                    )
+
+                is StateRelayPressureState.Settled ->
+                    current
+            }
+        }
+
+        /*
+         * The older async completion arrives after the newer intent. It receives CURRENT State at
+         * the Relay boundary rather than directly writing the State it wanted when it began.
+         */
+        relay.admit { current ->
+            when (current) {
+                is StateRelayPressureState.Pending ->
+                    if (
+                        current.intentRef ==
+                        "intent.old"
+                    ) {
+                        StateRelayPressureState.Settled(
+                            semanticValue =
+                                "old-result",
+                        )
+                    } else {
+                        current
+                    }
+
+                is StateRelayPressureState.Settled ->
+                    current
+            }
+        }
+
+        assertEquals(
+            StateRelayPressureState.Pending(
+                intentRef =
+                    "intent.new",
+                semanticValue =
+                    "new-intent",
+            ),
+            relay.current,
+        )
+
+        /*
+         * The completion belonging to the CURRENT intent remains lawful and may advance State.
+         */
+        relay.admit { current ->
+            when (current) {
+                is StateRelayPressureState.Pending ->
+                    if (
+                        current.intentRef ==
+                        "intent.new"
+                    ) {
+                        StateRelayPressureState.Settled(
+                            semanticValue =
+                                "new-result",
+                        )
+                    } else {
+                        current
+                    }
+
+                is StateRelayPressureState.Settled ->
+                    current
+            }
+        }
+
+        assertEquals(
+            StateRelayPressureState.Settled(
+                semanticValue =
+                    "new-result",
+            ),
+            relay.current,
+        )
+    }
+
+    @Test
     fun runtimePayloadControlMaterializesActFromActualCurrentStateAndRequest() {
         val root =
             VexExecutionRoot()
@@ -425,6 +532,72 @@ class VexBehaviorV2PlaybackOriginPressureTest {
         } finally {
             root.forceStopAll()
         }
+    }
+
+    /**
+     * Origin candidate only: StateRelay.
+     *
+     * The State-forward name is intentional:
+     *
+     *     DisplayState
+     *       -> State qualified for outward/display meaning
+     *
+     *     StateRelay
+     *       -> Relay/custody relationship whose primary concern is CURRENT State
+     *
+     * This test reuses the accepted V1 VexRelay currentness law directly. It is not yet a V2 Family
+     * member and does not imply every Behavior State must implement VexState. That type relationship
+     * remains pressure because current production Playback State does not yet carry VexState/deepCopy.
+     */
+    private class StateRelay(
+        initialState:
+            StateRelayPressureState,
+    ) :
+        VexRelay<
+            StateRelayPressureState
+        >(
+            relayRef =
+                "origin-pressure.family.state-relay",
+            initialState =
+                initialState,
+        ) {
+        fun admit(
+            transition:
+                (
+                    StateRelayPressureState,
+                ) ->
+                    StateRelayPressureState,
+        ):
+            StateRelayPressureState =
+            update(
+                transition,
+            )
+    }
+
+    private sealed interface StateRelayPressureState :
+        VexState<
+            StateRelayPressureState
+        > {
+        data class Pending(
+            val intentRef: String,
+            val semanticValue: String,
+        ) :
+            StateRelayPressureState
+
+        data class Settled(
+            val semanticValue: String,
+        ) :
+            StateRelayPressureState
+
+        override fun deepCopy():
+            StateRelayPressureState =
+            when (this) {
+                is Pending ->
+                    copy()
+
+                is Settled ->
+                    copy()
+            }
     }
 
     /**

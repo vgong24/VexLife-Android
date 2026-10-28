@@ -1509,3 +1509,91 @@ The next useful test should add one **competing lawful Family admission cause** 
 async result) and prove the failure before choosing the serialization/currentness mechanism.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][SERIALIZED-ADMISSION-PRESSURE] -->
+
+
+## Origin pressure candidate — Family StateRelay
+
+The remaining currentness problem now has direct V1 Relay evidence.
+
+V1 `VexRelay` already proves the law:
+
+~~~text
+concurrent arrivals
+-> one serialized update/send boundary
+-> read exact retained CURRENT State
+-> process incoming cause against CURRENT
+-> publish semantic change only
+~~~
+
+The Playback Origin pressure class now contains a **test-only StateRelay candidate** that reuses
+`VexRelay` directly.
+
+The State-forward name is intentional:
+
+~~~text
+DisplayState
+  display qualifies State
+  -> outward/projectable State meaning
+
+StateRelay
+  State is foregrounded
+  -> current-State custody / movement / admission relationship
+~~~
+
+The competing-admission specimen proves:
+
+~~~text
+old async intent begins
+-> newer semantic intent becomes CURRENT
+-> old completion arrives
+-> StateRelay gives completion CURRENT State
+-> old completion sees it no longer owns current meaning
+-> no State regression
+
+then:
+current intent's completion arrives
+-> still lawful against CURRENT
+-> State advances
+~~~
+
+This is a stronger currentness rule than direct `admit(nextState)` from callbacks:
+
+~~~text
+incoming cause
++
+CURRENT State at serialized boundary
+-> lawful next State
+~~~
+
+### Why this is not foundation yet
+
+The pressure fixture's State implements `VexState` so it can reuse V1 `VexRelay`. Current Behavior
+Family State does not universally require `VexState`, and production Playback State currently does
+not implement it.
+
+Therefore this checkpoint does **not** yet decide:
+
+~~~text
+V2 Family.State : VexState
+StateRelay : VexRelay
+Behavior module -> production Relay dependency
+new independent StateRelay kernel
+~~~
+
+Those are implementation-shape questions.
+
+The next removal/type-fit walk is:
+
+~~~text
+Can Family StateRelay reuse VexRelay directly
+without forcing an unrelated deep-copy/type contract?
+
+If yes:
+  specialize/reuse it.
+
+If no:
+  identify which exact VexRelay law is foundational below both,
+  rather than copying synchronized currentness machinery.
+~~~
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-PRESSURE] -->
