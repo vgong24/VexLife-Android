@@ -3,11 +3,11 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * How repeated later-completing episodes participate in the rightful owner's execution lane.
+ * Exact Kotlin spelling of the Origin-Walk begin(mode = ...) relationship.
  *
  * This is semantic scheduling intent, not a coroutine/thread/transaction primitive.
  */
-enum class VexBehaviorV2ExecutionMode {
+enum class VexBehaviorV2BeginMode {
     Replaceable,
     Sequenced,
 }
@@ -17,12 +17,6 @@ enum class VexBehaviorV2StateDispositionKind {
     Admit,
 }
 
-/**
- * One immediate or later State disposition inside one exact Behavior family.
- *
- * Family remains present in the type equation so V2 helper types do not weaken the compiler-bound
- * kinship already established by VexBehaviorFamily.
- */
 data class VexBehaviorV2StateDisposition<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
@@ -31,59 +25,77 @@ data class VexBehaviorV2StateDisposition<
     val stateKind: KClass<out State>,
 )
 
-data class VexBehaviorV2AsyncResult<
+/**
+ * One Success or Failure result consequence.
+ *
+ * Null means that result has no later State admission. The Origin Walk intentionally does not
+ * require a redundant stay() in a result block when no later State consequence exists.
+ */
+data class VexBehaviorV2Result<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
 >(
-    /**
-     * Null means this result produces no additional State admission.
-     *
-     * Result scopes deliberately do not require a redundant stay(); stay/admit remains mandatory
-     * only for the immediate on(...) decision.
-     */
     val admittedStateKind: KClass<out State>?,
 )
 
-data class VexBehaviorV2AsyncResults<
+data class VexBehaviorV2Results<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
 >(
     val success:
-        VexBehaviorV2AsyncResult<
+        VexBehaviorV2Result<
             Family,
             State
         >,
     val failure:
-        VexBehaviorV2AsyncResult<
+        VexBehaviorV2Result<
             Family,
             State
         >,
 )
 
-data class VexBehaviorV2EffectPlan<
+/**
+ * One exact operation(...) inside begin(...).
+ *
+ * [effect] is the existing SCAE Effect identity realized by this operation. V2 does not create a
+ * fifth Family role for Operation; Operation is the execution relationship around that Effect.
+ */
+data class VexBehaviorV2Operation<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
     val effect: Effect,
-    val executionMode: VexBehaviorV2ExecutionMode?,
     val results:
-        VexBehaviorV2AsyncResults<
+        VexBehaviorV2Results<
             Family,
             State
-        >?,
-) {
-    val isAsync: Boolean
-        get() =
-            executionMode !=
-                null
-}
+        >,
+)
+
+/**
+ * The Origin-Walk Effect scope:
+ *
+ *     begin(mode = ...) {
+ *         operation(...).results { ... }
+ *     }
+ */
+data class VexBehaviorV2Begin<
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Effect : VexBehaviorFamily.Effect<Family>,
+> internal constructor(
+    val mode: VexBehaviorV2BeginMode,
+    val operation:
+        VexBehaviorV2Operation<
+            Family,
+            State,
+            Effect
+        >,
+)
 
 /**
  * One V2 cause/effect bond inside one exact Behavior family.
- *
- * V1 keeps one immediate admitted State kind. V2 keeps that immediate decision explicit while also
- * allowing the Effect plan to describe a later result admission.
  */
 class VexBehaviorV2Relationship<
     Family : VexBehaviorFamily<Family>,
@@ -93,12 +105,13 @@ class VexBehaviorV2Relationship<
 > internal constructor(
     val from: KClass<out State>,
     val act: Act,
-    val effectPlan:
-        VexBehaviorV2EffectPlan<
+    val effect: Effect,
+    val begin:
+        VexBehaviorV2Begin<
             Family,
             State,
             Effect
-        >,
+        >?,
     val immediateDisposition:
         VexBehaviorV2StateDisposition<
             Family,
@@ -118,26 +131,23 @@ class VexBehaviorV2Relationship<
             )
 }
 
-/**
- * Read-only V2 semantic consequence of one Act from one current State.
- */
 data class VexBehaviorV2Resolution<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Effect : VexBehaviorFamily.Effect<Family>,
 >(
     val effect: Effect,
+    val begin:
+        VexBehaviorV2Begin<
+            Family,
+            State,
+            Effect
+        >?,
     val immediateDisposition:
         VexBehaviorV2StateDisposition<
             Family,
             State
         >,
-    val executionMode: VexBehaviorV2ExecutionMode?,
-    val results:
-        VexBehaviorV2AsyncResults<
-            Family,
-            State
-        >?,
 )
 
 // [VXG RealForever]
