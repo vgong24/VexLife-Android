@@ -562,7 +562,20 @@ abstract class VexBehaviorV2Family<
         }
     }
 
-    private fun admit(
+    /**
+     * Family-owned semantic admission seam.
+     *
+     * activate(Control) uses this after an authored Act. A concrete Family may also use it after its
+     * own rightful external-truth reconciliation (for example provider observation + pending intent).
+     *
+     * This is protected rather than public on purpose:
+     * - UI/provider callers do not receive a generic setCurrent(...);
+     * - external observations must first pass through the concrete Family's owned reconciliation;
+     * - the same State-admission/accountant path is reused once semantic truth is earned.
+     *
+     * This does not yet solve concurrent admission serialization or stale async-result generations.
+     */
+    protected fun admit(
         state: State,
     ) {
         val before =

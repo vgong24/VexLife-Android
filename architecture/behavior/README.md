@@ -1287,3 +1287,45 @@ Those remain inside the Playback pressure class rather than being filled by a ge
 setCurrent(...) API.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][RUNTIME-ACT-MATERIALIZATION] -->
+
+
+## V2 pressure candidate — concrete Family owns admission after external reconciliation
+
+Playback pressure exposes a second useful relationship without earning a generic observation API.
+
+The foundation now allows the concrete Family implementation to reuse semantic `admit(State)` after
+its own rightful external-truth reconciliation:
+
+~~~text
+provider observation
+-> provider/Connection-owned reconciliation
+-> reconciled semantic State
+-> concrete Family-specific admission method
+-> protected Family.admit(State)
+-> Family.current + accountant
+~~~
+
+The protected seam matters:
+
+~~~text
+UI / arbitrary provider caller
+  CANNOT call setCurrent(...)
+
+generic V2 foundation
+  DOES NOT invent observe(...) / reconcile(...) for every Family
+
+concrete Family
+  may expose the exact provider/repository observation relationship it has actually earned
+  and may call protected admit(...) only after that relationship produces semantic truth
+~~~
+
+The Playback pressure test reuses the existing `VexStreamPlaybackPending` and
+`reconcileVexStreamPlaybackObservation(...)` logic. A stale provider callback therefore remains
+subordinate to a newer local intent; a later matching provider observation clears pending before the
+Family admits the reconciled semantic State.
+
+This is still a candidate pressure result, not a production Playback migration. It does not yet solve
+concurrent admission serialization, async-result generation guards, provider-affine Operations or
+Compose observation.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][PROVIDER-RECONCILED-ADMISSION] -->

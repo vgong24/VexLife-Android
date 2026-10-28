@@ -22,7 +22,8 @@ import org.junit.Test
  * A passing test here means the PRESSURE remains visible:
  *
  *     provider observation
- *       must reconcile with newer local intent before becoming semantic truth
+ *       reconciles with newer local intent before concrete Family admission
+ *       without becoming a fake Control or generic public setter
  *
  *     payload request
  *       must retain exact identity/currentness at activation
@@ -195,6 +196,112 @@ class VexBehaviorV2PlaybackOriginPressureTest {
     }
 
     @Test
+    fun reconciledProviderTruthCanEnterFamilyWithoutBecomingFakeControl() {
+        val root =
+            VexExecutionRoot()
+
+        try {
+            val initialSemantic =
+                VexStreamPlaybackState.Media(
+                    playRequested =
+                        true,
+                    requestPending =
+                        true,
+                    phase =
+                        VexStreamPlaybackPhase.Buffering,
+                    playPauseAvailable =
+                        true,
+                )
+
+            val family =
+                ProviderObservationPressureFamily(
+                    executionRoot =
+                        root,
+                    initialState =
+                        ProviderObservationPressureFamily.State.Playback(
+                            initialSemantic,
+                        ),
+                )
+
+            val connection =
+                ProviderObservationPressureConnection(
+                    family =
+                        family,
+                    initialPending =
+                        VexStreamPlaybackPending(
+                            playRequested =
+                                true,
+                        ),
+                )
+
+            /*
+             * Media3 reports the older false value. Existing Playback reconciliation preserves the
+             * newer local play intent before the concrete Family admits semantic truth.
+             */
+            connection.providerObserved(
+                VexStreamPlaybackState.Media(
+                    playRequested =
+                        false,
+                    phase =
+                        VexStreamPlaybackPhase.Buffering,
+                    playPauseAvailable =
+                        true,
+                ),
+            )
+
+            assertEquals(
+                ProviderObservationPressureFamily.State.Playback(
+                    VexStreamPlaybackState.Media(
+                        playRequested =
+                            true,
+                        requestPending =
+                            true,
+                        phase =
+                            VexStreamPlaybackPhase.Buffering,
+                        playPauseAvailable =
+                            true,
+                    ),
+                ),
+                family.current,
+            )
+
+            /*
+             * When the provider finally acknowledges the requested value, the same reconciliation
+             * clears pending and the Family admits the reconciled semantic State. No Control was
+             * fabricated for either provider callback.
+             */
+            connection.providerObserved(
+                VexStreamPlaybackState.Media(
+                    playRequested =
+                        true,
+                    phase =
+                        VexStreamPlaybackPhase.Ready,
+                    playPauseAvailable =
+                        true,
+                ),
+            )
+
+            assertEquals(
+                ProviderObservationPressureFamily.State.Playback(
+                    VexStreamPlaybackState.Media(
+                        playRequested =
+                            true,
+                        requestPending =
+                            false,
+                        phase =
+                            VexStreamPlaybackPhase.Ready,
+                        playPauseAvailable =
+                            true,
+                    ),
+                ),
+                family.current,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
     fun runtimePayloadControlMaterializesActFromActualCurrentStateAndRequest() {
         val root =
             VexExecutionRoot()
@@ -317,6 +424,117 @@ class VexBehaviorV2PlaybackOriginPressureTest {
             )
         } finally {
             root.forceStopAll()
+        }
+    }
+
+    /**
+     * Provider-currentness pressure fixture.
+     *
+     * The wrapper State satisfies V2 Family kinship while carrying the real current production-shaped
+     * Playback semantic State as evidence. It does not replace VexStreamPlaybackFamily.
+     */
+    private class ProviderObservationPressureFamily(
+        executionRoot:
+            VexExecutionRoot,
+        initialState:
+            State,
+    ) :
+        VexBehaviorV2Family<
+            ProviderObservationPressureFamily,
+            ProviderObservationPressureFamily.State,
+            ProviderObservationPressureFamily.Control
+        >(
+            initialState =
+                initialState,
+            executionRoot =
+                executionRoot,
+            logger =
+                VexFamilyLogger.None,
+        ) {
+        sealed interface State :
+            VexBehaviorFamily.State<
+                ProviderObservationPressureFamily
+            > {
+            data class Playback(
+                val value:
+                    VexStreamPlaybackState,
+            ) :
+                State
+        }
+
+        sealed interface Control :
+            VexBehaviorFamily.Control<
+                ProviderObservationPressureFamily
+            > {
+            data object None :
+                Control
+        }
+
+        override val acts =
+            vexActs<
+                ProviderObservationPressureFamily,
+                State,
+                Control
+            >(
+                family =
+                    this,
+                behaviorRef =
+                    "origin-pressure.playback.provider-observation",
+            ) {
+                state<State.Playback>()
+            }
+
+        /**
+         * This is intentionally concrete-Family vocabulary rather than a generic public setter.
+         * The Connection may call it only after provider truth has already been reconciled.
+         */
+        fun providerReconciled(
+            state:
+                VexStreamPlaybackState,
+        ) {
+            admit(
+                State.Playback(
+                    state,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Keeps the existing Playback responsibility split visible:
+     *
+     * Media3 observation
+     * -> Connection-owned pending reconciliation
+     * -> reconciled semantic State
+     * -> concrete Family admission
+     */
+    private class ProviderObservationPressureConnection(
+        private val family:
+            ProviderObservationPressureFamily,
+        initialPending:
+            VexStreamPlaybackPending,
+    ) {
+        private var pending =
+            initialPending
+
+        fun providerObserved(
+            observed:
+                VexStreamPlaybackState,
+        ) {
+            val reconciled =
+                reconcileVexStreamPlaybackObservation(
+                    observed =
+                        observed,
+                    pending =
+                        pending,
+                )
+
+            pending =
+                reconciled.pending
+
+            family.providerReconciled(
+                reconciled.state,
+            )
         }
     }
 
