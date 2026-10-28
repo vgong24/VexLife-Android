@@ -3,45 +3,41 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 sibling of the completed Origin-Walk two-scope Behavior circuit.
+ * V2 sibling proof of the Origin-Walk Family circuit.
  *
- * V2 does not invent a feature-local Effect enum for ThemeMode. The SCAE Effect is the structured
- * begin(...) scope itself, and the operation inside it is Save(State).
+ * The POC originally copied V1's separate Family.Act vocabulary and therefore needed:
+ *
+ *     Control + State -> Act value
+ *     State + Act value -> Effect
+ *
+ * ThemeMode made the duplication visible: the same State neighborhood was authored twice. The V2
+ * removal test showed that no meaning was lost when that intermediate Act value disappeared.
+ *
+ * V2 therefore treats each authored on(Control) relationship as the Act:
+ *
+ *     CURRENT State + Control
+ *     -> Act { Effect + immediate State consequence }
+ *
+ * This keeps Act as behavioral process/meaning while removing an extra type hierarchy and resolver
+ * layer that fresh AI authors could otherwise recreate by habit.
  */
 class VexBehaviorV2<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Control : VexBehaviorFamily.Control<Family>,
-    Act : VexBehaviorFamily.Act<Family>,
 > internal constructor(
     val family: Family,
     val behaviorRef: String,
-    private val controlToAct:
-        (
-            State,
-            Control,
-        ) -> Act?,
     val states: Set<KClass<out State>>,
-    val relationships:
+    val acts:
         List<
-            VexBehaviorV2Relationship<
+            VexBehaviorV2Act<
                 Family,
                 State,
-                Act
+                Control
             >
         >,
 ) {
-    val v1:
-        VexBehaviorBlueprint<
-            Family,
-            State,
-            Act,
-            VexBehaviorV2Begin<
-                Family,
-                State
-            >
-        >
-
     init {
         require(
             behaviorRef.isNotBlank(),
@@ -51,32 +47,29 @@ class VexBehaviorV2<
         require(
             states.isNotEmpty(),
         ) {
-            "behavior V2 requires at least one state"
+            "behavior V2 requires at least one State"
         }
 
-        relationships.forEach { relationship ->
+        acts.forEach { act ->
             require(
-                relationship.from in
+                act.from in
                     states,
             ) {
-                "relationship source is not a registered state: " +
-                    relationship.from
+                "Act source is not a registered State: " +
+                    act.from
             }
             require(
-                relationship
-                    .immediateDisposition
+                act.immediateDisposition
                     .stateKind in
                     states,
             ) {
-                "relationship immediate state is not registered: " +
-                    relationship
-                        .immediateDisposition
+                "Act immediate State is not registered: " +
+                    act.immediateDisposition
                         .stateKind
             }
 
             require(
-                relationship
-                    .effect
+                act.effect
                     .save
                     .state
                     .let {
@@ -87,8 +80,7 @@ class VexBehaviorV2<
                     behaviorRef
             }
 
-            relationship
-                .effect
+            act.effect
                 .save
                 .results
                 .let { results ->
@@ -96,170 +88,59 @@ class VexBehaviorV2<
                         results.success,
                         results.failure,
                     ).forEach { result ->
-                        result
-                            .admittedStateKind
+                        result.admittedStateKind
                             ?.let { laterState ->
                                 require(
                                     laterState in
                                         states,
                                 ) {
-                                    "later admitted state is not registered: " +
+                                    "later admitted State is not registered: " +
                                         laterState
                                 }
                             }
                     }
                 }
         }
-
-        v1 =
-            VexBehaviorBlueprint(
-                behaviorRef =
-                    behaviorRef,
-                states =
-                    states,
-                relationships =
-                    relationships.map { relationship ->
-                        VexBehaviorRelationship(
-                            from =
-                                relationship.from,
-                            act =
-                                relationship.act,
-                            effect =
-                                relationship.effect,
-                            admittedStateKind =
-                                relationship
-                                    .immediateDisposition
-                                    .stateKind,
-                            conditionName =
-                                relationship
-                                    .conditionName,
-                            whenCurrent = { current ->
-                                relationship
-                                    .isAvailableFrom(
-                                        current,
-                                    )
-                            },
-                        )
-                    },
-            )
-    }
-
-    fun availableRelationships(
-        current: State,
-    ): List<
-        VexBehaviorV2Relationship<
-            Family,
-            State,
-            Act
-        >
-    > {
-        val currentType =
-            current::class
-
-        require(
-            currentType in
-                states,
-        ) {
-            "current state is not registered in " +
-                behaviorRef +
-                ": " +
-                currentType
-        }
-
-        return relationships.filter { relationship ->
-            relationship.from ==
-                currentType &&
-                relationship
-                    .isAvailableFrom(
-                        current,
-                    )
-        }
-    }
-
-    fun availableActs(
-        current: State,
-    ): List<Act> {
-        val available =
-            availableRelationships(
-                current,
-            )
-
-        requireNoActAmbiguity(
-            current = current,
-            available = available,
-        )
-
-        return available
-            .map {
-                it.act
-            }
-            .distinct()
-    }
-
-    fun resolve(
-        current: State,
-        act: Act,
-    ): VexBehaviorV2Resolution<
-        Family,
-        State,
-        Act
-    >? {
-        val available =
-            availableRelationships(
-                current,
-            )
-
-        requireNoActAmbiguity(
-            current = current,
-            available = available,
-        )
-
-        val relationship =
-            available
-                .singleOrNull {
-                    it.act ==
-                        act
-                }
-                ?: return null
-
-        return VexBehaviorV2Resolution(
-            act =
-                relationship.act,
-            effect =
-                relationship.effect,
-            immediateDisposition =
-                relationship
-                    .immediateDisposition,
-        )
     }
 
     /**
-     * Resolve the full semantic path from the external Family Control and CURRENT State.
+     * Resolve the one authored Act for this exact CURRENT State + Control input.
      *
-     * Control + CURRENT State -> Act
-     * CURRENT State + Act -> Effect + immediate State disposition
+     * The caller does not translate Control into another Family vocabulary first. Connection/UI
+     * supplies the semantic Control, Behavior selects the matching Act, and the Act already carries
+     * the Effect plus immediate State consequence.
      */
     fun resolve(
         current: State,
         control: Control,
-    ): VexBehaviorV2Resolution<
+    ): VexBehaviorV2Act<
         Family,
         State,
-        Act
+        Control
     >? {
-        val act =
-            controlToAct(
-                current,
-                control,
-            )
-                ?: return null
+        val available =
+            acts.filter { act ->
+                act.matches(
+                    current =
+                        current,
+                    requestedControl =
+                        control,
+                )
+            }
 
-        return resolve(
-            current =
-                current,
-            act =
-                act,
-        )
+        require(
+            available.size <=
+                1,
+        ) {
+            "behavior " +
+                behaviorRef +
+                " has ambiguous Acts for current " +
+                current::class.simpleName +
+                " + Control " +
+                control
+        }
+
+        return available.singleOrNull()
     }
 
     fun describe(): String =
@@ -269,32 +150,29 @@ class VexBehaviorV2<
                     " [V2]",
             )
 
-            relationships.forEach { relationship ->
+            acts.forEach { act ->
                 append(
-                    relationship
-                        .from
+                    act.from
                         .simpleName,
                 )
                 append(
-                    " --",
+                    " --on(",
                 )
                 append(
-                    relationship.act,
+                    act.control,
                 )
                 append(
-                    " / begin[",
+                    ") / begin[",
                 )
                 append(
-                    relationship
-                        .effect
+                    act.effect
                         .mode,
                 )
                 append(
                     "] Save(",
                 )
                 append(
-                    relationship
-                        .effect
+                    act.effect
                         .save
                         .state,
                 )
@@ -302,23 +180,20 @@ class VexBehaviorV2<
                     ")--> ",
                 )
                 append(
-                    relationship
-                        .immediateDisposition
+                    act.immediateDisposition
                         .kind,
                 )
                 append(
                     " ",
                 )
                 append(
-                    relationship
-                        .immediateDisposition
+                    act.immediateDisposition
                         .stateKind
                         .simpleName,
                 )
 
                 val results =
-                    relationship
-                        .effect
+                    act.effect
                         .save
                         .results
 
@@ -326,8 +201,7 @@ class VexBehaviorV2<
                     " ; Success=",
                 )
                 append(
-                    results
-                        .success
+                    results.success
                         .admittedStateKind
                         ?.simpleName
                         ?: "NO_STATE_CHANGE",
@@ -336,15 +210,13 @@ class VexBehaviorV2<
                     " ; Failure=",
                 )
                 append(
-                    results
-                        .failure
+                    results.failure
                         .admittedStateKind
                         ?.simpleName
                         ?: "NO_STATE_CHANGE",
                 )
 
-                relationship
-                    .conditionName
+                act.conditionName
                     ?.let { name ->
                         append(
                             " when ",
@@ -357,67 +229,30 @@ class VexBehaviorV2<
                 appendLine()
             }
         }.trimEnd()
-
-    private fun requireNoActAmbiguity(
-        current: State,
-        available:
-            List<
-                VexBehaviorV2Relationship<
-                    Family,
-                    State,
-                    Act
-                >
-            >,
-    ) {
-        available
-            .groupBy {
-                it.act
-            }
-            .forEach { (act, matches) ->
-                require(
-                    matches.size ==
-                        1,
-                ) {
-                    "behavior " +
-                        behaviorRef +
-                        " V2 has ambiguous act " +
-                        act +
-                        " from current " +
-                        current::class.simpleName
-                }
-            }
-    }
 }
 
 fun <
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Control : VexBehaviorFamily.Control<Family>,
-    Act : VexBehaviorFamily.Act<Family>,
 > vexBehaviorV2(
     family: Family,
     behaviorRef: String,
-    controlToAct:
-        (
-            State,
-            Control,
-        ) -> Act?,
     block:
         VexBehaviorV2Builder<
             Family,
             State,
-            Act
+            Control
         >.() -> Unit,
 ): VexBehaviorV2<
     Family,
     State,
-    Control,
-    Act
+    Control
 > =
     VexBehaviorV2Builder<
         Family,
         State,
-        Act
+        Control
     >(
         behaviorRef =
             behaviorRef,
@@ -426,10 +261,7 @@ fun <
             block,
         )
         .build(
-            family =
-                family,
-            controlToAct =
-                controlToAct,
+            family,
         )
 
 // [VXG RealForever]
