@@ -206,23 +206,27 @@ surface across features, not merely two VexStream families.
 The accepted V1 kernel remains the production-used contract. V2 exists beside it so the ThemeMode
 Origin Walk can be proven in ordinary Kotlin without changing VexStream/Queue semantics in place.
 
-The V2 proof must **consume Origin language rather than translate it into a second vocabulary**.
+The governing rule is:
 
-Current mapping:
+~~~text
+Origin earns the language
+-> Kotlin maps it
+-> Kotlin does not rename it for convenience
+~~~
+
+Current ThemeMode mapping:
 
 ~~~text
 ORIGIN WALK                         KOTLIN V2
 ────────────────────────────────────────────────────────────
-Family                              Family generic bound
-State                               State<Family>
-Control                             Control<Family>
-Act                                 Act<Family>
-Effect                              Effect<Family>
+ThemeMode                           ThemeMode
+ThemeMode Family identity           ThemeModeFamily
+ThemeMode.Dark                      ThemeMode.Dark
 
 begin(mode = Replaceable)           begin(mode = Replaceable)
 begin(mode = Sequenced)             begin(mode = Sequenced)
 
-operation(...)                      operation(...)
+Save(ThemeMode, ThemeMode.Dark)      save(ThemeMode.Dark)
 
 .results {                          .results {
   Success { ... }                     success { ... }
@@ -230,104 +234,107 @@ operation(...)                      operation(...)
 }                                   }
 
 .stay()                             .stay()
-.admit<State>()                     .admit<State>()
+.admit<ThemeMode.Dark>()            .admit<ThemeMode.Dark>()
 ~~~
 
-Kotlin method casing follows this repository's function naming convention; it does not rename the
-semantic Success / Failure result cases.
+The Family argument is not discarded in Kotlin. It is already fixed by the surrounding generic scope:
 
-The first V2 prototype briefly introduced implementation-translated nouns such as:
+~~~kotlin
+vexBehaviorV2Blueprint<
+    ThemeModeFamily,
+    ThemeMode,
+    ThemeModeAct
+> { ... }
+~~~
+
+Therefore the target-native call:
+
+~~~kotlin
+save(ThemeMode.Dark)
+~~~
+
+still means:
+
+~~~text
+Save(
+  Family = ThemeModeFamily,
+  State = ThemeMode.Dark
+)
+~~~
+
+without repeating Family as a runtime value.
+
+The SCAE Effect is the structured `begin(...)` scope. `Save(...)` is the operation inside that Effect.
+V2 therefore does **not** invent `ThemeEffect.SaveDark` or another feature-local synonym for Save.
+
+The first prototypes briefly used:
 
 ~~~text
 AsyncResult
 AsyncResults
 EffectPlan
 ExecutionMode
+operation(ThemeEffect.SaveDark)
 ~~~
 
-That was an Origin-Walk violation: those names were formed before checking whether the Walk had already
-named the responsibilities. Current source removes those prototype nouns.
+Those forms are superseded because they translated already-earned Origin meaning into new nouns.
 
-The source now uses only directly mapped V2 support identities:
-
-~~~text
-VexBehaviorV2BeginMode
-VexBehaviorV2Begin
-VexBehaviorV2Operation
-VexBehaviorV2Results
-VexBehaviorV2Result
-VexBehaviorV2StateDisposition
-
-VexBehaviorV2Relationship
-VexBehaviorV2Resolution
-VexBehaviorV2Blueprint
-VexBehaviorV2BlueprintBuilder
-~~~
-
-The first group exists only to carry already-earned Origin relationships in Kotlin. It is not a new
-foundation vocabulary.
-
-Generic ordering preserves the V1 Family language:
-
-~~~text
-<Family, State, Act, Effect>
-~~~
-
-Control remains attached through `controls<Control>()`, exactly as in V1.
-
-The Kotlin shape under proof is therefore:
+Current Kotlin shape:
 
 ~~~kotlin
-state<ThemeState.NotSet> {
+state<ThemeMode.Light> {
     on(
-        act = ThemeAct.CommitDark,
+        act = ThemeModeAct.SelectDark,
+        effect = begin(
+            mode = VexBehaviorV2BeginMode.Replaceable,
+        ) {
+            save(
+                ThemeMode.Dark,
+            ).results {
+                success { }
+                failure { }
+            }
+        },
+    ).admit<ThemeMode.Dark>()
+}
+~~~
+
+Durability-gated form:
+
+~~~kotlin
+state<ThemeMode.NotSet> {
+    on(
+        act = ThemeModeAct.CommitDark,
         effect = begin(
             mode = VexBehaviorV2BeginMode.Sequenced,
         ) {
-            operation(
-                ThemeEffect.SaveDark,
+            save(
+                ThemeMode.Dark,
             ).results {
                 success {
-                    admit<ThemeState.Dark>()
+                    admit<ThemeMode.Dark>()
                 }
-
-                failure {
-                }
+                failure { }
             }
         },
     ).stay()
 }
 ~~~
 
-That reads in the same order as the Origin Walk:
+V2 still materializes a V1-compatible immediate graph so existing Control projection/resolution remains
+reusable.
+
+The focused proof also demonstrates that the semantic noun `ThemeMode` can satisfy both:
 
 ~~~text
-NOW
-  stay()
-
-LATER
-  begin Sequenced
-  -> operation SaveDark
-  -> Success
-  -> admit Dark
-~~~
-
-V2 materializes a V1-compatible immediate graph so existing Control projection/resolution remains
-reusable rather than being cloned.
-
-The focused proof also demonstrates that one concrete immutable State family may satisfy both:
-
-~~~text
-VexBehaviorFamily.State<Family>
+VexBehaviorFamily.State<ThemeModeFamily>
 +
-Relay VexState<State>
+Relay VexState<ThemeMode>
 ~~~
 
-without making the production Behavior module depend on Relay.
+without inventing a second `ThemeState` noun and without making production Behavior depend on Relay.
 
-V2 remains an experiment. Do not migrate V1 consumers merely because V2 exists. A migration is earned
-when a real family needs the two-scope semantics and focused proof shows the relationship is more truthful
-than its current Connection-local handling.
+V2 remains an experiment. Do not migrate V1 consumers merely because V2 exists.
 
 ## Deliberately held
 
