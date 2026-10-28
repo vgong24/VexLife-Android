@@ -10,8 +10,10 @@
 Put the work in a `VexExecution`.
 
 `VexExecution` is the architectural meta-pattern. Ordinary feature/UI/domain classes do not receive
-`VexCoroutineLauncher`; the launcher is internal foundation machinery. A class that needs managed
-coroutine execution must make that role explicit by extending `VexExecution`.
+`VexCoroutineLauncher`; the launcher is internal foundation machinery. Ordinary runtime classes that
+need managed execution extend `VexExecution`. A foundation that already owns a semantic execution
+boundary may use the source-referenced companion bridge instead of inventing another feature
+Execution class; V2 Behavior `begin(...)` is the current patient zero.
 
 ```text
 VexExecutionRoot
@@ -474,3 +476,53 @@ source-only bounded recovery, downstream-consumer failure without auto-restart, 
 and post-shutdown admission rejection.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
+
+
+## Behavior begin as an execution boundary
+
+The V2 Behavior Origin Walk supplied a real consumer that refined the earlier "every consumer extends
+VexExecution" rule.
+
+~~~text
+Act
+  immediate stay/admit
+
+  begin(Replaceable | Sequenced)
+    Operation
+~~~
+
+`begin(...)` is already the semantic execution phase. Behavior therefore does not introduce a
+`ThemeModeExecution` / `FamilyExecution` sibling merely to reach coroutine mechanics.
+
+The Behavior foundation may carry the rightful `VexExecutionRoot` and call the sanctioned companion
+bridge with the actual suspend callable:
+
+~~~text
+VexExecution.beginReplaceable(
+  owner = Family source identity,
+  operation = Family.Store::save,
+  argument = State
+)
+
+VexExecution.beginSequenced(...)
+~~~
+
+The callable remains both the source reference and the invoked operation. The internal
+`VexCoroutineLauncher` stays hidden.
+
+Current lane semantics:
+
+~~~text
+Replaceable
+  newer same-source episode cancels the prior active episode
+  -> waits for prior teardown
+  -> newest operation begins
+
+Sequenced
+  newer same-source episode waits for prior accepted episode
+  -> accepted order is retained
+~~~
+
+Cancellation/replacement is execution lifetime, not an Operation Failure result.
+
+<!-- [VXG RealForever][VEXEXECUTION][BEHAVIOR-BEGIN] -->

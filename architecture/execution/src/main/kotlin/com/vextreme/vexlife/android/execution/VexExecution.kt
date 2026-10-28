@@ -22,9 +22,10 @@ import kotlinx.coroutines.withContext
  * long-running collectors are actually concurrent. VexExecution centralizes those mechanics so a
  * feature author can focus on the semantic operation while the execution topology remains inspectable.
  *
- * A class that needs managed coroutine capability must make that architectural role explicit by
- * extending [VexExecution]. Ordinary UI, Experience, Behavior, repository, and domain classes do
- * not receive [VexCoroutineLauncher]; that implementation remains internal to this module.
+ * An ordinary feature/runtime class that needs managed coroutine capability makes that role explicit
+ * by extending [VexExecution]. Foundations may also use the companion begin bridge when they already
+ * own a semantic execution boundary (for example Behavior begin(...)); this does not expose
+ * [VexCoroutineLauncher], which remains internal to this module.
  *
  * Callable references are executable source references, not decorative labels:
  *
