@@ -8,9 +8,19 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexBehaviorV2Test {
-    private sealed interface ThemeModeFamily :
+    private object ThemeModeFamily :
         VexBehaviorFamily<
             ThemeModeFamily
+        >,
+        VexBehaviorFamily.Members<
+            ThemeModeFamily,
+            ThemeMode,
+            ThemeModeControl,
+            ThemeModeAct,
+            VexBehaviorV2Begin<
+                ThemeModeFamily,
+                ThemeMode
+            >
         >
 
     private sealed interface ThemeMode :
@@ -56,11 +66,9 @@ class VexBehaviorV2Test {
     }
 
     private fun themeModeBehavior() =
-        vexBehaviorV2<
-            ThemeModeFamily,
-            ThemeMode,
-            ThemeModeAct
-        >(
+        vexBehaviorV2(
+            family =
+                ThemeModeFamily,
             behaviorRef =
                 "example.theme-mode.v2",
         ) {
@@ -274,11 +282,9 @@ class VexBehaviorV2Test {
             IllegalArgumentException::class,
     )
     fun resultsRequireExplicitSuccessAndFailure() {
-        vexBehaviorV2<
-            ThemeModeFamily,
-            ThemeMode,
-            ThemeModeAct
-        >(
+        vexBehaviorV2(
+            family =
+                ThemeModeFamily,
             behaviorRef =
                 "example.theme-mode.v2.incomplete-results",
         ) {
