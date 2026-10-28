@@ -545,9 +545,22 @@ class VexBehaviorV2PlaybackOriginPressureTest {
      *     StateRelay
      *       -> Relay/custody relationship whose primary concern is CURRENT State
      *
-     * This test reuses the accepted V1 VexRelay currentness law directly. It is not yet a V2 Family
-     * member and does not imply every Behavior State must implement VexState. That type relationship
-     * remains pressure because current production Playback State does not yet carry VexState/deepCopy.
+     * This test reuses the accepted V1 VexRelay currentness law directly, but not merely because a
+     * Relay class already exists.
+     *
+     * The transferable law is:
+     *
+     *     incoming cause
+     *     + exact CURRENT retained State
+     *     -> one non-suspending serialized decision
+     *     -> publish only changed semantic meaning
+     *
+     * V1 deepCopy is a separate ownership guarantee: callers/collectors cannot mutate retained truth
+     * by alias. Family State may or may not need that exact contract. Likewise V1 source freshness
+     * remains source-owned; serialization alone never makes an older provider/result semantically new.
+     *
+     * This is not yet a V2 Family member and does not imply every Behavior State must implement
+     * VexState. Current production Playback State does not yet carry VexState/deepCopy.
      */
     private class StateRelay(
         initialState:

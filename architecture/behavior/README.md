@@ -1597,3 +1597,111 @@ If no:
 ~~~
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-PRESSURE] -->
+
+
+## Why V1 Relay has the shape it does — and what StateRelay may inherit
+
+The StateRelay pressure must not copy `VexRelay` merely because its implementation already exists.
+
+V1 Relay was earned from several distinct failures:
+
+~~~text
+caller/collector aliases mutable retained truth
+-> defensive deepCopy boundary
+
+two causes race and each computes from a different stale snapshot
+-> one serialized current-state decision boundary
+
+one reducer recursively mutates the truth it is currently deciding
+-> recursion guard
+
+incoming cause is semantically equal to retained truth
+-> suppress duplicate current-state publication
+
+provider arrival order differs from provider semantic freshness
+-> source-specific freshness remains in the source/reducer law
+
+UI/consumer needs current truth, not every historical transition
+-> StateFlow/current are current-state projections, not event ledgers
+
+Compound dependencies change independently
+-> retain one coherent input totality and fully re-derive bounded output meaning
+~~~
+
+These reasons must stay separate.
+
+### What clearly transfers to Family State currentness
+
+Family now has the same failure shape for several lawful semantic causes:
+
+~~~text
+Control activation
+provider-reconciled semantic proposal
+async Operation completion
+future Store/repository observation
+~~~
+
+Therefore the transferable StateRelay law is:
+
+~~~text
+each lawful cause may arrive independently
+
+BUT
+
+semantic State advancement
+-> enters one serialized boundary
+-> reads exact CURRENT State there
+-> decides whether the cause is still lawful/current
+-> derives the next semantic State
+-> publishes only if semantic meaning changed
+~~~
+
+This explains why the StateRelay pressure test uses `VexRelay.update { current -> ... }`: the old
+completion does not carry authority to overwrite State directly. It is forced to answer:
+
+> given CURRENT semantic State now, is my consequence still lawful?
+
+### What does NOT automatically transfer
+
+~~~text
+VexState / deepCopy requirement
+  V1 Relay needs defensive detachment across ownership boundaries.
+  Behavior Family State does not yet universally promise this exact copy contract.
+
+Compound InputState / OutputState
+  Compound Relay owns a relationship among independently-owned truths.
+  Family StateRelay would own one Family's semantic-State custody.
+  Do not flatten provider/repository inputs into Family State merely to reuse Compound Relay.
+
+revision
+  useful V1 current-state lineage,
+  but not yet proved necessary for every Family StateRelay.
+
+dependency collection / activate(scope)
+  belongs to Compound observation ownership.
+  StateRelay should not become a universal provider observer.
+
+source freshness
+  remains with the rightful source/reconciliation law.
+  Serialization orders admitted causes; it does not invent semantic freshness.
+~~~
+
+So the current question is **not**:
+
+~~~text
+Should Family inherit VexRelay?
+~~~
+
+It is:
+
+~~~text
+Does Family State currentness need the same retained-current / serialized-decision law?
+
+If yes, which existing VexRelay guarantees are essential to that law,
+and which are implementation/ownership details that should stay outside Family?
+~~~
+
+The test-only StateRelay currently answers the first question with evidence while holding the second
+open.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-WHY] -->

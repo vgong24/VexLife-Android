@@ -652,3 +652,21 @@ Behavior Family State should implement `VexState`/deepCopy or whether both Relay
 smaller current-state custody primitive.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-PRESSURE] -->
+
+
+### V2 Behavior Origin Walk — why StateRelay is pressure, not copied Relay
+
+The StateRelay candidate reuses V1 Relay only to pressure one already-earned law:
+
+~~~text
+incoming cause
++ exact CURRENT retained State
+-> one serialized non-suspending decision
+-> semantic no-op suppression
+~~~
+
+Do not infer that Family must therefore inherit all Relay mechanics. V1 defensive deep-copy,
+Compound dependency totality, revision, dependency collection and source-freshness rules each solve
+different ownership problems. The Origin Walk must keep those reasons distinct.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-WHY] -->
