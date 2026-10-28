@@ -409,10 +409,13 @@ fun <
  * Stable authoring rules live above this runtime: Family-root vocabulary, structural Act,
  * concrete admission, optional Effect and begin(mode) execution.
  *
- * This implementation currently proves a locally-owned CURRENT State plus Control activation and
- * State-store Save. It is NOT yet the universal currentness owner for provider-observed Families.
- * Playback/Maps/Conversation pressure still has to earn how external observation, observable UI
- * state, payload Controls and multi-instance execution enter without making Family a god-object.
+ * This implementation now proves locally-owned CURRENT State + Control activation, runtime payload
+ * Act materialization, same-law Control availability, State-store Save, and a protected semantic
+ * admission seam that a concrete Family may use only after its own rightful external reconciliation.
+ *
+ * It is still NOT a universal currentness runtime. Concurrent admission serialization, observable UI
+ * State, provider Operation realization, async-result staleness and multi-instance execution identity
+ * remain open pressure.
  *
  * begin(mode) remains the semantic execution phase; no ThemeModeExecution/FamilyExecution sibling is
  * introduced. VexExecution is coroutine machinery underneath that already-authored boundary.

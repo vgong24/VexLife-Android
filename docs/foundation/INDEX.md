@@ -612,3 +612,24 @@ An isolated Kotlin language proof passed for the runtime State + payload Control
 repository Gradle/JVM execution remains pending.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][RUNTIME-ACT-MATERIALIZATION] -->
+
+
+### V2 Behavior Origin Walk — reconciled provider admission candidate
+
+Playback pressure now exercises:
+
+~~~text
+provider observation
+-> existing provider/Connection pending reconciliation
+-> reconciled semantic State
+-> concrete Family-specific admission method
+-> protected Family.admit(State)
+~~~
+
+The candidate deliberately does not add a generic public setter, fake provider Control, or universal
+observe/reconcile API. Concrete provider ownership remains visible.
+
+This is not yet production Playback architecture. Concurrency/serialization, provider-affine Operation
+execution, Compose observation and async-result staleness remain open.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PROVIDER-ADMISSION-CANDIDATE] -->

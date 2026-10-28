@@ -685,7 +685,7 @@ why Control is sealed rather than enum-only
 why Behavior is exposed from the Family root
 why on(State + Control) is called the Act
 why V1's Act marker still exists
-why payload-bearing Control matching remains held
+why payload-bearing Control matching was later earned by the Playback pressure threshold
 ~~~
 
 The comments exist to prevent an apparently reasonable "cleanup" from recreating the superseded
@@ -748,8 +748,8 @@ recreating the same semantic bridge:
    projection?
    activation surface?
 
-3. How should payload-bearing Control shapes be authored/matched
-   without returning to registration lists or an extra Act-value layer?
+3. Payload-bearing Control shapes are now authored by runtime Control type and actual value.
+   The remaining question is how their provider Operations/results should be realized.
 ~~~
 
 Those questions are held as the next refinement edge, not silently answered by the current POC.
@@ -761,7 +761,7 @@ V2 remains an experiment. Do not migrate V1 consumers merely because V2 exists.
 The current kernel does not claim generic solutions for:
 
 ~~~text
-runtime request payloads
+provider Operation payload/result realization
 generic UIElement -> Control binding
 generic heterogeneous convergence envelope
 generic concurrency/locking
@@ -1157,36 +1157,43 @@ Operation-result contract. Rich provider Operations remain free to earn typed re
 The Family accountant is now an explicit constructor dependency. Tests/previews may explicitly choose
 `VexFamilyLogger.None`; the foundation no longer silently installs a no-op accountant.
 
+### Candidate thresholds reached
+
+~~~text
+runtime payload-bearing Control materialization
+  actual CURRENT State + actual Control payload -> resolved Act
+
+value-transforming immediate State
+  dynamic Act may admit from actual current/control values
+
+same-law Control availability
+  isAvailable(Control) and activate(Control) resolve from the same Act rules
+
+external provider admission seam
+  provider/Connection reconciliation stays concrete
+  -> concrete Family-specific method
+  -> protected admit(State)
+  -> no fake Control / no generic public setter
+~~~
+
+These are still candidate V2 refinements until repository proof and another real feature pressure them.
+
 ### Still OPEN — do not generalize by syntax
 
 ~~~text
-payload-bearing Controls
-  Click(songId)
-  Seek(position)
-  Send(message)
-  Select(routeId)
+concurrent admission serialization/currentness
 
-value-transforming State
-  State.Volume(x) + Increase
-  Cart(items) + Remove(itemId)
+async result staleness / transition generation
 
-externally observed current truth
-  Media3
-  location
-  provider/repository truth
-  SystemAppearance convergence
+observable Family State / bounded DisplayState for Compose
 
-observable Family State / DisplayState for Compose
+typed provider Operation result payload
 
-Control availability / UI affordance projection
-
-typed Operation result payload
+provider-affine Operation execution under begin
 
 multiple Family-instance execution identity
 
 Sequenced lane queue/custody semantics
-
-provider-affine handoff from begin without local coroutine folklore
 
 cross-version durable identity / rename migration
 
