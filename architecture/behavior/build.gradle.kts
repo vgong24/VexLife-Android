@@ -24,4 +24,5 @@ kotlin {
 dependencies {
     implementation(libs.coroutinesCore)
     testImplementation(libs.junit)
+    testImplementation(project(":architecture:relay"))
 }
