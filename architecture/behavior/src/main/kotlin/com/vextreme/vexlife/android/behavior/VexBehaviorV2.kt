@@ -11,10 +11,16 @@ import kotlin.reflect.KClass
 class VexBehaviorV2<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
     Act : VexBehaviorFamily.Act<Family>,
 > internal constructor(
     val family: Family,
     val behaviorRef: String,
+    private val controlToAct:
+        (
+            State,
+            Control,
+        ) -> Act?,
     val states: Set<KClass<out State>>,
     val relationships:
         List<
@@ -195,7 +201,8 @@ class VexBehaviorV2<
         act: Act,
     ): VexBehaviorV2Resolution<
         Family,
-        State
+        State,
+        Act
     >? {
         val available =
             availableRelationships(
@@ -216,11 +223,42 @@ class VexBehaviorV2<
                 ?: return null
 
         return VexBehaviorV2Resolution(
+            act =
+                relationship.act,
             effect =
                 relationship.effect,
             immediateDisposition =
                 relationship
                     .immediateDisposition,
+        )
+    }
+
+    /**
+     * Resolve the full semantic path from the external Family Control and CURRENT State.
+     *
+     * Control + CURRENT State -> Act
+     * CURRENT State + Act -> Effect + immediate State disposition
+     */
+    fun resolve(
+        current: State,
+        control: Control,
+    ): VexBehaviorV2Resolution<
+        Family,
+        State,
+        Act
+    >? {
+        val act =
+            controlToAct(
+                current,
+                control,
+            )
+                ?: return null
+
+        return resolve(
+            current =
+                current,
+            act =
+                act,
         )
     }
 
@@ -354,10 +392,16 @@ class VexBehaviorV2<
 fun <
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
     Act : VexBehaviorFamily.Act<Family>,
 > vexBehaviorV2(
     family: Family,
     behaviorRef: String,
+    controlToAct:
+        (
+            State,
+            Control,
+        ) -> Act?,
     block:
         VexBehaviorV2Builder<
             Family,
@@ -367,6 +411,7 @@ fun <
 ): VexBehaviorV2<
     Family,
     State,
+    Control,
     Act
 > =
     VexBehaviorV2Builder<
@@ -381,7 +426,10 @@ fun <
             block,
         )
         .build(
-            family,
+            family =
+                family,
+            controlToAct =
+                controlToAct,
         )
 
 // [VXG RealForever]
