@@ -237,15 +237,20 @@ Save(ThemeMode, ThemeMode.Dark)      save(ThemeMode.Dark)
 .admit<ThemeMode.Dark>()            .admit<ThemeMode.Dark>()
 ~~~
 
-The Family argument is not discarded in Kotlin. It is already fixed by the surrounding generic scope:
+The three generic arguments are compile-time alphabets, not runtime parameters:
 
 ~~~kotlin
-vexBehaviorV2Blueprint<
-    ThemeModeFamily,
-    ThemeMode,
-    ThemeModeAct
+vexBehaviorV2<
+    ThemeModeFamily,  // which SCAE Family binds this vocabulary
+    ThemeMode,        // which State type is current truth
+    ThemeModeAct      // which Act type Behavior resolves
 > { ... }
 ~~~
+
+Control remains separately attached through `controls<ThemeModeControl>()`, exactly as in V1.
+
+There is no fourth Effect type argument in V2 because the Effect is the structured `begin { save(...) }`
+relationship itself.
 
 Therefore the target-native call:
 
