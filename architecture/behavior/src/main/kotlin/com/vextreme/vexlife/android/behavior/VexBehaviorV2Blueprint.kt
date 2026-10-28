@@ -5,11 +5,12 @@ import kotlin.reflect.KClass
 /**
  * V2 is a sibling experiment over the accepted V1 SCAE graph, not a replacement fork.
  *
- * Generic ordering intentionally follows the V1 Family language:
+ * It keeps the Origin-Walk language visible instead of translating it into another architecture:
  *
- *     Family, State, Act, Effect
- *
- * Control remains attached separately through controls<Control>(), exactly as in V1.
+ *     begin(mode = ...)
+ *       operation(...).results { Success / Failure }
+ *     immediate stay/admit
+ *     optional later admit from a result
  */
 class VexBehaviorV2Blueprint<
     Family : VexBehaviorFamily<Family>,
@@ -29,12 +30,6 @@ class VexBehaviorV2Blueprint<
             >
         >,
 ) {
-    /**
-     * The V1-compatible immediate graph.
-     *
-     * Existing Control projection/resolution can therefore stay on the current foundation instead
-     * of being cloned into a second SCAE vocabulary.
-     */
     val v1:
         VexBehaviorBlueprint<
             Family,
@@ -76,8 +71,9 @@ class VexBehaviorV2Blueprint<
             }
 
             relationship
-                .effectPlan
-                .results
+                .begin
+                ?.operation
+                ?.results
                 ?.let { results ->
                     listOf(
                         results.success,
@@ -112,9 +108,7 @@ class VexBehaviorV2Blueprint<
                             act =
                                 relationship.act,
                             effect =
-                                relationship
-                                    .effectPlan
-                                    .effect,
+                                relationship.effect,
                             admittedStateKind =
                                 relationship
                                     .immediateDisposition
@@ -214,26 +208,15 @@ class VexBehaviorV2Blueprint<
 
         return VexBehaviorV2Resolution(
             effect =
-                relationship
-                    .effectPlan
-                    .effect,
+                relationship.effect,
+            begin =
+                relationship.begin,
             immediateDisposition =
                 relationship
                     .immediateDisposition,
-            executionMode =
-                relationship
-                    .effectPlan
-                    .executionMode,
-            results =
-                relationship
-                    .effectPlan
-                    .results,
         )
     }
 
-    /**
-     * Reuse V1 Control projection/resolution instead of creating another Control language in V2.
-     */
     inline fun <reified Control> controls(
         block:
             VexBehaviorControlBlueprintBuilder<
@@ -260,6 +243,7 @@ class VexBehaviorV2Blueprint<
                 behaviorRef +
                     " [V2]",
             )
+
             relationships.forEach { relationship ->
                 append(
                     relationship
@@ -276,20 +260,16 @@ class VexBehaviorV2Blueprint<
                     " / ",
                 )
                 append(
-                    relationship
-                        .effectPlan
-                        .effect,
+                    relationship.effect,
                 )
 
-                relationship
-                    .effectPlan
-                    .executionMode
-                    ?.let { mode ->
+                relationship.begin
+                    ?.let { begin ->
                         append(
                             " begin[",
                         )
                         append(
-                            mode,
+                            begin.mode,
                         )
                         append(
                             "]",
@@ -314,9 +294,9 @@ class VexBehaviorV2Blueprint<
                         .simpleName,
                 )
 
-                relationship
-                    .effectPlan
-                    .results
+                relationship.begin
+                    ?.operation
+                    ?.results
                     ?.let { results ->
                         append(
                             " ; Success=",
