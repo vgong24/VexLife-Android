@@ -238,15 +238,12 @@ class VexBehaviorV2StateScope<
         ) -> Unit,
 ) {
     /**
-     * Begins one Act for this State neighborhood.
+     * Begins an Act whose only consequence is semantic State admission/stay.
      *
      * Why this API takes Control directly:
      * the POC first introduced a separate Control->Act mapper, then authored the same State again in
      * the Act->Effect graph. ThemeMode proved that translation layer redundant. The on(...) scenario
      * itself is now the Act.
-     */
-    /**
-     * Begins an Act whose only consequence is semantic State admission/stay.
      *
      * No Effect is manufactured here. Use the Effect-bearing overload only when the Act actually
      * asks a runtime/provider/store to do something.

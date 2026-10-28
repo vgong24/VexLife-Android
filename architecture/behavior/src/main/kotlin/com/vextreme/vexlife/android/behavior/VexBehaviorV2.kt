@@ -111,7 +111,7 @@ class VexBehaviorV2<
      *
      * The caller does not translate Control into another Family vocabulary first. Connection/UI
      * supplies the semantic Control, Behavior selects the matching Act, and the Act already carries
-     * the Effect plus immediate State consequence.
+     * the optional Effect (when one is earned) plus immediate State consequence.
      */
     fun resolve(
         current: State,
