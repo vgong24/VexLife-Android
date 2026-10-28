@@ -204,7 +204,7 @@ surface across features, not merely two VexStream families.
 ## V2 two-scope refinement — sibling experiment, not replacement
 
 The accepted V1 kernel remains the production-used contract. V2 exists beside it so the ThemeMode
-Origin Walk can be proven in ordinary Kotlin without changing VexStream/Queue semantics in place.
+Origin Walk can pressure a more contained Family shape without silently rewriting existing consumers.
 
 The governing rule is:
 
@@ -214,30 +214,9 @@ Origin earns the language
 -> Kotlin does not rename it for convenience
 ~~~
 
-Current ThemeMode mapping:
+### Family as the visible root
 
-~~~text
-ORIGIN WALK                         KOTLIN V2
-────────────────────────────────────────────────────────────
-ThemeMode                           ThemeMode
-ThemeMode Family identity           ThemeModeFamily
-ThemeModeFamily.State.Dark                      ThemeModeFamily.State.Dark
-
-begin(mode = Replaceable)           begin(mode = Replaceable)
-begin(mode = Sequenced)             begin(mode = Sequenced)
-
-Save(ThemeMode, ThemeModeFamily.State.Dark)      save(ThemeModeFamily.State.Dark)
-
-.results {                          .results {
-  Success { ... }                     success { ... }
-  Failure { ... }                     failure { ... }
-}                                   }
-
-.stay()                             .stay()
-.admit<ThemeModeFamily.State.Dark>()            .admit<ThemeModeFamily.State.Dark>()
-~~~
-
-The repeated generic authoring is now removed through one reusable Family member map.
+The current V2 experiment makes the Family the namespace/root:
 
 ~~~kotlin
 object ThemeModeFamily :
@@ -252,6 +231,7 @@ object ThemeModeFamily :
 
     sealed interface State :
         VexBehaviorFamily.State<ThemeModeFamily> {
+
         data object NotSet : State
         data object Light : State
         data object Dark : State
@@ -264,6 +244,8 @@ object ThemeModeFamily :
 
     sealed interface Act :
         VexBehaviorFamily.Act<ThemeModeFamily> {
+
+        data object CommitDark : Act
         data object SelectDark : Act
         data object SelectLight : Act
     }
@@ -273,18 +255,39 @@ object ThemeModeFamily :
 }
 ~~~
 
-That one declaration canonically binds:
+This creates self-identifying paths:
 
 ~~~text
-ThemeModeFamily.State   -> nested closed State region
-ThemeModeFamily.Control -> nested finite Control region
-ThemeModeFamily.Act     -> nested closed Act region
-ThemeModeFamily.Effect  -> VexBehaviorV2Begin<ThemeModeFamily, ThemeModeFamily.State>
+ThemeModeFamily.State.NotSet
+ThemeModeFamily.State.Light
+ThemeModeFamily.State.Dark
+
+ThemeModeFamily.Control.Toggle
+
+ThemeModeFamily.Act.CommitDark
+ThemeModeFamily.Act.SelectDark
+ThemeModeFamily.Act.SelectLight
 ~~~
 
-The role types remain in their ordinary feature-owned files; the Family map lets Kotlin recover them.
+A reader no longer has to infer whether a top-level `ThemeMode` or `SelectDark` symbol is a State,
+Control, Act or unrelated type.
 
-Behavior authoring therefore becomes:
+`State` and `Act` are sealed regions. `Control` is an enum, so adding a Control automatically appears
+through `Control.entries`; there is no second hand-maintained registration list of individual Controls.
+
+### One member map, then inference
+
+The `Members` contract records the role types once:
+
+~~~text
+ThemeModeFamily
+  State   -> ThemeModeFamily.State
+  Control -> ThemeModeFamily.Control
+  Act     -> ThemeModeFamily.Act
+  Effect  -> VexBehaviorV2Begin<ThemeModeFamily, ThemeModeFamily.State>
+~~~
+
+Behavior authoring then needs only the Family value:
 
 ~~~kotlin
 vexBehaviorV2(
@@ -295,7 +298,7 @@ vexBehaviorV2(
 }
 ~~~
 
-and Control binding becomes:
+Control binding likewise infers its Control type:
 
 ~~~kotlin
 themeModeBehavior().controls {
@@ -307,48 +310,24 @@ themeModeBehavior().controls {
 }
 ~~~
 
-No repeated `<ThemeModeFamily, ThemeMode, ThemeModeAct>` or `<ThemeModeControl>` is required at
-those authoring sites.
+There is no repeated `<ThemeModeFamily, State, Act>` or `<Control>` at those use sites.
 
-There is no separate feature Effect type argument because the Effect is the structured
-`begin { save(...) }` relationship itself.
-
-Therefore the target-native call:
-
-~~~kotlin
-save(ThemeModeFamily.State.Dark)
-~~~
-
-still means:
+### Direct Origin mapping
 
 ~~~text
-Save(
-  Family = ThemeModeFamily,
-  State = ThemeModeFamily.State.Dark
-)
+ORIGIN WALK
+  Save(ThemeModeFamily, ThemeModeFamily.State.Dark)
+
+KOTLIN INSIDE THE FAMILY-BOUND BEHAVIOR
+  save(ThemeModeFamily.State.Dark)
 ~~~
 
-without repeating Family as a runtime value.
+The Family argument is already fixed by the surrounding Behavior scope.
 
-The SCAE Effect is the structured `begin(...)` scope. `Save(...)` is the operation inside that Effect.
-V2 therefore does **not** invent `ThemeEffect.SaveDark` or another feature-local synonym for Save.
-
-The first prototypes briefly used:
-
-~~~text
-AsyncResult
-AsyncResults
-EffectPlan
-ExecutionMode
-operation(ThemeEffect.SaveDark)
-~~~
-
-Those forms are superseded because they translated already-earned Origin meaning into new nouns.
-
-Current Kotlin shape:
+Immediate form:
 
 ~~~kotlin
-state<ThemeMode.Light> {
+state<ThemeModeFamily.State.Light> {
     on(
         act = ThemeModeFamily.Act.SelectDark,
         effect = begin(
@@ -368,9 +347,9 @@ state<ThemeMode.Light> {
 Durability-gated form:
 
 ~~~kotlin
-state<ThemeMode.NotSet> {
+state<ThemeModeFamily.State.NotSet> {
     on(
-        act = ThemeModeAct.CommitDark,
+        act = ThemeModeFamily.Act.CommitDark,
         effect = begin(
             mode = VexBehaviorV2BeginMode.Sequenced,
         ) {
@@ -380,6 +359,7 @@ state<ThemeMode.NotSet> {
                 success {
                     admit<ThemeModeFamily.State.Dark>()
                 }
+
                 failure { }
             }
         },
@@ -387,18 +367,52 @@ state<ThemeMode.NotSet> {
 }
 ~~~
 
-V2 still materializes a V1-compatible immediate graph so existing Control projection/resolution remains
-reusable.
+The SCAE Effect is the structured `begin(...)` scope. `Save(...)` is the operation inside that Effect.
+V2 does not invent a feature-local `SaveDark` Effect.
 
-The focused proof also demonstrates that the semantic noun `ThemeMode` can satisfy both:
+### Source-organization tradeoff
+
+This Family-root form intentionally pressures the existing V1 seven-file package pattern.
+
+Kotlin does not support partial nested type declarations across files. Therefore true paths such as:
 
 ~~~text
-VexBehaviorFamily.State<ThemeModeFamily>
-+
-Relay VexState<ThemeMode>
+ThemeModeFamily.State.Dark
+ThemeModeFamily.Control.Toggle
+ThemeModeFamily.Act.SelectDark
 ~~~
 
-without inventing a second `ThemeState` noun and without making production Behavior depend on Relay.
+mean those role declarations live under the Family root declaration rather than in independent
+`ThemeModeState.kt`, `ThemeModeControl.kt`, and `ThemeModeAct.kt` declarations.
+
+That is a real tradeoff, not an implementation accident:
+
+~~~text
+V1 PACKAGE EMPHASIS
+  separate role files
+  + shared Family generic coordinate
+
+V2 FAMILY-ROOT PRESSURE
+  one visible Family region
+  + nested closed member regions
+  + less scattered registration / naming ambiguity
+~~~
+
+The V2 experiment does not yet declare that every production Family must adopt this source organization.
+It exists to determine whether the containment/readability benefit is worth changing the older file pattern.
+
+### Fractal State compatibility
+
+The focused proof also makes the nested State region satisfy Relay State:
+
+~~~text
+ThemeModeFamily.State
+  : VexBehaviorFamily.State<ThemeModeFamily>
+  + VexState<ThemeModeFamily.State>
+~~~
+
+so the same family-scoped State can participate in SCAE and Relay/Convergence without inventing another
+semantic noun.
 
 V2 remains an experiment. Do not migrate V1 consumers merely because V2 exists.
 
