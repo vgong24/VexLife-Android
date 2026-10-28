@@ -9,10 +9,9 @@ import kotlin.reflect.KClass
  * begin(...) scope itself, and the operation inside it is Save(State).
  */
 class VexBehaviorV2<
-    Family,
-    State,
-    Control,
-    Act,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
 > internal constructor(
     val family: Family,
     val behaviorRef: String,
@@ -25,22 +24,7 @@ class VexBehaviorV2<
                 Act
             >
         >,
-)
-    where Family : VexBehaviorFamily<Family>,
-          Family : VexBehaviorFamily.Members<
-              Family,
-              State,
-              Control,
-              Act,
-              VexBehaviorV2Begin<
-                  Family,
-                  State
-              >
-          >,
-          State : VexBehaviorFamily.State<Family>,
-          Control : Enum<Control>,
-          Control : VexBehaviorFamily.Control<Family>,
-          Act : VexBehaviorFamily.Act<Family> {
+) {
     val v1:
         VexBehaviorBlueprint<
             Family,
@@ -240,38 +224,6 @@ class VexBehaviorV2<
         )
     }
 
-    fun controls(
-        block:
-            VexBehaviorControlBlueprintBuilder<
-                Family,
-                Act,
-                Control
-            >.() -> Unit,
-    ): VexBehaviorControlBlueprint<
-        Family,
-        State,
-        Act,
-        VexBehaviorV2Begin<
-            Family,
-            State
-        >,
-        Control
-    > =
-        VexBehaviorControlBlueprintBuilder<
-            Family,
-            Act,
-            Control
-        >(
-            expectedControls =
-                family.controls,
-        )
-            .apply(
-                block,
-            )
-            .build(
-                v1,
-            )
-
     fun describe(): String =
         buildString {
             appendLine(
@@ -399,46 +351,31 @@ class VexBehaviorV2<
     }
 }
 
+@OptIn(
+    kotlin.experimental.ExperimentalTypeInference::class,
+)
 fun <
-    Family,
-    State,
-    Control,
-    Act,
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
 > vexBehaviorV2(
     family: Family,
     behaviorRef: String,
+    @kotlin.BuilderInference
     block:
         VexBehaviorV2Builder<
             Family,
             State,
-            Control,
             Act
         >.() -> Unit,
 ): VexBehaviorV2<
     Family,
     State,
-    Control,
     Act
->
-    where Family : VexBehaviorFamily<Family>,
-          Family : VexBehaviorFamily.Members<
-              Family,
-              State,
-              Control,
-              Act,
-              VexBehaviorV2Begin<
-                  Family,
-                  State
-              >
-          >,
-          State : VexBehaviorFamily.State<Family>,
-          Control : Enum<Control>,
-          Control : VexBehaviorFamily.Control<Family>,
-          Act : VexBehaviorFamily.Act<Family> =
+> =
     VexBehaviorV2Builder<
         Family,
         State,
-        Control,
         Act
     >(
         behaviorRef =
