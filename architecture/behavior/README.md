@@ -1207,6 +1207,54 @@ provider/repository truth.
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][STABILITY-BOUNDARY] -->
 
 
+
+
+### Why DisplayState remains mandatory even when Empty adds no new truth
+
+The removal test for DisplayState is **not**:
+
+> does `Empty(current)` add another semantic fact?
+
+It does not.
+
+The question is:
+
+> if the DisplayState role disappears entirely, what guaranteed relationship disappears?
+
+Without it, a fresh consumer has only semantic State and must decide for itself how that State becomes
+human/UI/VexBoard-readable output:
+
+~~~text
+Family.current
+-> ??? consumer-specific interpretation
+-> UI / VexBoard
+~~~
+
+Keeping the role makes that relationship explicit even when the smallest lawful projection is simply:
+
+~~~text
+Family.current
+-> DisplayState.Empty(current)
+-> human/projectable output
+~~~
+
+So:
+
+~~~text
+MANDATORY DISPLAY ROLE
+!= MANDATORY EXTRA DISPLAY TRUTH
+
+Empty(current)
+= explicit "no richer display classification earned"
+~~~
+
+A richer Family may expose bounded fields and must not carry the entire canonical State merely to
+satisfy the role.
+
+This remains worth pressure-testing against non-visual Families, but the current reason for mandatory
+DisplayState is discoverability/projectability, not duplication of truth.
+
+
 ## V2 threshold — runtime State + payload Control materialize the Act
 
 Playback pressure earned one reusable refinement without deciding provider observation.
@@ -1336,3 +1384,56 @@ concurrent admission serialization, async-result generation guards, provider-aff
 Compose observation.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][PROVIDER-RECONCILED-ADMISSION] -->
+
+
+## Next runtime pressure — serialized semantic admission
+
+The cross-feature review narrows the next runtime question substantially.
+
+The remaining issue is no longer whether Family can represent payload Controls or receive reconciled
+provider truth. Candidate paths now exist for both.
+
+The unresolved question is:
+
+~~~text
+several lawful semantic-admission causes
+  UI activation
+  provider reconciliation
+  async Operation result
+  future Store/repository observation
+        |
+        v
+who decides their exact order/currentness?
+~~~
+
+`@Volatile` is deliberately insufficient. It gives visibility, not ordering.
+
+The next Origin pressure must preserve all of these distinctions:
+
+~~~text
+accepted newer Control
+!= older async result finishing later
+
+provider observation time
+!= semantic admission authority by itself
+
+serialized semantic admission
+!= make Family own provider/repository truth
+
+one ordering boundary
+!= one giant lock around every feature responsibility
+~~~
+
+Do not add a mutex, transition generation, event queue, Relay, actor, or dispatcher rule until a real
+race specimen proves what must be ordered together and what must remain independently owned.
+
+Playback remains the preferred pressure source because it already has:
+- newer pending intent versus stale provider observation;
+- provider callbacks;
+- Controls;
+- provider capability availability.
+
+The next useful test should add one **competing lawful Family admission cause** (for example an older
+async result) and prove the failure before choosing the serialization/currentness mechanism.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][SERIALIZED-ADMISSION-PRESSURE] -->

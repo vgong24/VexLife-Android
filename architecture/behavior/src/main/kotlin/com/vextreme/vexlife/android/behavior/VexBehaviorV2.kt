@@ -5,12 +5,21 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlin.reflect.KClass
 
 /**
- * Required minimum Family display role.
+ * Required minimum Family display/projectable-output role.
  *
- * The type parameter preserves Family/State association, but the role does not require every display
- * projection to expose the full semantic State. Bounded projections may carry only the UI meaning
- * they own. The foundation Empty default retains current State because it is explicitly the
- * "no richer projection authored" fallback.
+ * Mandatory does NOT mean every Family must invent a second presentation truth. The requirement is
+ * that a fresh human/AI/UI/VexBoard consumer can always ask the Family for one bounded, discoverable
+ * output surface instead of reconstructing presentation from semantic State ad hoc.
+ *
+ * The removal test is therefore relational:
+ *
+ *     remove DisplayState
+ *     -> semantic State still exists
+ *     -> but the guaranteed State -> human/projectable-output relationship disappears
+ *
+ * The type parameter preserves Family/State association, but concrete display projections do not
+ * need to expose the full semantic State. The foundation Empty(current) form explicitly means:
+ * "this Family has not earned a richer display classification; project current semantic truth."
  */
 interface VexBehaviorV2DisplayState<
     out State,
