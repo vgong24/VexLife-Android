@@ -221,12 +221,12 @@ ORIGIN WALK                         KOTLIN V2
 ────────────────────────────────────────────────────────────
 ThemeMode                           ThemeMode
 ThemeMode Family identity           ThemeModeFamily
-ThemeMode.Dark                      ThemeMode.Dark
+ThemeModeFamily.State.Dark                      ThemeModeFamily.State.Dark
 
 begin(mode = Replaceable)           begin(mode = Replaceable)
 begin(mode = Sequenced)             begin(mode = Sequenced)
 
-Save(ThemeMode, ThemeMode.Dark)      save(ThemeMode.Dark)
+Save(ThemeMode, ThemeModeFamily.State.Dark)      save(ThemeModeFamily.State.Dark)
 
 .results {                          .results {
   Success { ... }                     success { ... }
@@ -234,7 +234,7 @@ Save(ThemeMode, ThemeMode.Dark)      save(ThemeMode.Dark)
 }                                   }
 
 .stay()                             .stay()
-.admit<ThemeMode.Dark>()            .admit<ThemeMode.Dark>()
+.admit<ThemeModeFamily.State.Dark>()            .admit<ThemeModeFamily.State.Dark>()
 ~~~
 
 The repeated generic authoring is now removed through one reusable Family member map.
@@ -244,23 +244,42 @@ object ThemeModeFamily :
     VexBehaviorFamily<ThemeModeFamily>,
     VexBehaviorFamily.Members<
         ThemeModeFamily,
-        ThemeMode,
-        ThemeModeControl,
-        ThemeModeAct,
-        VexBehaviorV2Begin<ThemeModeFamily, ThemeMode>,
+        ThemeModeFamily.State,
+        ThemeModeFamily.Control,
+        ThemeModeFamily.Act,
+        VexBehaviorV2Begin<ThemeModeFamily, ThemeModeFamily.State>,
     > {
+
+    sealed interface State :
+        VexBehaviorFamily.State<ThemeModeFamily> {
+        data object NotSet : State
+        data object Light : State
+        data object Dark : State
+    }
+
+    enum class Control :
+        VexBehaviorFamily.Control<ThemeModeFamily> {
+        Toggle,
+    }
+
+    sealed interface Act :
+        VexBehaviorFamily.Act<ThemeModeFamily> {
+        data object SelectDark : Act
+        data object SelectLight : Act
+    }
+
     override val controls =
-        ThemeModeControl.entries.toSet()
+        Control.entries.toSet()
 }
 ~~~
 
 That one declaration canonically binds:
 
 ~~~text
-ThemeModeFamily.State   -> ThemeMode
-ThemeModeFamily.Control -> ThemeModeControl
-ThemeModeFamily.Act     -> ThemeModeAct
-ThemeModeFamily.Effect  -> VexBehaviorV2Begin<ThemeModeFamily, ThemeMode>
+ThemeModeFamily.State   -> nested closed State region
+ThemeModeFamily.Control -> nested finite Control region
+ThemeModeFamily.Act     -> nested closed Act region
+ThemeModeFamily.Effect  -> VexBehaviorV2Begin<ThemeModeFamily, ThemeModeFamily.State>
 ~~~
 
 The role types remain in their ordinary feature-owned files; the Family map lets Kotlin recover them.
@@ -281,9 +300,9 @@ and Control binding becomes:
 ~~~kotlin
 themeModeBehavior().controls {
     control(
-        ThemeModeControl.Toggle,
-        ThemeModeAct.SelectDark,
-        ThemeModeAct.SelectLight,
+        ThemeModeFamily.Control.Toggle,
+        ThemeModeFamily.Act.SelectDark,
+        ThemeModeFamily.Act.SelectLight,
     )
 }
 ~~~
@@ -297,7 +316,7 @@ There is no separate feature Effect type argument because the Effect is the stru
 Therefore the target-native call:
 
 ~~~kotlin
-save(ThemeMode.Dark)
+save(ThemeModeFamily.State.Dark)
 ~~~
 
 still means:
@@ -305,7 +324,7 @@ still means:
 ~~~text
 Save(
   Family = ThemeModeFamily,
-  State = ThemeMode.Dark
+  State = ThemeModeFamily.State.Dark
 )
 ~~~
 
@@ -331,18 +350,18 @@ Current Kotlin shape:
 ~~~kotlin
 state<ThemeMode.Light> {
     on(
-        act = ThemeModeAct.SelectDark,
+        act = ThemeModeFamily.Act.SelectDark,
         effect = begin(
             mode = VexBehaviorV2BeginMode.Replaceable,
         ) {
             save(
-                ThemeMode.Dark,
+                ThemeModeFamily.State.Dark,
             ).results {
                 success { }
                 failure { }
             }
         },
-    ).admit<ThemeMode.Dark>()
+    ).admit<ThemeModeFamily.State.Dark>()
 }
 ~~~
 
@@ -356,10 +375,10 @@ state<ThemeMode.NotSet> {
             mode = VexBehaviorV2BeginMode.Sequenced,
         ) {
             save(
-                ThemeMode.Dark,
+                ThemeModeFamily.State.Dark,
             ).results {
                 success {
-                    admit<ThemeMode.Dark>()
+                    admit<ThemeModeFamily.State.Dark>()
                 }
                 failure { }
             }
