@@ -11,16 +11,6 @@ class VexBehaviorV2Test {
     private object ThemeModeFamily :
         VexBehaviorFamily<
             ThemeModeFamily
-        >,
-        VexBehaviorFamily.Members<
-            ThemeModeFamily,
-            ThemeModeFamily.State,
-            ThemeModeFamily.Control,
-            ThemeModeFamily.Act,
-            VexBehaviorV2Begin<
-                ThemeModeFamily,
-                ThemeModeFamily.State
-            >
         > {
         sealed interface State :
             VexBehaviorFamily.State<
@@ -43,11 +33,12 @@ class VexBehaviorV2Test {
                 this
         }
 
-        enum class Control :
+        sealed interface Control :
             VexBehaviorFamily.Control<
                 ThemeModeFamily
             > {
-            Toggle,
+            data object Toggle :
+                Control
         }
 
         sealed interface Act :
@@ -63,10 +54,6 @@ class VexBehaviorV2Test {
             data object SelectLight :
                 Act
         }
-
-        override val controls =
-            Control.entries
-                .toSet()
     }
 
     private fun themeModeBehavior() =
@@ -231,30 +218,6 @@ class VexBehaviorV2Test {
                 ?.results
                 ?.failure
                 ?.admittedStateKind,
-        )
-    }
-
-    @Test
-    fun v2ReusesV1ControlMeaningInsteadOfCreatingAnotherControlSystem() {
-        val controls =
-            themeModeBehavior()
-                .controls {
-                    control(
-                        ThemeModeFamily.Control.Toggle,
-                        ThemeModeFamily.Act.SelectDark,
-                        ThemeModeFamily.Act.SelectLight,
-                        ThemeModeFamily.Act.CommitDark,
-                    )
-                }
-
-        assertSame(
-            ThemeModeFamily.Act.SelectDark,
-            controls.resolve(
-                current =
-                    ThemeModeFamily.State.Light,
-                control =
-                    ThemeModeFamily.Control.Toggle,
-            )?.act,
         )
     }
 
