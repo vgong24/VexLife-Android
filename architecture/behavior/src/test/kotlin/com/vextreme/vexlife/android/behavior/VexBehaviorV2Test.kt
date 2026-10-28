@@ -21,7 +21,11 @@ class VexBehaviorV2Test {
                 ThemeModeFamily,
                 ThemeMode
             >
-        >
+        > {
+        override val controls =
+            ThemeModeControl.entries
+                .toSet()
+    }
 
     private sealed interface ThemeMode :
         VexBehaviorFamily.State<
@@ -234,9 +238,7 @@ class VexBehaviorV2Test {
     fun v2ReusesV1ControlMeaningInsteadOfCreatingAnotherControlSystem() {
         val controls =
             themeModeBehavior()
-                .controls<
-                    ThemeModeControl
-                > {
+                .controls {
                     control(
                         ThemeModeControl.Toggle,
                         ThemeModeAct.SelectDark,
