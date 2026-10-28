@@ -129,7 +129,9 @@ class VexBehaviorV2Relationship<
 data class VexBehaviorV2Resolution<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
+    Act : VexBehaviorFamily.Act<Family>,
 >(
+    val act: Act,
     val effect:
         VexBehaviorV2Begin<
             Family,
