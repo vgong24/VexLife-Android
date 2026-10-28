@@ -237,20 +237,62 @@ Save(ThemeMode, ThemeMode.Dark)      save(ThemeMode.Dark)
 .admit<ThemeMode.Dark>()            .admit<ThemeMode.Dark>()
 ~~~
 
-The three generic arguments are compile-time alphabets, not runtime parameters:
+The repeated generic authoring is now removed through one reusable Family member map.
 
 ~~~kotlin
-vexBehaviorV2<
-    ThemeModeFamily,  // which SCAE Family binds this vocabulary
-    ThemeMode,        // which State type is current truth
-    ThemeModeAct      // which Act type Behavior resolves
-> { ... }
+object ThemeModeFamily :
+    VexBehaviorFamily<ThemeModeFamily>,
+    VexBehaviorFamily.Members<
+        ThemeModeFamily,
+        ThemeMode,
+        ThemeModeControl,
+        ThemeModeAct,
+        VexBehaviorV2Begin<ThemeModeFamily, ThemeMode>,
+    > {
+    override val controls =
+        ThemeModeControl.entries.toSet()
+}
 ~~~
 
-Control remains separately attached through `controls<ThemeModeControl>()`, exactly as in V1.
+That one declaration canonically binds:
 
-There is no fourth Effect type argument in V2 because the Effect is the structured `begin { save(...) }`
-relationship itself.
+~~~text
+ThemeModeFamily.State   -> ThemeMode
+ThemeModeFamily.Control -> ThemeModeControl
+ThemeModeFamily.Act     -> ThemeModeAct
+ThemeModeFamily.Effect  -> VexBehaviorV2Begin<ThemeModeFamily, ThemeMode>
+~~~
+
+The role types remain in their ordinary feature-owned files; the Family map lets Kotlin recover them.
+
+Behavior authoring therefore becomes:
+
+~~~kotlin
+vexBehaviorV2(
+    ThemeModeFamily,
+    behaviorRef = "theme-mode",
+) {
+    ...
+}
+~~~
+
+and Control binding becomes:
+
+~~~kotlin
+themeModeBehavior().controls {
+    control(
+        ThemeModeControl.Toggle,
+        ThemeModeAct.SelectDark,
+        ThemeModeAct.SelectLight,
+    )
+}
+~~~
+
+No repeated `<ThemeModeFamily, ThemeMode, ThemeModeAct>` or `<ThemeModeControl>` is required at
+those authoring sites.
+
+There is no separate feature Effect type argument because the Effect is the structured
+`begin { save(...) }` relationship itself.
 
 Therefore the target-native call:
 
