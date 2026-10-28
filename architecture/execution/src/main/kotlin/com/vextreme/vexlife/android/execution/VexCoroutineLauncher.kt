@@ -60,7 +60,17 @@ internal class VexCoroutineLauncher(
 
     private data class ManagedCoroutine(
         val job: Job,
+        val generation: Long,
     )
+
+    private enum class PredecessorPolicy {
+        Reject,
+        Replace,
+        Sequence,
+    }
+
+    private var nextGeneration =
+        1L
 
     /**
      * Failure originating from obtaining/subscribing to the observed Flow itself.
@@ -113,6 +123,34 @@ internal class VexCoroutineLauncher(
             ref = ref,
             restartRecoverableFailure =
                 false,
+            predecessorPolicy =
+                PredecessorPolicy.Reject,
+            action = action,
+        )
+
+    fun launchReplaceable(
+        ref: VexCoroutineRef,
+        action: suspend () -> Unit,
+    ): VexCoroutineHandle =
+        launchManaged(
+            ref = ref,
+            restartRecoverableFailure =
+                false,
+            predecessorPolicy =
+                PredecessorPolicy.Replace,
+            action = action,
+        )
+
+    fun launchSequenced(
+        ref: VexCoroutineRef,
+        action: suspend () -> Unit,
+    ): VexCoroutineHandle =
+        launchManaged(
+            ref = ref,
+            restartRecoverableFailure =
+                false,
+            predecessorPolicy =
+                PredecessorPolicy.Sequence,
             action = action,
         )
 
@@ -139,6 +177,8 @@ internal class VexCoroutineLauncher(
             ref = ref,
             restartRecoverableFailure =
                 restartOnSourceFailure,
+            predecessorPolicy =
+                PredecessorPolicy.Reject,
         ) {
             val observed =
                 try {
@@ -235,6 +275,7 @@ internal class VexCoroutineLauncher(
     private fun launchManaged(
         ref: VexCoroutineRef,
         restartRecoverableFailure: Boolean,
+        predecessorPolicy: PredecessorPolicy,
         action: suspend () -> Unit,
     ): VexCoroutineHandle {
         val mutableState =
@@ -248,7 +289,13 @@ internal class VexCoroutineLauncher(
                 ),
             )
 
-        lateinit var job: Job
+        lateinit var job:
+            Job
+        var predecessor:
+            ManagedCoroutine? =
+            null
+        var generation =
+            0L
 
         synchronized(
             registryLock,
@@ -260,15 +307,40 @@ internal class VexCoroutineLauncher(
                 "VexExecutionRoot is stopped and cannot accept new work"
             }
 
-            val existing =
-                active[ref]
+            active[ref]
+                ?.takeIf { existing ->
+                    existing.job.isActive
+                }
+                ?.let { existing ->
+                    when (
+                        predecessorPolicy
+                    ) {
+                        PredecessorPolicy.Reject ->
+                            error(
+                                "Coroutine " +
+                                    ref.value +
+                                    " is already active",
+                            )
 
-            check(
-                existing == null ||
-                    !existing.job.isActive,
-            ) {
-                "Coroutine ${ref.value} is already active"
-            }
+                        PredecessorPolicy.Replace -> {
+                            predecessor =
+                                existing
+                            existing.job.cancel(
+                                CancellationException(
+                                    "replaced by newer execution for " +
+                                        ref.value,
+                                ),
+                            )
+                        }
+
+                        PredecessorPolicy.Sequence ->
+                            predecessor =
+                                existing
+                    }
+                }
+
+            generation =
+                nextGeneration++
 
             job =
                 scope.launch(
@@ -279,8 +351,14 @@ internal class VexCoroutineLauncher(
                     start =
                         CoroutineStart.LAZY,
                 ) {
+                    predecessor
+                        ?.job
+                        ?.join()
+
                     runManagedCoroutine(
                         ref = ref,
+                        generation =
+                            generation,
                         restartRecoverableFailure =
                             restartRecoverableFailure,
                         mutableState =
@@ -292,6 +370,8 @@ internal class VexCoroutineLauncher(
             active[ref] =
                 ManagedCoroutine(
                     job = job,
+                    generation =
+                        generation,
                 )
 
             updateRegistryLocked(
@@ -315,22 +395,18 @@ internal class VexCoroutineLauncher(
                         VexCoroutineState(
                             ref = ref,
                             status =
-                                VexCoroutineStatus
-                                    .CANCELLED,
+                                VexCoroutineStatus.CANCELLED,
                             attempt =
-                                mutableState
-                                    .value
-                                    .attempt,
+                                mutableState.value.attempt,
                             restartCount =
-                                mutableState
-                                    .value
-                                    .restartCount,
+                                mutableState.value.restartCount,
                             failureClass =
-                                cause::class
-                                    .simpleName,
+                                cause::class.simpleName,
                             failureMessage =
                                 cause.message,
                         ),
+                    generation =
+                        generation,
                 )
             }
 
@@ -338,8 +414,9 @@ internal class VexCoroutineLauncher(
                 registryLock,
             ) {
                 if (
-                    active[ref]?.job ===
-                    job
+                    active[ref]
+                        ?.generation ==
+                    generation
                 ) {
                     active.remove(
                         ref,
@@ -456,6 +533,7 @@ internal class VexCoroutineLauncher(
 
     private suspend fun runManagedCoroutine(
         ref: VexCoroutineRef,
+        generation: Long,
         restartRecoverableFailure: Boolean,
         mutableState:
             MutableStateFlow<
@@ -477,19 +555,16 @@ internal class VexCoroutineLauncher(
                         VexCoroutineState(
                             ref = ref,
                             status =
-                                VexCoroutineStatus
-                                    .RUNNING,
+                                VexCoroutineStatus.RUNNING,
                             attempt = attempt,
                             restartCount =
                                 restartCount,
                         ),
+                    generation =
+                        generation,
                 )
 
                 try {
-                    /**
-                     * The admitted operation remains one structured tree. If the referenced suspend
-                     * function creates ordinary structured children, cancellation/join reaches them.
-                     */
                     coroutineScope {
                         action()
                     }
@@ -501,13 +576,14 @@ internal class VexCoroutineLauncher(
                             VexCoroutineState(
                                 ref = ref,
                                 status =
-                                    VexCoroutineStatus
-                                        .COMPLETED,
+                                    VexCoroutineStatus.COMPLETED,
                                 attempt =
                                     attempt,
                                 restartCount =
                                     restartCount,
                             ),
+                        generation =
+                            generation,
                     )
                     return
                 } catch (
@@ -534,7 +610,9 @@ internal class VexCoroutineLauncher(
                             restartCount <
                                 maxCollectRestarts
 
-                    if (!canRestart) {
+                    if (
+                        !canRestart
+                    ) {
                         publish(
                             mutableState =
                                 mutableState,
@@ -542,18 +620,18 @@ internal class VexCoroutineLauncher(
                                 VexCoroutineState(
                                     ref = ref,
                                     status =
-                                        VexCoroutineStatus
-                                            .FAILED,
+                                        VexCoroutineStatus.FAILED,
                                     attempt =
                                         attempt,
                                     restartCount =
                                         restartCount,
                                     failureClass =
-                                        reportedFailure::class
-                                            .simpleName,
+                                        reportedFailure::class.simpleName,
                                     failureMessage =
                                         reportedFailure.message,
                                 ),
+                            generation =
+                                generation,
                         )
                         return
                     }
@@ -567,17 +645,17 @@ internal class VexCoroutineLauncher(
                             VexCoroutineState(
                                 ref = ref,
                                 status =
-                                    VexCoroutineStatus
-                                        .RESTARTING,
+                                    VexCoroutineStatus.RESTARTING,
                                 attempt = attempt,
                                 restartCount =
                                     restartCount,
                                 failureClass =
-                                    reportedFailure::class
-                                        .simpleName,
+                                    reportedFailure::class.simpleName,
                                 failureMessage =
                                     reportedFailure.message,
                             ),
+                        generation =
+                            generation,
                     )
 
                     if (
@@ -601,17 +679,17 @@ internal class VexCoroutineLauncher(
                     VexCoroutineState(
                         ref = ref,
                         status =
-                            VexCoroutineStatus
-                                .CANCELLED,
+                            VexCoroutineStatus.CANCELLED,
                         attempt = attempt,
                         restartCount =
                             restartCount,
                         failureClass =
-                            cancelled::class
-                                .simpleName,
+                            cancelled::class.simpleName,
                         failureMessage =
                             cancelled.message,
                     ),
+                generation =
+                    generation,
             )
             throw cancelled
         }
@@ -623,15 +701,23 @@ internal class VexCoroutineLauncher(
                 VexCoroutineState
             >,
         state: VexCoroutineState,
+        generation: Long,
     ) {
-        mutableState.value = state
+        mutableState.value =
+            state
 
         synchronized(
             registryLock,
         ) {
-            updateRegistryLocked(
-                state,
-            )
+            if (
+                active[state.ref]
+                    ?.generation ==
+                generation
+            ) {
+                updateRegistryLocked(
+                    state,
+                )
+            }
         }
     }
 

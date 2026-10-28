@@ -1,6 +1,8 @@
 package com.vextreme.vexlife.android.execution
 
+import java.util.concurrent.CancellationException
 import kotlin.reflect.KCallable
+import kotlin.reflect.KClass
 import kotlin.reflect.KFunction0
 import kotlin.reflect.KFunction1
 import kotlin.reflect.KProperty0
@@ -191,6 +193,130 @@ abstract class VexExecution protected constructor(
             ref = ref(reference),
             reason = reason,
         )
+
+
+    /**
+     * Foundation bridge for a semantic begin(...) boundary that already owns its Operation.
+     *
+     * Ordinary feature/runtime classes should continue to extend VexExecution. This companion path
+     * exists so another foundation can place a source-referenced suspend Operation under the same
+     * managed coroutine custody without inventing a feature-specific Execution class.
+     *
+     * The callable is both source identity and the operation actually invoked.
+     */
+    companion object {
+        fun <Argument, Result> beginReplaceable(
+            executionRoot: VexExecutionRoot,
+            owner: KClass<*>,
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit = {},
+            onResult: (Result) -> Unit = {},
+            onFailure: (Throwable) -> Unit = {},
+        ): VexCoroutineHandle =
+            executionRoot.coroutineLauncher.launchReplaceable(
+                ref =
+                    sourceRef(
+                        owner =
+                            owner,
+                        reference =
+                            operation,
+                    ),
+            ) {
+                executeOperation(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+
+        fun <Argument, Result> beginSequenced(
+            executionRoot: VexExecutionRoot,
+            owner: KClass<*>,
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit = {},
+            onResult: (Result) -> Unit = {},
+            onFailure: (Throwable) -> Unit = {},
+        ): VexCoroutineHandle =
+            executionRoot.coroutineLauncher.launchSequenced(
+                ref =
+                    sourceRef(
+                        owner =
+                            owner,
+                        reference =
+                            operation,
+                    ),
+            ) {
+                executeOperation(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+
+        private suspend fun <Argument, Result> executeOperation(
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit,
+            onResult: (Result) -> Unit,
+            onFailure: (Throwable) -> Unit,
+        ) {
+            try {
+                beforeOperation()
+                onResult(
+                    operation(
+                        argument,
+                    ),
+                )
+            } catch (
+                cancelled:
+                    CancellationException,
+            ) {
+                throw cancelled
+            } catch (
+                failure:
+                    Throwable,
+            ) {
+                onFailure(
+                    failure,
+                )
+            }
+        }
+
+        private fun sourceRef(
+            owner: KClass<*>,
+            reference: KCallable<*>,
+        ):
+            VexCoroutineRef {
+            val ownerName =
+                owner.qualifiedName
+                    ?: owner.simpleName
+                    ?: error(
+                        "VexExecution begin owner requires a named source class",
+                    )
+
+            return VexCoroutineRef(
+                ownerName +
+                    "." +
+                    reference.name,
+            )
+        }
+    }
 
     private fun ref(
         reference: KCallable<*>,
