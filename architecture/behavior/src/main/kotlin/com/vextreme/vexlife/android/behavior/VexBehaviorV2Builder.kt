@@ -3,28 +3,34 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 Act-graph authoring scope produced by the ThemeMode Origin Walk.
+ * V2 Act-graph authoring scope produced by the Origin Walk.
  *
- * The complete Act is now one contiguous on(Control) { ... } block:
+ * Singleton/exact Controls keep the smallest form:
  *
- *     state<Current> {
- *         on(Control) {
- *             stay() / admit(nextState)
- *
- *             optional:
- *             begin(mode = Replaceable | Sequenced) {
- *                 save(...)
- *                     .results {
- *                         success { optional later admit(...) }
- *                         failure { optional later admit(...) }
- *                     }
- *             }
+ *     state<State.Light> {
+ *         on(Control.Toggle) {
+ *             admit(State.Dark)
  *         }
  *     }
  *
- * Direct stay/admit inside on { ... } is the immediate semantic disposition. Nesting under
- * begin(...).results { ... } is the already-earned later result scope. No additional "immediate"
- * vocabulary is required.
+ * Runtime payload Controls materialize the Act from the actual CURRENT State + incoming Control:
+ *
+ *     state<State.Ready> {
+ *         on<Control.Seek>(
+ *             whenCurrent = { current, seek ->
+ *                 current.mediaId == seek.mediaId
+ *             },
+ *         ) { current, seek ->
+ *             admit(
+ *                 current.copy(
+ *                     requestedPositionMs = seek.positionMs,
+ *                 ),
+ *             )
+ *         }
+ *     }
+ *
+ * The dynamic block is declarative authoring. Resolving availability may materialize it without
+ * executing begin(...); real Operation execution happens only after activate(Control) selects the Act.
  */
 class VexBehaviorV2Builder<
     Family : VexBehaviorFamily<Family>,
@@ -40,9 +46,9 @@ class VexBehaviorV2Builder<
         >()
 
     @PublishedApi
-    internal val authoredActs =
+    internal val authoredRules =
         mutableListOf<
-            VexBehaviorV2Act<
+            VexBehaviorV2ActRule<
                 Family,
                 State,
                 Control
@@ -71,8 +77,8 @@ class VexBehaviorV2Builder<
         >(
             from =
                 Current::class,
-            completeAct =
-                ::completeAct,
+            completeRule =
+                ::completeRule,
         )
             .apply(
                 block,
@@ -80,16 +86,16 @@ class VexBehaviorV2Builder<
     }
 
     @PublishedApi
-    internal fun completeAct(
-        act:
-            VexBehaviorV2Act<
+    internal fun completeRule(
+        rule:
+            VexBehaviorV2ActRule<
                 Family,
                 State,
                 Control
             >,
     ) {
-        authoredActs +=
-            act
+        authoredRules +=
+            rule
     }
 
     internal fun build(
@@ -107,8 +113,8 @@ class VexBehaviorV2Builder<
                 behaviorRef,
             states =
                 stateTypes.toSet(),
-            acts =
-                authoredActs.toList(),
+            rules =
+                authoredRules.toList(),
         )
 }
 
@@ -122,9 +128,9 @@ class VexBehaviorV2StateScope<
     internal val from:
         KClass<Current>,
     @PublishedApi
-    internal val completeAct:
+    internal val completeRule:
         (
-            VexBehaviorV2Act<
+            VexBehaviorV2ActRule<
                 Family,
                 State,
                 Control
@@ -132,11 +138,9 @@ class VexBehaviorV2StateScope<
         ) -> Unit,
 ) {
     /**
-     * Author one complete Act for this CURRENT State + Control relationship.
+     * Exact-value Control form.
      *
-     * The block must declare exactly one immediate stay()/admit(state). It may additionally declare
-     * one begin(mode) Effect episode. Keeping both scopes inside this block preserves the causal read
-     * without moving Effect meaning into another handler or function.
+     * This preserves the compact singleton-Control language already earned by ThemeMode.
      */
     fun on(
         control: Control,
@@ -152,7 +156,7 @@ class VexBehaviorV2StateScope<
                 Current
             >.() -> Unit,
     ) {
-        completeAct(
+        val act =
             VexBehaviorV2ActScope<
                 Family,
                 State,
@@ -165,13 +169,153 @@ class VexBehaviorV2StateScope<
                     control,
                 conditionName =
                     conditionName,
-                whenCurrent =
-                    whenCurrent,
             )
                 .apply(
                     block,
                 )
-                .build(),
+                .build()
+
+        completeRule(
+            VexBehaviorV2ActRule(
+                from =
+                    from,
+                controlDescription =
+                    control.toString(),
+                conditionName =
+                    conditionName,
+                staticAct =
+                    act,
+                resolveAct = { current, requestedControl ->
+                    if (
+                        !from.isInstance(
+                            current,
+                        ) ||
+                        requestedControl !=
+                        control
+                    ) {
+                        null
+                    } else {
+                        @Suppress(
+                            "UNCHECKED_CAST",
+                        )
+                        val typedCurrent =
+                            current as
+                                Current
+
+                        act.takeIf {
+                            whenCurrent(
+                                typedCurrent,
+                            )
+                        }
+                    }
+                },
+            ),
+        )
+    }
+
+    /**
+     * Runtime Control-shape form.
+     *
+     * The actual CURRENT State value and actual incoming payload Control value materialize the Act.
+     * This is the minimum relationship needed by Seek/Select/Click-style Controls; it does not invent
+     * provider observation or provider Operation semantics.
+     */
+    inline fun <
+        reified RequestedControl : Control,
+    > on(
+        conditionName: String? = null,
+        noinline whenCurrent:
+            (
+                Current,
+                RequestedControl,
+            ) -> Boolean = {
+                _,
+                _,
+                ->
+                true
+            },
+        noinline block:
+            VexBehaviorV2ActScope<
+                Family,
+                State,
+                Control,
+                Current
+            >.(
+                Current,
+                RequestedControl,
+            ) -> Unit,
+    ) {
+        val requestedType =
+            RequestedControl::class
+
+        completeRule(
+            VexBehaviorV2ActRule(
+                from =
+                    from,
+                controlDescription =
+                    requestedType.simpleName
+                        ?: requestedType.toString(),
+                conditionName =
+                    conditionName,
+                staticAct =
+                    null,
+                resolveAct = { current, requestedControl ->
+                    if (
+                        !from.isInstance(
+                            current,
+                        ) ||
+                        !requestedType.isInstance(
+                            requestedControl,
+                        )
+                    ) {
+                        null
+                    } else {
+                        @Suppress(
+                            "UNCHECKED_CAST",
+                        )
+                        val typedCurrent =
+                            current as
+                                Current
+
+                        @Suppress(
+                            "UNCHECKED_CAST",
+                        )
+                        val typedControl =
+                            requestedControl as
+                                RequestedControl
+
+                        if (
+                            !whenCurrent(
+                                typedCurrent,
+                                typedControl,
+                            )
+                        ) {
+                            null
+                        } else {
+                            VexBehaviorV2ActScope<
+                                Family,
+                                State,
+                                Control,
+                                Current
+                            >(
+                                from =
+                                    from,
+                                control =
+                                    typedControl,
+                                conditionName =
+                                    conditionName,
+                            )
+                                .apply {
+                                    block(
+                                        typedCurrent,
+                                        typedControl,
+                                    )
+                                }
+                                .build()
+                        }
+                    }
+                },
+            ),
         )
     }
 }
@@ -181,15 +325,13 @@ class VexBehaviorV2ActScope<
     State : VexBehaviorFamily.State<Family>,
     Control : VexBehaviorFamily.Control<Family>,
     Current : State,
-> internal constructor(
+> @PublishedApi internal constructor(
     private val from:
         KClass<Current>,
     private val control:
         Control,
     private val conditionName:
         String?,
-    private val whenCurrent:
-        (Current) -> Boolean,
 ) {
     private var effect:
         VexBehaviorV2Begin<
@@ -270,6 +412,7 @@ class VexBehaviorV2ActScope<
                 .build()
     }
 
+    @PublishedApi
     internal fun build():
         VexBehaviorV2Act<
             Family,
@@ -294,14 +437,6 @@ class VexBehaviorV2ActScope<
                 immediate,
             conditionName =
                 conditionName,
-            whenCurrent = { current ->
-                @Suppress(
-                    "UNCHECKED_CAST",
-                )
-                whenCurrent(
-                    current as Current,
-                )
-            },
         )
     }
 }

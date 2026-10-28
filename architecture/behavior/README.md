@@ -49,7 +49,8 @@ Read them in this order:
    -> provider observation must reconcile with newer local intent
    -> payload Seek retains exact media identity/currentness
    -> Control availability derives from current semantic/provider capability
-   -> current exact-value V2 Control matching does NOT yet generalize runtime payloads
+   -> runtime State + payload Control now materialize an Act
+   -> provider observation/reconciliation remains open
 ~~~
 
 The third class is intentionally a **pressure reference**, not the newest confirmed V2 template.
@@ -1197,3 +1198,92 @@ patient-zero realization of the stable authoring language, not as proof that Fam
 provider/repository truth.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][STABILITY-BOUNDARY] -->
+
+
+## V2 threshold — runtime State + payload Control materialize the Act
+
+Playback pressure earned one reusable refinement without deciding provider observation.
+
+The exact singleton form remains unchanged:
+
+~~~kotlin
+state<State.Light> {
+    on(Control.Toggle) {
+        admit(State.Dark)
+    }
+}
+~~~
+
+A runtime payload Control may now author by Control shape:
+
+~~~kotlin
+state<State.Ready> {
+    on<Control.Seek>(
+        whenCurrent = { current, seek ->
+            current.mediaId == seek.request.mediaId &&
+                current.mediaItemIndex == seek.request.mediaItemIndex &&
+                current.seekAvailable
+        },
+    ) { current, seek ->
+        // Act is materialized from THESE runtime values.
+        ...
+    }
+}
+~~~
+
+Relationship:
+
+~~~text
+actual CURRENT State value
++
+actual incoming Control value
+-> authored rule matches the State/Control shapes
+-> currentness/availability predicate evaluates the actual values
+-> one resolved Act is materialized from those values
+~~~
+
+The old exact-value `on(Control)` form remains a compact specialization for singleton Controls.
+
+The Family also exposes `isAvailable(Control)`, derived from the exact same rule resolution as
+`activate(Control)`. It is informative only:
+
+~~~text
+isAvailable(Control)
+-> re-read CURRENT State
+-> resolve same semantic rule
+
+later activate(Control)
+-> re-read CURRENT State AGAIN
+-> resolve again
+~~~
+
+Therefore UI availability does not become activation authority and no second availability table is
+introduced.
+
+Dynamic Act authoring is declarative. Availability may materialize an Act but never executes
+`begin(...)`; Operation execution starts only after activation selects the Act.
+
+This threshold solves:
+
+~~~text
+payload-bearing Control matching
+runtime Control payload reaching the Act
+CURRENT State value participating in Act formation
+same-law Control availability
+value-dependent immediate State consequence
+~~~
+
+It intentionally does NOT solve:
+
+~~~text
+provider observation -> Family semantic current State
+pending-intent/provider reconciliation ownership
+provider-affine Seek Operation
+async result staleness/generation
+Compose observation
+~~~
+
+Those remain inside the Playback pressure class rather than being filled by a generic observer or
+setCurrent(...) API.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][RUNTIME-ACT-MATERIALIZATION] -->

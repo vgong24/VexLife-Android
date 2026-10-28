@@ -53,7 +53,7 @@ data class VexBehaviorV2Results<
 )
 
 /**
- * Family Store Save(State) Operation.
+ * Family State Store Save(State) Operation.
  *
  * Save remains common-language intention even though begin(...) owns a generic Operation slot.
  */
@@ -91,6 +91,12 @@ data class VexBehaviorV2Begin<
         Family
     >
 
+/**
+ * One resolved Act for the exact CURRENT State value + incoming Control value that activated it.
+ *
+ * Static singleton Controls may reuse one pre-authored instance. Runtime payload Controls materialize
+ * a new Act from the actual State/Control values at resolution time.
+ */
 class VexBehaviorV2Act<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
@@ -109,20 +115,53 @@ class VexBehaviorV2Act<
             State
         >,
     val conditionName: String?,
-    private val whenCurrent: (State) -> Boolean,
+)
+
+/**
+ * Authored relationship capable of resolving/materializing one Act from runtime values.
+ *
+ * Keeping this internal preserves the public language as State + Control -> Act rather than exposing
+ * another Family vocabulary noun merely to implement dynamic matching.
+ */
+@PublishedApi
+internal class VexBehaviorV2ActRule<
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+> @PublishedApi internal constructor(
+    val from: KClass<out State>,
+    val controlDescription: String,
+    val conditionName: String?,
+    val staticAct:
+        VexBehaviorV2Act<
+            Family,
+            State,
+            Control
+        >?,
+    private val resolveAct:
+        (
+            State,
+            Control,
+        ) ->
+            VexBehaviorV2Act<
+                Family,
+                State,
+                Control
+            >?,
 ) {
-    internal fun matches(
+    internal fun resolve(
         current: State,
-        requestedControl: Control,
-    ): Boolean =
-        from.isInstance(
+        control: Control,
+    ):
+        VexBehaviorV2Act<
+            Family,
+            State,
+            Control
+        >? =
+        resolveAct(
             current,
-        ) &&
-            control ==
-                requestedControl &&
-            whenCurrent(
-                current,
-            )
+            control,
+        )
 }
 
 // [VXG RealForever]

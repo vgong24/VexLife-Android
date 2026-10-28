@@ -33,9 +33,9 @@ class VexBehaviorV2<
     val family: Family,
     val behaviorRef: String,
     val states: Set<KClass<out State>>,
-    val acts:
+    private val rules:
         List<
-            VexBehaviorV2Act<
+            VexBehaviorV2ActRule<
                 Family,
                 State,
                 Control
@@ -54,62 +54,19 @@ class VexBehaviorV2<
             "behavior V2 requires at least one State"
         }
 
-        acts.forEach { act ->
+        rules.forEach { rule ->
             require(
-                act.from in
+                rule.from in
                     states,
             ) {
                 "Act source is not a registered State: " +
-                    act.from
+                    rule.from
             }
 
-            act.immediateDisposition
-                .admittedState
-                ?.let { admitted ->
-                    require(
-                        admitted::class in
-                            states,
-                    ) {
-                        "Act immediate State is not registered: " +
-                            admitted::class
-                    }
-                }
-
-            act.effect
-                ?.operation
-                ?.let { operation ->
-                    when (
-                        operation
-                    ) {
-                        is VexBehaviorV2Save<*, *> ->
-                            require(
-                                operation
-                                    .state
-                                    .let {
-                                        it::class in states
-                                    },
-                            ) {
-                                "Save State is not registered in " +
-                                    behaviorRef
-                            }
-                    }
-
-                    listOf(
-                        operation.results.success,
-                        operation.results.failure,
-                    ).forEach { result ->
-                        result.admittedState
-                            ?.let { laterState ->
-                                require(
-                                    laterState::class in
-                                        states,
-                                ) {
-                                    "later admitted State is not registered: " +
-                                        laterState::class
-                                }
-                            }
-                    }
-                }
+            rule.staticAct
+                ?.let(
+                    ::validateAct,
+                )
         }
     }
 
@@ -123,13 +80,16 @@ class VexBehaviorV2<
             Control
         >? {
         val available =
-            acts.filter { act ->
-                act.matches(
+            rules.mapNotNull { rule ->
+                rule.resolve(
                     current =
                         current,
-                    requestedControl =
+                    control =
                         control,
                 )
+                    ?.let(
+                        ::validateAct,
+                    )
             }
 
         require(
@@ -147,6 +107,79 @@ class VexBehaviorV2<
         return available.singleOrNull()
     }
 
+    private fun validateAct(
+        act:
+            VexBehaviorV2Act<
+                Family,
+                State,
+                Control
+            >,
+    ):
+        VexBehaviorV2Act<
+            Family,
+            State,
+            Control
+        > {
+        require(
+            act.from in
+                states,
+        ) {
+            "Act source is not a registered State: " +
+                act.from
+        }
+
+        act.immediateDisposition
+            .admittedState
+            ?.let { admitted ->
+                require(
+                    admitted::class in
+                        states,
+                ) {
+                    "Act immediate State is not registered: " +
+                        admitted::class
+                }
+            }
+
+        act.effect
+            ?.operation
+            ?.let { operation ->
+                when (
+                    operation
+                ) {
+                    is VexBehaviorV2Save<*, *> ->
+                        require(
+                            operation
+                                .state
+                                .let {
+                                    it::class in
+                                        states
+                                },
+                        ) {
+                            "Save State is not registered in " +
+                                behaviorRef
+                        }
+                }
+
+                listOf(
+                    operation.results.success,
+                    operation.results.failure,
+                ).forEach { result ->
+                    result.admittedState
+                        ?.let { laterState ->
+                            require(
+                                laterState::class in
+                                    states,
+                            ) {
+                                "later admitted State is not registered: " +
+                                    laterState::class
+                            }
+                        }
+                }
+            }
+
+        return act
+    }
+
     fun describe():
         String =
         buildString {
@@ -155,7 +188,41 @@ class VexBehaviorV2<
                     " [V2]",
             )
 
-            acts.forEach { act ->
+            rules.forEach { rule ->
+                val act =
+                    rule.staticAct
+
+                if (
+                    act ==
+                    null
+                ) {
+                    append(
+                        rule.from.simpleName,
+                    )
+                    append(
+                        " --on<",
+                    )
+                    append(
+                        rule.controlDescription,
+                    )
+                    append(
+                        ">() / RUNTIME_ACT",
+                    )
+
+                    rule.conditionName
+                        ?.let { name ->
+                            append(
+                                " when ",
+                            )
+                            append(
+                                name,
+                            )
+                        }
+
+                    appendLine()
+                    return@forEach
+                }
+
                 append(
                     act.from.simpleName,
                 )
@@ -405,6 +472,23 @@ abstract class VexBehaviorV2Family<
             VexBehaviorV2DisplayState.Empty(
                 current,
             )
+
+    /**
+     * Informative availability from the same CURRENT State + Control relationship used by activate.
+     *
+     * No second UI availability table is introduced. Activation always re-resolves CURRENT State, so
+     * an availability read never becomes authority for a later activation.
+     */
+    fun isAvailable(
+        control: Control,
+    ): Boolean =
+        acts.resolve(
+            current =
+                current,
+            control =
+                control,
+        ) !=
+            null
 
     fun activate(
         control: Control,

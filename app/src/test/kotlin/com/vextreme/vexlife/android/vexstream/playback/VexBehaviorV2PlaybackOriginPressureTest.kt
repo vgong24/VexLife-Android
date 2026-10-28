@@ -31,14 +31,12 @@ import org.junit.Test
  *     Control availability
  *       must derive from current semantic/provider capability
  *
- *     current V2 exact-value Control matching
- *       does NOT yet author arbitrary runtime payload Controls
+ *     runtime payload Control
+ *       now materializes an Act from actual CURRENT State + actual Control payload
  *
- * Do not "fix" the final test by registering representative payload values or by turning provider
- * observation into a fake Control. The point of this class is to preserve the unresolved boundary
- * until a later Origin Walk earns one reusable relationship. Production Playback stays on its current
- * accepted architecture until this pressure can be expressed without losing provider ownership,
- * currentness, payload identity or UI availability.
+ * This class still does NOT solve provider observation/reconciliation or production Seek execution.
+ * Production Playback stays on its current accepted architecture until those remaining pressures can
+ * be expressed without losing provider ownership, currentness, payload identity or UI availability.
  */
 class VexBehaviorV2PlaybackOriginPressureTest {
     @Test
@@ -198,7 +196,7 @@ class VexBehaviorV2PlaybackOriginPressureTest {
     }
 
     @Test
-    fun currentV2ExactControlMatchingKeepsArbitraryPayloadAuthoringOpen() {
+    fun runtimePayloadControlMaterializesActFromActualCurrentStateAndRequest() {
         val root =
             VexExecutionRoot()
 
@@ -207,50 +205,86 @@ class VexBehaviorV2PlaybackOriginPressureTest {
                 PayloadPressureFamily(
                     executionRoot =
                         root,
+                    initialState =
+                        PayloadPressureFamily.State.Ready(
+                            mediaId =
+                                "track.alpha",
+                            mediaItemIndex =
+                                1,
+                            seekAvailable =
+                                true,
+                            requestedPositionMs =
+                                null,
+                        ),
                 )
 
-            val exactlyAuthoredRequest =
+            val runtimeRequest =
                 VexStreamPlaybackSeekRequest(
                     mediaId =
                         "track.alpha",
                     mediaItemIndex =
                         1,
                     positionMs =
-                        30_000L,
-                )
-
-            val runtimeRequestWithDifferentPayload =
-                exactlyAuthoredRequest.copy(
-                    positionMs =
                         60_000L,
                 )
+            val control =
+                PayloadPressureFamily.Control.Seek(
+                    runtimeRequest,
+                )
 
-            assertNotNull(
-                family.activate(
-                    PayloadPressureFamily.Control.Seek(
-                        exactlyAuthoredRequest,
-                    ),
+            /*
+             * Availability and activation resolve from the same semantic rule. The actual payload
+             * value does not need to exist when the Family graph is constructed.
+             */
+            assertTrue(
+                family.isAvailable(
+                    control,
                 ),
             )
 
+            val act =
+                family.activate(
+                    control,
+                )
+
+            assertEquals(
+                control,
+                act?.control,
+            )
+            assertEquals(
+                PayloadPressureFamily.State.Ready(
+                    mediaId =
+                        "track.alpha",
+                    mediaItemIndex =
+                        1,
+                    seekAvailable =
+                        true,
+                    requestedPositionMs =
+                        60_000L,
+                ),
+                family.current,
+            )
+
             /*
-             * This null is the executable hold.
-             *
-             * V2 currently pre-authors a concrete Control value into the Act graph. Data-class
-             * equality therefore matches the exact authored Seek payload, but it cannot express:
-             *
-             *     on<Control.Seek> { seek ->
-             *         begin { Seek(seek.request) }
-             *     }
-             *
-             * for arbitrary runtime requests. Do not interpret the sealed Control type alone as
-             * proof that payload-bearing Control authoring is solved.
+             * The same Control shape with a stale occurrence does not become available merely because
+             * the type matches. Runtime State + runtime Control payload participate in the Act law.
              */
+            val staleOccurrence =
+                PayloadPressureFamily.Control.Seek(
+                    runtimeRequest.copy(
+                        mediaItemIndex =
+                            2,
+                    ),
+                )
+
+            assertFalse(
+                family.isAvailable(
+                    staleOccurrence,
+                ),
+            )
             assertNull(
                 family.activate(
-                    PayloadPressureFamily.Control.Seek(
-                        runtimeRequestWithDifferentPayload,
-                    ),
+                    staleOccurrence,
                 ),
             )
         } finally {
@@ -259,15 +293,22 @@ class VexBehaviorV2PlaybackOriginPressureTest {
     }
 
     /**
-     * Minimal V2 comparison fixture used only to make the exact-value payload boundary executable.
+     * Minimal V2 comparison fixture proving runtime payload materialization only.
      *
-     * It intentionally does not model Media3, provider observation, pending reconciliation or Seek
-     * execution. Those already have rightful production-shaped owners above; copying them into this
-     * fixture would make the test look more complete than the current V2 architecture really is.
+     * requestedPositionMs is deliberately fixture-local pressure data. This does NOT claim production
+     * Playback should store seek position as Behavior State; real Media3 Seek remains provider-owned.
+     * The fixture only proves the reusable relationship:
+     *
+     *     actual CURRENT State value
+     *     + actual incoming payload Control
+     *     -> materialized Act
+     *     -> value-dependent immediate consequence
      */
     private class PayloadPressureFamily(
         executionRoot:
             VexExecutionRoot,
+        initialState:
+            State,
     ) :
         VexBehaviorV2Family<
             PayloadPressureFamily,
@@ -275,12 +316,7 @@ class VexBehaviorV2PlaybackOriginPressureTest {
             PayloadPressureFamily.Control
         >(
             initialState =
-                State.Ready(
-                    mediaId =
-                        "track.alpha",
-                    mediaItemIndex =
-                        1,
-                ),
+                initialState,
             executionRoot =
                 executionRoot,
             logger =
@@ -293,6 +329,8 @@ class VexBehaviorV2PlaybackOriginPressureTest {
             data class Ready(
                 val mediaId: String,
                 val mediaItemIndex: Int,
+                val seekAvailable: Boolean,
+                val requestedPositionMs: Long?,
             ) :
                 State
         }
@@ -320,23 +358,28 @@ class VexBehaviorV2PlaybackOriginPressureTest {
                     "origin-pressure.playback.payload-control",
             ) {
                 state<State.Ready> {
-                    on(
-                        Control.Seek(
-                            VexStreamPlaybackSeekRequest(
-                                mediaId =
-                                    "track.alpha",
-                                mediaItemIndex =
-                                    1,
-                                positionMs =
-                                    30_000L,
+                    on<Control.Seek>(
+                        conditionName =
+                            "seek-matches-current-media-and-provider-is-available",
+                        whenCurrent = { current, seek ->
+                            current.seekAvailable &&
+                                current.mediaId ==
+                                    seek.request.mediaId &&
+                                current.mediaItemIndex ==
+                                    seek.request.mediaItemIndex
+                        },
+                    ) { current, seek ->
+                        admit(
+                            current.copy(
+                                requestedPositionMs =
+                                    seek.request.positionMs,
                             ),
-                        ),
-                    ) {
-                        stay()
+                        )
                     }
                 }
             }
     }
 }
+
 
 // [VXG RealForever]
