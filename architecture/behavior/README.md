@@ -10,6 +10,9 @@ This module preserves the geometry of **what a human can do from what is true no
 - IDE/code navigation: `VexBehaviorDocs`
 - Canonical family/package construction pattern:
   [`VEX-BEHAVIOR-FAMILY-BLUEPRINT.md`](VEX-BEHAVIOR-FAMILY-BLUEPRINT.md)
+- **Fresh-entry round-trip reference:** [`VexBehaviorUiRoundTripReferenceTest`](src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorUiRoundTripReferenceTest.kt)
+  — read this when you need the vetted UI intent -> CURRENT observed State -> Family Behavior -> Act ->
+  Effect/Save -> ObservableState -> UI loop, including the stale-render currentness case.
 - Review pressure/evidence:
   [`REVIEW-CHECKPOINT.md`](REVIEW-CHECKPOINT.md)
 
@@ -200,6 +203,43 @@ view classification is currently earned; Mini Player and Context Dock still cons
 
 A generic `VexExperience` abstraction remains held until a second real feature proves the same
 surface across features, not merely two VexStream families.
+
+## Fresh-entry reference specimen
+
+The canonical **look-here-first working specimen** for the current V2 Origin-Walk shape is:
+
+~~~text
+VexBehaviorUiRoundTripReferenceTest
+~~~
+
+It is intentionally a JVM reference rather than production Compose code. It proves one readable semantic
+round trip without making `:architecture:behavior` depend on app/UI runtime:
+
+~~~text
+Composable-facing observation
+-> onClick emits Family.Control
+-> live boundary reads CURRENT State
+-> Family.Behavior resolves the Act
+-> Act carries Effect + immediate stay/admit
+-> Connection realizes Save
+-> Store ObservableState is observed
+-> one semantic State owner updates
+-> UI observes the resulting State
+~~~
+
+It also proves the stale-render case:
+
+~~~text
+UI rendered Light
+-> observed truth becomes Dark before click
+-> click does NOT pass stale Light back as authority
+-> activation re-reads CURRENT Dark
+-> Dark + Toggle Act is selected
+~~~
+
+The test comments preserve why each boundary exists and which pieces remain deliberately held. AppActions,
+Journey ActionElements, real Compose rendering, coroutine lifetime, and device evidence remain in their
+rightful foundations rather than being duplicated into this reference.
 
 ## V2 Origin-Walk refinement — sibling experiment, not replacement
 
