@@ -206,67 +206,116 @@ surface across features, not merely two VexStream families.
 The accepted V1 kernel remains the production-used contract. V2 exists beside it so the ThemeMode
 Origin Walk can be proven in ordinary Kotlin without changing VexStream/Queue semantics in place.
 
-V2 naming intentionally sorts under one `VexBehaviorV2...` prefix. Its generic equations preserve the
-same Family-first ordering as V1 (`Family, State, Act, Effect`), while Control remains a separately bound
-finite vocabulary through `controls<Control>()`.
+The V2 proof must **consume Origin language rather than translate it into a second vocabulary**.
+
+Current mapping:
 
 ~~~text
-V1
-  State + Act
-  -> Effect
-  -> required immediate stay/admit
+ORIGIN WALK                         KOTLIN V2
+────────────────────────────────────────────────────────────
+Family                              Family generic bound
+State                               State<Family>
+Control                             Control<Family>
+Act                                 Act<Family>
+Effect                              Effect<Family>
 
-  provider/result reconciliation
-  -> concrete Connection responsibility
+begin(mode = Replaceable)           begin(mode = Replaceable)
+begin(mode = Sequenced)             begin(mode = Sequenced)
 
+operation(...)                      operation(...)
 
-V2
-  reuses the same V1 immediate graph
-  +
-  begin(mode = Replaceable | Sequenced)
-  +
-  explicit Success / Failure result scopes
-  +
-  optional later admit<State>()
+.results {                          .results {
+  Success { ... }                     success { ... }
+  Failure { ... }                     failure { ... }
+}                                   }
+
+.stay()                             .stay()
+.admit<State>()                     .admit<State>()
 ~~~
 
-The implementation deliberately wraps a V1-compatible immediate blueprint rather than cloning Control
-resolution or SCAE family typing.
+Kotlin method casing follows this repository's function naming convention; it does not rename the
+semantic Success / Failure result cases.
+
+The first V2 prototype briefly introduced implementation-translated nouns such as:
 
 ~~~text
-VexBehaviorV2Blueprint.v1
--> ordinary V1 Control projection / resolution remains reusable
+AsyncResult
+AsyncResults
+EffectPlan
+ExecutionMode
 ~~~
 
-This gives future workers a direct comparison:
+That was an Origin-Walk violation: those names were formed before checking whether the Walk had already
+named the responsibilities. Current source removes those prototype nouns.
+
+The source now uses only directly mapped V2 support identities:
 
 ~~~text
-WHY V1 STILL EXISTS
-  current production consumers already rely on its small immediate-admission contract
+VexBehaviorV2BeginMode
+VexBehaviorV2Begin
+VexBehaviorV2Operation
+VexBehaviorV2Results
+VexBehaviorV2Result
+VexBehaviorV2StateDisposition
 
-WHY V2 EXISTS
-  later-completing Effects can now express:
-    stay now
-    -> Success later
-    -> admit<State>() later
-
-  repeated async episodes can state their visible execution relationship:
-    Replaceable
-    Sequenced
+VexBehaviorV2Relationship
+VexBehaviorV2Resolution
+VexBehaviorV2Blueprint
+VexBehaviorV2BlueprintBuilder
 ~~~
 
-V2 does not make coroutine/thread mechanics portable semantics. The concrete Effect owner supplies the
-execution lane and runtime realization.
+The first group exists only to carry already-earned Origin relationships in Kotlin. It is not a new
+foundation vocabulary.
+
+Generic ordering preserves the V1 Family language:
 
 ~~~text
-Family / rightful Effect owner
-  -> execution lane identity
-
-begin(mode = ...)
-  -> how this episode participates in that lane
+<Family, State, Act, Effect>
 ~~~
 
-The test proof also demonstrates that one concrete immutable State family may satisfy both:
+Control remains attached through `controls<Control>()`, exactly as in V1.
+
+The Kotlin shape under proof is therefore:
+
+~~~kotlin
+state<ThemeState.NotSet> {
+    on(
+        act = ThemeAct.CommitDark,
+        effect = begin(
+            mode = VexBehaviorV2BeginMode.Sequenced,
+        ) {
+            operation(
+                ThemeEffect.SaveDark,
+            ).results {
+                success {
+                    admit<ThemeState.Dark>()
+                }
+
+                failure {
+                }
+            }
+        },
+    ).stay()
+}
+~~~
+
+That reads in the same order as the Origin Walk:
+
+~~~text
+NOW
+  stay()
+
+LATER
+  begin Sequenced
+  -> operation SaveDark
+  -> Success
+  -> admit Dark
+~~~
+
+V2 materializes a V1-compatible immediate graph so existing Control projection/resolution remains
+reusable rather than being cloned.
+
+The focused proof also demonstrates that one concrete immutable State family may satisfy both:
 
 ~~~text
 VexBehaviorFamily.State<Family>
@@ -274,12 +323,11 @@ VexBehaviorFamily.State<Family>
 Relay VexState<State>
 ~~~
 
-without making the production Behavior module depend on Relay. This preserves the current layering while
-showing that SCAE State and fractal Relay/Convergence State can meet at a concrete family.
+without making the production Behavior module depend on Relay.
 
-V2 is still an experiment. Do not migrate V1 consumers merely because V2 exists. A migration is earned
-when a real family needs the two-scope semantics and focused proof shows the v2 relationship is more
-truthful than its current Connection-local handling.
+V2 remains an experiment. Do not migrate V1 consumers merely because V2 exists. A migration is earned
+when a real family needs the two-scope semantics and focused proof shows the relationship is more truthful
+than its current Connection-local handling.
 
 ## Deliberately held
 
