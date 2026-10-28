@@ -3,20 +3,15 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 is a sibling experiment over the accepted V1 SCAE graph, not a replacement fork.
+ * V2 sibling proof of the completed Origin-Walk two-scope Behavior circuit.
  *
- * It keeps the Origin-Walk language visible instead of translating it into another architecture:
- *
- *     begin(mode = ...)
- *       operation(...).results { Success / Failure }
- *     immediate stay/admit
- *     optional later admit from a result
+ * V2 does not invent a feature-local Effect enum for ThemeMode. The SCAE Effect is the structured
+ * begin(...) scope itself, and the operation inside it is Save(State).
  */
 class VexBehaviorV2Blueprint<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Act : VexBehaviorFamily.Act<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
     val behaviorRef: String,
     val states: Set<KClass<out State>>,
@@ -25,8 +20,7 @@ class VexBehaviorV2Blueprint<
             VexBehaviorV2Relationship<
                 Family,
                 State,
-                Act,
-                Effect
+                Act
             >
         >,
 ) {
@@ -35,7 +29,10 @@ class VexBehaviorV2Blueprint<
             Family,
             State,
             Act,
-            Effect
+            VexBehaviorV2Begin<
+                Family,
+                State
+            >
         >
 
     init {
@@ -70,11 +67,24 @@ class VexBehaviorV2Blueprint<
                         .stateKind
             }
 
+            require(
+                relationship
+                    .effect
+                    .save
+                    .state
+                    .let {
+                        it::class in states
+                    },
+            ) {
+                "Save State is not registered in " +
+                    behaviorRef
+            }
+
             relationship
-                .begin
-                ?.operation
-                ?.results
-                ?.let { results ->
+                .effect
+                .save
+                .results
+                .let { results ->
                     listOf(
                         results.success,
                         results.failure,
@@ -86,7 +96,7 @@ class VexBehaviorV2Blueprint<
                                     laterState in
                                         states,
                                 ) {
-                                    "relationship later admitted state is not registered: " +
+                                    "later admitted state is not registered: " +
                                         laterState
                                 }
                             }
@@ -133,8 +143,7 @@ class VexBehaviorV2Blueprint<
         VexBehaviorV2Relationship<
             Family,
             State,
-            Act,
-            Effect
+            Act
         >
     > {
         val currentType =
@@ -185,8 +194,7 @@ class VexBehaviorV2Blueprint<
         act: Act,
     ): VexBehaviorV2Resolution<
         Family,
-        State,
-        Effect
+        State
     >? {
         val available =
             availableRelationships(
@@ -209,8 +217,6 @@ class VexBehaviorV2Blueprint<
         return VexBehaviorV2Resolution(
             effect =
                 relationship.effect,
-            begin =
-                relationship.begin,
             immediateDisposition =
                 relationship
                     .immediateDisposition,
@@ -228,7 +234,10 @@ class VexBehaviorV2Blueprint<
         Family,
         State,
         Act,
-        Effect,
+        VexBehaviorV2Begin<
+            Family,
+            State
+        >,
         Control
     >
         where Control : Enum<Control>,
@@ -257,27 +266,24 @@ class VexBehaviorV2Blueprint<
                     relationship.act,
                 )
                 append(
-                    " / ",
+                    " / begin[",
                 )
                 append(
-                    relationship.effect,
+                    relationship
+                        .effect
+                        .mode,
                 )
-
-                relationship.begin
-                    ?.let { begin ->
-                        append(
-                            " begin[",
-                        )
-                        append(
-                            begin.mode,
-                        )
-                        append(
-                            "]",
-                        )
-                    }
-
                 append(
-                    "--> ",
+                    "] Save(",
+                )
+                append(
+                    relationship
+                        .effect
+                        .save
+                        .state,
+                )
+                append(
+                    ")--> ",
                 )
                 append(
                     relationship
@@ -294,31 +300,32 @@ class VexBehaviorV2Blueprint<
                         .simpleName,
                 )
 
-                relationship.begin
-                    ?.operation
-                    ?.results
-                    ?.let { results ->
-                        append(
-                            " ; Success=",
-                        )
-                        append(
-                            results
-                                .success
-                                .admittedStateKind
-                                ?.simpleName
-                                ?: "NO_STATE_CHANGE",
-                        )
-                        append(
-                            " ; Failure=",
-                        )
-                        append(
-                            results
-                                .failure
-                                .admittedStateKind
-                                ?.simpleName
-                                ?: "NO_STATE_CHANGE",
-                        )
-                    }
+                val results =
+                    relationship
+                        .effect
+                        .save
+                        .results
+
+                append(
+                    " ; Success=",
+                )
+                append(
+                    results
+                        .success
+                        .admittedStateKind
+                        ?.simpleName
+                        ?: "NO_STATE_CHANGE",
+                )
+                append(
+                    " ; Failure=",
+                )
+                append(
+                    results
+                        .failure
+                        .admittedStateKind
+                        ?.simpleName
+                        ?: "NO_STATE_CHANGE",
+                )
 
                 relationship
                     .conditionName
@@ -342,8 +349,7 @@ class VexBehaviorV2Blueprint<
                 VexBehaviorV2Relationship<
                     Family,
                     State,
-                    Act,
-                    Effect
+                    Act
                 >
             >,
     ) {
@@ -361,10 +367,7 @@ class VexBehaviorV2Blueprint<
                         " V2 has ambiguous act " +
                         act +
                         " from current " +
-                        current::class.simpleName +
-                        "; " +
-                        matches.size +
-                        " conditional relationships are simultaneously available"
+                        current::class.simpleName
                 }
             }
     }
@@ -374,27 +377,23 @@ fun <
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Act : VexBehaviorFamily.Act<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 > vexBehaviorV2Blueprint(
     behaviorRef: String,
     block:
         VexBehaviorV2BlueprintBuilder<
             Family,
             State,
-            Act,
-            Effect
+            Act
         >.() -> Unit,
 ): VexBehaviorV2Blueprint<
     Family,
     State,
-    Act,
-    Effect
+    Act
 > =
     VexBehaviorV2BlueprintBuilder<
         Family,
         State,
-        Act,
-        Effect
+        Act
     >(
         behaviorRef =
             behaviorRef,
