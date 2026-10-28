@@ -96,11 +96,13 @@ data class VexBehaviorV2Begin<
  * The Act that survived the removal test is the scenario itself:
  *
  *     CURRENT State + Control
- *     -> Effect
+ *     -> optional Effect
  *     -> immediate stay/admit
  *
- * [from] and [control] identify the input neighborhood. [effect] and [immediateDisposition] are the
- * consequence authored by that exact on(...) relationship.
+ * [from] and [control] identify the input neighborhood. [effect] is present only when this Act asks
+ * reality/runtime to do something beyond semantic State admission. Null means no Effect was earned;
+ * it is not an implicit no-op Effect. [immediateDisposition] carries the immediate State consequence
+ * authored by this exact on(...) relationship.
  *
  * This proof currently matches exact Control values, which is sufficient for ThemeMode.Toggle.
  * Payload-bearing Control-shape matching (for example Click(songId)) remains a deliberate next
@@ -117,7 +119,7 @@ class VexBehaviorV2Act<
         VexBehaviorV2Begin<
             Family,
             State
-        >,
+        >?,
     val immediateDisposition:
         VexBehaviorV2StateDisposition<
             Family,

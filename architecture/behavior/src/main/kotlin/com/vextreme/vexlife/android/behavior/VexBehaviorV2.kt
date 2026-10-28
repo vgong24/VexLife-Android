@@ -16,7 +16,7 @@ import kotlin.reflect.KClass
  * V2 therefore treats each authored on(Control) relationship as the Act:
  *
  *     CURRENT State + Control
- *     -> Act { Effect + immediate State consequence }
+ *     -> Act { optional Effect + immediate State consequence }
  *
  * This keeps Act as behavioral process/meaning while removing an extra type hierarchy and resolver
  * layer that fresh AI authors could otherwise recreate by habit.
@@ -68,37 +68,40 @@ class VexBehaviorV2<
                         .stateKind
             }
 
-            require(
-                act.effect
-                    .save
-                    .state
-                    .let {
-                        it::class in states
-                    },
-            ) {
-                "Save State is not registered in " +
-                    behaviorRef
-            }
-
             act.effect
-                .save
-                .results
-                .let { results ->
-                    listOf(
-                        results.success,
-                        results.failure,
-                    ).forEach { result ->
-                        result.admittedStateKind
-                            ?.let { laterState ->
-                                require(
-                                    laterState in
-                                        states,
-                                ) {
-                                    "later admitted State is not registered: " +
-                                        laterState
-                                }
-                            }
+                ?.let { effect ->
+                    require(
+                        effect
+                            .save
+                            .state
+                            .let {
+                                it::class in states
+                            },
+                    ) {
+                        "Save State is not registered in " +
+                            behaviorRef
                     }
+
+                    effect
+                        .save
+                        .results
+                        .let { results ->
+                            listOf(
+                                results.success,
+                                results.failure,
+                            ).forEach { result ->
+                                result.admittedStateKind
+                                    ?.let { laterState ->
+                                        require(
+                                            laterState in
+                                                states,
+                                        ) {
+                                            "later admitted State is not registered: " +
+                                                laterState
+                                        }
+                                    }
+                            }
+                        }
                 }
         }
     }
@@ -162,22 +165,41 @@ class VexBehaviorV2<
                     act.control,
                 )
                 append(
-                    ") / begin[",
+                    ")",
                 )
-                append(
+
+                val effect =
                     act.effect
-                        .mode,
-                )
+
+                if (
+                    effect ==
+                    null
+                ) {
+                    append(
+                        " / NO_EFFECT",
+                    )
+                } else {
+                    append(
+                        " / begin[",
+                    )
+                    append(
+                        effect.mode,
+                    )
+                    append(
+                        "] Save(",
+                    )
+                    append(
+                        effect
+                            .save
+                            .state,
+                    )
+                    append(
+                        ")",
+                    )
+                }
+
                 append(
-                    "] Save(",
-                )
-                append(
-                    act.effect
-                        .save
-                        .state,
-                )
-                append(
-                    ")--> ",
+                    "--> ",
                 )
                 append(
                     act.immediateDisposition
@@ -192,29 +214,29 @@ class VexBehaviorV2<
                         .simpleName,
                 )
 
-                val results =
-                    act.effect
-                        .save
-                        .results
-
-                append(
-                    " ; Success=",
-                )
-                append(
-                    results.success
-                        .admittedStateKind
-                        ?.simpleName
-                        ?: "NO_STATE_CHANGE",
-                )
-                append(
-                    " ; Failure=",
-                )
-                append(
-                    results.failure
-                        .admittedStateKind
-                        ?.simpleName
-                        ?: "NO_STATE_CHANGE",
-                )
+                effect
+                    ?.save
+                    ?.results
+                    ?.let { results ->
+                        append(
+                            " ; Success=",
+                        )
+                        append(
+                            results.success
+                                .admittedStateKind
+                                ?.simpleName
+                                ?: "NO_STATE_CHANGE",
+                        )
+                        append(
+                            " ; Failure=",
+                        )
+                        append(
+                            results.failure
+                                .admittedStateKind
+                                ?.simpleName
+                                ?: "NO_STATE_CHANGE",
+                        )
+                    }
 
                 act.conditionName
                     ?.let { name ->

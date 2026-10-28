@@ -422,6 +422,13 @@ class VexBehaviorUiRoundTripReferenceTest {
                     )
                     ?: return
 
+            val effect =
+                requireNotNull(
+                    act.effect,
+                ) {
+                    "this Store round-trip reference intentionally exercises an Effect-bearing Act"
+                }
+
             trace +=
                 "Behavior.Act=${current.toString()}+${control.toString()}"
 
@@ -437,7 +444,7 @@ class VexBehaviorUiRoundTripReferenceTest {
                     // ThemeMode's current POC admits the same concrete State value that Save carries.
                     // A future generic runtime must not assume that equation without earning it.
                     val admitted =
-                        act.effect
+                        effect
                             .save
                             .state
 
@@ -459,7 +466,7 @@ class VexBehaviorUiRoundTripReferenceTest {
             }
 
             realize(
-                act.effect,
+                effect,
             )
         }
 

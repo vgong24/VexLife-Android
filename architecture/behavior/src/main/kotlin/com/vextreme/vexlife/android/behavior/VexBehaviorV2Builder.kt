@@ -9,9 +9,15 @@ import kotlin.reflect.KClass
  * builder protects:
  *
  *     state<Current> {
+ *         on(Control)
+ *             .stay() / .admit<Next>()
+ *
  *         on(Control, Effect)
  *             .stay() / .admit<Next>()
  *     }
+ *
+ * Effect is earned per Act. A purely semantic State admission must not invent a no-op Effect merely
+ * to satisfy builder symmetry.
  *
  * That complete relationship is the Act. There is intentionally no separate Family.Act value to
  * maintain or route through.
@@ -87,7 +93,7 @@ class VexBehaviorV2Builder<
             VexBehaviorV2Begin<
                 Family,
                 State
-            >,
+            >?,
         conditionName: String?,
     ): Int {
         val id =
@@ -104,22 +110,33 @@ class VexBehaviorV2Builder<
                 append(
                     control,
                 )
-                append(
-                    " / begin[",
-                )
-                append(
-                    effect.mode,
-                )
-                append(
-                    "] Save(",
-                )
-                append(
-                    effect.save
-                        .state,
-                )
-                append(
-                    ")",
-                )
+
+                if (
+                    effect ==
+                    null
+                ) {
+                    append(
+                        " / NO_EFFECT",
+                    )
+                } else {
+                    append(
+                        " / begin[",
+                    )
+                    append(
+                        effect.mode,
+                    )
+                    append(
+                        "] Save(",
+                    )
+                    append(
+                        effect
+                            .save
+                            .state,
+                    )
+                    append(
+                        ")",
+                    )
+                }
 
                 conditionName
                     ?.let { name ->
@@ -206,7 +223,7 @@ class VexBehaviorV2StateScope<
             VexBehaviorV2Begin<
                 Family,
                 State
-            >,
+            >?,
             String?,
         ) -> Int,
     @PublishedApi
@@ -228,6 +245,50 @@ class VexBehaviorV2StateScope<
      * the Act->Effect graph. ThemeMode proved that translation layer redundant. The on(...) scenario
      * itself is now the Act.
      */
+    /**
+     * Begins an Act whose only consequence is semantic State admission/stay.
+     *
+     * No Effect is manufactured here. Use the Effect-bearing overload only when the Act actually
+     * asks a runtime/provider/store to do something.
+     */
+    fun on(
+        control: Control,
+        conditionName: String? = null,
+        whenCurrent: (Current) -> Boolean = {
+            true
+        },
+    ): VexBehaviorV2Destination<
+        Family,
+        State,
+        Control,
+        Current
+    > {
+        val actId =
+            beginAct(
+                from,
+                control,
+                null,
+                conditionName,
+            )
+
+        return VexBehaviorV2Destination(
+            actId =
+                actId,
+            from =
+                from,
+            control =
+                control,
+            effect =
+                null,
+            conditionName =
+                conditionName,
+            whenCurrent =
+                whenCurrent,
+            completeAct =
+                completeAct,
+        )
+    }
+
     fun on(
         control: Control,
         effect:
@@ -541,7 +602,7 @@ class VexBehaviorV2Destination<
         VexBehaviorV2Begin<
             Family,
             State
-        >,
+        >?,
     @PublishedApi
     internal val conditionName:
         String?,

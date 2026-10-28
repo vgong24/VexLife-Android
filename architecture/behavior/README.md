@@ -641,3 +641,94 @@ generic async failure/result grammar
 Let real consumers earn those extensions.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR] -->
+
+
+### V2 refinement — Effect is earned per Act
+
+The real Debug Menu UI/runtime walk added a pressure that the earlier persistence specimen had hidden.
+
+Current Android owns Theme Mode only as in-process session truth:
+
+~~~text
+VexLifeSession.darkTheme
+  -> VexLifeApp / DebugMenu checked projection
+
+DebugMenu activation
+  -> VexLifeSession.toggleDarkMode()
+  -> the SAME current session truth changes
+~~~
+
+`VexLifeSession` explicitly does not claim process-death restoration. The VexSync work outcome asks for
+the dark/light Theme Mode feature and Origin/Android round trip; it does not independently require
+durable persistence.
+
+Therefore V2 must not require every Act to manufacture an Effect merely because the builder previously
+accepted only `on(Control, Effect)`.
+
+The current V2 rule is now:
+
+~~~text
+CURRENT State + Control
+-> Act {
+     optional Effect
+     immediate stay/admit
+     optional later result admission when an Effect exists
+   }
+~~~
+
+For the current in-process ThemeMode transition:
+
+~~~kotlin
+state<State.Light> {
+    on(
+        control = Control.Toggle,
+    ).admit<State.Dark>()
+}
+
+state<State.Dark> {
+    on(
+        control = Control.Toggle,
+    ).admit<State.Light>()
+}
+~~~
+
+No `NoOpEffect`, fake Save or persistence layer is introduced.
+
+The already-earned two-scope Effect language remains intact for an Act that really needs it:
+
+~~~kotlin
+state<State.NotSet> {
+    on(
+        control = Control.Toggle,
+        effect = begin(
+            mode = VexBehaviorV2BeginMode.Sequenced,
+        ) {
+            save(State.Dark)
+                .results {
+                    success {
+                        admit<State.Dark>()
+                    }
+                    failure { }
+                }
+        },
+    ).stay()
+}
+~~~
+
+So:
+
+~~~text
+EFFECT ABSENT
+  = this Act asks no external/runtime reality owner to transform anything
+
+EFFECT PRESENT
+  = this Act explicitly asks reality/runtime to do work
+
+NO EFFECT
+!= NO-OP EFFECT
+!= EFFECT FAILURE
+~~~
+
+This refinement does not yet choose the production ThemeMode runtime object. The current target evidence
+instead says to start from the existing session-owned current truth and add another owner only if a later
+persistence/System/provider/lifecycle pressure actually earns one.

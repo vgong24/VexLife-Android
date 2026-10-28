@@ -15,8 +15,10 @@ import org.junit.Test
  * 1. The first POC copied V1 and created ThemeModeFamily.Act values.
  * 2. That forced ThemeMode State to be interpreted once in Control->Act and again in Act->Effect.
  * 3. Removing the intermediate Act vocabulary lost no ThemeMode meaning.
- * 4. The surviving Act is the authored Behavior scenario itself: State + Control -> Effect +
- *    stay/admit.
+ * 4. The surviving Act is the authored Behavior scenario itself: State + Control -> optional Effect
+ *    + stay/admit.
+ * 5. The real Debug Menu session path then proved Effect is optional: Light/Dark Toggle changes
+ *    semantic State without earning a persistence/provider transformation.
  *
  * A fresh implementation should therefore extend State / Control / Behavior below, not recreate a
  * ThemeModeFamily.Act hierarchy merely because V1 has one.
@@ -114,52 +116,23 @@ class VexBehaviorV2Test {
                     ).stay()
                 }
 
-                // Act: while Light is current, Toggle attempts Save(Dark) and immediately admits
-                // Dark. No separate SelectDark value is needed to repeat what this scenario says.
+                // Act: current Android ThemeMode has no persistence/provider Effect. While Light is
+                // current, Toggle immediately admits Dark without inventing a no-op Effect.
                 state<State.Light> {
                     on(
                         control =
                             Control.Toggle,
-                        effect =
-                            begin(
-                                mode =
-                                    VexBehaviorV2BeginMode.Replaceable,
-                            ) {
-                                save(
-                                    State.Dark,
-                                ).results {
-                                    success {
-                                    }
-
-                                    failure {
-                                    }
-                                }
-                            },
                     ).admit<
                         State.Dark
                     >()
                 }
 
-                // Act: the same Control in a different State is a different behavioral scenario.
+                // The same Control in another State is a different behavioral scenario. Again, no
+                // Effect is earned merely because semantic State changes.
                 state<State.Dark> {
                     on(
                         control =
                             Control.Toggle,
-                        effect =
-                            begin(
-                                mode =
-                                    VexBehaviorV2BeginMode.Replaceable,
-                            ) {
-                                save(
-                                    State.Light,
-                                ).results {
-                                    success {
-                                    }
-
-                                    failure {
-                                    }
-                                }
-                            },
                     ).admit<
                         State.Light
                     >()
@@ -184,11 +157,8 @@ class VexBehaviorV2Test {
             ThemeModeFamily.Control.Toggle,
             act?.control,
         )
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            act?.effect
-                ?.save
-                ?.state,
+        assertNull(
+            act?.effect,
         )
         assertEquals(
             VexBehaviorV2StateDispositionKind.Admit,
@@ -222,17 +192,21 @@ class VexBehaviorV2Test {
                         ThemeModeFamily.Control.Toggle,
                 )
 
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            fromLight?.effect
-                ?.save
-                ?.state,
+        assertNull(
+            fromLight?.effect,
         )
-        assertSame(
-            ThemeModeFamily.State.Light,
-            fromDark?.effect
-                ?.save
-                ?.state,
+        assertNull(
+            fromDark?.effect,
+        )
+        assertEquals(
+            ThemeModeFamily.State.Dark::class,
+            fromLight?.immediateDisposition
+                ?.stateKind,
+        )
+        assertEquals(
+            ThemeModeFamily.State.Light::class,
+            fromDark?.immediateDisposition
+                ?.stateKind,
         )
     }
 
