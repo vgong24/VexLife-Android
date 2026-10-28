@@ -7,11 +7,31 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * Patient-zero proof for the V2 Origin Walk.
+ *
+ * This test intentionally preserves why the current shape exists:
+ *
+ * 1. The first POC copied V1 and created ThemeModeFamily.Act values.
+ * 2. That forced ThemeMode State to be interpreted once in Control->Act and again in Act->Effect.
+ * 3. Removing the intermediate Act vocabulary lost no ThemeMode meaning.
+ * 4. The surviving Act is the authored Behavior scenario itself: State + Control -> Effect +
+ *    stay/admit.
+ *
+ * A fresh implementation should therefore extend State / Control / Behavior below, not recreate a
+ * ThemeModeFamily.Act hierarchy merely because V1 has one.
+ */
 class VexBehaviorV2Test {
     private object ThemeModeFamily :
         VexBehaviorFamily<
             ThemeModeFamily
         > {
+        /**
+         * Family-scoped truth region.
+         *
+         * The nested path makes role and ownership visible without a separate registration list:
+         * ThemeModeFamily.State.Dark cannot be mistaken for an unrelated top-level enum.
+         */
         sealed interface State :
             VexBehaviorFamily.State<
                 ThemeModeFamily
@@ -33,6 +53,12 @@ class VexBehaviorV2Test {
                 this
         }
 
+        /**
+         * Semantic input region.
+         *
+         * Toggle is a singleton for this patient zero. Control is sealed rather than enum-based so
+         * later Families are not forced into finite payload-free Controls.
+         */
         sealed interface Control :
             VexBehaviorFamily.Control<
                 ThemeModeFamily
@@ -41,54 +67,36 @@ class VexBehaviorV2Test {
                 Control
         }
 
-        sealed interface Act :
-            VexBehaviorFamily.Act<
-                ThemeModeFamily
-            > {
-            data object CommitDark :
-                Act
-
-            data object SelectDark :
-                Act
-
-            data object SelectLight :
-                Act
-        }
-
+        /**
+         * Behavior is deliberately exposed as a Family member in the POC.
+         *
+         * This closes the semantic circuit at one discoverable root:
+         *
+         *     ThemeModeFamily
+         *       State
+         *       Control
+         *       Behavior
+         *
+         * The next Origin-Walk refinement may pressure what Behavior should expose toward UI, but
+         * the caller should not need a separate Control resolver or Family.Act vocabulary.
+         */
         val Behavior =
             vexBehaviorV2(
                 family =
                     this,
                 behaviorRef =
                     "example.theme-mode.v2",
-                controlToAct = {
-                        current: State,
-                        control: Control,
-                    ->
-                    when (control) {
-                        Control.Toggle ->
-                            when (current) {
-                                State.NotSet ->
-                                    Act.CommitDark
-
-                                State.Light ->
-                                    Act.SelectDark
-
-                                State.Dark ->
-                                    Act.SelectLight
-                            }
-                    }
-                },
             ) {
+                // Act: while no override is stored, Toggle means attempt durable Dark and remain
+                // immediately in current truth until Save succeeds.
                 state<State.NotSet> {
                     on(
-                        act =
-                            Act.CommitDark,
+                        control =
+                            Control.Toggle,
                         effect =
                             begin(
                                 mode =
-                                    VexBehaviorV2BeginMode
-                                        .Sequenced,
+                                    VexBehaviorV2BeginMode.Sequenced,
                             ) {
                                 save(
                                     State.Dark,
@@ -106,15 +114,16 @@ class VexBehaviorV2Test {
                     ).stay()
                 }
 
+                // Act: while Light is current, Toggle attempts Save(Dark) and immediately admits
+                // Dark. No separate SelectDark value is needed to repeat what this scenario says.
                 state<State.Light> {
                     on(
-                        act =
-                            Act.SelectDark,
+                        control =
+                            Control.Toggle,
                         effect =
                             begin(
                                 mode =
-                                    VexBehaviorV2BeginMode
-                                        .Replaceable,
+                                    VexBehaviorV2BeginMode.Replaceable,
                             ) {
                                 save(
                                     State.Dark,
@@ -131,15 +140,15 @@ class VexBehaviorV2Test {
                     >()
                 }
 
+                // Act: the same Control in a different State is a different behavioral scenario.
                 state<State.Dark> {
                     on(
-                        act =
-                            Act.SelectLight,
+                        control =
+                            Control.Toggle,
                         effect =
                             begin(
                                 mode =
-                                    VexBehaviorV2BeginMode
-                                        .Replaceable,
+                                    VexBehaviorV2BeginMode.Replaceable,
                             ) {
                                 save(
                                     State.Light,
@@ -159,8 +168,8 @@ class VexBehaviorV2Test {
     }
 
     @Test
-    fun familyBehaviorResolvesControlThroughActToEffectInOneCall() {
-        val resolution =
+    fun onStatePlusControlIsTheActWithoutAnotherFamilyVocabulary() {
+        val act =
             ThemeModeFamily.Behavior
                 .resolve(
                     current =
@@ -169,106 +178,96 @@ class VexBehaviorV2Test {
                         ThemeModeFamily.Control.Toggle,
                 )
 
+        // The removal test: everything needed to understand the Act survives without
+        // ThemeModeFamily.Act.SelectDark.
         assertSame(
-            ThemeModeFamily.Act.SelectDark,
-            resolution
-                ?.act,
+            ThemeModeFamily.Control.Toggle,
+            act?.control,
         )
         assertSame(
             ThemeModeFamily.State.Dark,
-            resolution
-                ?.effect
+            act?.effect
                 ?.save
                 ?.state,
         )
         assertEquals(
             VexBehaviorV2StateDispositionKind.Admit,
-            resolution
-                ?.immediateDisposition
+            act?.immediateDisposition
                 ?.kind,
         )
         assertEquals(
             ThemeModeFamily.State.Dark::class,
-            resolution
-                ?.immediateDisposition
+            act?.immediateDisposition
                 ?.stateKind,
         )
     }
 
     @Test
-    fun saveCarriesTheActualThemeModeStateFromTheOriginWalk() {
-        val resolution =
+    fun sameControlCanMeanDifferentActsBecauseCurrentStateOwnsTheScenario() {
+        val fromLight =
             ThemeModeFamily.Behavior
                 .resolve(
                     current =
                         ThemeModeFamily.State.Light,
-                    act =
-                        ThemeModeFamily.Act.SelectDark,
+                    control =
+                        ThemeModeFamily.Control.Toggle,
+                )
+
+        val fromDark =
+            ThemeModeFamily.Behavior
+                .resolve(
+                    current =
+                        ThemeModeFamily.State.Dark,
+                    control =
+                        ThemeModeFamily.Control.Toggle,
                 )
 
         assertSame(
             ThemeModeFamily.State.Dark,
-            resolution
-                ?.effect
+            fromLight?.effect
                 ?.save
                 ?.state,
         )
-        assertEquals(
-            VexBehaviorV2BeginMode.Replaceable,
-            resolution
-                ?.effect
-                ?.mode,
-        )
-        assertEquals(
-            VexBehaviorV2StateDispositionKind.Admit,
-            resolution
-                ?.immediateDisposition
-                ?.kind,
-        )
-        assertEquals(
-            ThemeModeFamily.State.Dark::class,
-            resolution
-                ?.immediateDisposition
-                ?.stateKind,
+        assertSame(
+            ThemeModeFamily.State.Light,
+            fromDark?.effect
+                ?.save
+                ?.state,
         )
     }
 
     @Test
-    fun durabilityGatedSaveCanAdmitTheSameStateLater() {
-        val resolution =
+    fun durabilityGatedActCanAdmitStateLaterAfterSaveSuccess() {
+        val act =
             ThemeModeFamily.Behavior
                 .resolve(
                     current =
                         ThemeModeFamily.State.NotSet,
-                    act =
-                        ThemeModeFamily.Act.CommitDark,
+                    control =
+                        ThemeModeFamily.Control.Toggle,
                 )
 
         assertSame(
             ThemeModeFamily.State.Dark,
-            resolution
-                ?.effect
+            act?.effect
                 ?.save
                 ?.state,
         )
         assertEquals(
             VexBehaviorV2StateDispositionKind.Stay,
-            resolution
-                ?.immediateDisposition
+            act?.immediateDisposition
                 ?.kind,
         )
         assertEquals(
             ThemeModeFamily.State.Dark::class,
-            resolution
-                ?.effect
+            act?.effect
                 ?.save
                 ?.results
                 ?.success
                 ?.admittedStateKind,
         )
         assertNull(
-            resolution
-                ?.effect
+            act?.effect
                 ?.save
                 ?.results
                 ?.failure
@@ -277,7 +276,7 @@ class VexBehaviorV2Test {
     }
 
     @Test
-    fun themeModeCanAlsoBeRelayVexStateWithoutRenamingTheSemanticNoun() {
+    fun themeModeStateCanAlsoBeRelayVexStateWithoutInventingAnotherStateNoun() {
         val copied:
             ThemeModeFamily.State =
             ThemeModeFamily.State.Dark
@@ -292,7 +291,7 @@ class VexBehaviorV2Test {
             ThemeModeFamily.Behavior
                 .describe()
                 .contains(
-                    "Save(Dark)",
+                    "Light --on(Toggle)",
                 ),
         )
     }
@@ -301,40 +300,27 @@ class VexBehaviorV2Test {
         expected =
             IllegalArgumentException::class,
     )
-    fun resultsRequireExplicitSuccessAndFailure() {
-        vexBehaviorV2(
+    fun saveResultsStillRequireExplicitSuccessAndFailure() {
+        // This negative proof exists because removing the Act value must not weaken the already-earned
+        // two-scope Save contract.
+        vexBehaviorV2<
+            ThemeModeFamily,
+            ThemeModeFamily.State,
+            ThemeModeFamily.Control
+        >(
             family =
                 ThemeModeFamily,
             behaviorRef =
                 "example.theme-mode.v2.incomplete-results",
-            controlToAct = {
-                    current: ThemeModeFamily.State,
-                    control: ThemeModeFamily.Control,
-                ->
-                when (control) {
-                    ThemeModeFamily.Control.Toggle ->
-                        when (current) {
-                            ThemeModeFamily.State.NotSet ->
-                                ThemeModeFamily.Act.CommitDark
-
-                            ThemeModeFamily.State.Light ->
-                                ThemeModeFamily.Act.SelectDark
-
-                            ThemeModeFamily.State.Dark ->
-                                ThemeModeFamily.Act.SelectLight
-                        }
-                }
-            },
         ) {
             state<ThemeModeFamily.State.Light> {
                 on(
-                    act =
-                        ThemeModeFamily.Act.SelectDark,
+                    control =
+                        ThemeModeFamily.Control.Toggle,
                     effect =
                         begin(
                             mode =
-                                VexBehaviorV2BeginMode
-                                    .Replaceable,
+                                VexBehaviorV2BeginMode.Replaceable,
                         ) {
                             save(
                                 ThemeModeFamily.State.Dark,
