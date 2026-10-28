@@ -397,6 +397,101 @@ class VexBehaviorV2PlaybackOriginPressureTest {
         )
     }
 
+    @Test
+    fun nestedCurrentSnapshotDetachesCallerOwnedMutableCollectionsWithoutLosingLayers() {
+        val itemRefs =
+            mutableListOf(
+                "item.alpha.one",
+                "item.alpha.two",
+            )
+        val itemValues =
+            mutableMapOf(
+                "item.alpha.one" to
+                    NestedItemState(
+                        itemRef =
+                            "item.alpha.one",
+                        label =
+                            "Alpha One",
+                    ),
+                "item.alpha.two" to
+                    NestedItemState(
+                        itemRef =
+                            "item.alpha.two",
+                        label =
+                            "Alpha Two",
+                    ),
+            )
+        val sectionRefs =
+            mutableListOf(
+                "section.alpha",
+            )
+        val sectionValues =
+            mutableMapOf(
+                "section.alpha" to
+                    NestedSectionState(
+                        sectionRef =
+                            "section.alpha",
+                        items =
+                            StateListSnapshot(
+                                refs =
+                                    itemRefs,
+                                valuesByRef =
+                                    itemValues,
+                            ),
+                    ),
+            )
+
+        val relay =
+            NestedListStateRelay(
+                initialState =
+                    NestedListState(
+                        sections =
+                            StateListSnapshot(
+                                refs =
+                                    sectionRefs,
+                                valuesByRef =
+                                    sectionValues,
+                            ),
+                    ),
+            )
+
+        /*
+         * Mutate every caller-owned collection after VexRelay has accepted the initial State.
+         * The retained current snapshot must not lose a nested layer merely because the caller still
+         * owns the original mutable containers.
+         */
+        itemRefs.clear()
+        itemValues.clear()
+        sectionRefs.clear()
+        sectionValues.clear()
+
+        assertEquals(
+            listOf(
+                "section.alpha",
+            ),
+            relay.current.sections.refs,
+        )
+        assertEquals(
+            listOf(
+                "item.alpha.one",
+                "item.alpha.two",
+            ),
+            relay.current
+                .sections[
+                    "section.alpha"
+                ]
+                .items
+                .refs,
+        )
+        assertEquals(
+            listOf(
+                "Alpha One",
+                "Alpha Two",
+            ),
+            relay.current.displayLabels(),
+        )
+    }
+
     @Test(
         expected =
             IllegalArgumentException::class,
@@ -715,8 +810,11 @@ class VexBehaviorV2PlaybackOriginPressureTest {
             }
 
             return copy(
+                refs =
+                    refs.toList(),
                 valuesByRef =
-                    valuesByRef +
+                    valuesByRef
+                        .toMap() +
                         (
                             ref to
                                 transform(
@@ -727,6 +825,30 @@ class VexBehaviorV2PlaybackOriginPressureTest {
                         ),
             )
         }
+
+        fun snapshot(
+            copyValue:
+                (
+                    Value,
+                ) ->
+                    Value,
+        ):
+            StateListSnapshot<
+                Ref,
+                Value
+            > =
+            StateListSnapshot(
+                refs =
+                    refs.toList(),
+                valuesByRef =
+                    refs.associateWith { ref ->
+                        copyValue(
+                            get(
+                                ref,
+                            ),
+                        )
+                    },
+            )
     }
 
     private data class NestedItemState(
@@ -754,12 +876,25 @@ class VexBehaviorV2PlaybackOriginPressureTest {
             NestedListState
         > {
         /*
-         * This fixture is structurally immutable: lists/maps are created as snapshot values and no
-         * mutable collection handles are exposed. copy() preserves every root field by default.
+         * V1 Relay deepCopy protects ownership detachment; stable refs protect semantic identity.
+         *
+         * Copy from CURRENT and replace only the nested ownership-bearing collection field. Using
+         * data-class copy preserves any future root siblings by default instead of reconstructing a
+         * selected subset of constructor arguments.
          */
         override fun deepCopy():
             NestedListState =
-            copy()
+            copy(
+                sections =
+                    sections.snapshot { section ->
+                        section.copy(
+                            items =
+                                section.items.snapshot { item ->
+                                    item.copy()
+                                },
+                        )
+                    },
+            )
 
         fun displayLabels():
             List<String> =
