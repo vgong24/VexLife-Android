@@ -75,7 +75,7 @@ class VexBehaviorV2<
                     when (
                         operation
                     ) {
-                        is VexBehaviorV2Save ->
+                        is VexBehaviorV2Save<*, *> ->
                             require(
                                 operation
                                     .state
@@ -188,7 +188,7 @@ class VexBehaviorV2<
                         val operation =
                             effect.operation
                     ) {
-                        is VexBehaviorV2Save -> {
+                        is VexBehaviorV2Save<*, *> -> {
                             append(
                                 "Save(",
                             )
@@ -498,13 +498,24 @@ abstract class VexBehaviorV2Family<
             val operation =
                 effect.operation
         ) {
-            is VexBehaviorV2Save ->
+            is VexBehaviorV2Save<*, *> -> {
+                @Suppress(
+                    "UNCHECKED_CAST",
+                )
+                val familySave =
+                    operation as
+                        VexBehaviorV2Save<
+                            Family,
+                            State
+                        >
+
                 beginSave(
                     mode =
                         effect.mode,
                     save =
-                        operation,
+                        familySave,
                 )
+            }
 
             else ->
                 error(

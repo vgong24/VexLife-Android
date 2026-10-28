@@ -372,7 +372,10 @@ class VexBehaviorV2Test {
             assertTrue(
                 act?.effect
                     ?.operation is
-                    VexBehaviorV2Save,
+                    VexBehaviorV2Save<
+                        *,
+                        *
+                    >,
             )
 
             store.gate.complete(
