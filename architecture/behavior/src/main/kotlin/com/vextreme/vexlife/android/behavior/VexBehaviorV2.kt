@@ -9,10 +9,12 @@ import kotlin.reflect.KClass
  * begin(...) scope itself, and the operation inside it is Save(State).
  */
 class VexBehaviorV2<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-    Act : VexBehaviorFamily.Act<Family>,
+    Family,
+    State,
+    Control,
+    Act,
 > internal constructor(
+    val family: Family,
     val behaviorRef: String,
     val states: Set<KClass<out State>>,
     val relationships:
@@ -23,7 +25,22 @@ class VexBehaviorV2<
                 Act
             >
         >,
-) {
+)
+    where Family : VexBehaviorFamily<Family>,
+          Family : VexBehaviorFamily.Members<
+              Family,
+              State,
+              Control,
+              Act,
+              VexBehaviorV2Begin<
+                  Family,
+                  State
+              >
+          >,
+          State : VexBehaviorFamily.State<Family>,
+          Control : Enum<Control>,
+          Control : VexBehaviorFamily.Control<Family>,
+          Act : VexBehaviorFamily.Act<Family> {
     val v1:
         VexBehaviorBlueprint<
             Family,
@@ -223,7 +240,7 @@ class VexBehaviorV2<
         )
     }
 
-    inline fun <reified Control> controls(
+    fun controls(
         block:
             VexBehaviorControlBlueprintBuilder<
                 Family,
@@ -239,12 +256,21 @@ class VexBehaviorV2<
             State
         >,
         Control
-    >
-        where Control : Enum<Control>,
-              Control : VexBehaviorFamily.Control<Family> =
-        v1.controls(
-            block,
+    > =
+        VexBehaviorControlBlueprintBuilder<
+            Family,
+            Act,
+            Control
+        >(
+            expectedControls =
+                family.controls,
         )
+            .apply(
+                block,
+            )
+            .build(
+                v1,
+            )
 
     fun describe(): String =
         buildString {
@@ -378,7 +404,6 @@ fun <
     State,
     Control,
     Act,
-    Effect,
 > vexBehaviorV2(
     family: Family,
     behaviorRef: String,
@@ -386,11 +411,13 @@ fun <
         VexBehaviorV2Builder<
             Family,
             State,
+            Control,
             Act
         >.() -> Unit,
 ): VexBehaviorV2<
     Family,
     State,
+    Control,
     Act
 >
     where Family : VexBehaviorFamily<Family>,
@@ -399,21 +426,19 @@ fun <
               State,
               Control,
               Act,
-              Effect
+              VexBehaviorV2Begin<
+                  Family,
+                  State
+              >
           >,
           State : VexBehaviorFamily.State<Family>,
+          Control : Enum<Control>,
           Control : VexBehaviorFamily.Control<Family>,
-          Act : VexBehaviorFamily.Act<Family>,
-          Effect : VexBehaviorFamily.Effect<Family> {
-    @Suppress(
-        "UNUSED_VARIABLE",
-    )
-    val familyMemberMap =
-        family
-
-    return VexBehaviorV2Builder<
+          Act : VexBehaviorFamily.Act<Family> =
+    VexBehaviorV2Builder<
         Family,
         State,
+        Control,
         Act
     >(
         behaviorRef =
@@ -422,7 +447,8 @@ fun <
         .apply(
             block,
         )
-        .build()
-}
+        .build(
+            family,
+        )
 
 // [VXG RealForever]
