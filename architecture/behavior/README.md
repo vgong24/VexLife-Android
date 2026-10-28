@@ -20,6 +20,56 @@ This module preserves the geometry of **what a human can do from what is true no
 
 
 
+
+
+## V2 Origin-Walk test progression
+
+The V2 tests are deliberately an **evolution sequence**, not three interchangeable examples.
+
+Read them in this order:
+
+~~~text
+1. VexBehaviorV2Test
+   ThemeMode patient zero
+   -> Family-root authoring
+   -> structural Act
+   -> concrete stay/admit
+   -> optional begin/Save/results
+   -> local State-store execution/accounting
+
+2. VexBehaviorUiRoundTripReferenceTest
+   activation-currentness pressure
+   -> UI reads DisplayState
+   -> UI sends Control only
+   -> Family re-reads CURRENT semantic State
+   -> stale render is not activation authority
+
+3. app/.../vexstream/playback/VexBehaviorV2PlaybackOriginPressureTest
+   cross-feature edge pressure
+   -> provider observation must reconcile with newer local intent
+   -> payload Seek retains exact media identity/currentness
+   -> Control availability derives from current semantic/provider capability
+   -> current exact-value V2 Control matching does NOT yet generalize runtime payloads
+~~~
+
+The third class is intentionally a **pressure reference**, not the newest confirmed V2 template.
+
+~~~text
+PASSING PRESSURE TEST
+!= V2 SUPPORTS THE FEATURE
+!= PRODUCTION PLAYBACK SHOULD BE REFACTORED NOW
+~~~
+
+Its purpose is to make unresolved boundaries executable so a later Origin Walk cannot accidentally
+erase them with prose or a convenient abstraction. Production Playback remains unchanged until a V2
+candidate can satisfy those pressures without stealing Media3 ownership, duplicating availability
+rules, losing payload identity or bypassing reconciliation.
+
+Once a later candidate makes the pressure class read naturally without escape hatches, that candidate
+can earn a new reference/proof layer and only then pressure production refactoring.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][TEST-EVOLUTION][PLAYBACK-PRESSURE] -->
+
 ## Current V2 currentness boundary
 
 "Currentness" is not one mechanism. The Origin Walk currently distinguishes these separate questions:

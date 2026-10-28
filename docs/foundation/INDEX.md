@@ -563,3 +563,26 @@ SharedPreferences appears only in the Android instrumented target proof; it is n
 definition. Production ThemeMode/session migration remains outside this draft PR.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STORE-EXECUTION] -->
+
+
+### V2 Behavior Origin Walk — executable evolution references
+
+The V2 draft now carries three intentionally different test roles:
+
+~~~text
+VexBehaviorV2Test
+  -> local ThemeMode patient-zero language/runtime
+
+VexBehaviorUiRoundTripReferenceTest
+  -> stale-render activation-currentness reference
+
+VexBehaviorV2PlaybackOriginPressureTest
+  -> Playback edge pressure; NOT a confirmed V2 Playback template
+~~~
+
+The Playback pressure class lives in the app Playback test package so it can consume the real current
+Playback semantics rather than copying Media3/pending/Seek rules into the Behavior foundation. A
+passing pressure test preserves the unresolved requirement; it does not authorize production Playback
+refactoring.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PLAYBACK-PRESSURE] -->
