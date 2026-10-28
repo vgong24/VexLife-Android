@@ -201,22 +201,78 @@ view classification is currently earned; Mini Player and Context Dock still cons
 A generic `VexExperience` abstraction remains held until a second real feature proves the same
 surface across features, not merely two VexStream families.
 
-## V2 two-scope refinement — sibling experiment, not replacement
+## V2 Origin-Walk refinement — sibling experiment, not replacement
 
-The accepted V1 kernel remains the production-used contract. V2 exists beside it so the ThemeMode
-Origin Walk can pressure a more contained Family shape without silently rewriting existing consumers.
+The accepted V1 kernel remains production-used and is intentionally left intact above. V2 exists beside
+it so the ThemeMode Origin Walk can pressure the smallest complete semantic circuit without silently
+rewriting existing VexStream / Queue consumers.
 
 The governing rule is:
 
 ~~~text
 Origin earns the language
--> Kotlin maps it
--> Kotlin does not rename it for convenience
+-> Kotlin realizes it
+-> Kotlin does not manufacture a type merely because V1 had one
 ~~~
+
+### What the POC discovered
+
+The first V2 shape copied V1 literally:
+
+~~~text
+State + Control
+-> Act value
+
+State + Act value
+-> Effect + State consequence
+~~~
+
+ThemeMode exposed a duplication:
+
+~~~text
+State.Light + Control.Toggle
+-> Act.SelectDark
+
+then:
+
+State.Light + Act.SelectDark
+-> Save(State.Dark) + admit State.Dark
+~~~
+
+The same State meaning was authored twice, and `Act.SelectDark` repeated meaning already visible in the
+behavioral scenario.
+
+The removal test then asked:
+
+~~~text
+remove ThemeModeFamily.Act.SelectDark
+
+did we lose:
+  which State was current?        no
+  which Control entered?          no
+  which Effect was attempted?     no
+  which State consequence occurs? no
+~~~
+
+So the intermediate **Act value/type hierarchy was not earned for this POC**.
+
+What survived was the Act as the behavior scenario itself:
+
+~~~text
+CURRENT State + Control
+-> Act {
+     Effect
+     immediate stay/admit
+     optional later result admission
+   }
+~~~
+
+V2 therefore uses `Act` as the authored `on(...)` relationship/process, not as another Family member
+vocabulary that a fresh feature must invent.
 
 ### Family as the visible root
 
-The current V2 experiment makes the Family the namespace/root:
+Current patient-zero shape:
 
 ~~~kotlin
 object ThemeModeFamily :
@@ -234,33 +290,38 @@ object ThemeModeFamily :
         VexBehaviorFamily.Control<ThemeModeFamily> {
 
         data object Toggle : Control
-
-        // A different Family may use parameterized controls:
-        // data class Click(val songId: SongId) : Control
     }
 
-    sealed interface Act :
-        VexBehaviorFamily.Act<ThemeModeFamily> {
-
-        data object CommitDark : Act
-        data object SelectDark : Act
-        data object SelectLight : Act
-    }
+    val Behavior =
+        vexBehaviorV2(
+            family = this,
+            behaviorRef = "theme-mode",
+        ) {
+            // Acts are authored here as State + Control scenarios.
+        }
 }
 ~~~
 
-The foundation role markers remain open:
+This gives one discoverable semantic root:
 
 ~~~text
-VexBehaviorFamily.State<Family>
-VexBehaviorFamily.Control<Family>
-VexBehaviorFamily.Act<Family>
-VexBehaviorFamily.Effect<Family>
+ThemeModeFamily
+  State
+  Control
+  Behavior
+    Acts
+      Effects
 ~~~
 
-and each concrete Family closes the role region that belongs to it with its own sealed interface.
+There is deliberately no `ThemeModeFamily.Act` in V2.
 
-This creates self-identifying paths:
+The `VexBehaviorFamily.Act<Family>` foundation marker remains only because V1 production consumers still
+use the older Act-as-vocabulary contract. Its KDoc records that compatibility boundary so a fresh AI does
+not recreate a V2 Family.Act merely for symmetry.
+
+### State and Control are contained, not registered twice
+
+State and Control remain Family-scoped sealed regions:
 
 ~~~text
 ThemeModeFamily.State.NotSet
@@ -268,14 +329,11 @@ ThemeModeFamily.State.Light
 ThemeModeFamily.State.Dark
 
 ThemeModeFamily.Control.Toggle
-
-ThemeModeFamily.Act.CommitDark
-ThemeModeFamily.Act.SelectDark
-ThemeModeFamily.Act.SelectLight
 ~~~
 
-A Control region is sealed rather than enum-only. The set of Control **shapes** is closed, while an
-individual shape may carry unbounded payload:
+No `Members<...>` registry exists.
+
+A Control region is sealed rather than enum-only, so another Family may later carry payload:
 
 ~~~kotlin
 sealed interface Control :
@@ -287,158 +345,77 @@ sealed interface Control :
 }
 ~~~
 
-So:
+The current ThemeMode proof resolves exact Control values because Toggle is a singleton. Matching
+payload-bearing Control **shapes** such as `Click(songId)` remains the next explicit pressure; V2 does not
+hide that unfinished edge behind an unearned matcher framework.
 
-~~~text
-known Control kind:
-  Click
+### The authored Act
 
-possible Control values:
-  Click(songA)
-  Click(songB)
-  Click(songC)
-  ...
-~~~
-
-No Idle/Reset Control is required merely because an event finished. If idle-ness is meaningful current
-truth, it belongs in State.
-
-### No Members registry — builder inference
-
-An earlier V2 prototype introduced a manual `Members<...>` map so the Family could recover State /
-Control / Act types. That duplicated information already present in the nested role types.
-
-The current experiment removes that registry.
-
-Kotlin builder inference can infer the Behavior State and Act types from the actual Family-bound
-declarations used inside the block:
+ThemeMode's immediate Toggle scenario now reads:
 
 ~~~kotlin
-vexBehaviorV2(
-    ThemeModeFamily,
-    behaviorRef = "theme-mode",
-) {
-    state<ThemeModeFamily.State.Light> {
-        on(
-            act = ThemeModeFamily.Act.SelectDark,
-            ...
-        )
-    }
-}
-~~~
-
-The compiler constraints still require:
-
-~~~text
-State : VexBehaviorFamily.State<ThemeModeFamily>
-Act   : VexBehaviorFamily.Act<ThemeModeFamily>
-~~~
-
-but the author does not repeat those types in a generic argument list or a secondary registry.
-
-Kotlin cannot make `State` an abstract associated-type slot that every implementing Family overrides by
-name. Nested classifiers are declarations, not virtual type members. Therefore the exact
-`Family.State / Family.Control / Family.Act` source shape is authored by the concrete Family itself,
-while generic type bounds and builder inference protect use of those members.
-
-### Family Behavior owns the semantic input circuit
-
-The current V2 proof no longer requires a Connection/caller to manually join a Control resolver and an
-Act resolver.
-
-The Family owns one Behavior value:
-
-~~~kotlin
-ThemeModeFamily.Behavior.resolve(
-    current = ThemeModeFamily.State.Light,
-    control = ThemeModeFamily.Control.Toggle,
-)
-~~~
-
-and that single call preserves both semantic equations internally:
-
-~~~text
-Control + CURRENT State
--> Act
-
-CURRENT State + Act
--> Effect + immediate State disposition
-~~~
-
-The focused contract test proves:
-
-~~~text
-State.Light
-+ Control.Toggle
--> Act.SelectDark
--> begin(Replaceable) { Save(State.Dark) }
--> admit State.Dark
-~~~
-
-The runtime Connection remains the reality/currentness boundary. Its semantic job can therefore reduce
-toward:
-
-~~~text
-receive Control
--> read CURRENT State
--> Family.Behavior.resolve(State, Control)
--> realize returned Effect
--> observe/reconcile reality
-~~~
-
-rather than manually stitching separate ControlBlueprint and BehaviorBlueprint resolution layers.
-
-The current Control-to-Act mapper is value-based rather than enum-registration-based, so a later
-parameterized Control such as `Click(songId)` can preserve its payload when producing an Act. The exact
-parameterized authoring DSL remains an Origin-Walk pressure point; this ThemeMode test does not claim that
-syntax is settled.
-
-### Direct Origin mapping
-
-~~~text
-ORIGIN WALK
-  Save(ThemeModeFamily, ThemeModeFamily.State.Dark)
-
-KOTLIN INSIDE THE FAMILY-BOUND BEHAVIOR
-  save(ThemeModeFamily.State.Dark)
-~~~
-
-The Family argument is already fixed by the surrounding Behavior scope.
-
-Immediate form:
-
-~~~kotlin
-state<ThemeModeFamily.State.Light> {
+state<State.Light> {
     on(
-        act = ThemeModeFamily.Act.SelectDark,
+        control = Control.Toggle,
         effect = begin(
             mode = VexBehaviorV2BeginMode.Replaceable,
         ) {
             save(
-                ThemeModeFamily.State.Dark,
+                State.Dark,
             ).results {
                 success { }
                 failure { }
             }
         },
-    ).admit<ThemeModeFamily.State.Dark>()
+    ).admit<State.Dark>()
 }
 ~~~
 
-Durability-gated form:
+Read it as one sentence:
+
+~~~text
+WHILE State.Light is current
+ON Control.Toggle
+ACT by:
+  begin Replaceable
+  Save(State.Dark)
+  admit State.Dark immediately
+~~~
+
+The same Control in another State is a different Act:
 
 ~~~kotlin
-state<ThemeModeFamily.State.NotSet> {
+state<State.Dark> {
     on(
-        act = ThemeModeFamily.Act.CommitDark,
+        control = Control.Toggle,
+        effect = begin(
+            mode = VexBehaviorV2BeginMode.Replaceable,
+        ) {
+            save(
+                State.Light,
+            ).results {
+                success { }
+                failure { }
+            }
+        },
+    ).admit<State.Light>()
+}
+~~~
+
+The durability-gated Act preserves the already-earned two temporal scopes:
+
+~~~kotlin
+state<State.NotSet> {
+    on(
+        control = Control.Toggle,
         effect = begin(
             mode = VexBehaviorV2BeginMode.Sequenced,
         ) {
             save(
-                ThemeModeFamily.State.Dark,
+                State.Dark,
             ).results {
                 success {
-                    admit<ThemeModeFamily.State.Dark>()
+                    admit<State.Dark>()
                 }
 
                 failure { }
@@ -448,43 +425,135 @@ state<ThemeModeFamily.State.NotSet> {
 }
 ~~~
 
-The SCAE Effect is the structured `begin(...)` scope. `Save(...)` is the operation inside that Effect.
-V2 does not invent a feature-local `SaveDark` Effect.
+So:
+
+~~~text
+NOW
+  stay in the current State
+
+LATER
+  Save succeeds
+  -> admit State.Dark
+~~~
+
+Removing the Family.Act value did not weaken Save / Success / Failure / later-admission semantics.
+
+### Runtime entrance
+
+The runtime-facing semantic call is now one operation:
+
+~~~kotlin
+val act =
+    ThemeModeFamily.Behavior.resolve(
+        current = currentState,
+        control = incomingControl,
+    )
+~~~
+
+The caller does not perform:
+
+~~~text
+Control blueprint
+-> Act value
+-> Behavior blueprint
+~~~
+
+Instead Behavior selects the one authored Act whose State + Control input matches.
+
+That lets the Connection remain the reality/currentness boundary:
+
+~~~text
+receive semantic Control
+-> read CURRENT State
+-> Family.Behavior.resolve(State, Control)
+-> realize Act.effect
+-> observe provider/runtime truth
+-> reconcile current State
+~~~
+
+The POC therefore removes semantic assembly from the Connection without turning Family into a runtime
+service.
+
+### Effect language remains Origin-owned
+
+The SCAE Effect is still the structured `begin(...)` scope, and Save is the operation inside it:
+
+~~~text
+begin(mode = Replaceable | Sequenced) {
+  Save(State)
+    .results {
+      Success { optional later admit }
+      Failure { optional later admit }
+    }
+}
+~~~
+
+Kotlin uses target-native casing:
+
+~~~kotlin
+begin(...) {
+    save(State.Dark)
+        .results {
+            success { }
+            failure { }
+        }
+}
+~~~
+
+The surrounding Behavior already fixes Family, so `save(State.Dark)` is the target realization of
+`Save(ThemeModeFamily, ThemeModeFamily.State.Dark)` without repeating Family as a runtime token.
+
+### Why the code comments are unusually causal
+
+The V2 source and focused test deliberately record the POC history, not just API mechanics.
+
+A fresh AI should be able to recover:
+
+~~~text
+why no Family.Act exists in V2
+why Control is sealed rather than enum-only
+why Behavior is exposed from the Family root
+why on(State + Control) is called the Act
+why V1's Act marker still exists
+why payload-bearing Control matching remains held
+~~~
+
+The comments exist to prevent an apparently reasonable "cleanup" from recreating the superseded
+Control->Act-value->Effect layering.
 
 ### Source-organization tradeoff
 
-This Family-root form intentionally pressures the existing V1 seven-file package pattern.
-
-Kotlin does not support partial nested type declarations across files. Therefore true paths such as:
+True paths such as:
 
 ~~~text
 ThemeModeFamily.State.Dark
 ThemeModeFamily.Control.Toggle
-ThemeModeFamily.Act.SelectDark
+ThemeModeFamily.Behavior
 ~~~
 
-mean those role declarations live under the Family root declaration rather than in independent
-`ThemeModeState.kt`, `ThemeModeControl.kt`, and `ThemeModeAct.kt` declarations.
+mean those declarations live under the Family root. Kotlin does not provide partial nested-type
+declarations across independent files.
 
-That is a real tradeoff, not an implementation accident:
+That intentionally pressures the older V1 seven-file package pattern:
 
 ~~~text
-V1 PACKAGE EMPHASIS
-  separate role files
-  + shared Family generic coordinate
+V1
+  separate Family / State / Control / Act / Effect / Behavior types
 
-V2 FAMILY-ROOT PRESSURE
-  one visible Family region
-  + nested closed member regions
-  + less scattered registration / naming ambiguity
+V2 patient zero
+  one visible Family root
+    State
+    Control
+    Behavior
+      Acts
+        Effects
 ~~~
 
-The V2 experiment does not yet declare that every production Family must adopt this source organization.
-It exists to determine whether the containment/readability benefit is worth changing the older file pattern.
+This POC does not yet mandate migration of existing V1 families.
 
 ### Fractal State compatibility
 
-The focused proof also makes the nested State region satisfy Relay State:
+The focused proof also keeps the same nested State region compatible with Relay:
 
 ~~~text
 ThemeModeFamily.State
@@ -492,8 +561,28 @@ ThemeModeFamily.State
   + VexState<ThemeModeFamily.State>
 ~~~
 
-so the same family-scoped State can participate in SCAE and Relay/Convergence without inventing another
-semantic noun.
+No second `ThemeState` noun is introduced.
+
+### Next pressure after the end-to-end circuit
+
+The ThemeMode path is now sufficiently closed to move the Origin Walk to the next questions rather than
+recreating the same semantic bridge:
+
+~~~text
+1. What should Behavior itself be as a Family member?
+   value / function / stable contract / another shape?
+
+2. What does UI actually need to see from Family.Behavior?
+   current State?
+   available semantic Controls?
+   projection?
+   activation surface?
+
+3. How should payload-bearing Control shapes be authored/matched
+   without returning to registration lists or an extra Act-value layer?
+~~~
+
+Those questions are held as the next refinement edge, not silently answered by the current POC.
 
 V2 remains an experiment. Do not migrate V1 consumers merely because V2 exists.
 
