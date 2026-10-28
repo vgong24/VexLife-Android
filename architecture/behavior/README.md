@@ -206,6 +206,10 @@ surface across features, not merely two VexStream families.
 The accepted V1 kernel remains the production-used contract. V2 exists beside it so the ThemeMode
 Origin Walk can be proven in ordinary Kotlin without changing VexStream/Queue semantics in place.
 
+V2 naming intentionally sorts under one `VexBehaviorV2...` prefix. Its generic equations preserve the
+same Family-first ordering as V1 (`Family, State, Act, Effect`), while Control remains a separately bound
+finite vocabulary through `controls<Control>()`.
+
 ~~~text
 V1
   State + Act
@@ -230,7 +234,7 @@ The implementation deliberately wraps a V1-compatible immediate blueprint rather
 resolution or SCAE family typing.
 
 ~~~text
-VexBehaviorBlueprintV2.v1
+VexBehaviorV2Blueprint.v1
 -> ordinary V1 Control projection / resolution remains reusable
 ~~~
 
