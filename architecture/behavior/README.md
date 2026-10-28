@@ -220,14 +220,7 @@ The current V2 experiment makes the Family the namespace/root:
 
 ~~~kotlin
 object ThemeModeFamily :
-    VexBehaviorFamily<ThemeModeFamily>,
-    VexBehaviorFamily.Members<
-        ThemeModeFamily,
-        ThemeModeFamily.State,
-        ThemeModeFamily.Control,
-        ThemeModeFamily.Act,
-        VexBehaviorV2Begin<ThemeModeFamily, ThemeModeFamily.State>,
-    > {
+    VexBehaviorFamily<ThemeModeFamily> {
 
     sealed interface State :
         VexBehaviorFamily.State<ThemeModeFamily> {
@@ -237,9 +230,13 @@ object ThemeModeFamily :
         data object Dark : State
     }
 
-    enum class Control :
+    sealed interface Control :
         VexBehaviorFamily.Control<ThemeModeFamily> {
-        Toggle,
+
+        data object Toggle : Control
+
+        // A different Family may use parameterized controls:
+        // data class Click(val songId: SongId) : Control
     }
 
     sealed interface Act :
@@ -249,11 +246,19 @@ object ThemeModeFamily :
         data object SelectDark : Act
         data object SelectLight : Act
     }
-
-    override val controls =
-        Control.entries.toSet()
 }
 ~~~
+
+The foundation role markers remain open:
+
+~~~text
+VexBehaviorFamily.State<Family>
+VexBehaviorFamily.Control<Family>
+VexBehaviorFamily.Act<Family>
+VexBehaviorFamily.Effect<Family>
+~~~
+
+and each concrete Family closes the role region that belongs to it with its own sealed interface.
 
 This creates self-identifying paths:
 
@@ -269,48 +274,72 @@ ThemeModeFamily.Act.SelectDark
 ThemeModeFamily.Act.SelectLight
 ~~~
 
-A reader no longer has to infer whether a top-level `ThemeMode` or `SelectDark` symbol is a State,
-Control, Act or unrelated type.
+A Control region is sealed rather than enum-only. The set of Control **shapes** is closed, while an
+individual shape may carry unbounded payload:
 
-`State` and `Act` are sealed regions. `Control` is an enum, so adding a Control automatically appears
-through `Control.entries`; there is no second hand-maintained registration list of individual Controls.
+~~~kotlin
+sealed interface Control :
+    VexBehaviorFamily.Control<SongFamily> {
 
-### One member map, then inference
-
-The `Members` contract records the role types once:
-
-~~~text
-ThemeModeFamily
-  State   -> ThemeModeFamily.State
-  Control -> ThemeModeFamily.Control
-  Act     -> ThemeModeFamily.Act
-  Effect  -> VexBehaviorV2Begin<ThemeModeFamily, ThemeModeFamily.State>
+    data class Click(
+        val songId: SongId,
+    ) : Control
+}
 ~~~
 
-Behavior authoring then needs only the Family value:
+So:
+
+~~~text
+known Control kind:
+  Click
+
+possible Control values:
+  Click(songA)
+  Click(songB)
+  Click(songC)
+  ...
+~~~
+
+No Idle/Reset Control is required merely because an event finished. If idle-ness is meaningful current
+truth, it belongs in State.
+
+### No Members registry — builder inference
+
+An earlier V2 prototype introduced a manual `Members<...>` map so the Family could recover State /
+Control / Act types. That duplicated information already present in the nested role types.
+
+The current experiment removes that registry.
+
+Kotlin builder inference can infer the Behavior State and Act types from the actual Family-bound
+declarations used inside the block:
 
 ~~~kotlin
 vexBehaviorV2(
     ThemeModeFamily,
     behaviorRef = "theme-mode",
 ) {
-    ...
+    state<ThemeModeFamily.State.Light> {
+        on(
+            act = ThemeModeFamily.Act.SelectDark,
+            ...
+        )
+    }
 }
 ~~~
 
-Control binding likewise infers its Control type:
+The compiler constraints still require:
 
-~~~kotlin
-themeModeBehavior().controls {
-    control(
-        ThemeModeFamily.Control.Toggle,
-        ThemeModeFamily.Act.SelectDark,
-        ThemeModeFamily.Act.SelectLight,
-    )
-}
+~~~text
+State : VexBehaviorFamily.State<ThemeModeFamily>
+Act   : VexBehaviorFamily.Act<ThemeModeFamily>
 ~~~
 
-There is no repeated `<ThemeModeFamily, State, Act>` or `<Control>` at those use sites.
+but the author does not repeat those types in a generic argument list or a secondary registry.
+
+Kotlin cannot make `State` an abstract associated-type slot that every implementing Family overrides by
+name. Nested classifiers are declarations, not virtual type members. Therefore the exact
+`Family.State / Family.Control / Family.Act` source shape is authored by the concrete Family itself,
+while generic type bounds and builder inference protect use of those members.
 
 ### Direct Origin mapping
 
