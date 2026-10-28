@@ -7,19 +7,26 @@ import kotlin.reflect.KClass
 /**
  * Required minimum Family display/projectable-output role.
  *
- * Mandatory does NOT mean every Family must invent a second presentation truth. The requirement is
- * that a fresh human/AI/UI/VexBoard consumer can always ask the Family for one bounded, discoverable
- * output surface instead of reconstructing presentation from semantic State ad hoc.
+ * A feature Family is not reviewed as an isolated class. It participates in a larger fractal
+ * application ecosystem: UI, VexBoard, widgets, diagnostics and later consumers may all need the
+ * Family's outward meaning without reinterpreting raw semantic State independently.
  *
- * The removal test is therefore relational:
+ * Mandatory therefore does NOT mean every Family must invent a second presentation truth. The
+ * requirement is that a fresh human/AI/consumer can always find one bounded, Family-owned output
+ * coordinate.
+ *
+ * The removal test is ecosystem-aware:
  *
  *     remove DisplayState
- *     -> semantic State still exists
- *     -> but the guaranteed State -> human/projectable-output relationship disappears
+ *     -> semantic State still exists locally
+ *     -> but the designated State -> human/projectable-output relationship disappears
+ *     -> downstream consumers must invent that ownership again
+ *
+ * Empty(current) is the structural zero for that relationship: it adds no new semantic fact, while
+ * preserving where outward/projectable meaning belongs until richer presentation pressure is earned.
  *
  * The type parameter preserves Family/State association, but concrete display projections do not
- * need to expose the full semantic State. The foundation Empty(current) form explicitly means:
- * "this Family has not earned a richer display classification; project current semantic truth."
+ * need to expose the full semantic State.
  */
 interface VexBehaviorV2DisplayState<
     out State,

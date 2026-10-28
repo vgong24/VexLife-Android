@@ -420,7 +420,7 @@ class VexBehaviorV2Test {
     }
 
     @Test
-    fun displayStateIsAlwaysPresentAndDefaultsToEmptyCurrentState() {
+    fun displayStateRoleRemainsPresentAsStructuralZeroWhenNoRicherProjectionIsEarned() {
         val root =
             VexExecutionRoot()
 
@@ -433,6 +433,12 @@ class VexBehaviorV2Test {
                         root,
                 )
 
+            /*
+             * Empty(current) intentionally adds no new semantic truth. It proves the Family still
+             * owns one canonical projectable-output coordinate, so UI/VexBoard/later consumers do
+             * not have to invent where State interpretation belongs merely because this Family has
+             * not earned richer presentation categories.
+             */
             assertEquals(
                 VexBehaviorV2DisplayState.Empty(
                     MinimalFamily.State.Idle,

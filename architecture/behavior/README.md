@@ -1255,6 +1255,78 @@ This remains worth pressure-testing against non-visual Families, but the current
 DisplayState is discoverability/projectability, not duplication of truth.
 
 
+
+
+## Ecosystem-aware removal tests
+
+Origin removal tests must follow the **relationship through the larger fractal ecosystem**, not stop
+at the local class/file.
+
+A local value may be information-redundant while its ownership coordinate remains structurally
+necessary.
+
+Use this sequence:
+
+~~~text
+1. What local information disappears?
+
+2. What relationship disappears?
+
+3. Which larger Family/fractal consumers rely on that relationship?
+   UI
+   VexBoard
+   widgets
+   diagnostics
+   future projections
+
+4. Would removal force those consumers to reconstruct or reinterpret upstream meaning?
+
+5. If no correctness, ownership, projectability, continuity or proof relationship is lost anywhere
+   in that ecosystem, remove it.
+~~~
+
+This is why `DisplayState.Empty(current)` survives its current removal test:
+
+~~~text
+Empty(current)
+  adds no new semantic truth
+
+DisplayState ROLE
+  preserves the Family-owned coordinate for outward/projectable meaning
+~~~
+
+Think of `Empty(current)` as a structural zero:
+
+~~~text
+[]
+  contains no elements
+  but preserves "this is where this collection relationship lives"
+
+DisplayState.Empty(current)
+  contains no richer display classification
+  but preserves "this is where this Family's projectable meaning lives"
+~~~
+
+Without that coordinate, a fresh implementation is forced to invent placement again:
+
+~~~text
+ThemeModeProjection?
+ThemeModeUiState?
+ThemeModeViewState?
+Experience?
+Composable mapper?
+ViewModel property?
+VexBoard adapter?
+~~~
+
+That is not simplification if every downstream consumer must rediscover the ownership boundary.
+
+The rule is still bounded: mandatory DisplayState role does **not** require a custom display
+vocabulary, full semantic State exposure, or a second truth owner.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][ECOSYSTEM-AWARE-REMOVAL] -->
+
+
 ## V2 threshold — runtime State + payload Control materialize the Act
 
 Playback pressure earned one reusable refinement without deciding provider observation.
