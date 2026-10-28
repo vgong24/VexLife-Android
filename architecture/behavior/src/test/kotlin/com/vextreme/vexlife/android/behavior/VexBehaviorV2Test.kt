@@ -54,96 +54,151 @@ class VexBehaviorV2Test {
             data object SelectLight :
                 Act
         }
+
+        val Behavior =
+            vexBehaviorV2(
+                family =
+                    this,
+                behaviorRef =
+                    "example.theme-mode.v2",
+                controlToAct = {
+                        current: State,
+                        control: Control,
+                    ->
+                    when (control) {
+                        Control.Toggle ->
+                            when (current) {
+                                State.NotSet ->
+                                    Act.CommitDark
+
+                                State.Light ->
+                                    Act.SelectDark
+
+                                State.Dark ->
+                                    Act.SelectLight
+                            }
+                    }
+                },
+            ) {
+                state<State.NotSet> {
+                    on(
+                        act =
+                            Act.CommitDark,
+                        effect =
+                            begin(
+                                mode =
+                                    VexBehaviorV2BeginMode
+                                        .Sequenced,
+                            ) {
+                                save(
+                                    State.Dark,
+                                ).results {
+                                    success {
+                                        admit<
+                                            State.Dark
+                                        >()
+                                    }
+
+                                    failure {
+                                    }
+                                }
+                            },
+                    ).stay()
+                }
+
+                state<State.Light> {
+                    on(
+                        act =
+                            Act.SelectDark,
+                        effect =
+                            begin(
+                                mode =
+                                    VexBehaviorV2BeginMode
+                                        .Replaceable,
+                            ) {
+                                save(
+                                    State.Dark,
+                                ).results {
+                                    success {
+                                    }
+
+                                    failure {
+                                    }
+                                }
+                            },
+                    ).admit<
+                        State.Dark
+                    >()
+                }
+
+                state<State.Dark> {
+                    on(
+                        act =
+                            Act.SelectLight,
+                        effect =
+                            begin(
+                                mode =
+                                    VexBehaviorV2BeginMode
+                                        .Replaceable,
+                            ) {
+                                save(
+                                    State.Light,
+                                ).results {
+                                    success {
+                                    }
+
+                                    failure {
+                                    }
+                                }
+                            },
+                    ).admit<
+                        State.Light
+                    >()
+                }
+            }
     }
 
-    private fun themeModeBehavior() =
-        vexBehaviorV2(
-            family =
-                ThemeModeFamily,
-            behaviorRef =
-                "example.theme-mode.v2",
-        ) {
-            state<ThemeModeFamily.State.NotSet> {
-                on(
-                    act =
-                        ThemeModeFamily.Act.CommitDark,
-                    effect =
-                        begin(
-                            mode =
-                                VexBehaviorV2BeginMode
-                                    .Sequenced,
-                        ) {
-                            save(
-                                ThemeModeFamily.State.Dark,
-                            ).results {
-                                success {
-                                    admit<
-                                        ThemeModeFamily.State.Dark
-                                    >()
-                                }
+    @Test
+    fun familyBehaviorResolvesControlThroughActToEffectInOneCall() {
+        val resolution =
+            ThemeModeFamily.Behavior
+                .resolve(
+                    current =
+                        ThemeModeFamily.State.Light,
+                    control =
+                        ThemeModeFamily.Control.Toggle,
+                )
 
-                                failure {
-                                }
-                            }
-                        },
-                ).stay()
-            }
-
-            state<ThemeModeFamily.State.Light> {
-                on(
-                    act =
-                        ThemeModeFamily.Act.SelectDark,
-                    effect =
-                        begin(
-                            mode =
-                                VexBehaviorV2BeginMode
-                                    .Replaceable,
-                        ) {
-                            save(
-                                ThemeModeFamily.State.Dark,
-                            ).results {
-                                success {
-                                }
-
-                                failure {
-                                }
-                            }
-                        },
-                ).admit<
-                    ThemeModeFamily.State.Dark
-                >()
-            }
-
-            state<ThemeModeFamily.State.Dark> {
-                on(
-                    act =
-                        ThemeModeFamily.Act.SelectLight,
-                    effect =
-                        begin(
-                            mode =
-                                VexBehaviorV2BeginMode
-                                    .Replaceable,
-                        ) {
-                            save(
-                                ThemeModeFamily.State.Light,
-                            ).results {
-                                success {
-                                }
-
-                                failure {
-                                }
-                            }
-                        },
-                ).admit<
-                    ThemeModeFamily.State.Light
-                >()
-            }
-        }
+        assertSame(
+            ThemeModeFamily.Act.SelectDark,
+            resolution
+                ?.act,
+        )
+        assertSame(
+            ThemeModeFamily.State.Dark,
+            resolution
+                ?.effect
+                ?.save
+                ?.state,
+        )
+        assertEquals(
+            VexBehaviorV2StateDispositionKind.Admit,
+            resolution
+                ?.immediateDisposition
+                ?.kind,
+        )
+        assertEquals(
+            ThemeModeFamily.State.Dark::class,
+            resolution
+                ?.immediateDisposition
+                ?.stateKind,
+        )
+    }
 
     @Test
     fun saveCarriesTheActualThemeModeStateFromTheOriginWalk() {
         val resolution =
-            themeModeBehavior()
+            ThemeModeFamily.Behavior
                 .resolve(
                     current =
                         ThemeModeFamily.State.Light,
@@ -181,7 +236,7 @@ class VexBehaviorV2Test {
     @Test
     fun durabilityGatedSaveCanAdmitTheSameStateLater() {
         val resolution =
-            themeModeBehavior()
+            ThemeModeFamily.Behavior
                 .resolve(
                     current =
                         ThemeModeFamily.State.NotSet,
@@ -234,7 +289,7 @@ class VexBehaviorV2Test {
         )
 
         assertTrue(
-            themeModeBehavior()
+            ThemeModeFamily.Behavior
                 .describe()
                 .contains(
                     "Save(Dark)",
@@ -252,6 +307,24 @@ class VexBehaviorV2Test {
                 ThemeModeFamily,
             behaviorRef =
                 "example.theme-mode.v2.incomplete-results",
+            controlToAct = {
+                    current: ThemeModeFamily.State,
+                    control: ThemeModeFamily.Control,
+                ->
+                when (control) {
+                    ThemeModeFamily.Control.Toggle ->
+                        when (current) {
+                            ThemeModeFamily.State.NotSet ->
+                                ThemeModeFamily.Act.CommitDark
+
+                            ThemeModeFamily.State.Light ->
+                                ThemeModeFamily.Act.SelectDark
+
+                            ThemeModeFamily.State.Dark ->
+                                ThemeModeFamily.Act.SelectLight
+                        }
+                }
+            },
         ) {
             state<ThemeModeFamily.State.Light> {
                 on(
