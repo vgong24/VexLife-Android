@@ -3,13 +3,12 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 construction scope using the Origin-Walk vocabulary directly.
+ * V2 construction scope that mirrors the current Origin-Walk ThemeMode circuit.
  */
 class VexBehaviorV2BlueprintBuilder<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Act : VexBehaviorFamily.Act<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
     private val behaviorRef: String,
 ) {
@@ -25,8 +24,7 @@ class VexBehaviorV2BlueprintBuilder<
             VexBehaviorV2Relationship<
                 Family,
                 State,
-                Act,
-                Effect
+                Act
             >
         >()
 
@@ -47,7 +45,6 @@ class VexBehaviorV2BlueprintBuilder<
                 Family,
                 State,
                 Act,
-                Effect,
                 Current
             >.() -> Unit = {},
     ) {
@@ -58,7 +55,6 @@ class VexBehaviorV2BlueprintBuilder<
             Family,
             State,
             Act,
-            Effect,
             Current
         >(
             from =
@@ -76,13 +72,11 @@ class VexBehaviorV2BlueprintBuilder<
     internal fun beginRelationship(
         from: KClass<out State>,
         act: Act,
-        effect: Effect,
-        begin:
+        effect:
             VexBehaviorV2Begin<
                 Family,
-                State,
-                Effect
-            >?,
+                State
+            >,
         conditionName: String?,
     ): Int {
         val id =
@@ -100,24 +94,22 @@ class VexBehaviorV2BlueprintBuilder<
                     act,
                 )
                 append(
-                    " / ",
+                    " / begin[",
                 )
                 append(
-                    effect,
+                    effect.mode,
                 )
-
-                begin
-                    ?.let {
-                        append(
-                            " begin[",
-                        )
-                        append(
-                            it.mode,
-                        )
-                        append(
-                            "]",
-                        )
-                    }
+                append(
+                    "] Save(",
+                )
+                append(
+                    effect
+                        .save
+                        .state,
+                )
+                append(
+                    ")",
+                )
 
                 conditionName
                     ?.let { name ->
@@ -140,8 +132,7 @@ class VexBehaviorV2BlueprintBuilder<
             VexBehaviorV2Relationship<
                 Family,
                 State,
-                Act,
-                Effect
+                Act
             >,
     ) {
         require(
@@ -161,8 +152,7 @@ class VexBehaviorV2BlueprintBuilder<
         VexBehaviorV2Blueprint<
             Family,
             State,
-            Act,
-            Effect
+            Act
         > {
         require(
             pendingRelationships
@@ -192,7 +182,6 @@ class VexBehaviorV2StateScope<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Act : VexBehaviorFamily.Act<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
     Current : State,
 > @PublishedApi internal constructor(
     @PublishedApi
@@ -203,12 +192,10 @@ class VexBehaviorV2StateScope<
         (
             KClass<out State>,
             Act,
-            Effect,
             VexBehaviorV2Begin<
                 Family,
-                State,
-                Effect
-            >?,
+                State
+            >,
             String?,
         ) -> Int,
     @PublishedApi
@@ -218,40 +205,16 @@ class VexBehaviorV2StateScope<
             VexBehaviorV2Relationship<
                 Family,
                 State,
-                Act,
-                Effect
+                Act
             >,
         ) -> Unit,
 ) {
     fun on(
         act: Act,
-        effect: Effect,
-        conditionName: String? = null,
-        whenCurrent: (Current) -> Boolean = {
-            true
-        },
-    ): VexBehaviorV2Destination<
-        Family,
-        State,
-        Act,
-        Effect,
-        Current
-    > =
-        destination(
-            act = act,
-            effect = effect,
-            begin = null,
-            conditionName = conditionName,
-            whenCurrent = whenCurrent,
-        )
-
-    fun on(
-        act: Act,
         effect:
             VexBehaviorV2Begin<
                 Family,
-                State,
-                Effect
+                State
             >,
         conditionName: String? = null,
         whenCurrent: (Current) -> Boolean = {
@@ -261,39 +224,6 @@ class VexBehaviorV2StateScope<
         Family,
         State,
         Act,
-        Effect,
-        Current
-    > =
-        destination(
-            act = act,
-            effect =
-                effect
-                    .operation
-                    .effect,
-            begin =
-                effect,
-            conditionName =
-                conditionName,
-            whenCurrent =
-                whenCurrent,
-        )
-
-    private fun destination(
-        act: Act,
-        effect: Effect,
-        begin:
-            VexBehaviorV2Begin<
-                Family,
-                State,
-                Effect
-            >?,
-        conditionName: String?,
-        whenCurrent: (Current) -> Boolean,
-    ): VexBehaviorV2Destination<
-        Family,
-        State,
-        Act,
-        Effect,
         Current
     > {
         val relationshipId =
@@ -301,7 +231,6 @@ class VexBehaviorV2StateScope<
                 from,
                 act,
                 effect,
-                begin,
                 conditionName,
             )
 
@@ -314,8 +243,6 @@ class VexBehaviorV2StateScope<
                 act,
             effect =
                 effect,
-            begin =
-                begin,
             conditionName =
                 conditionName,
             whenCurrent =
@@ -330,18 +257,15 @@ class VexBehaviorV2StateScope<
         block:
             VexBehaviorV2BeginScope<
                 Family,
-                State,
-                Effect
+                State
             >.() -> Unit,
     ): VexBehaviorV2Begin<
         Family,
-        State,
-        Effect
+        State
     > =
         VexBehaviorV2BeginScope<
             Family,
-            State,
-            Effect
+            State
         >(
             mode =
                 mode,
@@ -355,43 +279,46 @@ class VexBehaviorV2StateScope<
 class VexBehaviorV2BeginScope<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
     private val mode: VexBehaviorV2BeginMode,
 ) {
-    private var operation:
-        VexBehaviorV2Operation<
+    private var save:
+        VexBehaviorV2Save<
             Family,
-            State,
-            Effect
+            State
         >? =
         null
 
-    fun operation(
-        effect: Effect,
-    ): VexBehaviorV2OperationDestination<
+    /**
+     * Kotlin target form of Origin Save(Family, State).
+     *
+     * Family is already fixed by this scope, so callers provide only the State value.
+     */
+    fun save(
+        state: State,
+    ): VexBehaviorV2SaveDestination<
         Family,
-        State,
-        Effect
+        State
     > {
         require(
-            operation ==
+            save ==
                 null,
         ) {
-            "begin V2 currently admits one operation; another operation was already declared"
+            "begin V2 currently admits one Save operation"
         }
 
-        return VexBehaviorV2OperationDestination(
-            effect =
-                effect,
+        return VexBehaviorV2SaveDestination(
+            state =
+                state,
             complete = { completed ->
                 require(
-                    operation ==
+                    save ==
                         null,
                 ) {
-                    "operation was already completed"
+                    "Save was already completed"
                 }
-                operation =
+
+                save =
                     completed
             },
         )
@@ -400,33 +327,30 @@ class VexBehaviorV2BeginScope<
     internal fun build():
         VexBehaviorV2Begin<
             Family,
-            State,
-            Effect
+            State
         > =
         VexBehaviorV2Begin(
             mode =
                 mode,
-            operation =
+            save =
                 requireNotNull(
-                    operation,
+                    save,
                 ) {
-                    "begin V2 requires one operation(...).results { ... }"
+                    "begin V2 requires Save(...).results { ... }"
                 },
         )
 }
 
-class VexBehaviorV2OperationDestination<
+class VexBehaviorV2SaveDestination<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
-    private val effect: Effect,
+    private val state: State,
     private val complete:
         (
-            VexBehaviorV2Operation<
+            VexBehaviorV2Save<
                 Family,
-                State,
-                Effect
+                State
             >,
         ) -> Unit,
 ) {
@@ -438,9 +362,9 @@ class VexBehaviorV2OperationDestination<
             >.() -> Unit,
     ) {
         complete(
-            VexBehaviorV2Operation(
-                effect =
-                    effect,
+            VexBehaviorV2Save(
+                state =
+                    state,
                 results =
                     VexBehaviorV2ResultsScope<
                         Family,
@@ -582,7 +506,6 @@ class VexBehaviorV2Destination<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Act : VexBehaviorFamily.Act<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
     Current : State,
 > @PublishedApi internal constructor(
     @PublishedApi
@@ -596,14 +519,10 @@ class VexBehaviorV2Destination<
         Act,
     @PublishedApi
     internal val effect:
-        Effect,
-    @PublishedApi
-    internal val begin:
         VexBehaviorV2Begin<
             Family,
-            State,
-            Effect
-        >?,
+            State
+        >,
     @PublishedApi
     internal val conditionName:
         String?,
@@ -617,8 +536,7 @@ class VexBehaviorV2Destination<
             VexBehaviorV2Relationship<
                 Family,
                 State,
-                Act,
-                Effect
+                Act
             >,
         ) -> Unit,
 ) {
@@ -665,8 +583,6 @@ class VexBehaviorV2Destination<
                     act,
                 effect =
                     effect,
-                begin =
-                    begin,
                 immediateDisposition =
                     disposition,
                 conditionName =
