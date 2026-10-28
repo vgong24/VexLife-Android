@@ -3,23 +3,36 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 sibling proof of the Origin-Walk Family circuit.
+ * Required UI-facing role for a live V2 Family.
  *
- * The POC originally copied V1's separate Family.Act vocabulary and therefore needed:
+ * DisplayState is presentation-facing output, not another semantic truth owner. Every live V2 Family
+ * exposes [VexBehaviorV2Family.displayState]. The foundation supplies [Empty] by default so the
+ * ownership surface is always visible even when a Family has not earned richer display categories.
  *
- *     Control + State -> Act value
- *     State + Act value -> Effect
+ * A Family that needs richer categories should declare its own nested DisplayState vocabulary and
+ * override [VexBehaviorV2Family.displayState], while preserving the underlying current semantic State.
+ */
+interface VexBehaviorV2DisplayState<
+    out State,
+> {
+    val state: State
+
+    data class Empty<
+        State,
+    >(
+        override val state: State,
+    ) :
+        VexBehaviorV2DisplayState<
+            State
+        >
+}
+
+/**
+ * V2 authored Act graph.
  *
- * ThemeMode made the duplication visible: the same State neighborhood was authored twice. The V2
- * removal test showed that no meaning was lost when that intermediate Act value disappeared.
- *
- * V2 therefore treats each authored on(Control) relationship as the Act:
- *
- *     CURRENT State + Control
- *     -> Act { optional Effect + immediate State consequence }
- *
- * This keeps Act as behavioral process/meaning while removing an extra type hierarchy and resolver
- * layer that fresh AI authors could otherwise recreate by habit.
+ * The public Family entrance is [VexBehaviorV2Family.activate]. This object remains the inspectable
+ * graph/matching machinery underneath that entrance; callers should not need to provide CURRENT State
+ * themselves.
  */
 class VexBehaviorV2<
     Family : VexBehaviorFamily<Family>,
@@ -58,6 +71,7 @@ class VexBehaviorV2<
                 "Act source is not a registered State: " +
                     act.from
             }
+
             act.immediateDisposition
                 .admittedState
                 ?.let { admitted ->
@@ -109,13 +123,12 @@ class VexBehaviorV2<
     }
 
     /**
-     * Resolve the one authored Act for this exact CURRENT State + Control input.
+     * Internal matching primitive used by the live Family entrance.
      *
-     * The caller does not translate Control into another Family vocabulary first. Connection/UI
-     * supplies the semantic Control, Behavior selects the matching Act, and the Act already carries
-     * the optional Effect (when one is earned) plus immediate State consequence.
+     * A UI/runtime caller should activate the Family with a Control instead of supplying CURRENT State
+     * to this matcher directly.
      */
-    fun resolve(
+    internal fun resolve(
         current: State,
         control: Control,
     ): VexBehaviorV2Act<
@@ -257,11 +270,17 @@ class VexBehaviorV2<
         }.trimEnd()
 }
 
+/**
+ * Author one required V2 Act graph.
+ *
+ * "acts" is the Family-facing noun. VexBehaviorV2 remains the internal graph type while this draft
+ * proves the clearer Family-rooted authoring surface.
+ */
 fun <
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Control : VexBehaviorFamily.Control<Family>,
-> vexBehaviorV2(
+> vexActs(
     family: Family,
     behaviorRef: String,
     block:
@@ -289,5 +308,128 @@ fun <
         .build(
             family,
         )
+
+/**
+ * Compatibility spelling retained while the V2 draft migrates to the required Family acts surface.
+ */
+@Deprecated(
+    message =
+        "V2 Family authors should expose required acts with vexActs(...).",
+)
+fun <
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+> vexBehaviorV2(
+    family: Family,
+    behaviorRef: String,
+    block:
+        VexBehaviorV2Builder<
+            Family,
+            State,
+            Control
+        >.() -> Unit,
+): VexBehaviorV2<
+    Family,
+    State,
+    Control
+> =
+    vexActs(
+        family =
+            family,
+        behaviorRef =
+            behaviorRef,
+        block =
+            block,
+    )
+
+/**
+ * Live V2 Family foundation.
+ *
+ * The Family owns one CURRENT semantic State, one required Act graph, one always-visible DisplayState
+ * field, and one common [activate] entrance. UI callers provide only Control; CURRENT State is read
+ * here so rendered/stale UI State cannot become activation authority.
+ *
+ * [activate] applies the Act's immediate stay/admit consequence and returns the selected Act. It does
+ * not invent generic Effect execution. An Effect-bearing provider/Store/third-party boundary is the
+ * next Origin pressure and can consume the already-authored Act without creating another semantic
+ * story.
+ */
+abstract class VexBehaviorV2Family<
+    Family : VexBehaviorV2Family<
+        Family,
+        State,
+        Control
+    >,
+    State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+>(
+    initialState: State,
+) :
+    VexBehaviorFamily<
+        Family
+    > {
+    var current: State =
+        initialState
+        private set
+
+    abstract val acts:
+        VexBehaviorV2<
+            Family,
+            State,
+            Control
+        >
+
+    open val displayState:
+        VexBehaviorV2DisplayState<
+            State
+        >
+        get() =
+            VexBehaviorV2DisplayState.Empty(
+                current,
+            )
+
+    fun activate(
+        control: Control,
+    ):
+        VexBehaviorV2Act<
+            Family,
+            State,
+            Control
+        >? {
+        check(
+            acts.family ===
+                this,
+        ) {
+            "acts must belong to this live Family instance"
+        }
+
+        val act =
+            acts.resolve(
+                current =
+                    current,
+                control =
+                    control,
+            )
+                ?: return null
+
+        when (
+            act.immediateDisposition
+                .kind
+        ) {
+            VexBehaviorV2StateDispositionKind.Stay ->
+                Unit
+
+            VexBehaviorV2StateDispositionKind.Admit ->
+                current =
+                    requireNotNull(
+                        act.immediateDisposition
+                            .admittedState,
+                    )
+        }
+
+        return act
+    }
+}
 
 // [VXG RealForever]

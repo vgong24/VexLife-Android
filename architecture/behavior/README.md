@@ -813,3 +813,80 @@ Behavior.resolve(CURRENT State, Control)
 ~~~
 
 No second State-kind -> State-value translator is required.
+
+
+---
+
+## V2 Origin-Walk refinement — live Family + required Acts + DisplayState
+
+The ThemeMode patient zero now keeps the current semantic and UI-facing contract at one discoverable
+Family root:
+
+~~~text
+Family
+  State
+  Control
+  DisplayState
+  current
+  acts
+  activate(Control)
+~~~
+
+activate(Control) is foundational V2 language. The caller supplies only Control; the live Family
+re-reads its own CURRENT State, selects the authored Act and applies that Act's immediate stay/admit
+consequence.
+
+Every live V2 Family has a displayState field. The foundation default is
+VexBehaviorV2DisplayState.Empty(current), so display ownership remains explicit even when a Family has
+not earned richer presentation categories. A Family may override that field with its own nested
+DisplayState vocabulary while preserving the underlying semantic State.
+
+DisplayState is presentation-facing output, not another State admitted by Behavior:
+
+~~~text
+admit(State)
+-> changes semantic truth
+
+current State
+-> DisplayState
+-> UI
+~~~
+
+The Act authoring surface is contiguous:
+
+~~~kotlin
+state<State.Light> {
+    on(Control.Toggle) {
+        admit(State.Dark)
+    }
+}
+
+state<State.NotSet> {
+    on(Control.Toggle) {
+        stay()
+
+        begin(mode = VexBehaviorV2BeginMode.Sequenced) {
+            save(State.Dark)
+                .results {
+                    success {
+                        admit(State.Dark)
+                    }
+
+                    failure {
+                    }
+                }
+        }
+    }
+}
+~~~
+
+Direct stay()/admit(...) inside on { ... } is the immediate semantic disposition. The existing
+begin(mode = Replaceable | Sequenced) scope remains the later-running Effect episode, and
+Success/Failure remain operation result branches. No extra immediate, realize, or feature-specific
+toggle function vocabulary was added.
+
+activate(Control) returns the selected Act after applying its immediate consequence. Generic
+provider/Store/third-party Effect execution is deliberately not invented by this checkpoint; that is the
+next Origin pressure, with Media3/provider-backed families available as comparison evidence.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][LIVE-FAMILY][DISPLAY-STATE] -->

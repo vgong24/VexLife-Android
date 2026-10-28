@@ -3,24 +3,28 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 authoring scope produced by the ThemeMode Origin Walk.
+ * V2 Act-graph authoring scope produced by the ThemeMode Origin Walk.
  *
- * The important outcome of the POC is not another builder class. It is the source sentence the
- * builder protects:
+ * The complete Act is now one contiguous on(Control) { ... } block:
  *
  *     state<Current> {
- *         on(Control)
- *             .stay() / .admit(nextState)
+ *         on(Control) {
+ *             stay() / admit(nextState)
  *
- *         on(Control, Effect)
- *             .stay() / .admit(nextState)
+ *             optional:
+ *             begin(mode = Replaceable | Sequenced) {
+ *                 save(...)
+ *                     .results {
+ *                         success { optional later admit(...) }
+ *                         failure { optional later admit(...) }
+ *                     }
+ *             }
+ *         }
  *     }
  *
- * Effect is earned per Act. A purely semantic State admission must not invent a no-op Effect merely
- * to satisfy builder symmetry.
- *
- * That complete relationship is the Act. There is intentionally no separate Family.Act value to
- * maintain or route through.
+ * Direct stay/admit inside on { ... } is the immediate semantic disposition. Nesting under
+ * begin(...).results { ... } is the already-earned later result scope. No additional "immediate"
+ * vocabulary is required.
  */
 class VexBehaviorV2Builder<
     Family : VexBehaviorFamily<Family>,
@@ -45,15 +49,6 @@ class VexBehaviorV2Builder<
             >
         >()
 
-    private val pendingActs =
-        linkedMapOf<
-            Int,
-            String
-        >()
-
-    private var nextActId =
-        0
-
     inline fun <
         reified Current : State,
     > state(
@@ -76,85 +71,16 @@ class VexBehaviorV2Builder<
         >(
             from =
                 Current::class,
-            beginAct =
-                ::beginAct,
             completeAct =
                 ::completeAct,
-        ).apply(
-            block,
         )
-    }
-
-    @PublishedApi
-    internal fun beginAct(
-        from: KClass<out State>,
-        control: Control,
-        effect:
-            VexBehaviorV2Begin<
-                Family,
-                State
-            >?,
-        conditionName: String?,
-    ): Int {
-        val id =
-            nextActId++
-
-        pendingActs[id] =
-            buildString {
-                append(
-                    from.simpleName,
-                )
-                append(
-                    " + ",
-                )
-                append(
-                    control,
-                )
-
-                if (
-                    effect ==
-                    null
-                ) {
-                    append(
-                        " / NO_EFFECT",
-                    )
-                } else {
-                    append(
-                        " / begin[",
-                    )
-                    append(
-                        effect.mode,
-                    )
-                    append(
-                        "] Save(",
-                    )
-                    append(
-                        effect
-                            .save
-                            .state,
-                    )
-                    append(
-                        ")",
-                    )
-                }
-
-                conditionName
-                    ?.let { name ->
-                        append(
-                            " when ",
-                        )
-                        append(
-                            name,
-                        )
-                    }
-            }
-
-        return id
+            .apply(
+                block,
+            )
     }
 
     @PublishedApi
     internal fun completeAct(
-        id: Int,
         act:
             VexBehaviorV2Act<
                 Family,
@@ -162,15 +88,6 @@ class VexBehaviorV2Builder<
                 Control
             >,
     ) {
-        require(
-            pendingActs.remove(
-                id,
-            ) !=
-                null,
-        ) {
-            "behavior V2 Act was already completed"
-        }
-
         authoredActs +=
             act
     }
@@ -182,18 +99,8 @@ class VexBehaviorV2Builder<
             Family,
             State,
             Control
-        > {
-        require(
-            pendingActs.isEmpty(),
-        ) {
-            "behavior " +
-                behaviorRef +
-                " has Act(s) without a terminal .stay() or .admit(state): " +
-                pendingActs.values
-                    .joinToString()
-        }
-
-        return VexBehaviorV2(
+        > =
+        VexBehaviorV2(
             family =
                 family,
             behaviorRef =
@@ -203,7 +110,6 @@ class VexBehaviorV2Builder<
             acts =
                 authoredActs.toList(),
         )
-    }
 }
 
 class VexBehaviorV2StateScope<
@@ -216,20 +122,8 @@ class VexBehaviorV2StateScope<
     internal val from:
         KClass<Current>,
     @PublishedApi
-    internal val beginAct:
-        (
-            KClass<out State>,
-            Control,
-            VexBehaviorV2Begin<
-                Family,
-                State
-            >?,
-            String?,
-        ) -> Int,
-    @PublishedApi
     internal val completeAct:
         (
-            Int,
             VexBehaviorV2Act<
                 Family,
                 State,
@@ -238,15 +132,11 @@ class VexBehaviorV2StateScope<
         ) -> Unit,
 ) {
     /**
-     * Begins an Act whose only consequence is semantic State admission/stay.
+     * Author one complete Act for this CURRENT State + Control relationship.
      *
-     * Why this API takes Control directly:
-     * the POC first introduced a separate Control->Act mapper, then authored the same State again in
-     * the Act->Effect graph. ThemeMode proved that translation layer redundant. The on(...) scenario
-     * itself is now the Act.
-     *
-     * No Effect is manufactured here. Use the Effect-bearing overload only when the Act actually
-     * asks a runtime/provider/store to do something.
+     * The block must declare exactly one immediate stay()/admit(state). It may additionally declare
+     * one begin(mode) Effect episode. Keeping both scopes inside this block preserves the causal read
+     * without moving Effect meaning into another handler or function.
      */
     fun on(
         control: Control,
@@ -254,79 +144,101 @@ class VexBehaviorV2StateScope<
         whenCurrent: (Current) -> Boolean = {
             true
         },
-    ): VexBehaviorV2Destination<
-        Family,
-        State,
-        Control,
-        Current
-    > {
-        val actId =
-            beginAct(
-                from,
-                control,
-                null,
-                conditionName,
+        block:
+            VexBehaviorV2ActScope<
+                Family,
+                State,
+                Control,
+                Current
+            >.() -> Unit,
+    ) {
+        completeAct(
+            VexBehaviorV2ActScope<
+                Family,
+                State,
+                Control,
+                Current
+            >(
+                from =
+                    from,
+                control =
+                    control,
+                conditionName =
+                    conditionName,
+                whenCurrent =
+                    whenCurrent,
             )
-
-        return VexBehaviorV2Destination(
-            actId =
-                actId,
-            from =
-                from,
-            control =
-                control,
-            effect =
-                null,
-            conditionName =
-                conditionName,
-            whenCurrent =
-                whenCurrent,
-            completeAct =
-                completeAct,
+                .apply(
+                    block,
+                )
+                .build(),
         )
     }
+}
 
-    fun on(
-        control: Control,
-        effect:
-            VexBehaviorV2Begin<
-                Family,
-                State
-            >,
-        conditionName: String? = null,
-        whenCurrent: (Current) -> Boolean = {
-            true
-        },
-    ): VexBehaviorV2Destination<
-        Family,
-        State,
+class VexBehaviorV2ActScope<
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
+    Current : State,
+> internal constructor(
+    private val from:
+        KClass<Current>,
+    private val control:
         Control,
-        Current
-    > {
-        val actId =
-            beginAct(
-                from,
-                control,
-                effect,
-                conditionName,
-            )
+    private val conditionName:
+        String?,
+    private val whenCurrent:
+        (Current) -> Boolean,
+) {
+    private var effect:
+        VexBehaviorV2Begin<
+            Family,
+            State
+        >? =
+        null
 
-        return VexBehaviorV2Destination(
-            actId =
-                actId,
-            from =
-                from,
-            control =
-                control,
-            effect =
-                effect,
-            conditionName =
-                conditionName,
-            whenCurrent =
-                whenCurrent,
-            completeAct =
-                completeAct,
-        )
+    private var immediateDisposition:
+        VexBehaviorV2StateDisposition<
+            Family,
+            State
+        >? =
+        null
+
+    fun admit(
+        state: State,
+    ) {
+        require(
+            immediateDisposition ==
+                null,
+        ) {
+            "on(Control) may declare only one immediate stay() or admit(state)"
+        }
+
+        immediateDisposition =
+            VexBehaviorV2StateDisposition(
+                kind =
+                    VexBehaviorV2StateDispositionKind.Admit,
+                admittedState =
+                    state,
+            )
+    }
+
+    fun stay() {
+        require(
+            immediateDisposition ==
+                null,
+        ) {
+            "on(Control) may declare only one immediate stay() or admit(state)"
+        }
+
+        immediateDisposition =
+            VexBehaviorV2StateDisposition(
+                kind =
+                    VexBehaviorV2StateDispositionKind.Stay,
+                admittedState =
+                    null,
+            )
     }
 
     fun begin(
@@ -336,21 +248,62 @@ class VexBehaviorV2StateScope<
                 Family,
                 State
             >.() -> Unit,
-    ): VexBehaviorV2Begin<
-        Family,
-        State
-    > =
-        VexBehaviorV2BeginScope<
-            Family,
-            State
-        >(
-            mode =
-                mode,
-        )
-            .apply(
-                block,
+    ) {
+        require(
+            effect ==
+                null,
+        ) {
+            "one V2 Act currently admits at most one begin(...) Effect"
+        }
+
+        effect =
+            VexBehaviorV2BeginScope<
+                Family,
+                State
+            >(
+                mode =
+                    mode,
             )
-            .build()
+                .apply(
+                    block,
+                )
+                .build()
+    }
+
+    internal fun build():
+        VexBehaviorV2Act<
+            Family,
+            State,
+            Control
+        > {
+        val immediate =
+            requireNotNull(
+                immediateDisposition,
+            ) {
+                "on(Control) requires exactly one immediate stay() or admit(state)"
+            }
+
+        return VexBehaviorV2Act(
+            from =
+                from,
+            control =
+                control,
+            effect =
+                effect,
+            immediateDisposition =
+                immediate,
+            conditionName =
+                conditionName,
+            whenCurrent = { current ->
+                @Suppress(
+                    "UNCHECKED_CAST",
+                )
+                whenCurrent(
+                    current as Current,
+                )
+            },
+        )
+    }
 }
 
 class VexBehaviorV2BeginScope<
@@ -366,17 +319,13 @@ class VexBehaviorV2BeginScope<
         >? =
         null
 
-    /**
-     * Kotlin target form of Origin Save(Family, State).
-     *
-     * Family is already fixed by this scope, so callers provide only the State value.
-     */
     fun save(
         state: State,
-    ): VexBehaviorV2SaveDestination<
-        Family,
-        State
-    > {
+    ):
+        VexBehaviorV2SaveDestination<
+            Family,
+            State
+        > {
         require(
             save ==
                 null,
@@ -422,7 +371,8 @@ class VexBehaviorV2SaveDestination<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
 > internal constructor(
-    private val state: State,
+    private val state:
+        State,
     private val complete:
         (
             VexBehaviorV2Save<
@@ -576,108 +526,6 @@ class VexBehaviorV2ResultScope<
             admittedState =
                 admittedState,
         )
-}
-
-class VexBehaviorV2Destination<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-    Control : VexBehaviorFamily.Control<Family>,
-    Current : State,
-> @PublishedApi internal constructor(
-    @PublishedApi
-    internal val actId:
-        Int,
-    @PublishedApi
-    internal val from:
-        KClass<Current>,
-    @PublishedApi
-    internal val control:
-        Control,
-    @PublishedApi
-    internal val effect:
-        VexBehaviorV2Begin<
-            Family,
-            State
-        >?,
-    @PublishedApi
-    internal val conditionName:
-        String?,
-    @PublishedApi
-    internal val whenCurrent:
-        (Current) -> Boolean,
-    @PublishedApi
-    internal val completeAct:
-        (
-            Int,
-            VexBehaviorV2Act<
-                Family,
-                State,
-                Control
-            >,
-        ) -> Unit,
-) {
-    /**
-     * Immediately admit one concrete semantic State value.
-     *
-     * The Act already knows this semantic consequence, so carrying only a State class would force a
-     * later runtime owner to reconstruct information Behavior should have preserved.
-     */
-    fun admit(
-        state: State,
-    ) {
-        complete(
-            VexBehaviorV2StateDisposition(
-                kind =
-                    VexBehaviorV2StateDispositionKind.Admit,
-                admittedState =
-                    state,
-            ),
-        )
-    }
-
-    fun stay() {
-        complete(
-            VexBehaviorV2StateDisposition(
-                kind =
-                    VexBehaviorV2StateDispositionKind.Stay,
-                admittedState =
-                    null,
-            ),
-        )
-    }
-
-    @PublishedApi
-    internal fun complete(
-        disposition:
-            VexBehaviorV2StateDisposition<
-                Family,
-                State
-            >,
-    ) {
-        completeAct(
-            actId,
-            VexBehaviorV2Act(
-                from =
-                    from,
-                control =
-                    control,
-                effect =
-                    effect,
-                immediateDisposition =
-                    disposition,
-                conditionName =
-                    conditionName,
-                whenCurrent = { current ->
-                    @Suppress(
-                        "UNCHECKED_CAST",
-                    )
-                    whenCurrent(
-                        current as Current,
-                    )
-                },
-            ),
-        )
-    }
 }
 
 // [VXG RealForever]
