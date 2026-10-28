@@ -14,59 +14,59 @@ class VexBehaviorV2Test {
         >,
         VexBehaviorFamily.Members<
             ThemeModeFamily,
-            ThemeMode,
-            ThemeModeControl,
-            ThemeModeAct,
+            ThemeModeFamily.State,
+            ThemeModeFamily.Control,
+            ThemeModeFamily.Act,
             VexBehaviorV2Begin<
                 ThemeModeFamily,
-                ThemeMode
+                ThemeModeFamily.State
             >
         > {
+        sealed interface State :
+            VexBehaviorFamily.State<
+                ThemeModeFamily
+            >,
+            VexState<
+                State
+            > {
+            data object NotSet :
+                State
+
+            data object Light :
+                State
+
+            data object Dark :
+                State
+
+            override fun deepCopy():
+                State =
+                this
+        }
+
+        enum class Control :
+            VexBehaviorFamily.Control<
+                ThemeModeFamily
+            > {
+            Toggle,
+        }
+
+        sealed interface Act :
+            VexBehaviorFamily.Act<
+                ThemeModeFamily
+            > {
+            data object CommitDark :
+                Act
+
+            data object SelectDark :
+                Act
+
+            data object SelectLight :
+                Act
+        }
+
         override val controls =
-            ThemeModeControl.entries
+            Control.entries
                 .toSet()
-    }
-
-    private sealed interface ThemeMode :
-        VexBehaviorFamily.State<
-            ThemeModeFamily
-        >,
-        VexState<
-            ThemeMode
-        > {
-        data object NotSet :
-            ThemeMode
-
-        data object Light :
-            ThemeMode
-
-        data object Dark :
-            ThemeMode
-
-        override fun deepCopy():
-            ThemeMode =
-            this
-    }
-
-    private enum class ThemeModeControl :
-        VexBehaviorFamily.Control<
-            ThemeModeFamily
-        > {
-        Toggle,
-    }
-
-    private sealed interface ThemeModeAct :
-        VexBehaviorFamily.Act<
-            ThemeModeFamily
-        > {
-        data object CommitDark :
-            ThemeModeAct
-
-        data object SelectDark :
-            ThemeModeAct
-
-        data object SelectLight :
-            ThemeModeAct
     }
 
     private fun themeModeBehavior() =
@@ -76,10 +76,10 @@ class VexBehaviorV2Test {
             behaviorRef =
                 "example.theme-mode.v2",
         ) {
-            state<ThemeMode.NotSet> {
+            state<ThemeModeFamily.State.NotSet> {
                 on(
                     act =
-                        ThemeModeAct.CommitDark,
+                        ThemeModeFamily.Act.CommitDark,
                     effect =
                         begin(
                             mode =
@@ -87,11 +87,11 @@ class VexBehaviorV2Test {
                                     .Sequenced,
                         ) {
                             save(
-                                ThemeMode.Dark,
+                                ThemeModeFamily.State.Dark,
                             ).results {
                                 success {
                                     admit<
-                                        ThemeMode.Dark
+                                        ThemeModeFamily.State.Dark
                                     >()
                                 }
 
@@ -102,10 +102,10 @@ class VexBehaviorV2Test {
                 ).stay()
             }
 
-            state<ThemeMode.Light> {
+            state<ThemeModeFamily.State.Light> {
                 on(
                     act =
-                        ThemeModeAct.SelectDark,
+                        ThemeModeFamily.Act.SelectDark,
                     effect =
                         begin(
                             mode =
@@ -113,7 +113,7 @@ class VexBehaviorV2Test {
                                     .Replaceable,
                         ) {
                             save(
-                                ThemeMode.Dark,
+                                ThemeModeFamily.State.Dark,
                             ).results {
                                 success {
                                 }
@@ -123,14 +123,14 @@ class VexBehaviorV2Test {
                             }
                         },
                 ).admit<
-                    ThemeMode.Dark
+                    ThemeModeFamily.State.Dark
                 >()
             }
 
-            state<ThemeMode.Dark> {
+            state<ThemeModeFamily.State.Dark> {
                 on(
                     act =
-                        ThemeModeAct.SelectLight,
+                        ThemeModeFamily.Act.SelectLight,
                     effect =
                         begin(
                             mode =
@@ -138,7 +138,7 @@ class VexBehaviorV2Test {
                                     .Replaceable,
                         ) {
                             save(
-                                ThemeMode.Light,
+                                ThemeModeFamily.State.Light,
                             ).results {
                                 success {
                                 }
@@ -148,7 +148,7 @@ class VexBehaviorV2Test {
                             }
                         },
                 ).admit<
-                    ThemeMode.Light
+                    ThemeModeFamily.State.Light
                 >()
             }
         }
@@ -159,13 +159,13 @@ class VexBehaviorV2Test {
             themeModeBehavior()
                 .resolve(
                     current =
-                        ThemeMode.Light,
+                        ThemeModeFamily.State.Light,
                     act =
-                        ThemeModeAct.SelectDark,
+                        ThemeModeFamily.Act.SelectDark,
                 )
 
         assertSame(
-            ThemeMode.Dark,
+            ThemeModeFamily.State.Dark,
             resolution
                 ?.effect
                 ?.save
@@ -184,7 +184,7 @@ class VexBehaviorV2Test {
                 ?.kind,
         )
         assertEquals(
-            ThemeMode.Dark::class,
+            ThemeModeFamily.State.Dark::class,
             resolution
                 ?.immediateDisposition
                 ?.stateKind,
@@ -197,13 +197,13 @@ class VexBehaviorV2Test {
             themeModeBehavior()
                 .resolve(
                     current =
-                        ThemeMode.NotSet,
+                        ThemeModeFamily.State.NotSet,
                     act =
-                        ThemeModeAct.CommitDark,
+                        ThemeModeFamily.Act.CommitDark,
                 )
 
         assertSame(
-            ThemeMode.Dark,
+            ThemeModeFamily.State.Dark,
             resolution
                 ?.effect
                 ?.save
@@ -216,7 +216,7 @@ class VexBehaviorV2Test {
                 ?.kind,
         )
         assertEquals(
-            ThemeMode.Dark::class,
+            ThemeModeFamily.State.Dark::class,
             resolution
                 ?.effect
                 ?.save
@@ -240,20 +240,20 @@ class VexBehaviorV2Test {
             themeModeBehavior()
                 .controls {
                     control(
-                        ThemeModeControl.Toggle,
-                        ThemeModeAct.SelectDark,
-                        ThemeModeAct.SelectLight,
-                        ThemeModeAct.CommitDark,
+                        ThemeModeFamily.Control.Toggle,
+                        ThemeModeFamily.Act.SelectDark,
+                        ThemeModeFamily.Act.SelectLight,
+                        ThemeModeFamily.Act.CommitDark,
                     )
                 }
 
         assertSame(
-            ThemeModeAct.SelectDark,
+            ThemeModeFamily.Act.SelectDark,
             controls.resolve(
                 current =
-                    ThemeMode.Light,
+                    ThemeModeFamily.State.Light,
                 control =
-                    ThemeModeControl.Toggle,
+                    ThemeModeFamily.Control.Toggle,
             )?.act,
         )
     }
@@ -261,12 +261,12 @@ class VexBehaviorV2Test {
     @Test
     fun themeModeCanAlsoBeRelayVexStateWithoutRenamingTheSemanticNoun() {
         val copied:
-            ThemeMode =
-            ThemeMode.Dark
+            ThemeModeFamily.State =
+            ThemeModeFamily.State.Dark
                 .deepCopy()
 
         assertSame(
-            ThemeMode.Dark,
+            ThemeModeFamily.State.Dark,
             copied,
         )
 
@@ -290,10 +290,10 @@ class VexBehaviorV2Test {
             behaviorRef =
                 "example.theme-mode.v2.incomplete-results",
         ) {
-            state<ThemeMode.Light> {
+            state<ThemeModeFamily.State.Light> {
                 on(
                     act =
-                        ThemeModeAct.SelectDark,
+                        ThemeModeFamily.Act.SelectDark,
                     effect =
                         begin(
                             mode =
@@ -301,18 +301,18 @@ class VexBehaviorV2Test {
                                     .Replaceable,
                         ) {
                             save(
-                                ThemeMode.Dark,
+                                ThemeModeFamily.State.Dark,
                             ).results {
                                 success {
                                 }
                             }
                         },
                 ).admit<
-                    ThemeMode.Dark
+                    ThemeModeFamily.State.Dark
                 >()
             }
 
-            state<ThemeMode.Dark>()
+            state<ThemeModeFamily.State.Dark>()
         }
     }
 }
