@@ -890,3 +890,72 @@ provider/Store/third-party Effect execution is deliberately not invented by this
 next Origin pressure, with Media3/provider-backed families available as comparison evidence.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][LIVE-FAMILY][DISPLAY-STATE] -->
+
+
+---
+
+## V2 Origin-Walk refinement — begin executes Family Store operations
+
+The next pressure makes the previously structural begin/Save episode executable without adding a
+feature-specific Execution class.
+
+~~~text
+Family
+  State
+  Control
+  DisplayState
+  Store
+  current
+  acts
+  activate(Control)
+
+Act
+  immediate:
+    stay / admit
+
+  execution:
+    begin(mode)
+      Operation
+        StoreOperation
+          Save(State)
+~~~
+
+The reusable storage relationship is:
+
+~~~text
+VexStore
+  -> VexFamilyStore<Family, State>
+       ObservableState
+       Get()
+       Save(State)
+       Forget()
+
+Concrete Family
+  interface Store : VexFamilyStore<ThisFamily, State>
+~~~
+
+CURRENT semantic State and durable Store State remain different truths. An immediate admit(Dark) can
+make Dark visible to UI while Save(Dark) is still background work.
+
+Operation generalizes the slot under begin; it does not erase the Store verb. Save remains authored as
+save(State). Media/provider operations can pressure additional operation families later without
+pretending that Play/Pause are persistence.
+
+begin(Replaceable) and begin(Sequenced) now enter the existing VexExecution coroutine custody. The
+Behavior foundation does not add a ThemeModeExecution/FamilyExecution class. The source callable
+Family.Store::save is both the invoked operation and the execution identity input.
+
+The live Family accepts one VexFamilyLogger accountant. The app's existing VexLogger may implement
+that contract; the Family never creates another logger.
+
+~~~text
+Control accepted
+State admitted
+Operation began
+Operation Success / Failure
+~~~
+
+An empty success { } remains meaningful: the Operation succeeded and produced no additional semantic
+State consequence, while the accountant still witnesses progression.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][FAMILY-STORE][BEGIN-EXECUTION][ACCOUNTANT] -->

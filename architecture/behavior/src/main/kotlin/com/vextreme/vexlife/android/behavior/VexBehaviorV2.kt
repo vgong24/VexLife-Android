@@ -1,17 +1,9 @@
 package com.vextreme.vexlife.android.behavior
 
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlin.reflect.KClass
 
-/**
- * Required UI-facing role for a live V2 Family.
- *
- * DisplayState is presentation-facing output, not another semantic truth owner. Every live V2 Family
- * exposes [VexBehaviorV2Family.displayState]. The foundation supplies [Empty] by default so the
- * ownership surface is always visible even when a Family has not earned richer display categories.
- *
- * A Family that needs richer categories should declare its own nested DisplayState vocabulary and
- * override [VexBehaviorV2Family.displayState], while preserving the underlying current semantic State.
- */
 interface VexBehaviorV2DisplayState<
     out State,
 > {
@@ -27,13 +19,6 @@ interface VexBehaviorV2DisplayState<
         >
 }
 
-/**
- * V2 authored Act graph.
- *
- * The public Family entrance is [VexBehaviorV2Family.activate]. This object remains the inspectable
- * graph/matching machinery underneath that entrance; callers should not need to provide CURRENT State
- * themselves.
- */
 class VexBehaviorV2<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
@@ -85,57 +70,52 @@ class VexBehaviorV2<
                 }
 
             act.effect
-                ?.let { effect ->
-                    require(
-                        effect
-                            .save
-                            .state
-                            .let {
-                                it::class in states
-                            },
+                ?.operation
+                ?.let { operation ->
+                    when (
+                        operation
                     ) {
-                        "Save State is not registered in " +
-                            behaviorRef
+                        is VexBehaviorV2Save ->
+                            require(
+                                operation
+                                    .state
+                                    .let {
+                                        it::class in states
+                                    },
+                            ) {
+                                "Save State is not registered in " +
+                                    behaviorRef
+                            }
                     }
 
-                    effect
-                        .save
-                        .results
-                        .let { results ->
-                            listOf(
-                                results.success,
-                                results.failure,
-                            ).forEach { result ->
-                                result.admittedState
-                                    ?.let { laterState ->
-                                        require(
-                                            laterState::class in
-                                                states,
-                                        ) {
-                                            "later admitted State is not registered: " +
-                                                laterState::class
-                                        }
-                                    }
+                    listOf(
+                        operation.results.success,
+                        operation.results.failure,
+                    ).forEach { result ->
+                        result.admittedState
+                            ?.let { laterState ->
+                                require(
+                                    laterState::class in
+                                        states,
+                                ) {
+                                    "later admitted State is not registered: " +
+                                        laterState::class
+                                }
                             }
-                        }
+                    }
                 }
         }
     }
 
-    /**
-     * Internal matching primitive used by the live Family entrance.
-     *
-     * A UI/runtime caller should activate the Family with a Control instead of supplying CURRENT State
-     * to this matcher directly.
-     */
     internal fun resolve(
         current: State,
         control: Control,
-    ): VexBehaviorV2Act<
-        Family,
-        State,
-        Control
-    >? {
+    ):
+        VexBehaviorV2Act<
+            Family,
+            State,
+            Control
+        >? {
         val available =
             acts.filter { act ->
                 act.matches(
@@ -161,7 +141,8 @@ class VexBehaviorV2<
         return available.singleOrNull()
     }
 
-    fun describe(): String =
+    fun describe():
+        String =
         buildString {
             appendLine(
                 behaviorRef +
@@ -170,8 +151,7 @@ class VexBehaviorV2<
 
             acts.forEach { act ->
                 append(
-                    act.from
-                        .simpleName,
+                    act.from.simpleName,
                 )
                 append(
                     " --on(",
@@ -201,24 +181,32 @@ class VexBehaviorV2<
                         effect.mode,
                     )
                     append(
-                        "] Save(",
+                        "] ",
                     )
-                    append(
-                        effect
-                            .save
-                            .state,
-                    )
-                    append(
-                        ")",
-                    )
+
+                    when (
+                        val operation =
+                            effect.operation
+                    ) {
+                        is VexBehaviorV2Save -> {
+                            append(
+                                "Save(",
+                            )
+                            append(
+                                operation.state,
+                            )
+                            append(
+                                ")",
+                            )
+                        }
+                    }
                 }
 
                 append(
                     "--> ",
                 )
                 append(
-                    act.immediateDisposition
-                        .kind,
+                    act.immediateDisposition.kind,
                 )
                 act.immediateDisposition
                     .admittedState
@@ -232,7 +220,7 @@ class VexBehaviorV2<
                     }
 
                 effect
-                    ?.save
+                    ?.operation
                     ?.results
                     ?.let { results ->
                         append(
@@ -270,12 +258,6 @@ class VexBehaviorV2<
         }.trimEnd()
 }
 
-/**
- * Author one required V2 Act graph.
- *
- * "acts" is the Family-facing noun. VexBehaviorV2 remains the internal graph type while this draft
- * proves the clearer Family-rooted authoring surface.
- */
 fun <
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
@@ -289,11 +271,12 @@ fun <
             State,
             Control
         >.() -> Unit,
-): VexBehaviorV2<
-    Family,
-    State,
-    Control
-> =
+):
+    VexBehaviorV2<
+        Family,
+        State,
+        Control
+    > =
     VexBehaviorV2Builder<
         Family,
         State,
@@ -309,9 +292,6 @@ fun <
             family,
         )
 
-/**
- * Compatibility spelling retained while the V2 draft migrates to the required Family acts surface.
- */
 @Deprecated(
     message =
         "V2 Family authors should expose required acts with vexActs(...).",
@@ -329,11 +309,12 @@ fun <
             State,
             Control
         >.() -> Unit,
-): VexBehaviorV2<
-    Family,
-    State,
-    Control
-> =
+):
+    VexBehaviorV2<
+        Family,
+        State,
+        Control
+    > =
     vexActs(
         family =
             family,
@@ -344,16 +325,11 @@ fun <
     )
 
 /**
- * Live V2 Family foundation.
+ * Live V2 Family.
  *
- * The Family owns one CURRENT semantic State, one required Act graph, one always-visible DisplayState
- * field, and one common [activate] entrance. UI callers provide only Control; CURRENT State is read
- * here so rendered/stale UI State cannot become activation authority.
- *
- * [activate] applies the Act's immediate stay/admit consequence and returns the selected Act. It does
- * not invent generic Effect execution. An Effect-bearing provider/Store/third-party boundary is the
- * next Origin pressure and can consume the already-authored Act without creating another semantic
- * story.
+ * begin(mode) is the execution phase; no ThemeModeExecution/FamilyExecution sibling is introduced.
+ * Store remains visible on the Family. The existing VexExecution foundation is only the coroutine
+ * machinery underneath begin.
  */
 abstract class VexBehaviorV2Family<
     Family : VexBehaviorV2Family<
@@ -365,13 +341,24 @@ abstract class VexBehaviorV2Family<
     Control : VexBehaviorFamily.Control<Family>,
 >(
     initialState: State,
+    private val executionRoot:
+        VexExecutionRoot,
+    protected val logger:
+        VexFamilyLogger =
+        VexFamilyLogger.None,
 ) :
     VexBehaviorFamily<
         Family
     > {
-    var current: State =
+    @Volatile
+    private var currentState:
+        State =
         initialState
-        private set
+
+    val current:
+        State
+        get() =
+            currentState
 
     abstract val acts:
         VexBehaviorV2<
@@ -379,6 +366,13 @@ abstract class VexBehaviorV2Family<
             State,
             Control
         >
+
+    open val store:
+        VexFamilyStore<
+            Family,
+            State
+        >? =
+        null
 
     open val displayState:
         VexBehaviorV2DisplayState<
@@ -404,31 +398,265 @@ abstract class VexBehaviorV2Family<
             "acts must belong to this live Family instance"
         }
 
+        val before =
+            current
+
         val act =
             acts.resolve(
                 current =
-                    current,
+                    before,
                 control =
                     control,
             )
                 ?: return null
 
+        logger.record(
+            VexFamilyLogEvent.ControlAccepted(
+                family =
+                    this::class,
+                control =
+                    control::class,
+                currentState =
+                    before::class,
+            ),
+        )
+
+        applyDisposition(
+            act.immediateDisposition,
+        )
+
+        act.effect
+            ?.let(
+                ::begin,
+            )
+
+        return act
+    }
+
+    private fun applyDisposition(
+        disposition:
+            VexBehaviorV2StateDisposition<
+                Family,
+                State
+            >,
+    ) {
         when (
-            act.immediateDisposition
-                .kind
+            disposition.kind
         ) {
             VexBehaviorV2StateDispositionKind.Stay ->
                 Unit
 
             VexBehaviorV2StateDispositionKind.Admit ->
-                current =
+                admit(
                     requireNotNull(
-                        act.immediateDisposition
-                            .admittedState,
-                    )
+                        disposition.admittedState,
+                    ),
+                )
+        }
+    }
+
+    private fun admit(
+        state: State,
+    ) {
+        val before =
+            currentState
+
+        currentState =
+            state
+
+        if (
+            before !=
+            state
+        ) {
+            logger.record(
+                VexFamilyLogEvent.StateAdmitted(
+                    family =
+                        this::class,
+                    fromState =
+                        before::class,
+                    toState =
+                        state::class,
+                ),
+            )
+        }
+    }
+
+    private fun begin(
+        effect:
+            VexBehaviorV2Begin<
+                Family,
+                State
+            >,
+    ) {
+        when (
+            val operation =
+                effect.operation
+        ) {
+            is VexBehaviorV2Save ->
+                beginSave(
+                    mode =
+                        effect.mode,
+                    save =
+                        operation,
+                )
+        }
+    }
+
+    private fun beginSave(
+        mode: VexBehaviorV2BeginMode,
+        save:
+            VexBehaviorV2Save<
+                Family,
+                State
+            >,
+    ) {
+        val familyStore =
+            requireNotNull(
+                store,
+            ) {
+                "Save was authored for " +
+                    this::class.qualifiedName +
+                    " but this live Family has no Store"
+            }
+
+        val operation =
+            familyStore::save
+
+        val beforeOperation = {
+            logger.record(
+                VexFamilyLogEvent.OperationBegan(
+                    family =
+                        this::class,
+                    operation =
+                        operation,
+                    state =
+                        save.state::class,
+                ),
+            )
         }
 
-        return act
+        val onResult:
+            (
+                VexOperationResult,
+            ) -> Unit = { result ->
+                when (
+                    result
+                ) {
+                    VexOperationResult.Success -> {
+                        logger.record(
+                            VexFamilyLogEvent.OperationSuccess(
+                                family =
+                                    this::class,
+                                operation =
+                                    operation,
+                                state =
+                                    save.state::class,
+                            ),
+                        )
+
+                        applyLaterResult(
+                            save.results.success,
+                        )
+                    }
+
+                    is VexOperationResult.Failure -> {
+                        logger.record(
+                            VexFamilyLogEvent.OperationFailure(
+                                family =
+                                    this::class,
+                                operation =
+                                    operation,
+                                state =
+                                    save.state::class,
+                                failure =
+                                    result.cause
+                                        ?.let { cause ->
+                                            cause::class
+                                        },
+                            ),
+                        )
+
+                        applyLaterResult(
+                            save.results.failure,
+                        )
+                    }
+                }
+            }
+
+        val onFailure:
+            (
+                Throwable,
+            ) -> Unit = { failure ->
+                logger.record(
+                    VexFamilyLogEvent.OperationFailure(
+                        family =
+                            this::class,
+                        operation =
+                            operation,
+                        state =
+                            save.state::class,
+                        failure =
+                            failure::class,
+                    ),
+                )
+
+                applyLaterResult(
+                    save.results.failure,
+                )
+            }
+
+        when (
+            mode
+        ) {
+            VexBehaviorV2BeginMode.Replaceable ->
+                VexExecution.beginReplaceable(
+                    executionRoot =
+                        executionRoot,
+                    owner =
+                        this::class,
+                    operation =
+                        operation,
+                    argument =
+                        save.state,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+
+            VexBehaviorV2BeginMode.Sequenced ->
+                VexExecution.beginSequenced(
+                    executionRoot =
+                        executionRoot,
+                    owner =
+                        this::class,
+                    operation =
+                        operation,
+                    argument =
+                        save.state,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+        }
+    }
+
+    private fun applyLaterResult(
+        result:
+            VexBehaviorV2Result<
+                Family,
+                State
+            >,
+    ) {
+        result.admittedState
+            ?.let(
+                ::admit,
+            )
     }
 }
 

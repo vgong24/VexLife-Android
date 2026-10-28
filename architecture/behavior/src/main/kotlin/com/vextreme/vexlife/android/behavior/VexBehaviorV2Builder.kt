@@ -312,8 +312,8 @@ class VexBehaviorV2BeginScope<
 > internal constructor(
     private val mode: VexBehaviorV2BeginMode,
 ) {
-    private var save:
-        VexBehaviorV2Save<
+    private var operation:
+        VexOperation<
             Family,
             State
         >? =
@@ -327,10 +327,10 @@ class VexBehaviorV2BeginScope<
             State
         > {
         require(
-            save ==
+            operation ==
                 null,
         ) {
-            "begin V2 currently admits one Save operation"
+            "begin V2 currently admits one Operation"
         }
 
         return VexBehaviorV2SaveDestination(
@@ -338,13 +338,13 @@ class VexBehaviorV2BeginScope<
                 state,
             complete = { completed ->
                 require(
-                    save ==
+                    operation ==
                         null,
                 ) {
-                    "Save was already completed"
+                    "begin Operation was already completed"
                 }
 
-                save =
+                operation =
                     completed
             },
         )
@@ -358,11 +358,11 @@ class VexBehaviorV2BeginScope<
         VexBehaviorV2Begin(
             mode =
                 mode,
-            save =
+            operation =
                 requireNotNull(
-                    save,
+                    operation,
                 ) {
-                    "begin V2 requires Save(...).results { ... }"
+                    "begin V2 requires one Operation; Save(...).results { ... } is the current patient zero"
                 },
         )
 }

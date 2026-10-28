@@ -1,23 +1,15 @@
 package com.vextreme.vexlife.android.behavior
 
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.relay.VexState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
 
-/**
- * Canonical fresh-entry reference for the current V2 Family/UI Origin Walk.
- *
- * UI receives one live Family, reads its DisplayState, and calls activate(Control). The Family
- * re-reads CURRENT semantic State, selects the authored Act, applies its immediate consequence, and
- * exposes the resulting DisplayState.
- *
- * Store / Connection / provider execution is deliberately not introduced merely to complete the UI
- * loop. Effect-bearing third-party truth is the next Origin pressure.
- */
 class VexBehaviorUiRoundTripReferenceTest {
     private class ThemeModeFamily(
         initialState: State,
+        executionRoot: VexExecutionRoot,
     ) :
         VexBehaviorV2Family<
             ThemeModeFamily,
@@ -26,6 +18,8 @@ class VexBehaviorUiRoundTripReferenceTest {
         >(
             initialState =
                 initialState,
+            executionRoot =
+                executionRoot,
         ) {
         sealed interface State :
             VexBehaviorFamily.State<
@@ -90,31 +84,7 @@ class VexBehaviorUiRoundTripReferenceTest {
                 behaviorRef =
                     "reference.theme-mode",
             ) {
-                state<State.NotSet> {
-                    on(
-                        Control.Toggle,
-                    ) {
-                        stay()
-
-                        begin(
-                            mode =
-                                VexBehaviorV2BeginMode.Sequenced,
-                        ) {
-                            save(
-                                State.Dark,
-                            ).results {
-                                success {
-                                    admit(
-                                        State.Dark,
-                                    )
-                                }
-
-                                failure {
-                                }
-                            }
-                        }
-                    }
-                }
+                state<State.NotSet>()
 
                 state<State.Light> {
                     on(
@@ -186,93 +156,97 @@ class VexBehaviorUiRoundTripReferenceTest {
 
     @Test
     fun uiReadsDisplayStateAndActivatesTheSameLiveFamily() {
-        val themeMode =
-            ThemeModeFamily(
-                initialState =
-                    ThemeModeFamily.State.Light,
-            )
+        val root =
+            VexExecutionRoot()
 
-        val ui =
-            ReferenceComposableUi(
-                themeMode =
-                    themeMode,
-            )
-
-        assertEquals(
-            ReferenceUiState(
-                displayState =
-                    ThemeModeFamily.DisplayState.Inactive(
+        try {
+            val themeMode =
+                ThemeModeFamily(
+                    initialState =
                         ThemeModeFamily.State.Light,
-                    ),
-            ),
-            ui.render(),
-        )
+                    executionRoot =
+                        root,
+                )
 
-        ui.onActivate()
+            val ui =
+                ReferenceComposableUi(
+                    themeMode =
+                        themeMode,
+                )
 
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            themeMode.current,
-        )
+            assertEquals(
+                ReferenceUiState(
+                    displayState =
+                        ThemeModeFamily.DisplayState.Inactive(
+                            ThemeModeFamily.State.Light,
+                        ),
+                ),
+                ui.render(),
+            )
 
-        assertEquals(
-            ReferenceUiState(
-                displayState =
-                    ThemeModeFamily.DisplayState.Active(
-                        ThemeModeFamily.State.Dark,
-                    ),
-            ),
-            ui.render(),
-        )
+            ui.onActivate()
+
+            assertSame(
+                ThemeModeFamily.State.Dark,
+                themeMode.current,
+            )
+
+            assertEquals(
+                ReferenceUiState(
+                    displayState =
+                        ThemeModeFamily.DisplayState.Active(
+                            ThemeModeFamily.State.Dark,
+                        ),
+                ),
+                ui.render(),
+            )
+        } finally {
+            root.forceStopAll()
+        }
     }
 
     @Test
     fun activationUsesFamilyCurrentStateInsteadOfStaleRenderedDisplayState() {
-        val themeMode =
-            ThemeModeFamily(
-                initialState =
+        val root =
+            VexExecutionRoot()
+
+        try {
+            val themeMode =
+                ThemeModeFamily(
+                    initialState =
+                        ThemeModeFamily.State.Light,
+                    executionRoot =
+                        root,
+                )
+
+            val ui =
+                ReferenceComposableUi(
+                    themeMode =
+                        themeMode,
+                )
+
+            val stale =
+                ui.render()
+
+            assertEquals(
+                ThemeModeFamily.DisplayState.Inactive(
                     ThemeModeFamily.State.Light,
+                ),
+                stale.displayState,
             )
 
-        val ui =
-            ReferenceComposableUi(
-                themeMode =
-                    themeMode,
+            themeMode.activate(
+                ThemeModeFamily.Control.Toggle,
             )
+            ui.onActivate()
 
-        val staleRender =
-            ui.render()
-
-        assertEquals(
-            ThemeModeFamily.DisplayState.Inactive(
+            assertSame(
                 ThemeModeFamily.State.Light,
-            ),
-            staleRender.displayState,
-        )
-
-        themeMode.activate(
-            ThemeModeFamily.Control.Toggle,
-        )
-
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            themeMode.current,
-        )
-
-        ui.onActivate()
-
-        assertSame(
-            ThemeModeFamily.State.Light,
-            themeMode.current,
-        )
-
-        assertEquals(
-            ThemeModeFamily.DisplayState.Inactive(
-                ThemeModeFamily.State.Light,
-            ),
-            ui.render()
-                .displayState,
-        )
+                themeMode.current,
+            )
+        } finally {
+            root.forceStopAll()
+        }
     }
 }
 

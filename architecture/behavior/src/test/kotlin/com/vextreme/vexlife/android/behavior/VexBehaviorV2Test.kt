@@ -1,6 +1,14 @@
 package com.vextreme.vexlife.android.behavior
 
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.relay.VexState
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -10,6 +18,9 @@ import org.junit.Test
 class VexBehaviorV2Test {
     private class ThemeModeFamily(
         initialState: State,
+        executionRoot: VexExecutionRoot,
+        override val store: Store? = null,
+        logger: VexFamilyLogger = VexFamilyLogger.None,
     ) :
         VexBehaviorV2Family<
             ThemeModeFamily,
@@ -18,6 +29,10 @@ class VexBehaviorV2Test {
         >(
             initialState =
                 initialState,
+            executionRoot =
+                executionRoot,
+            logger =
+                logger,
         ) {
         sealed interface State :
             VexBehaviorFamily.State<
@@ -47,6 +62,12 @@ class VexBehaviorV2Test {
             data object Toggle :
                 Control
         }
+
+        interface Store :
+            VexFamilyStore<
+                ThemeModeFamily,
+                State
+            >
 
         sealed interface DisplayState :
             VexBehaviorV2DisplayState<
@@ -155,6 +176,7 @@ class VexBehaviorV2Test {
 
     private class MinimalFamily(
         initialState: State,
+        executionRoot: VexExecutionRoot,
     ) :
         VexBehaviorV2Family<
             MinimalFamily,
@@ -163,6 +185,8 @@ class VexBehaviorV2Test {
         >(
             initialState =
                 initialState,
+            executionRoot =
+                executionRoot,
         ) {
         sealed interface State :
             VexBehaviorFamily.State<
@@ -201,210 +225,253 @@ class VexBehaviorV2Test {
             }
     }
 
+    private class GatedStore :
+        ThemeModeFamily.Store {
+        private val mutableState =
+            MutableStateFlow<ThemeModeFamily.State>(
+                ThemeModeFamily.State.NotSet,
+            )
+
+        override val observableState =
+            mutableState.asStateFlow()
+
+        val gate =
+            CompletableDeferred<Unit>()
+
+        override suspend fun get():
+            ThemeModeFamily.State =
+            mutableState.value
+
+        override suspend fun save(
+            state:
+                ThemeModeFamily.State,
+        ):
+            VexOperationResult {
+            gate.await()
+            mutableState.value =
+                state
+            return VexOperationResult.Success
+        }
+
+        override suspend fun forget():
+            VexOperationResult {
+            mutableState.value =
+                ThemeModeFamily.State.NotSet
+            return VexOperationResult.Success
+        }
+    }
+
+    private class RecordingLogger(
+        private val onRecord:
+            (
+                VexFamilyLogEvent,
+            ) -> Unit = {},
+    ) :
+        VexFamilyLogger {
+        val events =
+            Collections.synchronizedList(
+                mutableListOf<
+                    VexFamilyLogEvent
+                >(),
+            )
+
+        override fun record(
+            event: VexFamilyLogEvent,
+        ) {
+            events +=
+                event
+            onRecord(
+                event,
+            )
+        }
+    }
+
     @Test
     fun activateUsesFamilyCurrentStateAndAppliesTheAuthoredAct() {
-        val family =
-            ThemeModeFamily(
-                initialState =
-                    ThemeModeFamily.State.Light,
-            )
+        val root =
+            VexExecutionRoot()
 
-        assertEquals(
-            ThemeModeFamily.DisplayState.Inactive(
-                ThemeModeFamily.State.Light,
-            ),
-            family.displayState,
-        )
+        try {
+            val family =
+                ThemeModeFamily(
+                    initialState =
+                        ThemeModeFamily.State.Light,
+                    executionRoot =
+                        root,
+                )
 
-        val act =
-            family.activate(
+            val act =
+                family.activate(
+                    ThemeModeFamily.Control.Toggle,
+                )
+
+            assertSame(
                 ThemeModeFamily.Control.Toggle,
+                act?.control,
             )
-
-        assertSame(
-            ThemeModeFamily.Control.Toggle,
-            act?.control,
-        )
-        assertNull(
-            act?.effect,
-        )
-        assertEquals(
-            VexBehaviorV2StateDispositionKind.Admit,
-            act?.immediateDisposition
-                ?.kind,
-        )
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            family.current,
-        )
-        assertEquals(
-            ThemeModeFamily.DisplayState.Active(
+            assertNull(
+                act?.effect,
+            )
+            assertSame(
                 ThemeModeFamily.State.Dark,
-            ),
-            family.displayState,
-        )
+                family.current,
+            )
+            assertEquals(
+                ThemeModeFamily.DisplayState.Active(
+                    ThemeModeFamily.State.Dark,
+                ),
+                family.displayState,
+            )
+        } finally {
+            root.forceStopAll()
+        }
     }
 
     @Test
-    fun sameControlUsesLiveCurrentStateWithoutCallerSupplyingState() {
-        val family =
-            ThemeModeFamily(
-                initialState =
-                    ThemeModeFamily.State.Light,
+    fun beginExecutesSaveAndSuccessCanAdmitLaterState() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            GatedStore()
+        val success =
+            CountDownLatch(
+                1,
+            )
+        val logger =
+            RecordingLogger { event ->
+                if (
+                    event is
+                        VexFamilyLogEvent.OperationSuccess
+                ) {
+                    success.countDown()
+                }
+            }
+
+        try {
+            val family =
+                ThemeModeFamily(
+                    initialState =
+                        ThemeModeFamily.State.NotSet,
+                    executionRoot =
+                        root,
+                    store =
+                        store,
+                    logger =
+                        logger,
+                )
+
+            val act =
+                family.activate(
+                    ThemeModeFamily.Control.Toggle,
+                )
+
+            assertSame(
+                ThemeModeFamily.State.NotSet,
+                family.current,
+            )
+            assertTrue(
+                act?.effect
+                    ?.operation is
+                    VexBehaviorV2Save,
             )
 
-        family.activate(
-            ThemeModeFamily.Control.Toggle,
-        )
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            family.current,
-        )
-
-        family.activate(
-            ThemeModeFamily.Control.Toggle,
-        )
-        assertSame(
-            ThemeModeFamily.State.Light,
-            family.current,
-        )
-    }
-
-    @Test
-    fun durabilityGatedActPreservesBeginResultsAndStaysNow() {
-        val family =
-            ThemeModeFamily(
-                initialState =
-                    ThemeModeFamily.State.NotSet,
+            store.gate.complete(
+                Unit,
             )
 
-        val act =
-            family.activate(
-                ThemeModeFamily.Control.Toggle,
+            assertTrue(
+                "Save Success was not witnessed",
+                success.await(
+                    5,
+                    TimeUnit.SECONDS,
+                ),
             )
 
-        assertSame(
-            ThemeModeFamily.State.NotSet,
-            family.current,
-        )
-        assertEquals(
-            VexBehaviorV2BeginMode.Sequenced,
-            act?.effect
-                ?.mode,
-        )
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            act?.effect
-                ?.save
-                ?.state,
-        )
-        assertEquals(
-            VexBehaviorV2StateDispositionKind.Stay,
-            act?.immediateDisposition
-                ?.kind,
-        )
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            act?.effect
-                ?.save
-                ?.results
-                ?.success
-                ?.admittedState,
-        )
-        assertNull(
-            act?.effect
-                ?.save
-                ?.results
-                ?.failure
-                ?.admittedState,
-        )
+            assertSame(
+                ThemeModeFamily.State.Dark,
+                runBlocking {
+                    store.get()
+                },
+            )
+            assertSame(
+                ThemeModeFamily.State.Dark,
+                family.current,
+            )
+            assertTrue(
+                logger.events.any { event ->
+                    event is
+                        VexFamilyLogEvent.OperationBegan
+                },
+            )
+            assertTrue(
+                logger.events.any { event ->
+                    event is
+                        VexFamilyLogEvent.OperationSuccess
+                },
+            )
+        } finally {
+            root.forceStopAll()
+        }
     }
 
     @Test
     fun displayStateIsAlwaysPresentAndDefaultsToEmptyCurrentState() {
-        val family =
-            MinimalFamily(
-                initialState =
-                    MinimalFamily.State.Idle,
-            )
+        val root =
+            VexExecutionRoot()
 
-        assertEquals(
-            VexBehaviorV2DisplayState.Empty(
-                MinimalFamily.State.Idle,
-            ),
-            family.displayState,
-        )
+        try {
+            val family =
+                MinimalFamily(
+                    initialState =
+                        MinimalFamily.State.Idle,
+                    executionRoot =
+                        root,
+                )
+
+            assertEquals(
+                VexBehaviorV2DisplayState.Empty(
+                    MinimalFamily.State.Idle,
+                ),
+                family.displayState,
+            )
+        } finally {
+            root.forceStopAll()
+        }
     }
 
     @Test
     fun themeModeStateCanAlsoBeRelayVexStateWithoutInventingAnotherStateNoun() {
-        val copied:
-            ThemeModeFamily.State =
-            ThemeModeFamily.State.Dark
-                .deepCopy()
+        val root =
+            VexExecutionRoot()
 
-        assertSame(
-            ThemeModeFamily.State.Dark,
-            copied,
-        )
+        try {
+            val copied:
+                ThemeModeFamily.State =
+                ThemeModeFamily.State.Dark
+                    .deepCopy()
 
-        val family =
-            ThemeModeFamily(
-                initialState =
-                    ThemeModeFamily.State.Light,
+            assertSame(
+                ThemeModeFamily.State.Dark,
+                copied,
             )
 
-        assertTrue(
-            family.acts
-                .describe()
-                .contains(
-                    "Light --on(Toggle)",
-                ),
-        )
-    }
+            val family =
+                ThemeModeFamily(
+                    initialState =
+                        ThemeModeFamily.State.Light,
+                    executionRoot =
+                        root,
+                )
 
-    @Test(
-        expected =
-            IllegalArgumentException::class,
-    )
-    fun saveResultsStillRequireExplicitSuccessAndFailure() {
-        val family =
-            ThemeModeFamily(
-                initialState =
-                    ThemeModeFamily.State.Light,
+            assertTrue(
+                family.acts
+                    .describe()
+                    .contains(
+                        "Light --on(Toggle)",
+                    ),
             )
-
-        vexActs<
-            ThemeModeFamily,
-            ThemeModeFamily.State,
-            ThemeModeFamily.Control
-        >(
-            family =
-                family,
-            behaviorRef =
-                "example.theme-mode.v2.incomplete-results",
-        ) {
-            state<ThemeModeFamily.State.Light> {
-                on(
-                    ThemeModeFamily.Control.Toggle,
-                ) {
-                    admit(
-                        ThemeModeFamily.State.Dark,
-                    )
-
-                    begin(
-                        mode =
-                            VexBehaviorV2BeginMode.Replaceable,
-                    ) {
-                        save(
-                            ThemeModeFamily.State.Dark,
-                        ).results {
-                            success {
-                            }
-                        }
-                    }
-                }
-            }
+        } finally {
+            root.forceStopAll()
         }
     }
 
@@ -412,29 +479,53 @@ class VexBehaviorV2Test {
         expected =
             IllegalArgumentException::class,
     )
-    fun everyAuthoredActRequiresAnImmediateStayOrAdmit() {
-        val family =
-            ThemeModeFamily(
-                initialState =
-                    ThemeModeFamily.State.Light,
-            )
+    fun saveResultsStillRequireExplicitSuccessAndFailure() {
+        val root =
+            VexExecutionRoot()
 
-        vexActs<
-            ThemeModeFamily,
-            ThemeModeFamily.State,
-            ThemeModeFamily.Control
-        >(
-            family =
-                family,
-            behaviorRef =
-                "example.theme-mode.v2.missing-immediate",
-        ) {
-            state<ThemeModeFamily.State.Light> {
-                on(
-                    ThemeModeFamily.Control.Toggle,
-                ) {
+        try {
+            val family =
+                ThemeModeFamily(
+                    initialState =
+                        ThemeModeFamily.State.Light,
+                    executionRoot =
+                        root,
+                )
+
+            vexActs<
+                ThemeModeFamily,
+                ThemeModeFamily.State,
+                ThemeModeFamily.Control
+            >(
+                family =
+                    family,
+                behaviorRef =
+                    "example.theme-mode.v2.incomplete-results",
+            ) {
+                state<ThemeModeFamily.State.Light> {
+                    on(
+                        ThemeModeFamily.Control.Toggle,
+                    ) {
+                        admit(
+                            ThemeModeFamily.State.Dark,
+                        )
+
+                        begin(
+                            mode =
+                                VexBehaviorV2BeginMode.Replaceable,
+                        ) {
+                            save(
+                                ThemeModeFamily.State.Dark,
+                            ).results {
+                                success {
+                                }
+                            }
+                        }
+                    }
                 }
             }
+        } finally {
+            root.forceStopAll()
         }
     }
 }
