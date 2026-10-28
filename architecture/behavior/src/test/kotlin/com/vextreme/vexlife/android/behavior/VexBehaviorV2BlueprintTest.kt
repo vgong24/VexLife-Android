@@ -8,90 +8,78 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexBehaviorV2BlueprintTest {
-    private sealed interface ThemeFamily :
+    private sealed interface ThemeModeFamily :
         VexBehaviorFamily<
-            ThemeFamily
+            ThemeModeFamily
         >
 
-    private sealed interface ThemeState :
+    private sealed interface ThemeMode :
         VexBehaviorFamily.State<
-            ThemeFamily
+            ThemeModeFamily
         >,
         VexState<
-            ThemeState
+            ThemeMode
         > {
         data object NotSet :
-            ThemeState
+            ThemeMode
 
         data object Light :
-            ThemeState
+            ThemeMode
 
         data object Dark :
-            ThemeState
+            ThemeMode
 
         override fun deepCopy():
-            ThemeState =
+            ThemeMode =
             this
     }
 
-    private enum class ThemeControl :
+    private enum class ThemeModeControl :
         VexBehaviorFamily.Control<
-            ThemeFamily
+            ThemeModeFamily
         > {
         Toggle,
     }
 
-    private sealed interface ThemeAct :
+    private sealed interface ThemeModeAct :
         VexBehaviorFamily.Act<
-            ThemeFamily
+            ThemeModeFamily
         > {
         data object CommitDark :
-            ThemeAct
+            ThemeModeAct
 
         data object SelectDark :
-            ThemeAct
+            ThemeModeAct
 
         data object SelectLight :
-            ThemeAct
+            ThemeModeAct
     }
 
-    private sealed interface ThemeEffect :
-        VexBehaviorFamily.Effect<
-            ThemeFamily
-        > {
-        data object SaveDark :
-            ThemeEffect
-
-        data object SaveLight :
-            ThemeEffect
-    }
-
-    private fun themeBlueprint() =
+    private fun themeModeBehavior() =
         vexBehaviorV2Blueprint<
-            ThemeFamily,
-            ThemeState,
-            ThemeAct,
-            ThemeEffect
+            ThemeModeFamily,
+            ThemeMode,
+            ThemeModeAct
         >(
             behaviorRef =
-                "example.theme.v2",
+                "example.theme-mode.v2",
         ) {
-            state<ThemeState.NotSet> {
+            state<ThemeMode.NotSet> {
                 on(
                     act =
-                        ThemeAct.CommitDark,
+                        ThemeModeAct.CommitDark,
                     effect =
                         begin(
                             mode =
                                 VexBehaviorV2BeginMode
                                     .Sequenced,
                         ) {
-                            operation(
-                                ThemeEffect.SaveDark,
+                            save(
+                                ThemeMode.Dark,
                             ).results {
                                 success {
                                     admit<
-                                        ThemeState.Dark
+                                        ThemeMode.Dark
                                     >()
                                 }
 
@@ -102,18 +90,18 @@ class VexBehaviorV2BlueprintTest {
                 ).stay()
             }
 
-            state<ThemeState.Light> {
+            state<ThemeMode.Light> {
                 on(
                     act =
-                        ThemeAct.SelectDark,
+                        ThemeModeAct.SelectDark,
                     effect =
                         begin(
                             mode =
                                 VexBehaviorV2BeginMode
                                     .Replaceable,
                         ) {
-                            operation(
-                                ThemeEffect.SaveDark,
+                            save(
+                                ThemeMode.Dark,
                             ).results {
                                 success {
                                 }
@@ -123,22 +111,22 @@ class VexBehaviorV2BlueprintTest {
                             }
                         },
                 ).admit<
-                    ThemeState.Dark
+                    ThemeMode.Dark
                 >()
             }
 
-            state<ThemeState.Dark> {
+            state<ThemeMode.Dark> {
                 on(
                     act =
-                        ThemeAct.SelectLight,
+                        ThemeModeAct.SelectLight,
                     effect =
                         begin(
                             mode =
                                 VexBehaviorV2BeginMode
                                     .Replaceable,
                         ) {
-                            operation(
-                                ThemeEffect.SaveLight,
+                            save(
+                                ThemeMode.Light,
                             ).results {
                                 success {
                                 }
@@ -148,25 +136,66 @@ class VexBehaviorV2BlueprintTest {
                             }
                         },
                 ).admit<
-                    ThemeState.Light
+                    ThemeMode.Light
                 >()
             }
         }
 
     @Test
-    fun v2KeepsImmediateAndLaterAdmissionAsSeparateDecisionPoints() {
+    fun saveCarriesTheActualThemeModeStateFromTheOriginWalk() {
         val resolution =
-            themeBlueprint()
+            themeModeBehavior()
                 .resolve(
                     current =
-                        ThemeState.NotSet,
+                        ThemeMode.Light,
                     act =
-                        ThemeAct.CommitDark,
+                        ThemeModeAct.SelectDark,
                 )
 
         assertSame(
-            ThemeEffect.SaveDark,
-            resolution?.effect,
+            ThemeMode.Dark,
+            resolution
+                ?.effect
+                ?.save
+                ?.state,
+        )
+        assertEquals(
+            VexBehaviorV2BeginMode.Replaceable,
+            resolution
+                ?.effect
+                ?.mode,
+        )
+        assertEquals(
+            VexBehaviorV2StateDispositionKind.Admit,
+            resolution
+                ?.immediateDisposition
+                ?.kind,
+        )
+        assertEquals(
+            ThemeMode.Dark::class,
+            resolution
+                ?.immediateDisposition
+                ?.stateKind,
+        )
+    }
+
+    @Test
+    fun durabilityGatedSaveCanAdmitTheSameStateLater() {
+        val resolution =
+            themeModeBehavior()
+                .resolve(
+                    current =
+                        ThemeMode.NotSet,
+                    act =
+                        ThemeModeAct.CommitDark,
+                )
+
+        assertSame(
+            ThemeMode.Dark,
+            resolution
+                ?.effect
+                ?.save
+                ?.state,
         )
         assertEquals(
             VexBehaviorV2StateDispositionKind.Stay,
@@ -175,30 +204,18 @@ class VexBehaviorV2BlueprintTest {
                 ?.kind,
         )
         assertEquals(
-            ThemeState.NotSet::class,
+            ThemeMode.Dark::class,
             resolution
-                ?.immediateDisposition
-                ?.stateKind,
-        )
-        assertEquals(
-            VexBehaviorV2BeginMode.Sequenced,
-            resolution
-                ?.begin
-                ?.mode,
-        )
-        assertEquals(
-            ThemeState.Dark::class,
-            resolution
-                ?.begin
-                ?.operation
+                ?.effect
+                ?.save
                 ?.results
                 ?.success
                 ?.admittedStateKind,
         )
         assertNull(
             resolution
-                ?.begin
-                ?.operation
+                ?.effect
+                ?.save
                 ?.results
                 ?.failure
                 ?.admittedStateKind,
@@ -206,139 +223,49 @@ class VexBehaviorV2BlueprintTest {
     }
 
     @Test
-    fun sameEffectIdentityDoesNotOwnAdmissionTiming() {
-        val durabilityGated =
-            themeBlueprint()
-                .resolve(
-                    current =
-                        ThemeState.NotSet,
-                    act =
-                        ThemeAct.CommitDark,
-                )
-
-        val immediate =
-            themeBlueprint()
-                .resolve(
-                    current =
-                        ThemeState.Light,
-                    act =
-                        ThemeAct.SelectDark,
-                )
-
-        assertSame(
-            ThemeEffect.SaveDark,
-            durabilityGated?.effect,
-        )
-        assertSame(
-            ThemeEffect.SaveDark,
-            immediate?.effect,
-        )
-
-        assertEquals(
-            VexBehaviorV2StateDispositionKind.Stay,
-            durabilityGated
-                ?.immediateDisposition
-                ?.kind,
-        )
-        assertEquals(
-            ThemeState.Dark::class,
-            durabilityGated
-                ?.begin
-                ?.operation
-                ?.results
-                ?.success
-                ?.admittedStateKind,
-        )
-
-        assertEquals(
-            VexBehaviorV2StateDispositionKind.Admit,
-            immediate
-                ?.immediateDisposition
-                ?.kind,
-        )
-        assertEquals(
-            ThemeState.Dark::class,
-            immediate
-                ?.immediateDisposition
-                ?.stateKind,
-        )
-        assertNull(
-            immediate
-                ?.begin
-                ?.operation
-                ?.results
-                ?.success
-                ?.admittedStateKind,
-        )
-    }
-
-    @Test
     fun v2ReusesV1ControlMeaningInsteadOfCreatingAnotherControlSystem() {
         val controls =
-            themeBlueprint()
-                .controls<ThemeControl> {
+            themeModeBehavior()
+                .controls<
+                    ThemeModeControl
+                > {
                     control(
-                        ThemeControl.Toggle,
-                        ThemeAct.SelectDark,
-                        ThemeAct.SelectLight,
-                        ThemeAct.CommitDark,
+                        ThemeModeControl.Toggle,
+                        ThemeModeAct.SelectDark,
+                        ThemeModeAct.SelectLight,
+                        ThemeModeAct.CommitDark,
                     )
                 }
 
         assertSame(
-            ThemeAct.SelectDark,
+            ThemeModeAct.SelectDark,
             controls.resolve(
                 current =
-                    ThemeState.Light,
+                    ThemeMode.Light,
                 control =
-                    ThemeControl.Toggle,
-            )?.act,
-        )
-        assertSame(
-            ThemeAct.SelectLight,
-            controls.resolve(
-                current =
-                    ThemeState.Dark,
-                control =
-                    ThemeControl.Toggle,
-            )?.act,
-        )
-        assertSame(
-            ThemeAct.CommitDark,
-            controls.resolve(
-                current =
-                    ThemeState.NotSet,
-                control =
-                    ThemeControl.Toggle,
+                    ThemeModeControl.Toggle,
             )?.act,
         )
     }
 
     @Test
-    fun v2FamilyStateCanAlsoBeRelayVexStateWithoutChangingTheDsl() {
+    fun themeModeCanAlsoBeRelayVexStateWithoutRenamingTheSemanticNoun() {
         val copied:
-            ThemeState =
-            ThemeState.Dark
+            ThemeMode =
+            ThemeMode.Dark
                 .deepCopy()
 
         assertSame(
-            ThemeState.Dark,
+            ThemeMode.Dark,
             copied,
         )
 
-        val description =
-            themeBlueprint()
+        assertTrue(
+            themeModeBehavior()
                 .describe()
-
-        assertTrue(
-            description.contains(
-                "begin[Replaceable]",
-            ),
-        )
-        assertTrue(
-            description.contains(
-                "Success=Dark",
-            ),
+                .contains(
+                    "Save(Dark)",
+                ),
         )
     }
 
@@ -348,62 +275,36 @@ class VexBehaviorV2BlueprintTest {
     )
     fun resultsRequireExplicitSuccessAndFailure() {
         vexBehaviorV2Blueprint<
-            ThemeFamily,
-            ThemeState,
-            ThemeAct,
-            ThemeEffect
+            ThemeModeFamily,
+            ThemeMode,
+            ThemeModeAct
         >(
             behaviorRef =
-                "example.theme.v2.incomplete-results",
+                "example.theme-mode.v2.incomplete-results",
         ) {
-            state<ThemeState.Light> {
+            state<ThemeMode.Light> {
                 on(
                     act =
-                        ThemeAct.SelectDark,
+                        ThemeModeAct.SelectDark,
                     effect =
                         begin(
                             mode =
                                 VexBehaviorV2BeginMode
                                     .Replaceable,
                         ) {
-                            operation(
-                                ThemeEffect.SaveDark,
+                            save(
+                                ThemeMode.Dark,
                             ).results {
                                 success {
                                 }
                             }
                         },
                 ).admit<
-                    ThemeState.Dark
+                    ThemeMode.Dark
                 >()
             }
 
-            state<ThemeState.Dark>()
-        }
-    }
-
-    @Test(
-        expected =
-            IllegalArgumentException::class,
-    )
-    fun v2StillRejectsRelationshipWithoutImmediateStayOrAdmit() {
-        vexBehaviorV2Blueprint<
-            ThemeFamily,
-            ThemeState,
-            ThemeAct,
-            ThemeEffect
-        >(
-            behaviorRef =
-                "example.theme.v2.incomplete-immediate",
-        ) {
-            state<ThemeState.Light> {
-                on(
-                    act =
-                        ThemeAct.SelectDark,
-                    effect =
-                        ThemeEffect.SaveDark,
-                )
-            }
+            state<ThemeMode.Dark>()
         }
     }
 }
