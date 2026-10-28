@@ -64,7 +64,7 @@ class VexBehaviorV2SharedPreferencesStoreInstrumentedTest {
         }
 
         interface Store :
-            VexFamilyStore<
+            VexFamilyStateStore<
                 ThemeModeFamily,
                 State
             >
@@ -74,19 +74,19 @@ class VexBehaviorV2SharedPreferencesStoreInstrumentedTest {
                 State
             > {
             data class Empty(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
 
             data class Active(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
 
             data class Inactive(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
@@ -248,7 +248,7 @@ class VexBehaviorV2SharedPreferencesStoreInstrumentedTest {
             state:
                 ThemeModeFamily.State,
         ):
-            VexOperationResult {
+            VexStoreWriteResult {
             if (
                 state ==
                 ThemeModeFamily.State.NotSet
@@ -267,14 +267,14 @@ class VexBehaviorV2SharedPreferencesStoreInstrumentedTest {
                     )
                     .commit()
             ) {
-                VexOperationResult.Success
+                VexStoreWriteResult.Success
             } else {
-                VexOperationResult.Failure()
+                VexStoreWriteResult.Failure()
             }
         }
 
         override suspend fun forget():
-            VexOperationResult =
+            VexStoreWriteResult =
             if (
                 preferences
                     .edit()
@@ -283,9 +283,9 @@ class VexBehaviorV2SharedPreferencesStoreInstrumentedTest {
                     )
                     .commit()
             ) {
-                VexOperationResult.Success
+                VexStoreWriteResult.Success
             } else {
-                VexOperationResult.Failure()
+                VexStoreWriteResult.Failure()
             }
 
         fun clearForTest() {
@@ -444,7 +444,7 @@ class VexBehaviorV2SharedPreferencesStoreInstrumentedTest {
 
         try {
             assertEquals(
-                VexOperationResult.Success,
+                VexStoreWriteResult.Success,
                 runBlocking {
                     store.save(
                         ThemeModeFamily.State.Dark,
@@ -459,7 +459,7 @@ class VexBehaviorV2SharedPreferencesStoreInstrumentedTest {
             )
 
             assertEquals(
-                VexOperationResult.Success,
+                VexStoreWriteResult.Success,
                 runBlocking {
                     store.forget()
                 },

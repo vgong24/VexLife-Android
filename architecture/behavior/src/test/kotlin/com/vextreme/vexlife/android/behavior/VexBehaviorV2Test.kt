@@ -64,7 +64,7 @@ class VexBehaviorV2Test {
         }
 
         interface Store :
-            VexFamilyStore<
+            VexFamilyStateStore<
                 ThemeModeFamily,
                 State
             >
@@ -74,19 +74,19 @@ class VexBehaviorV2Test {
                 State
             > {
             data class Empty(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
 
             data class Active(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
 
             data class Inactive(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
@@ -187,6 +187,8 @@ class VexBehaviorV2Test {
                 initialState,
             executionRoot =
                 executionRoot,
+            logger =
+                VexFamilyLogger.None,
         ) {
         sealed interface State :
             VexBehaviorFamily.State<
@@ -246,18 +248,18 @@ class VexBehaviorV2Test {
             state:
                 ThemeModeFamily.State,
         ):
-            VexOperationResult {
+            VexStoreWriteResult {
             gate.await()
             mutableState.value =
                 state
-            return VexOperationResult.Success
+            return VexStoreWriteResult.Success
         }
 
         override suspend fun forget():
-            VexOperationResult {
+            VexStoreWriteResult {
             mutableState.value =
                 ThemeModeFamily.State.NotSet
-            return VexOperationResult.Success
+            return VexStoreWriteResult.Success
         }
     }
 

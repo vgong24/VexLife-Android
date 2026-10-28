@@ -4,15 +4,21 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlin.reflect.KClass
 
+/**
+ * Required minimum Family display role.
+ *
+ * The type parameter preserves Family/State association, but the role does not require every display
+ * projection to expose the full semantic State. Bounded projections may carry only the UI meaning
+ * they own. The foundation Empty default retains current State because it is explicitly the
+ * "no richer projection authored" fallback.
+ */
 interface VexBehaviorV2DisplayState<
     out State,
 > {
-    val state: State
-
     data class Empty<
         State,
     >(
-        override val state: State,
+        val state: State,
     ) :
         VexBehaviorV2DisplayState<
             State
@@ -331,11 +337,18 @@ fun <
     )
 
 /**
- * Live V2 Family.
+ * Current live V2 Family patient-zero runtime.
  *
- * begin(mode) is the execution phase; no ThemeModeExecution/FamilyExecution sibling is introduced.
- * Store remains visible on the Family. The existing VexExecution foundation is only the coroutine
- * machinery underneath begin.
+ * Stable authoring rules live above this runtime: Family-root vocabulary, structural Act,
+ * concrete admission, optional Effect and begin(mode) execution.
+ *
+ * This implementation currently proves a locally-owned CURRENT State plus Control activation and
+ * State-store Save. It is NOT yet the universal currentness owner for provider-observed Families.
+ * Playback/Maps/Conversation pressure still has to earn how external observation, observable UI
+ * state, payload Controls and multi-instance execution enter without making Family a god-object.
+ *
+ * begin(mode) remains the semantic execution phase; no ThemeModeExecution/FamilyExecution sibling is
+ * introduced. VexExecution is coroutine machinery underneath that already-authored boundary.
  */
 abstract class VexBehaviorV2Family<
     Family : VexBehaviorV2Family<
@@ -350,8 +363,7 @@ abstract class VexBehaviorV2Family<
     private val executionRoot:
         VexExecutionRoot,
     protected val logger:
-        VexFamilyLogger =
-        VexFamilyLogger.None,
+        VexFamilyLogger,
 ) :
     VexBehaviorFamily<
         Family
@@ -375,8 +387,7 @@ abstract class VexBehaviorV2Family<
 
     open val store:
         VexFamilyStore<
-            Family,
-            State
+            Family
         >? =
         null
 
@@ -546,8 +557,30 @@ abstract class VexBehaviorV2Family<
                     " but this live Family has no Store"
             }
 
+        val stateStore =
+            familyStore as?
+                VexFamilyStateStore<
+                    *,
+                    *
+                >
+                ?: error(
+                    "Save requires a Family State Store; " +
+                        this::class.qualifiedName +
+                        ".Store does not expose VexFamilyStateStore",
+                )
+
+        @Suppress(
+            "UNCHECKED_CAST",
+        )
+        val typedStateStore =
+            stateStore as
+                VexFamilyStateStore<
+                    Family,
+                    State
+                >
+
         val operation =
-            familyStore::save
+            typedStateStore::save
 
         val beforeOperation = {
             logger.record(
@@ -564,12 +597,12 @@ abstract class VexBehaviorV2Family<
 
         val onResult:
             (
-                VexOperationResult,
+                VexStoreWriteResult,
             ) -> Unit = { result ->
                 when (
                     result
                 ) {
-                    VexOperationResult.Success -> {
+                    VexStoreWriteResult.Success -> {
                         logger.record(
                             VexFamilyLogEvent.OperationSuccess(
                                 family =
@@ -586,7 +619,7 @@ abstract class VexBehaviorV2Family<
                         )
                     }
 
-                    is VexOperationResult.Failure -> {
+                    is VexStoreWriteResult.Failure -> {
                         logger.record(
                             VexFamilyLogEvent.OperationFailure(
                                 family =

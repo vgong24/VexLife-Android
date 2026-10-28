@@ -924,7 +924,7 @@ The reusable storage relationship is:
 
 ~~~text
 VexStore
-  -> VexFamilyStore<Family, State>
+  -> VexFamilyStateStore<Family, State>
        ObservableState
        Get()
        Save(State)
@@ -959,3 +959,112 @@ An empty success { } remains meaningful: the Operation succeeded and produced no
 State consequence, while the accountant still witnesses progression.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][FAMILY-STORE][BEGIN-EXECUTION][ACCOUNTANT] -->
+
+
+---
+
+## V2 stability boundary after cross-feature re-entry
+
+The ThemeMode Origin Walk has now been reread against VexStream Playback/MediaStore, Maps
+Convergence/offline stores and Conversation repository/hybrid projection pressure.
+
+### Stable architecture to preserve
+
+~~~text
+Family as the discoverable semantic root
+
+Family.State
+Family.Control
+required minimum Family.DisplayState role
+
+Act = CURRENT State + Control scenario
+
+on(Control) {
+  immediate stay()/admit(concrete State)
+
+  optional begin(mode) {
+    Operation
+      .results {
+        Success { optional later consequence }
+        Failure { optional later consequence }
+      }
+  }
+}
+
+Effect is optional
+begin is the semantic execution phase
+stronger operation verbs remain visible (Save stays Save)
+one supplied accountant witnesses accepted facts but owns no truth
+Relay / Convergence remains separate for independently-owned complete truths
+~~~
+
+These are the parts a fresh feature author may treat as the intended V2 direction.
+
+### Deliberately narrowed after re-entry
+
+DisplayState remains mandatory, but `VexBehaviorV2DisplayState<State>` no longer requires every
+projection to expose the complete semantic State. The default `Empty(current)` retains State only as
+the explicit fallback. Family-specific display cases may expose bounded UI fields instead.
+
+Store remains discoverable from the Family, but storage is no longer equated with "persist the Family
+State":
+
+~~~text
+VexStore
+-> VexFamilyStore<Family>
+     broad Family-visible Store capability
+
+VexFamilyStateStore<Family, State>
+     earned specialization for Get / ObservableState / Save(State) / Forget
+~~~
+
+ThemeMode uses the State-store specialization. VexStream media custody, Maps artifacts and
+Conversation canonical repositories must keep their own rightful value/result domains.
+
+The SharedPreferences boolean write result is now `VexStoreWriteResult`, not a universal
+Operation-result contract. Rich provider Operations remain free to earn typed results.
+
+The Family accountant is now an explicit constructor dependency. Tests/previews may explicitly choose
+`VexFamilyLogger.None`; the foundation no longer silently installs a no-op accountant.
+
+### Still OPEN — do not generalize by syntax
+
+~~~text
+payload-bearing Controls
+  Click(songId)
+  Seek(position)
+  Send(message)
+  Select(routeId)
+
+value-transforming State
+  State.Volume(x) + Increase
+  Cart(items) + Remove(itemId)
+
+externally observed current truth
+  Media3
+  location
+  provider/repository truth
+  SystemAppearance convergence
+
+observable Family State / DisplayState for Compose
+
+Control availability / UI affordance projection
+
+typed Operation result payload
+
+multiple Family-instance execution identity
+
+Sequenced lane queue/custody semantics
+
+provider-affine handoff from begin without local coroutine folklore
+
+cross-version durable identity / rename migration
+
+privacy-bounded accountant payload
+~~~
+
+The current `VexBehaviorV2Family` runtime should therefore be read as the locally-owned ThemeMode
+patient-zero realization of the stable authoring language, not as proof that Family itself owns every
+provider/repository truth.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][STABILITY-BOUNDARY] -->

@@ -20,6 +20,8 @@ class VexBehaviorUiRoundTripReferenceTest {
                 initialState,
             executionRoot =
                 executionRoot,
+            logger =
+                VexFamilyLogger.None,
         ) {
         sealed interface State :
             VexBehaviorFamily.State<
@@ -55,19 +57,19 @@ class VexBehaviorUiRoundTripReferenceTest {
                 State
             > {
             data class Empty(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
 
             data class Active(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
 
             data class Inactive(
-                override val state:
+                val state:
                     State,
             ) :
                 DisplayState
