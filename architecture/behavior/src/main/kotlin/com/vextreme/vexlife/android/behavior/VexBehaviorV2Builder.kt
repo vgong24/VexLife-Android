@@ -148,12 +148,20 @@ class VexBehaviorV2Builder<
             relationship
     }
 
-    internal fun build(
+    internal fun <
+        Control : VexBehaviorFamily.Control<Family>,
+    > build(
         family: Family,
+        controlToAct:
+            (
+                State,
+                Control,
+            ) -> Act?,
     ):
         VexBehaviorV2<
             Family,
             State,
+            Control,
             Act
         > {
         require(
@@ -173,6 +181,8 @@ class VexBehaviorV2Builder<
                 family,
             behaviorRef =
                 behaviorRef,
+            controlToAct =
+                controlToAct,
             states =
                 stateTypes.toSet(),
             relationships =
