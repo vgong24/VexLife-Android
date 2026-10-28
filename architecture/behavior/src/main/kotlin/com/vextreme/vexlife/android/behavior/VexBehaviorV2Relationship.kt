@@ -4,8 +4,6 @@ import kotlin.reflect.KClass
 
 /**
  * Exact Kotlin spelling of the Origin-Walk begin(mode = ...) relationship.
- *
- * This is semantic scheduling intent, not a coroutine/thread/transaction primitive.
  */
 enum class VexBehaviorV2BeginMode {
     Replaceable,
@@ -26,10 +24,9 @@ data class VexBehaviorV2StateDisposition<
 )
 
 /**
- * One Success or Failure result consequence.
+ * One Success or Failure consequence from Save(...).results { ... }.
  *
- * Null means that result has no later State admission. The Origin Walk intentionally does not
- * require a redundant stay() in a result block when no later State consequence exists.
+ * Null means this result produces no later State admission.
  */
 data class VexBehaviorV2Result<
     Family : VexBehaviorFamily<Family>,
@@ -55,17 +52,22 @@ data class VexBehaviorV2Results<
 )
 
 /**
- * One exact operation(...) inside begin(...).
+ * FamilyStore Save(State) operation proven by the ThemeMode Origin Walk.
  *
- * [effect] is the existing SCAE Effect identity realized by this operation. V2 does not create a
- * fifth Family role for Operation; Operation is the execution relationship around that Effect.
+ * Family is carried by the generic bound; Kotlin therefore does not need to repeat the Family as a
+ * runtime argument when the surrounding Behavior is already bound to one exact Family.
+ *
+ * Origin:
+ *     Save(ThemeMode, ThemeMode.Dark)
+ *
+ * Kotlin inside ThemeModeFamily:
+ *     save(ThemeMode.Dark)
  */
-data class VexBehaviorV2Operation<
+data class VexBehaviorV2Save<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
-    val effect: Effect,
+    val state: State,
     val results:
         VexBehaviorV2Results<
             Family,
@@ -74,44 +76,37 @@ data class VexBehaviorV2Operation<
 )
 
 /**
- * The Origin-Walk Effect scope:
+ * SCAE Effect scope proven by the Origin Walk.
  *
- *     begin(mode = ...) {
- *         operation(...).results { ... }
- *     }
+ * The Effect is begin(...); Save(...) is the operation inside that Effect.
  */
 data class VexBehaviorV2Begin<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
     val mode: VexBehaviorV2BeginMode,
-    val operation:
-        VexBehaviorV2Operation<
+    val save:
+        VexBehaviorV2Save<
             Family,
-            State,
-            Effect
+            State
         >,
-)
+) :
+    VexBehaviorFamily.Effect<
+        Family
+    >
 
-/**
- * One V2 cause/effect bond inside one exact Behavior family.
- */
 class VexBehaviorV2Relationship<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
     Act : VexBehaviorFamily.Act<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 > internal constructor(
     val from: KClass<out State>,
     val act: Act,
-    val effect: Effect,
-    val begin:
+    val effect:
         VexBehaviorV2Begin<
             Family,
-            State,
-            Effect
-        >?,
+            State
+        >,
     val immediateDisposition:
         VexBehaviorV2StateDisposition<
             Family,
@@ -134,15 +129,12 @@ class VexBehaviorV2Relationship<
 data class VexBehaviorV2Resolution<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
-    Effect : VexBehaviorFamily.Effect<Family>,
 >(
-    val effect: Effect,
-    val begin:
+    val effect:
         VexBehaviorV2Begin<
             Family,
-            State,
-            Effect
-        >?,
+            State
+        >,
     val immediateDisposition:
         VexBehaviorV2StateDisposition<
             Family,
