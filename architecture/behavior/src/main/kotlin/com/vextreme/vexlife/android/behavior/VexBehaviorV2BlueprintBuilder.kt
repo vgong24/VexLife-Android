@@ -3,13 +3,7 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 construction scope.
- *
- * Generic ordering mirrors V1:
- *
- *     Family, State, Act, Effect
- *
- * The new vocabulary is limited to begin(mode) and optional later result admission.
+ * V2 construction scope using the Origin-Walk vocabulary directly.
  */
 class VexBehaviorV2BlueprintBuilder<
     Family : VexBehaviorFamily<Family>,
@@ -82,12 +76,13 @@ class VexBehaviorV2BlueprintBuilder<
     internal fun beginRelationship(
         from: KClass<out State>,
         act: Act,
-        effectPlan:
-            VexBehaviorV2EffectPlan<
+        effect: Effect,
+        begin:
+            VexBehaviorV2Begin<
                 Family,
                 State,
                 Effect
-            >,
+            >?,
         conditionName: String?,
     ): Int {
         val id =
@@ -108,17 +103,16 @@ class VexBehaviorV2BlueprintBuilder<
                     " / ",
                 )
                 append(
-                    effectPlan.effect,
+                    effect,
                 )
 
-                effectPlan
-                    .executionMode
-                    ?.let { mode ->
+                begin
+                    ?.let {
                         append(
                             " begin[",
                         )
                         append(
-                            mode,
+                            it.mode,
                         )
                         append(
                             "]",
@@ -209,11 +203,12 @@ class VexBehaviorV2StateScope<
         (
             KClass<out State>,
             Act,
-            VexBehaviorV2EffectPlan<
+            Effect,
+            VexBehaviorV2Begin<
                 Family,
                 State,
                 Effect
-            >,
+            >?,
             String?,
         ) -> Int,
     @PublishedApi
@@ -228,9 +223,6 @@ class VexBehaviorV2StateScope<
             >,
         ) -> Unit,
 ) {
-    /**
-     * V1-compatible direct Effect. No async execution/result contract is added.
-     */
     fun on(
         act: Act,
         effect: Effect,
@@ -245,31 +237,18 @@ class VexBehaviorV2StateScope<
         Effect,
         Current
     > =
-        on(
-            act =
-                act,
-            effect =
-                VexBehaviorV2EffectPlan(
-                    effect =
-                        effect,
-                    executionMode =
-                        null,
-                    results =
-                        null,
-                ),
-            conditionName =
-                conditionName,
-            whenCurrent =
-                whenCurrent,
+        destination(
+            act = act,
+            effect = effect,
+            begin = null,
+            conditionName = conditionName,
+            whenCurrent = whenCurrent,
         )
 
-    /**
-     * Async V2 Effect plan formed by begin(...).
-     */
     fun on(
         act: Act,
         effect:
-            VexBehaviorV2EffectPlan<
+            VexBehaviorV2Begin<
                 Family,
                 State,
                 Effect
@@ -284,12 +263,45 @@ class VexBehaviorV2StateScope<
         Act,
         Effect,
         Current
+    > =
+        destination(
+            act = act,
+            effect =
+                effect
+                    .operation
+                    .effect,
+            begin =
+                effect,
+            conditionName =
+                conditionName,
+            whenCurrent =
+                whenCurrent,
+        )
+
+    private fun destination(
+        act: Act,
+        effect: Effect,
+        begin:
+            VexBehaviorV2Begin<
+                Family,
+                State,
+                Effect
+            >?,
+        conditionName: String?,
+        whenCurrent: (Current) -> Boolean,
+    ): VexBehaviorV2Destination<
+        Family,
+        State,
+        Act,
+        Effect,
+        Current
     > {
         val relationshipId =
             beginRelationship(
                 from,
                 act,
                 effect,
+                begin,
                 conditionName,
             )
 
@@ -300,8 +312,10 @@ class VexBehaviorV2StateScope<
                 from,
             act =
                 act,
-            effectPlan =
+            effect =
                 effect,
+            begin =
+                begin,
             conditionName =
                 conditionName,
             whenCurrent =
@@ -311,25 +325,170 @@ class VexBehaviorV2StateScope<
         )
     }
 
-    /**
-     * Declare later-completing Effect work and how repeated episodes participate in their shared
-     * execution lane. Lane identity remains owned by the concrete Effect owner.
-     */
     fun begin(
-        effect: Effect,
-        mode: VexBehaviorV2ExecutionMode,
+        mode: VexBehaviorV2BeginMode,
         block:
-            VexBehaviorV2AsyncResultsBuilder<
+            VexBehaviorV2BeginScope<
                 Family,
-                State
+                State,
+                Effect
             >.() -> Unit,
-    ): VexBehaviorV2EffectPlan<
+    ): VexBehaviorV2Begin<
+        Family,
+        State,
+        Effect
+    > =
+        VexBehaviorV2BeginScope<
+            Family,
+            State,
+            Effect
+        >(
+            mode =
+                mode,
+        )
+            .apply(
+                block,
+            )
+            .build()
+}
+
+class VexBehaviorV2BeginScope<
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Effect : VexBehaviorFamily.Effect<Family>,
+> internal constructor(
+    private val mode: VexBehaviorV2BeginMode,
+) {
+    private var operation:
+        VexBehaviorV2Operation<
+            Family,
+            State,
+            Effect
+        >? =
+        null
+
+    fun operation(
+        effect: Effect,
+    ): VexBehaviorV2OperationDestination<
         Family,
         State,
         Effect
     > {
-        val results =
-            VexBehaviorV2AsyncResultsBuilder<
+        require(
+            operation ==
+                null,
+        ) {
+            "begin V2 currently admits one operation; another operation was already declared"
+        }
+
+        return VexBehaviorV2OperationDestination(
+            effect =
+                effect,
+            complete = { completed ->
+                require(
+                    operation ==
+                        null,
+                ) {
+                    "operation was already completed"
+                }
+                operation =
+                    completed
+            },
+        )
+    }
+
+    internal fun build():
+        VexBehaviorV2Begin<
+            Family,
+            State,
+            Effect
+        > =
+        VexBehaviorV2Begin(
+            mode =
+                mode,
+            operation =
+                requireNotNull(
+                    operation,
+                ) {
+                    "begin V2 requires one operation(...).results { ... }"
+                },
+        )
+}
+
+class VexBehaviorV2OperationDestination<
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+    Effect : VexBehaviorFamily.Effect<Family>,
+> internal constructor(
+    private val effect: Effect,
+    private val complete:
+        (
+            VexBehaviorV2Operation<
+                Family,
+                State,
+                Effect
+            >,
+        ) -> Unit,
+) {
+    fun results(
+        block:
+            VexBehaviorV2ResultsScope<
+                Family,
+                State
+            >.() -> Unit,
+    ) {
+        complete(
+            VexBehaviorV2Operation(
+                effect =
+                    effect,
+                results =
+                    VexBehaviorV2ResultsScope<
+                        Family,
+                        State
+                    >()
+                        .apply(
+                            block,
+                        )
+                        .build(),
+            ),
+        )
+    }
+}
+
+class VexBehaviorV2ResultsScope<
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+> internal constructor() {
+    private var success:
+        VexBehaviorV2Result<
+            Family,
+            State
+        >? =
+        null
+
+    private var failure:
+        VexBehaviorV2Result<
+            Family,
+            State
+        >? =
+        null
+
+    fun success(
+        block:
+            VexBehaviorV2ResultScope<
+                Family,
+                State
+            >.() -> Unit = {},
+    ) {
+        require(
+            success ==
+                null,
+        ) {
+            "Success result was declared more than once"
+        }
+
+        success =
+            VexBehaviorV2ResultScope<
                 Family,
                 State
             >()
@@ -337,24 +496,88 @@ class VexBehaviorV2StateScope<
                     block,
                 )
                 .build()
-
-        return VexBehaviorV2EffectPlan(
-            effect =
-                effect,
-            executionMode =
-                mode,
-            results =
-                results,
-        )
     }
+
+    fun failure(
+        block:
+            VexBehaviorV2ResultScope<
+                Family,
+                State
+            >.() -> Unit = {},
+    ) {
+        require(
+            failure ==
+                null,
+        ) {
+            "Failure result was declared more than once"
+        }
+
+        failure =
+            VexBehaviorV2ResultScope<
+                Family,
+                State
+            >()
+                .apply(
+                    block,
+                )
+                .build()
+    }
+
+    internal fun build():
+        VexBehaviorV2Results<
+            Family,
+            State
+        > =
+        VexBehaviorV2Results(
+            success =
+                requireNotNull(
+                    success,
+                ) {
+                    "results requires explicit Success"
+                },
+            failure =
+                requireNotNull(
+                    failure,
+                ) {
+                    "results requires explicit Failure"
+                },
+        )
 }
 
-/**
- * Completes the required immediate SCAE decision.
- *
- * Async result scopes may optionally emit a later admission, but they do not replace this immediate
- * stay/admit decision.
- */
+class VexBehaviorV2ResultScope<
+    Family : VexBehaviorFamily<Family>,
+    State : VexBehaviorFamily.State<Family>,
+> internal constructor() {
+    @PublishedApi
+    internal var admittedStateKind:
+        KClass<out State>? =
+        null
+
+    inline fun <
+        reified Next : State,
+    > admit() {
+        require(
+            admittedStateKind ==
+                null,
+        ) {
+            "one result may admit at most one later State"
+        }
+
+        admittedStateKind =
+            Next::class
+    }
+
+    internal fun build():
+        VexBehaviorV2Result<
+            Family,
+            State
+        > =
+        VexBehaviorV2Result(
+            admittedStateKind =
+                admittedStateKind,
+        )
+}
+
 class VexBehaviorV2Destination<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
@@ -372,12 +595,15 @@ class VexBehaviorV2Destination<
     internal val act:
         Act,
     @PublishedApi
-    internal val effectPlan:
-        VexBehaviorV2EffectPlan<
+    internal val effect:
+        Effect,
+    @PublishedApi
+    internal val begin:
+        VexBehaviorV2Begin<
             Family,
             State,
             Effect
-        >,
+        >?,
     @PublishedApi
     internal val conditionName:
         String?,
@@ -437,8 +663,10 @@ class VexBehaviorV2Destination<
                     from,
                 act =
                     act,
-                effectPlan =
-                    effectPlan,
+                effect =
+                    effect,
+                begin =
+                    begin,
                 immediateDisposition =
                     disposition,
                 conditionName =
@@ -454,145 +682,6 @@ class VexBehaviorV2Destination<
             ),
         )
     }
-}
-
-class VexBehaviorV2AsyncResultsBuilder<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-> internal constructor() {
-    private var successDeclared =
-        false
-
-    private var failureDeclared =
-        false
-
-    private var success:
-        VexBehaviorV2AsyncResult<
-            Family,
-            State
-        >? =
-        null
-
-    private var failure:
-        VexBehaviorV2AsyncResult<
-            Family,
-            State
-        >? =
-        null
-
-    fun success(
-        block:
-            VexBehaviorV2AsyncResultScope<
-                Family,
-                State
-            >.() -> Unit = {},
-    ) {
-        require(
-            !successDeclared,
-        ) {
-            "Success result was declared more than once"
-        }
-
-        successDeclared =
-            true
-        success =
-            VexBehaviorV2AsyncResultScope<
-                Family,
-                State
-            >()
-                .apply(
-                    block,
-                )
-                .build()
-    }
-
-    fun failure(
-        block:
-            VexBehaviorV2AsyncResultScope<
-                Family,
-                State
-            >.() -> Unit = {},
-    ) {
-        require(
-            !failureDeclared,
-        ) {
-            "Failure result was declared more than once"
-        }
-
-        failureDeclared =
-            true
-        failure =
-            VexBehaviorV2AsyncResultScope<
-                Family,
-                State
-            >()
-                .apply(
-                    block,
-                )
-                .build()
-    }
-
-    internal fun build():
-        VexBehaviorV2AsyncResults<
-            Family,
-            State
-        > {
-        require(
-            successDeclared,
-        ) {
-            "begin V2 requires an explicit Success result"
-        }
-        require(
-            failureDeclared,
-        ) {
-            "begin V2 requires an explicit Failure result"
-        }
-
-        return VexBehaviorV2AsyncResults(
-            success =
-                requireNotNull(
-                    success,
-                ),
-            failure =
-                requireNotNull(
-                    failure,
-                ),
-        )
-    }
-}
-
-class VexBehaviorV2AsyncResultScope<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-> internal constructor() {
-    @PublishedApi
-    internal var admittedStateKind:
-        KClass<out State>? =
-        null
-
-    inline fun <
-        reified Next : State,
-    > admit() {
-        require(
-            admittedStateKind ==
-                null,
-        ) {
-            "async result may admit at most one later State"
-        }
-
-        admittedStateKind =
-            Next::class
-    }
-
-    internal fun build():
-        VexBehaviorV2AsyncResult<
-            Family,
-            State
-        > =
-        VexBehaviorV2AsyncResult(
-            admittedStateKind =
-                admittedStateKind,
-        )
 }
 
 // [VXG RealForever]
