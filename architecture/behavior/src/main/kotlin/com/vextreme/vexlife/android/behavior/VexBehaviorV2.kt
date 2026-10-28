@@ -368,6 +368,12 @@ abstract class VexBehaviorV2Family<
     VexBehaviorFamily<
         Family
     > {
+    /**
+     * Patient-zero locally-owned semantic State.
+     *
+     * @Volatile provides cross-thread visibility only. It is NOT the eventual serialization,
+     * provider-reconciliation, transition-generation, or Compose-observation contract.
+     */
     @Volatile
     private var currentState:
         State =
@@ -706,6 +712,13 @@ abstract class VexBehaviorV2Family<
         }
     }
 
+    /**
+     * Current ThemeMode patient-zero later consequence.
+     *
+     * This intentionally does not claim a reusable stale-result guard. A richer Family may receive a
+     * newer Control or provider observation while an earlier Operation is running; Playback pressure
+     * must earn the transition/result currentness relationship before this becomes universal.
+     */
     private fun applyLaterResult(
         result:
             VexBehaviorV2Result<

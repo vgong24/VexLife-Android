@@ -10,13 +10,103 @@ This module preserves the geometry of **what a human can do from what is true no
 - IDE/code navigation: `VexBehaviorDocs`
 - Canonical family/package construction pattern:
   [`VEX-BEHAVIOR-FAMILY-BLUEPRINT.md`](VEX-BEHAVIOR-FAMILY-BLUEPRINT.md)
-- **Fresh-entry round-trip reference:** [`VexBehaviorUiRoundTripReferenceTest`](src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorUiRoundTripReferenceTest.kt)
-  — read this when you need the vetted UI intent -> CURRENT observed State -> Family Behavior -> Act ->
-  Effect/Save -> ObservableState -> UI loop, including the stale-render currentness case.
+- **Fresh-entry V2 activation-currentness reference:** [`VexBehaviorUiRoundTripReferenceTest`](src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorUiRoundTripReferenceTest.kt)
+  — read this for the proved local loop: UI emits only Control -> live Family re-reads CURRENT semantic
+  State -> selects the Act -> applies immediate stay/admit -> a later render reads the resulting
+  DisplayState. It proves stale rendered State is not activation authority. It does **not** prove
+  Compose observation, provider-observation currentness, async-result staleness, or Store convergence.
 - Review pressure/evidence:
   [`REVIEW-CHECKPOINT.md`](REVIEW-CHECKPOINT.md)
 
-## SCAE architecture
+
+
+## Current V2 currentness boundary
+
+"Currentness" is not one mechanism. The Origin Walk currently distinguishes these separate questions:
+
+~~~text
+ACTIVATION CURRENTNESS
+  UI sends Control only
+  -> Family.activate(Control)
+  -> Family re-reads its CURRENT semantic State
+  -> stale rendered State is never sent back as authority
+
+  STATUS: PROVED for the locally-owned ThemeMode patient zero
+
+
+IMMEDIATE SEMANTIC CURRENTNESS
+  selected Act
+  -> stay()
+     or
+  -> admit(concrete State)
+  -> Family.current changes immediately
+
+  STATUS: PROVED for the locally-owned ThemeMode patient zero
+
+
+ASYNC RESULT CURRENTNESS
+  begin(...)
+  -> Operation completes later
+  -> result-scoped admit(...)
+
+  QUESTION:
+  is this result still current relative to newer Controls/observations?
+
+  STATUS: OPEN
+  current V2 has no general transition/result generation guard
+
+
+EXTERNALLY OBSERVED CURRENTNESS
+  Media3 / SystemAppearance / location / repository/provider observation
+  -> reconciliation
+  -> semantic Family current State
+
+  STATUS: OPEN
+  do not turn provider observations into fake Controls or expose arbitrary setCurrent(...)
+
+
+UI OBSERVATION CURRENTNESS
+  Family State / DisplayState changes
+  -> Compose or another UI consumer reacts
+
+  STATUS: OPEN
+  current / displayState are readable snapshots; @Volatile is not an observable UI contract
+
+
+DURABLE CURRENTNESS
+  Family.current
+  versus
+  Family State Store durable State
+
+  STATUS: distinction proved
+  reconciliation/observation into live Family remains OPEN
+
+
+INSTANCE / EXECUTION CURRENTNESS
+  multiple Family instances or several queued episodes
+  -> independent execution identity / lawful sequencing
+
+  STATUS: OPEN
+~~~
+
+The stable law is therefore narrower than "Family owns all currentness":
+
+~~~text
+for locally-owned semantic State,
+activation must re-read the rightful current owner
+
+for externally-owned truth,
+ownership and reconciliation must be earned from the real provider/Relay relationship
+~~~
+
+Do not add a generic setter, fake Control, Connection, Relay, observer, or transition token merely to
+fill these open boxes. Let Playback / Select / Seek and SystemAppearance pressure the smallest
+relationship that preserves rightful ownership.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][CURRENTNESS-BOUNDARY] -->
+
+
+## SCAE architecture — accepted production lineage and general semantic law
 
 **SCAE** names the Vex semantic architecture built around four explicit roles:
 
@@ -204,42 +294,47 @@ view classification is currently earned; Mini Player and Context Dock still cons
 A generic `VexExperience` abstraction remains held until a second real feature proves the same
 surface across features, not merely two VexStream families.
 
-## Fresh-entry reference specimen
+## Fresh-entry V2 reference specimen
 
-The canonical **look-here-first working specimen** for the current V2 Origin-Walk shape is:
+The current V2 fresh-entry specimen is:
 
 ~~~text
 VexBehaviorUiRoundTripReferenceTest
 ~~~
 
-It is intentionally a JVM reference rather than production Compose code. It proves one readable semantic
-round trip without making `:architecture:behavior` depend on app/UI runtime:
+It deliberately proves **activation currentness only** for the local ThemeMode-shaped case:
 
 ~~~text
-Composable-facing observation
--> onClick emits Family.Control
--> live boundary reads CURRENT State
--> Family.Behavior resolves the Act
--> Act carries Effect + immediate stay/admit
--> Connection realizes Save
--> Store ObservableState is observed
--> one semantic State owner updates
--> UI observes the resulting State
+UI render reads Family.displayState
+-> UI activation emits Control only
+-> Family.activate(Control)
+-> Family re-reads CURRENT semantic State
+-> selects the authored Act
+-> applies immediate stay/admit
+-> a later render reads Family.displayState again
 ~~~
 
-It also proves the stale-render case:
+Stale-render proof:
 
 ~~~text
 UI rendered Light
--> observed truth becomes Dark before click
--> click does NOT pass stale Light back as authority
--> activation re-reads CURRENT Dark
+-> Family current becomes Dark before the UI activation
+-> UI does not send Light/checked Boolean back as authority
+-> activate(Toggle) re-reads CURRENT Dark
 -> Dark + Toggle Act is selected
 ~~~
 
-The test comments preserve why each boundary exists and which pieces remain deliberately held. AppActions,
-Journey ActionElements, real Compose rendering, coroutine lifetime, and device evidence remain in their
-rightful foundations rather than being duplicated into this reference.
+This reference does **not** claim:
+
+~~~text
+StateFlow / Compose automatic observation
+Store ObservableState -> Family reconciliation
+provider observation -> Family current
+async result generation/currentness
+multi-instance execution identity
+~~~
+
+Those belong to the explicit currentness boundary above and remain Origin pressure.
 
 ## V2 Origin-Walk refinement — sibling experiment, not replacement
 
@@ -478,41 +573,25 @@ LATER
 
 Removing the Family.Act value did not weaken Save / Success / Failure / later-admission semantics.
 
-### Runtime entrance
+### Runtime entrance — superseded by live Family activation
 
-The runtime-facing semantic call is now one operation:
-
-~~~kotlin
-val act =
-    ThemeModeFamily.Behavior.resolve(
-        current = currentState,
-        control = incomingControl,
-    )
-~~~
-
-The caller does not perform:
+The early V2 POC exposed `Behavior.resolve(current, control)` directly. That entrance is superseded
+by the live-Family patient zero:
 
 ~~~text
-Control blueprint
--> Act value
--> Behavior blueprint
+UI / caller
+-> Family.activate(Control)
+-> Family re-reads its own CURRENT semantic State
+-> internal Act resolution
+-> immediate stay/admit
 ~~~
 
-Instead Behavior selects the one authored Act whose State + Control input matches.
+This closes one specific currentness hole: callers cannot choose the semantic State used for
+activation.
 
-That lets the Connection remain the reality/currentness boundary:
-
-~~~text
-receive semantic Control
--> read CURRENT State
--> Family.Behavior.resolve(State, Control)
--> realize Act.effect
--> observe provider/runtime truth
--> reconcile current State
-~~~
-
-The POC therefore removes semantic assembly from the Connection without turning Family into a runtime
-service.
+It does **not** establish Family as the universal current-State owner. Provider observation,
+SystemAppearance, Store observation and other independently-owned truths still require a lawful
+reconciliation relationship before they may affect semantic Family current State.
 
 ### Effect language remains Origin-owned
 
@@ -931,7 +1010,7 @@ VexStore
        Forget()
 
 Concrete Family
-  interface Store : VexFamilyStore<ThisFamily, State>
+  interface Store : VexFamilyStateStore<ThisFamily, State>
 ~~~
 
 CURRENT semantic State and durable Store State remain different truths. An immediate admit(Dark) can
