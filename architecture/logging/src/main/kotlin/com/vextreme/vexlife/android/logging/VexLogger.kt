@@ -1,9 +1,9 @@
 package com.vextreme.vexlife.android.logging
 
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import com.vextreme.vexlife.android.behavior.VexFamilyLogEvent
 import com.vextreme.vexlife.android.behavior.VexFamilyLogger
-import androidx.compose.runtime.mutableStateOf
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.UIElement
 import java.time.Duration
@@ -352,14 +352,23 @@ class VexLogger(
             records: List<VexLogRecord>,
             zoneId: ZoneId,
         ): String {
-            if (records.isEmpty()) return "No actions recorded yet."
+            val scopes =
+                screenScopes(
+                    records,
+                )
+
+            if (
+                scopes.isEmpty()
+            ) {
+                return "No actions recorded yet."
+            }
 
             val formatter = DateTimeFormatter
                 .ofPattern("h:mm:ssa MMM d, yyyy", Locale.US)
                 .withZone(zoneId)
 
             return buildString {
-                screenScopes(records).forEachIndexed { scopeIndex, scope ->
+                scopes.forEachIndexed { scopeIndex, scope ->
                     if (scopeIndex > 0) appendLine()
                     appendLine("---${screenName(scope.screenId)}---")
 

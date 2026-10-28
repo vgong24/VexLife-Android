@@ -216,10 +216,7 @@ class VexBehaviorV2SharedPreferencesStoreInstrumentedTest {
 
                 val listener =
                     android.content.SharedPreferences
-                        .OnSharedPreferenceChangeListener {
-                            _,
-                            changedKey,
-                            ->
+                        .OnSharedPreferenceChangeListener { _, changedKey ->
                             if (
                                 changedKey ==
                                 stateKey

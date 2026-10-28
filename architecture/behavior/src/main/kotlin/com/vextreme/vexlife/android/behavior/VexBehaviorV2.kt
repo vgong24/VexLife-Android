@@ -199,6 +199,12 @@ class VexBehaviorV2<
                                 ")",
                             )
                         }
+
+                        else ->
+                            append(
+                                operation::class.simpleName
+                                    ?: "Operation",
+                            )
                     }
                 }
 
@@ -498,6 +504,16 @@ abstract class VexBehaviorV2Family<
                         effect.mode,
                     save =
                         operation,
+                )
+
+            else ->
+                error(
+                    "begin has no runtime realization for Operation " +
+                        (
+                            operation::class.qualifiedName
+                                ?: operation::class.simpleName
+                                ?: "Unknown"
+                        ),
                 )
         }
     }

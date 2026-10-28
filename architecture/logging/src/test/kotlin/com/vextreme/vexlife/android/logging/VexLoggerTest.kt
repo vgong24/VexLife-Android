@@ -188,7 +188,9 @@ class VexLoggerTest {
         logger.appOpened(Home)
 
         assertTrue(locallyVisibleWhenObserved)
-    }    @Test
+    }
+
+    @Test
     fun familyAccountantWitnessesStoreProgressionWithoutBecomingTheTruthOwner() {
         val logger =
             VexLogger(
