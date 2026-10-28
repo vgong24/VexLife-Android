@@ -201,6 +201,82 @@ view classification is currently earned; Mini Player and Context Dock still cons
 A generic `VexExperience` abstraction remains held until a second real feature proves the same
 surface across features, not merely two VexStream families.
 
+## V2 two-scope refinement — sibling experiment, not replacement
+
+The accepted V1 kernel remains the production-used contract. V2 exists beside it so the ThemeMode
+Origin Walk can be proven in ordinary Kotlin without changing VexStream/Queue semantics in place.
+
+~~~text
+V1
+  State + Act
+  -> Effect
+  -> required immediate stay/admit
+
+  provider/result reconciliation
+  -> concrete Connection responsibility
+
+
+V2
+  reuses the same V1 immediate graph
+  +
+  begin(mode = Replaceable | Sequenced)
+  +
+  explicit Success / Failure result scopes
+  +
+  optional later admit<State>()
+~~~
+
+The implementation deliberately wraps a V1-compatible immediate blueprint rather than cloning Control
+resolution or SCAE family typing.
+
+~~~text
+VexBehaviorBlueprintV2.v1
+-> ordinary V1 Control projection / resolution remains reusable
+~~~
+
+This gives future workers a direct comparison:
+
+~~~text
+WHY V1 STILL EXISTS
+  current production consumers already rely on its small immediate-admission contract
+
+WHY V2 EXISTS
+  later-completing Effects can now express:
+    stay now
+    -> Success later
+    -> admit<State>() later
+
+  repeated async episodes can state their visible execution relationship:
+    Replaceable
+    Sequenced
+~~~
+
+V2 does not make coroutine/thread mechanics portable semantics. The concrete Effect owner supplies the
+execution lane and runtime realization.
+
+~~~text
+Family / rightful Effect owner
+  -> execution lane identity
+
+begin(mode = ...)
+  -> how this episode participates in that lane
+~~~
+
+The test proof also demonstrates that one concrete immutable State family may satisfy both:
+
+~~~text
+VexBehaviorFamily.State<Family>
++
+Relay VexState<State>
+~~~
+
+without making the production Behavior module depend on Relay. This preserves the current layering while
+showing that SCAE State and fractal Relay/Convergence State can meet at a concrete family.
+
+V2 is still an experiment. Do not migrate V1 consumers merely because V2 exists. A migration is earned
+when a real family needs the two-scope semantics and focused proof shows the v2 relationship is more
+truthful than its current Connection-local handling.
+
 ## Deliberately held
 
 The current kernel does not claim generic solutions for:
