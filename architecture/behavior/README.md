@@ -108,7 +108,7 @@ cross-truth composition, when applicable
 3. **State kind versus flavor is semantic.** New types are earned by changed behavioral topology.
 4. **Control != Act.** One stable affordance may mean different Acts from different States.
 5. **Act != Effect.** Human/product language stays separate from provider/runtime operation language.
-6. **Admission != eventual provider outcome.** `.admit<State>()` describes immediate semantic
+6. **Admission != eventual provider outcome.** `.admit(state)` describes immediate semantic
    topology after Effect acceptance.
 7. **Family safety is compile-time.** One F-bounded family ties State / Control / Act / Effect
    together.
@@ -122,7 +122,7 @@ cross-truth composition, when applicable
 11. **Control meaning is semantic-first.** Prefer `Available(Act)` / `Unavailable`; Boolean
     availability is derived convenience.
 12. **Every relationship terminates explicitly.** Every `on(...)` must end in `.stay()` or
-    `.admit<State>()`.
+    `.admit(state)`.
 13. **DisplayState is a deterministic view classification, not another truth owner.** Use it only
     when views would otherwise repeat conditional treatment of an already-derived Projection.
 
@@ -407,7 +407,7 @@ state<State.Light> {
                 failure { }
             }
         },
-    ).admit<State.Dark>()
+    ).admit(State.Dark)
 }
 ~~~
 
@@ -438,7 +438,7 @@ state<State.Dark> {
                 failure { }
             }
         },
-    ).admit<State.Light>()
+    ).admit(State.Light)
 }
 ~~~
 
@@ -455,7 +455,7 @@ state<State.NotSet> {
                 State.Dark,
             ).results {
                 success {
-                    admit<State.Dark>()
+                    admit(State.Dark)
                 }
 
                 failure { }
@@ -682,13 +682,13 @@ For the current in-process ThemeMode transition:
 state<State.Light> {
     on(
         control = Control.Toggle,
-    ).admit<State.Dark>()
+    ).admit(State.Dark)
 }
 
 state<State.Dark> {
     on(
         control = Control.Toggle,
-    ).admit<State.Light>()
+    ).admit(State.Light)
 }
 ~~~
 
@@ -706,7 +706,7 @@ state<State.NotSet> {
             save(State.Dark)
                 .results {
                     success {
-                        admit<State.Dark>()
+                        admit(State.Dark)
                     }
                     failure { }
                 }
@@ -732,3 +732,84 @@ NO EFFECT
 This refinement does not yet choose the production ThemeMode runtime object. The current target evidence
 instead says to start from the existing session-owned current truth and add another owner only if a later
 persistence/System/provider/lifecycle pressure actually earns one.
+
+
+### V2 refinement — admission carries the concrete State value
+
+Making Effect optional exposed one more hidden dependency in the earlier V2 shape.
+
+The previous terminal spelling:
+
+~~~kotlin
+.admit<State.Dark>()
+~~~
+
+preserved only:
+
+~~~text
+State.Dark::class
+~~~
+
+That was sufficient while the POC also happened to carry `Save(State.Dark)`, because the reference
+could borrow the Save value as the admitted value. Once an Act truthfully has no Effect, that shortcut
+disappears.
+
+The removal question is:
+
+> If Behavior already knows the exact semantic State to admit, why should Runtime reconstruct it from
+> a class token?
+
+It should not.
+
+V2 now spells immediate admission with the concrete State value:
+
+~~~kotlin
+state<State.Light> {
+    on(
+        control = Control.Toggle,
+    ).admit(State.Dark)
+}
+~~~
+
+and later result admission likewise carries a value:
+
+~~~kotlin
+success {
+    admit(State.Dark)
+}
+~~~
+
+The distinction becomes:
+
+~~~text
+stay()
+  current State value remains authoritative
+  -> no destination value is carried
+
+admit(nextState)
+  Behavior names the concrete next semantic truth
+  -> the Act carries that State value
+
+result { admit(nextState) }
+  later consequence names the concrete later semantic truth
+  -> the Result carries that State value
+~~~
+
+This matters beyond ThemeMode singleton objects. A data-bearing State must not lose its flavor and then
+require a runtime registry to reconstruct it from a `KClass`.
+
+The current V2 result grammar still does not claim dynamic provider-result payload mapping. If a future
+Effect result needs runtime data to construct the next State, that real consumer must earn the
+corresponding result contract rather than hiding it behind a class token.
+
+So the current semantic output is now directly usable by a session owner:
+
+~~~text
+Behavior.resolve(CURRENT State, Control)
+-> Act.immediateDisposition
+-> Stay
+   or
+-> Admit(concrete State)
+~~~
+
+No second State-kind -> State-value translator is required.

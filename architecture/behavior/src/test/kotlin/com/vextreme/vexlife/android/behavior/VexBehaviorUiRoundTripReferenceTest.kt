@@ -124,9 +124,9 @@ class VexBehaviorUiRoundTripReferenceTest {
                                     State.Dark,
                                 ).results {
                                     success {
-                                        admit<
-                                            State.Dark
-                                        >()
+                                        admit(
+                                            State.Dark,
+                                        )
                                     }
 
                                     failure {
@@ -156,9 +156,9 @@ class VexBehaviorUiRoundTripReferenceTest {
                                     }
                                 }
                             },
-                    ).admit<
-                        State.Dark
-                    >()
+                    ).admit(
+                        State.Dark,
+                    )
                 }
 
                 state<State.Dark> {
@@ -180,9 +180,9 @@ class VexBehaviorUiRoundTripReferenceTest {
                                     }
                                 }
                             },
-                    ).admit<
-                        State.Light
-                    >()
+                    ).admit(
+                        State.Light,
+                    )
                 }
             }
     }
@@ -441,20 +441,11 @@ class VexBehaviorUiRoundTripReferenceTest {
                         "Behavior.immediate=Stay"
 
                 VexBehaviorV2StateDispositionKind.Admit -> {
-                    // ThemeMode's current POC admits the same concrete State value that Save carries.
-                    // A future generic runtime must not assume that equation without earning it.
                     val admitted =
-                        effect
-                            .save
-                            .state
-
-                    check(
-                        act.immediateDisposition
-                            .stateKind
-                            .isInstance(
-                                admitted,
-                            ),
-                    )
+                        requireNotNull(
+                            act.immediateDisposition
+                                .admittedState,
+                        )
 
                     trace +=
                         "Behavior.immediate=Admit(${admitted.toString()})"

@@ -15,24 +15,42 @@ enum class VexBehaviorV2StateDispositionKind {
     Admit,
 }
 
+/**
+ * Immediate semantic State consequence of one Act.
+ *
+ * Stay carries no destination value because the current State value remains authoritative.
+ * Admit carries the concrete next State value. A class token alone is intentionally insufficient:
+ * data-bearing State flavor must not be reconstructed by a later runtime mapping.
+ */
 data class VexBehaviorV2StateDisposition<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
 >(
     val kind: VexBehaviorV2StateDispositionKind,
-    val stateKind: KClass<out State>,
-)
+    val admittedState: State?,
+) {
+    init {
+        require(
+            (kind == VexBehaviorV2StateDispositionKind.Admit) ==
+                (admittedState != null),
+        ) {
+            "Admit requires a concrete State value; Stay must not carry one"
+        }
+    }
+}
 
 /**
  * One Success or Failure consequence from Save(...).results { ... }.
  *
- * Null means this result produces no later State admission.
+ * Null means this result produces no later State admission. A non-null consequence is the concrete
+ * semantic State value admitted later; this V2 grammar does not pretend to solve result-payload
+ * mapping that has not yet been earned by a real consumer.
  */
 data class VexBehaviorV2Result<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
 >(
-    val admittedStateKind: KClass<out State>?,
+    val admittedState: State?,
 )
 
 data class VexBehaviorV2Results<

@@ -104,9 +104,9 @@ class VexBehaviorV2Test {
                                     State.Dark,
                                 ).results {
                                     success {
-                                        admit<
-                                            State.Dark
-                                        >()
+                                        admit(
+                                            State.Dark,
+                                        )
                                     }
 
                                     failure {
@@ -122,9 +122,9 @@ class VexBehaviorV2Test {
                     on(
                         control =
                             Control.Toggle,
-                    ).admit<
-                        State.Dark
-                    >()
+                    ).admit(
+                        State.Dark,
+                    )
                 }
 
                 // The same Control in another State is a different behavioral scenario. Again, no
@@ -133,9 +133,9 @@ class VexBehaviorV2Test {
                     on(
                         control =
                             Control.Toggle,
-                    ).admit<
-                        State.Light
-                    >()
+                    ).admit(
+                        State.Light,
+                    )
                 }
             }
     }
@@ -165,10 +165,10 @@ class VexBehaviorV2Test {
             act?.immediateDisposition
                 ?.kind,
         )
-        assertEquals(
-            ThemeModeFamily.State.Dark::class,
+        assertSame(
+            ThemeModeFamily.State.Dark,
             act?.immediateDisposition
-                ?.stateKind,
+                ?.admittedState,
         )
     }
 
@@ -198,15 +198,15 @@ class VexBehaviorV2Test {
         assertNull(
             fromDark?.effect,
         )
-        assertEquals(
-            ThemeModeFamily.State.Dark::class,
+        assertSame(
+            ThemeModeFamily.State.Dark,
             fromLight?.immediateDisposition
-                ?.stateKind,
+                ?.admittedState,
         )
-        assertEquals(
-            ThemeModeFamily.State.Light::class,
+        assertSame(
+            ThemeModeFamily.State.Light,
             fromDark?.immediateDisposition
-                ?.stateKind,
+                ?.admittedState,
         )
     }
 
@@ -232,20 +232,20 @@ class VexBehaviorV2Test {
             act?.immediateDisposition
                 ?.kind,
         )
-        assertEquals(
-            ThemeModeFamily.State.Dark::class,
+        assertSame(
+            ThemeModeFamily.State.Dark,
             act?.effect
                 ?.save
                 ?.results
                 ?.success
-                ?.admittedStateKind,
+                ?.admittedState,
         )
         assertNull(
             act?.effect
                 ?.save
                 ?.results
                 ?.failure
-                ?.admittedStateKind,
+                ?.admittedState,
         )
     }
 
@@ -303,9 +303,9 @@ class VexBehaviorV2Test {
                                 }
                             }
                         },
-                ).admit<
-                    ThemeModeFamily.State.Dark
-                >()
+                ).admit(
+                    ThemeModeFamily.State.Dark,
+                )
             }
 
             state<ThemeModeFamily.State.Dark>()

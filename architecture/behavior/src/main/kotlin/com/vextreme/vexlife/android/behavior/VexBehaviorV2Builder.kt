@@ -10,10 +10,10 @@ import kotlin.reflect.KClass
  *
  *     state<Current> {
  *         on(Control)
- *             .stay() / .admit<Next>()
+ *             .stay() / .admit(nextState)
  *
  *         on(Control, Effect)
- *             .stay() / .admit<Next>()
+ *             .stay() / .admit(nextState)
  *     }
  *
  * Effect is earned per Act. A purely semantic State admission must not invent a no-op Effect merely
@@ -188,7 +188,7 @@ class VexBehaviorV2Builder<
         ) {
             "behavior " +
                 behaviorRef +
-                " has Act(s) without a terminal .stay() or .admit<State>(): " +
+                " has Act(s) without a terminal .stay() or .admit(state): " +
                 pendingActs.values
                     .joinToString()
         }
@@ -549,23 +549,22 @@ class VexBehaviorV2ResultScope<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
 > internal constructor() {
-    @PublishedApi
-    internal var admittedStateKind:
-        KClass<out State>? =
+    private var admittedState:
+        State? =
         null
 
-    inline fun <
-        reified Next : State,
-    > admit() {
+    fun admit(
+        state: State,
+    ) {
         require(
-            admittedStateKind ==
+            admittedState ==
                 null,
         ) {
             "one result may admit at most one later State"
         }
 
-        admittedStateKind =
-            Next::class
+        admittedState =
+            state
     }
 
     internal fun build():
@@ -574,8 +573,8 @@ class VexBehaviorV2ResultScope<
             State
         > =
         VexBehaviorV2Result(
-            admittedStateKind =
-                admittedStateKind,
+            admittedState =
+                admittedState,
         )
 }
 
@@ -617,15 +616,21 @@ class VexBehaviorV2Destination<
             >,
         ) -> Unit,
 ) {
-    inline fun <
-        reified Next : State,
-    > admit() {
+    /**
+     * Immediately admit one concrete semantic State value.
+     *
+     * The Act already knows this semantic consequence, so carrying only a State class would force a
+     * later runtime owner to reconstruct information Behavior should have preserved.
+     */
+    fun admit(
+        state: State,
+    ) {
         complete(
             VexBehaviorV2StateDisposition(
                 kind =
                     VexBehaviorV2StateDispositionKind.Admit,
-                stateKind =
-                    Next::class,
+                admittedState =
+                    state,
             ),
         )
     }
@@ -635,8 +640,8 @@ class VexBehaviorV2Destination<
             VexBehaviorV2StateDisposition(
                 kind =
                     VexBehaviorV2StateDispositionKind.Stay,
-                stateKind =
-                    from,
+                admittedState =
+                    null,
             ),
         )
     }

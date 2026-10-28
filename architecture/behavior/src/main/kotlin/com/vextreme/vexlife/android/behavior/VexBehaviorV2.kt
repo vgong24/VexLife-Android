@@ -58,15 +58,17 @@ class VexBehaviorV2<
                 "Act source is not a registered State: " +
                     act.from
             }
-            require(
-                act.immediateDisposition
-                    .stateKind in
-                    states,
-            ) {
-                "Act immediate State is not registered: " +
-                    act.immediateDisposition
-                        .stateKind
-            }
+            act.immediateDisposition
+                .admittedState
+                ?.let { admitted ->
+                    require(
+                        admitted::class in
+                            states,
+                    ) {
+                        "Act immediate State is not registered: " +
+                            admitted::class
+                    }
+                }
 
             act.effect
                 ?.let { effect ->
@@ -90,14 +92,14 @@ class VexBehaviorV2<
                                 results.success,
                                 results.failure,
                             ).forEach { result ->
-                                result.admittedStateKind
+                                result.admittedState
                                     ?.let { laterState ->
                                         require(
-                                            laterState in
+                                            laterState::class in
                                                 states,
                                         ) {
                                             "later admitted State is not registered: " +
-                                                laterState
+                                                laterState::class
                                         }
                                     }
                             }
@@ -205,14 +207,16 @@ class VexBehaviorV2<
                     act.immediateDisposition
                         .kind,
                 )
-                append(
-                    " ",
-                )
-                append(
-                    act.immediateDisposition
-                        .stateKind
-                        .simpleName,
-                )
+                act.immediateDisposition
+                    .admittedState
+                    ?.let { admitted ->
+                        append(
+                            " ",
+                        )
+                        append(
+                            admitted,
+                        )
+                    }
 
                 effect
                     ?.save
@@ -223,8 +227,8 @@ class VexBehaviorV2<
                         )
                         append(
                             results.success
-                                .admittedStateKind
-                                ?.simpleName
+                                .admittedState
+                                ?.toString()
                                 ?: "NO_STATE_CHANGE",
                         )
                         append(
@@ -232,8 +236,8 @@ class VexBehaviorV2<
                         )
                         append(
                             results.failure
-                                .admittedStateKind
-                                ?.simpleName
+                                .admittedState
+                                ?.toString()
                                 ?: "NO_STATE_CHANGE",
                         )
                     }
