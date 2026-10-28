@@ -374,10 +374,13 @@ class VexBehaviorV2<
 }
 
 fun <
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-    Act : VexBehaviorFamily.Act<Family>,
+    Family,
+    State,
+    Control,
+    Act,
+    Effect,
 > vexBehaviorV2(
+    family: Family,
     behaviorRef: String,
     block:
         VexBehaviorV2Builder<
@@ -389,8 +392,26 @@ fun <
     Family,
     State,
     Act
-> =
-    VexBehaviorV2Builder<
+>
+    where Family : VexBehaviorFamily<Family>,
+          Family : VexBehaviorFamily.Members<
+              Family,
+              State,
+              Control,
+              Act,
+              Effect
+          >,
+          State : VexBehaviorFamily.State<Family>,
+          Control : VexBehaviorFamily.Control<Family>,
+          Act : VexBehaviorFamily.Act<Family>,
+          Effect : VexBehaviorFamily.Effect<Family> {
+    @Suppress(
+        "UNUSED_VARIABLE",
+    )
+    val familyMemberMap =
+        family
+
+    return VexBehaviorV2Builder<
         Family,
         State,
         Act
@@ -402,5 +423,6 @@ fun <
             block,
         )
         .build()
+}
 
 // [VXG RealForever]
