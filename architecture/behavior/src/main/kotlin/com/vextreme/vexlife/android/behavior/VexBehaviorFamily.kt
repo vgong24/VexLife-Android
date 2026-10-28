@@ -9,18 +9,38 @@ package com.vextreme.vexlife.android.behavior
  *
  * Generic architecture cannot collapse back to a raw VexBehaviorFamily without losing the bound.
  *
- * The foundation role markers intentionally remain open. A concrete Family may then contain its own
- * sealed role regions:
+ * V1 originally modeled State / Control / Act / Effect as four Family member type vocabularies. That
+ * shape remains here because existing V1 consumers use it.
+ *
+ * The V2 Origin Walk earned a narrower concrete Family surface:
  *
  * object ThemeModeFamily : VexBehaviorFamily<ThemeModeFamily> {
  *     sealed interface State : VexBehaviorFamily.State<ThemeModeFamily>
  *     sealed interface Control : VexBehaviorFamily.Control<ThemeModeFamily>
- *     sealed interface Act : VexBehaviorFamily.Act<ThemeModeFamily>
+ *     val Behavior = ...
  * }
  *
- * Kotlin nested types are declarations, not overridable associated-type slots. Therefore this
- * foundation cannot force an implementing Family to "override type State". The concrete Family root
- * owns that sealed region directly, while generic builders infer the role types from actual use.
+ * Why V2 does not add a nested Family.Act vocabulary:
+ *
+ * The proof first modeled:
+ *
+ *     State + Control -> Act value
+ *     State + Act -> Effect + State consequence
+ *
+ * ThemeMode exposed that the same State context had to be authored twice. Removing the intermediate
+ * Act value lost no semantic truth. The earned Act is instead the Behavior scenario itself:
+ *
+ *     state<State.Light> {
+ *         on(Control.Toggle, ...)
+ *             .admit<State.Dark>()
+ *     }
+ *
+ * In other words, V2 keeps "Act" as the process/relationship authored by on(...), not as another
+ * Family data type that a fresh feature must manufacture.
+ *
+ * Kotlin nested types are declarations, not overridable associated-type slots. The foundation cannot
+ * force every Family to declare nested types named State or Control; concrete Family roots own those
+ * sealed regions directly, while generic bounds protect Family membership.
  */
 interface VexBehaviorFamily<
     Self : VexBehaviorFamily<Self>,
@@ -30,12 +50,17 @@ interface VexBehaviorFamily<
         Family : VexBehaviorFamily<Family>,
     >
 
-    /** Human-facing affordance or request belonging to one exact Behavior family. */
+    /** Semantic request/input belonging to one exact Behavior family. */
     interface Control<
         Family : VexBehaviorFamily<Family>,
     >
 
-    /** Human/product verb belonging to one exact Behavior family. */
+    /**
+     * V1 compatibility marker for the older "Act as Family vocabulary" model.
+     *
+     * Do not introduce a V2 Family.Act merely to satisfy SCAE naming. In the V2 proof, the authored
+     * State + Control -> Effect/consequence relationship is the Act.
+     */
     interface Act<
         Family : VexBehaviorFamily<Family>,
     >
