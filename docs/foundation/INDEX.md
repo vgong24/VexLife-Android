@@ -542,3 +542,24 @@ When a block becomes real here, give it its own narrow source/doc only if this i
 carry the information without obscuring implementation or proof.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][FOUNDATION-INDEX] -->
+
+
+### V2 Behavior Origin Walk — Store/execution/accountant pressure
+
+The V2 Behavior draft now pressures a real background Store Operation:
+
+~~~text
+Family.activate(Control)
+-> immediate stay/admit
+-> begin(Replaceable | Sequenced)
+-> Family.Store Save(State)
+-> VexExecution custody
+-> Success / Failure
+-> optional later admit
+-> VexLogger Family witness
+~~~
+
+SharedPreferences appears only in the Android instrumented target proof; it is not the portable Store
+definition. Production ThemeMode/session migration remains outside this draft PR.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STORE-EXECUTION] -->

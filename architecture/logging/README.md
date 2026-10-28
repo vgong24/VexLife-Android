@@ -103,3 +103,24 @@ Durable/local history is projected through the app-level Data/Repository foundat
 remains independent of Room.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][LOGGING] -->
+
+
+## Family accountant projection
+
+The same VexLogger instance may witness accepted Family progression through the Behavior foundation's
+VexFamilyLogger contract.
+
+~~~text
+Family remains truth owner
+-> VexLogger witnesses accepted fact
+-> Logcat / readable Family history are projections
+
+LOGGER_FAILURE
+!= FAMILY_EFFECT_FAILURE
+~~~
+
+Family records use source identities carried by the event instead of a second hand-authored diagnostic
+ID catalog. Screen history remains the UI projection; renderFamilyHistory() exposes the Family
+accountant projection over the same canonical logger history.
+
+<!-- [VXG RealForever][VEXLOGGER][FAMILY-ACCOUNTANT] -->
