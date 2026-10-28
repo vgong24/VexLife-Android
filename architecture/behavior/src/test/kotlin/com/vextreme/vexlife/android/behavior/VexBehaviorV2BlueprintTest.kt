@@ -13,12 +13,6 @@ class VexBehaviorV2BlueprintTest {
             ThemeFamily
         >
 
-    /**
-     * One exact family can satisfy both SCAE State typing and Relay VexState deep-copy typing.
-     *
-     * The production Behavior module remains decoupled from Relay; this focused test proves the two
-     * foundations can meet at a concrete family without weakening either contract.
-     */
     private sealed interface ThemeState :
         VexBehaviorFamily.State<
             ThemeFamily
@@ -88,19 +82,21 @@ class VexBehaviorV2BlueprintTest {
                         ThemeAct.CommitDark,
                     effect =
                         begin(
-                            effect =
-                                ThemeEffect.SaveDark,
                             mode =
-                                VexBehaviorV2ExecutionMode
+                                VexBehaviorV2BeginMode
                                     .Sequenced,
                         ) {
-                            success {
-                                admit<
-                                    ThemeState.Dark
-                                >()
-                            }
+                            operation(
+                                ThemeEffect.SaveDark,
+                            ).results {
+                                success {
+                                    admit<
+                                        ThemeState.Dark
+                                    >()
+                                }
 
-                            failure {
+                                failure {
+                                }
                             }
                         },
                 ).stay()
@@ -112,16 +108,18 @@ class VexBehaviorV2BlueprintTest {
                         ThemeAct.SelectDark,
                     effect =
                         begin(
-                            effect =
-                                ThemeEffect.SaveDark,
                             mode =
-                                VexBehaviorV2ExecutionMode
+                                VexBehaviorV2BeginMode
                                     .Replaceable,
                         ) {
-                            success {
-                            }
+                            operation(
+                                ThemeEffect.SaveDark,
+                            ).results {
+                                success {
+                                }
 
-                            failure {
+                                failure {
+                                }
                             }
                         },
                 ).admit<
@@ -135,16 +133,18 @@ class VexBehaviorV2BlueprintTest {
                         ThemeAct.SelectLight,
                     effect =
                         begin(
-                            effect =
-                                ThemeEffect.SaveLight,
                             mode =
-                                VexBehaviorV2ExecutionMode
+                                VexBehaviorV2BeginMode
                                     .Replaceable,
                         ) {
-                            success {
-                            }
+                            operation(
+                                ThemeEffect.SaveLight,
+                            ).results {
+                                success {
+                                }
 
-                            failure {
+                                failure {
+                                }
                             }
                         },
                 ).admit<
@@ -181,18 +181,24 @@ class VexBehaviorV2BlueprintTest {
                 ?.stateKind,
         )
         assertEquals(
-            VexBehaviorV2ExecutionMode.Sequenced,
-            resolution?.executionMode,
+            VexBehaviorV2BeginMode.Sequenced,
+            resolution
+                ?.begin
+                ?.mode,
         )
         assertEquals(
             ThemeState.Dark::class,
             resolution
+                ?.begin
+                ?.operation
                 ?.results
                 ?.success
                 ?.admittedStateKind,
         )
         assertNull(
             resolution
+                ?.begin
+                ?.operation
                 ?.results
                 ?.failure
                 ?.admittedStateKind,
@@ -237,6 +243,8 @@ class VexBehaviorV2BlueprintTest {
         assertEquals(
             ThemeState.Dark::class,
             durabilityGated
+                ?.begin
+                ?.operation
                 ?.results
                 ?.success
                 ?.admittedStateKind,
@@ -256,6 +264,8 @@ class VexBehaviorV2BlueprintTest {
         )
         assertNull(
             immediate
+                ?.begin
+                ?.operation
                 ?.results
                 ?.success
                 ?.admittedStateKind,
@@ -336,7 +346,7 @@ class VexBehaviorV2BlueprintTest {
         expected =
             IllegalArgumentException::class,
     )
-    fun beginRequiresExplicitSuccessAndFailureBranches() {
+    fun resultsRequireExplicitSuccessAndFailure() {
         vexBehaviorV2Blueprint<
             ThemeFamily,
             ThemeState,
@@ -352,13 +362,15 @@ class VexBehaviorV2BlueprintTest {
                         ThemeAct.SelectDark,
                     effect =
                         begin(
-                            effect =
-                                ThemeEffect.SaveDark,
                             mode =
-                                VexBehaviorV2ExecutionMode
+                                VexBehaviorV2BeginMode
                                     .Replaceable,
                         ) {
-                            success {
+                            operation(
+                                ThemeEffect.SaveDark,
+                            ).results {
+                                success {
+                                }
                             }
                         },
                 ).admit<
