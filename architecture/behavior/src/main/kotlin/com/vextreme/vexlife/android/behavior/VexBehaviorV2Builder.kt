@@ -3,12 +3,23 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 construction scope that mirrors the current Origin-Walk ThemeMode circuit.
+ * V2 authoring scope produced by the ThemeMode Origin Walk.
+ *
+ * The important outcome of the POC is not another builder class. It is the source sentence the
+ * builder protects:
+ *
+ *     state<Current> {
+ *         on(Control, Effect)
+ *             .stay() / .admit<Next>()
+ *     }
+ *
+ * That complete relationship is the Act. There is intentionally no separate Family.Act value to
+ * maintain or route through.
  */
 class VexBehaviorV2Builder<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
-    Act : VexBehaviorFamily.Act<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
 > internal constructor(
     private val behaviorRef: String,
 ) {
@@ -19,22 +30,22 @@ class VexBehaviorV2Builder<
         >()
 
     @PublishedApi
-    internal val authoredRelationships =
+    internal val authoredActs =
         mutableListOf<
-            VexBehaviorV2Relationship<
+            VexBehaviorV2Act<
                 Family,
                 State,
-                Act
+                Control
             >
         >()
 
-    private val pendingRelationships =
+    private val pendingActs =
         linkedMapOf<
             Int,
             String
         >()
 
-    private var nextRelationshipId =
+    private var nextActId =
         0
 
     inline fun <
@@ -44,7 +55,7 @@ class VexBehaviorV2Builder<
             VexBehaviorV2StateScope<
                 Family,
                 State,
-                Act,
+                Control,
                 Current
             >.() -> Unit = {},
     ) {
@@ -54,24 +65,24 @@ class VexBehaviorV2Builder<
         VexBehaviorV2StateScope<
             Family,
             State,
-            Act,
+            Control,
             Current
         >(
             from =
                 Current::class,
-            beginRelationship =
-                ::beginRelationship,
-            completeRelationship =
-                ::completeRelationship,
+            beginAct =
+                ::beginAct,
+            completeAct =
+                ::completeAct,
         ).apply(
             block,
         )
     }
 
     @PublishedApi
-    internal fun beginRelationship(
+    internal fun beginAct(
         from: KClass<out State>,
-        act: Act,
+        control: Control,
         effect:
             VexBehaviorV2Begin<
                 Family,
@@ -80,9 +91,9 @@ class VexBehaviorV2Builder<
         conditionName: String?,
     ): Int {
         val id =
-            nextRelationshipId++
+            nextActId++
 
-        pendingRelationships[id] =
+        pendingActs[id] =
             buildString {
                 append(
                     from.simpleName,
@@ -91,7 +102,7 @@ class VexBehaviorV2Builder<
                     " + ",
                 )
                 append(
-                    act,
+                    control,
                 )
                 append(
                     " / begin[",
@@ -103,8 +114,7 @@ class VexBehaviorV2Builder<
                     "] Save(",
                 )
                 append(
-                    effect
-                        .save
+                    effect.save
                         .state,
                 )
                 append(
@@ -126,53 +136,43 @@ class VexBehaviorV2Builder<
     }
 
     @PublishedApi
-    internal fun completeRelationship(
+    internal fun completeAct(
         id: Int,
-        relationship:
-            VexBehaviorV2Relationship<
+        act:
+            VexBehaviorV2Act<
                 Family,
                 State,
-                Act
+                Control
             >,
     ) {
         require(
-            pendingRelationships.remove(
+            pendingActs.remove(
                 id,
             ) !=
                 null,
         ) {
-            "behavior V2 relationship was already completed"
+            "behavior V2 Act was already completed"
         }
 
-        authoredRelationships +=
-            relationship
+        authoredActs +=
+            act
     }
 
-    internal fun <
-        Control : VexBehaviorFamily.Control<Family>,
-    > build(
+    internal fun build(
         family: Family,
-        controlToAct:
-            (
-                State,
-                Control,
-            ) -> Act?,
     ):
         VexBehaviorV2<
             Family,
             State,
-            Control,
-            Act
+            Control
         > {
         require(
-            pendingRelationships
-                .isEmpty(),
+            pendingActs.isEmpty(),
         ) {
             "behavior " +
                 behaviorRef +
-                " V2 has relationship(s) without a terminal .stay() or .admit<State>(): " +
-                pendingRelationships
-                    .values
+                " has Act(s) without a terminal .stay() or .admit<State>(): " +
+                pendingActs.values
                     .joinToString()
         }
 
@@ -181,13 +181,10 @@ class VexBehaviorV2Builder<
                 family,
             behaviorRef =
                 behaviorRef,
-            controlToAct =
-                controlToAct,
             states =
                 stateTypes.toSet(),
-            relationships =
-                authoredRelationships
-                    .toList(),
+            acts =
+                authoredActs.toList(),
         )
     }
 }
@@ -195,17 +192,17 @@ class VexBehaviorV2Builder<
 class VexBehaviorV2StateScope<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
-    Act : VexBehaviorFamily.Act<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
     Current : State,
 > @PublishedApi internal constructor(
     @PublishedApi
     internal val from:
         KClass<Current>,
     @PublishedApi
-    internal val beginRelationship:
+    internal val beginAct:
         (
             KClass<out State>,
-            Act,
+            Control,
             VexBehaviorV2Begin<
                 Family,
                 State
@@ -213,18 +210,26 @@ class VexBehaviorV2StateScope<
             String?,
         ) -> Int,
     @PublishedApi
-    internal val completeRelationship:
+    internal val completeAct:
         (
             Int,
-            VexBehaviorV2Relationship<
+            VexBehaviorV2Act<
                 Family,
                 State,
-                Act
+                Control
             >,
         ) -> Unit,
 ) {
+    /**
+     * Begins one Act for this State neighborhood.
+     *
+     * Why this API takes Control directly:
+     * the POC first introduced a separate Control->Act mapper, then authored the same State again in
+     * the Act->Effect graph. ThemeMode proved that translation layer redundant. The on(...) scenario
+     * itself is now the Act.
+     */
     fun on(
-        act: Act,
+        control: Control,
         effect:
             VexBehaviorV2Begin<
                 Family,
@@ -237,32 +242,32 @@ class VexBehaviorV2StateScope<
     ): VexBehaviorV2Destination<
         Family,
         State,
-        Act,
+        Control,
         Current
     > {
-        val relationshipId =
-            beginRelationship(
+        val actId =
+            beginAct(
                 from,
-                act,
+                control,
                 effect,
                 conditionName,
             )
 
         return VexBehaviorV2Destination(
-            relationshipId =
-                relationshipId,
+            actId =
+                actId,
             from =
                 from,
-            act =
-                act,
+            control =
+                control,
             effect =
                 effect,
             conditionName =
                 conditionName,
             whenCurrent =
                 whenCurrent,
-            completeRelationship =
-                completeRelationship,
+            completeAct =
+                completeAct,
         )
     }
 
@@ -519,18 +524,18 @@ class VexBehaviorV2ResultScope<
 class VexBehaviorV2Destination<
     Family : VexBehaviorFamily<Family>,
     State : VexBehaviorFamily.State<Family>,
-    Act : VexBehaviorFamily.Act<Family>,
+    Control : VexBehaviorFamily.Control<Family>,
     Current : State,
 > @PublishedApi internal constructor(
     @PublishedApi
-    internal val relationshipId:
+    internal val actId:
         Int,
     @PublishedApi
     internal val from:
         KClass<Current>,
     @PublishedApi
-    internal val act:
-        Act,
+    internal val control:
+        Control,
     @PublishedApi
     internal val effect:
         VexBehaviorV2Begin<
@@ -544,13 +549,13 @@ class VexBehaviorV2Destination<
     internal val whenCurrent:
         (Current) -> Boolean,
     @PublishedApi
-    internal val completeRelationship:
+    internal val completeAct:
         (
             Int,
-            VexBehaviorV2Relationship<
+            VexBehaviorV2Act<
                 Family,
                 State,
-                Act
+                Control
             >,
         ) -> Unit,
 ) {
@@ -560,8 +565,7 @@ class VexBehaviorV2Destination<
         complete(
             VexBehaviorV2StateDisposition(
                 kind =
-                    VexBehaviorV2StateDispositionKind
-                        .Admit,
+                    VexBehaviorV2StateDispositionKind.Admit,
                 stateKind =
                     Next::class,
             ),
@@ -572,8 +576,7 @@ class VexBehaviorV2Destination<
         complete(
             VexBehaviorV2StateDisposition(
                 kind =
-                    VexBehaviorV2StateDispositionKind
-                        .Stay,
+                    VexBehaviorV2StateDispositionKind.Stay,
                 stateKind =
                     from,
             ),
@@ -588,13 +591,13 @@ class VexBehaviorV2Destination<
                 State
             >,
     ) {
-        completeRelationship(
-            relationshipId,
-            VexBehaviorV2Relationship(
+        completeAct(
+            actId,
+            VexBehaviorV2Act(
                 from =
                     from,
-                act =
-                    act,
+                control =
+                    control,
                 effect =
                     effect,
                 immediateDisposition =
