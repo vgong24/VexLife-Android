@@ -8,6 +8,19 @@ package com.vextreme.vexlife.android.behavior
  * sealed interface PlaybackFamily : VexBehaviorFamily<PlaybackFamily>
  *
  * Generic architecture cannot collapse back to a raw VexBehaviorFamily without losing the bound.
+ *
+ * The foundation role markers intentionally remain open. A concrete Family may then contain its own
+ * sealed role regions:
+ *
+ * object ThemeModeFamily : VexBehaviorFamily<ThemeModeFamily> {
+ *     sealed interface State : VexBehaviorFamily.State<ThemeModeFamily>
+ *     sealed interface Control : VexBehaviorFamily.Control<ThemeModeFamily>
+ *     sealed interface Act : VexBehaviorFamily.Act<ThemeModeFamily>
+ * }
+ *
+ * Kotlin nested types are declarations, not overridable associated-type slots. Therefore this
+ * foundation cannot force an implementing Family to "override type State". The concrete Family root
+ * owns that sealed region directly, while generic builders infer the role types from actual use.
  */
 interface VexBehaviorFamily<
     Self : VexBehaviorFamily<Self>,
@@ -17,7 +30,7 @@ interface VexBehaviorFamily<
         Family : VexBehaviorFamily<Family>,
     >
 
-    /** Human-facing affordance belonging to one exact Behavior family. */
+    /** Human-facing affordance or request belonging to one exact Behavior family. */
     interface Control<
         Family : VexBehaviorFamily<Family>,
     >
@@ -27,44 +40,10 @@ interface VexBehaviorFamily<
         Family : VexBehaviorFamily<Family>,
     >
 
-    /** Runtime transformation verb belonging to one exact Behavior family. */
+    /** Runtime transformation relationship belonging to one exact Behavior family. */
     interface Effect<
         Family : VexBehaviorFamily<Family>,
     >
-
-    /**
-     * Canonical one-time member map for a concrete Family.
-     *
-     * The role types still live in their ordinary feature-owned source files. [Members] only lets
-     * Kotlin recover those already-bound types from the Family value so authoring sites do not have
-     * to repeat <Family, State, Control, Act, Effect> on every generic call.
-     *
-     * Preferred source shape keeps the Family as the visible namespace/root:
-     *
-     * object ThemeModeFamily : VexBehaviorFamily<ThemeModeFamily>, Members<...> {
-     *     sealed interface State { ... }
-     *     enum class Control { ... }
-     *     sealed interface Act { ... }
-     * }
-     *
-     * This gives self-identifying paths such as ThemeModeFamily.State.Dark and
-     * ThemeModeFamily.Control.Toggle without a second registration catalog.
-     */
-    interface Members<
-        Family,
-        State,
-        Control,
-        Act,
-        Effect,
-    >
-        where Family : VexBehaviorFamily<Family>,
-              State : VexBehaviorFamily.State<Family>,
-              Control : VexBehaviorFamily.Control<Family>,
-              Act : VexBehaviorFamily.Act<Family>,
-              Effect : VexBehaviorFamily.Effect<Family> {
-        /** Complete Control vocabulary for the Family when a consumer needs exhaustive binding. */
-        val controls: Set<Control>
-    }
 }
 
 // [VXG RealForever]
