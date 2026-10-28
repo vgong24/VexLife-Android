@@ -242,7 +242,7 @@ class VexBehaviorUiRoundTripReferenceTest {
             state: ThemeModeFamily.State,
         ) {
             trace +=
-                "Store.Save(${state.label()})"
+                "Store.Save(${state.toString()})"
 
             publish(
                 state,
@@ -253,7 +253,7 @@ class VexBehaviorUiRoundTripReferenceTest {
             state: ThemeModeFamily.State,
         ) {
             trace +=
-                "Store.externalObservation(${state.label()})"
+                "Store.externalObservation(${state.toString()})"
 
             publish(
                 state,
@@ -322,7 +322,7 @@ class VexBehaviorUiRoundTripReferenceTest {
             }
 
             trace +=
-                "SemanticState.admit(${state.label()})"
+                "SemanticState.admit(${state.toString()})"
 
             mutableStates.value =
                 state
@@ -394,7 +394,7 @@ class VexBehaviorUiRoundTripReferenceTest {
         init {
             store.observe { observed ->
                 trace +=
-                    "Connection.ObservableState=${observed.label()}"
+                    "Connection.ObservableState=${observed.toString()}"
 
                 semanticState.admit(
                     observed,
@@ -410,7 +410,7 @@ class VexBehaviorUiRoundTripReferenceTest {
                 semanticState.current
 
             trace +=
-                "Connection.current=${current.label()}"
+                "Connection.current=${current.toString()}"
 
             val act =
                 ThemeModeFamily.Behavior
@@ -423,7 +423,7 @@ class VexBehaviorUiRoundTripReferenceTest {
                     ?: return
 
             trace +=
-                "Behavior.Act=${current.label()}+${control.label()}"
+                "Behavior.Act=${current.toString()}+${control.toString()}"
 
             when (
                 act.immediateDisposition
@@ -450,7 +450,7 @@ class VexBehaviorUiRoundTripReferenceTest {
                     )
 
                     trace +=
-                        "Behavior.immediate=Admit(${admitted.label()})"
+                        "Behavior.immediate=Admit(${admitted.toString()})"
 
                     semanticState.admit(
                         admitted,
@@ -506,11 +506,11 @@ class VexBehaviorUiRoundTripReferenceTest {
                 live.states.value
 
             trace +=
-                "UI.render=${observed.label()}"
+                "UI.render=${observed.toString()}"
 
             return ReferenceUiState(
                 visibleMode =
-                    observed.label(),
+                    observed.toString(),
                 toggleChecked =
                     observed ==
                         ThemeModeFamily.State.Dark,
@@ -687,25 +687,7 @@ class VexBehaviorUiRoundTripReferenceTest {
         )
     }
 
-    private fun ThemeModeFamily.State.label():
-        String =
-        when (this) {
-            ThemeModeFamily.State.NotSet ->
-                "NotSet"
 
-            ThemeModeFamily.State.Light ->
-                "Light"
-
-            ThemeModeFamily.State.Dark ->
-                "Dark"
-        }
-
-    private fun ThemeModeFamily.Control.label():
-        String =
-        when (this) {
-            ThemeModeFamily.Control.Toggle ->
-                "Toggle"
-        }
 }
 
 // [VXG RealForever]
