@@ -40,9 +40,11 @@ import org.junit.Test
  * semantic causes enter one serialized current-State boundary and an older completion is evaluated
  * against CURRENT meaning instead of directly overwriting it.
  *
- * StateRelay is still a pressure candidate, not a confirmed Family member. In particular, this test
- * uses a VexState/deep-copyable fixture while current production Playback State does not yet implement
- * VexState. Production Playback stays unchanged.
+ * StateRelay is still a pressure candidate, not a confirmed Family member. The class also pressures
+ * nested list currentness using stable refs + complete identity-indexed snapshots so a copied parent
+ * cannot silently lose a nested display layer. In particular, these test fixtures use VexState while
+ * current production Playback State does not yet implement VexState. Production Playback stays
+ * unchanged.
  */
 class VexBehaviorV2PlaybackOriginPressureTest {
     @Test
@@ -308,6 +310,118 @@ class VexBehaviorV2PlaybackOriginPressureTest {
     }
 
     @Test
+    fun nestedCurrentListsPreserveEveryLayerByStableIdentity() {
+        val relay =
+            NestedListStateRelay(
+                initialState =
+                    NestedListState.fixture(),
+            )
+
+        relay.updateItem(
+            sectionRef =
+                "section.alpha",
+            itemRef =
+                "item.alpha.two",
+        ) { item ->
+            item.copy(
+                label =
+                    "Alpha Two — updated",
+            )
+        }
+
+        assertEquals(
+            listOf(
+                "section.alpha",
+                "section.beta",
+            ),
+            relay.current.sections.refs,
+        )
+        assertEquals(
+            listOf(
+                "item.alpha.one",
+                "item.alpha.two",
+            ),
+            relay.current
+                .sections[
+                    "section.alpha"
+                ]
+                .items
+                .refs,
+        )
+        assertEquals(
+            "Alpha One",
+            relay.current
+                .sections[
+                    "section.alpha"
+                ]
+                .items[
+                    "item.alpha.one"
+                ]
+                .label,
+        )
+        assertEquals(
+            "Alpha Two — updated",
+            relay.current
+                .sections[
+                    "section.alpha"
+                ]
+                .items[
+                    "item.alpha.two"
+                ]
+                .label,
+        )
+        assertEquals(
+            "Beta One",
+            relay.current
+                .sections[
+                    "section.beta"
+                ]
+                .items[
+                    "item.beta.one"
+                ]
+                .label,
+        )
+
+        /*
+         * Display walks semantic refs from the CURRENT snapshot. If a copy/update ever drops a list
+         * layer or item value, StateListSnapshot construction/resolution fails rather than silently
+         * rendering a shorter list.
+         */
+        assertEquals(
+            listOf(
+                "Alpha One",
+                "Alpha Two — updated",
+                "Beta One",
+            ),
+            relay.current.displayLabels(),
+        )
+    }
+
+    @Test(
+        expected =
+            IllegalArgumentException::class,
+    )
+    fun nestedCurrentListRejectsDanglingDisplayIdentity() {
+        StateListSnapshot(
+            refs =
+                listOf(
+                    "item.present",
+                    "item.missing",
+                ),
+            valuesByRef =
+                mapOf(
+                    "item.present" to
+                        NestedItemState(
+                            itemRef =
+                                "item.present",
+                            label =
+                                "Present",
+                        ),
+                ),
+        )
+    }
+
+    @Test
     fun stateRelayReevaluatesOlderCompletionAgainstCurrentSemanticState() {
         val relay =
             StateRelay(
@@ -531,6 +645,245 @@ class VexBehaviorV2PlaybackOriginPressureTest {
             )
         } finally {
             root.forceStopAll()
+        }
+    }
+
+    /**
+     * Test-only identity-first list snapshot.
+     *
+     * refs owns semantic ordering. valuesByRef owns the complete value snapshot for those exact refs.
+     * The constructor refuses a dangling/missing layer instead of letting presentation degrade into a
+     * shorter list. A parent may nest another StateListSnapshot recursively.
+     *
+     * This is pressure evidence, not yet a proposed universal collection type.
+     */
+    private data class StateListSnapshot<
+        Ref,
+        Value,
+    >(
+        val refs:
+            List<Ref>,
+        val valuesByRef:
+            Map<
+                Ref,
+                Value
+            >,
+    ) {
+        init {
+            require(
+                refs.distinct().size ==
+                    refs.size,
+            ) {
+                "StateListSnapshot refs must be unique"
+            }
+            require(
+                refs.toSet() ==
+                    valuesByRef.keys,
+            ) {
+                "StateListSnapshot refs and valuesByRef must describe the same complete current list"
+            }
+        }
+
+        operator fun get(
+            ref: Ref,
+        ): Value =
+            requireNotNull(
+                valuesByRef[
+                    ref
+                ],
+            ) {
+                "StateListSnapshot has no current value for ref $ref"
+            }
+
+        fun update(
+            ref: Ref,
+            transform:
+                (
+                    Value,
+                ) ->
+                    Value,
+        ):
+            StateListSnapshot<
+                Ref,
+                Value
+            > {
+            require(
+                ref in
+                    valuesByRef,
+            ) {
+                "StateListSnapshot cannot update unknown ref $ref"
+            }
+
+            return copy(
+                valuesByRef =
+                    valuesByRef +
+                        (
+                            ref to
+                                transform(
+                                    get(
+                                        ref,
+                                    ),
+                                )
+                        ),
+            )
+        }
+    }
+
+    private data class NestedItemState(
+        val itemRef: String,
+        val label: String,
+    )
+
+    private data class NestedSectionState(
+        val sectionRef: String,
+        val items:
+            StateListSnapshot<
+                String,
+                NestedItemState
+            >,
+    )
+
+    private data class NestedListState(
+        val sections:
+            StateListSnapshot<
+                String,
+                NestedSectionState
+            >,
+    ) :
+        VexState<
+            NestedListState
+        > {
+        /*
+         * This fixture is structurally immutable: lists/maps are created as snapshot values and no
+         * mutable collection handles are exposed. copy() preserves every root field by default.
+         */
+        override fun deepCopy():
+            NestedListState =
+            copy()
+
+        fun displayLabels():
+            List<String> =
+            sections.refs.flatMap { sectionRef ->
+                val section =
+                    sections[
+                        sectionRef
+                    ]
+
+                section.items.refs.map { itemRef ->
+                    section.items[
+                        itemRef
+                    ].label
+                }
+            }
+
+        companion object {
+            fun fixture():
+                NestedListState =
+                NestedListState(
+                    sections =
+                        StateListSnapshot(
+                            refs =
+                                listOf(
+                                    "section.alpha",
+                                    "section.beta",
+                                ),
+                            valuesByRef =
+                                mapOf(
+                                    "section.alpha" to
+                                        NestedSectionState(
+                                            sectionRef =
+                                                "section.alpha",
+                                            items =
+                                                StateListSnapshot(
+                                                    refs =
+                                                        listOf(
+                                                            "item.alpha.one",
+                                                            "item.alpha.two",
+                                                        ),
+                                                    valuesByRef =
+                                                        mapOf(
+                                                            "item.alpha.one" to
+                                                                NestedItemState(
+                                                                    itemRef =
+                                                                        "item.alpha.one",
+                                                                    label =
+                                                                        "Alpha One",
+                                                                ),
+                                                            "item.alpha.two" to
+                                                                NestedItemState(
+                                                                    itemRef =
+                                                                        "item.alpha.two",
+                                                                    label =
+                                                                        "Alpha Two",
+                                                                ),
+                                                        ),
+                                                ),
+                                        ),
+                                    "section.beta" to
+                                        NestedSectionState(
+                                            sectionRef =
+                                                "section.beta",
+                                            items =
+                                                StateListSnapshot(
+                                                    refs =
+                                                        listOf(
+                                                            "item.beta.one",
+                                                        ),
+                                                    valuesByRef =
+                                                        mapOf(
+                                                            "item.beta.one" to
+                                                                NestedItemState(
+                                                                    itemRef =
+                                                                        "item.beta.one",
+                                                                    label =
+                                                                        "Beta One",
+                                                                ),
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                )
+        }
+    }
+
+    private class NestedListStateRelay(
+        initialState:
+            NestedListState,
+    ) :
+        VexRelay<
+            NestedListState
+        >(
+            relayRef =
+                "origin-pressure.family.state-relay.nested-list",
+            initialState =
+                initialState,
+        ) {
+        fun updateItem(
+            sectionRef: String,
+            itemRef: String,
+            transform:
+                (
+                    NestedItemState,
+                ) ->
+                    NestedItemState,
+        ) {
+            update { current ->
+                current.copy(
+                    sections =
+                        current.sections.update(
+                            sectionRef,
+                        ) { section ->
+                            section.copy(
+                                items =
+                                    section.items.update(
+                                        itemRef,
+                                        transform,
+                                    ),
+                            )
+                        },
+                )
+            }
         }
     }
 

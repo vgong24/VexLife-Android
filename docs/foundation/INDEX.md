@@ -670,3 +670,24 @@ Compound dependency totality, revision, dependency collection and source-freshne
 different ownership problems. The Origin Walk must keep those reasons distinct.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-WHY] -->
+
+
+### V2 Behavior Origin Walk — nested State/list currentness pressure
+
+StateRelay pressure now includes a nested list/list specimen.
+
+~~~text
+stable ordered refs
++ complete values indexed by those refs
+-> coherent current list snapshot
+-> nested update by semantic ref
+-> display resolves the same current refs
+~~~
+
+The specimen rejects dangling ref/value pairs rather than silently rendering a shorter copied tree.
+
+This is evidence for an identity-first snapshot law, not yet admission of a universal StateList type.
+Independently-owned child currentness should remain with the child and converge by stable ref rather
+than being recursively absorbed into a parent State.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][NESTED-STATE-LIST-PRESSURE] -->

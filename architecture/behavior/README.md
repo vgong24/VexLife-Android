@@ -1705,3 +1705,116 @@ The test-only StateRelay currently answers the first question with evidence whil
 open.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-WHY] -->
+
+## Nested current-State pressure — identity before object reference
+
+A second StateRelay pressure comes from nested collection snapshots.
+
+The failure to prevent is:
+
+~~~text
+CURRENT parent snapshot
+  -> ordered list
+       -> item
+            -> nested ordered list
+                 -> nested current item
+
+one layer updates/copies
+-> a nested list/value is accidentally omitted or aliased
+-> DisplayState/UI traverses the copied parent
+-> a row/layer silently disappears even though another owner still has the truth
+~~~
+
+The more complete relationship is identity-first:
+
+~~~text
+StateList snapshot
+  ordered semantic refs
+  +
+  complete valuesByRef for those exact refs
+~~~
+
+and it is fractal:
+
+~~~text
+Parent State
+  sections:
+    refs = [A, B]
+    valuesByRef:
+      A -> Section State
+             items:
+               refs = [A1, A2]
+               valuesByRef:
+                 A1 -> Item State
+                 A2 -> Item State
+      B -> Section State
+             ...
+~~~
+
+### Why separate order from values
+
+List position is presentation/traversal order. It is not identity.
+
+~~~text
+INDEX != IDENTITY
+~~~
+
+Updating A2 therefore means:
+
+~~~text
+CURRENT
+-> resolve section A by ref
+-> resolve item A2 by ref
+-> replace only A2's immutable value
+-> preserve section order
+-> preserve item order
+-> preserve every sibling value
+~~~
+
+Display walks the refs from that same coherent snapshot and resolves every ref. A dangling ref is an
+invariant failure, not permission to silently render fewer rows.
+
+The third pressure test now proves:
+- a deep nested item update preserves parent order, sibling section, sibling item and nested order;
+- display resolves the complete current tree by stable refs;
+- a list snapshot with a missing ref/value pair fails construction.
+
+### What belongs inline versus in another current owner
+
+Do not turn every list item into a Family.
+
+Inline nested value State is appropriate when the child:
+- exists as part of the parent semantic truth;
+- has no independent currentness/lifetime owner;
+- changes only through the parent owner.
+
+Use independent child currentness when the child:
+- changes independently;
+- is observed/used outside this parent;
+- has its own provider/repository/lifetime identity.
+
+Then the parent should retain stable child refs/order and a Convergence relationship may compose the
+children's current bounded projections into one coherent parent/list output. The parent should not
+recursively absorb another owner's entire mutable State merely to render a list.
+
+### Copy law
+
+Do not rely on object-reference continuity for semantic identity.
+
+For structurally immutable value snapshots, prefer:
+
+~~~text
+stable semantic refs
++ immutable values
++ data-class copy from CURRENT
+~~~
+
+over rebuilding a constructor from a hand-selected subset of fields.
+
+That way a newly-added sibling field is preserved by default, while nested independently-owned truth
+does not need to be recursively cloned into the parent.
+
+V1 Relay deepCopy remains valuable where ownership detachment is required, but deep copy is not the
+identity model. Stable refs and coherent current snapshots are.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][NESTED-STATE-LIST-PRESSURE] -->
