@@ -691,3 +691,20 @@ Independently-owned child currentness should remain with the child and converge 
 than being recursively absorbed into a parent State.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][NESTED-STATE-LIST-PRESSURE] -->
+
+
+### V2 Behavior Origin Walk — fourth StateRelay reference
+
+The executable evolution now includes:
+
+~~~text
+1 ThemeMode local Family language/runtime
+2 UI activation-currentness reference
+3 Playback payload/provider pressure
+4 StateRelay + nested current-list/convergence pressure
+~~~
+
+The fourth reference distinguishes parent-owned nested values from independently-owned child
+currentness and proves stable-ref convergence without silent display-layer loss.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-FOURTH-REFERENCE] -->

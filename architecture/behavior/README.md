@@ -49,8 +49,16 @@ Read them in this order:
    -> provider observation must reconcile with newer local intent
    -> payload Seek retains exact media identity/currentness
    -> Control availability derives from current semantic/provider capability
-   -> runtime State + payload Control now materialize an Act
-   -> provider observation/reconciliation remains open
+   -> runtime State + payload Control materialize an Act
+   -> reconciled provider truth reaches a concrete Family admission seam
+
+4. VexBehaviorV2StateRelayOriginPressureTest
+   Family currentness / nested-state pressure
+   -> stale async completion re-evaluates against CURRENT State
+   -> nested owned lists preserve stable identity + complete snapshot layers
+   -> caller-owned mutable containers detach at the copy boundary
+   -> independently-owned child currentness converges by stable ref
+      instead of being recursively absorbed into parent State
 ~~~
 
 The third class is intentionally a **pressure reference**, not the newest confirmed V2 template.
@@ -1818,3 +1826,49 @@ V1 Relay deepCopy remains valuable where ownership detachment is required, but d
 identity model. Stable refs and coherent current snapshots are.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][NESTED-STATE-LIST-PRESSURE] -->
+
+
+## Fourth Origin reference — StateRelay and nested currentness
+
+StateRelay/current-list pressure has moved out of the Playback-specific class into:
+
+~~~text
+VexBehaviorV2StateRelayOriginPressureTest
+~~~
+
+The fourth reference separates two kinds of nesting:
+
+~~~text
+INLINE OWNED VALUE TREE
+  parent owns child meaning
+  -> stable refs + complete indexed snapshot
+  -> update by ref
+  -> nested copy/detachment preserves every layer
+
+INDEPENDENT CHILD CURRENTNESS
+  child has its own owner/lifetime
+  -> parent keeps semantic refs/order
+  -> child owner exposes a coherent current-by-ref projection
+  -> Compound Convergence combines both
+  -> Display/output resolves exact refs
+~~~
+
+This avoids two opposite mistakes:
+
+~~~text
+recursive object-reference tree
+  -> copies/aliases can lose layers or make identity accidental
+
+Family-per-row explosion
+  -> every nested value gets an unnecessary independent owner
+~~~
+
+The deciding question remains ownership/currentness, not collection depth.
+
+The test also proves a current list may not silently omit a missing nested identity. Once the
+relationship claims a complete current order + child projection, every ordered ref must resolve or the
+relationship fails instead of rendering a shorter list.
+
+No universal StateList type is admitted by this checkpoint.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-FOURTH-REFERENCE] -->
