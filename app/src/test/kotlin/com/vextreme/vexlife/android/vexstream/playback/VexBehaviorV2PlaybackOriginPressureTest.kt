@@ -7,7 +7,6 @@ import com.vextreme.vexlife.android.behavior.vexActs
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -285,6 +284,35 @@ class VexBehaviorV2PlaybackOriginPressureTest {
             assertNull(
                 family.activate(
                     staleOccurrence,
+                ),
+            )
+
+
+            val providerUnavailable =
+                PayloadPressureFamily(
+                    executionRoot =
+                        root,
+                    initialState =
+                        PayloadPressureFamily.State.Ready(
+                            mediaId =
+                                "track.alpha",
+                            mediaItemIndex =
+                                1,
+                            seekAvailable =
+                                false,
+                            requestedPositionMs =
+                                null,
+                        ),
+                )
+
+            assertFalse(
+                providerUnavailable.isAvailable(
+                    control,
+                ),
+            )
+            assertNull(
+                providerUnavailable.activate(
+                    control,
                 ),
             )
         } finally {

@@ -586,3 +586,29 @@ passing pressure test preserves the unresolved requirement; it does not authoriz
 refactoring.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PLAYBACK-PRESSURE] -->
+
+
+### V2 Behavior Origin Walk — runtime Act materialization threshold
+
+Playback pressure has now earned one candidate V2 refinement:
+
+~~~text
+actual CURRENT State value
++
+actual incoming payload Control value
+-> materialized Act
+~~~
+
+The singleton/exact `on(Control)` form remains unchanged. The runtime form
+`on<ControlType> { current, control -> ... }` uses the real values at resolution time.
+
+`Family.isAvailable(Control)` derives from the same Act rule as `activate(Control)`; activation
+re-resolves CURRENT State, so an earlier availability read never becomes authority.
+
+This threshold does **not** solve provider observation/reconciliation, async-result staleness, provider
+affinity, Compose observation or multi-instance execution identity.
+
+An isolated Kotlin language proof passed for the runtime State + payload Control materialization shape;
+repository Gradle/JVM execution remains pending.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][RUNTIME-ACT-MATERIALIZATION] -->
