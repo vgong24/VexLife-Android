@@ -286,8 +286,15 @@ Code-navigation roots:
 
 ~~~text
 VexBehaviorDocs
+VexBehaviorUiRoundTripReferenceTest
 VexStreamPlaybackDocs
 ~~~
+
+Fresh-entry working reference:
+[`VexBehaviorUiRoundTripReferenceTest`](../../architecture/behavior/src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorUiRoundTripReferenceTest.kt)
+
+Use that reference when the question is the current end-to-end UI/SCAE/observation loop. It is a bounded
+JVM semantic specimen, not a replacement for Compose/Journey/ScreenCrawler/device proof.
 
 The candidate preserves one human-readable four-move vocabulary with explicit semantic equations:
 
