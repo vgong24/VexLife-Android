@@ -742,10 +742,34 @@ partial Input observation
 -> process again
 ~~~
 
-VexBehaviorV2FamilyCircuitTestSampleSuite is the clean teaching surface. Its deliberately generic
-ComplexFamily extends VexBehaviorV2CompoundFamily, owns ComplexCompoundState, observes Screen /
-MusicQueue / ThemeMode currents, and routes a required screen change through
-ScreenFamily.Control.Show(...) rather than a bespoke apply/setCurrent escape hatch.
+VexBehaviorV2FamilyCircuitTestSampleSuite is the clean teaching surface.
+
+~~~text
+createSingleFamily()
+  -> SingleFamily
+  -> one current State
+
+createListFamily()
+  -> ListFamily
+  -> nested list State
+
+createBooleanFamily()
+  -> BooleanFamily
+  -> Boolean State
+
+createMultiFamily(...)
+  -> MultiFamily
+  -> several Family currents
+  -> MultiInputState.latest(...)
+  -> process(...)
+  -> MultiOutputState
+  -> MultiCompoundState / Family.current
+  -> Act
+~~~
+
+The sample uses generic data shapes rather than app features so the infrastructure is the thing being
+taught. MultiFamily requests a list change through ListFamily.Control rather than a bespoke mutation
+escape hatch.
 
 Permanent ownership law:
 
