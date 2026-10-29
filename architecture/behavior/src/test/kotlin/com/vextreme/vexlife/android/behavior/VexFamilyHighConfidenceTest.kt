@@ -354,7 +354,9 @@ class VexFamilyHighConfidenceTest {
     private class GatedStore :
         ValueFamily.Store {
         val started =
-            CompletableDeferred<Unit>()
+            CountDownLatch(
+                1,
+            )
 
         val gate =
             CompletableDeferred<Unit>()
@@ -364,9 +366,7 @@ class VexFamilyHighConfidenceTest {
                 ValueFamily.State,
         ):
             VexFamily.Store.WriteResult {
-            started.complete(
-                Unit,
-            )
+            started.countDown()
             gate.await()
             return VexFamily.Store.WriteResult.Success
         }
@@ -709,8 +709,9 @@ class VexFamilyHighConfidenceTest {
                     ),
                 ),
             )
-            assertFalse(
-                store.started.isCompleted,
+            assertEquals(
+                1L,
+                store.started.count,
             )
             assertEquals(
                 ValueFamily.State.Empty,
@@ -727,7 +728,11 @@ class VexFamilyHighConfidenceTest {
             )
 
             assertTrue(
-                store.started.isCompleted,
+                "activated Begin did not reach Store.save",
+                store.started.await(
+                    5,
+                    TimeUnit.SECONDS,
+                ),
             )
         } finally {
             root.forceStopAll()
