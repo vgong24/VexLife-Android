@@ -332,7 +332,7 @@ object DebugMenuScreen : AppScreenBlueprint(
 }
 
 @Composable
-fun DebugMenuScreenContent(
+internal fun DebugMenuScreenContent(
     runtime: VexRuntime,
     logHistoryRepository: LogHistoryRepository,
     themeMode: ThemeMode,
