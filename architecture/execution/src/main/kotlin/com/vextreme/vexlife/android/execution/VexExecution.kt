@@ -582,26 +582,31 @@ abstract class VexExecution protected constructor(
             onResult: (Result) -> Unit,
             onFailure: (Throwable) -> Unit,
         ) {
-            try {
-                beforeOperation()
-                onResult(
+            beforeOperation()
+
+            val result =
+                try {
                     operation(
                         argument,
-                    ),
-                )
-            } catch (
-                cancelled:
-                    CancellationException,
-            ) {
-                throw cancelled
-            } catch (
-                failure:
-                    Throwable,
-            ) {
-                onFailure(
-                    failure,
-                )
-            }
+                    )
+                } catch (
+                    cancelled:
+                        CancellationException,
+                ) {
+                    throw cancelled
+                } catch (
+                    failure:
+                        Throwable,
+                ) {
+                    onFailure(
+                        failure,
+                    )
+                    return
+                }
+
+            onResult(
+                result,
+            )
         }
 
         private fun sourceRef(

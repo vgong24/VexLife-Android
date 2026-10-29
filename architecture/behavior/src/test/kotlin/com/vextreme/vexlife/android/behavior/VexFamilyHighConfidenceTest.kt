@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.behavior
 
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import java.util.concurrent.CountDownLatch
@@ -947,7 +948,7 @@ class VexFamilyHighConfidenceTest {
             )
         val executor =
             Executors.newFixedThreadPool(
-                8,
+                count,
             )
 
         try {
@@ -1063,6 +1064,20 @@ class VexFamilyHighConfidenceTest {
                     TimeUnit.SECONDS,
                 ),
             )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    root.executions.first { executions ->
+                        executions.values.any { state ->
+                            state.status ==
+                                VexExecution.Status.COMPLETED
+                        }
+                    }
+                }
+            }
+
             assertEquals(
                 ValueFamily.State.Ready(
                     value =
