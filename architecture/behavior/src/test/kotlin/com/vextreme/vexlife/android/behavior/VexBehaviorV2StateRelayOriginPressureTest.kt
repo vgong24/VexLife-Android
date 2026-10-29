@@ -2713,9 +2713,13 @@ class VexBehaviorV2StateRelayOriginPressureTest {
  *
  * The simulated domain uses three independently-owned CURRENT truths:
  *
- *     ScreenState
+ *     ScreenFamily.State
  *     MusicQueueState
  *     ThemeModeState
+ *
+ * Screen is a real Family because the circuit will make a semantic request of it. MusicQueue and
+ * ThemeMode are observation-only owners in this sample, so they intentionally remain simpler current
+ * owners instead of receiving fake Controls just to make every input look alike.
  *
  * They stay outside [ComplexFamily]. ComplexFamily does not absorb their ownership. It receives
  * snapshots of those truths as partial input observations and answers one question:
@@ -2765,15 +2769,17 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 ),
             )
 
-        val screenOwner =
-            ScreenOwner(
-                initial =
-                    ScreenState(
+        val screenFamily =
+            ScreenFamily(
+                initialState =
+                    ScreenFamily.State(
                         screenName =
                             "BrowseSurface",
                         transientBlocked =
                             false,
                     ),
+                executionRoot =
+                    VexExecutionRoot(),
             )
         val queueOwner =
             MusicQueueOwner(
@@ -2801,7 +2807,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
          */
         assertEquals(
             "BrowseSurface",
-            screenOwner.current.screenName,
+            screenFamily.current.screenName,
         )
         assertEquals(
             "track.alpha",
@@ -2845,7 +2851,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
         val retainedCurrentInput =
             ComplexInputState(
                 screen =
-                    ScreenState(
+                    ScreenFamily.State(
                         screenName =
                             "BrowseSurface",
                         transientBlocked =
@@ -2958,7 +2964,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
          * ComplexFamily.process(...) is called.
          */
         family.screenChanged(
-            ScreenState(
+            ScreenFamily.State(
                 screenName =
                     "BrowseSurface",
                 transientBlocked =
@@ -3035,17 +3041,17 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
     fun step4_and_5_commitThenActThenObserveNewOwnerTruthBackAsInput() {
         val trace =
             mutableListOf<String>()
-        val screenOwner =
-            ScreenOwner(
-                initial =
-                    ScreenState(
+        val screenFamily =
+            ScreenFamily(
+                initialState =
+                    ScreenFamily.State(
                         screenName =
                             "BrowseSurface",
                         transientBlocked =
                             false,
                     ),
-                trace =
-                    trace,
+                executionRoot =
+                    VexExecutionRoot(),
             )
         val queueOwner =
             MusicQueueOwner(
@@ -3075,8 +3081,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             ComplexFamilyCircuit(
                 family =
                     family,
-                screenOwner =
-                    screenOwner,
+                screenFamily =
+                    screenFamily,
                 trace =
                     trace,
             )
@@ -3087,7 +3093,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
          */
         circuit.accept(
             family.screenOutputCommitted(
-                screenOwner.current,
+                screenFamily.current,
             ),
         )
         circuit.accept(
@@ -3108,7 +3114,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
          */
         assertEquals(
             PLAYER_SCREEN,
-            screenOwner.current.screenName,
+            screenFamily.current.screenName,
         )
         assertEquals(
             ComplexOutputState.Settled(
@@ -3129,7 +3135,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 "process:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
                 "commit:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
                 "act:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
-                "screen-owner:PlayerSurface",
+                "screen-family:PlayerSurface",
                 "observe:screen:PlayerSurface",
                 "process:Settled(PlayerSurface,track.alpha,Dark)",
                 "commit:Settled(PlayerSurface,track.alpha,Dark)",
@@ -3218,23 +3224,95 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
     }
 
     /**
-     * STEP 1 — three unrelated owners.
+     * STEP 1 — three independently-owned current truths.
      *
      * These types intentionally live OUTSIDE ComplexFamily. They are complete current truths in
      * their own right. ComplexFamily may observe them; it does not become their owner.
+     *
+     * Screen demonstrates the full Family boundary because another circuit may ask it to change.
+     * Queue and Theme demonstrate that observation-only truth does not need fake Family ceremony.
      */
-    private data class ScreenState(
-        val screenName:
-            String,
-        val transientBlocked:
-            Boolean,
+    /**
+     * STEP 1A — a target that participates through the Family grammar.
+     *
+     * Screen is intentionally a Family because the larger circuit will eventually REQUEST a screen
+     * change. That request must enter through Control -> Act -> admitted CURRENT State rather than
+     * through a bespoke apply/setCurrent method.
+     *
+     * Queue and Theme below are observation-only owners in this sample. They therefore remain simple
+     * current-State owners; no fake Controls are invented merely for symmetry.
+     */
+    private class ScreenFamily(
+        initialState:
+            State,
+        executionRoot:
+            VexExecutionRoot,
     ) :
-        VexState<
-            ScreenState
-        > {
-        override fun deepCopy():
-            ScreenState =
-            copy()
+        VexBehaviorV2Family<
+            ScreenFamily,
+            ScreenFamily.State,
+            ScreenFamily.Control
+        >(
+            initialState =
+                initialState,
+            executionRoot =
+                executionRoot,
+            logger =
+                VexFamilyLogger.None,
+        ) {
+        data class State(
+            val screenName:
+                String,
+            val transientBlocked:
+                Boolean,
+        ) :
+            VexBehaviorFamily.State<
+                ScreenFamily
+            >,
+            VexState<
+                State
+            > {
+            override fun deepCopy():
+                State =
+                copy()
+        }
+
+        sealed interface Control :
+            VexBehaviorFamily.Control<
+                ScreenFamily
+            > {
+            data class Show(
+                val screenName:
+                    String,
+            ) :
+                Control
+        }
+
+        override val acts =
+            vexActs<
+                ScreenFamily,
+                State,
+                Control
+            >(
+                family =
+                    this,
+                behaviorRef =
+                    "sample.family-circuit.screen",
+            ) {
+                state<State> {
+                    on<Control.Show> {
+                        current,
+                        control,
+                        ->
+                        admit(
+                            current.copy(
+                                screenName =
+                                    control.screenName,
+                            ),
+                        )
+                    }
+                }
+            }
     }
 
     private data class QueueItem(
@@ -3339,43 +3417,6 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             copy()
     }
 
-    private class ScreenOwner(
-        initial:
-            ScreenState,
-        private val trace:
-            MutableList<String>? =
-            null,
-    ) :
-        VexRelay<
-            ScreenState
-        >(
-            relayRef =
-                "sample.family-circuit.screen-owner",
-            initialState =
-                initial,
-        ) {
-        fun apply(
-            screenName:
-                String,
-        ):
-            ScreenState {
-            val next =
-                send(
-                    current.copy(
-                        screenName =
-                            screenName,
-                    ),
-                )
-
-            trace?.add(
-                "screen-owner:" +
-                    next.screenName,
-            )
-
-            return next
-        }
-    }
-
     private class MusicQueueOwner(
         initial:
             MusicQueueState,
@@ -3426,7 +3467,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
 
     private data class ComplexInputState(
         val screen:
-            ScreenState? =
+            ScreenFamily.State? =
             null,
         val musicQueue:
             MusicQueueState? =
@@ -3764,7 +3805,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
         ) {
         fun screenChanged(
             state:
-                ScreenState,
+                ScreenFamily.State,
         ):
             VexCompoundState<
                 ComplexInputState,
@@ -3809,7 +3850,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
 
         fun screenOutputCommitted(
             state:
-                ScreenState,
+                ScreenFamily.State,
         ):
             CommittedOutput<
                 ComplexOutputState
@@ -3955,17 +3996,20 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
     /**
      * STEPS 4 + 5 — realization after established relationship truth.
      *
-     * Act receives an ALREADY-COMMITTED Output. If that output asks for a screen change, Act calls
-     * ScreenOwner. It never writes ComplexFamily Output directly.
+     * Act receives an ALREADY-COMMITTED Output. If that output asks for a screen change, Act sends
+     * ScreenFamily.Control.Show(...) through the target Family's normal activate(Control) boundary.
+     * It never writes Screen State or ComplexFamily Output directly.
      *
-     * After ScreenOwner changes, the circuit observes ScreenOwner.current and returns it as NEW
-     * ComplexInputState. That new input goes through latest(...) and process(...) again.
+     * ScreenFamily resolves Control against its own CURRENT State, materializes its Act and admits
+     * the resulting Screen State. The circuit then observes ScreenFamily.current and returns that
+     * rightful truth as NEW ComplexInputState. That new input goes through latest(...) and
+     * process(...) again.
      */
     private class ComplexFamilyCircuit(
         private val family:
             ComplexFamily,
-        private val screenOwner:
-            ScreenOwner,
+        private val screenFamily:
+            ScreenFamily,
         private val trace:
             MutableList<String>,
     ) {
@@ -3999,13 +4043,19 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                     Unit
 
                 is ComplexOutputState.NeedsPlayerScreen -> {
-                    screenOwner.apply(
-                        output.targetScreenName,
+                    screenFamily.activate(
+                        ScreenFamily.Control.Show(
+                            screenName =
+                                output.targetScreenName,
+                        ),
                     )
 
                     val observed =
-                        screenOwner.current
+                        screenFamily.current
 
+                    trace +=
+                        "screen-family:" +
+                            observed.screenName
                     trace +=
                         "observe:screen:" +
                             observed.screenName
