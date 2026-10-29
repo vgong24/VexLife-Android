@@ -135,24 +135,29 @@ Earliest / Latest / Queued
     caller supplies one VexExecution.Id
 ```
 
-The reusable contract is `VexExecution.Id`. The concrete name lives with the owner that understands
-the relationship:
+The reusable contract is `VexExecution.Id`. Direct VexExecution owners that have no richer semantic
+cause may declare a typed Id vocabulary locally:
 
 ```kotlin
 enum class ExecutionId :
     VexExecution.Id {
-    Save,
     Refresh,
 }
 ```
 
-If a Family owns that relationship, `ConcreteFamily.ExecutionId` is the natural declaration. If a
-dedicated execution component owns it, that component holds its own `ExecutionId`. Do not create a
-global catalog.
+Family-originated execution is different: Family already owns the semantic cause as a Control, so it
+does **not** repeat `Control.Save` as `ExecutionId.Save`. Family derives the internal Id from:
 
-The single authored Id is automatically scoped to the **live owner instance**. Two live Families may
-both use `ExecutionId.Save` under the same `VexExecutionRoot` without sharing a relationship.
-Callers do not provide a second owner ID; the execution boundary already knows its live owner.
+```text
+live Family
++
+triggering Control kind
++
+optional ordered arguments
+```
+
+The optional arguments are chosen by the Family author only when one Control needs several separate
+maintained relationships.
 
 The four shapes remain deliberately different:
 
@@ -280,8 +285,9 @@ VexExecution.InstanceId
     exact runtime invocation identity
 
 VexExecution.Id
-    caller-authored
-    present only for Earliest / Latest / Queued relationships
+    relationship key consumed by Execution
+    explicitly authored by direct Execution owners
+    derived from Control + arguments for Family-originated execution
 ```
 
 Therefore:
@@ -305,14 +311,16 @@ The owner part is runtime referential identity, supplied automatically by the ex
 This prevents two live instances that use the same concrete enum/object Id from accidentally sharing
 one lane.
 
-The caller authors exactly one identity when a relationship is needed. It never supplies SourceRef or
-InstanceId.
+A direct VexExecution caller authors one Id when a relationship is needed. Family callers do not
+author another ID: Family derives it from the live Family + triggering Control + optional ordered
+arguments. Neither path supplies SourceRef or InstanceId.
 
 `SourceRef` may change when source is renamed or obfuscated and therefore must not become durable
-semantic identity. Likewise, `Id` is an in-memory relationship key unless its concrete owner
-explicitly earns a persistence boundary. Do not derive durable identity from reflection names,
-enum `.name`, `toString()`, or an entire mutable argument. If persistence is genuinely required,
-the concrete owner supplies a stable serialized representation at that boundary.
+semantic identity. `Id` remains an in-memory relationship key unless its concrete owner explicitly earns a persistence
+boundary. Family relationship arguments participate in equality and must therefore have stable
+value semantics while the relationship is alive. Do not derive durable identity from reflection
+names, enum `.name`, `toString()`, or an entire mutable request. If persistence is genuinely
+required, the concrete owner supplies a stable serialized representation at that boundary.
 
 ## Collection recovery boundary
 

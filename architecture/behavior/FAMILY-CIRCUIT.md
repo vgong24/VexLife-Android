@@ -112,23 +112,59 @@ ConcreteFamily
 fresh reader that DisplayState already has a rightful owner and that no parallel ViewState / UiState /
 PresentationState should be created merely to fill a perceived gap.
 
-## Execution identity boundary
+## Execution relationship identity
 
-When a Family authors a maintained execution relationship, its concrete name stays with that Family:
+Family does not declare a second execution name for a Control it already owns.
 
 ~~~text
-VexExecution
--> Id
-
-ConcreteFamily
--> ExecutionId : VexExecution.Id
+activate(control)
+-> act(currentState, control)
+-> Begin relationship
+-> execute(
+       owner = this live Family,
+       control = triggering Control kind,
+       arguments = optional ordered tuple
+   )
 ~~~
 
-The runtime still owns automatic SourceRef and InstanceId. Family authors only the one relationship
-ID when it intentionally chooses Earliest / Latest / Queued. That Id is automatically scoped to the
-live Family instance, so identical `ExecutionId` declarations on two live Families do not collide.
-`Begin` consumes the `VexExecution.Relationship` directly; it does not own a duplicate mode
-vocabulary.
+Authoring stays small:
+
+~~~kotlin
+beginLatest {
+    ...
+}
+
+beginLatest(
+    accountId,
+    itemId,
+) {
+    ...
+}
+~~~
+
+Meaning:
+
+~~~text
+no arguments
+    Family + Control
+
+one argument
+    Family + Control + arg1
+
+many arguments
+    Family + Control + arg1 + arg2 + ...
+~~~
+
+The arguments are ordered relationship components, not automatic copies of the Control payload.
+Zero arguments and one explicit null argument are distinct. Use stable immutable semantic values
+whose equality remains stable while the relationship is alive.
+
+Family derives the internal `VexExecution.Id` from this relationship. A direct non-Family
+VexExecution owner may still author an explicit Id when no Control exists to supply the semantic
+cause.
+
+`Begin` consumes `VexExecution.Relationship` directly and carries only its ordered arguments; it
+does not own a duplicate execution-ID vocabulary.
 
 ## Logger boundary
 

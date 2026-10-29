@@ -193,45 +193,86 @@ does not exist as a peer package capability. Its construction is closed and a co
 receives the protected `begin(...)` opening while authoring an Act.
 
 Begin does not own a second execution-mode vocabulary. It carries the relationship owned by
-`VexExecution`; maintained relationships receive the concrete owner's `ExecutionId`.
+`VexExecution`; Family-originated maintained identity is derived from the triggering Control plus
+optional ordered arguments.
 
-## Execution identity boundary
+## Execution relationship identity
 
-Execution relationship identity belongs to the independent `VexExecution` root, while the concrete
-name belongs to the semantic owner that understands the relationship.
-
-When a Family authors the relationship:
+Family-originated execution reuses vocabulary the Family already owns. It does not declare a second
+`ExecutionId.Save` beside `Control.Save`.
 
 ~~~text
-VexExecution
--> Id
-
-ConcreteFamily
--> ExecutionId : VexExecution.Id
+live Family instance
++
+triggering Control kind
++
+ordered optional arguments
+=
+maintained execution relationship
 ~~~
 
-For example, `ConcreteFamily.ExecutionId.Save` is a concrete Family-owned declaration implementing
-the reusable execution contract. There is no global execution-ID catalog and callers do not author
-SourceRef or InstanceId.
+`activate(control)` already knows the exact Control that earned the Act, so Begin authoring does not
+repeat it:
 
-That one `ExecutionId` is automatically scoped to the **live Family instance**. Two live instances
-of the same Family may both use `ExecutionId.Save` under one execution root without sharing the
-same maintained relationship.
+~~~kotlin
+Control.Save ->
+    stay(
+        begin =
+            beginLatest {
+                save(...)
+            },
+    )
+~~~
+
+No arguments means the Control alone identifies the relationship.
+
+Arguments may be stacked when one Control owns several independently maintained relationships:
+
+~~~kotlin
+beginLatest(
+    accountId,
+    itemId,
+) {
+    save(...)
+}
+~~~
+
+This forms the ordered relationship tuple:
 
 ~~~text
+Family + Control + accountId + itemId
+~~~
+
+Arguments are positional. `(A, B)` differs from `(B, A)`. Zero arguments differs from one explicit
+`null` argument. Arguments participate in relationship equality, so use stable immutable semantic
+values such as IDs, enums, strings, numbers, or other value objects whose equality does not mutate
+while the relationship is alive. Do not pass an entire mutable request merely because it is
+available.
+
+The exact Control payload remains the request that caused the Act; only explicitly selected
+`arguments` participate in duplicate handling.
+
+Internally Family derives the `VexExecution.Id` required by the independent Execution root. Direct
+non-Family `VexExecution` owners may still declare an explicit `VexExecution.Id` when they have no
+Family Control relationship to reuse.
+
+~~~text
+Family-originated
+    Family + Control + arguments
+    -> derived VexExecution.Id
+
+direct VexExecution
+    explicit VexExecution.Id when genuinely needed
+
 SourceRef
     automatic / diagnostic
 
 InstanceId
-    automatic / per launch
-
-ExecutionId
-    the one caller-authored identity
-    only when Earliest / Latest / Queued intentionally relate launches
+    automatic / exact invocation
 ~~~
 
-`Begin` no longer owns Replaceable / Sequenced mode names. It carries the relationship owned by
-`VexExecution` and the optional concrete `ExecutionId`.
+`Begin` carries only the VexExecution relationship plus its ordered arguments. It does not own
+Replaceable / Sequenced mode names or a duplicate Family execution-ID catalog.
 
 ## Logger boundary
 
