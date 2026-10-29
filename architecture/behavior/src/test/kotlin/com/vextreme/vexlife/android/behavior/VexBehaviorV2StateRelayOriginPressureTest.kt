@@ -1,12 +1,18 @@
 package com.vextreme.vexlife.android.behavior
 
 import java.util.ArrayDeque
+import java.util.Collections
+import com.vextreme.vexlife.android.execution.VexCoroutineHandle
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.relay.VexCompoundRelay
 import com.vextreme.vexlife.android.relay.VexCompoundState
 import com.vextreme.vexlife.android.relay.VexInputState
 import com.vextreme.vexlife.android.relay.VexOutputState
 import com.vextreme.vexlife.android.relay.VexRelay
 import com.vextreme.vexlife.android.relay.VexState
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -559,6 +565,419 @@ class VexBehaviorV2StateRelayOriginPressureTest {
             trace,
         )
     }
+
+    @Test
+    fun replaceableActRunnerCancelsOlderEpisodeWhenNewerCommittedOutputNeedsNoAct() =
+        runBlocking {
+            val trace =
+                Collections.synchronizedList(
+                    mutableListOf<String>(),
+                )
+            val root =
+                VexExecutionRoot()
+
+            try {
+                val targetOwner =
+                    TargetOwnerRelay(
+                        trace =
+                            trace,
+                        initialValue =
+                            "Light",
+                    )
+                val relationship =
+                    DesiredActualConvergenceRelay(
+                        trace =
+                            trace,
+                    )
+                val targetOperation =
+                    GatedTargetOwnerOperation(
+                        targetOwner =
+                            targetOwner,
+                        trace =
+                            trace,
+                        gatedValue =
+                            "Dark",
+                    )
+                val runner =
+                    CommittedOutputActRunner(
+                        relationship =
+                            relationship,
+                        targetOperation =
+                            targetOperation,
+                        executionRoot =
+                            root,
+                        mode =
+                            VexBehaviorV2BeginMode.Replaceable,
+                        trace =
+                            trace,
+                    )
+
+                /*
+                 * Input can advance retained Compound currentness without creating a new Output
+                 * consequence. The runner intentionally receives no receipt for this revision.
+                 */
+                assertEquals(
+                    null,
+                    relationship.actualOutputCommitted(
+                        "Light",
+                    ),
+                )
+
+                val needsDark =
+                    checkNotNull(
+                        relationship.desiredOutputCommitted(
+                            "Dark",
+                        ),
+                    )
+
+                runner.accept(
+                    needsDark,
+                )
+                runner.accept(
+                    needsDark,
+                )
+
+                /*
+                 * Duplicate delivery of one exact committed Output is ignored by commit identity.
+                 * The one admitted episode has started but has not reached the target owner yet.
+                 */
+                targetOperation.gatedStarted.await()
+
+                val settledLight =
+                    checkNotNull(
+                        relationship.desiredOutputCommitted(
+                            "Light",
+                        ),
+                    )
+
+                assertEquals(
+                    DesiredActualOutputState.Settled(
+                        value =
+                            "Light",
+                    ),
+                    settledLight.outputState,
+                )
+
+                /*
+                 * The newer committed relationship truth requires no target mutation, but it still
+                 * supersedes the older Replaceable reaction. Cancellation does not "uncommit" either
+                 * OutputState; it only stops the now-obsolete realization episode.
+                 */
+                runner.accept(
+                    settledLight,
+                )
+                runner.awaitAll()
+
+                assertEquals(
+                    TargetOwnerState(
+                        value =
+                            "Light",
+                    ),
+                    targetOwner.current,
+                )
+                assertEquals(
+                    DesiredActualOutputState.Settled(
+                        value =
+                            "Light",
+                    ),
+                    relationship.currentOutput,
+                )
+
+                val recorded =
+                    synchronized(
+                        trace,
+                    ) {
+                        trace.toList()
+                    }
+
+                assertEquals(
+                    1,
+                    recorded.count { event ->
+                        event ==
+                            "execute:start:Dark"
+                    },
+                )
+                assertEquals(
+                    0,
+                    recorded.count { event ->
+                        event ==
+                            "target:Dark"
+                    },
+                )
+            } finally {
+                root.forceStopAll()
+            }
+        }
+
+    @Test
+    fun replaceableActRunnerIgnoresInputOnlyRevisionWhenOutputMeaningIsStillCurrent() =
+        runBlocking {
+            val trace =
+                Collections.synchronizedList(
+                    mutableListOf<String>(),
+                )
+            val root =
+                VexExecutionRoot()
+
+            try {
+                val targetOwner =
+                    TargetOwnerRelay(
+                        trace =
+                            trace,
+                        initialValue =
+                            "A",
+                    )
+                val relationship =
+                    DesiredActualConvergenceRelay(
+                        trace =
+                            trace,
+                    )
+                val targetOperation =
+                    GatedTargetOwnerOperation(
+                        targetOwner =
+                            targetOwner,
+                        trace =
+                            trace,
+                        gatedValue =
+                            "Dark",
+                    )
+                val runner =
+                    CommittedOutputActRunner(
+                        relationship =
+                            relationship,
+                        targetOperation =
+                            targetOperation,
+                        executionRoot =
+                            root,
+                        mode =
+                            VexBehaviorV2BeginMode.Replaceable,
+                        trace =
+                            trace,
+                    )
+
+                assertEquals(
+                    null,
+                    relationship.actualOutputCommitted(
+                        "A",
+                    ),
+                )
+
+                val needsDark =
+                    checkNotNull(
+                        relationship.desiredOutputCommitted(
+                            "Dark",
+                        ),
+                    )
+
+                runner.accept(
+                    needsDark,
+                )
+                targetOperation.gatedStarted.await()
+
+                /*
+                 * actual=A -> actual=B advances the Compound revision, but desired is still Dark and
+                 * Output remains NeedsApply(Dark). This is NOT a new Act consequence and must not
+                 * cancel/replay the already-current Replaceable episode.
+                 */
+                assertEquals(
+                    null,
+                    relationship.actualOutputCommitted(
+                        "B",
+                    ),
+                )
+
+                assertEquals(
+                    needsDark.compoundRevision +
+                        1L,
+                    relationship.current.revision,
+                )
+
+                targetOperation.releaseGated.complete(
+                    Unit,
+                )
+                runner.awaitAll()
+
+                assertEquals(
+                    TargetOwnerState(
+                        value =
+                            "Dark",
+                    ),
+                    targetOwner.current,
+                )
+                assertEquals(
+                    DesiredActualOutputState.Settled(
+                        value =
+                            "Dark",
+                    ),
+                    relationship.currentOutput,
+                )
+
+                val recorded =
+                    synchronized(
+                        trace,
+                    ) {
+                        trace.toList()
+                    }
+
+                assertEquals(
+                    1,
+                    recorded.count { event ->
+                        event ==
+                            "target:Dark"
+                    },
+                )
+            } finally {
+                root.forceStopAll()
+            }
+        }
+
+    @Test
+    fun sequencedActRunnerPreservesAcceptedOutputOrderWithoutDuplicatingOnInputOnlyCommit() =
+        runBlocking {
+            val trace =
+                Collections.synchronizedList(
+                    mutableListOf<String>(),
+                )
+            val root =
+                VexExecutionRoot()
+
+            try {
+                val targetOwner =
+                    TargetOwnerRelay(
+                        trace =
+                            trace,
+                        initialValue =
+                            "Initial",
+                    )
+                val relationship =
+                    DesiredActualConvergenceRelay(
+                        trace =
+                            trace,
+                    )
+                val targetOperation =
+                    GatedTargetOwnerOperation(
+                        targetOwner =
+                            targetOwner,
+                        trace =
+                            trace,
+                        gatedValue =
+                            "Dark",
+                    )
+                val runner =
+                    CommittedOutputActRunner(
+                        relationship =
+                            relationship,
+                        targetOperation =
+                            targetOperation,
+                        executionRoot =
+                            root,
+                        mode =
+                            VexBehaviorV2BeginMode.Sequenced,
+                        trace =
+                            trace,
+                    )
+
+                assertEquals(
+                    null,
+                    relationship.actualOutputCommitted(
+                        "Initial",
+                    ),
+                )
+
+                val needsDark =
+                    checkNotNull(
+                        relationship.desiredOutputCommitted(
+                            "Dark",
+                        ),
+                    )
+
+                runner.accept(
+                    needsDark,
+                )
+                targetOperation.gatedStarted.await()
+
+                val needsLight =
+                    checkNotNull(
+                        relationship.desiredOutputCommitted(
+                            "Light",
+                        ),
+                    )
+
+                runner.accept(
+                    needsLight,
+                )
+                runner.accept(
+                    needsLight,
+                )
+
+                targetOperation.releaseGated.complete(
+                    Unit,
+                )
+                runner.awaitAll()
+
+                assertEquals(
+                    TargetOwnerState(
+                        value =
+                            "Light",
+                    ),
+                    targetOwner.current,
+                )
+                assertEquals(
+                    DesiredActualInputState(
+                        desired =
+                            "Light",
+                        actual =
+                            "Light",
+                    ),
+                    relationship.currentInput,
+                )
+                assertEquals(
+                    DesiredActualOutputState.Settled(
+                        value =
+                            "Light",
+                    ),
+                    relationship.currentOutput,
+                )
+
+                /*
+                 * The Dark result observation advances the full Compound revision while Output is
+                 * still NeedsApply(Light). No second Light receipt is formed, so Sequenced custody
+                 * contains exactly the two accepted output-changing consequences.
+                 */
+                assertEquals(
+                    5L,
+                    relationship.current.revision,
+                )
+
+                val recorded =
+                    synchronized(
+                        trace,
+                    ) {
+                        trace.toList()
+                    }
+
+                assertEquals(
+                    listOf(
+                        "target:Dark",
+                        "target:Light",
+                    ),
+                    recorded.filter { event ->
+                        event.startsWith(
+                            "target:",
+                        )
+                    },
+                )
+                assertEquals(
+                    1,
+                    recorded.count { event ->
+                        event ==
+                            "execute:start:Light"
+                    },
+                )
+            } finally {
+                root.forceStopAll()
+            }
+        }
 
     @Test
     fun independentlyOwnedChildCurrentnessConvergesByStableRefWithoutParentAbsorption() {
@@ -1250,6 +1669,25 @@ class VexBehaviorV2StateRelayOriginPressureTest {
     }
 
     /**
+     * Test-only commit receipt for the exact Compound commit whose Output meaning changed.
+     *
+     * [compoundRevision] already identifies one committed CompoundState. The receipt does not create
+     * another event ledger or Output revision counter. It is formed only when OutputState changes,
+     * because input-only currentness movement is not a new outward consequence to realize.
+     */
+    private data class CommittedOutput<
+        OutputState,
+    >(
+        val compoundRevision:
+            Long,
+        val outputState:
+            OutputState,
+    ) where OutputState :
+        VexOutputState<
+            OutputState
+        >
+
+    /**
      * Test-only reusable Compound shape matching the Origin readability pressure:
      *
      * incoming patch + retained current input
@@ -1350,6 +1788,47 @@ class VexBehaviorV2StateRelayOriginPressureTest {
             send(
                 inputState,
             )
+
+        /*
+         * This wrapper is pressure-only. A production post-commit seam would need to live at the
+         * actual Relay commit boundary so dependency-driven send(...) cannot bypass it.
+         */
+        private val outputCommitLock =
+            Any()
+
+        protected fun receiveOutputCommit(
+            inputState:
+                InputState,
+        ):
+            CommittedOutput<
+                OutputState
+            >? =
+            synchronized(
+                outputCommitLock,
+            ) {
+                val beforeOutput =
+                    currentOutput
+                val committed =
+                    send(
+                        inputState,
+                    )
+
+                if (
+                    committed.outputState ==
+                    beforeOutput
+                ) {
+                    null
+                } else {
+                    CommittedOutput(
+                        compoundRevision =
+                            committed.revision,
+                        outputState =
+                            committed
+                                .outputState
+                                .deepCopy(),
+                    )
+                }
+            }
     }
 
     private data class DesiredActualInputState(
@@ -1461,6 +1940,32 @@ class VexBehaviorV2StateRelayOriginPressureTest {
                 ),
             )
 
+        fun desiredOutputCommitted(
+            value: String,
+        ):
+            CommittedOutput<
+                DesiredActualOutputState
+            >? =
+            receiveOutputCommit(
+                DesiredActualInputState(
+                    desired =
+                        value,
+                ),
+            )
+
+        fun actualOutputCommitted(
+            value: String,
+        ):
+            CommittedOutput<
+                DesiredActualOutputState
+            >? =
+            receiveOutputCommit(
+                DesiredActualInputState(
+                    actual =
+                        value,
+                ),
+            )
+
         override fun process(
             latestStateInput:
                 DesiredActualInputState,
@@ -1520,6 +2025,8 @@ class VexBehaviorV2StateRelayOriginPressureTest {
     private class TargetOwnerRelay(
         private val trace:
             MutableList<String>,
+        initialValue:
+            String? = null,
     ) :
         VexRelay<
             TargetOwnerState
@@ -1527,7 +2034,10 @@ class VexBehaviorV2StateRelayOriginPressureTest {
             relayRef =
                 "origin-pressure.process-act.target-owner",
             initialState =
-                TargetOwnerState(),
+                TargetOwnerState(
+                    value =
+                        initialValue,
+                ),
         ) {
         fun apply(
             value: String,
@@ -1541,6 +2051,382 @@ class VexBehaviorV2StateRelayOriginPressureTest {
                     value =
                         value,
                 )
+            }
+        }
+    }
+
+    /**
+     * Test-only target Operation used to pressure execution-lifetime semantics.
+     *
+     * The gate is intentionally before [TargetOwnerRelay.apply]. Replaceable cancellation can
+     * therefore prove that an obsolete realization may be stopped without pretending the already-
+     * committed relationship Output disappeared. Once the target owner really changes, observation
+     * must still return that truth through the relationship input circuit.
+     */
+    private class GatedTargetOwnerOperation(
+        private val targetOwner:
+            TargetOwnerRelay,
+        private val trace:
+            MutableList<String>,
+        private val gatedValue:
+            String?,
+    ) {
+        val gatedStarted =
+            CompletableDeferred<Unit>()
+        val releaseGated =
+            CompletableDeferred<Unit>()
+
+        suspend fun apply(
+            value: String,
+        ):
+            String {
+            trace +=
+                "execute:start:" +
+                    value
+
+            if (
+                value ==
+                gatedValue
+            ) {
+                gatedStarted.complete(
+                    Unit,
+                )
+                releaseGated.await()
+            }
+
+            targetOwner.apply(
+                value,
+            )
+
+            trace +=
+                "execute:return:" +
+                    value
+
+            return value
+        }
+    }
+
+    private data class ActEpisode(
+        val compoundRevision:
+            Long,
+        val value:
+            String,
+    )
+
+    /**
+     * Test-only production-runner pressure.
+     *
+     * It is deliberately NOT a proposed generic class. It exists to expose the minimum laws a
+     * production post-commit runner must preserve:
+     *
+     * 1. one exact output-changing Compound commit produces at most one accepted episode;
+     * 2. input-only Compound revisions do not replay or stale the current Output consequence;
+     * 3. Replaceable supersession is driven by newer committed Output meaning, including a newer
+     *    no-op/Settled output that has no Operation of its own;
+     * 4. Sequenced custody preserves every accepted effect-bearing Output transition in order;
+     * 5. cancellation changes execution lifetime, never the already-committed relationship truth;
+     * 6. target-owner truth returns through observation, never by writing Output back into process.
+     */
+    private class CommittedOutputActRunner(
+        private val relationship:
+            DesiredActualConvergenceRelay,
+        private val targetOperation:
+            GatedTargetOwnerOperation,
+        private val executionRoot:
+            VexExecutionRoot,
+        private val mode:
+            VexBehaviorV2BeginMode,
+        private val trace:
+            MutableList<String>,
+    ) {
+        private val lock =
+            Any()
+        private val seenCommitRevisions =
+            linkedSetOf<Long>()
+        private val handles =
+            mutableListOf<
+                VexCoroutineHandle
+            >()
+
+        @Volatile
+        private var latestOutputCommitRevision =
+            -1L
+
+        private var activeReplaceableRevision:
+            Long? =
+            null
+        private var activeReplaceableHandle:
+            VexCoroutineHandle? =
+            null
+
+        fun accept(
+            committed:
+                CommittedOutput<
+                    DesiredActualOutputState
+                >?,
+        ) {
+            if (
+                committed ==
+                null
+            ) {
+                return
+            }
+
+            val episode =
+                synchronized(
+                    lock,
+                ) {
+                    if (
+                        !seenCommitRevisions.add(
+                            committed.compoundRevision,
+                        )
+                    ) {
+                        return
+                    }
+
+                    latestOutputCommitRevision =
+                        committed.compoundRevision
+
+                    trace +=
+                        "runner:commit:" +
+                            committed.compoundRevision +
+                            ":" +
+                            committed.outputState
+                                .traceValue()
+
+                    if (
+                        mode ==
+                        VexBehaviorV2BeginMode.Replaceable
+                    ) {
+                        activeReplaceableHandle
+                            ?.forceStop(
+                                "superseded by committed Output revision " +
+                                    committed.compoundRevision,
+                            )
+
+                        activeReplaceableHandle =
+                            null
+                        activeReplaceableRevision =
+                            null
+                    }
+
+                    when (
+                        val output =
+                            committed.outputState
+                    ) {
+                        DesiredActualOutputState.Unobserved,
+                        is DesiredActualOutputState.Settled,
+                        ->
+                            null
+
+                        is DesiredActualOutputState.NeedsApply -> {
+                            if (
+                                mode ==
+                                VexBehaviorV2BeginMode.Replaceable
+                            ) {
+                                activeReplaceableRevision =
+                                    committed.compoundRevision
+                            }
+
+                            ActEpisode(
+                                compoundRevision =
+                                    committed.compoundRevision,
+                                value =
+                                    output.value,
+                            )
+                        }
+                    }
+                }
+
+            if (
+                episode ==
+                null
+            ) {
+                return
+            }
+
+            val handle =
+                when (
+                    mode
+                ) {
+                    VexBehaviorV2BeginMode.Replaceable ->
+                        VexExecution.beginReplaceable(
+                            executionRoot =
+                                executionRoot,
+                            owner =
+                                this::class,
+                            operation =
+                                this::executeEpisode,
+                            argument =
+                                episode,
+                            onResult = { observed ->
+                                onEpisodeResult(
+                                    episode =
+                                        episode,
+                                    observed =
+                                        observed,
+                                )
+                            },
+                            onFailure = { failure ->
+                                trace +=
+                                    "runner:failure:" +
+                                        (
+                                            failure::class.simpleName
+                                                ?: "Unknown"
+                                        )
+                            },
+                        )
+
+                    VexBehaviorV2BeginMode.Sequenced ->
+                        VexExecution.beginSequenced(
+                            executionRoot =
+                                executionRoot,
+                            owner =
+                                this::class,
+                            operation =
+                                this::executeEpisode,
+                            argument =
+                                episode,
+                            onResult = { observed ->
+                                onEpisodeResult(
+                                    episode =
+                                        episode,
+                                    observed =
+                                        observed,
+                                )
+                            },
+                            onFailure = { failure ->
+                                trace +=
+                                    "runner:failure:" +
+                                        (
+                                            failure::class.simpleName
+                                                ?: "Unknown"
+                                        )
+                            },
+                        )
+                }
+
+            synchronized(
+                lock,
+            ) {
+                handles +=
+                    handle
+
+                if (
+                    mode ==
+                        VexBehaviorV2BeginMode.Replaceable
+                ) {
+                    if (
+                        activeReplaceableRevision ==
+                        episode.compoundRevision
+                    ) {
+                        activeReplaceableHandle =
+                            handle
+                    } else {
+                        handle.forceStop(
+                            "Output was superseded before execution custody completed",
+                        )
+                    }
+                }
+            }
+        }
+
+        private suspend fun executeEpisode(
+            episode:
+                ActEpisode,
+        ):
+            String? {
+            /*
+             * Replaceable currentness is tied to the latest OUTPUT-CHANGING commit, not the latest
+             * Compound revision. A newer input-only revision does not invalidate this consequence.
+             *
+             * Sequenced episodes use accepted queue custody instead: an older accepted episode may
+             * still execute after newer relationship Output has been committed.
+             */
+            if (
+                mode ==
+                    VexBehaviorV2BeginMode.Replaceable &&
+                latestOutputCommitRevision !=
+                    episode.compoundRevision
+            ) {
+                trace +=
+                    "runner:stale:" +
+                        episode.compoundRevision
+                return null
+            }
+
+            return targetOperation.apply(
+                episode.value,
+            )
+        }
+
+        private fun onEpisodeResult(
+            episode:
+                ActEpisode,
+            observed:
+                String?,
+        ) {
+            if (
+                mode ==
+                VexBehaviorV2BeginMode.Replaceable
+            ) {
+                synchronized(
+                    lock,
+                ) {
+                    if (
+                        activeReplaceableRevision ==
+                        episode.compoundRevision
+                    ) {
+                        activeReplaceableRevision =
+                            null
+                        activeReplaceableHandle =
+                            null
+                    }
+                }
+            }
+
+            if (
+                observed ==
+                null
+            ) {
+                return
+            }
+
+            accept(
+                relationship.actualOutputCommitted(
+                    observed,
+                ),
+            )
+        }
+
+        suspend fun awaitAll() {
+            while (
+                true
+            ) {
+                val snapshot =
+                    synchronized(
+                        lock,
+                    ) {
+                        handles.toList()
+                    }
+
+                snapshot.forEach { handle ->
+                    handle.awaitCompletion()
+                }
+
+                val complete =
+                    synchronized(
+                        lock,
+                    ) {
+                        handles.size ==
+                            snapshot.size
+                    }
+
+                if (
+                    complete
+                ) {
+                    return
+                }
             }
         }
     }
