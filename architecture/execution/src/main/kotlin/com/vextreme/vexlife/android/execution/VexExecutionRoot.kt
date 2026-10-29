@@ -7,7 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Rightful lifetime owner for one Vex execution tree.
  *
- * The root owns shutdown and exposes retained execution state by exact per-launch InstanceId.
+ * The root owns shutdown and exposes observable execution lifecycle State by exact per-launch
+ * [VexExecution.Instance].
+ *
+ * This `executions` projection is not active coroutine custody and is not the maintained
+ * RelationshipId map used for Earliest / Latest / Queued overlap handling. Terminal State may remain
+ * observable here after active custody and an empty RelationshipId entry have been cleaned up.
  */
 class VexExecutionRoot(
     dispatcher:
@@ -33,7 +38,7 @@ class VexExecutionRoot(
     val executions:
         StateFlow<
             Map<
-                VexExecution.InstanceId,
+                VexExecution.Instance,
                 VexExecution.State
             >
         >

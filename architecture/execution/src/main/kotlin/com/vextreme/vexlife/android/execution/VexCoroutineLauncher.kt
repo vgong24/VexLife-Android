@@ -20,9 +20,18 @@ import kotlinx.coroutines.launch
 /**
  * Internal coroutine engine.
  *
- * Active custody is keyed by exact [VexExecution.InstanceId]. Maintained overlap handling is keyed
- * directly by [VexExecution.Relationship]: live owner + semantic trigger + ordered arguments.
- * Source identity remains diagnostic/source-addressing information only.
+ * Three runtime surfaces stay intentionally separate:
+ *
+ * active[Instance]
+ *     exact unfinished coroutine custody
+ *
+ * maintainedByRelationshipId[RelationshipId]
+ *     overlap coordination only while unfinished Instances belong to that RelationshipId
+ *
+ * executions[Instance]
+ *     observable lifecycle snapshots; terminal State may remain after active/maintained cleanup
+ *
+ * RelationshipId is the one semantic execution identity. SourceRef remains diagnostic only.
  */
 internal class VexCoroutineLauncher(
     dispatcher: CoroutineDispatcher,
@@ -60,23 +69,23 @@ internal class VexCoroutineLauncher(
     private var nextInstanceValue =
         1L
 
-    private data class MaintainedRelationship(
+    private data class RelationshipEntry(
         var approach:
             VexExecution.Approach,
         val instances:
             LinkedHashSet<
-                VexExecution.InstanceId
+                VexExecution.Instance
             > =
             linkedSetOf(),
     )
 
     private data class ManagedExecution(
-        val instanceId:
-            VexExecution.InstanceId,
+        val instance:
+            VexExecution.Instance,
         val sourceRef:
             VexExecution.SourceRef,
-        val relationship:
-            VexExecution.Relationship?,
+        val relationshipId:
+            VexExecution.RelationshipId?,
         val job:
             Job,
         val mutableState:
@@ -97,20 +106,27 @@ internal class VexCoroutineLauncher(
 
     private val active =
         LinkedHashMap<
-            VexExecution.InstanceId,
+            VexExecution.Instance,
             ManagedExecution
         >()
 
-    private val relationships =
+    /*
+     * Ephemeral overlap-coordination map.
+     *
+     * Completion removes the finished Instance from its entry. When the final Instance leaves, the
+     * RelationshipId entry itself is removed. A later equal RelationshipId therefore begins from a
+     * fresh empty coordination entry rather than inheriting stale runtime membership.
+     */
+    private val maintainedByRelationshipId =
         LinkedHashMap<
-            VexExecution.Relationship,
-            MaintainedRelationship
+            VexExecution.RelationshipId,
+            RelationshipEntry
         >()
 
     private val mutableExecutions =
         MutableStateFlow<
             Map<
-                VexExecution.InstanceId,
+                VexExecution.Instance,
                 VexExecution.State
             >
         >(
@@ -120,7 +136,7 @@ internal class VexCoroutineLauncher(
     val executions:
         StateFlow<
             Map<
-                VexExecution.InstanceId,
+                VexExecution.Instance,
                 VexExecution.State
             >
         > =
@@ -141,7 +157,7 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                relationship =
+                relationshipId =
                     null,
                 predecessors =
                     emptyList(),
@@ -155,8 +171,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchEarliest(
-        relationship:
-            VexExecution.Relationship,
+        relationshipId:
+            VexExecution.RelationshipId,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -169,9 +185,9 @@ internal class VexCoroutineLauncher(
             requireAcceptingWorkLocked()
 
             val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
+                relationshipEntryLocked(
+                    relationshipId =
+                        relationshipId,
                     approach =
                         VexExecution.Approach.Earliest,
                 )
@@ -194,8 +210,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
+                relationshipId =
+                    relationshipId,
                 predecessors =
                     emptyList(),
                 maintainedObservation =
@@ -208,8 +224,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchLatest(
-        relationship:
-            VexExecution.Relationship,
+        relationshipId:
+            VexExecution.RelationshipId,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -222,9 +238,9 @@ internal class VexCoroutineLauncher(
             requireAcceptingWorkLocked()
 
             val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
+                relationshipEntryLocked(
+                    relationshipId =
+                        relationshipId,
                     approach =
                         VexExecution.Approach.Latest,
                 )
@@ -239,7 +255,7 @@ internal class VexCoroutineLauncher(
                     predecessor.job.cancel(
                         CancellationException(
                             "superseded by latest execution for " +
-                                relationship,
+                                relationshipId,
                         ),
                     )
                 }
@@ -247,8 +263,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
+                relationshipId =
+                    relationshipId,
                 predecessors =
                     predecessors
                         .map {
@@ -264,8 +280,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchQueued(
-        relationship:
-            VexExecution.Relationship,
+        relationshipId:
+            VexExecution.RelationshipId,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -278,9 +294,9 @@ internal class VexCoroutineLauncher(
             requireAcceptingWorkLocked()
 
             val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
+                relationshipEntryLocked(
+                    relationshipId =
+                        relationshipId,
                     approach =
                         VexExecution.Approach.Queued,
                 )
@@ -293,8 +309,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
+                relationshipId =
+                    relationshipId,
                 predecessors =
                     predecessors
                         .map {
@@ -341,7 +357,7 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                relationship =
+                relationshipId =
                     null,
                 predecessors =
                     emptyList(),
@@ -516,28 +532,28 @@ internal class VexCoroutineLauncher(
         }
     }
 
-    private fun relationshipLocked(
-        relationship:
-            VexExecution.Relationship,
+    private fun relationshipEntryLocked(
+        relationshipId:
+            VexExecution.RelationshipId,
         approach:
             VexExecution.Approach,
     ):
-        MaintainedRelationship {
+        RelationshipEntry {
         val existing =
-            relationships[
-                relationship
+            maintainedByRelationshipId[
+                relationshipId
             ]
 
         if (
             existing ==
             null
         ) {
-            return MaintainedRelationship(
+            return RelationshipEntry(
                 approach =
                     approach,
             ).also { maintained ->
-                relationships[
-                    relationship
+                maintainedByRelationshipId[
+                    relationshipId
                 ] =
                     maintained
             }
@@ -560,8 +576,8 @@ internal class VexCoroutineLauncher(
             existing.approach ==
                 approach,
         ) {
-            "Execution relationship " +
-                relationship +
+            "Execution relationshipId " +
+                relationshipId +
                 " is already active as " +
                 existing.approach +
                 " and cannot also be " +
@@ -573,7 +589,7 @@ internal class VexCoroutineLauncher(
 
     private fun activeRelationshipMembersLocked(
         maintained:
-            MaintainedRelationship,
+            RelationshipEntry,
     ):
         List<
             ManagedExecution
@@ -592,7 +608,7 @@ internal class VexCoroutineLauncher(
                 .mapTo(
                     linkedSetOf(),
                 ) {
-                    it.instanceId
+                    it.instance
                 },
         )
 
@@ -602,8 +618,8 @@ internal class VexCoroutineLauncher(
     private fun createManagedLocked(
         sourceRef:
             VexExecution.SourceRef,
-        relationship:
-            VexExecution.Relationship?,
+        relationshipId:
+            VexExecution.RelationshipId?,
         predecessors:
             List<Job>,
         maintainedObservation:
@@ -614,16 +630,16 @@ internal class VexCoroutineLauncher(
             suspend () -> Unit,
     ):
         VexExecution.Handle {
-        val instanceId =
-            VexExecution.InstanceId(
+        val instance =
+            VexExecution.Instance(
                 nextInstanceValue++,
             )
 
         val mutableState =
             MutableStateFlow(
                 VexExecution.State(
-                    instanceId =
-                        instanceId,
+                    instance =
+                        instance,
                     sourceRef =
                         sourceRef,
                     status =
@@ -644,7 +660,7 @@ internal class VexCoroutineLauncher(
                     CoroutineName(
                         sourceRef.value +
                             "#" +
-                            instanceId.value,
+                            instance.value,
                     ),
                 start =
                     CoroutineStart.LAZY,
@@ -655,8 +671,8 @@ internal class VexCoroutineLauncher(
                     }
 
                 runManagedCoroutine(
-                    instanceId =
-                        instanceId,
+                    instance =
+                        instance,
                     sourceRef =
                         sourceRef,
                     restartRecoverableFailure =
@@ -670,12 +686,12 @@ internal class VexCoroutineLauncher(
 
         val managed =
             ManagedExecution(
-                instanceId =
-                    instanceId,
+                instance =
+                    instance,
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
+                relationshipId =
+                    relationshipId,
                 job =
                     job,
                 mutableState =
@@ -685,28 +701,37 @@ internal class VexCoroutineLauncher(
             )
 
         active[
-            instanceId
+            instance
         ] =
             managed
 
-        relationship?.let { key ->
+        relationshipId?.let { key ->
             requireNotNull(
-                relationships[
+                maintainedByRelationshipId[
                     key
                 ],
             ) {
-                "Execution relationship " +
+                "Execution relationshipId " +
                     key +
                     " must be established before admission"
             }
                 .instances +=
-                instanceId
+                instance
         }
 
         updateRegistryLocked(
             mutableState.value,
         )
 
+        /*
+         * Terminal cleanup has two distinct jobs:
+         * 1. remove this Instance from active runtime custody;
+         * 2. remove it from maintained overlap coordination, deleting the RelationshipId entry when
+         *    no unfinished Instances remain.
+         *
+         * mutableExecutions is intentionally separate retained observation state and is not used to
+         * decide Earliest / Latest / Queued behavior.
+         */
         job.invokeOnCompletion { cause ->
             if (
                 cause is
@@ -721,8 +746,8 @@ internal class VexCoroutineLauncher(
                         mutableState,
                     state =
                         VexExecution.State(
-                            instanceId =
-                                instanceId,
+                            instance =
+                                instance,
                             sourceRef =
                                 sourceRef,
                             status =
@@ -743,23 +768,23 @@ internal class VexCoroutineLauncher(
                 registryLock,
             ) {
                 active.remove(
-                    instanceId,
+                    instance,
                 )
 
-                relationship?.let { key ->
-                    relationships[
+                relationshipId?.let { key ->
+                    maintainedByRelationshipId[
                         key
                     ]
                         ?.let { maintained ->
                             maintained.instances.remove(
-                                instanceId,
+                                instance,
                             )
 
                             if (
                                 maintained.instances
                                     .isEmpty()
                             ) {
-                                relationships.remove(
+                                maintainedByRelationshipId.remove(
                                     key,
                                 )
                             }
@@ -782,9 +807,9 @@ internal class VexCoroutineLauncher(
         VexExecution.Handle =
         object :
             VexExecution.Handle {
-            override val instanceId:
-                VexExecution.InstanceId =
-                managed.instanceId
+            override val instance:
+                VexExecution.Instance =
+                managed.instance
 
             override val sourceRef:
                 VexExecution.SourceRef =
@@ -849,8 +874,8 @@ internal class VexCoroutineLauncher(
         }
 
     private suspend fun runManagedCoroutine(
-        instanceId:
-            VexExecution.InstanceId,
+        instance:
+            VexExecution.Instance,
         sourceRef:
             VexExecution.SourceRef,
         restartRecoverableFailure:
@@ -880,8 +905,8 @@ internal class VexCoroutineLauncher(
                         mutableState,
                     state =
                         VexExecution.State(
-                            instanceId =
-                                instanceId,
+                            instance =
+                                instance,
                             sourceRef =
                                 sourceRef,
                             status =
@@ -903,8 +928,8 @@ internal class VexCoroutineLauncher(
                             mutableState,
                         state =
                             VexExecution.State(
-                                instanceId =
-                                    instanceId,
+                                instance =
+                                    instance,
                                 sourceRef =
                                     sourceRef,
                                 status =
@@ -949,8 +974,8 @@ internal class VexCoroutineLauncher(
                                 mutableState,
                             state =
                                 VexExecution.State(
-                                    instanceId =
-                                        instanceId,
+                                    instance =
+                                        instance,
                                     sourceRef =
                                         sourceRef,
                                     status =
@@ -976,8 +1001,8 @@ internal class VexCoroutineLauncher(
                             mutableState,
                         state =
                             VexExecution.State(
-                                instanceId =
-                                    instanceId,
+                                instance =
+                                    instance,
                                 sourceRef =
                                     sourceRef,
                                 status =
@@ -1012,8 +1037,8 @@ internal class VexCoroutineLauncher(
                     mutableState,
                 state =
                     VexExecution.State(
-                        instanceId =
-                            instanceId,
+                        instance =
+                            instance,
                         sourceRef =
                             sourceRef,
                         status =
@@ -1064,7 +1089,7 @@ internal class VexCoroutineLauncher(
                         mutableExecutions.value,
                     ).apply {
                         this[
-                            state.instanceId
+                            state.instance
                         ] =
                             state
                     },

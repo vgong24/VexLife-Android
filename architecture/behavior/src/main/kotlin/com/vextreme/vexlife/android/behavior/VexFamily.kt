@@ -821,7 +821,7 @@ abstract class VexFamily<
                     executionRoot =
                         executionRoot,
                     relationship =
-                        executionRelationship(
+                        executionRelationshipId(
                             control =
                                 control,
                             arguments =
@@ -844,7 +844,7 @@ abstract class VexFamily<
                     executionRoot =
                         executionRoot,
                     relationship =
-                        executionRelationship(
+                        executionRelationshipId(
                             control =
                                 control,
                             arguments =
@@ -867,7 +867,7 @@ abstract class VexFamily<
                     executionRoot =
                         executionRoot,
                     relationship =
-                        executionRelationship(
+                        executionRelationshipId(
                             control =
                                 control,
                             arguments =
@@ -887,14 +887,21 @@ abstract class VexFamily<
         }
     }
 
-    private fun executionRelationship(
+    /**
+     * Forms the exact RelationshipId consumed by the VexExecution maintained map.
+     *
+     * Family does not author another execution ID. The live Family is the owner, the triggering
+     * Control kind is the semantic trigger, and optional ordered arguments narrow the relationship
+     * only when the Family author explicitly chooses them.
+     */
+    private fun executionRelationshipId(
         control:
             FamilyControl,
         arguments:
             List<Any?>,
     ):
-        VexExecution.Relationship =
-        VexExecution.relationship(
+        VexExecution.RelationshipId =
+        VexExecution.relationshipId(
             owner =
                 this,
             trigger =
