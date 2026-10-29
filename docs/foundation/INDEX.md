@@ -707,3 +707,26 @@ The fourth reference distinguishes parent-owned nested values from independently
 currentness and proves stable-ref convergence without silent display-layer loss.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-FOURTH-REFERENCE] -->
+
+
+### V2 Origin Walk — formalized process/Act feedback circuit
+
+The fourth reference now proves one complete ownership loop:
+
+~~~text
+partial InputState
+-> latestStateInput
+-> process
+-> latestStateOutput
+-> committed CompoundState
+-> Act
+-> rightful target owner
+-> observed target CURRENT truth
+-> NEW InputState
+-> process again
+~~~
+
+OutputState is relationship consequence, not hidden process memory. Existing production feature Relays
+remain unchanged while this circuit is evaluated.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PROCESS-ACT-CIRCUIT] -->

@@ -2087,3 +2087,127 @@ latestStateInput
 No production VexCompoundRelay contract is changed by this checkpoint.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][PROCESS-ONLY-COMPOUND] -->
+
+
+## Formalized process -> commit -> Act -> observe circuit
+
+The process-only Compound pressure now has one complete executable circuit.
+
+The reusable relationship loop is:
+
+~~~text
+incoming partial InputState
++ retained current InputState
+-> latestStateInput
+
+latestStateInput
+-> process(latestStateInput)
+-> latestStateOutput
+
+latestStateInput + latestStateOutput
+-> commit VexCompoundState
+
+COMMITTED OutputState
+-> Act / realization
+-> bounded request to rightful other owner
+
+other owner changes its own CURRENT State
+-> observed owner truth
+-> NEW partial InputState
+
+NEW input
+-> latestStateInput
+-> process again
+~~~
+
+Permanent rule:
+
+~~~text
+OutputState
+  = current relationship consequence
+
+OutputState
+  != hidden input memory
+
+process(...)
+  does NOT mutate another owner
+
+Act
+  does NOT run until the CompoundState carrying its OutputState is already committed
+~~~
+
+### Executable specimen
+
+The fourth Origin reference now contains:
+
+~~~text
+DesiredActualConvergenceRelay
+  Input:
+    desired
+    actual
+
+  process(latestStateInput):
+    desired missing
+      -> Unobserved
+
+    actual != desired
+      -> NeedsApply(desired)
+
+    actual == desired
+      -> Settled(desired)
+
+TargetOwnerRelay
+  owns actual CURRENT value
+
+DesiredActualCircuit
+  receives committed relationship output
+  -> Act
+  -> tells TargetOwnerRelay to apply desired value
+  -> observes TargetOwnerRelay.current
+  -> returns that truth as NEW relationship InputState
+~~~
+
+The proved trace is:
+
+~~~text
+process:NeedsApply(Dark)
+commit:NeedsApply(Dark)
+act:NeedsApply(Dark)
+target:Dark
+process:Settled(Dark)
+commit:Settled(Dark)
+act:Settled(Dark)
+~~~
+
+This makes the ownership boundary explicit:
+
+~~~text
+relationship owner
+  calculates what current truths mean
+
+Act
+  reacts to established relationship truth
+
+target owner
+  owns whether the requested reality actually changes
+
+observation
+  reports that new truth back as fresh input
+~~~
+
+### Why this matters for retained relationship memory
+
+If a future `process(latestStateInput)` appears to require yesterday's OutputState, first ask what fact
+that output was carrying.
+
+If the fact matters to today's calculation, it needs a truthful current owner and must arrive in
+`latestStateInput`. Do not turn OutputState into a covert feedback channel merely to preserve reducer
+history.
+
+This checkpoint formalizes the circuit only. Existing Events, Maps, Navigation and Conversation Relay
+implementations are deliberately unchanged.
+
+Isolated Kotlin circuit proof: PASS.
+Repository Gradle/JVM proof: PENDING.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][PROCESS-COMMIT-ACT-OBSERVE] -->
