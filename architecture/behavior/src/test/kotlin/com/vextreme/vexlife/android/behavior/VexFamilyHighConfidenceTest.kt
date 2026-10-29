@@ -50,12 +50,6 @@ class VexFamilyHighConfidenceTest {
                 State
         }
 
-        data class CommitResourceId(
-            override val value:
-                String,
-        ) :
-            VexFamily.ResourceId<ValueFamily>
-
         sealed interface Control :
             VexFamily.Control<ValueFamily> {
             data class Set(
@@ -67,9 +61,6 @@ class VexFamilyHighConfidenceTest {
             data class Commit(
                 val value:
                     String,
-                override val resourceId:
-                    VexFamily.ResourceId<ValueFamily>? =
-                    null,
             ) :
                 Control
         }
@@ -217,6 +208,148 @@ class VexFamilyHighConfidenceTest {
             }
 
     }
+
+    private class ResourceIdentityFamily(
+        initialState:
+            State,
+        executionRoot:
+            VexExecutionRoot,
+    ) :
+        VexFamily<
+            ResourceIdentityFamily,
+            ResourceIdentityFamily.State,
+            ResourceIdentityFamily.Control
+        >(
+            initialState =
+                initialState,
+            executionRoot =
+                executionRoot,
+            logger =
+                VexLogger.Sink.None,
+        ) {
+        sealed interface State :
+            VexFamily.State<ResourceIdentityFamily> {
+            data object Idle :
+                State
+        }
+
+        data class TrackId(
+            val value:
+                String,
+        ) :
+            VexFamily.ResourceId<ResourceIdentityFamily>
+
+        data class AccountId(
+            val value:
+                String,
+        ) :
+            VexFamily.ResourceId<ResourceIdentityFamily>
+
+        sealed interface Control :
+            VexFamily.Control<ResourceIdentityFamily> {
+            data class Play(
+                override val resourceId:
+                    TrackId,
+                val position:
+                    Int,
+            ) :
+                Control,
+                VexFamily.Control.Resource<
+                    ResourceIdentityFamily,
+                    TrackId
+                >
+
+            data class Search(
+                val query:
+                    String,
+            ) :
+                Control
+        }
+
+        override fun act(
+            currentState:
+                State,
+            control:
+                Control,
+        ):
+            VexFamily.Act<State>? =
+            when (
+                currentState
+            ) {
+                State.Idle ->
+                    when (
+                        control
+                    ) {
+                        is Control.Play ->
+                            stay()
+
+                        is Control.Search ->
+                            stay()
+                    }
+            }
+    }
+
+    private class EnumControlFamily(
+        initialState:
+            State,
+        executionRoot:
+            VexExecutionRoot,
+    ) :
+        VexFamily<
+            EnumControlFamily,
+            EnumControlFamily.State,
+            EnumControlFamily.Control
+        >(
+            initialState =
+                initialState,
+            executionRoot =
+                executionRoot,
+            logger =
+                VexLogger.Sink.None,
+        ) {
+        sealed interface State :
+            VexFamily.State<EnumControlFamily> {
+            data object Idle :
+                State
+        }
+
+        enum class Control :
+            VexFamily.Control<EnumControlFamily> {
+            Play,
+            Pause,
+        }
+
+        override fun act(
+            currentState:
+                State,
+            control:
+                Control,
+        ):
+            VexFamily.Act<State>? =
+            when (
+                currentState
+            ) {
+                State.Idle ->
+                    when (
+                        control
+                    ) {
+                        Control.Play,
+                        Control.Pause,
+                        ->
+                            stay()
+                    }
+            }
+    }
+
+    /**
+     * Compile-time fixture: Play exposes TrackId exactly, not an arbitrary ResourceId for the Family.
+     */
+    private fun requireTrackId(
+        control:
+            ResourceIdentityFamily.Control.Play,
+    ):
+        ResourceIdentityFamily.TrackId =
+        control.resourceId
 
     private class GatedStore :
         ValueFamily.Store {
@@ -383,19 +516,19 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun relationshipIdentityAlwaysIncludesControlNameAndOnlyTypedResourceIdWhenProvided() {
+    fun relationshipIdentityPreservesControlKindExactResourceTypeAndLiveFamilyScope() {
         val root =
             VexExecutionRoot()
 
         try {
-            val firstFamily =
+            val firstValueFamily =
                 ValueFamily(
                     initialState =
                         ValueFamily.State.Empty,
                     executionRoot =
                         root,
                 )
-            val secondFamily =
+            val secondValueFamily =
                 ValueFamily(
                     initialState =
                         ValueFamily.State.Empty,
@@ -404,17 +537,24 @@ class VexFamilyHighConfidenceTest {
                 )
 
             val defaultFirst =
-                firstFamily.relationshipId(
-                    ValueFamily.Control.Commit(
+                firstValueFamily.relationshipId(
+                    ValueFamily.Control.Set(
                         value =
                             "first payload",
                     ),
                 )
             val defaultSecond =
-                firstFamily.relationshipId(
-                    ValueFamily.Control.Commit(
+                firstValueFamily.relationshipId(
+                    ValueFamily.Control.Set(
                         value =
                             "second payload",
+                    ),
+                )
+            val otherLiveFamily =
+                secondValueFamily.relationshipId(
+                    ValueFamily.Control.Set(
+                        value =
+                            "first payload",
                     ),
                 )
 
@@ -422,56 +562,67 @@ class VexFamilyHighConfidenceTest {
                 defaultFirst,
                 defaultSecond,
             )
+            assertFalse(
+                defaultFirst ==
+                    otherLiveFamily,
+            )
             assertEquals(
-                "Commit",
-                defaultFirst.toString(),
+                "Set",
+                defaultFirst.controlName,
+            )
+            assertEquals(
+                null,
+                defaultFirst.resourceId,
             )
 
-            val resourceA =
-                ValueFamily.CommitResourceId(
-                    value =
-                        "resource-a",
+            val resourceFamily =
+                ResourceIdentityFamily(
+                    initialState =
+                        ResourceIdentityFamily.State.Idle,
+                    executionRoot =
+                        root,
                 )
-            val resourceB =
-                ValueFamily.CommitResourceId(
+            val trackA =
+                ResourceIdentityFamily.TrackId(
                     value =
-                        "resource-b",
+                        "same",
+                )
+            val trackACopy =
+                ResourceIdentityFamily.TrackId(
+                    value =
+                        "same",
+                )
+            val trackB =
+                ResourceIdentityFamily.TrackId(
+                    value =
+                        "other",
                 )
 
             val narrowedFirst =
-                firstFamily.relationshipId(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "first payload",
+                resourceFamily.relationshipId(
+                    ResourceIdentityFamily.Control.Play(
                         resourceId =
-                            resourceA,
+                            trackA,
+                        position =
+                            10,
                     ),
                 )
             val narrowedSame =
-                firstFamily.relationshipId(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "different payload",
+                resourceFamily.relationshipId(
+                    ResourceIdentityFamily.Control.Play(
                         resourceId =
-                            resourceA,
+                            trackACopy,
+                        position =
+                            99,
                     ),
                 )
             val narrowedOther =
-                firstFamily.relationshipId(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "first payload",
+                resourceFamily.relationshipId(
+                    ResourceIdentityFamily.Control.Play(
                         resourceId =
-                            resourceB,
-                    ),
-                )
-            val otherFamily =
-                secondFamily.relationshipId(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "first payload",
-                        resourceId =
-                            resourceA,
+                            trackB,
+                        position =
+                            10,
                     ),
                 )
 
@@ -483,13 +634,49 @@ class VexFamilyHighConfidenceTest {
                 narrowedFirst ==
                     narrowedOther,
             )
-            assertFalse(
-                narrowedFirst ==
-                    otherFamily,
+            assertEquals(
+                trackA,
+                narrowedFirst.resourceId,
             )
             assertEquals(
-                "Commit[resource-a]",
-                narrowedFirst.toString(),
+                trackA,
+                requireTrackId(
+                    ResourceIdentityFamily.Control.Play(
+                        resourceId =
+                            trackA,
+                        position =
+                            0,
+                    ),
+                ),
+            )
+
+            val enumFamily =
+                EnumControlFamily(
+                    initialState =
+                        EnumControlFamily.State.Idle,
+                    executionRoot =
+                        root,
+                )
+            val play =
+                enumFamily.relationshipId(
+                    EnumControlFamily.Control.Play,
+                )
+            val pause =
+                enumFamily.relationshipId(
+                    EnumControlFamily.Control.Pause,
+                )
+
+            assertFalse(
+                play ==
+                    pause,
+            )
+            assertEquals(
+                "Play",
+                play.controlName,
+            )
+            assertEquals(
+                "Pause",
+                pause.controlName,
             )
         } finally {
             root.forceStopAll()
