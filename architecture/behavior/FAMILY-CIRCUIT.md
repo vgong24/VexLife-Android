@@ -289,30 +289,36 @@ provider / repository observation
 
 `admitCurrent` is protected; there is still no public generic State setter.
 
-## Process remains separate
+## Process / Compound current State
+
+Current accepted Relay already carries the complete processed relationship as
+`VexCompoundState<InputState, OutputState>`:
 
 ~~~kotlin
-fun process(
+protected abstract fun processStates(
     inputState: InputState,
-): OutputState
+    currentState: VexCompoundState<InputState, OutputState>,
+): VexCompoundState<InputState, OutputState>
 ~~~
 
-Current accepted Relay already owns its own Compound current State. Therefore there is no generic
-`OutputState -> Family.currentState` handoff to manufacture:
+`processStates(...)` returns the coherent next InputState + derived OutputState together. The
+Compound Relay then admits that whole result as one current State:
 
 ~~~text
-Direct Family StateRelay
-    owns current Family State
-
-VexCompoundRelay
-    owns current Compound relationship State
-
-one current owner
-!= every current owner must be the same object
+incoming InputState
++ exact CURRENT VexCompoundState
+-> processStates(...)
+-> next VexCompoundState(inputState, outputState)
+-> one current-State commit
 ~~~
 
-If a relationship Output requests another owner to act, that is a cross-owner consequence after the
-relationship is current; it is not how StateRelay itself becomes current.
+If only retained Input meaning changes, current State changes while `outputStates` stays quiet. If
+derived Output meaning changes too, the same current-State commit carries both changes. UI and other
+consumers may read `current`, `currentInput`, or `currentOutput` without reconstructing the
+relationship.
+
+The old `OutputState -> Family.currentState` gap was incomplete because OutputState is only one
+part of the processed Compound State; it is not separately admitted after processing.
 
 This PR does not add CompoundFamily, stateFactory, Family revision, or post-process Act machinery.
 
@@ -321,7 +327,7 @@ This PR does not add CompoundFamily, stateFactory, Family revision, or post-proc
 ~~~text
 cross-cycle relationship memory and its rightful explicit supplier
 provider / intent stable identity mapping
-exact future Family + Relay Single/Compound unification, if real consumers earn one
+exact future Family + Relay Single/Compound composition beyond the established Compound current-State pattern
 ~~~
 
 Exact-head repository-owned `vexVerifyJvm` proof passed for PR #193, and the reviewed candidate tree
