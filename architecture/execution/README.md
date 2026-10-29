@@ -173,8 +173,8 @@ lambda work.
 source/subscription failure. A failure thrown while consuming a valid emitted value becomes
 `FAILED` with no automatic resubscription. Intentional cancellation never restarts.
 
-`launchOnce` remains only as a deprecated compatibility alias to independent `launch`; it no
-longer owns duplicate-source semantics.
+`launchOnce` preserves its fail-closed same-source contract. `launch` is the separate explicit
+surface for intentionally independent finite invocations.
 
 ## Worker preparation and provider-affine commit
 
@@ -247,6 +247,7 @@ VexExecution.InstanceId
 VexExecution.RelationshipId
     semantic maintained-work identity
     supplied by the rightful semantic owner
+    raw use is an error-level foundation opt-in
 
 VexExecution.Approach
     Independent / Earliest / Latest / Queued
@@ -271,6 +272,8 @@ relationships[RelationshipId]
 ~~~
 
 Execution does not add another owner/trigger/argument identity layer around the RelationshipId it receives.
+Raw RelationshipId implementation/bridging is guarded by `RelationshipFoundationApi`; product code
+should enter through its semantic owner's typed boundary instead.
 
 Family currently forms its RelationshipId from:
 
@@ -393,10 +396,11 @@ creating two lanes.
 - WorkManager or other process-death durability;
 - business retry/idempotency.
 
-Use Relay when several changing truths must converge. For finite work, choose the smallest relationship
-that matches the actual intention: independent `launch`, maintained `launchEarliest`,
-`launchLatest`, or `launchQueued`. Use `launchForCollect` only in an execution/runtime bridge
-that truly owns a sustained Flow observation.
+Use Relay when several changing truths must converge. Direct finite execution chooses between
+fail-closed `launchOnce` and intentionally independent `launch`. Maintained Earliest / Latest /
+Queued coordination is admitted through a semantic foundation that supplies a RelationshipId; ordinary
+feature code does not author raw maintained triggers. Use `launchForCollect` only in an
+execution/runtime bridge that truly owns a sustained Flow observation.
 
 These finite-launch relationships govern coroutine custody only. They do not decide whether a
 Control is lawful, what semantic State should be admitted, whether an asynchronous result is still
