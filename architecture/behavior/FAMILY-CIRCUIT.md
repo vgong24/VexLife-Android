@@ -181,7 +181,8 @@ access, so inspecting relationship meaning cannot accidentally emit accepted run
 
 ## Store / Save relationship
 
-The current earned storage path is deliberately narrow and tree-shaped:
+The current earned storage path remains tree-shaped. A plain Store supports authored Save; a StateStore
+specialization is earned only when durable truth is exactly Family State:
 
 ~~~text
 VexFamily
@@ -192,6 +193,13 @@ VexFamily
       -> Failure
 
 VexFamily
+-> StateStore<State>
+   -> Store<State>
+   -> observableState
+   -> get()
+   -> forget()
+
+VexFamily
 -> Act
    -> Begin
       -> Save
@@ -200,9 +208,9 @@ VexFamily
             -> Failure
 ~~~
 
-Family does not expose a broad Store and rediscover a narrower StateStore through runtime casts.
-The Store contract contains only the operation the current Family runtime consumes. Durable Store
-truth does not become a second live semantic State holder.
+Family does not expose a broad untyped Store and rediscover State semantics through runtime casts.
+The StateStore specialization is explicit in the type system and exists only where durable truth is
+actually Family State. Durable Store truth still does not become a second live semantic State holder.
 
 There is also no generic Operation hierarchy around the one current Save operation. A common
 operation parent must be earned by another real operation, not anticipated.
@@ -251,32 +259,99 @@ process(...)
 
 Except for the Vex domain functions themselves, State/Control traversal is ordinary Kotlin.
 
-## Process remains separate
+## StateRelay currentness
 
-~~~kotlin
-fun process(
-    inputState: InputState,
-): OutputState
-~~~
-
-The unresolved seam remains visible:
+StateRelay is still the one live Family State holder. The missing reusable law is the admission
+boundary around that holder:
 
 ~~~text
-OutputState
--> rightful StateRelay / Family.currentState handoff
+incoming Family-owned cause
++ exact CURRENT State
+-> one serialized non-suspending decision
+-> next CURRENT State
 ~~~
+
+Control activation resolves `act(CURRENT State, Control)` and commits its immediate State inside that
+same boundary. Delayed Begin results also re-enter StateRelay and may author their result against
+exact CURRENT State:
+
+~~~kotlin
+success {
+    admit { current ->
+        if (/* still lawful */) nextState else current
+    }
+}
+~~~
+
+No revision/generation number is invented by Family. Currentness meaning remains feature-owned.
+
+Already-reconciled external truth uses the same StateRelay boundary without becoming a fake Control:
+
+~~~text
+provider / repository observation
+-> rightful Connection/source reconciliation
+-> concrete Family source method
+-> admitCurrent { CURRENT -> next semantic State }
+-> StateRelay
+~~~
+
+`admitCurrent` is protected; there is still no public generic State setter.
+
+A State-shaped Family Store is itself a StateRelay dependency; it does not require another observer owner:
+
+~~~text
+StateStore.observableState
+-> maintained execution observation
+-> observeStore(CURRENT, stored)
+-> concrete Family decision
+-> admitCurrent
+-> same StateRelay
+~~~
+
+`StateStore` carries the already-earned `observableState / get / save / forget` capability. Plain
+`Store` remains the smaller save-only capability for Families that have not earned durable State
+observation.
+
+
+## Process / Compound current State
+
+Current accepted Relay already carries the complete processed relationship as
+`VexCompoundState<InputState, OutputState>`:
+
+~~~kotlin
+protected abstract fun processStates(
+    inputState: InputState,
+    currentState: VexCompoundState<InputState, OutputState>,
+): VexCompoundState<InputState, OutputState>
+~~~
+
+`processStates(...)` returns the coherent next InputState + derived OutputState together. The
+Compound Relay then admits that whole result as one current State:
+
+~~~text
+incoming InputState
++ exact CURRENT VexCompoundState
+-> processStates(...)
+-> next VexCompoundState(inputState, outputState)
+-> one current-State commit
+~~~
+
+If only retained Input meaning changes, current State changes while `outputStates` stays quiet. If
+derived Output meaning changes too, the same current-State commit carries both changes. UI and other
+consumers may read `current`, `currentInput`, or `currentOutput` without reconstructing the
+relationship.
+
+The old `OutputState -> Family.currentState` gap was incomplete because OutputState is only one
+part of the processed Compound State; it is not separately admitted after processing.
 
 This PR does not add CompoundFamily, stateFactory, Family revision, or post-process Act machinery.
 
 ## Current open edges
 
 ~~~text
-serialized competing-cause State decision / stale async result
-    -> held until a concrete Family proves the rightful currentness identity
 cross-cycle relationship memory and its rightful explicit supplier
 provider / intent stable identity mapping
-exact Family + Relay Single/Compound composition
-Process OutputState -> rightful Family.currentState handoff
+exact future Family + Relay Single/Compound composition beyond the established Compound current-State pattern
 ~~~
 
 Exact-head repository-owned `vexVerifyJvm` proof passed for PR #193, and the reviewed candidate tree

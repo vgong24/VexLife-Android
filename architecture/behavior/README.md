@@ -378,20 +378,127 @@ class ThemeModeFamily(...) :
 }
 ~~~
 
+## StateRelay currentness boundary
+
+StateRelay remains the one live Family State holder. Direct Family now also owns one serialized
+decision boundary around that holder:
+
+~~~text
+incoming Family-owned cause
++ exact CURRENT State
+-> one non-suspending decision
+-> publish only changed semantic meaning
+~~~
+
+For Control activation, `act(CURRENT State, Control)` and its immediate admission happen inside that
+same boundary. Concurrent Controls therefore cannot each resolve against the same stale snapshot and
+overwrite one another.
+
+A delayed Begin result may keep the simple form:
+
+~~~kotlin
+success {
+    admit(State.Ready)
+}
+~~~
+
+or re-evaluate exact CURRENT State when feature meaning requires it:
+
+~~~kotlin
+success {
+    admit { current ->
+        if (/* result is still lawful for current */) {
+            nextState
+        } else {
+            current
+        }
+    }
+}
+~~~
+
+Family supplies CURRENT State and serialization. The feature supplies what "still current" means.
+There is no generic Family revision/generation oracle.
+
+Already-reconciled external truth enters the same StateRelay through concrete Family vocabulary rather
+than a fake Control or public setter:
+
+~~~kotlin
+fun providerReconciled(observed: ProviderState) {
+    admitCurrent { current ->
+        reconcileSemanticState(
+            current = current,
+            observed = observed,
+        )
+    }
+}
+~~~
+
+`admitCurrent` is protected. The concrete Family/source relationship owns the visible method name
+and reconciliation meaning.
+
+Durable Family-State storage follows the same dependency law. When persistence is actually Family State,
+the earned specialization is:
+
+~~~text
+VexFamily.StateStore<State>
+  observableState
+  get()
+  save(State)
+  forget()
+~~~
+
+Its observation path is direct:
+
+~~~text
+StateStore.observableState
+-> VexExecution maintained observation custody
+-> Family.observeStore(CURRENT, stored)
+-> concrete Family decision
+-> admitCurrent(...)
+-> same StateRelay
+~~~
+
+Execution does not interpret stored State. Store does not own CURRENT State. No session/presentation
+owner observes the Store on Family's behalf.
+
+
+## Compound current State
+
+For a Compound relationship, the processed result is already the complete current State:
+
+~~~text
+incoming InputState
++ exact CURRENT VexCompoundState
+-> processStates(...)
+-> VexCompoundState(inputState, outputState)
+-> one current-State commit
+~~~
+
+`inputState` is the coherent retained input family and `outputState` is the meaning derived from
+that input by the processing layer. Either may change on a processing pass; when both change they are
+made current together rather than admitting OutputState separately afterward.
+
+The established Relay surfaces expose that same current relationship as `current`,
+`currentInput`, `currentOutput`, `states`, `inputStates`, and `outputStates`.
+
+Therefore the old:
+
+~~~text
+Process OutputState -> Family.currentState
+~~~
+
+gap is not a missing Output bridge. OutputState alone was an incomplete representation of the
+processed Compound State.
+
 ## Deliberately still open
 
 ~~~text
-serialized competing-cause State decision / stale async result
-    -> intentionally unresolved generically
-    -> do not reintroduce Family revision as a guessed currentness oracle
-provider/repository observation -> semantic Family State
 automatic UI observation/lifetime integration
 cross-cycle relationship memory
 provider / intent identity mapping
-Process OutputState -> rightful Family.currentState handoff
-exact Family + Relay Single/Compound composition
+exact future Family + Relay Single/Compound composition beyond the established Compound current-State pattern
 ~~~
 
-The current candidate should not be enlarged merely to fill those boxes.
+These remain separate questions; they do not require another State holder or an OutputState handoff.
 
 <!-- [VXG RealForever][VEX-FAMILY][CURRENT-ENTRY] -->
