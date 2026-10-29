@@ -9,6 +9,7 @@ import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
 import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogKind
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.shell.AppShell
@@ -23,6 +24,7 @@ import org.junit.Test
 class VexLifeSessionTest {
     @Test
     fun repeatedUiEntryDoesNotRestartTheLoggerSession() = runTest {
+        val executionRoot = VexExecutionRoot()
         val session = VexLifeSession(
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
@@ -36,6 +38,7 @@ class VexLifeSessionTest {
                 eventsAttentionLab = RelayEventsAttentionLabRepository(),
             ),
             scope = backgroundScope,
+            executionRoot = executionRoot,
         )
 
         // A new Compose tree can invoke the app entry effect again after configuration recreation.
@@ -53,6 +56,7 @@ class VexLifeSessionTest {
 
     @Test
     fun runtimeNavigationAndPresentationBelongToTheSessionNotTheComposable() = runTest {
+        val executionRoot = VexExecutionRoot()
         val session = VexLifeSession(
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
@@ -66,6 +70,7 @@ class VexLifeSessionTest {
                 eventsAttentionLab = RelayEventsAttentionLabRepository(),
             ),
             scope = backgroundScope,
+            executionRoot = executionRoot,
         )
 
         session.runtime.activate(AppShell.Elements.DebugMenu)
@@ -81,4 +86,61 @@ class VexLifeSessionTest {
             ),
         )
     }
+
+    @Test
+    fun debugMenuThemeActionRoutesThroughTheSessionThemeModeFamily() = runTest {
+        val executionRoot = VexExecutionRoot()
+        val session = VexLifeSession(
+            repositories = AppRepositories(
+                logHistory = InMemoryLogHistoryRepository(),
+                userProfile = InMemoryUserProfileRepository(),
+                vexMaps = InMemoryVexMapsRepository(),
+                vexMapsDistribution =
+                    InMemoryVexMapsDistributionRepository(),
+                vexStream = InMemoryVexStreamMusicRepository(),
+                events = RelayEventsRepository(),
+                eventsAttention = RelayEventsAttentionPreferenceRepository(),
+                eventsAttentionLab = RelayEventsAttentionLabRepository(),
+            ),
+            scope = backgroundScope,
+            executionRoot = executionRoot,
+        )
+
+        try {
+            assertEquals(
+                ThemeMode.Dark,
+                session.themeModeFamily.currentState,
+            )
+
+            session.runtime.activate(
+                AppShell.Elements.DebugMenu,
+            )
+            session.runtime.activate(
+                DebugMenuScreen.DarkMode,
+            )
+
+            assertEquals(
+                ThemeMode.Light,
+                session.themeModeFamily.currentState,
+            )
+            assertEquals(
+                false,
+                session.themeModeFamily
+                    .currentState
+                    .requireResolvedDarkTheme(),
+            )
+
+            session.runtime.activate(
+                DebugMenuScreen.DarkMode,
+            )
+
+            assertEquals(
+                ThemeMode.Dark,
+                session.themeModeFamily.currentState,
+            )
+        } finally {
+            executionRoot.forceStopAll()
+        }
+    }
+
 }

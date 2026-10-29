@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
@@ -19,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
@@ -55,11 +58,24 @@ internal fun VexLifeApp(
     repositories: AppRepositories,
 ) {
     val scope = rememberCoroutineScope()
-    val session = remember(repositories, scope) {
+    val executionRoot =
+        remember {
+            VexExecutionRoot()
+        }
+    val session = remember(repositories, scope, executionRoot) {
         VexLifeSession(
             repositories = repositories,
             scope = scope,
+            executionRoot = executionRoot,
         )
+    }
+
+    DisposableEffect(executionRoot) {
+        onDispose {
+            executionRoot.forceStopAll(
+                "VexLife repository composition disposed",
+            )
+        }
     }
 
     VexLifeApp(session = session)
@@ -80,7 +96,10 @@ internal fun VexLifeApp(
     val repositories = session.repositories
     val relays = session.relays
     val sessionScope = session.scope
-    val darkTheme = session.darkTheme
+    val themeMode by
+        session.themeModeFamily.states.collectAsState()
+    val darkTheme =
+        themeMode.requireResolvedDarkTheme()
 
     LaunchedEffect(runtime) {
         runtime.appOpened()
