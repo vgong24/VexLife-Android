@@ -16,7 +16,7 @@ import org.junit.Test
  *     ListFamily
  *       one current State with nested list data
  *
- *     SwitchFamily
+ *     BooleanFamily
  *       one current Boolean State
  *
  *     MultiFamily
@@ -95,8 +95,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             createListFamily(
                 "one",
             )
-        val switchFamily =
-            createSwitchFamily(
+        val booleanFamily =
+            createBooleanFamily(
                 enabled =
                     true,
             )
@@ -106,8 +106,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                     singleFamily,
                 listFamily =
                     listFamily,
-                switchFamily =
-                    switchFamily,
+                booleanFamily =
+                    booleanFamily,
                 trace =
                     trace,
             )
@@ -119,7 +119,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
          *
          *     single = "two"
          *     list   = ["one"]
-         *     switch = true
+         *     boolean = true
          *
          * process(...) returned NeedsListValue("two").
          *
@@ -178,8 +178,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             createListFamily(
                 "one",
             )
-        val switchFamily =
-            createSwitchFamily(
+        val booleanFamily =
+            createBooleanFamily(
                 enabled =
                     true,
             )
@@ -189,8 +189,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                     singleFamily,
                 listFamily =
                     listFamily,
-                switchFamily =
-                    switchFamily,
+                booleanFamily =
+                    booleanFamily,
                 trace =
                     trace,
             )
@@ -505,16 +505,16 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
     /**
      * Another simple current-State shape.
      */
-    private class SwitchFamily(
+    private class BooleanFamily(
         initialState:
             State,
         executionRoot:
             VexExecutionRoot,
     ) :
         VexBehaviorV2Family<
-            SwitchFamily,
-            SwitchFamily.State,
-            SwitchFamily.Control
+            BooleanFamily,
+            BooleanFamily.State,
+            BooleanFamily.Control
         >(
             initialState =
                 initialState,
@@ -528,12 +528,12 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 Boolean,
         ) :
             VexBehaviorFamily.State<
-                SwitchFamily
+                BooleanFamily
             >
 
         sealed interface Control :
             VexBehaviorFamily.Control<
-                SwitchFamily
+                BooleanFamily
             > {
             data class Set(
                 val enabled:
@@ -544,7 +544,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
 
         override val acts =
             vexActs<
-                SwitchFamily,
+                BooleanFamily,
                 State,
                 Control
             >(
@@ -582,8 +582,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
         val listState:
             ListFamily.State? =
             null,
-        val switchState:
-            SwitchFamily.State? =
+        val booleanState:
+            BooleanFamily.State? =
             null,
     ) :
         VexBehaviorV2CompoundInputState<
@@ -605,10 +605,10 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                         incoming.listState
                             ?: listState
                     )?.snapshot(),
-                switchState =
+                booleanState =
                     (
-                        incoming.switchState
-                            ?: switchState
+                        incoming.booleanState
+                            ?: booleanState
                     )?.copy(),
             )
 
@@ -619,8 +619,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                     singleState?.copy(),
                 listState =
                     listState?.snapshot(),
-                switchState =
-                    switchState?.copy(),
+                booleanState =
+                    booleanState?.copy(),
             )
     }
 
@@ -697,8 +697,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             SingleFamily,
         private val listFamily:
             ListFamily,
-        private val switchFamily:
-            SwitchFamily,
+        private val booleanFamily:
+            BooleanFamily,
         private val trace:
             MutableList<String>,
     ) :
@@ -733,7 +733,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 listFamily.current,
             )
             observeSwitch(
-                switchFamily.current,
+                booleanFamily.current,
             )
         }
 
@@ -767,14 +767,14 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
 
         fun observeSwitch(
             state:
-                SwitchFamily.State,
+                BooleanFamily.State,
         ):
             VexBehaviorV2CommittedOutput<
                 MultiOutputState
             >? =
             observe(
                 MultiInputState(
-                    switchState =
+                    booleanState =
                         state,
                 ),
             )
@@ -788,8 +788,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 latestStateInput.singleState
             val list =
                 latestStateInput.listState
-            val switch =
-                latestStateInput.switchState
+            val boolean =
+                latestStateInput.booleanState
 
             val output =
                 when {
@@ -797,12 +797,12 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                         null ||
                         list ==
                         null ||
-                        switch ==
+                        boolean ==
                         null ->
                         MultiOutputState
                             .Unobserved
 
-                    switch.enabled &&
+                    boolean.enabled &&
                         !list.contains(
                             single.value,
                         ) ->
@@ -927,15 +927,15 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 VexExecutionRoot(),
         )
 
-    private fun createSwitchFamily(
+    private fun createBooleanFamily(
         enabled:
             Boolean =
             false,
     ):
-        SwitchFamily =
-        SwitchFamily(
+        BooleanFamily =
+        BooleanFamily(
             initialState =
-                SwitchFamily.State(
+                BooleanFamily.State(
                     enabled =
                         enabled,
                 ),
@@ -948,8 +948,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             SingleFamily,
         listFamily:
             ListFamily,
-        switchFamily:
-            SwitchFamily,
+        booleanFamily:
+            BooleanFamily,
         trace:
             MutableList<String> =
             mutableListOf(),
@@ -960,8 +960,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 singleFamily,
             listFamily =
                 listFamily,
-            switchFamily =
-                switchFamily,
+            booleanFamily =
+                booleanFamily,
             trace =
                 trace,
         )
