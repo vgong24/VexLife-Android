@@ -1,3 +1,5 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.execution
 
 import java.util.concurrent.CopyOnWriteArrayList
@@ -185,12 +187,33 @@ class VexExecutionTest {
             CoroutineDispatcher? =
             null,
     ) : VexExecution(root) {
-        private enum class TestRelationshipId :
-            VexExecution.RelationshipId {
-            Refresh,
-            Search,
-            Upload,
-        }
+        /**
+         * Engine-only fixture. Semantic/product authoring must obtain RelationshipId from its
+         * rightful typed owner (for Direct Family: Control -> ResourceId -> Family RelationshipId).
+         */
+        private data class EngineRelationshipFixture(
+            val semanticRef:
+                String,
+        ) :
+            VexExecution.RelationshipId
+
+        private val refreshRelationship =
+            EngineRelationshipFixture(
+                semanticRef =
+                    "test.refresh",
+            )
+
+        private val searchRelationship =
+            EngineRelationshipFixture(
+                semanticRef =
+                    "test.search",
+            )
+
+        private val uploadRelationship =
+            EngineRelationshipFixture(
+                semanticRef =
+                    "test.upload",
+            )
 
         fun runOnce(): VexCoroutineHandle =
             launchOnce(repository::once)
@@ -220,7 +243,7 @@ class VexExecutionTest {
                 owner =
                     TestExecution::class,
                 relationshipId =
-                    TestRelationshipId.Refresh,
+                    refreshRelationship,
                 operation =
                     repository::earliestWork,
                 argument =
@@ -234,7 +257,7 @@ class VexExecutionTest {
                 owner =
                     TestExecution::class,
                 relationshipId =
-                    TestRelationshipId.Search,
+                    searchRelationship,
                 operation =
                     repository::latestWork,
                 argument =
@@ -248,7 +271,7 @@ class VexExecutionTest {
                 owner =
                     TestExecution::class,
                 relationshipId =
-                    TestRelationshipId.Upload,
+                    uploadRelationship,
                 operation =
                     repository::queuedWork,
                 argument =
