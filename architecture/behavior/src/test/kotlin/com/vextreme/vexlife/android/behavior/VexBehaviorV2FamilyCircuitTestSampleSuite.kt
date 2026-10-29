@@ -37,9 +37,10 @@ import org.junit.Test
  *     STEP 7
  *       input-only currentness movement does not fabricate another Act
  *
- * Family Circuit is the umbrella being pressured here. Simple Families still use
- * [VexBehaviorV2Family] directly. A Family whose semantic State is the current relationship between
- * several independently-owned truths may use [VexBehaviorV2CompoundFamily].
+ * Family Circuit is the umbrella being pressured here. [VexFamily] is the common current-State
+ * root. A Control-driven Family uses [VexBehaviorV2Family]. A Family whose semantic State is the
+ * current relationship between several independently-owned truths uses
+ * [VexBehaviorV2CompoundFamily].
  */
 class VexBehaviorV2FamilyCircuitTestSampleSuite {
     @Test
@@ -275,8 +276,6 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             ComplexFamily(
                 screenFamily =
                     screenFamily,
-                executionRoot =
-                    VexExecutionRoot(),
                 trace =
                     trace,
             )
@@ -411,8 +410,6 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             ComplexFamily(
                 screenFamily =
                     screenFamily,
-                executionRoot =
-                    VexExecutionRoot(),
                 trace =
                     trace,
             )
@@ -496,8 +493,6 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             ComplexFamily(
                 screenFamily =
                     screenFamily,
-                executionRoot =
-                    VexExecutionRoot(),
                 trace =
                     trace,
             )
@@ -925,7 +920,8 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
      * The deliberately generic "complex" teaching Family.
      *
      * This is not a renamed feature specimen. It exists to demonstrate the reusable Family Circuit
-     * structure directly.
+     * structure directly. It is a Family because ComplexCompoundState is its CURRENT semantic State;
+     * it does not inherit a Control API merely because ScreenFamily does.
      *
      * ComplexFamily owns:
      * - its Compound CURRENT State;
@@ -939,8 +935,6 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
     private class ComplexFamily(
         private val screenFamily:
             ScreenFamily,
-        executionRoot:
-            VexExecutionRoot,
         private val trace:
             MutableList<String>,
     ) :
@@ -948,8 +942,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             ComplexFamily,
             ComplexCompoundState,
             ComplexInputState,
-            ComplexOutputState,
-            ComplexFamily.Control
+            ComplexOutputState
         >(
             initialInputState =
                 ComplexInputState(),
@@ -965,34 +958,9 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                         revision,
                 )
             },
-            executionRoot =
-                executionRoot,
             logger =
                 VexFamilyLogger.None,
         ) {
-        /*
-         * This sample Family is observation-driven. It has no invented human Control merely to fill
-         * the SCAE acronym. The target ScreenFamily below demonstrates a real Control boundary.
-         */
-        sealed interface Control :
-            VexBehaviorFamily.Control<
-                ComplexFamily
-            >
-
-        override val acts =
-            vexActs<
-                ComplexFamily,
-                ComplexCompoundState,
-                Control
-            >(
-                family =
-                    this,
-                behaviorRef =
-                    "sample.family-circuit.complex",
-            ) {
-                state<ComplexCompoundState>()
-            }
-
         fun observeScreen(
             state:
                 ScreenFamily.State,
