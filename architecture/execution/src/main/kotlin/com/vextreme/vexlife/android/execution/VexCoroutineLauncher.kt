@@ -390,8 +390,10 @@ internal class VexCoroutineLauncher(
             check(
                 active.values.none { managed ->
                     managed.maintainedObservation &&
+                        managed.sourceOwner ===
+                            sourceOwner &&
                         managed.sourceRef ==
-                        sourceRef &&
+                            sourceRef &&
                         !managed.job.isCompleted
                 },
             ) {
