@@ -1945,3 +1945,145 @@ The current integrated specimen is still test-only and does not change VexBehavi
 currentness yet.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-LIVE-LOOP] -->
+
+
+## Process-only Compound template — reusable causal skeleton
+
+The Origin review identified repeated ceremony in existing Compound Relays:
+
+~~~text
+incoming partial InputState
+-> read retained current InputState
+-> manually merge latest fields
+-> relationship calculation
+-> manually rebuild coherent InputState
+-> manually construct OutputState
+-> manually copy both into VexCompoundState
+~~~
+
+Only the relationship calculation should be feature-specific.
+
+The fourth Origin reference now carries a test-only reusable template:
+
+~~~kotlin
+final override fun processStates(
+    inputState: InputState,
+    currentState: VexCompoundState<InputState, OutputState>,
+): VexCompoundState<InputState, OutputState> {
+    val latestStateInput =
+        currentState.inputState.latest(inputState)
+
+    val latestStateOutput =
+        process(latestStateInput)
+
+    return currentState.copy(
+        inputState = latestStateInput,
+        outputState = latestStateOutput,
+    )
+}
+
+protected abstract fun process(
+    latestStateInput: InputState,
+): OutputState
+~~~
+
+A concrete relationship therefore reads only:
+
+~~~kotlin
+override fun process(
+    latestStateInput: ExampleInputState,
+): ExampleOutputState {
+    // What does this complete current relationship mean?
+}
+~~~
+
+### Where latest-input merging belongs
+
+The retained InputState owns how one partial patch becomes one complete latest input:
+
+~~~text
+current retained InputState
++ incoming partial InputState
+-> InputState.latest(incoming)
+-> latestStateInput
+~~~
+
+That keeps patch/currentness mechanics beside the input shape and out of every relationship
+calculation.
+
+For example:
+
+~~~kotlin
+override fun latest(
+    incoming: ExampleInputState,
+): ExampleInputState =
+    copy(
+        left = incoming.left ?: left,
+        right = incoming.right ?: right,
+    )
+~~~
+
+The Relay author then never repeats that merge inside `process(...)`.
+
+### Stronger readability law
+
+A fresh reader should be able to witness every Compound relationship in the same sequence:
+
+~~~text
+WHAT ARRIVED?
+  input patch
+
+WHAT IS CURRENT NOW?
+  latestStateInput
+
+WHAT DOES THAT CURRENT RELATIONSHIP MEAN?
+  process(latestStateInput)
+
+WHAT IS EXPOSED?
+  latestStateOutput
+
+WHAT IS RETAINED?
+  generic VexCompoundState assembly
+~~~
+
+This is the scalability value: the framework owns the repeated causal skeleton; each feature owns only
+its relationship meaning.
+
+### Existing-feature pressure
+
+Current source suggests three categories:
+
+~~~text
+Conversation Hybrid
+  already close to pure latestStateInput -> OutputState
+
+Maps Style
+  can likely fit once selection-change reset semantics live in InputState.latest(...)
+
+Events / Navigation
+  currently read previous OutputState as process memory
+~~~
+
+The last category is a useful pressure, not a reason to contaminate the generic process signature.
+
+If a relationship needs retained memory to decide the next output, make that memory an explicit part
+of the relationship's current processing state rather than making OutputState secretly serve as both:
+
+~~~text
+consumer output
+AND
+hidden reducer memory
+~~~
+
+The next Origin refinement should determine the smallest truthful representation for that retained
+relationship memory while preserving the desirable public law:
+
+~~~text
+latestStateInput
+-> process(...)
+-> latestStateOutput
+~~~
+
+No production VexCompoundRelay contract is changed by this checkpoint.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][PROCESS-ONLY-COMPOUND] -->
