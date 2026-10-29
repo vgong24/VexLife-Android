@@ -181,7 +181,8 @@ access, so inspecting relationship meaning cannot accidentally emit accepted run
 
 ## Store / Save relationship
 
-The current earned storage path is deliberately narrow and tree-shaped:
+The current earned storage path remains tree-shaped. A plain Store supports authored Save; a StateStore
+specialization is earned only when durable truth is exactly Family State:
 
 ~~~text
 VexFamily
@@ -192,6 +193,13 @@ VexFamily
       -> Failure
 
 VexFamily
+-> StateStore<State>
+   -> Store<State>
+   -> observableState
+   -> get()
+   -> forget()
+
+VexFamily
 -> Act
    -> Begin
       -> Save
@@ -200,9 +208,9 @@ VexFamily
             -> Failure
 ~~~
 
-Family does not expose a broad Store and rediscover a narrower StateStore through runtime casts.
-The Store contract contains only the operation the current Family runtime consumes. Durable Store
-truth does not become a second live semantic State holder.
+Family does not expose a broad untyped Store and rediscover State semantics through runtime casts.
+The StateStore specialization is explicit in the type system and exists only where durable truth is
+actually Family State. Durable Store truth still does not become a second live semantic State holder.
 
 There is also no generic Operation hierarchy around the one current Save operation. A common
 operation parent must be earned by another real operation, not anticipated.
@@ -288,6 +296,22 @@ provider / repository observation
 ~~~
 
 `admitCurrent` is protected; there is still no public generic State setter.
+
+A State-shaped Family Store is itself a StateRelay dependency; it does not require another observer owner:
+
+~~~text
+StateStore.observableState
+-> maintained execution observation
+-> observeStore(CURRENT, stored)
+-> concrete Family decision
+-> admitCurrent
+-> same StateRelay
+~~~
+
+`StateStore` carries the already-earned `observableState / get / save / forget` capability. Plain
+`Store` remains the smaller save-only capability for Families that have not earned durable State
+observation.
+
 
 ## Process / Compound current State
 
