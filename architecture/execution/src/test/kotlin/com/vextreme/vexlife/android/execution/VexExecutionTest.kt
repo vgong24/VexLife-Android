@@ -1037,6 +1037,92 @@ class VexExecutionTest {
         }
 
     @Test
+    fun theSameExecutionIdOnDifferentLiveOwnersDoesNotShareARelationship(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val firstRepository =
+                TestRepository()
+            val secondRepository =
+                TestRepository()
+            val firstExecution =
+                TestExecution(
+                    root,
+                    firstRepository,
+                )
+            val secondExecution =
+                TestExecution(
+                    root,
+                    secondRepository,
+                )
+
+            try {
+                val first =
+                    firstExecution.runEarliest(
+                        "first",
+                    )
+                val second =
+                    secondExecution.runEarliest(
+                        "second",
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        firstRepository.earliestStarted
+                            .isEmpty() ||
+                        secondRepository.earliestStarted
+                            .isEmpty()
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertEquals(
+                    TestExecution.ExecutionId.Earliest,
+                    first.id,
+                )
+                assertEquals(
+                    TestExecution.ExecutionId.Earliest,
+                    second.id,
+                )
+                assertFalse(
+                    first.instanceId ==
+                        second.instanceId,
+                )
+                assertEquals(
+                    listOf(
+                        "first",
+                    ),
+                    firstRepository.earliestStarted
+                        .toList(),
+                )
+                assertEquals(
+                    listOf(
+                        "second",
+                    ),
+                    secondRepository.earliestStarted
+                        .toList(),
+                )
+
+                firstRepository.earliestRelease.complete(
+                    Unit,
+                )
+                secondRepository.earliestRelease.complete(
+                    Unit,
+                )
+
+                first.awaitCompletion()
+                second.awaitCompletion()
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
     fun launchLatestWaitsForEveryUnfinishedPredecessorTeardown(): Unit =
         runBlocking {
             val root =
