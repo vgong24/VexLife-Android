@@ -1880,3 +1880,68 @@ structural collections being detached after admission. Repository Gradle/JVM pro
 No universal StateTree or production StateRelay type is admitted by this checkpoint.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-FOURTH-REFERENCE] -->
+
+
+## Live StateRelay Family loop — where tree mutation actually runs
+
+The fourth Origin reference now includes an integrated test-only Family specimen.
+
+The key placement is:
+
+~~~text
+UI / caller
+-> Family.activate(Control)
+-> StateRelay.process { CURRENT ->
+     Acts.resolve(CURRENT, Control)
+     -> selected Act
+     -> immediate disposition
+     -> next semantic State
+   }
+-> StateRelay publishes changed CURRENT State
+-> Family.DisplayState derives from StateRelay.current
+~~~
+
+For the nested-tree specimen:
+
+~~~text
+Control.RenameNode(ref = C1)
+-> StateRelay gives exact CURRENT Family State
+-> Acts resolves RenameNode against that CURRENT State
+-> Act admits:
+     current.copy(
+       tree = current.tree.updateLabel(C1, ...)
+     )
+-> StateRelay publishes NEXT
+-> DisplayState walks the same NEXT tree
+~~~
+
+The reusable boundary is therefore **not** tree-specific:
+
+~~~text
+StateRelay
+  owns:
+    exact CURRENT read
+    serialized current-State decision
+    semantic publication
+
+Acts / Family State
+  own:
+    what a Control means
+    which State transformation is lawful
+
+normalized tree
+  owns:
+    arbitrary-depth structural identity/completeness
+
+DisplayState
+  owns:
+    bounded outward projection
+~~~
+
+A later async/provider result must re-enter the same StateRelay process boundary and be evaluated
+against CURRENT State there. It does not receive direct write authority.
+
+The current integrated specimen is still test-only and does not change VexBehaviorV2Family production
+currentness yet.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-LIVE-LOOP] -->
