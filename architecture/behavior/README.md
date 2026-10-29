@@ -15,11 +15,11 @@ This module preserves the geometry of **what a human can do from what is true no
   State -> selects the Act -> applies immediate stay/admit -> a later render reads the resulting
   DisplayState. It proves stale rendered State is not activation authority. It does **not** prove
   Compose observation, provider-observation currentness, async-result staleness, or Store convergence.
-- **Family Circuit construction guide:** [`VexBehaviorV2FamilyCircuitTestSampleSuite`](src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorV2StateRelayOriginPressureTest.kt)
-  — read this teaching suite when you need the end-to-end ownership circuit rather than one isolated
-  pressure. It deliberately builds from a real Screen Family plus independent MusicQueue / ThemeMode
-  current owners through partial Input -> latest complete Input -> process -> Output -> commit -> Act
-  -> ScreenFamily Control -> admitted target CURRENT State -> observed NEW Input. The scenario is
+- **Family Circuit construction guide:** [`VexBehaviorV2FamilyCircuitTestSampleSuite`](src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorV2FamilyCircuitTestSampleSuite.kt)
+  — read this teaching suite when you need the current end-to-end Family Circuit construction shape
+  rather than historical pressure. ComplexFamily itself extends the Compound Family foundation and
+  owns ComplexCompoundState: partial Input -> latest complete Input -> process -> Output -> commit ->
+  Act -> ScreenFamily Control -> admitted target CURRENT State -> observed NEW Input. The scenario is
   simulated and not product behavior.
 - Review pressure/evidence:
   [`REVIEW-CHECKPOINT.md`](REVIEW-CHECKPOINT.md)
@@ -27,6 +27,30 @@ This module preserves the geometry of **what a human can do from what is true no
 
 
 
+
+## Current Family Circuit foundation
+
+The process simplification is now part of the V2 Family foundation rather than only a test-side Relay
+experiment.
+
+~~~text
+VexBehaviorV2Family
+  simple Family current-State case
+
+VexBehaviorV2CompoundFamily
+  Family specialization for a CURRENT relationship State
+  -> concrete named Compound State
+  -> InputState.latest(incoming)
+  -> process(latestStateInput)
+  -> OutputState
+  -> Family.current commit
+  -> Act only for Output-changing commits
+~~~
+
+The concrete Family owns the relationship. There is no sibling Compound Relay required to own a
+second copy of current Input/Output truth.
+
+VexBehaviorV2FamilyCircuitTestSampleSuite is the teaching surface for this current structure.
 
 ## V2 Origin-Walk test progression
 
@@ -36,15 +60,17 @@ Read them in this order:
 
 ~~~text
 0. VexBehaviorV2FamilyCircuitTestSampleSuite
-   construction-teaching suite for the candidate Family Circuit Architecture
+   current construction-teaching suite for the candidate Family Circuit Architecture
+   -> ComplexFamily extends VexBehaviorV2CompoundFamily
+   -> ComplexCompoundState is Family.current
    -> ScreenFamily + two independently-owned observation-only CURRENT truths
    -> partial ComplexInputState observations
    -> InputState.latest(...) forms one complete current input
    -> ComplexFamily.process(latestStateInput) calculates meaning only
    -> ComplexOutputState is the current relationship consequence
-   -> Output-changing commit becomes an Act consequence
-   -> Act asks the rightful owner to change
-   -> observed owner CURRENT truth returns as NEW input
+   -> Output-changing Family State commit becomes an Act consequence
+   -> Act enters the rightful target Family through Control
+   -> observed target CURRENT truth returns as NEW input
    -> input-only Compound revisions do not fabricate another Act
 
 1. VexBehaviorV2Test
