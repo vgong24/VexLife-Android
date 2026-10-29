@@ -3526,6 +3526,46 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 is Settled ->
                     copy()
             }
+
+        /**
+         * Teaching/debug projection only. Keeping this beside the Output vocabulary makes trace
+         * formatting available to the nested circuit helpers without giving another class ownership
+         * of relationship meaning.
+         */
+        fun traceValue():
+            String =
+            when (
+                this
+            ) {
+                Unobserved ->
+                    "Unobserved"
+
+                is HeldTransient ->
+                    "HeldTransient(" +
+                        screenName +
+                        ")"
+
+                is NeedsPlayerScreen ->
+                    "NeedsPlayerScreen(" +
+                        trackRef +
+                        "," +
+                        targetScreenName +
+                        "," +
+                        themeMode.name +
+                        ")"
+
+                is Settled ->
+                    "Settled(" +
+                        screenName +
+                        "," +
+                        (
+                            currentTrackRef
+                                ?: "none"
+                        ) +
+                        "," +
+                        themeMode.name +
+                        ")"
+            }
     }
 
     /**
@@ -3983,41 +4023,6 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             }
         }
     }
-
-    private fun ComplexOutputState.traceValue():
-        String =
-        when (
-            this
-        ) {
-            ComplexOutputState.Unobserved ->
-                "Unobserved"
-
-            is ComplexOutputState.HeldTransient ->
-                "HeldTransient(" +
-                    screenName +
-                    ")"
-
-            is ComplexOutputState.NeedsPlayerScreen ->
-                "NeedsPlayerScreen(" +
-                    trackRef +
-                    "," +
-                    targetScreenName +
-                    "," +
-                    themeMode.name +
-                    ")"
-
-            is ComplexOutputState.Settled ->
-                "Settled(" +
-                    screenName +
-                    "," +
-                    (
-                        currentTrackRef
-                            ?: "none"
-                    ) +
-                    "," +
-                    themeMode.name +
-                    ")"
-        }
 
     private fun musicQueue(
         currentTrackRef:
