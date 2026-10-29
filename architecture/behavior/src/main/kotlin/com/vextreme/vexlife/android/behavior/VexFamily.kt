@@ -50,15 +50,129 @@ abstract class VexFamily<
      * Compile-time kinship marker for semantic State belonging to one exact Family coordinate.
      */
     interface State<
-        Family : Any,
-    >
+        Family,
+    > where
+        Family : VexFamily<
+            Family,
+            *,
+            *
+        >
+
+    /**
+     * Typed resource identity contributed by a Control when Control name alone is not enough to
+     * distinguish maintained execution relationships.
+     */
+    interface ResourceId<
+        Family,
+    > where
+        Family : VexFamily<
+            Family,
+            *,
+            *
+        > {
+        val value:
+            String
+    }
 
     /**
      * Compile-time kinship marker for incoming Control belonging to one exact Family coordinate.
+     *
+     * Control name is always part of the Family-owned relationship identity. A concrete Control only
+     * contributes [resourceId] when repeated instances of that same Control need a narrower typed
+     * identity. Begin never accepts arbitrary relationship arguments.
      */
     interface Control<
-        Family : Any,
-    >
+        Family,
+    > where
+        Family : VexFamily<
+            Family,
+            *,
+            *
+        > {
+        val resourceId:
+            ResourceId<Family>?
+            get() =
+                null
+    }
+
+    /**
+     * Exact Family-maintained execution identity.
+     *
+     * The live Family instance scopes identity. Control name is always present. A typed ResourceId
+     * optionally narrows repeated instances of that same Control. Concrete Control code cannot
+     * replace this composition with a parallel ID convention.
+     */
+    internal class RelationshipId<
+        Family,
+    > internal constructor(
+        private val family:
+            VexFamily<
+                Family,
+                *,
+                *
+            >,
+        val controlName:
+            String,
+        private val controlTypeName:
+            String,
+        val resourceIdValue:
+            String?,
+    ) :
+        VexExecution.RelationshipId where
+        Family : VexFamily<
+            Family,
+            *,
+            *
+        > {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                RelationshipId<*> &&
+                family ===
+                other.family &&
+                controlTypeName ==
+                other.controlTypeName &&
+                resourceIdValue ==
+                other.resourceIdValue
+
+        override fun hashCode():
+            Int {
+            var result =
+                System.identityHashCode(
+                    family,
+                )
+            result =
+                31 *
+                    result +
+                    controlTypeName.hashCode()
+            result =
+                31 *
+                    result +
+                    (
+                        resourceIdValue
+                            ?.hashCode()
+                            ?: 0
+                    )
+            return result
+        }
+
+        override fun toString():
+            String =
+            if (
+                resourceIdValue ==
+                null
+            ) {
+                controlName
+            } else {
+                controlName +
+                    "[" +
+                    resourceIdValue +
+                    "]"
+            }
+    }
 
     /**
      * Family-owned display classification.
@@ -138,8 +252,6 @@ abstract class VexFamily<
         > internal constructor(
             internal val approach:
                 VexExecution.Approach,
-            internal val arguments:
-                List<Any?>,
             internal val save:
                 Save<State>,
         ) {
@@ -174,8 +286,6 @@ abstract class VexFamily<
             > internal constructor(
                 private val approach:
                     VexExecution.Approach,
-                private val arguments:
-                    List<Any?>,
             ) {
                 private var save:
                     Save<State>? =
@@ -214,8 +324,6 @@ abstract class VexFamily<
                     Begin(
                         approach =
                             approach,
-                        arguments =
-                            arguments,
                         save =
                             requireNotNull(
                                 save,
@@ -458,23 +566,16 @@ abstract class VexFamily<
         buildBegin(
             approach =
                 VexExecution.Approach.Independent,
-            arguments =
-                emptyList(),
             block =
                 block,
         )
 
     /**
-     * Earliest relationship for the triggering Control.
+     * Earliest maintained relationship for the triggering Control.
      *
-     * [arguments] are optional ordered relationship components. No arguments means the Control
-     * alone identifies the maintained relationship. Each supplied argument narrows that relationship.
-     * Arguments participate in equality and should therefore be stable immutable semantic values for
-     * the lifetime of the execution relationship.
+     * Relationship identity comes from the live Family + Control name + optional typed ResourceId.
      */
     protected fun beginEarliest(
-        vararg arguments:
-            Any?,
         block:
             Act.Begin.Scope<FamilyState>.() -> Unit,
     ):
@@ -482,20 +583,14 @@ abstract class VexFamily<
         buildBegin(
             approach =
                 VexExecution.Approach.Earliest,
-            arguments =
-                arguments.toList(),
             block =
                 block,
         )
 
     /**
-     * Latest relationship for the triggering Control.
-     *
-     * Ordered [arguments] stack onto the Control relationship. Zero arguments means Control-only.
+     * Latest maintained relationship for the triggering Control.
      */
     protected fun beginLatest(
-        vararg arguments:
-            Any?,
         block:
             Act.Begin.Scope<FamilyState>.() -> Unit,
     ):
@@ -503,20 +598,14 @@ abstract class VexFamily<
         buildBegin(
             approach =
                 VexExecution.Approach.Latest,
-            arguments =
-                arguments.toList(),
             block =
                 block,
         )
 
     /**
-     * Queued relationship for the triggering Control.
-     *
-     * Ordered [arguments] stack onto the Control relationship. Zero arguments means Control-only.
+     * Queued maintained relationship for the triggering Control.
      */
     protected fun beginQueued(
-        vararg arguments:
-            Any?,
         block:
             Act.Begin.Scope<FamilyState>.() -> Unit,
     ):
@@ -524,8 +613,6 @@ abstract class VexFamily<
         buildBegin(
             approach =
                 VexExecution.Approach.Queued,
-            arguments =
-                arguments.toList(),
             block =
                 block,
         )
@@ -533,8 +620,6 @@ abstract class VexFamily<
     private fun buildBegin(
         approach:
             VexExecution.Approach,
-        arguments:
-            List<Any?>,
         block:
             Act.Begin.Scope<FamilyState>.() -> Unit,
     ):
@@ -542,8 +627,6 @@ abstract class VexFamily<
         Act.Begin.Scope<FamilyState>(
             approach =
                 approach,
-            arguments =
-                arguments,
         )
             .apply(
                 block,
@@ -683,8 +766,6 @@ abstract class VexFamily<
                 begin.approach,
             control =
                 control,
-            arguments =
-                begin.arguments,
             save =
                 begin.save,
         )
@@ -695,8 +776,6 @@ abstract class VexFamily<
             VexExecution.Approach,
         control:
             FamilyControl,
-        arguments:
-            List<Any?>,
         save:
             Act.Begin.Save<FamilyState>,
     ) {
@@ -803,7 +882,7 @@ abstract class VexFamily<
                     executionRoot =
                         executionRoot,
                     owner =
-                        this,
+                        this::class,
                     operation =
                         operation,
                     argument =
@@ -820,12 +899,11 @@ abstract class VexFamily<
                 VexExecution.beginEarliest(
                     executionRoot =
                         executionRoot,
-                    relationship =
-                        executionRelationship(
-                            control =
-                                control,
-                            arguments =
-                                arguments,
+                    owner =
+                        this::class,
+                    relationshipId =
+                        relationshipId(
+                            control,
                         ),
                     operation =
                         operation,
@@ -843,12 +921,11 @@ abstract class VexFamily<
                 VexExecution.beginLatest(
                     executionRoot =
                         executionRoot,
-                    relationship =
-                        executionRelationship(
-                            control =
-                                control,
-                            arguments =
-                                arguments,
+                    owner =
+                        this::class,
+                    relationshipId =
+                        relationshipId(
+                            control,
                         ),
                     operation =
                         operation,
@@ -866,12 +943,11 @@ abstract class VexFamily<
                 VexExecution.beginQueued(
                     executionRoot =
                         executionRoot,
-                    relationship =
-                        executionRelationship(
-                            control =
-                                control,
-                            arguments =
-                                arguments,
+                    owner =
+                        this::class,
+                    relationshipId =
+                        relationshipId(
+                            control,
                         ),
                     operation =
                         operation,
@@ -887,22 +963,33 @@ abstract class VexFamily<
         }
     }
 
-    private fun executionRelationship(
+    internal fun relationshipId(
         control:
             FamilyControl,
-        arguments:
-            List<Any?>,
     ):
-        VexExecution.Relationship =
-        VexExecution.relationship(
-            owner =
+        RelationshipId<Family> {
+        val controlClass =
+            control::class
+        val controlName =
+            requireNotNull(
+                controlClass.simpleName,
+            ) {
+                "VexFamily Control requires a named class"
+            }
+
+        return RelationshipId(
+            family =
                 this,
-            trigger =
-                (control as? Enum<*>)
-                    ?: control::class,
-            arguments =
-                arguments,
+            controlName =
+                controlName,
+            controlTypeName =
+                controlClass.qualifiedName
+                    ?: controlName,
+            resourceIdValue =
+                control.resourceId
+                    ?.value,
         )
+    }
 
     private fun applyLaterResult(
         result:

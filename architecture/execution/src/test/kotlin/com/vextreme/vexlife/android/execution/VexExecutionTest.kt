@@ -179,23 +179,24 @@ class VexExecutionTest {
     )
 
     private class TestExecution(
-        root: VexExecutionRoot,
+        private val root: VexExecutionRoot,
         private val repository: TestRepository,
         private val handoffDispatcher:
             CoroutineDispatcher? =
             null,
     ) : VexExecution(root) {
-        enum class Trigger {
-            Earliest,
-            Latest,
-            Queued,
+        private enum class TestRelationshipId :
+            VexExecution.RelationshipId {
+            Refresh,
+            Search,
+            Upload,
         }
 
         fun runOnce(): VexCoroutineHandle =
-            launch(repository::once)
+            launchOnce(repository::once)
 
         fun runWithArgument(value: Int): VexCoroutineHandle =
-            launch(
+            launchOnce(
                 repository::add,
                 value,
             )
@@ -206,38 +207,56 @@ class VexExecutionTest {
                 value,
             )
 
+        fun runExclusive(value: String): VexExecution.Handle =
+            launchOnce(
+                repository::independentWork,
+                value,
+            )
+
         fun runEarliest(value: String): VexExecution.Handle =
-            launchEarliest(
-                trigger =
-                    Trigger.Earliest,
-                action =
+            VexExecution.beginEarliest(
+                executionRoot =
+                    root,
+                owner =
+                    TestExecution::class,
+                relationshipId =
+                    TestRelationshipId.Refresh,
+                operation =
                     repository::earliestWork,
                 argument =
                     value,
             )
 
         fun runLatest(value: String): VexExecution.Handle =
-            launchLatest(
-                trigger =
-                    Trigger.Latest,
-                action =
+            VexExecution.beginLatest(
+                executionRoot =
+                    root,
+                owner =
+                    TestExecution::class,
+                relationshipId =
+                    TestRelationshipId.Search,
+                operation =
                     repository::latestWork,
                 argument =
                     value,
             )
 
         fun runQueued(value: String): VexExecution.Handle =
-            launchQueued(
-                trigger =
-                    Trigger.Queued,
-                action =
+            VexExecution.beginQueued(
+                executionRoot =
+                    root,
+                owner =
+                    TestExecution::class,
+                relationshipId =
+                    TestRelationshipId.Upload,
+                operation =
                     repository::queuedWork,
                 argument =
                     value,
             )
 
         fun runStructured(): VexCoroutineHandle =
-            launch(repository::structuredWork)
+            launchOnce(repository::structuredWork)
 
         fun runHandoff(
             capture: HandoffCapture,
@@ -338,7 +357,7 @@ class VexExecutionTest {
     }
 
     @Test
-    fun launchInvokesReferencedSuspendFunctionExactlyOnce(): Unit =
+    fun launchOnceInvokesReferencedSuspendFunctionExactlyOnce(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot(
@@ -367,7 +386,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun launchKeepsOneArgumentInvocationTypeSafe(): Unit =
+    fun launchOnceKeepsOneArgumentInvocationTypeSafe(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
@@ -966,6 +985,58 @@ class VexExecutionTest {
         }
 
     @Test
+    fun launchOnceRejectsASecondUnfinishedInvocationFromTheSameSource(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+
+            try {
+                val first =
+                    execution.runExclusive(
+                        "A",
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        repository.independentStarted
+                            .isEmpty()
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                val duplicateAccepted =
+                    runCatching {
+                        execution.runExclusive(
+                            "B",
+                        )
+                    }.isSuccess
+
+                assertFalse(
+                    duplicateAccepted,
+                )
+
+                repository.independentRelease.complete(
+                    Unit,
+                )
+                first.awaitCompletion()
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
     fun launchEarliestReturnsTheExistingActiveRelationshipInstance(): Unit =
         runBlocking {
             val root =
@@ -1016,83 +1087,6 @@ class VexExecutionTest {
                     Unit,
                 )
                 first.awaitCompletion()
-            } finally {
-                root.joinStopAll(
-                    "test complete",
-                )
-            }
-        }
-
-    @Test
-    fun theSameTriggerOnDifferentLiveOwnersDoesNotShareARelationship(): Unit =
-        runBlocking {
-            val root =
-                VexExecutionRoot()
-            val firstRepository =
-                TestRepository()
-            val secondRepository =
-                TestRepository()
-            val firstExecution =
-                TestExecution(
-                    root,
-                    firstRepository,
-                )
-            val secondExecution =
-                TestExecution(
-                    root,
-                    secondRepository,
-                )
-
-            try {
-                val first =
-                    firstExecution.runEarliest(
-                        "first",
-                    )
-                val second =
-                    secondExecution.runEarliest(
-                        "second",
-                    )
-
-                withTimeout(
-                    2_000L,
-                ) {
-                    while (
-                        firstRepository.earliestStarted
-                            .isEmpty() ||
-                        secondRepository.earliestStarted
-                            .isEmpty()
-                    ) {
-                        kotlinx.coroutines.yield()
-                    }
-                }
-                assertFalse(
-                    first.instanceId ==
-                        second.instanceId,
-                )
-                assertEquals(
-                    listOf(
-                        "first",
-                    ),
-                    firstRepository.earliestStarted
-                        .toList(),
-                )
-                assertEquals(
-                    listOf(
-                        "second",
-                    ),
-                    secondRepository.earliestStarted
-                        .toList(),
-                )
-
-                firstRepository.earliestRelease.complete(
-                    Unit,
-                )
-                secondRepository.earliestRelease.complete(
-                    Unit,
-                )
-
-                first.awaitCompletion()
-                second.awaitCompletion()
             } finally {
                 root.joinStopAll(
                     "test complete",

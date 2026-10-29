@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
  * Internal coroutine engine.
  *
  * Active custody is keyed by exact [VexExecution.InstanceId]. Maintained overlap handling is keyed
- * directly by [VexExecution.Relationship]: live owner + semantic trigger + ordered arguments.
+ * directly by [VexExecution.RelationshipId]: live owner + semantic trigger + ordered arguments.
  * Source identity remains diagnostic/source-addressing information only.
  */
 internal class VexCoroutineLauncher(
@@ -76,7 +76,7 @@ internal class VexCoroutineLauncher(
         val sourceRef:
             VexExecution.SourceRef,
         val relationship:
-            VexExecution.Relationship?,
+            VexExecution.RelationshipId?,
         val job:
             Job,
         val mutableState:
@@ -103,7 +103,7 @@ internal class VexCoroutineLauncher(
 
     private val relationships =
         LinkedHashMap<
-            VexExecution.Relationship,
+            VexExecution.RelationshipId,
             MaintainedRelationship
         >()
 
@@ -125,6 +125,46 @@ internal class VexCoroutineLauncher(
             >
         > =
         mutableExecutions.asStateFlow()
+
+    fun launchOnce(
+        sourceRef:
+            VexExecution.SourceRef,
+        action:
+            suspend () -> Unit,
+    ):
+        VexExecution.Handle =
+        synchronized(
+            registryLock,
+        ) {
+            requireAcceptingWorkLocked()
+
+            check(
+                active.values.none { managed ->
+                    managed.sourceRef ==
+                        sourceRef &&
+                        !managed.job.isCompleted
+                },
+            ) {
+                "Coroutine " +
+                    sourceRef.value +
+                    " is already active"
+            }
+
+            createManagedLocked(
+                sourceRef =
+                    sourceRef,
+                relationship =
+                    null,
+                predecessors =
+                    emptyList(),
+                maintainedObservation =
+                    false,
+                restartRecoverableFailure =
+                    false,
+                action =
+                    action,
+            )
+        }
 
     fun launch(
         sourceRef:
@@ -156,7 +196,7 @@ internal class VexCoroutineLauncher(
 
     fun launchEarliest(
         relationship:
-            VexExecution.Relationship,
+            VexExecution.RelationshipId,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -209,7 +249,7 @@ internal class VexCoroutineLauncher(
 
     fun launchLatest(
         relationship:
-            VexExecution.Relationship,
+            VexExecution.RelationshipId,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -265,7 +305,7 @@ internal class VexCoroutineLauncher(
 
     fun launchQueued(
         relationship:
-            VexExecution.Relationship,
+            VexExecution.RelationshipId,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -518,7 +558,7 @@ internal class VexCoroutineLauncher(
 
     private fun relationshipLocked(
         relationship:
-            VexExecution.Relationship,
+            VexExecution.RelationshipId,
         approach:
             VexExecution.Approach,
     ):
@@ -603,7 +643,7 @@ internal class VexCoroutineLauncher(
         sourceRef:
             VexExecution.SourceRef,
         relationship:
-            VexExecution.Relationship?,
+            VexExecution.RelationshipId?,
         predecessors:
             List<Job>,
         maintainedObservation:

@@ -50,6 +50,12 @@ class VexFamilyHighConfidenceTest {
                 State
         }
 
+        data class CommitResourceId(
+            override val value:
+                String,
+        ) :
+            VexFamily.ResourceId<ValueFamily>
+
         sealed interface Control :
             VexFamily.Control<ValueFamily> {
             data class Set(
@@ -61,6 +67,9 @@ class VexFamilyHighConfidenceTest {
             data class Commit(
                 val value:
                     String,
+                override val resourceId:
+                    VexFamily.ResourceId<ValueFamily>? =
+                    null,
             ) :
                 Control
         }
@@ -367,6 +376,120 @@ class VexFamilyHighConfidenceTest {
                         "two",
                 ),
                 family.currentState,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
+    fun relationshipIdentityAlwaysIncludesControlNameAndOnlyTypedResourceIdWhenProvided() {
+        val root =
+            VexExecutionRoot()
+
+        try {
+            val firstFamily =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                    executionRoot =
+                        root,
+                )
+            val secondFamily =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                    executionRoot =
+                        root,
+                )
+
+            val defaultFirst =
+                firstFamily.relationshipId(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "first payload",
+                    ),
+                )
+            val defaultSecond =
+                firstFamily.relationshipId(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "second payload",
+                    ),
+                )
+
+            assertEquals(
+                defaultFirst,
+                defaultSecond,
+            )
+            assertEquals(
+                "Commit",
+                defaultFirst.toString(),
+            )
+
+            val resourceA =
+                ValueFamily.CommitResourceId(
+                    value =
+                        "resource-a",
+                )
+            val resourceB =
+                ValueFamily.CommitResourceId(
+                    value =
+                        "resource-b",
+                )
+
+            val narrowedFirst =
+                firstFamily.relationshipId(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "first payload",
+                        resourceId =
+                            resourceA,
+                    ),
+                )
+            val narrowedSame =
+                firstFamily.relationshipId(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "different payload",
+                        resourceId =
+                            resourceA,
+                    ),
+                )
+            val narrowedOther =
+                firstFamily.relationshipId(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "first payload",
+                        resourceId =
+                            resourceB,
+                    ),
+                )
+            val otherFamily =
+                secondFamily.relationshipId(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "first payload",
+                        resourceId =
+                            resourceA,
+                    ),
+                )
+
+            assertEquals(
+                narrowedFirst,
+                narrowedSame,
+            )
+            assertFalse(
+                narrowedFirst ==
+                    narrowedOther,
+            )
+            assertFalse(
+                narrowedFirst ==
+                    otherFamily,
+            )
+            assertEquals(
+                "Commit[resource-a]",
+                narrowedFirst.toString(),
             )
         } finally {
             root.forceStopAll()
