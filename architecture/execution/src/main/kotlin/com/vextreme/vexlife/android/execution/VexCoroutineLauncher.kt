@@ -20,9 +20,9 @@ import kotlinx.coroutines.launch
 /**
  * Internal coroutine engine.
  *
- * Active custody is keyed by exact [VexExecution.InstanceId]. Source identity is diagnostic and
- * source-addressing information only. [VexExecution.Id] exists only when callers intentionally
- * relate several executions through Earliest / Latest / Queued semantics.
+ * Active custody is keyed by exact [VexExecution.InstanceId]. Maintained overlap handling is keyed
+ * directly by [VexExecution.Relationship]: live owner + semantic trigger + ordered arguments.
+ * Source identity remains diagnostic/source-addressing information only.
  */
 internal class VexCoroutineLauncher(
     dispatcher: CoroutineDispatcher,
@@ -60,42 +60,9 @@ internal class VexCoroutineLauncher(
     private var nextInstanceValue =
         1L
 
-    private enum class LaneMode {
-        Earliest,
-        Latest,
-        Queued,
-    }
-
-    private class RelationshipKey(
-        val owner:
-            Any,
-        val id:
-            VexExecution.Id,
-    ) {
-        override fun equals(
-            other:
-                Any?,
-        ):
-            Boolean =
-            other is
-                RelationshipKey &&
-                owner ===
-                other.owner &&
-                id ==
-                other.id
-
-        override fun hashCode():
-            Int =
-            31 *
-                System.identityHashCode(
-                    owner,
-                ) +
-                id.hashCode()
-    }
-
-    private data class Lane(
-        var mode:
-            LaneMode,
+    private data class MaintainedRelationship(
+        var approach:
+            VexExecution.Approach,
         val instances:
             LinkedHashSet<
                 VexExecution.InstanceId
@@ -108,8 +75,8 @@ internal class VexCoroutineLauncher(
             VexExecution.InstanceId,
         val sourceRef:
             VexExecution.SourceRef,
-        val id:
-            VexExecution.Id?,
+        val relationship:
+            VexExecution.Relationship?,
         val job:
             Job,
         val mutableState:
@@ -134,10 +101,10 @@ internal class VexCoroutineLauncher(
             ManagedExecution
         >()
 
-    private val lanes =
+    private val relationships =
         LinkedHashMap<
-            RelationshipKey,
-            Lane
+            VexExecution.Relationship,
+            MaintainedRelationship
         >()
 
     private val mutableExecutions =
@@ -174,9 +141,7 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                id =
-                    null,
-                relationshipKey =
+                relationship =
                     null,
                 predecessors =
                     emptyList(),
@@ -190,11 +155,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchEarliest(
-        id:
-            VexExecution.Id,
-        relationshipOwner:
-            Any =
-            id,
+        relationship:
+            VexExecution.Relationship,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -206,25 +168,17 @@ internal class VexCoroutineLauncher(
         ) {
             requireAcceptingWorkLocked()
 
-            val relationshipKey =
-                RelationshipKey(
-                    owner =
-                        relationshipOwner,
-                    id =
-                        id,
-                )
-
-            val lane =
-                laneLocked(
-                    relationshipKey =
-                        relationshipKey,
-                    mode =
-                        LaneMode.Earliest,
+            val maintained =
+                relationshipLocked(
+                    relationship =
+                        relationship,
+                    approach =
+                        VexExecution.Approach.Earliest,
                 )
 
             val existing =
-                activeLaneMembersLocked(
-                    lane,
+                activeRelationshipMembersLocked(
+                    maintained,
                 )
                     .firstOrNull()
 
@@ -240,10 +194,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                id =
-                    id,
-                relationshipKey =
-                    relationshipKey,
+                relationship =
+                    relationship,
                 predecessors =
                     emptyList(),
                 maintainedObservation =
@@ -256,11 +208,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchLatest(
-        id:
-            VexExecution.Id,
-        relationshipOwner:
-            Any =
-            id,
+        relationship:
+            VexExecution.Relationship,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -272,25 +221,17 @@ internal class VexCoroutineLauncher(
         ) {
             requireAcceptingWorkLocked()
 
-            val relationshipKey =
-                RelationshipKey(
-                    owner =
-                        relationshipOwner,
-                    id =
-                        id,
-                )
-
-            val lane =
-                laneLocked(
-                    relationshipKey =
-                        relationshipKey,
-                    mode =
-                        LaneMode.Latest,
+            val maintained =
+                relationshipLocked(
+                    relationship =
+                        relationship,
+                    approach =
+                        VexExecution.Approach.Latest,
                 )
 
             val predecessors =
-                activeLaneMembersLocked(
-                    lane,
+                activeRelationshipMembersLocked(
+                    maintained,
                 )
 
             predecessors
@@ -298,7 +239,7 @@ internal class VexCoroutineLauncher(
                     predecessor.job.cancel(
                         CancellationException(
                             "superseded by latest execution for " +
-                                id,
+                                relationship,
                         ),
                     )
                 }
@@ -306,10 +247,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                id =
-                    id,
-                relationshipKey =
-                    relationshipKey,
+                relationship =
+                    relationship,
                 predecessors =
                     predecessors
                         .map {
@@ -325,11 +264,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchQueued(
-        id:
-            VexExecution.Id,
-        relationshipOwner:
-            Any =
-            id,
+        relationship:
+            VexExecution.Relationship,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -341,34 +277,24 @@ internal class VexCoroutineLauncher(
         ) {
             requireAcceptingWorkLocked()
 
-            val relationshipKey =
-                RelationshipKey(
-                    owner =
-                        relationshipOwner,
-                    id =
-                        id,
-                )
-
-            val lane =
-                laneLocked(
-                    relationshipKey =
-                        relationshipKey,
-                    mode =
-                        LaneMode.Queued,
+            val maintained =
+                relationshipLocked(
+                    relationship =
+                        relationship,
+                    approach =
+                        VexExecution.Approach.Queued,
                 )
 
             val predecessors =
-                activeLaneMembersLocked(
-                    lane,
+                activeRelationshipMembersLocked(
+                    maintained,
                 )
 
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                id =
-                    id,
-                relationshipKey =
-                    relationshipKey,
+                relationship =
+                    relationship,
                 predecessors =
                     predecessors
                         .map {
@@ -415,9 +341,7 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 sourceRef =
                     sourceRef,
-                id =
-                    null,
-                relationshipKey =
+                relationship =
                     null,
                 predecessors =
                     emptyList(),
@@ -592,34 +516,34 @@ internal class VexCoroutineLauncher(
         }
     }
 
-    private fun laneLocked(
-        relationshipKey:
-            RelationshipKey,
-        mode:
-            LaneMode,
+    private fun relationshipLocked(
+        relationship:
+            VexExecution.Relationship,
+        approach:
+            VexExecution.Approach,
     ):
-        Lane {
+        MaintainedRelationship {
         val existing =
-            lanes[
-                relationshipKey
+            relationships[
+                relationship
             ]
 
         if (
             existing ==
             null
         ) {
-            return Lane(
-                mode =
-                    mode,
-            ).also { lane ->
-                lanes[
-                    relationshipKey
+            return MaintainedRelationship(
+                approach =
+                    approach,
+            ).also { maintained ->
+                relationships[
+                    relationship
                 ] =
-                    lane
+                    maintained
             }
         }
 
-        activeLaneMembersLocked(
+        activeRelationshipMembersLocked(
             existing,
         )
 
@@ -627,35 +551,35 @@ internal class VexCoroutineLauncher(
             existing.instances
                 .isEmpty()
         ) {
-            existing.mode =
-                mode
+            existing.approach =
+                approach
             return existing
         }
 
         check(
-            existing.mode ==
-                mode,
+            existing.approach ==
+                approach,
         ) {
-            "Execution id " +
-                relationshipKey.id +
+            "Execution relationship " +
+                relationship +
                 " is already active as " +
-                existing.mode +
+                existing.approach +
                 " and cannot also be " +
-                mode
+                approach
         }
 
         return existing
     }
 
-    private fun activeLaneMembersLocked(
-        lane:
-            Lane,
+    private fun activeRelationshipMembersLocked(
+        maintained:
+            MaintainedRelationship,
     ):
         List<
             ManagedExecution
         > {
         val members =
-            lane.instances
+            maintained.instances
                 .mapNotNull(
                     active::get,
                 )
@@ -663,7 +587,7 @@ internal class VexCoroutineLauncher(
                     !it.job.isCompleted
                 }
 
-        lane.instances.retainAll(
+        maintained.instances.retainAll(
             members
                 .mapTo(
                     linkedSetOf(),
@@ -678,10 +602,8 @@ internal class VexCoroutineLauncher(
     private fun createManagedLocked(
         sourceRef:
             VexExecution.SourceRef,
-        id:
-            VexExecution.Id?,
-        relationshipKey:
-            RelationshipKey?,
+        relationship:
+            VexExecution.Relationship?,
         predecessors:
             List<Job>,
         maintainedObservation:
@@ -704,8 +626,6 @@ internal class VexCoroutineLauncher(
                         instanceId,
                     sourceRef =
                         sourceRef,
-                    id =
-                        id,
                     status =
                         VexExecution.Status.STARTING,
                     attempt =
@@ -739,8 +659,6 @@ internal class VexCoroutineLauncher(
                         instanceId,
                     sourceRef =
                         sourceRef,
-                    id =
-                        id,
                     restartRecoverableFailure =
                         restartRecoverableFailure,
                     mutableState =
@@ -756,8 +674,8 @@ internal class VexCoroutineLauncher(
                     instanceId,
                 sourceRef =
                     sourceRef,
-                id =
-                    id,
+                relationship =
+                    relationship,
                 job =
                     job,
                 mutableState =
@@ -771,14 +689,14 @@ internal class VexCoroutineLauncher(
         ] =
             managed
 
-        relationshipKey?.let { key ->
+        relationship?.let { key ->
             requireNotNull(
-                lanes[
+                relationships[
                     key
                 ],
             ) {
                 "Execution relationship " +
-                    key.id +
+                    key +
                     " must be established before admission"
             }
                 .instances +=
@@ -807,8 +725,6 @@ internal class VexCoroutineLauncher(
                                 instanceId,
                             sourceRef =
                                 sourceRef,
-                            id =
-                                id,
                             status =
                                 VexExecution.Status.CANCELLED,
                             attempt =
@@ -830,20 +746,20 @@ internal class VexCoroutineLauncher(
                     instanceId,
                 )
 
-                relationshipKey?.let { key ->
-                    lanes[
+                relationship?.let { key ->
+                    relationships[
                         key
                     ]
-                        ?.let { lane ->
-                            lane.instances.remove(
+                        ?.let { maintained ->
+                            maintained.instances.remove(
                                 instanceId,
                             )
 
                             if (
-                                lane.instances
+                                maintained.instances
                                     .isEmpty()
                             ) {
-                                lanes.remove(
+                                relationships.remove(
                                     key,
                                 )
                             }
@@ -873,10 +789,6 @@ internal class VexCoroutineLauncher(
             override val sourceRef:
                 VexExecution.SourceRef =
                 managed.sourceRef
-
-            override val id:
-                VexExecution.Id? =
-                managed.id
 
             override val state:
                 StateFlow<
@@ -941,8 +853,6 @@ internal class VexCoroutineLauncher(
             VexExecution.InstanceId,
         sourceRef:
             VexExecution.SourceRef,
-        id:
-            VexExecution.Id?,
         restartRecoverableFailure:
             Boolean,
         mutableState:
@@ -974,8 +884,6 @@ internal class VexCoroutineLauncher(
                                 instanceId,
                             sourceRef =
                                 sourceRef,
-                            id =
-                                id,
                             status =
                                 VexExecution.Status.RUNNING,
                             attempt =
@@ -999,8 +907,6 @@ internal class VexCoroutineLauncher(
                                     instanceId,
                                 sourceRef =
                                     sourceRef,
-                                id =
-                                    id,
                                 status =
                                     VexExecution.Status.COMPLETED,
                                 attempt =
@@ -1047,8 +953,6 @@ internal class VexCoroutineLauncher(
                                         instanceId,
                                     sourceRef =
                                         sourceRef,
-                                    id =
-                                        id,
                                     status =
                                         VexExecution.Status.FAILED,
                                     attempt =
@@ -1076,8 +980,6 @@ internal class VexCoroutineLauncher(
                                     instanceId,
                                 sourceRef =
                                     sourceRef,
-                                id =
-                                    id,
                                 status =
                                     VexExecution.Status.RESTARTING,
                                 attempt =
@@ -1114,8 +1016,6 @@ internal class VexCoroutineLauncher(
                             instanceId,
                         sourceRef =
                             sourceRef,
-                        id =
-                            id,
                         status =
                             VexExecution.Status.CANCELLED,
                         attempt =
