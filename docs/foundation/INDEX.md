@@ -21,16 +21,18 @@ Current clean foundation:
 
 ~~~text
 architecture/behavior/FAMILY-CIRCUIT.md
-VexFamilyCircuit.kt
-VexFamilyCircuitTestSampleSuite.kt
+architecture/behavior/src/main/.../VexBehaviorV2.kt
+architecture/behavior/src/test/.../VexBehaviorV2FamilyCircuitTestSampleSuite.kt
 ~~~
 
 The current hierarchy is:
 
 ~~~text
 VexFamily
-├─ VexControlFamily
-└─ VexCompoundFamily
+├─ VexBehaviorV2Family
+│    Control-driven State + Control -> Act
+└─ VexBehaviorV2CompoundFamily
+     observed truths -> latest Input -> process -> Output -> committed Family State -> Act
 ~~~
 
 The teaching suite uses SingleFamily, ListFamily, BooleanFamily and MultiFamily so readers learn the
@@ -49,7 +51,8 @@ partial Input
 -> observed target CURRENT as NEW Input
 ~~~
 
-Async Effect custody remains outside this baseline.
+The current V2 source also carries begin(Replaceable|Sequenced) execution custody through the existing
+VexExecution foundation. Execution does not become another semantic State owner.
 
 <!-- [VXG RealForever][FOUNDATION][FAMILY-CIRCUIT] -->
 
