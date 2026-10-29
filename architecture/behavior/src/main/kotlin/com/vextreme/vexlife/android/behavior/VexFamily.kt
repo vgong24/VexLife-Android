@@ -10,6 +10,10 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Live Family runtime for one semantic State and Control vocabulary.
  *
+ * [Family] is the concrete VexFamily root itself, not an arbitrary marker. The root bound closes
+ * compile-time kinship so State and Control cannot agree on a fake coordinate that is not the
+ * Family that actually owns them.
+ *
  * Human-visible runtime call:
  *
  *     activate(control)
@@ -25,16 +29,23 @@ import kotlinx.coroutines.flow.asStateFlow
  * meaning.
  */
 abstract class VexFamily<
-    Family : Any,
-    FamilyState : VexFamily.State<Family>,
-    FamilyControl : VexFamily.Control<Family>,
+    Family,
+    FamilyState,
+    FamilyControl,
 >(
     initialState: FamilyState,
     private val executionRoot:
         VexExecutionRoot,
     private val logger:
         VexLogger.Sink,
-) {
+) where
+    Family : VexFamily<
+        Family,
+        FamilyState,
+        FamilyControl
+    >,
+    FamilyState : VexFamily.State<Family>,
+    FamilyControl : VexFamily.Control<Family> {
     /**
      * Compile-time kinship marker for semantic State belonging to one exact Family coordinate.
      */

@@ -83,11 +83,14 @@ concrete Family, for example `ThemeModeFamily.DisplayState`, and implements
 
 ## Family kinship
 
-The direct Family keeps compile-time kinship without restoring the old recursive self-generic
-framework:
+The direct Family closes compile-time kinship with one recursive bound at the root, without
+propagating recursive self-generics through every child:
 
 ~~~text
 VexFamily<Family, State, Control>
+
+Family
+    -> must itself be VexFamily<Family, State, Control>
 
 State
     -> VexFamily.State<Family>
@@ -114,11 +117,18 @@ class ThemeModeFamily(...) :
 }
 ~~~
 
-This prevents another Family's Control from being combined with this Family's State. Family-owned
-children such as `DisplayState`, `Store`, and `Act` require a Family-bound State type, so kinship
-continues down the tree without repeating a large recursive generic equation at every call site.
+This prevents another Family's Control from being combined with this Family's State and also
+prevents an arbitrary marker type from pretending to be the Family coordinate. The concrete root
+must actually be the VexFamily that owns the vocabulary.
+
+Family-owned children such as `DisplayState`, `Store`, and `Act` require a Family-bound State
+type, so kinship continues down the tree without repeating the recursive root equation at every call
+site.
 
 ~~~text
+ROOT SAFETY
+    Family coordinate must itself be the owning VexFamily
+
 FAMILY SAFETY
     ThemeModeFamily.State + MapsFamily.Control
     -> does not satisfy VexFamily<ThemeModeFamily, ...>

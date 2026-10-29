@@ -62,6 +62,7 @@ two vocabularies:
 
 ~~~text
 VexFamily<Family, State, Control>
+    Family  : VexFamily<Family, State, Control>
     State   : VexFamily.State<Family>
     Control : VexFamily.Control<Family>
 ~~~
@@ -69,7 +70,9 @@ VexFamily<Family, State, Control>
 Family-owned children that carry semantic State require that Family-bound State type, so
 DisplayState / Store / Act cannot be formed around an arbitrary unrelated value type.
 
-This restores compile-time Family safety without restoring the older recursive Family self-generic.
+The recursive constraint exists only at the root to prove the coordinate is the actual owning
+Family. Descendants then carry the already-bound State relationship instead of repeating the whole
+root equation.
 
 ## State ownership
 
