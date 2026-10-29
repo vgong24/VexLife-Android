@@ -30,7 +30,6 @@ import com.vextreme.vexlife.android.screens.shared.conversation.VexFamilyConvers
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
-import com.vextreme.vexlife.android.ui.ThemeMode
 
 object HomeScreen : AppScreenBlueprint(
     screenKey = "home",
@@ -108,7 +107,6 @@ object HomeScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        themeMode: ThemeMode,
     ) {
         HomeScreenContent(
             runtime = runtime,

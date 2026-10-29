@@ -39,7 +39,6 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.ui.ThemeMode
 
 object GalleryScreen : AppScreenBlueprint(
     screenKey = "gallery",
@@ -254,7 +253,6 @@ object GalleryScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        themeMode: ThemeMode,
     ) {
         GalleryScreenContent(runtime)
     }

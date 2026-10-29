@@ -13,7 +13,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
@@ -96,9 +95,6 @@ internal fun VexLifeApp(
     val repositories = session.repositories
     val relays = session.relays
     val sessionScope = session.scope
-    val themeMode by
-        session.themeModeFamily.states.collectAsState()
-
     LaunchedEffect(runtime) {
         runtime.appOpened()
     }
@@ -118,13 +114,15 @@ internal fun VexLifeApp(
         )
     }
 
-    VexLifeTheme(themeMode = themeMode) {
+    VexLifeTheme(
+        themeModeFamily =
+            session.themeModeFamily,
+    ) {
         VexLifeScaffold(
             runtime = runtime,
             repositories = repositories,
             relays = relays,
             sessionScope = sessionScope,
-            themeMode = themeMode,
         )
     }
 }
@@ -135,7 +133,6 @@ private fun VexLifeScaffold(
     repositories: AppRepositories,
     relays: VexLifeRelays,
     sessionScope: CoroutineScope,
-    themeMode: ThemeMode,
 ) {
     val primaryScreens = AppScreens.primary
     val pagerState = rememberPagerState(
@@ -204,7 +201,6 @@ private fun VexLifeScaffold(
                     repositories = repositories,
                     relays = relays,
                     sessionScope = sessionScope,
-                    themeMode = themeMode,
                 )
             }
         } else {
@@ -231,7 +227,6 @@ private fun VexLifeScaffold(
                     repositories = repositories,
                     relays = relays,
                     sessionScope = sessionScope,
-                    themeMode = themeMode,
                 )
             }
         }

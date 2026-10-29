@@ -5,13 +5,18 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
@@ -37,59 +42,108 @@ object VexLayoutTokens {
     val BottomBarHeight = 70.dp
 }
 
-private object VexLifeThemeColors {
-    val Dark =
-        darkColorScheme(
-            primary = Color(0xFFF2F2EF),
-            onPrimary = Color(0xFF111216),
-            secondary = Color(0xFF9BB7D4),
-            onSecondary = Color(0xFF111216),
-            tertiary = Color(0xFFE9C46A),
-            background = Color(0xFF0F1012),
-            onBackground = Color(0xFFF5F5F4),
-            surface = Color(0xFF17181C),
-            onSurface = Color(0xFFF5F5F4),
-            surfaceVariant = Color(0xFF202126),
-            onSurfaceVariant = Color(0xFFB7B8BF),
-            surfaceContainer = Color(0xFF202126),
-            surfaceContainerHigh = Color(0xFF272930),
-            outline = Color(0xFF5A5D68),
-            outlineVariant = Color(0xFF383A42),
-        )
+internal sealed interface VexThemePresentation {
+    val materialColorScheme:
+        ColorScheme
 
-    val Light =
-        lightColorScheme(
-            primary = Color(0xFF17181B),
-            onPrimary = Color.White,
-            secondary = Color(0xFF315D8A),
-            onSecondary = Color.White,
-            tertiary = Color(0xFF805500),
-            background = Color(0xFFF2F2F0),
-            onBackground = Color(0xFF17181B),
-            surface = Color.White,
-            onSurface = Color(0xFF17181B),
-            surfaceVariant = Color(0xFFF5F5F3),
-            onSurfaceVariant = Color(0xFF565861),
-            surfaceContainer = Color(0xFFF5F5F3),
-            surfaceContainerHigh = Color(0xFFECECEA),
-            outline = Color(0xFFAAA9A4),
-            outlineVariant = Color(0xFFD6D6D2),
-        )
-}
+    val lightSystemBars:
+        Boolean
 
-private fun ThemeMode.materialColorScheme() =
-    when (this) {
-        ThemeMode.NotSet ->
-            error(
-                "ThemeMode must be resolved before VexLifeTheme renders",
+    val darkModeControlChecked:
+        Boolean
+
+    data object Unresolved :
+        VexThemePresentation {
+        override val materialColorScheme:
+            ColorScheme
+            get() =
+                error(
+                    "ThemeMode must be resolved before VexLifeTheme renders",
+                )
+
+        override val lightSystemBars:
+            Boolean
+            get() =
+                error(
+                    "ThemeMode must be resolved before system-bar presentation",
+                )
+
+        override val darkModeControlChecked:
+            Boolean
+            get() =
+                error(
+                    "ThemeMode must be resolved before control presentation",
+                )
+    }
+
+    data object Light :
+        VexThemePresentation {
+        override val materialColorScheme =
+            lightColorScheme(
+                primary = Color(0xFF17181B),
+                onPrimary = Color.White,
+                secondary = Color(0xFF315D8A),
+                onSecondary = Color.White,
+                tertiary = Color(0xFF805500),
+                background = Color(0xFFF2F2F0),
+                onBackground = Color(0xFF17181B),
+                surface = Color.White,
+                onSurface = Color(0xFF17181B),
+                surfaceVariant = Color(0xFFF5F5F3),
+                onSurfaceVariant = Color(0xFF565861),
+                surfaceContainer = Color(0xFFF5F5F3),
+                surfaceContainerHigh = Color(0xFFECECEA),
+                outline = Color(0xFFAAA9A4),
+                outlineVariant = Color(0xFFD6D6D2),
             )
 
-        ThemeMode.Light ->
-            VexLifeThemeColors.Light
+        override val lightSystemBars =
+            true
 
-        ThemeMode.Dark ->
-            VexLifeThemeColors.Dark
+        override val darkModeControlChecked =
+            false
     }
+
+    data object Dark :
+        VexThemePresentation {
+        override val materialColorScheme =
+            darkColorScheme(
+                primary = Color(0xFFF2F2EF),
+                onPrimary = Color(0xFF111216),
+                secondary = Color(0xFF9BB7D4),
+                onSecondary = Color(0xFF111216),
+                tertiary = Color(0xFFE9C46A),
+                background = Color(0xFF0F1012),
+                onBackground = Color(0xFFF5F5F4),
+                surface = Color(0xFF17181C),
+                onSurface = Color(0xFFF5F5F4),
+                surfaceVariant = Color(0xFF202126),
+                onSurfaceVariant = Color(0xFFB7B8BF),
+                surfaceContainer = Color(0xFF202126),
+                surfaceContainerHigh = Color(0xFF272930),
+                outline = Color(0xFF5A5D68),
+                outlineVariant = Color(0xFF383A42),
+            )
+
+        override val lightSystemBars =
+            false
+
+        override val darkModeControlChecked =
+            true
+    }
+}
+
+private val LocalVexThemePresentation =
+    staticCompositionLocalOf<VexThemePresentation> {
+        error(
+            "Vex theme presentation requires an enclosing VexLifeTheme",
+        )
+    }
+
+@Composable
+internal fun currentVexThemePresentation():
+    VexThemePresentation =
+    LocalVexThemePresentation.current
 
 private val VexTypography = Typography(
     headlineLarge = TextStyle(
@@ -121,43 +175,77 @@ private val VexTypography = Typography(
  */
 @Composable
 internal fun VexLifeTheme(
-    themeMode: ThemeMode,
+    themeModeFamily: ThemeModeFamily,
+    content: @Composable () -> Unit,
+) {
+    val currentState by
+        themeModeFamily
+            .states
+            .collectAsState()
+
+    VexLifeTheme(
+        presentation =
+            themeModeFamily
+                .displayStateFor(
+                    currentState,
+                )
+                .presentation,
+        content = content,
+    )
+}
+
+@Composable
+internal fun VexLifeTheme(
+    presentation: VexThemePresentation,
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
         colorScheme =
-            themeMode.materialColorScheme(),
+            presentation.materialColorScheme,
         typography = VexTypography,
     ) {
-        val view = LocalView.current
+        CompositionLocalProvider(
+            LocalVexThemePresentation provides
+                presentation,
+        ) {
+            val view = LocalView.current
 
-        if (!view.isInEditMode) {
-            SideEffect {
-                val activity = view.context.findActivity() ?: return@SideEffect
-                val controller = WindowCompat.getInsetsController(
-                    activity.window,
-                    view,
-                )
+            if (!view.isInEditMode) {
+                SideEffect {
+                    val activity =
+                        view.context.findActivity()
+                            ?: return@SideEffect
+                    val controller =
+                        WindowCompat.getInsetsController(
+                            activity.window,
+                            view,
+                        )
 
-                controller.isAppearanceLightStatusBars =
-                    themeMode ==
-                        ThemeMode.Light
-                controller.isAppearanceLightNavigationBars =
-                    themeMode ==
-                        ThemeMode.Light
+                    controller.isAppearanceLightStatusBars =
+                        presentation.lightSystemBars
+                    controller.isAppearanceLightNavigationBars =
+                        presentation.lightSystemBars
 
-                // We draw our own themed background behind the navigation area.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    activity.window.isNavigationBarContrastEnforced = false
+                    if (
+                        Build.VERSION.SDK_INT >=
+                        Build.VERSION_CODES.Q
+                    ) {
+                        activity.window.isNavigationBarContrastEnforced =
+                            false
+                    }
                 }
             }
-        }
 
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-            content = content,
-        )
+            Surface(
+                modifier =
+                    Modifier.fillMaxSize(),
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .background,
+                content = content,
+            )
+        }
     }
 }
 

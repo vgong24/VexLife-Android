@@ -61,6 +61,52 @@ internal class ThemeModeFamily(
         }
     }
 
+    sealed interface DisplayState :
+        VexFamily.DisplayState<ThemeMode> {
+        val presentation:
+            VexThemePresentation
+
+        data object Unresolved :
+            DisplayState {
+            override val presentation =
+                VexThemePresentation.Unresolved
+        }
+
+        data object Light :
+            DisplayState {
+            override val presentation =
+                VexThemePresentation.Light
+        }
+
+        data object Dark :
+            DisplayState {
+            override val presentation =
+                VexThemePresentation.Dark
+        }
+    }
+
+    internal fun displayStateFor(
+        state: ThemeMode,
+    ):
+        DisplayState =
+        when (state) {
+            ThemeMode.NotSet ->
+                DisplayState.Unresolved
+
+            ThemeMode.Light ->
+                DisplayState.Light
+
+            ThemeMode.Dark ->
+                DisplayState.Dark
+        }
+
+    override val displayState:
+        DisplayState
+        get() =
+            displayStateFor(
+                currentState,
+            )
+
     override fun act(
         currentState: ThemeMode,
         control: Control,

@@ -31,8 +31,8 @@ import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.shell.AppFrame
 import com.vextreme.vexlife.android.ui.VexLifeRelays
-import com.vextreme.vexlife.android.ui.ThemeMode
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 
 /**
  * Shared Android Studio preview ENVIRONMENT for Screen work.
@@ -77,7 +77,6 @@ internal data class VexPreviewContext(
     val runtime: VexRuntime,
     val repositories: AppRepositories,
     val relays: VexLifeRelays,
-    val themeMode: ThemeMode,
 )
 
 /**
@@ -153,14 +152,14 @@ internal fun VexPreviewHost(
     previewSetup: VexPreviewSetup.() -> Unit = {},
     content: @Composable (VexPreviewContext) -> Unit,
 ) {
-    val themeMode =
+    val themePresentation =
         if (isSystemInDarkTheme()) {
-            ThemeMode.Dark
+            VexThemePresentation.Dark
         } else {
-            ThemeMode.Light
+            VexThemePresentation.Light
         }
     val scope = rememberCoroutineScope()
-    val context = remember(id, scope, themeMode) {
+    val context = remember(id, scope) {
         val repositories = repositoriesFactory()
         val relays =
             VexLifeRelays.create(
@@ -186,7 +185,6 @@ internal fun VexPreviewHost(
             runtime = runtime,
             repositories = repositories,
             relays = relays,
-            themeMode = themeMode,
         )
     }
 
@@ -197,7 +195,7 @@ internal fun VexPreviewHost(
         )
     }
 
-    VexLifeTheme(themeMode = context.themeMode) {
+    VexLifeTheme(presentation = themePresentation) {
         val currentScreenBlueprint =
             AppScreens.require(
                 context.runtime.currentScreen.screenId,
@@ -237,7 +235,6 @@ internal fun VexRenderedScreenPreview(
             runtime = context.runtime,
             repositories = context.repositories,
             relays = context.relays,
-            themeMode = context.themeMode,
         )
     }
 }

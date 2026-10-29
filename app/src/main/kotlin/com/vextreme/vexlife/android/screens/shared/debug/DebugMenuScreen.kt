@@ -26,7 +26,7 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.ui.ThemeMode
+import com.vextreme.vexlife.android.ui.currentVexThemePresentation
 
 object DebugMenuScreen : AppScreenBlueprint(
     screenKey = "debug-menu",
@@ -321,12 +321,10 @@ object DebugMenuScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        themeMode: ThemeMode,
     ) {
         DebugMenuScreenContent(
             runtime = runtime,
             logHistoryRepository = repositories.logHistory,
-            themeMode = themeMode,
         )
     }
 }
@@ -335,8 +333,10 @@ object DebugMenuScreen : AppScreenBlueprint(
 internal fun DebugMenuScreenContent(
     runtime: VexRuntime,
     logHistoryRepository: LogHistoryRepository,
-    themeMode: ThemeMode,
 ) {
+    val themePresentation =
+        currentVexThemePresentation()
+
     VexElementTree(
         placement = DebugMenuScreen.content,
         registry = runtime.registry,
@@ -345,8 +345,8 @@ internal fun DebugMenuScreenContent(
         toggleChecked = {
             it.elementId ==
                 DebugMenuScreen.DarkMode.elementId &&
-                themeMode ==
-                ThemeMode.Dark
+                themePresentation
+                    .darkModeControlChecked
         },
         selectedChild = runtime.presentation::selected,
     )
@@ -372,7 +372,6 @@ private fun DebugMenuScreenPreview() {
         DebugMenuScreenContent(
             runtime = context.runtime,
             logHistoryRepository = context.repositories.logHistory,
-            themeMode = context.themeMode,
         )
     }
 }
@@ -395,7 +394,6 @@ private fun DebugMenuHistoryPreview() {
         DebugMenuScreenContent(
             runtime = context.runtime,
             logHistoryRepository = context.repositories.logHistory,
-            themeMode = context.themeMode,
         )
     }
 }

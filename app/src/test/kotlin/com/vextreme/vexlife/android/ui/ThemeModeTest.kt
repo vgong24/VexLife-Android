@@ -29,6 +29,48 @@ class ThemeModeTest {
     }
 
     @Test
+    fun displayStateOwnsTheExpectedVexThemePresentation() {
+        val root =
+            VexExecutionRoot()
+
+        try {
+            val family =
+                ThemeModeFamily(
+                    initialState =
+                        ThemeMode.Light,
+                    executionRoot =
+                        root,
+                )
+
+            assertEquals(
+                ThemeModeFamily.DisplayState.Light,
+                family.displayState,
+            )
+            assertEquals(
+                VexThemePresentation.Light,
+                family.displayState.presentation,
+            )
+
+            family.activate(
+                ThemeModeFamily.Control.Select(
+                    ThemeMode.Dark,
+                ),
+            )
+
+            assertEquals(
+                ThemeModeFamily.DisplayState.Dark,
+                family.displayState,
+            )
+            assertEquals(
+                VexThemePresentation.Dark,
+                family.displayState.presentation,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
     fun selectUsesTheAcceptedFamilyCircuitWithoutBinaryInversion() {
         val root =
             VexExecutionRoot()

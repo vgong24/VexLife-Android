@@ -37,7 +37,6 @@ import com.vextreme.vexlife.android.ui.VexLifeRelays
 import com.vextreme.vexlife.android.vexstream.offline.rememberVexStreamOfflineCopyConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import com.vextreme.vexlife.android.ui.ThemeMode
 
 /**
  * One registered VexLife Screen, with feature-local library lenses.
@@ -773,7 +772,6 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         repositories: AppRepositories,
         relays: VexLifeRelays,
         sessionScope: CoroutineScope,
-        themeMode: ThemeMode,
     ) {
         VexStreamMusicScreenContent(
             runtime = runtime,
@@ -793,7 +791,6 @@ object VexStreamMusicScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        themeMode: ThemeMode,
     ) {
         VexStreamMusicScreenContent(
             runtime = runtime,

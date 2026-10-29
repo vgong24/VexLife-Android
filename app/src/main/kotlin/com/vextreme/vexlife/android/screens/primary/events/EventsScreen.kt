@@ -46,7 +46,6 @@ import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.ui.VexLifeRelays
-import com.vextreme.vexlife.android.ui.ThemeMode
 
 object EventsScreen : AppScreenBlueprint(
     screenKey = "events",
@@ -66,7 +65,6 @@ object EventsScreen : AppScreenBlueprint(
         runtime: VexRuntime,
         repositories: AppRepositories,
         relays: VexLifeRelays,
-        themeMode: ThemeMode,
     ) {
         EventsScreenContent(
             runtime = runtime,
