@@ -349,6 +349,41 @@ abstract class VexExecution protected constructor(
         )
 
     companion object {
+        /**
+         * Maintained observation bridge for another rightful semantic owner.
+         *
+         * Execution owns only coroutine lifetime/restart mechanics. The caller owns what an observed
+         * value means and where that value is admitted.
+         */
+        @RelationshipFoundationApi
+        fun <Value, Source : Flow<Value>> observe(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                KClass<*>,
+            source:
+                KProperty0<Source>,
+            restartOnSourceFailure:
+                Boolean =
+                true,
+            onEach:
+                suspend (Value) -> Unit,
+        ):
+            Handle =
+            executionRoot.coroutineLauncher.launchForCollect(
+                sourceRef =
+                    sourceRef(
+                        owner,
+                        source,
+                    ),
+                restartOnSourceFailure =
+                    restartOnSourceFailure,
+                source =
+                    source::get,
+                onEach =
+                    onEach,
+            )
+
         fun <Argument, Result> begin(
             executionRoot: VexExecutionRoot,
             owner: KClass<*>,
