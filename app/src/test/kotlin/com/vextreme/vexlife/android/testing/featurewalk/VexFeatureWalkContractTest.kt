@@ -7,6 +7,7 @@ import com.vextreme.vexlife.android.testing.journey.VexJourney
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
 import com.vextreme.vexlife.android.testing.journey.VexJourneyShard
 import com.vextreme.vexlife.android.testing.journey.featureWalkCatalogEntries
+import com.vextreme.vexlife.android.ui.vexThemeModeFeatureWalkProofBacklinks
 import java.nio.file.Files
 import java.nio.file.Path
 import org.junit.Assert.assertEquals
@@ -19,7 +20,8 @@ class VexFeatureWalkContractTest {
     private val proofBacklinks =
         vexConversationFeatureWalkProofBacklinks +
             vexMapsFeatureWalkProofBacklinks +
-            vexStreamFeatureWalkProofBacklinks
+            vexStreamFeatureWalkProofBacklinks +
+            vexThemeModeFeatureWalkProofBacklinks
 
     @Test
     fun stableHierarchyIsUniqueAndDirectlyAddressable() {
@@ -382,7 +384,7 @@ class VexFeatureWalkContractTest {
     }
 
     @Test
-    fun traceabilityReportKeepsConversationDoorwayAndVexMapsCompletionHeld() {
+    fun traceabilityReportShowsThemeModeActiveWhileOtherHeldEdgesStayHeld() {
         val report =
             renderFeatureWalkReport(
                 features =
@@ -410,12 +412,25 @@ class VexFeatureWalkContractTest {
         )
         assertTrue(
             report.contains(
-                "${ThemeModeFeatureWalkRefs.TOGGLE_THEME_MODE} status=HELD journey=HELD",
+                "${ThemeModeFeatureWalkRefs.TOGGLE_THEME_MODE} status=ACTIVE " +
+                    "journey=shared.debug/toggle-theme-mode",
             ),
         )
         assertTrue(
             report.contains(
-                "${ThemeModeFeatureWalkRefs.INSTALLED_TOGGLE_REALIZATION} state=HELD",
+                "${ThemeModeFeatureWalkRefs.INSTALLED_TOGGLE_REALIZATION} state=ACTIVE",
+            ),
+        )
+        assertTrue(
+            report.contains(
+                "com.vextreme.vexlife.android.ui.VexLifeSessionTest#" +
+                    "debugMenuThemeActionRoutesThroughTheSessionThemeModeFamily",
+            ),
+        )
+        assertTrue(
+            report.contains(
+                "com.vextreme.vexlife.android.ui.ThemeModeTest#" +
+                    "displayStateOwnsTheExpectedVexThemePresentation",
             ),
         )
 

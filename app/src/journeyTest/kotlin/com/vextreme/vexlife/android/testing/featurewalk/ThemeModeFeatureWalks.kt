@@ -37,13 +37,6 @@ internal object ThemeModeFeatureWalks {
                             "installed-toggle-realization",
                         title =
                             "The installed Debug Menu toggle enters ThemeModeFamily and the app renders the resulting Theme Mode",
-                        hold =
-                            VexFeatureWalkHold(
-                                reason =
-                                    "ThemeMode Family semantics are source-proved, but the current production Debug Menu action still owns a Boolean session callback instead of entering ThemeModeFamily.",
-                                releasePredicate =
-                                    "Accepted production source routes DebugMenuScreen.DarkMode through ThemeModeFamily.Control.Toggle, and a dedicated Feature-Walk Journey executes the installed toggle while observing the resulting theme projection.",
-                            ),
                     ),
                 ),
         )
