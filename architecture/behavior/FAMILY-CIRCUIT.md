@@ -1,109 +1,102 @@
-# Family Circuit — readable high-confidence boundary
+# Family Circuit — direct readable runtime
 
 [VXG RealForever]
 
-This candidate keeps the Family language deliberately small and human-readable.
+The current candidate keeps the runtime call graph visible in source.
 
-## Family
-
-~~~text
-<Feature>Family
-  State
-  Control
-  DisplayState
-  StateRelay
-  currentState
-  states
-  activate(Control)
-  Store? / begin(...) when earned
-~~~
-
-The live root is:
-
-~~~kotlin
-VexFamily<State, Control>
-~~~
-
-The two generics bind the State and Control contracts. There is no recursive Family self-generic in
-the new path.
-
-## State + Control -> Act
-
-Act remains the authored relationship, not another feature vocabulary type.
-
-~~~kotlin
-state<State.Idle> {
-    on<Control.Load> { currentState, control ->
-        admit(...)
-        begin(...) {
-            ...
-        }
-    }
-}
-~~~
-
-Read it literally:
+## Family runtime
 
 ~~~text
-CURRENT State
-+ incoming Control
--> authored Act meaning
+caller / UI
+-> Family.activate(control)
+-> Family.act(currentState, control)
+-> state<State> / on<Control>
 -> stay() or admit(State)
 -> optional begin(...)
+-> StateRelay / execution
 ~~~
 
-Both singleton and payload Control forms receive currentState and control in the lambda so the causal
-inputs stay visible.
+There is no separately constructed `VexActs` table, no `VexActsBuilder`, no stored `VexActRule`,
+and no hidden `operator fun invoke` between activate(...) and the concrete Family's State + Control
+logic.
 
-The public Family entrance remains:
+## Concrete Family
+
+A concrete Family owns the direct Act function:
 
 ~~~kotlin
-family.activate(control)
+override fun act(
+    currentState: State,
+    control: Control,
+): VexAct<State>? =
+    state<State.Light>(
+        currentState,
+        control,
+    ) { _, control ->
+        on(
+            expectedControl = Control.Toggle,
+            control = control,
+        ) {
+            admit(State.Dark)
+        }
+    }
+        ?: state<State.Dark>(
+            currentState,
+            control,
+        ) { _, control ->
+            on(
+                expectedControl = Control.Toggle,
+                control = control,
+            ) {
+                admit(State.Light)
+            }
+        }
 ~~~
 
-Family does not expose a resolve(...) API or an Act carrier.
+`state` and `on` are runtime branching helpers called from that function. They do not register a
+relationship table during Family construction.
 
-## StateRelay / current State
-
-~~~text
-StateRelay
-├─ current State -> Family.currentState
-└─ observable State -> Family.states
-~~~
-
-Family does not retain another semantic-State copy.
+## State ownership
 
 ~~~text
-admit(State)
--> StateRelay
--> currentState / states
-~~~
+private StateRelay
+  MutableStateFlow<State>
 
-The current candidate uses the existing StateFlow substrate for this holder; it does not add another
-Relay hierarchy or revision/currentness token. Competing-cause serialization/currentness remains the
-separate open pressure already identified by the Origin Walk.
-
-## DisplayState
-
-~~~text
 Family.currentState
--> Family.displayState
--> UI / VexBoard / projectable consumers
+  -> StateRelay.value
+
+Family.states
+  -> StateRelay.asStateFlow()
+
+activate(...)
+  -> Act.Admit(State)
+  -> setCurrentState(State)
+  -> StateRelay.value = State
 ~~~
 
-DisplayState does not own another semantic truth.
+StateRelay remains the one live State holder.
 
-When no richer projection is earned:
+## Act outcome
 
-~~~kotlin
-VexDisplayState.Empty(currentState)
+The direct act(...) function returns one small Act outcome:
+
+~~~text
+no Act
+  null
+
+stay
+  current State remains current
+
+admit(State)
+  activate(...) writes State into StateRelay
+
+optional begin(...)
+  activate(...) starts the authored execution consequence
 ~~~
 
-is the structural zero.
+There is no separate StateDisposition object.
 
-## Functions and nouns
-
-Current language rule:
+## Human-visible nouns and verbs
 
 ~~~text
 NOUNS
@@ -111,34 +104,24 @@ NOUNS
   State
   Control
   DisplayState
+  Act
+  StateRelay
   InputState
   OutputState
   Store
 
 VERBS
   activate(...)
+  act(...)
+  state(...)
+  on(...)
+  stay()
   admit(...)
   begin(...)
-  save(...)
   process(...)
 ~~~
 
-The state/on grammar exists only to keep State + Control traversal canonical and visible. Internal
-matching helpers are not architecture vocabulary.
-
-## Convergence remains a separate open integration boundary
-
-The accepted Relay/Origin process law remains:
-
-~~~text
-partial observations
-+ retained CURRENT InputState
--> complete InputState
--> process(complete InputState)
--> ONE OutputState(fields...)
-~~~
-
-Process remains an ordinary function:
+## Process remains separate
 
 ~~~kotlin
 fun process(
@@ -146,46 +129,29 @@ fun process(
 ): OutputState
 ~~~
 
-This PR does not introduce CompoundFamily, stateFactory, Family-level revision, post-commit
-act(OutputState), or another SCAE chain after Process.
-
-## SIPOC continuity
-
-| Layer | Supplier | Input | Process | Output | Customer |
-| --- | --- | --- | --- | --- | --- |
-| Act | caller + Family | currentState + Control | state/on authored meaning | stay/admit + optional begin | Family / execution |
-| DisplayState | Family | currentState | project | DisplayState | UI / projectable consumers |
-| Compound currentization | observed owners | partial + retained InputState | currentize | complete InputState | process |
-| Process | Compound currentization | complete InputState | calculate once | OutputState(fields) | open Family/Relay integration boundary |
-
-A local simplification is not complete if its Output no longer satisfies the next customer's Input.
-
-## Intentionally open
+The current unresolved seam remains:
 
 ~~~text
-one serialized Family-current decision when Control and observation collide
+OutputState
+-> rightful StateRelay / Family.currentState handoff
+~~~
+
+This PR does not add CompoundFamily, stateFactory, Family revision, or post-process Act machinery.
+
+## Current open edges
+
+~~~text
+serialized competing-cause State decision / stale async result
 
 cross-cycle relationship memory and its rightful explicit supplier
 
-provider/intent stable identity mapping
+provider / intent stable identity mapping
 
 exact Family + Relay Single/Compound composition
 
-whether the remaining State/Control generics can be reduced further without losing a real contract
-~~~
-
-## Review path
-
-~~~text
-1. FAMILY-CIRCUIT.md
-2. VexFamilyHighConfidenceTest.kt
-3. VexFamily.kt
-4. VexActsBuilder.kt
-5. VexAct.kt only when inspecting internal Act carriers
-6. VexFamilyStore.kt / VexFamilyLogger.kt when those depths matter
-7. architecture/relay only when convergence/currentization is implicated
+Process OutputState -> rightful Family.currentState handoff
 ~~~
 
 Repository Gradle/JVM proof remains PENDING.
 
-<!-- [VXG RealForever][VEX-BEHAVIOR][FAMILY-CIRCUIT][READABLE-HIGH-CONFIDENCE] -->
+<!-- [VXG RealForever][VEX-BEHAVIOR][FAMILY][DIRECT-RUNTIME] -->

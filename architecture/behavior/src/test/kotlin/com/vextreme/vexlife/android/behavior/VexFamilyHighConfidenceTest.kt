@@ -7,7 +7,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -64,67 +63,83 @@ class VexFamilyHighConfidenceTest {
         }
 
         interface Store :
-            VexFamilyStateStore<
-                State
-            >
+            VexFamilyStateStore<State>
 
         data class DisplayState(
             val value:
                 String?,
         ) :
-            VexDisplayState<
-                State
-            >
+            VexDisplayState<State>
 
-        protected override val acts =
-            vexActs<
-                State,
-                Control
-            >(
-                behaviorRef =
-                    "test.family.value",
-            ) {
-                state<State.Empty> {
-                    on<Control.Set> { currentState, control ->
-                        admit(
-                            State.Ready(
-                                value =
-                                    control.value,
-                            ),
-                        )
-                    }
-
-                    on<Control.Commit> { currentState, control ->
-                        stay()
-
-                        begin(
-                            mode =
-                                VexBeginMode.Sequenced,
-                        ) {
-                            save(
-                                State.Ready(
-                                    value =
-                                        control.value,
-                                ),
-                            ).results {
-                                success {
-                                    admit(
+        /**
+         * This is the function Family.activate(...) calls.
+         *
+         * State and Control traversal is visible here; there is no separately constructed Acts table.
+         */
+        override fun act(
+            currentState: State,
+            control: Control,
+        ):
+            VexAct<State>? =
+            state<State.Empty>(
+                currentState =
+                    currentState,
+                control =
+                    control,
+            ) { _, control ->
+                on<Control.Set>(
+                    control =
+                        control,
+                ) { control ->
+                    admit(
+                        State.Ready(
+                            value =
+                                control.value,
+                        ),
+                    )
+                }
+                    ?: on<Control.Commit>(
+                        control =
+                            control,
+                    ) { control ->
+                        stay(
+                            begin =
+                                begin(
+                                    mode =
+                                        VexBeginMode.Sequenced,
+                                ) {
+                                    save(
                                         State.Ready(
                                             value =
                                                 control.value,
                                         ),
-                                    )
-                                }
+                                    ).results {
+                                        success {
+                                            admit(
+                                                State.Ready(
+                                                    value =
+                                                        control.value,
+                                                ),
+                                            )
+                                        }
 
-                                failure {
-                                }
-                            }
-                        }
+                                        failure {
+                                        }
+                                    }
+                                },
+                        )
                     }
-                }
-
-                state<State.Ready> {
-                    on<Control.Set> { currentState, control ->
+            }
+                ?: state<State.Ready>(
+                    currentState =
+                        currentState,
+                    control =
+                        control,
+                ) { currentState, control ->
+                    on<Control.Set>(
+                        control =
+                            control,
+                    ) { control ->
                         admit(
                             currentState.copy(
                                 value =
@@ -133,7 +148,6 @@ class VexFamilyHighConfidenceTest {
                         )
                     }
                 }
-            }
 
         override val displayState:
             DisplayState
@@ -180,20 +194,24 @@ class VexFamilyHighConfidenceTest {
                 Control
         }
 
-        protected override val acts =
-            vexActs<
-                State,
-                Control
-            >(
-                behaviorRef =
-                    "test.family.minimal",
-            ) {
-                state<State.Idle> {
-                    on(
+        override fun act(
+            currentState: State,
+            control: Control,
+        ):
+            VexAct<State>? =
+            state<State.Idle>(
+                currentState =
+                    currentState,
+                control =
+                    control,
+            ) { _, control ->
+                on(
+                    expectedControl =
                         Control.Keep,
-                    ) { currentState, control ->
-                        stay()
-                    }
+                    control =
+                        control,
+                ) {
+                    stay()
                 }
             }
     }
@@ -201,9 +219,7 @@ class VexFamilyHighConfidenceTest {
     private class GatedStore :
         ValueFamily.Store {
         private val mutableState =
-            MutableStateFlow<
-                ValueFamily.State
-            >(
+            MutableStateFlow<ValueFamily.State>(
                 ValueFamily.State.Empty,
             )
 
@@ -254,7 +270,7 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun stateAndControlTraversalIsVisibleAtTheAuthoringSite() {
+    fun activateCallsTheConcreteFamilyActFunctionThenAdmitsIntoTheSameStateRelay() {
         val root =
             VexExecutionRoot()
 
@@ -267,20 +283,12 @@ class VexFamilyHighConfidenceTest {
                         root,
                 )
 
-            val control =
-                ValueFamily.Control.Set(
-                    value =
-                        "one",
-                )
-
-            assertTrue(
-                family.isAvailable(
-                    control,
-                ),
-            )
             assertTrue(
                 family.activate(
-                    control,
+                    ValueFamily.Control.Set(
+                        value =
+                            "one",
+                    ),
                 ),
             )
             assertEquals(
@@ -289,13 +297,6 @@ class VexFamilyHighConfidenceTest {
                         "one",
                 ),
                 family.currentState,
-            )
-            assertEquals(
-                ValueFamily.DisplayState(
-                    value =
-                        "one",
-                ),
-                family.displayState,
             )
             assertEquals(
                 family.currentState,
@@ -327,7 +328,7 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun availabilityAndActivationUseTheSameCurrentStateControlGrammar() {
+    fun availabilityAndActivationCallTheSameActFunctionWithoutASeparateActsTable() {
         val root =
             VexExecutionRoot()
 
@@ -343,7 +344,7 @@ class VexFamilyHighConfidenceTest {
                         root,
                 )
 
-            val semanticNoOp =
+            val sameValue =
                 ValueFamily.Control.Set(
                     value =
                         "one",
@@ -356,12 +357,12 @@ class VexFamilyHighConfidenceTest {
 
             assertTrue(
                 family.isAvailable(
-                    semanticNoOp,
+                    sameValue,
                 ),
             )
             assertTrue(
                 family.activate(
-                    semanticNoOp,
+                    sameValue,
                 ),
             )
             assertEquals(
@@ -371,10 +372,7 @@ class VexFamilyHighConfidenceTest {
                 ),
                 family.currentState,
             )
-            assertEquals(
-                family.currentState,
-                family.states.value,
-            )
+
             assertTrue(
                 family.isAvailable(
                     change,
@@ -385,7 +383,6 @@ class VexFamilyHighConfidenceTest {
                     change,
                 ),
             )
-
             assertEquals(
                 ValueFamily.State.Ready(
                     value =

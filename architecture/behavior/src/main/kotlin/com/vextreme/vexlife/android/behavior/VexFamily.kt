@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import kotlin.reflect.KClass
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,247 +26,19 @@ interface VexDisplayState<
 }
 
 /**
- * Authored State + Control relationships for one Family.
- *
- * Feature code creates this with [vexActs] and reads the grammar as:
- *
- *     state<State.X> {
- *         on<Control.Y> { currentState, control ->
- *             ...
- *         }
- *     }
- *
- * Matching machinery is intentionally internal. Family code should not call a resolver API.
- */
-class VexActs<
-    State : Any,
-    Control : Any,
-> internal constructor(
-    val behaviorRef: String,
-    val states:
-        Set<
-            KClass<out State>
-        >,
-    private val rules:
-        List<
-            VexActRule<
-                State,
-                Control
-            >
-        >,
-) {
-    init {
-        require(
-            behaviorRef.isNotBlank(),
-        ) {
-            "behaviorRef must not be blank"
-        }
-        require(
-            states.isNotEmpty(),
-        ) {
-            "acts require at least one State"
-        }
-
-        rules.forEach { rule ->
-            require(
-                rule.from in
-                    states,
-            ) {
-                "Act source is not a registered State: " +
-                    rule.from
-            }
-        }
-    }
-
-    internal operator fun invoke(
-        currentState: State,
-        control: Control,
-    ):
-        VexAct<
-            State,
-            Control
-        >? {
-        val available =
-            rules.mapNotNull { rule ->
-                rule.match(
-                    currentState =
-                        currentState,
-                    control =
-                        control,
-                )
-                    ?.let(
-                        ::validateAct,
-                    )
-            }
-
-        require(
-            available.size <=
-                1,
-        ) {
-            "acts " +
-                behaviorRef +
-                " has ambiguous State + Control meaning for " +
-                currentState::class.simpleName +
-                " + " +
-                control
-        }
-
-        return available.singleOrNull()
-    }
-
-    private fun validateAct(
-        act:
-            VexAct<
-                State,
-                Control
-            >,
-    ):
-        VexAct<
-            State,
-            Control
-        > {
-        require(
-            act.from in
-                states,
-        ) {
-            "Act source is not a registered State: " +
-                act.from
-        }
-
-        act.immediateDisposition
-            .admittedState
-            ?.let { admittedState ->
-                require(
-                    admittedState::class in
-                        states,
-                ) {
-                    "Act immediate State is not registered: " +
-                        admittedState::class
-                }
-            }
-
-        act.begin
-            ?.operation
-            ?.let { operation ->
-                if (
-                    operation is
-                        VexSave<
-                            *
-                        >
-                ) {
-                    @Suppress(
-                        "UNCHECKED_CAST",
-                    )
-                    val save =
-                        operation as
-                            VexSave<
-                                State
-                            >
-
-                    require(
-                        save.state::class in
-                            states,
-                    ) {
-                        "Save State is not registered in " +
-                            behaviorRef
-                    }
-                }
-
-                listOf(
-                    operation.results.success,
-                    operation.results.failure,
-                ).forEach { result ->
-                    result.admittedState
-                        ?.let { laterState ->
-                            require(
-                                laterState::class in
-                                    states,
-                            ) {
-                                "later admitted State is not registered: " +
-                                    laterState::class
-                            }
-                        }
-                }
-            }
-
-        return act
-    }
-
-    fun describe():
-        String =
-        buildString {
-            appendLine(
-                behaviorRef,
-            )
-
-            rules.forEach { rule ->
-                append(
-                    rule.from.simpleName,
-                )
-                append(
-                    " --on<",
-                )
-                append(
-                    rule.controlDescription,
-                )
-                append(
-                    ">()",
-                )
-
-                rule.conditionName
-                    ?.let { name ->
-                        append(
-                            " when ",
-                        )
-                        append(
-                            name,
-                        )
-                    }
-
-                appendLine()
-            }
-        }.trimEnd()
-}
-
-fun <
-    State : Any,
-    Control : Any,
-> vexActs(
-    behaviorRef: String,
-    block:
-        VexActsBuilder<
-            State,
-            Control
-        >.() -> Unit,
-):
-    VexActs<
-        State,
-        Control
-    > =
-    VexActsBuilder<
-        State,
-        Control
-    >(
-        behaviorRef =
-            behaviorRef,
-    )
-        .apply(
-            block,
-        )
-        .build()
-
-/**
  * Live Family runtime for one semantic State and Control vocabulary.
  *
- * The generics bind the concrete State and Control contracts. They do not create another Family
- * type hierarchy.
+ * Human-visible runtime call:
  *
- * Human-facing circuit:
- *
- *     currentState + Control
- *     -> state<State> { on<Control> { currentState, control -> ... } }
+ *     activate(control)
+ *     -> act(currentState, control)
+ *     -> state<State> / on<Control>
  *     -> stay() or admit(State)
  *     -> optional begin(...)
+ *     -> StateRelay / execution
+ *
+ * The concrete Family owns [act]. There is no separately constructed Acts table or hidden invoke
+ * operator between activate(...) and the feature's State + Control logic.
  */
 abstract class VexFamily<
     State : Any,
@@ -282,8 +53,8 @@ abstract class VexFamily<
     /*
      * One live State holder.
      *
-     * Family exposes the same StateRelay truth as currentState and states; it does not retain a
-     * second copy of semantic State.
+     * Family.currentState and Family.states expose this same StateRelay truth. Family does not retain
+     * a second semantic-State copy.
      */
     private val stateRelay =
         MutableStateFlow(
@@ -299,35 +70,164 @@ abstract class VexFamily<
         get() =
             states.value
 
-    protected abstract val acts:
-        VexActs<
-            State,
-            Control
-        >
+    /**
+     * Feature-owned State + Control meaning.
+     *
+     * A concrete Family implements this function directly. Returning null means no Act is authored
+     * for the exact CURRENT State + incoming Control pair.
+     */
+    protected abstract fun act(
+        currentState: State,
+        control: Control,
+    ):
+        VexAct<State>?
+
+    /**
+     * State-shape helper for the direct [act] function.
+     *
+     * This is a runtime type branch, not construction-time rule registration.
+     */
+    protected inline fun <
+        reified Current : State,
+    > state(
+        currentState: State,
+        control: Control,
+        block:
+            (
+                currentState: Current,
+                control: Control,
+            ) ->
+                VexAct<State>?,
+    ):
+        VexAct<State>? =
+        if (
+            currentState is
+                Current
+        ) {
+            block(
+                currentState,
+                control,
+            )
+        } else {
+            null
+        }
+
+    /**
+     * Payload-Control helper for the direct [act] function.
+     */
+    protected inline fun <
+        reified RequestedControl : Control,
+    > on(
+        control: Control,
+        block:
+            (
+                control: RequestedControl,
+            ) ->
+                VexAct<State>,
+    ):
+        VexAct<State>? =
+        if (
+            control is
+                RequestedControl
+        ) {
+            block(
+                control,
+            )
+        } else {
+            null
+        }
+
+    /**
+     * Exact singleton/value Control helper for the direct [act] function.
+     */
+    protected fun on(
+        expectedControl: Control,
+        control: Control,
+        block:
+            () ->
+                VexAct<State>,
+    ):
+        VexAct<State>? =
+        if (
+            control ==
+                expectedControl
+        ) {
+            block()
+        } else {
+            null
+        }
+
+    /**
+     * Authored Act outcome: keep current semantic State.
+     */
+    protected fun stay(
+        begin:
+            VexBegin<State>? =
+            null,
+    ):
+        VexAct<State> =
+        VexAct(
+            admittedState =
+                null,
+            begin =
+                begin,
+        )
+
+    /**
+     * Authored Act outcome: admit this semantic State when activate(...) applies the Act.
+     */
+    protected fun admit(
+        state: State,
+        begin:
+            VexBegin<State>? =
+            null,
+    ):
+        VexAct<State> =
+        VexAct(
+            admittedState =
+                state,
+            begin =
+                begin,
+        )
+
+    /**
+     * Optional authored execution consequence carried by an Act.
+     */
+    protected fun begin(
+        mode: VexBeginMode,
+        block:
+            VexBeginScope<State>.() -> Unit,
+    ):
+        VexBegin<State> =
+        VexBeginScope<State>(
+            mode =
+                mode,
+        )
+            .apply(
+                block,
+            )
+            .build()
 
     open val store:
         VexFamilyStore? =
         null
 
     open val displayState:
-        VexDisplayState<
-            State
-        >
+        VexDisplayState<State>
         get() =
             VexDisplayState.Empty(
                 currentState,
             )
 
     /**
-     * Informative availability from the same CURRENT State + Control grammar used by [activate].
-     *
-     * An earlier availability read never becomes authority for a later activation.
+     * Informative availability from the same direct act(currentState, control) function used by
+     * activate(...). The returned Act is inspected but not applied.
      */
     fun isAvailable(
         control: Control,
     ):
         Boolean =
-        acts(
+        act(
             currentState =
                 currentState,
             control =
@@ -336,10 +236,12 @@ abstract class VexFamily<
             null
 
     /**
-     * Apply the Act authored for this exact CURRENT State + Control pair.
+     * Runtime entrance.
      *
-     * Returns false when no Act is authored for the pair. The internal Act carrier is never exposed
-     * as Family API.
+     * This is the explicit callsite another reader can follow:
+     *
+     *     activate(control)
+     *     -> act(currentState, control)
      */
     fun activate(
         control: Control,
@@ -349,7 +251,7 @@ abstract class VexFamily<
             currentState
 
         val act =
-            acts(
+            act(
                 currentState =
                     before,
                 control =
@@ -368,38 +270,25 @@ abstract class VexFamily<
             ),
         )
 
-        applyDisposition(
-            act.immediateDisposition,
-        )
+        act.admittedState
+            ?.let(
+                ::setCurrentState,
+            )
 
         act.begin
             ?.let(
-                ::begin,
+                ::execute,
             )
 
         return true
     }
 
-    private fun applyDisposition(
-        disposition:
-            VexStateDisposition<
-                State
-            >,
-    ) {
-        disposition
-            .admittedState
-            ?.let(
-                ::admit,
-            )
-    }
-
     /**
-     * Family-owned semantic admission seam.
+     * The write side of Family current State.
      *
-     * External observations must first pass through their rightful reconciliation/currentness
-     * boundary. Callers do not receive a generic setCurrent(...).
+     * StateRelay remains the single live holder.
      */
-    protected fun admit(
+    private fun setCurrentState(
         state: State,
     ) {
         val before =
@@ -425,11 +314,9 @@ abstract class VexFamily<
         }
     }
 
-    private fun begin(
+    private fun execute(
         begin:
-            VexBegin<
-                State
-            >,
+            VexBegin<State>,
     ) {
         when (
             val operation =
@@ -441,11 +328,9 @@ abstract class VexFamily<
                 )
                 val save =
                     operation as
-                        VexSave<
-                            State
-                        >
+                        VexSave<State>
 
-                beginSave(
+                executeSave(
                     mode =
                         begin.mode,
                     save =
@@ -465,13 +350,10 @@ abstract class VexFamily<
         }
     }
 
-    private fun beginSave(
-        mode:
-            VexBeginMode,
+    private fun executeSave(
+        mode: VexBeginMode,
         save:
-            VexSave<
-                State
-            >,
+            VexSave<State>,
     ) {
         val familyStore =
             requireNotNull(
@@ -484,9 +366,7 @@ abstract class VexFamily<
 
         val stateStore =
             familyStore as?
-                VexFamilyStateStore<
-                    *
-                >
+                VexFamilyStateStore<*>
                 ?: error(
                     "Save requires a Family State Store; " +
                         this::class.qualifiedName +
@@ -498,9 +378,7 @@ abstract class VexFamily<
         )
         val typedStateStore =
             stateStore as
-                VexFamilyStateStore<
-                    State
-                >
+                VexFamilyStateStore<State>
 
         val operation =
             typedStateStore::save
@@ -629,22 +507,13 @@ abstract class VexFamily<
         }
     }
 
-    /**
-     * Current patient-zero later consequence.
-     *
-     * This deliberately does not claim a reusable stale-result guard. A richer Family may receive
-     * newer Control/provider truth while an earlier Operation is running; that currentness law
-     * remains open pressure.
-     */
     private fun applyLaterResult(
         result:
-            VexResult<
-                State
-            >,
+            VexResult<State>,
     ) {
         result.admittedState
             ?.let(
-                ::admit,
+                ::setCurrentState,
             )
     }
 }

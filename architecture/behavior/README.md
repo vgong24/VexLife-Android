@@ -7,9 +7,9 @@ This module preserves the geometry of **what a human can do from what is true no
 
 ## Start here
 
-- **Current readable Family boundary:** [`FAMILY-CIRCUIT.md`](FAMILY-CIRCUIT.md)
-  — `VexFamily<State, Control>`, `currentState`, `activate(Control)`, visible `state/on` Act grammar,
-  mandatory DisplayState, and an explicit held boundary to Relay convergence.
+- **Current direct Family runtime:** [`FAMILY-CIRCUIT.md`](FAMILY-CIRCUIT.md)
+  — `activate(control) -> act(currentState, control) -> state/on -> stay/admit/begin`, one
+  StateRelay-backed currentState/states source, and no separately constructed Acts table.
 
 - IDE/code navigation: `VexBehaviorDocs`
 - Canonical family/package construction pattern:

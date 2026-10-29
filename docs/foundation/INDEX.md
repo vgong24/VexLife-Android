@@ -15,45 +15,38 @@ A foundation earns a dedicated entry when it has a real recurring consumer, inva
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
 
-### Readable Family candidate
+### Direct readable Family candidate
 
 Current review source:
 
 ~~~text
 architecture/behavior/FAMILY-CIRCUIT.md
 architecture/behavior/src/main/.../VexFamily.kt
-architecture/behavior/src/main/.../VexActsBuilder.kt
+architecture/behavior/src/main/.../VexAct.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-Current Family-facing language:
+Runtime call graph:
 
 ~~~text
-VexFamily<State, Control>
-  currentState
-  displayState
-  activate(Control)
-
-state<State.X> {
-  on<Control.Y> { currentState, control ->
-    stay() / admit(State)
-    optional begin(...)
-  }
-}
+Family.activate(control)
+-> concrete Family.act(currentState, control)
+-> state<State> / on<Control>
+-> stay / admit / optional begin
+-> StateRelay / execution
 ~~~
 
-The current candidate deliberately removes the V2-named runtime surface, resolve(...) language,
-recursive Family self-generic, CompoundFamily/stateFactory formalization and public Act carrier.
+The current candidate removes the separately constructed VexActs/VexActsBuilder/VexActRule path and
+the hidden operator invoke. StateRelay remains the one live current-State holder.
 
-Convergence remains owned by the separate Relay/process pressure:
+Compound/process integration remains separate and open:
 
 ~~~text
-InputState -> process(InputState) -> OutputState(fields)
+InputState -> process(InputState) -> OutputState
+OutputState -> ??? -> Family.currentState
 ~~~
 
-The exact Family/Relay composition remains OPEN.
-
-<!-- [VXG RealForever][FOUNDATION][FAMILY][READABLE-HIGH-CONFIDENCE] -->
+<!-- [VXG RealForever][FOUNDATION][FAMILY][DIRECT-RUNTIME] -->
 
 
 ## Foundation establishment criteria
