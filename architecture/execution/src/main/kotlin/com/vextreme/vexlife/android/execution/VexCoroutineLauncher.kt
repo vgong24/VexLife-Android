@@ -336,7 +336,7 @@ internal class VexCoroutineLauncher(
                     managed.maintainedObservation &&
                         managed.sourceRef ==
                         sourceRef &&
-                        managed.job.isActive
+                        !managed.job.isCompleted
                 },
             ) {
                 "Flow source " +
@@ -409,7 +409,7 @@ internal class VexCoroutineLauncher(
                     .filter { managed ->
                         managed.sourceRef ==
                             sourceRef &&
-                            managed.job.isActive
+                            !managed.job.isCompleted
                     }
                     .map {
                         it.job
@@ -447,7 +447,7 @@ internal class VexCoroutineLauncher(
                     .filter { managed ->
                         managed.sourceRef ==
                             sourceRef &&
-                            managed.job.isActive
+                            !managed.job.isCompleted
                     }
                     .map {
                         it.job
@@ -590,7 +590,7 @@ internal class VexCoroutineLauncher(
                     active::get,
                 )
                 .filter {
-                    it.job.isActive
+                    !it.job.isCompleted
                 }
 
         lane.instances.retainAll(
