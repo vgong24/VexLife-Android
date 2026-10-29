@@ -15,6 +15,45 @@ A foundation earns a dedicated entry when it has a real recurring consumer, inva
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
 
+### Family Circuit foundation
+
+Current clean foundation:
+
+~~~text
+architecture/behavior/FAMILY-CIRCUIT.md
+VexFamilyCircuit.kt
+VexFamilyCircuitTestSampleSuite.kt
+~~~
+
+The current hierarchy is:
+
+~~~text
+VexFamily
+├─ VexControlFamily
+└─ VexCompoundFamily
+~~~
+
+The teaching suite uses SingleFamily, ListFamily, BooleanFamily and MultiFamily so readers learn the
+infrastructure without product-specific context.
+
+Compound law:
+
+~~~text
+partial Input
+-> latest(...)
+-> process(...)
+-> Output
+-> COMMIT Family.current
+-> Act when Output changed
+-> rightful target Family Control
+-> observed target CURRENT as NEW Input
+~~~
+
+Async Effect custody remains outside this baseline.
+
+<!-- [VXG RealForever][FOUNDATION][FAMILY-CIRCUIT] -->
+
+
 ## Foundation establishment criteria
 
 The temporary incomplete notice can be removed when a fresh worker with repository access can:
