@@ -452,7 +452,7 @@ class VexRelayEventsPracticumTest {
     }
 
     @Test
-    fun compoundOutputStatesSuppressInputOnlyRevisions() = runBlocking {
+    fun compoundOutputStatesSuppressInputOnlyChanges() = runBlocking {
         val feed =
             ExternalFeedRelay()
         val events =
@@ -471,8 +471,8 @@ class VexRelayEventsPracticumTest {
             }
 
         /*
-         * Both mutations advance retained Compound input/currentness but derive the exact same empty
-         * output. A downstream consumer should not see either revision.
+         * Both mutations change retained Compound input/currentness but derive the exact same empty
+         * output. A downstream consumer should not see either input-only change.
          */
         events.screenChanged(
             ScreenState(
@@ -518,15 +518,15 @@ class VexRelayEventsPracticumTest {
     }
 
     @Test
-    fun semanticNoOpDoesNotAdvanceCompoundRevision() {
+    fun semanticNoOpKeepsTheSameCompoundCurrentMeaning() {
         val events = EventsConvergenceRelay()
 
         events.screenChanged(ScreenState(currentScreenId = "events"))
-        val afterFirst = events.current.revision
+        val afterFirst = events.current
 
         events.screenChanged(ScreenState(currentScreenId = "events"))
 
-        assertEquals(afterFirst, events.current.revision)
+        assertEquals(afterFirst, events.current)
     }
 }
 

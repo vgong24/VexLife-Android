@@ -213,16 +213,16 @@ class VexNavigationConvergenceRelayTest {
                 ?.distanceToManeuverMeters,
         )
 
-        val revisionBeforeDuplicate =
-            relay.current.revision
+        val currentBeforeDuplicate =
+            relay.current
 
         relay.fixChanged(
             fix(301),
         )
 
         assertEquals(
-            revisionBeforeDuplicate,
-            relay.current.revision,
+            currentBeforeDuplicate,
+            relay.current,
         )
     }
 

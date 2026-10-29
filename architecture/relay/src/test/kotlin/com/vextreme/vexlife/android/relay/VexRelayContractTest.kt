@@ -25,7 +25,7 @@ import org.junit.Test
  * StateFlow is current-state projection, not an event ledger:
  * - intermediate racing states may be conflated for slow collectors;
  * - the final retained state must be coherent;
- * - equal semantic input/output must not manufacture duplicate revisions/emissions.
+ * - equal semantic input/output must not manufacture duplicate current-state emissions.
  */
 class VexRelayContractTest {
     private data class CounterState(
@@ -370,34 +370,53 @@ class VexRelayContractTest {
             42,
             relay.currentOutput.sum,
         )
-        assertEquals(
-            3L,
-            relay.current.revision,
-        )
     }
 
     @Test
-    fun concurrentIdenticalCompoundTriggersCollapseToOneSemanticRevision() {
+    fun repeatedIdenticalCompoundMeaningDoesNotEmitAnotherCurrentState() = runBlocking {
         val relay =
             ProbeCompoundRelay()
+        val observed =
+            mutableListOf<VexCompoundState<ProbeInput, ProbeOutput>>()
 
-        runConcurrently(
-            count = 24,
-        ) {
+        val collection =
+            async(
+                start = CoroutineStart.UNDISPATCHED,
+            ) {
+                relay.states
+                    .take(3)
+                    .toList(observed)
+            }
+
+        relay.context("events")
+        repeat(24) {
             relay.context("events")
         }
 
+        yield()
+
+        // A genuinely different current meaning releases the third expected emission.
+        relay.left(5)
+
+        withTimeout(1_000L) {
+            collection.await()
+        }
+
+        assertEquals(
+            3,
+            observed.size,
+        )
+        assertEquals(
+            null,
+            observed[0].inputState.context,
+        )
         assertEquals(
             "events",
-            relay.currentInput.context,
+            observed[1].inputState.context,
         )
         assertEquals(
-            0,
-            relay.currentOutput.sum,
-        )
-        assertEquals(
-            1L,
-            relay.current.revision,
+            5,
+            observed[2].inputState.left,
         )
     }
 
@@ -597,10 +616,6 @@ class VexRelayContractTest {
         assertEquals(
             11,
             relay.currentOutput.value,
-        )
-        assertEquals(
-            1L,
-            relay.current.revision,
         )
     }
 
