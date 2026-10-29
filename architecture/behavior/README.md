@@ -15,6 +15,11 @@ This module preserves the geometry of **what a human can do from what is true no
   State -> selects the Act -> applies immediate stay/admit -> a later render reads the resulting
   DisplayState. It proves stale rendered State is not activation authority. It does **not** prove
   Compose observation, provider-observation currentness, async-result staleness, or Store convergence.
+- **Family Circuit construction guide:** [`VexBehaviorV2FamilyCircuitTestSampleSuite`](src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorV2StateRelayOriginPressureTest.kt)
+  — read this teaching suite when you need the end-to-end ownership circuit rather than one isolated
+  pressure. It deliberately builds from independent Screen / MusicQueue / ThemeMode current owners
+  through partial Input -> latest complete Input -> process -> Output -> commit -> Act -> rightful
+  owner -> observed NEW Input. The scenario is simulated and not product behavior.
 - Review pressure/evidence:
   [`REVIEW-CHECKPOINT.md`](REVIEW-CHECKPOINT.md)
 
@@ -29,6 +34,18 @@ The V2 tests are deliberately an **evolution sequence**, not three interchangeab
 Read them in this order:
 
 ~~~text
+0. VexBehaviorV2FamilyCircuitTestSampleSuite
+   construction-teaching suite for the candidate Family Circuit Architecture
+   -> three independently-owned CURRENT truths
+   -> partial ComplexInputState observations
+   -> InputState.latest(...) forms one complete current input
+   -> ComplexFamily.process(latestStateInput) calculates meaning only
+   -> ComplexOutputState is the current relationship consequence
+   -> Output-changing commit becomes an Act consequence
+   -> Act asks the rightful owner to change
+   -> observed owner CURRENT truth returns as NEW input
+   -> input-only Compound revisions do not fabricate another Act
+
 1. VexBehaviorV2Test
    ThemeMode patient zero
    -> Family-root authoring
@@ -53,12 +70,15 @@ Read them in this order:
    -> reconciled provider truth reaches a concrete Family admission seam
 
 4. VexBehaviorV2StateRelayOriginPressureTest
-   Family currentness / nested-state pressure
+   hard-pressure continuation after the teaching suite
    -> stale async completion re-evaluates against CURRENT State
    -> nested owned lists preserve stable identity + complete snapshot layers
    -> caller-owned mutable containers detach at the copy boundary
    -> independently-owned child currentness converges by stable ref
-      instead of being recursively absorbed into parent State
+   -> arbitrary-depth State identity
+   -> process-only Compound generic
+   -> process -> commit -> Act -> observe -> NEW input
+   -> Replaceable / Sequenced committed-Output runner pressure
 ~~~
 
 The third class is intentionally a **pressure reference**, not the newest confirmed V2 template.
