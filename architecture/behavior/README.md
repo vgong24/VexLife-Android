@@ -7,10 +7,10 @@ This module preserves the geometry of **what a human can do from what is true no
 
 ## Start here
 
-- **Current Family Circuit foundation:** [`FAMILY-CIRCUIT.md`](FAMILY-CIRCUIT.md)
-  — current State ownership through VexFamily, Control-driven VexBehaviorV2Family,
-  relationship-driven VexBehaviorV2CompoundFamily, process/commit/Act/observe, and the neutral
-  VexBehaviorV2FamilyCircuitTestSampleSuite.
+- **Current V2 Family high-confidence boundary:** [`FAMILY-CIRCUIT.md`](FAMILY-CIRCUIT.md)
+  — Family-owned CURRENT State, Control/Act, mandatory DisplayState, optional begin/Store depth, and
+  the explicit open boundary to Relay convergence. Recent CompoundFamily/stateFactory/post-commit
+  Act formalization is intentionally not part of the current candidate.
 
 - IDE/code navigation: `VexBehaviorDocs`
 - Canonical family/package construction pattern:

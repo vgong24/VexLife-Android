@@ -1,307 +1,218 @@
-# Family Circuit
+# Family Circuit — high-confidence boundary
 
 [VXG RealForever]
 
-This is the clean current-entry guide for the Family Circuit foundation.
+This document intentionally preserves only the Family conclusions that survived the Origin Walk.
 
-It describes the implementation in this PR, not the Origin-Walk history that produced it.
+It does **not** promote unresolved Compound/Relay integration pressure into a production Family
+hierarchy merely because an experiment compiled.
 
-## Family root
+## Family is the semantic root
 
-Every live Family has one CURRENT semantic State.
-
-~~~text
-VexFamily
-  current
-  displayState
-  protected admit(State)
-~~~
-
-admit(State) is protected. External callers do not receive a generic setCurrent(...).
-
-displayState is the Family-owned projectable output coordinate. The default
-VexBehaviorV2DisplayState.Empty(current) adds no second truth.
-
-## Control-driven Family
-
-Use VexBehaviorV2Family when callers make semantic requests through Controls.
+The current V2 Family surface is:
 
 ~~~text
-Family
+<Feature>Family
   State
   Control
+  DisplayState
+  current
   acts
   activate(Control)
+  Store?               when durable custody is actually earned
 ~~~
 
-Acts are authored with vexActs(...).
+State is the Family's semantic CURRENT truth.
+
+External callers do not receive a generic setCurrent(...). A concrete next State must first become
+lawful through the Family's semantic relationship or through a concrete owner-specific reconciliation
+boundary.
+
+## Structural Act
+
+V2 keeps the Origin-Walk removal result:
 
 ~~~text
 CURRENT State + Control
--> resolve/materialize VexBehaviorV2Act
+-> authored Act scenario
 -> immediate stay()
-   or
--> immediate admit(next State)
--> optional begin(...)
+   or admit(concrete State)
+-> optional begin(mode) execution
 ~~~
 
-isAvailable(Control) and activate(Control) use the same CURRENT State + Control law.
+There is no required V2 Family.Act value hierarchy.
 
-Activation always re-reads CURRENT State. Earlier UI availability never becomes activation authority.
+The authored State + Control relationship is the Act.
 
-## Compound Family
+Payload Controls materialize that relationship from the actual CURRENT State value and actual Control
+payload. isAvailable(Control) and activate(Control) use the same relationship, and activation always
+re-reads CURRENT State.
 
-Use VexBehaviorV2CompoundFamily when one Family owns the CURRENT meaning of several observed truths.
+## DisplayState
 
-A concrete Compound Family gives its State ordinary readable names:
+DisplayState is a required Family-owned projectable-output coordinate.
 
 ~~~text
-MultiInputState
-MultiOutputState
-MultiCompoundState
-MultiFamily
+Family.current
+-> Family.displayState
+-> UI / VexBoard / widgets / diagnostics
 ~~~
 
-and:
+DisplayState does not become another semantic truth owner.
+
+When no richer projection is earned:
 
 ~~~text
-MultiFamily.current
-  = MultiCompoundState(
-      inputState,
-      outputState,
-      revision,
-    )
+VexBehaviorV2DisplayState.Empty(current)
 ~~~
 
-There is no sibling Compound Relay owning a second copy of the same relationship truth.
+is the structural zero: it adds no second truth while preserving where outward/projectable meaning
+belongs.
 
-## Input currentization
+## begin / Store / accountant
 
-Input implements VexBehaviorV2CompoundInputState.
+An Act may optionally enter:
 
 ~~~text
-partial incoming Input
-+ retained CURRENT Input
--> Input.latest(incoming)
--> complete latestStateInput
+begin(Replaceable | Sequenced)
+  -> Operation
 ~~~
 
-latest(...) owns partial-input currentization only.
+Execution custody does not become semantic ownership.
 
-If Input contains mutable-backed data, deepCopy() owns detachment at the ownership boundary.
-
-## Relationship calculation
-
-The concrete Compound Family implements:
+The currently exercised Store specialization keeps these truths distinct:
 
 ~~~text
-override fun process(
-    latestStateInput: InputState,
-): OutputState
+Family.current
+  semantic truth now
+
+Family.Store
+  durable custody
 ~~~
 
-Read it as:
+The Family logger/accountant may witness accepted Control, State admission and Operation outcomes.
+It does not own or reverse Family truth.
+
+## Convergence / Process boundary
+
+Several independently-owned CURRENT truths may need to be composed. That concern already has an
+accepted Relay processing foundation and remains separate from the high-confidence Family runtime in
+this PR.
+
+The process law earned by Relay / Origin pressure is:
 
 ~~~text
-here is everything CURRENT
--> what does it mean?
--> return Output
+partial observations
++ retained CURRENT InputState
+-> complete InputState
+-> process(complete InputState)
+-> ONE OutputState(fields...)
 ~~~
 
-process(...) does not:
+Process calculates relationship meaning once.
+
+OutputState may contain several simultaneously valid processed fields. A field may have its own
+ordering, precedence or availability calculation when the domain requires it; OutputState does not
+need to become a sealed topology merely so downstream code can switch on it.
+
+The following are deliberately **not** admitted by this PR:
 
 ~~~text
-mutate another owner
-execute an Effect
-consult previous Output as hidden process memory
-re-currentize partial Input
+VexBehaviorV2CompoundFamily
+VexBehaviorV2CompoundFamilyState
+stateFactory
+Family-level revision
+post-commit act(OutputState) callback
+CommittedOutput as a Family concept
+sealed Output solely to recover Act selection
 ~~~
 
-If a future calculation needs a fact, that fact belongs in the CURRENT Input circuit.
+Those were recent formalization attempts around still-open pressure.
 
-## Output
+## SIPOC continuity
 
-Output implements VexBehaviorV2CompoundOutputState.
+Before changing a Family layer, preserve the exact handoff:
 
-Output is the CURRENT consequence of the complete relationship.
+| Layer | Supplier | Input | Process | Output | Customer |
+| --- | --- | --- | --- | --- | --- |
+| Act | caller + Family | CURRENT State + Control | authored scenario | stay/admit + optional begin | Family / execution |
+| DisplayState | Family | CURRENT State | project | DisplayState | UI / projectable consumers |
+| Single observation | rightful observed owner | observed State + retained current | reconcile | next semantic State | Family currentness boundary |
+| Compound currentization | observed owners | partial + retained InputState | currentize | complete InputState | Process |
+| Process | Compound currentization | complete InputState | derive once | OutputState(fields) | unresolved Family/Relay integration boundary |
 
-~~~text
-Output != previous process memory
-Output != another Family's State
-Output != event ledger
-~~~
+A layer is not complete merely because its local code looks simpler. Its Output must still satisfy the
+next consumer's expected Input.
 
-An Input-only currentness change may advance the Compound State revision while leaving Output unchanged.
+## Open edges — held, not papered over
 
-That does not create another Act consequence.
+These remain real architecture questions:
 
-## Commit then Act
+1. **One serialized Family-current decision**
+   - Control/Act and external observation may both lawfully move Family State.
+   - StateRelay pressure proved the need for an exact CURRENT decision boundary.
+   - No universal Family runtime mechanism is admitted yet.
 
-The Compound Family infrastructure owns the repeated circuit:
+2. **Cross-cycle relationship memory**
+   - Some convergence relationships need continuity such as retained candidate identity.
+   - Previous Output must not silently become hidden Process input.
+   - The rightful supplier of any such CURRENT fact must be explicit.
 
-~~~text
-partial Input
--> latest(...)
--> process(...)
--> Output
--> assemble next Compound State
--> COMMIT Family.current
--> VexBehaviorV2CommittedOutput only when Output changed
--> act(...)
-~~~
+3. **Provider / intent identity**
+   - Stable semantic identity is preferred over local request counters.
+   - A provider adapter may need to map Family intent identity to provider-owned identity before an
+     observation can be trusted.
+   - No universal identity mapper is admitted.
 
-act(...) runs after the next Compound State is already CURRENT and after the process/commit lock is
-released.
+4. **Exact Family + Relay Kotlin composition**
+   - Relay.Single / Relay.Compound describe useful mechanical roles.
+   - Their exact nesting/integration under Family is still pressure.
+   - Kotlin generic inconvenience is not authority to create another Family species.
 
-That matters because an Act may request another rightful Family to change, then observe that resulting
-CURRENT truth back into this Family without re-entering a half-committed calculation.
-
-## Ownership round trip
-
-~~~text
-Family A CURRENT
-Family B CURRENT
-Family C CURRENT
-        |
-        v
-partial Input observations
-        |
-        v
-Input.latest(...)
-        |
-        v
-process(...)
-        |
-        v
-Output
-        |
-        v
-COMMIT Compound Family.current
-        |
-        v
-Act
-        |
-        v
-rightful target Family Control
-        |
-        v
-target Family CURRENT
-        |
-        v
-observe as NEW Input
-        |
-        +-------> process again
-~~~
-
-One owner remains responsible for each truth.
-
-The Compound Family never writes another Family's State directly.
-
-## Teaching suite
+## Review path
 
 Read:
 
 ~~~text
-VexBehaviorV2FamilyCircuitTestSampleSuite
-~~~
-
-Start with the constructor forms at the top:
-
-~~~text
-createSingleFamily()
-  -> SingleFamily
-  -> State(value)
-
-createListFamily()
-  -> ListFamily
-  -> State(groups -> items)
-
-createBooleanFamily()
-  -> BooleanFamily
-  -> State(enabled)
-
-createMultiFamily(...)
-  -> MultiFamily
-  -> MultiInputState
-  -> MultiOutputState
-  -> MultiCompoundState
-~~~
-
-The names are intentionally structural rather than product-specific.
-
-MultiFamily is the complete circuit example.
-
-When its committed Output requires a list change:
-
-~~~text
-MultiFamily act
--> ListFamily.Control.Add(...)
--> ListFamily.activate(Control)
--> ListFamily.current changes
--> MultiFamily observes ListFamily.current as NEW Input
--> process again
-~~~
-
-The suite also proves that changing Input while leaving Output meaning unchanged advances relationship
-currentness without fabricating another Act.
-
-## Execution depth
-
-The exact current V2 source also carries the existing begin(mode) execution capability:
-
-~~~text
-Replaceable
-Sequenced
-~~~
-
-That execution substrate is included because the current VexBehaviorV2Family implementation depends
-on it.
-
-The Family Circuit law remains:
-
-~~~text
-semantic relationship truth is established first
-execution custody does not become another semantic truth owner
-~~~
-
-Longer-running result/currentness pressure may continue to refine execution without changing the
-ownership circuit above.
-
-## Review path
-
-A fresh reviewer should read in this order:
-
-~~~text
 1. FAMILY-CIRCUIT.md
-2. VexBehaviorV2FamilyCircuitTestSampleSuite.kt
+2. VexBehaviorV2HighConfidenceTest.kt
 3. VexBehaviorV2.kt
 4. VexBehaviorV2Act.kt
 5. VexBehaviorV2Builder.kt
 6. VexBehaviorV2Store.kt / VexBehaviorV2Logger.kt when those depths matter
+7. architecture/relay only when convergence/currentization is implicated
 ~~~
 
-Then explain:
+A fresh reviewer should be able to explain:
 
 ~~~text
-Why is MultiFamily.current MultiCompoundState?
+Why is Family the semantic root?
 
-Why is latest(...) separate from process(...)?
+Why does activate(Control) re-read CURRENT State?
 
-Why does unchanged Output not create another Act?
+Why is the State + Control scenario the Act rather than another Act value hierarchy?
 
-Why does act(...) run only after commit?
+Why is DisplayState required without becoming another truth owner?
 
-Why does MultiFamily enter ListFamily through Control?
+Why does execution custody remain beneath semantic truth?
 
-Why does ListFamily.current return as NEW Input?
+Why is InputState -> Process -> OutputState a convergence law rather than a second SCAE chain?
 
-What does execution own, and what does it NOT own?
+Which Family/Relay seams remain intentionally open?
 ~~~
 
-## Source relationship
+## Source boundary
 
-This clean PR ports the current winning source from the latest Origin-Walk candidate.
+The V2 implementation in this PR is restored to the last #192 source point before the recent
+Compound-Family teaching/foundation formalization began:
 
-Historical pressure tests and app-specific specimens are intentionally not included here.
+~~~text
+89e1d27c9e28d2cca5192da9bbc10d3e493b40cd
+~~~
 
-// [VXG RealForever]
+Later #192 commits remain useful Origin/pressure history. They are not automatically promoted merely
+because they are newer.
+
+Repository Gradle/JVM proof for this cleaned PR remains PENDING.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][FAMILY-CIRCUIT][HIGH-CONFIDENCE] -->

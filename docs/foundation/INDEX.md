@@ -15,46 +15,43 @@ A foundation earns a dedicated entry when it has a real recurring consumer, inva
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
 
-### Family Circuit foundation
+### V2 Family high-confidence candidate
 
-Current clean foundation:
+Current review source:
 
 ~~~text
 architecture/behavior/FAMILY-CIRCUIT.md
 architecture/behavior/src/main/.../VexBehaviorV2.kt
-architecture/behavior/src/test/.../VexBehaviorV2FamilyCircuitTestSampleSuite.kt
+architecture/behavior/src/test/.../VexBehaviorV2HighConfidenceTest.kt
 ~~~
 
-The current hierarchy is:
+The candidate currently preserves only the earned Family surface:
 
 ~~~text
-VexFamily
-├─ VexBehaviorV2Family
-│    Control-driven State + Control -> Act
-└─ VexBehaviorV2CompoundFamily
-     observed truths -> latest Input -> process -> Output -> committed Family State -> Act
+Family
+  State
+  Control
+  DisplayState
+  current
+  acts
+  activate(Control)
+  optional Store / begin execution
 ~~~
 
-The teaching suite uses SingleFamily, ListFamily, BooleanFamily and MultiFamily so readers learn the
-infrastructure without product-specific context.
-
-Compound law:
+Several-current-truth convergence remains owned by the Relay foundation:
 
 ~~~text
-partial Input
--> latest(...)
--> process(...)
--> Output
--> COMMIT Family.current
--> Act when Output changed
--> rightful target Family Control
--> observed target CURRENT as NEW Input
+partial observations
+-> coherent InputState
+-> process(InputState)
+-> OutputState(fields)
 ~~~
 
-The current V2 source also carries begin(Replaceable|Sequenced) execution custody through the existing
-VexExecution foundation. Execution does not become another semantic State owner.
+This PR deliberately does **not** admit a CompoundFamily superclass, CompoundFamilyState wrapper,
+stateFactory, Family-level revision, or arbitrary post-commit act(OutputState) callback. The exact
+Family/Relay composition remains open pressure.
 
-<!-- [VXG RealForever][FOUNDATION][FAMILY-CIRCUIT] -->
+<!-- [VXG RealForever][FOUNDATION][V2-FAMILY][HIGH-CONFIDENCE] -->
 
 
 ## Foundation establishment criteria
