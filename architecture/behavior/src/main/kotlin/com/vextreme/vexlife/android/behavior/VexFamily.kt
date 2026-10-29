@@ -86,6 +86,250 @@ abstract class VexFamily<
         }
     }
 
+    /**
+     * One lawful outcome authored by [act] for an exact current State + incoming Control pair.
+     *
+     * Act belongs to Family. It is intentionally not another Vex root.
+     */
+    class Act<
+        State : Any,
+    > internal constructor(
+        internal val admittedState:
+            State?,
+        internal val begin:
+            Begin<State>?,
+    ) {
+        /**
+         * Optional execution consequence opened by an Act.
+         *
+         * Begin is not a standalone package capability. Its constructors are closed; concrete
+         * Families receive the protected VexFamily.begin(...) opening only because they are
+         * authoring an Act.
+         */
+        class Begin<
+            State : Any,
+        > internal constructor(
+            internal val mode:
+                Mode,
+            internal val save:
+                Save<State>,
+        ) {
+            /**
+             * Provisional adapter to the current VexExecution implementation.
+             *
+             * These names are not the final execution contract. VexExecution owns the already
+             * accepted launch / Earliest / Latest / Queued relationship and this adapter disappears
+             * when that source conformance lands.
+             */
+            enum class Mode {
+                Replaceable,
+                Sequenced,
+            }
+
+            internal data class Result<
+                State,
+            >(
+                val admittedState:
+                    State?,
+            )
+
+            internal data class Results<
+                State,
+            >(
+                val success:
+                    Result<State>,
+                val failure:
+                    Result<State>,
+            )
+
+            internal data class Save<
+                State : Any,
+            >(
+                val state:
+                    State,
+                val results:
+                    Results<State>,
+            )
+
+            class Scope<
+                State : Any,
+            > internal constructor(
+                private val mode:
+                    Mode,
+            ) {
+                private var save:
+                    Save<State>? =
+                    null
+
+                fun save(
+                    state: State,
+                ):
+                    SaveDestination<State> {
+                    require(
+                        save ==
+                            null,
+                    ) {
+                        "begin currently admits one Save"
+                    }
+
+                    return SaveDestination(
+                        state =
+                            state,
+                        complete = { completed ->
+                            require(
+                                save ==
+                                    null,
+                            ) {
+                                "begin Save was already completed"
+                            }
+
+                            save =
+                                completed
+                        },
+                    )
+                }
+
+                internal fun build():
+                    Begin<State> =
+                    Begin(
+                        mode =
+                            mode,
+                        save =
+                            requireNotNull(
+                                save,
+                            ) {
+                                "begin requires one Save"
+                            },
+                    )
+
+                class SaveDestination<
+                    State : Any,
+                > internal constructor(
+                    private val state:
+                        State,
+                    private val complete:
+                        (
+                            Save<State>,
+                        ) -> Unit,
+                ) {
+                    fun results(
+                        block:
+                            ResultsScope<State>.() -> Unit,
+                    ) {
+                        complete(
+                            Save(
+                                state =
+                                    state,
+                                results =
+                                    ResultsScope<State>()
+                                        .apply(
+                                            block,
+                                        )
+                                        .build(),
+                            ),
+                        )
+                    }
+                }
+
+                class ResultsScope<
+                    State : Any,
+                > internal constructor() {
+                    private var success:
+                        Result<State>? =
+                        null
+
+                    private var failure:
+                        Result<State>? =
+                        null
+
+                    fun success(
+                        block:
+                            ResultScope<State>.() -> Unit = {},
+                    ) {
+                        require(
+                            success ==
+                                null,
+                        ) {
+                            "Success result was declared more than once"
+                        }
+
+                        success =
+                            ResultScope<State>()
+                                .apply(
+                                    block,
+                                )
+                                .build()
+                    }
+
+                    fun failure(
+                        block:
+                            ResultScope<State>.() -> Unit = {},
+                    ) {
+                        require(
+                            failure ==
+                                null,
+                        ) {
+                            "Failure result was declared more than once"
+                        }
+
+                        failure =
+                            ResultScope<State>()
+                                .apply(
+                                    block,
+                                )
+                                .build()
+                    }
+
+                    internal fun build():
+                        Results<State> =
+                        Results(
+                            success =
+                                requireNotNull(
+                                    success,
+                                ) {
+                                    "results requires explicit Success"
+                                },
+                            failure =
+                                requireNotNull(
+                                    failure,
+                                ) {
+                                    "results requires explicit Failure"
+                                },
+                        )
+                }
+
+                class ResultScope<
+                    State : Any,
+                > internal constructor() {
+                    private var admittedState:
+                        State? =
+                        null
+
+                    fun admit(
+                        state: State,
+                    ) {
+                        require(
+                            admittedState ==
+                                null,
+                        ) {
+                            "one result may admit at most one later State"
+                        }
+
+                        admittedState =
+                            state
+                    }
+
+                    internal fun build():
+                        Result<State> =
+                        Result(
+                            admittedState =
+                                admittedState,
+                        )
+                }
+            }
+        }
+    }
+
     /*
      * One live State holder.
      *
@@ -116,18 +360,18 @@ abstract class VexFamily<
         currentState: State,
         control: Control,
     ):
-        VexAct<State>?
+        Act<State>?
 
     /**
      * Authored Act outcome: keep current semantic State.
      */
     protected fun stay(
         begin:
-            VexBegin<State>? =
+            Act.Begin<State>? =
             null,
     ):
-        VexAct<State> =
-        VexAct(
+        Act<State> =
+        Act(
             admittedState =
                 null,
             begin =
@@ -140,11 +384,11 @@ abstract class VexFamily<
     protected fun admit(
         state: State,
         begin:
-            VexBegin<State>? =
+            Act.Begin<State>? =
             null,
     ):
-        VexAct<State> =
-        VexAct(
+        Act<State> =
+        Act(
             admittedState =
                 state,
             begin =
@@ -155,12 +399,12 @@ abstract class VexFamily<
      * Optional authored execution consequence carried by an Act.
      */
     protected fun begin(
-        mode: VexBeginMode,
+        mode: Act.Begin.Mode,
         block:
-            VexBegin.Scope<State>.() -> Unit,
+            Act.Begin.Scope<State>.() -> Unit,
     ):
-        VexBegin<State> =
-        VexBegin.Scope<State>(
+        Act.Begin<State> =
+        Act.Begin.Scope<State>(
             mode =
                 mode,
         )
@@ -284,7 +528,7 @@ abstract class VexFamily<
 
     private fun execute(
         begin:
-            VexBegin<State>,
+            Act.Begin<State>,
     ) {
         executeSave(
             mode =
@@ -295,9 +539,9 @@ abstract class VexFamily<
     }
 
     private fun executeSave(
-        mode: VexBeginMode,
+        mode: Act.Begin.Mode,
         save:
-            VexBegin.Save<State>,
+            Act.Begin.Save<State>,
     ) {
         val stateStore =
             requireNotNull(
@@ -397,7 +641,7 @@ abstract class VexFamily<
         when (
             mode
         ) {
-            VexBeginMode.Replaceable ->
+            Act.Begin.Mode.Replaceable ->
                 VexExecution.beginReplaceable(
                     executionRoot =
                         executionRoot,
@@ -415,7 +659,7 @@ abstract class VexFamily<
                         onFailure,
                 )
 
-            VexBeginMode.Sequenced ->
+            Act.Begin.Mode.Sequenced ->
                 VexExecution.beginSequenced(
                     executionRoot =
                         executionRoot,
@@ -437,7 +681,7 @@ abstract class VexFamily<
 
     private fun applyLaterResult(
         result:
-            VexBegin.Result<State>,
+            Act.Begin.Result<State>,
     ) {
         result.admittedState
             ?.let(

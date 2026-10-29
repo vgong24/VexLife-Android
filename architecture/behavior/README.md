@@ -81,6 +81,27 @@ same derived interpretation of State. A richer feature-owned classification belo
 concrete Family, for example `ThemeModeFamily.DisplayState`, and implements
 `VexFamily.DisplayState<ThemeModeFamily.State>`.
 
+## Act / Begin ownership
+
+The authored outcome tree is rooted under Family:
+
+~~~text
+VexFamily
+-> Act<State>
+   -> optional Begin<State>
+      -> Save
+         -> Results
+            -> Success
+            -> Failure
+~~~
+
+`Act` is the lawful outcome of one exact current State + incoming Control relationship. `Begin`
+does not exist as a peer package capability. Its construction is closed and a concrete Family only
+receives the protected `begin(...)` opening while authoring an Act.
+
+The current Begin mode names are only a provisional adapter to the not-yet-conformed VexExecution
+launch implementation; they are not a second owner of execution launch semantics.
+
 ## Store responsibility
 
 The current Family runtime consumes one exact storage capability:
@@ -126,7 +147,7 @@ class ThemeModeFamily(...) :
     override fun act(
         currentState: State,
         control: Control,
-    ): VexAct<State>? =
+    ): VexFamily.Act<State>? =
         when (currentState) {
             State.Light ->
                 when (control) {

@@ -28,7 +28,7 @@ A feature owns State, Control, one direct function, and only a richer DisplaySta
 override fun act(
     currentState: State,
     control: Control,
-): VexAct<State>? =
+): VexFamily.Act<State>? =
     when (currentState) {
         State.Light ->
             when (control) {
@@ -99,8 +99,10 @@ VexFamily
       -> Success
       -> Failure
 
-Begin
--> Save
+VexFamily
+-> Act
+   -> Begin
+      -> Save
    -> Results
       -> Success
       -> Failure
@@ -131,8 +133,8 @@ optional begin(...)
   activate(...) starts the authored execution consequence
 ~~~
 
-The return carrier is currently VexAct<State>. Its naming/shape remains a separate refinement
-question; this change does not rename it or add another replacement type.
+The return carrier is `VexFamily.Act<State>`. Act is a Family child rather than another Vex root.
+Its optional Begin child is opened only through Family's protected Act-authoring surface.
 
 ## Human-visible language
 

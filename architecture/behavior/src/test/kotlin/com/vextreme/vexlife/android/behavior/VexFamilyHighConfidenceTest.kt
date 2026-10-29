@@ -78,7 +78,7 @@ class VexFamilyHighConfidenceTest {
             currentState: State,
             control: Control,
         ):
-            VexAct<State>? =
+            VexFamily.Act<State>? =
             when (
                 currentState
             ) {
@@ -99,7 +99,7 @@ class VexFamilyHighConfidenceTest {
                                 begin =
                                     begin(
                                         mode =
-                                            VexBeginMode.Sequenced,
+                                            VexFamily.Act.Begin.Mode.Sequenced,
                                     ) {
                                         save(
                                             State.Ready(
@@ -189,7 +189,7 @@ class VexFamilyHighConfidenceTest {
             currentState: State,
             control: Control,
         ):
-            VexAct<State>? =
+            VexFamily.Act<State>? =
             when (
                 currentState
             ) {
