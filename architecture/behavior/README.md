@@ -378,18 +378,42 @@ class ThemeModeFamily(...) :
 }
 ~~~
 
+## Family + Compound / Process binding
+
+Compound/Process output remains a separate owner's relationship truth. When that output means another
+Family should act, composition uses the Family language already established by this foundation:
+
+~~~text
+Compound OutputState
+-> feature-owned target Control
+-> target Family.activate(control)
+-> CURRENT State + Control
+-> stay / admit / optional begin
+-> resulting Family truth observed back as NEW Compound InputState
+~~~
+
+Permanent:
+
+~~~text
+OutputState != Family State
+Process != Family
+Process Output does not write Family.currentState directly
+~~~
+
+The feature owns the exact translation from its relationship output to the target Family Control.
+The foundation owns the target binding and CURRENT-State re-resolution once that Control enters the
+Family.
+
 ## Deliberately still open
 
 ~~~text
 serialized competing-cause State decision / stale async result
     -> intentionally unresolved generically
     -> do not reintroduce Family revision as a guessed currentness oracle
-provider/repository observation -> semantic Family State
+provider/repository observation -> semantic Family State when there is no Control/request relationship
 automatic UI observation/lifetime integration
 cross-cycle relationship memory
 provider / intent identity mapping
-Process OutputState -> rightful Family.currentState handoff
-exact Family + Relay Single/Compound composition
 ~~~
 
 The current candidate should not be enlarged merely to fill those boxes.

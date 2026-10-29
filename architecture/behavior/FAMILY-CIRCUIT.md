@@ -259,12 +259,34 @@ fun process(
 ): OutputState
 ~~~
 
-The unresolved seam remains visible:
+A Compound/Process output is relationship truth. It is **not** permission to write another Family's
+State directly.
+
+When that output means another Family should act, the binding stays in the same readable language:
 
 ~~~text
-OutputState
--> rightful StateRelay / Family.currentState handoff
+Compound / Process
+-> OutputState
+-> feature-owned target Control
+-> target Family.activate(control)
+-> target Family re-reads CURRENT State
+-> stay / admit / optional begin
+-> resulting target Family truth
+-> NEW Compound InputState
+-> process again
 ~~~
+
+This keeps both owners intact:
+
+~~~text
+Process owns the relationship meaning.
+Family owns what its Control means against CURRENT State.
+Observation carries the target owner's new truth back into Process.
+~~~
+
+There is no generic `OutputState -> Family.currentState` setter/bridge and no fake shared transition
+registry. The feature supplies the exact target Control because only the feature knows what request the
+relationship output means.
 
 This PR does not add CompoundFamily, stateFactory, Family revision, or post-process Act machinery.
 
@@ -275,8 +297,7 @@ serialized competing-cause State decision / stale async result
     -> held until a concrete Family proves the rightful currentness identity
 cross-cycle relationship memory and its rightful explicit supplier
 provider / intent stable identity mapping
-exact Family + Relay Single/Compound composition
-Process OutputState -> rightful Family.currentState handoff
+provider/repository observation -> semantic Family State when no Control/request relationship exists
 ~~~
 
 Exact-head repository-owned `vexVerifyJvm` proof passed for PR #193, and the reviewed candidate tree

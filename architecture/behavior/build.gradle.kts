@@ -25,5 +25,6 @@ dependencies {
     api(project(":architecture:execution"))
     api(project(":architecture:logging"))
     implementation(libs.coroutinesCore)
+    testImplementation(project(":architecture:relay"))
     testImplementation(libs.junit)
 }
