@@ -81,6 +81,43 @@ same derived interpretation of State. A richer feature-owned classification belo
 concrete Family, for example `ThemeModeFamily.DisplayState`, and implements
 `VexFamily.DisplayState<ThemeModeFamily.State>`.
 
+## State / Control relationship visibility
+
+The Family relationship surface is intentionally exhaustive rather than sparse-by-default:
+
+~~~text
+declare all State possibilities
+declare all Control possibilities
+
+act(currentState, control)
+-> exhaustive when(currentState)
+   -> exhaustive when(control)
+~~~
+
+State remains the first traversal because current State is the truth against which an incoming
+Control receives meaning.
+
+At this semantic boundary, do not use `else` to hide future State or Control additions. A newly
+added State or Control should create compiler-visible relationship work so its placement cannot be
+silently forgotten. Controls may share one branch only when their reviewed authored outcome is
+exactly the same.
+
+Use:
+
+~~~text
+noAct()
+    reviewed State + Control pair has no lawful Act
+
+stay()
+    lawful Act; current State remains current
+
+admit(State)
+    lawful Act; admit State
+~~~
+
+`noAct()` is explicit authoring language for absence; concrete Family source should not use a naked
+`null` to communicate that semantic decision.
+
 ## Act / Begin ownership
 
 The authored outcome tree is rooted under Family:

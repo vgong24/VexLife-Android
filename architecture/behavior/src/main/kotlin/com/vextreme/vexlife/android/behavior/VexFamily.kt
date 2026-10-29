@@ -353,8 +353,14 @@ abstract class VexFamily<
     /**
      * Feature-owned State + Control meaning.
      *
-     * A concrete Family implements this function directly. Returning null means no Act is authored
-     * for the exact CURRENT State + incoming Control pair.
+     * A concrete Family implements this function directly. State is traversed first because current
+     * State is the truth against which the incoming Control receives meaning.
+     *
+     * Both State and Control traversal stay exhaustive at this semantic boundary. Do not use an
+     * else branch to absorb future vocabulary: a new State or Control should create compiler-visible
+     * relationship work. Controls with the exact same reviewed outcome may share one branch.
+     *
+     * Use [noAct] for a reviewed State + Control pair that has no lawful Act.
      */
     protected abstract fun act(
         currentState: State,
@@ -377,6 +383,16 @@ abstract class VexFamily<
             begin =
                 begin,
         )
+
+    /**
+     * Reviewed absence of a lawful Act for this exact current State + incoming Control pair.
+     *
+     * This intentionally returns the nullable representation used by act(...), but concrete Family
+     * source does not communicate semantic absence with a naked null.
+     */
+    protected fun noAct():
+        Act<State>? =
+        null
 
     /**
      * Authored Act outcome: admit this semantic State when activate(...) applies the Act.
@@ -432,8 +448,9 @@ abstract class VexFamily<
             )
 
     /**
-     * Informative availability from the same direct act(currentState, control) function used by
-     * activate(...). The returned Act is inspected but not applied.
+     * Informative availability from the same direct act(currentState, control) relationship used by
+     * activate(...). A Control is available exactly when current State + that Control produces a
+     * lawful Act; noAct() means unavailable. The returned Act is inspected but not applied.
      */
     fun isAvailable(
         control: Control,

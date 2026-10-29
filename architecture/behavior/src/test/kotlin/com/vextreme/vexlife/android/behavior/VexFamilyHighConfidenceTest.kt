@@ -136,7 +136,7 @@ class VexFamilyHighConfidenceTest {
                             )
 
                         is Control.Commit ->
-                            null
+                            noAct()
                     }
             }
 

@@ -45,6 +45,12 @@ override fun act(
 ~~~
 
 Both traversals are Kotlin-native exhaustive when expressions over feature-owned sealed types.
+State remains first because current State is the truth against which incoming Control receives
+meaning.
+
+Do not use `else` at this semantic boundary. New State or Control vocabulary should create
+compiler-visible relationship work. Controls may be grouped in one branch only when they have the
+same exact reviewed outcome.
 
 A reader does not need to learn what state<State> or on<Control> means because those custom helpers
 are no longer part of the current Family path.
@@ -103,9 +109,9 @@ VexFamily
 -> Act
    -> Begin
       -> Save
-   -> Results
-      -> Success
-      -> Failure
+         -> Results
+            -> Success
+            -> Failure
 ~~~
 
 Family does not expose a broad Store and rediscover a narrower StateStore through runtime casts.
@@ -120,8 +126,8 @@ operation parent must be earned by another real operation, not anticipated.
 act(currentState, control) returns the authored outcome that activate(...) applies:
 
 ~~~text
-null
-  no Act exists for this exact State + Control pair
+noAct()
+  reviewed absence: no lawful Act exists for this exact State + Control pair
 
 stay()
   current State stays current
@@ -150,6 +156,7 @@ activate(control)
 act(currentState, control)
 when (currentState)
 when (control)
+noAct()
 stay()
 admit(State)
 begin(...)
