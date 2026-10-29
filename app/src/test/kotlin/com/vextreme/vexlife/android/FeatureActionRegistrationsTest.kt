@@ -28,21 +28,30 @@ class FeatureActionRegistrationsTest {
             VexExecutionRoot()
 
         try {
-            val registrations = VexLifeSession(
-                repositories = AppRepositories(
-                logHistory = InMemoryLogHistoryRepository(),
-                userProfile = InMemoryUserProfileRepository(),
-                vexMaps = InMemoryVexMapsRepository(),
-                vexMapsDistribution =
-                    InMemoryVexMapsDistributionRepository(),
-                vexStream = InMemoryVexStreamMusicRepository(),
-                events = RelayEventsRepository(),
-                eventsAttention = RelayEventsAttentionPreferenceRepository(),
-                eventsAttentionLab = RelayEventsAttentionLabRepository(),
-            ),
-                scope = backgroundScope,
-                executionRoot = executionRoot,
-            ).appActions
+            val registrations =
+                VexLifeSession(
+                    repositories =
+                        AppRepositories(
+                            logHistory =
+                                InMemoryLogHistoryRepository(),
+                            userProfile =
+                                InMemoryUserProfileRepository(),
+                            vexMaps =
+                                InMemoryVexMapsRepository(),
+                            vexMapsDistribution =
+                                InMemoryVexMapsDistributionRepository(),
+                            vexStream =
+                                InMemoryVexStreamMusicRepository(),
+                            events =
+                                RelayEventsRepository(),
+                            eventsAttention =
+                                RelayEventsAttentionPreferenceRepository(),
+                            eventsAttentionLab =
+                                RelayEventsAttentionLabRepository(),
+                        ),
+                    scope = backgroundScope,
+                    executionRoot = executionRoot,
+                ).appActions
 
             assertTrue(registrations[HomeScreen.VexStreamMusic].isEmpty())
             assertTrue(registrations[HomeScreen.TalkToVex].isEmpty())
