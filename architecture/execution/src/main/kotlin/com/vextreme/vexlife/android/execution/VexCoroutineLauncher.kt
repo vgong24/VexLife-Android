@@ -20,13 +20,9 @@ import kotlinx.coroutines.launch
 /**
  * Internal coroutine engine.
  *
- * Feature code never receives this type directly. [VexExecution] is the application-facing
- * architectural role; this class owns the Kotlin coroutine mechanics underneath that role.
- *
- * This engine does not place several Flow collectors sequentially inside one hidden coroutine.
- * Every [launchForCollect] invocation enters [launchManaged] independently, gets its own registered
- * Job, and owns exactly one Flow collection. Independent observations therefore run as sibling
- * managed Jobs and may be stopped by their own source-derived refs.
+ * Active custody is keyed by exact [VexExecution.InstanceId]. Source identity is diagnostic and
+ * source-addressing information only. [VexExecution.Id] exists only when callers intentionally
+ * relate several executions through Earliest / Latest / Queued semantics.
  */
 internal class VexCoroutineLauncher(
     dispatcher: CoroutineDispatcher,
@@ -42,8 +38,8 @@ internal class VexCoroutineLauncher(
         }
     }
 
-    /** Sibling execution failure must not cancel unrelated managed work. */
-    private val parentJob: Job =
+    private val parentJob:
+        Job =
         SupervisorJob()
 
     private val scope =
@@ -55,197 +51,439 @@ internal class VexCoroutineLauncher(
                 ),
         )
 
-    private val registryLock = Any()
-    private var acceptingWork = true
+    private val registryLock =
+        Any()
 
-    private data class ManagedCoroutine(
-        val job: Job,
-        val generation: Long,
-    )
+    private var acceptingWork =
+        true
 
-    private enum class PredecessorPolicy {
-        Reject,
-        Replace,
-        Sequence,
-    }
-
-    private var nextGeneration =
+    private var nextInstanceValue =
         1L
 
-    /**
-     * Failure originating from obtaining/subscribing to the observed Flow itself.
-     *
-     * Downstream onEach failures are deliberately not wrapped. That lets the managed execution
-     * distinguish observation-lifetime failure from feature/provider effect failure.
-     */
-    private class VexCollectionSourceFailure(
-        val sourceFailure: Throwable,
-    ) : RuntimeException(
-        sourceFailure,
+    private enum class LaneMode {
+        Earliest,
+        Latest,
+        Queued,
+    }
+
+    private data class Lane(
+        var mode:
+            LaneMode,
+        val instances:
+            LinkedHashSet<
+                VexExecution.InstanceId
+            > =
+            linkedSetOf(),
     )
 
-    /**
-     * Active custody only.
-     *
-     * LinkedHashMap is intentional: exact ID lookup plus deterministic admission/inspection order.
-     * Terminal executions leave this map but retain their final state in [executions].
-     */
+    private data class ManagedExecution(
+        val instanceId:
+            VexExecution.InstanceId,
+        val sourceRef:
+            VexExecution.SourceRef,
+        val id:
+            VexExecution.Id?,
+        val job:
+            Job,
+        val mutableState:
+            MutableStateFlow<
+                VexExecution.State
+            >,
+        val maintainedObservation:
+            Boolean,
+    )
+
+    private class VexCollectionSourceFailure(
+        val sourceFailure:
+            Throwable,
+    ) :
+        RuntimeException(
+            sourceFailure,
+        )
+
     private val active =
         LinkedHashMap<
-            VexCoroutineRef,
-            ManagedCoroutine
+            VexExecution.InstanceId,
+            ManagedExecution
+        >()
+
+    private val lanes =
+        LinkedHashMap<
+            VexExecution.Id,
+            Lane
         >()
 
     private val mutableExecutions =
         MutableStateFlow<
-            Map<VexCoroutineRef, VexCoroutineState>
+            Map<
+                VexExecution.InstanceId,
+                VexExecution.State
+            >
         >(
             emptyMap(),
         )
 
-    /**
-     * Observable lifecycle state, including terminal disposition.
-     *
-     * Every published map is unmodifiable so consumers cannot mutate retained registry state by
-     * casting the projection.
-     */
     val executions:
         StateFlow<
-            Map<VexCoroutineRef, VexCoroutineState>
+            Map<
+                VexExecution.InstanceId,
+                VexExecution.State
+            >
         > =
         mutableExecutions.asStateFlow()
 
-    fun launchOnce(
-        ref: VexCoroutineRef,
-        action: suspend () -> Unit,
-    ): VexCoroutineHandle =
-        launchManaged(
-            ref = ref,
-            restartRecoverableFailure =
-                false,
-            predecessorPolicy =
-                PredecessorPolicy.Reject,
-            action = action,
-        )
-
-    fun launchReplaceable(
-        ref: VexCoroutineRef,
-        action: suspend () -> Unit,
-    ): VexCoroutineHandle =
-        launchManaged(
-            ref = ref,
-            restartRecoverableFailure =
-                false,
-            predecessorPolicy =
-                PredecessorPolicy.Replace,
-            action = action,
-        )
-
-    fun launchSequenced(
-        ref: VexCoroutineRef,
-        action: suspend () -> Unit,
-    ): VexCoroutineHandle =
-        launchManaged(
-            ref = ref,
-            restartRecoverableFailure =
-                false,
-            predecessorPolicy =
-                PredecessorPolicy.Sequence,
-            action = action,
-        )
-
-    /**
-     * Foundation-owned Flow collection.
-     *
-     * onEach only handles values from this source; it is not a child-launch surface. A second
-     * independent Flow must enter through another launchForCollect call so it receives another
-     * managed Job rather than waiting behind this collector.
-     *
-     * Recovery is source-only:
-     * - failure while obtaining the Flow or failure emitted by Flow upstream may restart;
-     * - failure thrown by onEach becomes FAILED immediately and never auto-restarts.
-     *
-     * This prevents collection recovery from silently becoming business/provider retry.
-     */
-    fun <Value> launchForCollect(
-        ref: VexCoroutineRef,
-        restartOnSourceFailure: Boolean,
-        source: () -> Flow<Value>,
-        onEach: suspend (Value) -> Unit,
-    ): VexCoroutineHandle =
-        launchManaged(
-            ref = ref,
-            restartRecoverableFailure =
-                restartOnSourceFailure,
-            predecessorPolicy =
-                PredecessorPolicy.Reject,
+    fun launch(
+        sourceRef:
+            VexExecution.SourceRef,
+        action:
+            suspend () -> Unit,
+    ):
+        VexExecution.Handle =
+        synchronized(
+            registryLock,
         ) {
-            val observed =
-                try {
-                    source()
-                } catch (
-                    cancelled:
-                        CancellationException,
-                ) {
-                    throw cancelled
-                } catch (
-                    failure:
-                        Throwable,
-                ) {
-                    throw VexCollectionSourceFailure(
-                        failure,
-                    )
-                }
+            requireAcceptingWorkLocked()
 
-            observed
-                .catch { failure ->
-                    if (
-                        failure is
-                            CancellationException
-                    ) {
-                        throw failure
-                    }
-
-                    throw VexCollectionSourceFailure(
-                        failure,
-                    )
-                }
-                .collect { value ->
-                    /*
-                     * Flow.catch is transparent to downstream failures. If onEach throws, the
-                     * original failure reaches runManagedCoroutine as non-recoverable.
-                     */
-                    onEach(value)
-                }
+            createManagedLocked(
+                sourceRef =
+                    sourceRef,
+                id =
+                    null,
+                predecessors =
+                    emptyList(),
+                maintainedObservation =
+                    false,
+                restartRecoverableFailure =
+                    false,
+                action =
+                    action,
+            )
         }
 
-    fun forceStop(
-        ref: VexCoroutineRef,
-        reason: String,
-    ): Boolean =
-        forceStop(
-            ref = ref,
-            reason = reason,
-            expectedJob = null,
-        )
+    fun launchEarliest(
+        id:
+            VexExecution.Id,
+        sourceRef:
+            VexExecution.SourceRef,
+        action:
+            suspend () -> Unit,
+    ):
+        VexExecution.Handle =
+        synchronized(
+            registryLock,
+        ) {
+            requireAcceptingWorkLocked()
 
-    suspend fun joinStop(
-        ref: VexCoroutineRef,
-        reason: String,
-    ): Boolean =
-        joinStop(
-            ref = ref,
-            reason = reason,
-            expectedJob = null,
-        )
+            val lane =
+                laneLocked(
+                    id =
+                        id,
+                    mode =
+                        LaneMode.Earliest,
+                )
+
+            val existing =
+                activeLaneMembersLocked(
+                    lane,
+                )
+                    .firstOrNull()
+
+            if (
+                existing !=
+                null
+            ) {
+                return@synchronized handleFor(
+                    existing,
+                )
+            }
+
+            createManagedLocked(
+                sourceRef =
+                    sourceRef,
+                id =
+                    id,
+                predecessors =
+                    emptyList(),
+                maintainedObservation =
+                    false,
+                restartRecoverableFailure =
+                    false,
+                action =
+                    action,
+            )
+        }
+
+    fun launchLatest(
+        id:
+            VexExecution.Id,
+        sourceRef:
+            VexExecution.SourceRef,
+        action:
+            suspend () -> Unit,
+    ):
+        VexExecution.Handle =
+        synchronized(
+            registryLock,
+        ) {
+            requireAcceptingWorkLocked()
+
+            val lane =
+                laneLocked(
+                    id =
+                        id,
+                    mode =
+                        LaneMode.Latest,
+                )
+
+            val predecessors =
+                activeLaneMembersLocked(
+                    lane,
+                )
+
+            predecessors
+                .forEach { predecessor ->
+                    predecessor.job.cancel(
+                        CancellationException(
+                            "superseded by latest execution for " +
+                                id,
+                        ),
+                    )
+                }
+
+            createManagedLocked(
+                sourceRef =
+                    sourceRef,
+                id =
+                    id,
+                predecessors =
+                    predecessors
+                        .map {
+                            it.job
+                        },
+                maintainedObservation =
+                    false,
+                restartRecoverableFailure =
+                    false,
+                action =
+                    action,
+            )
+        }
+
+    fun launchQueued(
+        id:
+            VexExecution.Id,
+        sourceRef:
+            VexExecution.SourceRef,
+        action:
+            suspend () -> Unit,
+    ):
+        VexExecution.Handle =
+        synchronized(
+            registryLock,
+        ) {
+            requireAcceptingWorkLocked()
+
+            val lane =
+                laneLocked(
+                    id =
+                        id,
+                    mode =
+                        LaneMode.Queued,
+                )
+
+            val predecessors =
+                activeLaneMembersLocked(
+                    lane,
+                )
+
+            createManagedLocked(
+                sourceRef =
+                    sourceRef,
+                id =
+                    id,
+                predecessors =
+                    predecessors
+                        .map {
+                            it.job
+                        },
+                maintainedObservation =
+                    false,
+                restartRecoverableFailure =
+                    false,
+                action =
+                    action,
+            )
+        }
+
+    fun <Value> launchForCollect(
+        sourceRef:
+            VexExecution.SourceRef,
+        restartOnSourceFailure:
+            Boolean,
+        source:
+            () -> Flow<Value>,
+        onEach:
+            suspend (Value) -> Unit,
+    ):
+        VexExecution.Handle =
+        synchronized(
+            registryLock,
+        ) {
+            requireAcceptingWorkLocked()
+
+            check(
+                active.values.none { managed ->
+                    managed.maintainedObservation &&
+                        managed.sourceRef ==
+                        sourceRef &&
+                        managed.job.isActive
+                },
+            ) {
+                "Flow source " +
+                    sourceRef.value +
+                    " is already actively observed"
+            }
+
+            createManagedLocked(
+                sourceRef =
+                    sourceRef,
+                id =
+                    null,
+                predecessors =
+                    emptyList(),
+                maintainedObservation =
+                    true,
+                restartRecoverableFailure =
+                    restartOnSourceFailure,
+            ) {
+                val observed =
+                    try {
+                        source()
+                    } catch (
+                        cancelled:
+                            CancellationException,
+                    ) {
+                        throw cancelled
+                    } catch (
+                        failure:
+                            Throwable,
+                    ) {
+                        throw VexCollectionSourceFailure(
+                            failure,
+                        )
+                    }
+
+                observed
+                    .catch { failure ->
+                        if (
+                            failure is
+                                CancellationException
+                        ) {
+                            throw failure
+                        }
+
+                        throw VexCollectionSourceFailure(
+                            failure,
+                        )
+                    }
+                    .collect { value ->
+                        onEach(
+                            value,
+                        )
+                    }
+            }
+        }
+
+    fun forceStopSource(
+        sourceRef:
+            VexExecution.SourceRef,
+        reason:
+            String,
+    ):
+        Boolean {
+        val jobs =
+            synchronized(
+                registryLock,
+            ) {
+                active.values
+                    .filter { managed ->
+                        managed.sourceRef ==
+                            sourceRef &&
+                            managed.job.isActive
+                    }
+                    .map {
+                        it.job
+                    }
+            }
+
+        if (
+            jobs.isEmpty()
+        ) {
+            return false
+        }
+
+        jobs.forEach { job ->
+            job.cancel(
+                CancellationException(
+                    reason,
+                ),
+            )
+        }
+        return true
+    }
+
+    suspend fun joinStopSource(
+        sourceRef:
+            VexExecution.SourceRef,
+        reason:
+            String,
+    ):
+        Boolean {
+        val jobs =
+            synchronized(
+                registryLock,
+            ) {
+                active.values
+                    .filter { managed ->
+                        managed.sourceRef ==
+                            sourceRef &&
+                            managed.job.isActive
+                    }
+                    .map {
+                        it.job
+                    }
+            }
+
+        if (
+            jobs.isEmpty()
+        ) {
+            return false
+        }
+
+        jobs.forEach { job ->
+            job.cancel(
+                CancellationException(
+                    reason,
+                ),
+            )
+        }
+
+        jobs.forEach { job ->
+            job.join()
+        }
+
+        return true
+    }
 
     fun forceStopAll(
-        reason: String,
+        reason:
+            String,
     ) {
         synchronized(
             registryLock,
         ) {
-            acceptingWork = false
+            acceptingWork =
+                false
         }
 
         parentJob.cancel(
@@ -256,12 +494,14 @@ internal class VexCoroutineLauncher(
     }
 
     suspend fun joinStopAll(
-        reason: String,
+        reason:
+            String,
     ) {
         synchronized(
             registryLock,
         ) {
-            acceptingWork = false
+            acceptingWork =
+                false
         }
 
         parentJob.cancel(
@@ -269,115 +509,213 @@ internal class VexCoroutineLauncher(
                 reason,
             ),
         )
+
         parentJob.join()
     }
 
-    private fun launchManaged(
-        ref: VexCoroutineRef,
-        restartRecoverableFailure: Boolean,
-        predecessorPolicy: PredecessorPolicy,
-        action: suspend () -> Unit,
-    ): VexCoroutineHandle {
+    private fun requireAcceptingWorkLocked() {
+        check(
+            acceptingWork &&
+                parentJob.isActive,
+        ) {
+            "VexExecutionRoot is stopped and cannot accept new work"
+        }
+    }
+
+    private fun laneLocked(
+        id:
+            VexExecution.Id,
+        mode:
+            LaneMode,
+    ):
+        Lane {
+        val existing =
+            lanes[
+                id
+            ]
+
+        if (
+            existing ==
+            null
+        ) {
+            return Lane(
+                mode =
+                    mode,
+            ).also { lane ->
+                lanes[
+                    id
+                ] =
+                    lane
+            }
+        }
+
+        activeLaneMembersLocked(
+            existing,
+        )
+
+        if (
+            existing.instances
+                .isEmpty()
+        ) {
+            existing.mode =
+                mode
+            return existing
+        }
+
+        check(
+            existing.mode ==
+                mode,
+        ) {
+            "Execution id " +
+                id +
+                " is already active as " +
+                existing.mode +
+                " and cannot also be " +
+                mode
+        }
+
+        return existing
+    }
+
+    private fun activeLaneMembersLocked(
+        lane:
+            Lane,
+    ):
+        List<
+            ManagedExecution
+        > {
+        val members =
+            lane.instances
+                .mapNotNull(
+                    active::get,
+                )
+                .filter {
+                    it.job.isActive
+                }
+
+        lane.instances.retainAll(
+            members
+                .mapTo(
+                    linkedSetOf(),
+                ) {
+                    it.instanceId
+                },
+        )
+
+        return members
+    }
+
+    private fun createManagedLocked(
+        sourceRef:
+            VexExecution.SourceRef,
+        id:
+            VexExecution.Id?,
+        predecessors:
+            List<Job>,
+        maintainedObservation:
+            Boolean,
+        restartRecoverableFailure:
+            Boolean,
+        action:
+            suspend () -> Unit,
+    ):
+        VexExecution.Handle {
+        val instanceId =
+            VexExecution.InstanceId(
+                nextInstanceValue++,
+            )
+
         val mutableState =
             MutableStateFlow(
-                VexCoroutineState(
-                    ref = ref,
+                VexExecution.State(
+                    instanceId =
+                        instanceId,
+                    sourceRef =
+                        sourceRef,
+                    id =
+                        id,
                     status =
-                        VexCoroutineStatus.STARTING,
-                    attempt = 0,
-                    restartCount = 0,
+                        VexExecution.Status.STARTING,
+                    attempt =
+                        0,
+                    restartCount =
+                        0,
                 ),
             )
 
         lateinit var job:
             Job
-        var predecessor:
-            ManagedCoroutine? =
-            null
-        var generation =
-            0L
 
-        synchronized(
-            registryLock,
-        ) {
-            check(
-                acceptingWork &&
-                    parentJob.isActive,
+        job =
+            scope.launch(
+                context =
+                    CoroutineName(
+                        sourceRef.value +
+                            "#" +
+                            instanceId.value,
+                    ),
+                start =
+                    CoroutineStart.LAZY,
             ) {
-                "VexExecutionRoot is stopped and cannot accept new work"
+                predecessors
+                    .forEach { predecessor ->
+                        predecessor.join()
+                    }
+
+                runManagedCoroutine(
+                    instanceId =
+                        instanceId,
+                    sourceRef =
+                        sourceRef,
+                    id =
+                        id,
+                    restartRecoverableFailure =
+                        restartRecoverableFailure,
+                    mutableState =
+                        mutableState,
+                    action =
+                        action,
+                )
             }
 
-            active[ref]
-                ?.takeIf { existing ->
-                    existing.job.isActive
-                }
-                ?.let { existing ->
-                    when (
-                        predecessorPolicy
-                    ) {
-                        PredecessorPolicy.Reject ->
-                            error(
-                                "Coroutine " +
-                                    ref.value +
-                                    " is already active",
-                            )
-
-                        PredecessorPolicy.Replace -> {
-                            predecessor =
-                                existing
-                            existing.job.cancel(
-                                CancellationException(
-                                    "replaced by newer execution for " +
-                                        ref.value,
-                                ),
-                            )
-                        }
-
-                        PredecessorPolicy.Sequence ->
-                            predecessor =
-                                existing
-                    }
-                }
-
-            generation =
-                nextGeneration++
-
-            job =
-                scope.launch(
-                    context =
-                        CoroutineName(
-                            ref.value,
-                        ),
-                    start =
-                        CoroutineStart.LAZY,
-                ) {
-                    predecessor
-                        ?.job
-                        ?.join()
-
-                    runManagedCoroutine(
-                        ref = ref,
-                        generation =
-                            generation,
-                        restartRecoverableFailure =
-                            restartRecoverableFailure,
-                        mutableState =
-                            mutableState,
-                        action = action,
-                    )
-                }
-
-            active[ref] =
-                ManagedCoroutine(
-                    job = job,
-                    generation =
-                        generation,
-                )
-
-            updateRegistryLocked(
-                mutableState.value,
+        val managed =
+            ManagedExecution(
+                instanceId =
+                    instanceId,
+                sourceRef =
+                    sourceRef,
+                id =
+                    id,
+                job =
+                    job,
+                mutableState =
+                    mutableState,
+                maintainedObservation =
+                    maintainedObservation,
             )
+
+        active[
+            instanceId
+        ] =
+            managed
+
+        id?.let { executionId ->
+            requireNotNull(
+                lanes[
+                    executionId
+                ],
+            ) {
+                "Execution lane " +
+                    executionId +
+                    " must be established before admission"
+            }
+                .instances +=
+                instanceId
         }
+
+        updateRegistryLocked(
+            mutableState.value,
+        )
 
         job.invokeOnCompletion { cause ->
             if (
@@ -392,10 +730,15 @@ internal class VexCoroutineLauncher(
                     mutableState =
                         mutableState,
                     state =
-                        VexCoroutineState(
-                            ref = ref,
+                        VexExecution.State(
+                            instanceId =
+                                instanceId,
+                            sourceRef =
+                                sourceRef,
+                            id =
+                                id,
                             status =
-                                VexCoroutineStatus.CANCELLED,
+                                VexExecution.Status.CANCELLED,
                             attempt =
                                 mutableState.value.attempt,
                             restartCount =
@@ -405,163 +748,169 @@ internal class VexCoroutineLauncher(
                             failureMessage =
                                 cause.message,
                         ),
-                    generation =
-                        generation,
                 )
             }
 
             synchronized(
                 registryLock,
             ) {
-                if (
-                    active[ref]
-                        ?.generation ==
-                    generation
-                ) {
-                    active.remove(
-                        ref,
-                    )
+                active.remove(
+                    instanceId,
+                )
+
+                id?.let { executionId ->
+                    lanes[
+                        executionId
+                    ]
+                        ?.let { lane ->
+                            lane.instances.remove(
+                                instanceId,
+                            )
+
+                            if (
+                                lane.instances
+                                    .isEmpty()
+                            ) {
+                                lanes.remove(
+                                    executionId,
+                                )
+                            }
+                        }
                 }
             }
         }
 
         job.start()
 
-        return object :
-            VexCoroutineHandle {
-            override val ref:
-                VexCoroutineRef =
-                ref
+        return handleFor(
+            managed,
+        )
+    }
+
+    private fun handleFor(
+        managed:
+            ManagedExecution,
+    ):
+        VexExecution.Handle =
+        object :
+            VexExecution.Handle {
+            override val instanceId:
+                VexExecution.InstanceId =
+                managed.instanceId
+
+            override val sourceRef:
+                VexExecution.SourceRef =
+                managed.sourceRef
+
+            override val id:
+                VexExecution.Id? =
+                managed.id
 
             override val state:
                 StateFlow<
-                    VexCoroutineState
+                    VexExecution.State
                 > =
-                mutableState.asStateFlow()
+                managed.mutableState
+                    .asStateFlow()
 
             override fun forceStop(
-                reason: String,
-            ): Boolean =
-                this@VexCoroutineLauncher
-                    .forceStop(
-                        ref = ref,
-                        reason = reason,
-                        expectedJob = job,
-                    )
+                reason:
+                    String,
+            ):
+                Boolean {
+                if (
+                    !managed.job
+                        .isActive
+                ) {
+                    return false
+                }
+
+                managed.job.cancel(
+                    CancellationException(
+                        reason,
+                    ),
+                )
+                return true
+            }
 
             override suspend fun joinStop(
-                reason: String,
-            ): Boolean =
-                this@VexCoroutineLauncher
-                    .joinStop(
-                        ref = ref,
-                        reason = reason,
-                        expectedJob = job,
+                reason:
+                    String,
+            ):
+                Boolean {
+                if (
+                    !managed.job.isActive &&
+                    managed.job.isCompleted
+                ) {
+                    return false
+                }
+
+                if (
+                    managed.job.isActive
+                ) {
+                    managed.job.cancel(
+                        CancellationException(
+                            reason,
+                        ),
                     )
+                }
+
+                managed.job.join()
+                return true
+            }
 
             override suspend fun awaitCompletion() {
-                job.join()
+                managed.job.join()
             }
         }
-    }
-
-    /**
-     * A handle acts on the exact Job it was created for. If the same source ref is later relaunched,
-     * an old handle cannot accidentally stop the newer run.
-     */
-    private fun forceStop(
-        ref: VexCoroutineRef,
-        reason: String,
-        expectedJob: Job?,
-    ): Boolean {
-        val job =
-            synchronized(
-                registryLock,
-            ) {
-                active[ref]
-                    ?.job
-                    ?.takeIf { activeJob ->
-                        expectedJob == null ||
-                            activeJob ===
-                                expectedJob
-                    }
-            }
-                ?: return false
-
-        if (!job.isActive) {
-            return false
-        }
-
-        job.cancel(
-            CancellationException(
-                reason,
-            ),
-        )
-        return true
-    }
-
-    private suspend fun joinStop(
-        ref: VexCoroutineRef,
-        reason: String,
-        expectedJob: Job?,
-    ): Boolean {
-        val job =
-            synchronized(
-                registryLock,
-            ) {
-                active[ref]
-                    ?.job
-                    ?.takeIf { activeJob ->
-                        expectedJob == null ||
-                            activeJob ===
-                                expectedJob
-                    }
-            }
-                ?: return false
-
-        if (job.isActive) {
-            job.cancel(
-                CancellationException(
-                    reason,
-                ),
-            )
-        }
-
-        job.join()
-        return true
-    }
 
     private suspend fun runManagedCoroutine(
-        ref: VexCoroutineRef,
-        generation: Long,
-        restartRecoverableFailure: Boolean,
+        instanceId:
+            VexExecution.InstanceId,
+        sourceRef:
+            VexExecution.SourceRef,
+        id:
+            VexExecution.Id?,
+        restartRecoverableFailure:
+            Boolean,
         mutableState:
             MutableStateFlow<
-                VexCoroutineState
+                VexExecution.State
             >,
-        action: suspend () -> Unit,
+        action:
+            suspend () -> Unit,
     ) {
-        var attempt = 0
-        var restartCount = 0
+        var attempt =
+            0
+
+        var restartCount =
+            0
 
         try {
-            while (true) {
-                attempt += 1
+            while (
+                true
+            ) {
+                attempt +=
+                    1
 
                 publish(
                     mutableState =
                         mutableState,
                     state =
-                        VexCoroutineState(
-                            ref = ref,
+                        VexExecution.State(
+                            instanceId =
+                                instanceId,
+                            sourceRef =
+                                sourceRef,
+                            id =
+                                id,
                             status =
-                                VexCoroutineStatus.RUNNING,
-                            attempt = attempt,
+                                VexExecution.Status.RUNNING,
+                            attempt =
+                                attempt,
                             restartCount =
                                 restartCount,
                         ),
-                    generation =
-                        generation,
                 )
 
                 try {
@@ -573,17 +922,20 @@ internal class VexCoroutineLauncher(
                         mutableState =
                             mutableState,
                         state =
-                            VexCoroutineState(
-                                ref = ref,
+                            VexExecution.State(
+                                instanceId =
+                                    instanceId,
+                                sourceRef =
+                                    sourceRef,
+                                id =
+                                    id,
                                 status =
-                                    VexCoroutineStatus.COMPLETED,
+                                    VexExecution.Status.COMPLETED,
                                 attempt =
                                     attempt,
                                 restartCount =
                                     restartCount,
                             ),
-                        generation =
-                            generation,
                     )
                     return
                 } catch (
@@ -606,9 +958,10 @@ internal class VexCoroutineLauncher(
 
                     val canRestart =
                         restartRecoverableFailure &&
-                            sourceFailure != null &&
+                            sourceFailure !=
+                            null &&
                             restartCount <
-                                maxCollectRestarts
+                            maxCollectRestarts
 
                     if (
                         !canRestart
@@ -617,10 +970,15 @@ internal class VexCoroutineLauncher(
                             mutableState =
                                 mutableState,
                             state =
-                                VexCoroutineState(
-                                    ref = ref,
+                                VexExecution.State(
+                                    instanceId =
+                                        instanceId,
+                                    sourceRef =
+                                        sourceRef,
+                                    id =
+                                        id,
                                     status =
-                                        VexCoroutineStatus.FAILED,
+                                        VexExecution.Status.FAILED,
                                     attempt =
                                         attempt,
                                     restartCount =
@@ -630,23 +988,28 @@ internal class VexCoroutineLauncher(
                                     failureMessage =
                                         reportedFailure.message,
                                 ),
-                            generation =
-                                generation,
                         )
                         return
                     }
 
-                    restartCount += 1
+                    restartCount +=
+                        1
 
                     publish(
                         mutableState =
                             mutableState,
                         state =
-                            VexCoroutineState(
-                                ref = ref,
+                            VexExecution.State(
+                                instanceId =
+                                    instanceId,
+                                sourceRef =
+                                    sourceRef,
+                                id =
+                                    id,
                                 status =
-                                    VexCoroutineStatus.RESTARTING,
-                                attempt = attempt,
+                                    VexExecution.Status.RESTARTING,
+                                attempt =
+                                    attempt,
                                 restartCount =
                                     restartCount,
                                 failureClass =
@@ -654,8 +1017,6 @@ internal class VexCoroutineLauncher(
                                 failureMessage =
                                     reportedFailure.message,
                             ),
-                        generation =
-                            generation,
                     )
 
                     if (
@@ -676,11 +1037,17 @@ internal class VexCoroutineLauncher(
                 mutableState =
                     mutableState,
                 state =
-                    VexCoroutineState(
-                        ref = ref,
+                    VexExecution.State(
+                        instanceId =
+                            instanceId,
+                        sourceRef =
+                            sourceRef,
+                        id =
+                            id,
                         status =
-                            VexCoroutineStatus.CANCELLED,
-                        attempt = attempt,
+                            VexExecution.Status.CANCELLED,
+                        attempt =
+                            attempt,
                         restartCount =
                             restartCount,
                         failureClass =
@@ -688,9 +1055,8 @@ internal class VexCoroutineLauncher(
                         failureMessage =
                             cancelled.message,
                     ),
-                generation =
-                    generation,
             )
+
             throw cancelled
         }
     }
@@ -698,10 +1064,10 @@ internal class VexCoroutineLauncher(
     private fun publish(
         mutableState:
             MutableStateFlow<
-                VexCoroutineState
+                VexExecution.State
             >,
-        state: VexCoroutineState,
-        generation: Long,
+        state:
+            VexExecution.State,
     ) {
         mutableState.value =
             state
@@ -709,20 +1075,15 @@ internal class VexCoroutineLauncher(
         synchronized(
             registryLock,
         ) {
-            if (
-                active[state.ref]
-                    ?.generation ==
-                generation
-            ) {
-                updateRegistryLocked(
-                    state,
-                )
-            }
+            updateRegistryLocked(
+                state,
+            )
         }
     }
 
     private fun updateRegistryLocked(
-        state: VexCoroutineState,
+        state:
+            VexExecution.State,
     ) {
         mutableExecutions.value =
             java.util.Collections
@@ -730,7 +1091,9 @@ internal class VexCoroutineLauncher(
                     LinkedHashMap(
                         mutableExecutions.value,
                     ).apply {
-                        this[state.ref] =
+                        this[
+                            state.instanceId
+                        ] =
                             state
                     },
                 )

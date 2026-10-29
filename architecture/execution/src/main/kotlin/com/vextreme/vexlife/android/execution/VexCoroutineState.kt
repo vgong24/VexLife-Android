@@ -1,56 +1,36 @@
 package com.vextreme.vexlife.android.execution
 
-import kotlinx.coroutines.flow.StateFlow
-
-@JvmInline
-value class VexCoroutineRef(
-    val value: String,
-) {
-    init {
-        require(value.isNotBlank()) {
-            "VexCoroutineRef must be non-blank"
-        }
-    }
-
-    override fun toString(): String = value
-}
-
-enum class VexCoroutineStatus {
-    STARTING,
-    RUNNING,
-    RESTARTING,
-    COMPLETED,
-    CANCELLED,
-    FAILED,
-}
-
-internal fun VexCoroutineStatus.isTerminal(): Boolean =
-    this == VexCoroutineStatus.COMPLETED ||
-        this == VexCoroutineStatus.CANCELLED ||
-        this == VexCoroutineStatus.FAILED
-
-data class VexCoroutineState(
-    val ref: VexCoroutineRef,
-    val status: VexCoroutineStatus,
-    val attempt: Int,
-    val restartCount: Int,
-    val failureClass: String? = null,
-    val failureMessage: String? = null,
+@Deprecated(
+    "Use VexExecution.SourceRef",
 )
+typealias VexCoroutineRef =
+    VexExecution.SourceRef
 
-interface VexCoroutineHandle {
-    val ref: VexCoroutineRef
-    val state: StateFlow<VexCoroutineState>
+@Deprecated(
+    "Use VexExecution.Status",
+)
+typealias VexCoroutineStatus =
+    VexExecution.Status
 
-    fun forceStop(
-        reason: String = "force stopped",
-    ): Boolean
+@Deprecated(
+    "Use VexExecution.State",
+)
+typealias VexCoroutineState =
+    VexExecution.State
 
-    suspend fun joinStop(
-        reason: String = "join stopped",
-    ): Boolean
+@Deprecated(
+    "Use VexExecution.Handle",
+)
+typealias VexCoroutineHandle =
+    VexExecution.Handle
 
-    suspend fun awaitCompletion()
-}
+internal fun VexExecution.Status.isTerminal():
+    Boolean =
+    this ==
+        VexExecution.Status.COMPLETED ||
+        this ==
+        VexExecution.Status.CANCELLED ||
+        this ==
+        VexExecution.Status.FAILED
 
 // [VXG RealForever]
