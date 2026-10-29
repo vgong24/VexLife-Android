@@ -65,7 +65,7 @@ abstract class VexFamily<
         data class StateOnly<
             State : VexFamily.State<*>,
         >(
-            val state: FamilyState,
+            val state: State,
         ) :
             DisplayState<
                 State
@@ -85,7 +85,7 @@ abstract class VexFamily<
         State : VexFamily.State<*>,
     > {
         suspend fun save(
-            state: FamilyState,
+            state: State,
         ):
             WriteResult
 
@@ -178,7 +178,7 @@ abstract class VexFamily<
                     null
 
                 fun save(
-                    state: FamilyState,
+                    state: State,
                 ):
                     SaveDestination<State> {
                     require(
@@ -322,7 +322,7 @@ abstract class VexFamily<
                         null
 
                     fun admit(
-                        state: FamilyState,
+                        state: State,
                     ) {
                         require(
                             admittedState ==
@@ -362,7 +362,7 @@ abstract class VexFamily<
         stateRelay.asStateFlow()
 
     val currentState:
-        State
+        FamilyState
         get() =
             states.value
 
@@ -379,7 +379,7 @@ abstract class VexFamily<
      * Use [noAct] for a reviewed State + Control pair that has no lawful Act.
      */
     protected abstract fun act(
-        currentState: State,
+        currentState: FamilyState,
         control: FamilyControl,
     ):
         Act<FamilyState>?
@@ -561,7 +561,7 @@ abstract class VexFamily<
 
     private fun execute(
         begin:
-            Act.Begin<State>,
+            Act.Begin<FamilyState>,
     ) {
         executeSave(
             mode =
@@ -574,7 +574,7 @@ abstract class VexFamily<
     private fun executeSave(
         mode: Act.Begin.Mode,
         save:
-            Act.Begin.Save<State>,
+            Act.Begin.Save<FamilyState>,
     ) {
         val stateStore =
             requireNotNull(
@@ -714,7 +714,7 @@ abstract class VexFamily<
 
     private fun applyLaterResult(
         result:
-            Act.Begin.Result<State>,
+            Act.Begin.Result<FamilyState>,
     ) {
         result.admittedState
             ?.let(
