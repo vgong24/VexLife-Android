@@ -32,13 +32,15 @@ interface VexDisplayState<
  *
  *     activate(control)
  *     -> act(currentState, control)
- *     -> state<State> / on<Control>
+ *     -> when (currentState)
+ *     -> when (control)
  *     -> stay() or admit(State)
  *     -> optional begin(...)
  *     -> StateRelay / execution
  *
- * The concrete Family owns [act]. There is no separately constructed Acts table or hidden invoke
- * operator between activate(...) and the feature's State + Control logic.
+ * The concrete Family owns [act]. State and Control traversal use native Kotlin sealed-type when
+ * expressions; there is no custom state/on branching language between activate(...) and feature
+ * meaning.
  */
 abstract class VexFamily<
     State : Any,
@@ -81,81 +83,6 @@ abstract class VexFamily<
         control: Control,
     ):
         VexAct<State>?
-
-    /**
-     * State-shape helper for the direct [act] function.
-     *
-     * This is a runtime type branch, not construction-time rule registration.
-     */
-    protected inline fun <
-        reified Current : State,
-    > state(
-        currentState: State,
-        control: Control,
-        block:
-            (
-                currentState: Current,
-                control: Control,
-            ) ->
-                VexAct<State>?,
-    ):
-        VexAct<State>? =
-        if (
-            currentState is
-                Current
-        ) {
-            block(
-                currentState,
-                control,
-            )
-        } else {
-            null
-        }
-
-    /**
-     * Payload-Control helper for the direct [act] function.
-     */
-    protected inline fun <
-        reified RequestedControl : Control,
-    > on(
-        control: Control,
-        block:
-            (
-                control: RequestedControl,
-            ) ->
-                VexAct<State>,
-    ):
-        VexAct<State>? =
-        if (
-            control is
-                RequestedControl
-        ) {
-            block(
-                control,
-            )
-        } else {
-            null
-        }
-
-    /**
-     * Exact singleton/value Control helper for the direct [act] function.
-     */
-    protected fun on(
-        expectedControl: Control,
-        control: Control,
-        block:
-            () ->
-                VexAct<State>,
-    ):
-        VexAct<State>? =
-        if (
-            control ==
-                expectedControl
-        ) {
-            block()
-        } else {
-            null
-        }
 
     /**
      * Authored Act outcome: keep current semantic State.

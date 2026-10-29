@@ -2,90 +2,83 @@
 
 [VXG RealForever]
 
-The current candidate keeps the runtime call graph visible in source.
+The current candidate keeps the runtime call graph visible in ordinary Kotlin.
 
-## Family runtime
+## Runtime
 
 ~~~text
 caller / UI
 -> Family.activate(control)
--> Family.act(currentState, control)
--> state<State> / on<Control>
+-> concrete Family.act(currentState, control)
+-> when (currentState)
+-> when (control)
 -> stay() or admit(State)
 -> optional begin(...)
 -> StateRelay / execution
 ~~~
 
-There is no separately constructed `VexActs` table, no `VexActsBuilder`, no stored `VexActRule`,
-and no hidden `operator fun invoke` between activate(...) and the concrete Family's State + Control
-logic.
+There is no separately constructed Acts table, builder, rule registry, hidden invoke operator, or
+custom State/Control branching DSL between activate(...) and the concrete Family logic.
 
 ## Concrete Family
 
-A concrete Family owns the direct Act function:
+A feature owns State, Control, DisplayState, and one direct function:
 
 ~~~kotlin
 override fun act(
     currentState: State,
     control: Control,
 ): VexAct<State>? =
-    state<State.Light>(
-        currentState,
-        control,
-    ) { _, control ->
-        on(
-            expectedControl = Control.Toggle,
-            control = control,
-        ) {
-            admit(State.Dark)
-        }
-    }
-        ?: state<State.Dark>(
-            currentState,
-            control,
-        ) { _, control ->
-            on(
-                expectedControl = Control.Toggle,
-                control = control,
-            ) {
-                admit(State.Light)
+    when (currentState) {
+        State.Light ->
+            when (control) {
+                Control.Toggle ->
+                    admit(State.Dark)
             }
-        }
+
+        State.Dark ->
+            when (control) {
+                Control.Toggle ->
+                    admit(State.Light)
+            }
+    }
 ~~~
 
-`state` and `on` are runtime branching helpers called from that function. They do not register a
-relationship table during Family construction.
+Both traversals are Kotlin-native exhaustive when expressions over feature-owned sealed types.
+
+A reader does not need to learn what state<State> or on<Control> means because those custom helpers
+are no longer part of the current Family path.
 
 ## State ownership
 
 ~~~text
-private StateRelay
+private stateRelay
   MutableStateFlow<State>
 
 Family.currentState
-  -> StateRelay.value
+  -> stateRelay value
 
 Family.states
-  -> StateRelay.asStateFlow()
+  -> stateRelay.asStateFlow()
 
 activate(...)
-  -> Act.Admit(State)
+  -> Act admitting State
   -> setCurrentState(State)
-  -> StateRelay.value = State
+  -> stateRelay.value = State
 ~~~
 
 StateRelay remains the one live State holder.
 
 ## Act outcome
 
-The direct act(...) function returns one small Act outcome:
+act(currentState, control) returns the authored outcome that activate(...) applies:
 
 ~~~text
-no Act
-  null
+null
+  no Act exists for this exact State + Control pair
 
-stay
-  current State remains current
+stay()
+  current State stays current
 
 admit(State)
   activate(...) writes State into StateRelay
@@ -94,32 +87,30 @@ optional begin(...)
   activate(...) starts the authored execution consequence
 ~~~
 
-There is no separate StateDisposition object.
+The return carrier is currently VexAct<State>. Its naming/shape remains a separate refinement
+question; this change does not rename it or add another replacement type.
 
-## Human-visible nouns and verbs
+## Human-visible language
 
 ~~~text
-NOUNS
-  Family
-  State
-  Control
-  DisplayState
-  Act
-  StateRelay
-  InputState
-  OutputState
-  Store
+Family
+State
+Control
+DisplayState
+currentState
+states
 
-VERBS
-  activate(...)
-  act(...)
-  state(...)
-  on(...)
-  stay()
-  admit(...)
-  begin(...)
-  process(...)
+activate(control)
+act(currentState, control)
+when (currentState)
+when (control)
+stay()
+admit(State)
+begin(...)
+process(...)
 ~~~
+
+Except for the Vex domain functions themselves, State/Control traversal is ordinary Kotlin.
 
 ## Process remains separate
 
@@ -129,7 +120,7 @@ fun process(
 ): OutputState
 ~~~
 
-The current unresolved seam remains:
+The unresolved seam remains visible:
 
 ~~~text
 OutputState
@@ -142,16 +133,12 @@ This PR does not add CompoundFamily, stateFactory, Family revision, or post-proc
 
 ~~~text
 serialized competing-cause State decision / stale async result
-
 cross-cycle relationship memory and its rightful explicit supplier
-
 provider / intent stable identity mapping
-
 exact Family + Relay Single/Compound composition
-
 Process OutputState -> rightful Family.currentState handoff
 ~~~
 
 Repository Gradle/JVM proof remains PENDING.
 
-<!-- [VXG RealForever][VEX-BEHAVIOR][FAMILY][DIRECT-RUNTIME] -->
+<!-- [VXG RealForever][VEX-FAMILY][NATIVE-STATE-CONTROL-TRAVERSAL] -->

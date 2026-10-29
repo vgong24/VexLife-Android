@@ -74,80 +74,73 @@ class VexFamilyHighConfidenceTest {
         /**
          * This is the function Family.activate(...) calls.
          *
-         * State and Control traversal is visible here; there is no separately constructed Acts table.
+         * State and Control traversal are ordinary Kotlin sealed-type when expressions.
          */
         override fun act(
             currentState: State,
             control: Control,
         ):
             VexAct<State>? =
-            state<State.Empty>(
-                currentState =
-                    currentState,
-                control =
-                    control,
-            ) { _, control ->
-                on<Control.Set>(
-                    control =
-                        control,
-                ) { control ->
-                    admit(
-                        State.Ready(
-                            value =
-                                control.value,
-                        ),
-                    )
-                }
-                    ?: on<Control.Commit>(
-                        control =
-                            control,
-                    ) { control ->
-                        stay(
-                            begin =
-                                begin(
-                                    mode =
-                                        VexBeginMode.Sequenced,
-                                ) {
-                                    save(
-                                        State.Ready(
-                                            value =
-                                                control.value,
-                                        ),
-                                    ).results {
-                                        success {
-                                            admit(
-                                                State.Ready(
-                                                    value =
-                                                        control.value,
-                                                ),
-                                            )
-                                        }
+            when (
+                currentState
+            ) {
+                State.Empty ->
+                    when (
+                        control
+                    ) {
+                        is Control.Set ->
+                            admit(
+                                State.Ready(
+                                    value =
+                                        control.value,
+                                ),
+                            )
 
-                                        failure {
+                        is Control.Commit ->
+                            stay(
+                                begin =
+                                    begin(
+                                        mode =
+                                            VexBeginMode.Sequenced,
+                                    ) {
+                                        save(
+                                            State.Ready(
+                                                value =
+                                                    control.value,
+                                            ),
+                                        ).results {
+                                            success {
+                                                admit(
+                                                    State.Ready(
+                                                        value =
+                                                            control.value,
+                                                    ),
+                                                )
+                                            }
+
+                                            failure {
+                                            }
                                         }
-                                    }
-                                },
-                        )
+                                    },
+                            )
+                    }
+
+                is State.Ready ->
+                    when (
+                        control
+                    ) {
+                        is Control.Set ->
+                            admit(
+                                currentState.copy(
+                                    value =
+                                        control.value,
+                                ),
+                            )
+
+                        is Control.Commit ->
+                            null
                     }
             }
-                ?: state<State.Ready>(
-                    currentState =
-                        currentState,
-                    control =
-                        control,
-                ) { currentState, control ->
-                    on<Control.Set>(
-                        control =
-                            control,
-                    ) { control ->
-                        admit(
-                            currentState.copy(
-                                value =
-                                    control.value,
-                            ),
-                        )
-                    }
-                }
 
         override val displayState:
             DisplayState
@@ -199,21 +192,18 @@ class VexFamilyHighConfidenceTest {
             control: Control,
         ):
             VexAct<State>? =
-            state<State.Idle>(
-                currentState =
-                    currentState,
-                control =
-                    control,
-            ) { _, control ->
-                on(
-                    expectedControl =
-                        Control.Keep,
-                    control =
-                        control,
-                ) {
-                    stay()
-                }
+            when (
+                currentState
+            ) {
+                State.Idle ->
+                    when (
+                        control
+                    ) {
+                        Control.Keep ->
+                            stay()
+                    }
             }
+
     }
 
     private class GatedStore :

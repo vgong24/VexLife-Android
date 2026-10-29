@@ -15,7 +15,7 @@ A foundation earns a dedicated entry when it has a real recurring consumer, inva
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
 
-### Direct readable Family candidate
+### Direct Family candidate
 
 Current review source:
 
@@ -26,18 +26,19 @@ architecture/behavior/src/main/.../VexAct.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-Runtime call graph:
+Current call graph:
 
 ~~~text
 Family.activate(control)
 -> concrete Family.act(currentState, control)
--> state<State> / on<Control>
+-> native when(currentState)
+-> native when(control)
 -> stay / admit / optional begin
 -> StateRelay / execution
 ~~~
 
-The current candidate removes the separately constructed VexActs/VexActsBuilder/VexActRule path and
-the hidden operator invoke. StateRelay remains the one live current-State holder.
+The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
+or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
 
 Compound/process integration remains separate and open:
 
@@ -46,7 +47,7 @@ InputState -> process(InputState) -> OutputState
 OutputState -> ??? -> Family.currentState
 ~~~
 
-<!-- [VXG RealForever][FOUNDATION][FAMILY][DIRECT-RUNTIME] -->
+<!-- [VXG RealForever][FOUNDATION][FAMILY][NATIVE-TRAVERSAL] -->
 
 
 ## Foundation establishment criteria
