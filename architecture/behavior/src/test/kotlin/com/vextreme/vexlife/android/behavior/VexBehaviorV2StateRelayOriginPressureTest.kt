@@ -3000,7 +3000,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
 
         /*
          * process(...) sees all three CURRENT inputs together and returns only relationship meaning.
-         * It does not mutate ScreenOwner, MusicQueueOwner or ThemeModeOwner.
+         * It does not mutate ScreenFamily, MusicQueueOwner or ThemeModeOwner.
          */
         assertEquals(
             ComplexOutputState.NeedsPlayerScreen(
@@ -3108,9 +3108,9 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
         )
 
         /*
-         * The first committed consequence requested PlayerSurface. Act asked ScreenOwner to change.
-         * ScreenOwner then owned the new truth. The circuit OBSERVED screenOwner.current and fed that
-         * value back as NEW input; process(...) then derived Settled.
+         * The first committed consequence requested PlayerSurface. Act entered ScreenFamily through
+         * its Control boundary. ScreenFamily then owned the admitted new truth. The circuit OBSERVED
+         * screenFamily.current and fed that value back as NEW input; process(...) then derived Settled.
          */
         assertEquals(
             PLAYER_SCREEN,
@@ -3268,14 +3268,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
         ) :
             VexBehaviorFamily.State<
                 ScreenFamily
-            >,
-            VexState<
-                State
-            > {
-            override fun deepCopy():
-                State =
-                copy()
-        }
+            >
 
         sealed interface Control :
             VexBehaviorFamily.Control<
@@ -3300,10 +3293,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                     "sample.family-circuit.screen",
             ) {
                 state<State> {
-                    on<Control.Show> {
-                        current,
-                        control,
-                        ->
+                    on<Control.Show> { current, control ->
                         admit(
                             current.copy(
                                 screenName =
@@ -3489,7 +3479,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                     (
                         incoming.screen
                             ?: screen
-                    )?.deepCopy(),
+                    )?.copy(),
                 musicQueue =
                     (
                         incoming.musicQueue
@@ -3506,7 +3496,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             ComplexInputState =
             ComplexInputState(
                 screen =
-                    screen?.deepCopy(),
+                    screen?.copy(),
                 musicQueue =
                     musicQueue?.deepCopy(),
                 themeMode =
