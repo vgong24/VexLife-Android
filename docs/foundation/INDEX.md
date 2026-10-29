@@ -22,6 +22,7 @@ Current review source:
 ~~~text
 architecture/behavior/FAMILY-CIRCUIT.md
 architecture/behavior/src/main/.../VexFamily.kt
+architecture/behavior/src/main/.../VexAct.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
@@ -38,32 +39,6 @@ Family.activate(control)
 
 The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
 or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
-
-PR #193 also refines the Family -> Execution boundary under current review:
-
-~~~text
-RelationshipId
-    = live Family + triggering Control kind + optional ordered arguments
-    = the maintained execution-map key
-
-Approach
-    = Independent / Earliest / Latest / Queued
-    = overlap behavior, not identity
-
-Instance
-    = one generated runtime occurrence
-    = not another semantic ID
-
-SourceRef
-    = diagnostic source/navigation information
-~~~
-
-Maintained coordination is ephemeral: a completed Instance is removed from its RelationshipId entry,
-and the entry itself is removed when no unfinished Instances remain. `VexExecutionRoot.executions`
-is a separate observable lifecycle-State projection and does not decide duplicate handling.
-
-This PR #193 refinement is **draft/source-review state** until repository-owned Gradle/JVM proof runs;
-it does not rewrite the accepted-main EXECUTION_BRIDGE checkpoint below before that proof exists.
 
 Compound/process integration remains separate and open:
 
@@ -316,24 +291,11 @@ FeatureExecution : VexExecution
 -> forceStop / joinStop
 ```
 
-The actual `VexCoroutineLauncher` remains internal foundation machinery. The accepted-main baseline
-still owns this checkpoint. Current draft PR #193 is reviewing a refinement that keeps one semantic
-execution ID only:
-
-~~~text
-RelationshipId = owner + trigger + ordered arguments
-Instance       = exact runtime occurrence
-SourceRef      = diagnostic source reference
-Approach       = overlap handling
-~~~
-
-Under that draft refinement, `RelationshipId` is the maintained-map key itself and its runtime entry
-is deleted when its final unfinished Instance completes. The separate root `executions` projection
-may retain terminal lifecycle State but is not used for duplicate coordination.
-
-`launchOnce` remains a deprecated compatibility alias; sustained Flow collection keeps its separate
-bounded recovery contract. Cancellation is terminal and exact root shutdown closes work admission
-before cancelling the supervised tree.
+The actual `VexCoroutineLauncher` remains internal foundation machinery. Source callables supply both
+the executed function and the source-derived runtime ref, avoiding a parallel hand-maintained ID
+catalog. `launchOnce` never silently retries finite operations; sustained Flow collection owns a
+bounded recovery path where requested. Cancellation is terminal and exact root shutdown closes work
+admission before cancelling the supervised tree.
 
 This candidate is intentionally not yet wired through Relay/Maps/VexStream. PR #77 independently
 identified continuous dependency collector death/restart as execution-lifetime work, while current

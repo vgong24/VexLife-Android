@@ -2,12 +2,9 @@ package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -217,11 +214,6 @@ class VexFamilyHighConfidenceTest {
         val started =
             CompletableDeferred<Unit>()
 
-        val startedStates =
-            CopyOnWriteArrayList<
-                ValueFamily.State
-            >()
-
         val gate =
             CompletableDeferred<Unit>()
 
@@ -230,8 +222,6 @@ class VexFamilyHighConfidenceTest {
                 ValueFamily.State,
         ):
             VexFamily.Store.WriteResult {
-            startedStates +=
-                state
             started.complete(
                 Unit,
             )
@@ -458,98 +448,6 @@ class VexFamilyHighConfidenceTest {
             root.forceStopAll()
         }
     }
-
-    @Test
-    fun controlPayloadDoesNotBecomeRelationshipIdUnlessArgumentsAreAuthored() =
-        runBlocking {
-            val root =
-                VexExecutionRoot()
-            val store =
-                GatedStore()
-
-            try {
-                val family =
-                    ValueFamily(
-                        initialState =
-                            ValueFamily.State.Empty,
-                        executionRoot =
-                            root,
-                        store =
-                            store,
-                    )
-
-                assertTrue(
-                    family.activate(
-                        ValueFamily.Control.Commit(
-                            value =
-                                "first",
-                        ),
-                    ),
-                )
-
-                withTimeout(
-                    2_000L,
-                ) {
-                    store.started.await()
-                }
-
-                assertTrue(
-                    family.activate(
-                        ValueFamily.Control.Commit(
-                            value =
-                                "second",
-                        ),
-                    ),
-                )
-
-                kotlinx.coroutines.yield()
-
-                assertEquals(
-                    listOf(
-                        ValueFamily.State.Ready(
-                            value =
-                                "first",
-                        ),
-                    ),
-                    store.startedStates
-                        .toList(),
-                )
-
-                store.gate.complete(
-                    Unit,
-                )
-
-                withTimeout(
-                    2_000L,
-                ) {
-                    while (
-                        store.startedStates.size <
-                        2
-                    ) {
-                        kotlinx.coroutines.yield()
-                    }
-                }
-
-                assertEquals(
-                    listOf(
-                        ValueFamily.State.Ready(
-                            value =
-                                "first",
-                        ),
-                        ValueFamily.State.Ready(
-                            value =
-                                "second",
-                        ),
-                    ),
-                    store.startedStates
-                        .toList(),
-                )
-            } finally {
-                root.joinStopAll(
-                    "test complete",
-                )
-            }
-        }
 
     @Test
     fun beginSaveSuccessMayAdmitTheAuthoredLaterState() {

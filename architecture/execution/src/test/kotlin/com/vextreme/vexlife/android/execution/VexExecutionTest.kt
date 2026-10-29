@@ -24,34 +24,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexExecutionTest {
-    /**
-     * Test-only observation of the private maintained RelationshipId map.
-     *
-     * The production API intentionally does not expose coordination-map internals merely for proof.
-     * This reflection is bounded to the exact lifecycle invariant: an empty RelationshipId entry
-     * must not survive after its final Instance completes.
-     */
-    private fun maintainedRelationshipCount(
-        root:
-            VexExecutionRoot,
-    ):
-        Int {
-        val field =
-            root.coroutineLauncher
-                .javaClass
-                .getDeclaredField(
-                    "maintainedByRelationshipId",
-                )
-        field.isAccessible =
-            true
-
-        return (
-            field.get(
-                root.coroutineLauncher,
-            ) as Map<*, *>
-        ).size
-    }
-
     private class TestRepository {
         var onceCount = 0
         var argumentTotal = 0
@@ -217,7 +189,6 @@ class VexExecutionTest {
             Earliest,
             Latest,
             Queued,
-            Shared,
         }
 
         fun runOnce(): VexCoroutineHandle =
@@ -261,26 +232,6 @@ class VexExecutionTest {
                     Trigger.Queued,
                 action =
                     repository::queuedWork,
-                argument =
-                    value,
-            )
-
-        fun runEarliestShared(value: String): VexExecution.Handle =
-            launchEarliest(
-                trigger =
-                    Trigger.Shared,
-                action =
-                    repository::earliestWork,
-                argument =
-                    value,
-            )
-
-        fun runLatestShared(value: String): VexExecution.Handle =
-            launchLatest(
-                trigger =
-                    Trigger.Shared,
-                action =
-                    repository::latestWork,
                 argument =
                     value,
             )
@@ -511,7 +462,7 @@ class VexExecutionTest {
                         .keys
                         .count {
                             it ==
-                                handle.instance
+                                handle.instanceId
                         },
                 )
             } finally {
@@ -920,8 +871,8 @@ class VexExecutionTest {
 
                 assertEquals(
                     listOf(
-                        first.instance,
-                        second.instance,
+                        first.instanceId,
+                        second.instanceId,
                     ),
                     root.executions
                         .value
@@ -933,7 +884,7 @@ class VexExecutionTest {
                 val exposed =
                     root.executions.value
                         as MutableMap<
-                            VexExecution.Instance,
+                            VexExecution.InstanceId,
                             VexExecution.State
                         >
 
@@ -945,7 +896,7 @@ class VexExecutionTest {
                 assertFalse(mutationAccepted)
                 assertNotNull(
                     root.executions.value[
-                        first.instance
+                        first.instanceId
                     ],
                 )
 
@@ -955,103 +906,6 @@ class VexExecutionTest {
                 root.joinStopAll("test complete")
             }
         }
-
-    @Test
-    fun relationshipIdIsLiveOwnerTriggerAndOrderedArguments() {
-        val owner =
-            Any()
-
-        val first =
-            VexExecution.relationshipId(
-                owner =
-                    owner,
-                trigger =
-                    "Save",
-                arguments =
-                    listOf(
-                        "account",
-                        7,
-                    ),
-            )
-        val same =
-            VexExecution.relationshipId(
-                owner =
-                    owner,
-                trigger =
-                    "Save",
-                arguments =
-                    listOf(
-                        "account",
-                        7,
-                    ),
-            )
-
-        assertEquals(
-            first,
-            same,
-        )
-        assertFalse(
-            first ==
-                VexExecution.relationshipId(
-                    owner =
-                        Any(),
-                    trigger =
-                        "Save",
-                    arguments =
-                        listOf(
-                            "account",
-                            7,
-                        ),
-                ),
-        )
-        assertFalse(
-            first ==
-                VexExecution.relationshipId(
-                    owner =
-                        owner,
-                    trigger =
-                        "Refresh",
-                    arguments =
-                        listOf(
-                            "account",
-                            7,
-                        ),
-                ),
-        )
-        assertFalse(
-            first ==
-                VexExecution.relationshipId(
-                    owner =
-                        owner,
-                    trigger =
-                        "Save",
-                    arguments =
-                        listOf(
-                            7,
-                            "account",
-                        ),
-                ),
-        )
-
-        assertFalse(
-            VexExecution.relationshipId(
-                owner =
-                    owner,
-                trigger =
-                    "Save",
-            ) ==
-                VexExecution.relationshipId(
-                    owner =
-                        owner,
-                    trigger =
-                        "Save",
-                    arguments =
-                        listOf(
-                            null,
-                        ),
-                ),
-        )
-    }
 
     @Test
     fun launchAdmitsIndependentInstancesForTheSameCallable(): Unit =
@@ -1091,8 +945,8 @@ class VexExecutionTest {
                 }
 
                 assertFalse(
-                    first.instance ==
-                        second.instance,
+                    first.instanceId ==
+                        second.instanceId,
                 )
                 assertEquals(
                     first.sourceRef,
@@ -1112,7 +966,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun launchEarliestReturnsTheExistingActiveRelationshipIdInstance(): Unit =
+    fun launchEarliestReturnsTheExistingActiveRelationshipInstance(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot()
@@ -1147,8 +1001,8 @@ class VexExecutionTest {
                     )
 
                 assertEquals(
-                    first.instance,
-                    second.instance,
+                    first.instanceId,
+                    second.instanceId,
                 )
                 assertEquals(
                     listOf(
@@ -1170,157 +1024,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun completedRelationshipIdEntryIsRemovedAndTheNextOccurrenceGetsAFreshInstance(): Unit =
-        runBlocking {
-            val root =
-                VexExecutionRoot()
-            val repository =
-                TestRepository()
-            val execution =
-                TestExecution(
-                    root,
-                    repository,
-                )
-
-            try {
-                val first =
-                    execution.runEarliest(
-                        "A",
-                    )
-
-                withTimeout(
-                    2_000L,
-                ) {
-                    while (
-                        repository.earliestStarted
-                            .isEmpty()
-                    ) {
-                        kotlinx.coroutines.yield()
-                    }
-                }
-
-                assertEquals(
-                    1,
-                    maintainedRelationshipCount(
-                        root,
-                    ),
-                )
-
-                repository.earliestRelease.complete(
-                    Unit,
-                )
-                first.awaitCompletion()
-
-                withTimeout(
-                    2_000L,
-                ) {
-                    while (
-                        maintainedRelationshipCount(
-                            root,
-                        ) !=
-                        0
-                    ) {
-                        kotlinx.coroutines.yield()
-                    }
-                }
-
-                val second =
-                    execution.runEarliest(
-                        "B",
-                    )
-
-                assertFalse(
-                    first.instance ==
-                        second.instance,
-                )
-
-                second.awaitCompletion()
-
-                withTimeout(
-                    2_000L,
-                ) {
-                    while (
-                        maintainedRelationshipCount(
-                            root,
-                        ) !=
-                        0
-                    ) {
-                        kotlinx.coroutines.yield()
-                    }
-                }
-            } finally {
-                root.joinStopAll(
-                    "test complete",
-                )
-            }
-        }
-
-    @Test
-    fun oneLiveRelationshipIdCannotSilentlyChangeApproach(): Unit =
-        runBlocking {
-            val root =
-                VexExecutionRoot()
-            val repository =
-                TestRepository()
-            val execution =
-                TestExecution(
-                    root,
-                    repository,
-                )
-
-            try {
-                val earliest =
-                    execution.runEarliestShared(
-                        "A",
-                    )
-
-                withTimeout(
-                    2_000L,
-                ) {
-                    while (
-                        repository.earliestStarted
-                            .isEmpty()
-                    ) {
-                        kotlinx.coroutines.yield()
-                    }
-                }
-
-                val conflict =
-                    runCatching {
-                        execution.runLatestShared(
-                            "B",
-                        )
-                    }.exceptionOrNull()
-
-                assertTrue(
-                    conflict is
-                        IllegalStateException,
-                )
-                assertEquals(
-                    listOf(
-                        "A",
-                    ),
-                    repository.earliestStarted
-                        .toList(),
-                )
-                assertTrue(
-                    repository.latestStarted
-                        .isEmpty(),
-                )
-
-                repository.earliestRelease.complete(
-                    Unit,
-                )
-                earliest.awaitCompletion()
-            } finally {
-                root.joinStopAll(
-                    "test complete",
-                )
-            }
-        }
-
-    @Test
-    fun theSameTriggerOnDifferentLiveOwnersDoesNotShareARelationshipId(): Unit =
+    fun theSameTriggerOnDifferentLiveOwnersDoesNotShareARelationship(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot()
@@ -1362,8 +1066,8 @@ class VexExecutionTest {
                     }
                 }
                 assertFalse(
-                    first.instance ==
-                        second.instance,
+                    first.instanceId ==
+                        second.instanceId,
                 )
                 assertEquals(
                     listOf(

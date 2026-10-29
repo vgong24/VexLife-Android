@@ -820,8 +820,8 @@ abstract class VexFamily<
                 VexExecution.beginEarliest(
                     executionRoot =
                         executionRoot,
-                    relationshipId =
-                        executionRelationshipId(
+                    relationship =
+                        executionRelationship(
                             control =
                                 control,
                             arguments =
@@ -843,8 +843,8 @@ abstract class VexFamily<
                 VexExecution.beginLatest(
                     executionRoot =
                         executionRoot,
-                    relationshipId =
-                        executionRelationshipId(
+                    relationship =
+                        executionRelationship(
                             control =
                                 control,
                             arguments =
@@ -866,8 +866,8 @@ abstract class VexFamily<
                 VexExecution.beginQueued(
                     executionRoot =
                         executionRoot,
-                    relationshipId =
-                        executionRelationshipId(
+                    relationship =
+                        executionRelationship(
                             control =
                                 control,
                             arguments =
@@ -887,21 +887,14 @@ abstract class VexFamily<
         }
     }
 
-    /**
-     * Forms the exact RelationshipId consumed by the VexExecution maintained map.
-     *
-     * Family does not author another execution ID. The live Family is the owner, the triggering
-     * Control kind is the semantic trigger, and optional ordered arguments narrow the relationship
-     * only when the Family author explicitly chooses them.
-     */
-    private fun executionRelationshipId(
+    private fun executionRelationship(
         control:
             FamilyControl,
         arguments:
             List<Any?>,
     ):
-        VexExecution.RelationshipId =
-        VexExecution.relationshipId(
+        VexExecution.Relationship =
+        VexExecution.relationship(
             owner =
                 this,
             trigger =

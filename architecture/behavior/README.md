@@ -194,7 +194,7 @@ receives the protected `begin(...)` opening while authoring an Act.
 
 Begin does not own a second execution-mode vocabulary. It carries `VexExecution.Approach` plus
 optional ordered arguments; activation combines those with the live Family and triggering Control
-to form the exact `VexExecution.RelationshipId` map key.
+to form the exact `VexExecution.Relationship` map key.
 
 ## Execution relationship identity
 
@@ -202,7 +202,7 @@ Family-originated execution uses the same semantic relationship that the executi
 no intermediate Family `ExecutionId` and no conversion of Control meaning into a second ID vocabulary.
 
 ~~~text
-VexExecution.RelationshipId
+VexExecution.Relationship
     owner      = this live Family
     trigger    = triggering Control kind
     arguments  = optional ordered tuple
@@ -237,10 +237,8 @@ many arguments
     Family + Control + arg1 + arg2 + ...
 ~~~
 
-The resulting `VexExecution.RelationshipId` is the key used by the maintained execution map itself.
-There is no additional Id/key wrapper around it. When the final unfinished Instance completes, its
-membership is removed and the empty RelationshipId entry is deleted; a later equal RelationshipId
-starts with fresh runtime coordination.
+The resulting `VexExecution.Relationship` is the key used by the maintained execution map itself.
+There is no additional Id/key wrapper around it.
 
 The overlap behavior is a separate fact:
 
@@ -255,22 +253,22 @@ VexExecution.Approach
 That separation matters:
 
 ~~~text
-RelationshipId
+Relationship
     WHICH executions belong together?
 
 Approach
-    HOW overlapping executions in that RelationshipId interact?
+    HOW overlapping executions in that Relationship interact?
 ~~~
 
 Arguments are positional. `(A, B)` differs from `(B, A)`. Zero arguments differs from one explicit
 `null` argument. Use stable immutable semantic values whose equality remains stable while the
 relationship is alive. The exact Control payload is not automatically part of duplicate handling.
 
-Direct non-Family VexExecution code may use its own semantic trigger to construct a RelationshipId, but
+Direct non-Family VexExecution code may use its own semantic trigger to construct a Relationship, but
 the architecture does not require a second `Id` concept.
 
-`SourceRef` remains automatic diagnostic/source information. `Instance` is the exact runtime
-occurrence. Neither substitutes for RelationshipId, and neither is another semantic ID.
+`SourceRef` remains automatic diagnostic/source information. `InstanceId` remains the exact
+per-launch occurrence. Neither substitutes for Relationship.
 
 ## Logger boundary
 
