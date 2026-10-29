@@ -34,11 +34,18 @@ The process simplification is now part of the V2 Family foundation rather than o
 experiment.
 
 ~~~text
-VexBehaviorV2Family
-  simple Family current-State case
+VexFamily
+  common CURRENT-State / DisplayState / admission root
 
-VexBehaviorV2CompoundFamily
-  Family specialization for a CURRENT relationship State
+VexBehaviorV2Family : VexFamily
+  Control-driven Family
+  -> CURRENT State + Control
+  -> Act
+  -> immediate stay/admit
+  -> optional begin(...)
+
+VexBehaviorV2CompoundFamily : VexFamily
+  relationship-driven Family
   -> concrete named Compound State
   -> InputState.latest(incoming)
   -> process(latestStateInput)
@@ -47,8 +54,9 @@ VexBehaviorV2CompoundFamily
   -> Act only for Output-changing commits
 ~~~
 
-The concrete Family owns the relationship. There is no sibling Compound Relay required to own a
-second copy of current Input/Output truth.
+Both specializations share the same Family root without inheriting capabilities they do not use.
+The concrete Compound Family owns the relationship; there is no sibling Compound Relay required to
+own a second copy of current Input/Output truth.
 
 VexBehaviorV2FamilyCircuitTestSampleSuite is the teaching surface for this current structure.
 
