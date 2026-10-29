@@ -16,6 +16,7 @@ import com.vextreme.vexlife.android.elements.toggle
 import com.vextreme.vexlife.android.preview.VexRenderedScreenPreview
 import com.vextreme.vexlife.android.preview.VexScreenPreviews
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.ui.ThemeMode
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 
 /**
@@ -424,14 +425,16 @@ object VexMapsScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
+        themeMode: ThemeMode,
     ) {
         VexMapsMapSurface(
             runtime = runtime,
             repository = repositories.vexMaps,
             distributionRepository =
                 repositories.vexMapsDistribution,
-            darkTheme = darkTheme,
+            darkTheme =
+                themeMode ==
+                    ThemeMode.Dark,
         )
     }
 }

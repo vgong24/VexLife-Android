@@ -85,8 +85,23 @@ internal class VexLifeSession(
     )
 
     private fun toggleDarkMode() {
+        val selectedMode =
+            when (
+                themeModeFamily
+                    .currentState
+            ) {
+                ThemeMode.NotSet,
+                ThemeMode.Light ->
+                    ThemeMode.Dark
+
+                ThemeMode.Dark ->
+                    ThemeMode.Light
+            }
+
         themeModeFamily.activate(
-            ThemeModeFamily.Control.Toggle,
+            ThemeModeFamily.Control.Select(
+                selectedMode,
+            ),
         )
     }
 }

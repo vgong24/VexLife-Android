@@ -20,27 +20,15 @@ internal enum class ThemeMode :
     Dark,
 }
 
-
-/** Boolean presentation projection of a resolved ThemeMode. */
-internal fun ThemeMode.requireResolvedDarkTheme(): Boolean =
-    when (this) {
-        ThemeMode.NotSet ->
-            throw IllegalStateException(
-                "ThemeMode must be resolved before VexLifeTheme projection",
-            )
-        ThemeMode.Light -> false
-        ThemeMode.Dark -> true
-    }
-
 /**
  * Smallest current ThemeMode Family earned by the Debug Menu patient zero.
  *
- * Toggle meaning depends on CURRENT semantic State, so it belongs in the accepted direct Family
- * circuit rather than in a Boolean callback. Control kind alone is sufficient relationship identity:
- * ThemeMode has no repeated resource whose identity would earn a ResourceId.
+ * ThemeMode values are peer semantic choices. The Family accepts an explicit Select request rather
+ * than making today's two-state Switch the semantic contract. A target may realize Light/Dark with
+ * a toggle, segmented control, menu, or another presentation without changing this relationship.
  *
- * NotSet deliberately has no Toggle Act. A future platform/system-appearance relationship must first
- * resolve effective ThemeMode through its rightful owner instead of this Family inventing a default.
+ * Control kind alone is sufficient relationship identity: ThemeMode has no repeated resource whose
+ * identity would earn a ResourceId. The selected mode is Control payload, not a ResourceId.
  */
 internal class ThemeModeFamily(
     initialState: ThemeMode,
@@ -58,8 +46,19 @@ internal class ThemeModeFamily(
     ) {
     sealed interface Control :
         VexFamily.Control<ThemeModeFamily> {
-        data object Toggle :
-            Control
+        data class Select(
+            val mode: ThemeMode,
+        ) :
+            Control {
+            init {
+                require(
+                    mode !=
+                        ThemeMode.NotSet,
+                ) {
+                    "ThemeMode.NotSet is unresolved state, not a selectable mode"
+                }
+            }
+        }
     }
 
     override fun act(
@@ -67,27 +66,26 @@ internal class ThemeModeFamily(
         control: Control,
     ):
         VexFamily.Act<ThemeMode>? =
-        when (currentState) {
-            ThemeMode.NotSet ->
-                when (control) {
-                    Control.Toggle ->
-                        noAct()
-                }
-
-            ThemeMode.Light ->
-                when (control) {
-                    Control.Toggle ->
+        when (control) {
+            is Control.Select ->
+                when (currentState) {
+                    ThemeMode.NotSet ->
                         admit(
-                            ThemeMode.Dark,
+                            control.mode,
                         )
-                }
 
-            ThemeMode.Dark ->
-                when (control) {
-                    Control.Toggle ->
-                        admit(
-                            ThemeMode.Light,
-                        )
+                    ThemeMode.Light,
+                    ThemeMode.Dark ->
+                        if (
+                            currentState ==
+                            control.mode
+                        ) {
+                            stay()
+                        } else {
+                            admit(
+                                control.mode,
+                            )
+                        }
                 }
         }
 }

@@ -103,11 +103,25 @@ private val VexTypography = Typography(
  */
 @Composable
 fun VexLifeTheme(
-    darkTheme: Boolean,
+    themeMode: ThemeMode,
     content: @Composable () -> Unit,
 ) {
+    val colorScheme =
+        when (themeMode) {
+            ThemeMode.NotSet ->
+                error(
+                    "ThemeMode must be resolved before VexLifeTheme renders",
+                )
+
+            ThemeMode.Light ->
+                LightColors
+
+            ThemeMode.Dark ->
+                DarkColors
+        }
+
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = colorScheme,
         typography = VexTypography,
     ) {
         val view = LocalView.current
@@ -120,9 +134,12 @@ fun VexLifeTheme(
                     view,
                 )
 
-                // Dark app -> light system icons. Light app -> dark system icons.
-                controller.isAppearanceLightStatusBars = !darkTheme
-                controller.isAppearanceLightNavigationBars = !darkTheme
+                controller.isAppearanceLightStatusBars =
+                    themeMode ==
+                        ThemeMode.Light
+                controller.isAppearanceLightNavigationBars =
+                    themeMode ==
+                        ThemeMode.Light
 
                 // We draw our own themed background behind the navigation area.
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

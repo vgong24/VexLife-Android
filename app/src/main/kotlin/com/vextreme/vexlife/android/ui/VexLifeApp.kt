@@ -98,8 +98,6 @@ internal fun VexLifeApp(
     val sessionScope = session.scope
     val themeMode by
         session.themeModeFamily.states.collectAsState()
-    val darkTheme =
-        themeMode.requireResolvedDarkTheme()
 
     LaunchedEffect(runtime) {
         runtime.appOpened()
@@ -120,13 +118,13 @@ internal fun VexLifeApp(
         )
     }
 
-    VexLifeTheme(darkTheme = darkTheme) {
+    VexLifeTheme(themeMode = themeMode) {
         VexLifeScaffold(
             runtime = runtime,
             repositories = repositories,
             relays = relays,
             sessionScope = sessionScope,
-            darkTheme = darkTheme,
+            themeMode = themeMode,
         )
     }
 }
@@ -137,7 +135,7 @@ private fun VexLifeScaffold(
     repositories: AppRepositories,
     relays: VexLifeRelays,
     sessionScope: CoroutineScope,
-    darkTheme: Boolean,
+    themeMode: ThemeMode,
 ) {
     val primaryScreens = AppScreens.primary
     val pagerState = rememberPagerState(
@@ -206,7 +204,7 @@ private fun VexLifeScaffold(
                     repositories = repositories,
                     relays = relays,
                     sessionScope = sessionScope,
-                    darkTheme = darkTheme,
+                    themeMode = themeMode,
                 )
             }
         } else {
@@ -233,7 +231,7 @@ private fun VexLifeScaffold(
                     repositories = repositories,
                     relays = relays,
                     sessionScope = sessionScope,
-                    darkTheme = darkTheme,
+                    themeMode = themeMode,
                 )
             }
         }

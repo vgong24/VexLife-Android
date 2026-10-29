@@ -131,13 +131,6 @@ class VexLifeSessionTest {
                 ThemeMode.Light,
                 session.themeModeFamily.currentState,
             )
-            assertEquals(
-                false,
-                session.themeModeFamily
-                    .currentState
-                    .requireResolvedDarkTheme(),
-            )
-
             session.runtime.activate(
                 DebugMenuScreen.DarkMode,
             )

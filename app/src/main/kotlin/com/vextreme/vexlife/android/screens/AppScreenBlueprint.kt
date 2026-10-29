@@ -15,6 +15,7 @@ import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.ui.ThemeMode
 import com.vextreme.vexlife.android.ui.VexLifeRelays
 import kotlinx.coroutines.CoroutineScope
 
@@ -110,13 +111,13 @@ abstract class AppScreenBlueprint(
         repositories: AppRepositories,
         relays: VexLifeRelays,
         sessionScope: CoroutineScope,
-        darkTheme: Boolean,
+        themeMode: ThemeMode,
     ) {
         renderContent(
             runtime = runtime,
             repositories = repositories,
             relays = relays,
-            darkTheme = darkTheme,
+            themeMode = themeMode,
         )
     }
 
@@ -125,12 +126,12 @@ abstract class AppScreenBlueprint(
         runtime: VexRuntime,
         repositories: AppRepositories,
         relays: VexLifeRelays,
-        darkTheme: Boolean,
+        themeMode: ThemeMode,
     ) {
         renderContent(
             runtime = runtime,
             repositories = repositories,
-            darkTheme = darkTheme,
+            themeMode = themeMode,
         )
     }
 
@@ -138,7 +139,7 @@ abstract class AppScreenBlueprint(
     internal open fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
+        themeMode: ThemeMode,
     ) {
         VexElementTree(
             placement = content,

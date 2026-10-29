@@ -26,6 +26,7 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.AppActions
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.ui.ThemeMode
 
 object DebugMenuScreen : AppScreenBlueprint(
     screenKey = "debug-menu",
@@ -320,12 +321,12 @@ object DebugMenuScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
+        themeMode: ThemeMode,
     ) {
         DebugMenuScreenContent(
             runtime = runtime,
             logHistoryRepository = repositories.logHistory,
-            darkTheme = darkTheme,
+            themeMode = themeMode,
         )
     }
 }
@@ -334,14 +335,19 @@ object DebugMenuScreen : AppScreenBlueprint(
 fun DebugMenuScreenContent(
     runtime: VexRuntime,
     logHistoryRepository: LogHistoryRepository,
-    darkTheme: Boolean,
+    themeMode: ThemeMode,
 ) {
     VexElementTree(
         placement = DebugMenuScreen.content,
         registry = runtime.registry,
         handler = runtime,
         modifier = Modifier.fillMaxSize(),
-        toggleChecked = { it.elementId == DebugMenuScreen.DarkMode.elementId && darkTheme },
+        toggleChecked = {
+            it.elementId ==
+                DebugMenuScreen.DarkMode.elementId &&
+                themeMode ==
+                ThemeMode.Dark
+        },
         selectedChild = runtime.presentation::selected,
     )
 
@@ -366,7 +372,7 @@ private fun DebugMenuScreenPreview() {
         DebugMenuScreenContent(
             runtime = context.runtime,
             logHistoryRepository = context.repositories.logHistory,
-            darkTheme = context.darkTheme,
+            themeMode = context.themeMode,
         )
     }
 }
@@ -389,7 +395,7 @@ private fun DebugMenuHistoryPreview() {
         DebugMenuScreenContent(
             runtime = context.runtime,
             logHistoryRepository = context.repositories.logHistory,
-            darkTheme = context.darkTheme,
+            themeMode = context.themeMode,
         )
     }
 }

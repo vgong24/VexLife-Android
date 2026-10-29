@@ -33,6 +33,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import com.vextreme.vexlife.android.ui.ThemeMode
 
 /**
  * First database-backed User Profile screen.
@@ -129,7 +130,7 @@ object UserProfileScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
+        themeMode: ThemeMode,
     ) {
         UserProfileScreenContent(
             runtime = runtime,
