@@ -420,21 +420,98 @@ fun <
     )
 
 /**
- * Current live V2 Family patient-zero runtime.
+ * Smallest live Family State owner.
  *
- * Stable authoring rules live above this runtime: Family-root vocabulary, structural Act,
- * concrete admission, optional Effect and begin(mode) execution.
+ * Family is the semantic root. This base owns only what every current Family needs:
  *
- * This implementation now proves locally-owned CURRENT State + Control activation, runtime payload
- * Act materialization, same-law Control availability, State-store Save, and a protected semantic
- * admission seam that a concrete Family may use only after its own rightful external reconciliation.
+ *     CURRENT State
+ *     bounded DisplayState / projectable output
+ *     protected semantic admission
  *
- * It is still NOT a universal currentness runtime. Concurrent admission serialization, observable UI
- * State, provider Operation realization, async-result staleness and multi-instance execution identity
- * remain open pressure.
+ * It does NOT assume that every Family has Controls, Acts, execution, Compound input/output, a Store
+ * or provider dependencies. Those are earned specializations layered below.
+ */
+abstract class VexFamily<
+    Family,
+    State,
+>(
+    initialState: State,
+    protected val logger:
+        VexFamilyLogger,
+) :
+    VexBehaviorFamily<
+        Family
+    >
+    where Family :
+        VexFamily<
+            Family,
+            State
+        >,
+          State :
+        VexBehaviorFamily.State<
+            Family
+        > {
+    /**
+     * @Volatile provides cross-thread visibility only. A specialization that admits from several
+     * concurrent causes must own the stronger serialization/currentness law around [admit].
+     */
+    @Volatile
+    private var currentState:
+        State =
+        initialState
+
+    val current:
+        State
+        get() =
+            currentState
+
+    open val displayState:
+        VexBehaviorV2DisplayState<
+            State
+        >
+        get() =
+            VexBehaviorV2DisplayState.Empty(
+                current,
+            )
+
+    /**
+     * Family-owned semantic admission seam.
+     *
+     * This is protected rather than public so callers never receive an arbitrary setCurrent(...).
+     * Each Family specialization must first establish why the next State is lawful/current.
+     */
+    protected fun admit(
+        state: State,
+    ) {
+        val before =
+            currentState
+
+        currentState =
+            state
+
+        if (
+            before !=
+            state
+        ) {
+            logger.record(
+                VexFamilyLogEvent.StateAdmitted(
+                    family =
+                        this::class,
+                    fromState =
+                        before::class,
+                    toState =
+                        state::class,
+                ),
+            )
+        }
+    }
+}
+
+/**
+ * Control-driven V2 Family specialization.
  *
- * begin(mode) remains the semantic execution phase; no ThemeModeExecution/FamilyExecution sibling is
- * introduced. VexExecution is coroutine machinery underneath that already-authored boundary.
+ * Stable authoring rules: Family-root vocabulary, structural Act, concrete admission, optional Effect
+ * and begin(mode) execution.
  */
 abstract class VexBehaviorV2Family<
     Family : VexBehaviorV2Family<
@@ -448,28 +525,18 @@ abstract class VexBehaviorV2Family<
     initialState: State,
     private val executionRoot:
         VexExecutionRoot,
-    protected val logger:
+    logger:
         VexFamilyLogger,
 ) :
-    VexBehaviorFamily<
-        Family
-    > {
-    /**
-     * Patient-zero locally-owned semantic State.
-     *
-     * @Volatile provides cross-thread visibility only. It is NOT the eventual serialization,
-     * provider-reconciliation, transition-generation, or Compose-observation contract.
-     */
-    @Volatile
-    private var currentState:
-        State =
-        initialState
-
-    val current:
+    VexFamily<
+        Family,
         State
-        get() =
-            currentState
-
+    >(
+        initialState =
+            initialState,
+        logger =
+            logger,
+    ) {
     abstract val acts:
         VexBehaviorV2<
             Family,
@@ -482,15 +549,6 @@ abstract class VexBehaviorV2Family<
             Family
         >? =
         null
-
-    open val displayState:
-        VexBehaviorV2DisplayState<
-            State
-        >
-        get() =
-            VexBehaviorV2DisplayState.Empty(
-                current,
-            )
 
     /**
      * Informative availability from the same CURRENT State + Control relationship used by activate.
@@ -578,45 +636,6 @@ abstract class VexBehaviorV2Family<
                         disposition.admittedState,
                     ),
                 )
-        }
-    }
-
-    /**
-     * Family-owned semantic admission seam.
-     *
-     * activate(Control) uses this after an authored Act. A concrete Family may also use it after its
-     * own rightful external-truth reconciliation (for example provider observation + pending intent).
-     *
-     * This is protected rather than public on purpose:
-     * - UI/provider callers do not receive a generic setCurrent(...);
-     * - external observations must first pass through the concrete Family's owned reconciliation;
-     * - the same State-admission/accountant path is reused once semantic truth is earned.
-     *
-     * This does not yet solve concurrent admission serialization or stale async-result generations.
-     */
-    protected fun admit(
-        state: State,
-    ) {
-        val before =
-            currentState
-
-        currentState =
-            state
-
-        if (
-            before !=
-            state
-        ) {
-            logger.record(
-                VexFamilyLogEvent.StateAdmitted(
-                    family =
-                        this::class,
-                    fromState =
-                        before::class,
-                    toState =
-                        state::class,
-                ),
-            )
         }
     }
 
@@ -971,15 +990,14 @@ data class VexBehaviorV2CommittedOutput<
  * is released. An Act may therefore request another rightful Family/owner to change and feed the
  * observed resulting truth back through [observe] without recursive half-committed processing.
  *
- * This specialization does not claim that every Family is Compound. A simple local Family continues
- * to use [VexBehaviorV2Family] directly.
+ * This specialization does not claim that every Family is Compound. A Control-driven Family uses
+ * [VexBehaviorV2Family]; both are specializations of [VexFamily].
  */
 abstract class VexBehaviorV2CompoundFamily<
     Family,
     State,
     InputState,
     OutputState,
-    Control,
 >(
     initialInputState: InputState,
     initialOutputState: OutputState,
@@ -989,13 +1007,11 @@ abstract class VexBehaviorV2CompoundFamily<
             outputState: OutputState,
             revision: Long,
         ) -> State,
-    executionRoot: VexExecutionRoot,
     logger: VexFamilyLogger,
 ) :
-    VexBehaviorV2Family<
+    VexFamily<
         Family,
-        State,
-        Control
+        State
     >(
         initialState =
             stateFactory(
@@ -1003,8 +1019,6 @@ abstract class VexBehaviorV2CompoundFamily<
                 initialOutputState.deepCopy(),
                 0L,
             ),
-        executionRoot =
-            executionRoot,
         logger =
             logger,
     )
@@ -1013,8 +1027,7 @@ abstract class VexBehaviorV2CompoundFamily<
             Family,
             State,
             InputState,
-            OutputState,
-            Control
+            OutputState
         >,
           State :
         VexBehaviorV2CompoundFamilyState<
@@ -1029,10 +1042,6 @@ abstract class VexBehaviorV2CompoundFamily<
           OutputState :
         VexBehaviorV2CompoundOutputState<
             OutputState
-        >,
-          Control :
-        VexBehaviorFamily.Control<
-            Family
         > {
     private val compoundProcessLock =
         Any()
