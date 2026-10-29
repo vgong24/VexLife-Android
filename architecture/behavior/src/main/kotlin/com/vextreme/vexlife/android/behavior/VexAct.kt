@@ -59,10 +59,11 @@ internal data class VexBegin<
         >,
 )
 
+@PublishedApi
 internal class VexAct<
     State : Any,
     Control : Any,
-> internal constructor(
+> @PublishedApi internal constructor(
     val from:
         KClass<out State>,
     val control:
