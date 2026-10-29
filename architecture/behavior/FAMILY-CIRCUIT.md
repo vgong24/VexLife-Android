@@ -112,6 +112,22 @@ ConcreteFamily
 fresh reader that DisplayState already has a rightful owner and that no parallel ViewState / UiState /
 PresentationState should be created merely to fill a perceived gap.
 
+## Execution identity boundary
+
+When a Family authors a maintained execution relationship, its concrete name stays with that Family:
+
+~~~text
+VexExecution
+-> Id
+
+ConcreteFamily
+-> ExecutionId : VexExecution.Id
+~~~
+
+The runtime still owns automatic SourceRef and InstanceId. Family authors only the one relationship
+ID when it intentionally chooses Earliest / Latest / Queued. `Begin` consumes the
+`VexExecution.Relationship` directly; it does not own a duplicate mode vocabulary.
+
 ## Logger boundary
 
 Family consumes logging through the independent logger root:

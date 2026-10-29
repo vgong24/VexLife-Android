@@ -195,6 +195,40 @@ receives the protected `begin(...)` opening while authoring an Act.
 The current Begin mode names are only a provisional adapter to the not-yet-conformed VexExecution
 launch implementation; they are not a second owner of execution launch semantics.
 
+## Execution identity boundary
+
+Execution relationship identity belongs to the independent `VexExecution` root, while the concrete
+name belongs to the semantic owner that understands the relationship.
+
+When a Family authors the relationship:
+
+~~~text
+VexExecution
+-> Id
+
+ConcreteFamily
+-> ExecutionId : VexExecution.Id
+~~~
+
+For example, `ConcreteFamily.ExecutionId.Save` is a concrete Family-owned declaration implementing
+the reusable execution contract. There is no global execution-ID catalog and callers do not author
+SourceRef or InstanceId.
+
+~~~text
+SourceRef
+    automatic / diagnostic
+
+InstanceId
+    automatic / per launch
+
+ExecutionId
+    the one caller-authored identity
+    only when Earliest / Latest / Queued intentionally relate launches
+~~~
+
+`Begin` no longer owns Replaceable / Sequenced mode names. It carries the relationship owned by
+`VexExecution` and the optional concrete `ExecutionId`.
+
 ## Logger boundary
 
 Logging is an explicit dependency on the independent `VexLogger` root:

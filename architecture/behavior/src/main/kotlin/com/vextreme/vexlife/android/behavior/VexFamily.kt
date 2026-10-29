@@ -136,22 +136,13 @@ abstract class VexFamily<
         class Begin<
             State : VexFamily.State<*>,
         > internal constructor(
-            internal val mode:
-                Mode,
+            internal val relationship:
+                VexExecution.Relationship,
+            internal val executionId:
+                VexExecution.Id?,
             internal val save:
                 Save<State>,
         ) {
-            /**
-             * Provisional adapter to the current VexExecution implementation.
-             *
-             * These names are not the final execution contract. VexExecution owns the already
-             * accepted launch / Earliest / Latest / Queued relationship and this adapter disappears
-             * when that source conformance lands.
-             */
-            enum class Mode {
-                Replaceable,
-                Sequenced,
-            }
 
             internal data class Result<
                 State,
@@ -181,8 +172,10 @@ abstract class VexFamily<
             class Scope<
                 State : VexFamily.State<*>,
             > internal constructor(
-                private val mode:
-                    Mode,
+                private val relationship:
+                    VexExecution.Relationship,
+                private val executionId:
+                    VexExecution.Id?,
             ) {
                 private var save:
                     Save<State>? =
@@ -219,8 +212,10 @@ abstract class VexFamily<
                 internal fun build():
                     Begin<State> =
                     Begin(
-                        mode =
-                            mode,
+                        relationship =
+                            relationship,
+                        executionId =
+                            executionId,
                         save =
                             requireNotNull(
                                 save,
@@ -439,17 +434,84 @@ abstract class VexFamily<
         )
 
     /**
-     * Optional authored execution consequence carried by an Act.
+     * Optional independent execution consequence carried by an Act.
      */
     protected fun begin(
-        mode: Act.Begin.Mode,
+        block:
+            Act.Begin.Scope<FamilyState>.() -> Unit,
+    ):
+        Act.Begin<FamilyState> =
+        buildBegin(
+            relationship =
+                VexExecution.Relationship.Independent,
+            executionId =
+                null,
+            block =
+                block,
+        )
+
+    protected fun beginEarliest(
+        id:
+            VexExecution.Id,
+        block:
+            Act.Begin.Scope<FamilyState>.() -> Unit,
+    ):
+        Act.Begin<FamilyState> =
+        buildBegin(
+            relationship =
+                VexExecution.Relationship.Earliest,
+            executionId =
+                id,
+            block =
+                block,
+        )
+
+    protected fun beginLatest(
+        id:
+            VexExecution.Id,
+        block:
+            Act.Begin.Scope<FamilyState>.() -> Unit,
+    ):
+        Act.Begin<FamilyState> =
+        buildBegin(
+            relationship =
+                VexExecution.Relationship.Latest,
+            executionId =
+                id,
+            block =
+                block,
+        )
+
+    protected fun beginQueued(
+        id:
+            VexExecution.Id,
+        block:
+            Act.Begin.Scope<FamilyState>.() -> Unit,
+    ):
+        Act.Begin<FamilyState> =
+        buildBegin(
+            relationship =
+                VexExecution.Relationship.Queued,
+            executionId =
+                id,
+            block =
+                block,
+        )
+
+    private fun buildBegin(
+        relationship:
+            VexExecution.Relationship,
+        executionId:
+            VexExecution.Id?,
         block:
             Act.Begin.Scope<FamilyState>.() -> Unit,
     ):
         Act.Begin<FamilyState> =
         Act.Begin.Scope<FamilyState>(
-            mode =
-                mode,
+            relationship =
+                relationship,
+            executionId =
+                executionId,
         )
             .apply(
                 block,
@@ -575,15 +637,20 @@ abstract class VexFamily<
             Act.Begin<FamilyState>,
     ) {
         executeSave(
-            mode =
-                begin.mode,
+            relationship =
+                begin.relationship,
+            executionId =
+                begin.executionId,
             save =
                 begin.save,
         )
     }
 
     private fun executeSave(
-        mode: Act.Begin.Mode,
+        relationship:
+            VexExecution.Relationship,
+        executionId:
+            VexExecution.Id?,
         save:
             Act.Begin.Save<FamilyState>,
     ) {
@@ -683,10 +750,10 @@ abstract class VexFamily<
             }
 
         when (
-            mode
+            relationship
         ) {
-            Act.Begin.Mode.Replaceable ->
-                VexExecution.beginReplaceable(
+            VexExecution.Relationship.Independent ->
+                VexExecution.begin(
                     executionRoot =
                         executionRoot,
                     owner =
@@ -703,8 +770,62 @@ abstract class VexFamily<
                         onFailure,
                 )
 
-            Act.Begin.Mode.Sequenced ->
-                VexExecution.beginSequenced(
+            VexExecution.Relationship.Earliest ->
+                VexExecution.beginEarliest(
+                    id =
+                        requireNotNull(
+                            executionId,
+                        ) {
+                            "Earliest begin requires one ExecutionId"
+                        },
+                    executionRoot =
+                        executionRoot,
+                    owner =
+                        this::class,
+                    operation =
+                        operation,
+                    argument =
+                        save.state,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+
+            VexExecution.Relationship.Latest ->
+                VexExecution.beginLatest(
+                    id =
+                        requireNotNull(
+                            executionId,
+                        ) {
+                            "Latest begin requires one ExecutionId"
+                        },
+                    executionRoot =
+                        executionRoot,
+                    owner =
+                        this::class,
+                    operation =
+                        operation,
+                    argument =
+                        save.state,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+
+            VexExecution.Relationship.Queued ->
+                VexExecution.beginQueued(
+                    id =
+                        requireNotNull(
+                            executionId,
+                        ) {
+                            "Queued begin requires one ExecutionId"
+                        },
                     executionRoot =
                         executionRoot,
                     owner =

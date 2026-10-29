@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.behavior
 
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import java.util.concurrent.CountDownLatch
@@ -64,6 +65,11 @@ class VexFamilyHighConfidenceTest {
                 Control
         }
 
+        enum class ExecutionId :
+            VexExecution.Id {
+            Save,
+        }
+
         interface Store :
             VexFamily.Store<State>
 
@@ -101,9 +107,9 @@ class VexFamilyHighConfidenceTest {
                         is Control.Commit ->
                             stay(
                                 begin =
-                                    begin(
-                                        mode =
-                                            VexFamily.Act.Begin.Mode.Sequenced,
+                                    beginQueued(
+                                        id =
+                                            ExecutionId.Save,
                                     ) {
                                         save(
                                             State.Ready(
