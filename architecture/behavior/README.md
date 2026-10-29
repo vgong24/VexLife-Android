@@ -192,87 +192,83 @@ VexFamily
 does not exist as a peer package capability. Its construction is closed and a concrete Family only
 receives the protected `begin(...)` opening while authoring an Act.
 
-Begin does not own a second execution-mode vocabulary. It carries the relationship owned by
-`VexExecution`; Family-originated maintained identity is derived from the triggering Control plus
-optional ordered arguments.
+Begin does not own a second execution-mode vocabulary. It carries `VexExecution.Approach` plus
+optional ordered arguments; activation combines those with the live Family and triggering Control
+to form the exact `VexExecution.Relationship` map key.
 
 ## Execution relationship identity
 
-Family-originated execution reuses vocabulary the Family already owns. It does not declare a second
-`ExecutionId.Save` beside `Control.Save`.
+Family-originated execution uses the same semantic relationship that the execution map uses. There is
+no intermediate Family `ExecutionId` and no conversion of Control meaning into a second ID vocabulary.
 
 ~~~text
-live Family instance
-+
-triggering Control kind
-+
-ordered optional arguments
-=
-maintained execution relationship
+VexExecution.Relationship
+    owner      = this live Family
+    trigger    = triggering Control kind
+    arguments  = optional ordered tuple
 ~~~
 
-`activate(control)` already knows the exact Control that earned the Act, so Begin authoring does not
-repeat it:
+`activate(control)` already knows the Control that earned the Act, so Begin authoring only chooses
+the overlap approach and, when needed, the relationship arguments:
 
 ~~~kotlin
-Control.Save ->
-    stay(
-        begin =
-            beginLatest {
-                save(...)
-            },
-    )
-~~~
+beginLatest {
+    ...
+}
 
-No arguments means the Control alone identifies the relationship.
-
-Arguments may be stacked when one Control owns several independently maintained relationships:
-
-~~~kotlin
 beginLatest(
     accountId,
     itemId,
 ) {
-    save(...)
+    ...
 }
 ~~~
 
-This forms the ordered relationship tuple:
+Meaning:
 
 ~~~text
-Family + Control + accountId + itemId
+no arguments
+    Family + Control
+
+one argument
+    Family + Control + arg1
+
+many arguments
+    Family + Control + arg1 + arg2 + ...
+~~~
+
+The resulting `VexExecution.Relationship` is the key used by the maintained execution map itself.
+There is no additional Id/key wrapper around it.
+
+The overlap behavior is a separate fact:
+
+~~~text
+VexExecution.Approach
+    Independent
+    Earliest
+    Latest
+    Queued
+~~~
+
+That separation matters:
+
+~~~text
+Relationship
+    WHICH executions belong together?
+
+Approach
+    HOW overlapping executions in that Relationship interact?
 ~~~
 
 Arguments are positional. `(A, B)` differs from `(B, A)`. Zero arguments differs from one explicit
-`null` argument. Arguments participate in relationship equality, so use stable immutable semantic
-values such as IDs, enums, strings, numbers, or other value objects whose equality does not mutate
-while the relationship is alive. Do not pass an entire mutable request merely because it is
-available.
+`null` argument. Use stable immutable semantic values whose equality remains stable while the
+relationship is alive. The exact Control payload is not automatically part of duplicate handling.
 
-The exact Control payload remains the request that caused the Act; only explicitly selected
-`arguments` participate in duplicate handling.
+Direct non-Family VexExecution code may use its own semantic trigger to construct a Relationship, but
+the architecture does not require a second `Id` concept.
 
-Internally Family derives the `VexExecution.Id` required by the independent Execution root. Direct
-non-Family `VexExecution` owners may still declare an explicit `VexExecution.Id` when they have no
-Family Control relationship to reuse.
-
-~~~text
-Family-originated
-    Family + Control + arguments
-    -> derived VexExecution.Id
-
-direct VexExecution
-    explicit VexExecution.Id when genuinely needed
-
-SourceRef
-    automatic / diagnostic
-
-InstanceId
-    automatic / exact invocation
-~~~
-
-`Begin` carries only the VexExecution relationship plus its ordered arguments. It does not own
-Replaceable / Sequenced mode names or a duplicate Family execution-ID catalog.
+`SourceRef` remains automatic diagnostic/source information. `InstanceId` remains the exact
+per-launch occurrence. Neither substitutes for Relationship.
 
 ## Logger boundary
 

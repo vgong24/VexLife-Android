@@ -21,9 +21,9 @@ VexExecutionRoot
 
 FeatureExecution : VexExecution
     -> launch(callable)
-    -> launchEarliest(id, callable)
-    -> launchLatest(id, callable)
-    -> launchQueued(id, callable)
+    -> launchEarliest(relationship, callable)
+    -> launchLatest(relationship, callable)
+    -> launchQueued(relationship, callable)
     -> launchForCollect(flowProvider) { value -> ... }
     -> forceStop(callable)
     -> joinStop(callable)
@@ -112,41 +112,41 @@ launch(...)
     every invocation is an independent execution instance
     the same callable may have many concurrent instances
 
-launchEarliest(id, ...)
-    the earliest unfinished execution for this Id is sufficient
+launchEarliest(relationship, ...)
+    the earliest unfinished execution for this Relationship is sufficient
     overlapping later calls return that same InstanceId
 
-launchLatest(id, ...)
+launchLatest(relationship, ...)
     newest launch supersedes every unfinished predecessor for this Id
     all predecessor teardown completes before the newest begins
 
-launchQueued(id, ...)
-    every launch for this Id remains meaningful
+launchQueued(relationship, ...)
+    every launch for this Relationship remains meaningful
     launches execute in arrival order
 ```
 
-Only the maintained forms take caller-authored identity:
+Only the maintained forms take Relationshipentity:
 
 ```text
 launch
     caller supplies no id
 
 Earliest / Latest / Queued
-    caller supplies one VexExecution.Id
+    caller supplies one VexExecution.Relationship
 ```
 
-The reusable contract is `VexExecution.Id`. Direct VexExecution owners that have no richer semantic
-cause may declare a typed Id vocabulary locally:
+The reusable contract is `VexExecution.Relationship`. Direct VexExecution owners that have no richer semantic
+cause may declare a typed Relationship vocabulary locally:
 
 ```kotlin
 enum class ExecutionId :
-    VexExecution.Id {
+    VexExecution.Relationship {
     Refresh,
 }
 ```
 
 Family-originated execution is different: Family already owns the semantic cause as a Control, so it
-does **not** repeat `Control.Save` as `ExecutionId.Save`. Family derives the internal Id from:
+does **not** repeat `Control.Save` as `ExecutionId.Save`. Family derives the internal Relationship from:
 
 ```text
 live Family
@@ -268,59 +268,69 @@ HANDOFF != RETRY_POLICY
 PROVIDER_AFFINITY != ALWAYS_MAIN
 ```
 
-## Execution identity
+## Execution relationship and instance identity
 
-Execution identity is split into three truths rather than inferred from one string:
+Execution keeps separate truths instead of overloading one ID:
 
-```text
+~~~text
 VexExecution.SourceRef
     automatic
     source class + callable name
-    diagnostic / source-addressing identity
-    not durable product identity
+    diagnostic / source-addressing information
 
 VexExecution.InstanceId
     automatic
     generated for every admitted execution
-    exact runtime invocation identity
+    exact runtime occurrence
 
-VexExecution.Id
-    relationship key consumed by Execution
-    explicitly authored by direct Execution owners
-    derived from Control + arguments for Family-originated execution
-```
+VexExecution.Relationship
+    maintained-map key
+    live owner identity + semantic trigger + ordered arguments
+
+VexExecution.Approach
+    Independent / Earliest / Latest / Queued
+    overlap handling for a Relationship
+~~~
 
 Therefore:
 
-```text
+~~~text
 SAME SOURCE
 != SAME INSTANCE
-!= AUTOMATICALLY SAME RELATIONSHIP
-```
+!= SAME RELATIONSHIP
 
-The active registry is keyed by `InstanceId`, so the same callable may have several concurrent
-ordinary launches. Maintained relationships are keyed internally by the pair:
+RELATIONSHIP
+!= APPROACH
+~~~
 
-```text
-live owner identity
+The active execution registry is keyed by `InstanceId`. The maintained overlap map is keyed directly
+by `Relationship`:
+
+~~~text
+active[InstanceId]
+relationships[Relationship]
+~~~
+
+No intermediate execution ID is manufactured.
+
+For Family-originated work, the Relationship is formed from:
+
+~~~text
+live Family
 +
-VexExecution.Id
-```
+triggering Control kind
++
+optional ordered arguments
+~~~
 
-The owner part is runtime referential identity, supplied automatically by the execution boundary.
-This prevents two live instances that use the same concrete enum/object Id from accidentally sharing
-one lane.
+For direct VexExecution work, the concrete execution owner supplies a semantic trigger and the
+execution boundary scopes it to that live owner.
 
-A direct VexExecution caller authors one Id when a relationship is needed. Family callers do not
-author another ID: Family derives it from the live Family + triggering Control + optional ordered
-arguments. Neither path supplies SourceRef or InstanceId.
-
-`SourceRef` may change when source is renamed or obfuscated and therefore must not become durable
-semantic identity. `Id` remains an in-memory relationship key unless its concrete owner explicitly earns a persistence
-boundary. Family relationship arguments participate in equality and must therefore have stable
-value semantics while the relationship is alive. Do not derive durable identity from reflection
-names, enum `.name`, `toString()`, or an entire mutable request. If persistence is genuinely
-required, the concrete owner supplies a stable serialized representation at that boundary.
+`SourceRef` may change when source is renamed or obfuscated and is therefore not durable semantic
+identity. Relationship arguments use ordinary value equality and should remain stable/immutable while
+the relationship is alive. If persistence is genuinely required, that concrete owner must define a
+stable serialized representation at the persistence boundary; the runtime Relationship itself is not
+a cross-build serialization format.
 
 ## Collection recovery boundary
 
@@ -383,26 +393,26 @@ thread termination.
 
 ## Custody and sequence context
 
-Active custody and maintained relationships are separate:
+Active custody and maintained overlap handling are separate:
 
-```text
+~~~text
 active
     LinkedHashMap<InstanceId, ManagedExecution>
 
 relationships
-    LinkedHashMap<RelationshipKey(live owner identity, Id), ordered InstanceIds>
-```
+    LinkedHashMap<Relationship, MaintainedRelationship>
+~~~
 
-Every admitted launch receives a unique InstanceId. Earliest / Latest / Queued add that instance to
-the relationship formed from the live owner plus the caller-authored Id. Ordinary launch has no Id.
+Every admitted launch receives a unique InstanceId. Earliest / Latest / Queued use an exact
+Relationship key. Ordinary independent launch has no maintained Relationship.
 
-A cancelling predecessor continues to occupy its maintained relationship until its Job is actually
-completed. This distinction is intentional: Kotlin may report `isActive == false` while
-non-cancellable/structured teardown is still running. A later Latest or Queued launch may not skip
-that unfinished predecessor.
+A cancelling predecessor continues to occupy its Relationship until its Job is actually completed.
+Kotlin may report `isActive == false` while structured/non-cancellable teardown is still running; a
+later Latest or Queued launch may not skip that unfinished predecessor.
 
-Retained root execution state is keyed by InstanceId. Handle state remains the exact lifecycle
-projection for one invocation.
+The map value stores the active Approach and ordered instance membership. Attempting to use the same
+unfinished Relationship simultaneously with a different Approach fails closed rather than silently
+creating two lanes.
 
 ## Ownership laws
 
@@ -607,9 +617,9 @@ launch
     same SourceRef is preserved
 
 launchEarliest
-    later overlap on the same live owner + Id -> same existing InstanceId
+    later overlap on the same live owner + Relationship -> same existing InstanceId
     duplicate operation does not begin
-    the same Id on a second live owner -> independent InstanceId / independent work
+    the same Relationship on a second live owner -> independent InstanceId / independent work
 
 launchLatest
     A begins

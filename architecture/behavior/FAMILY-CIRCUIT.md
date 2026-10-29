@@ -114,18 +114,23 @@ PresentationState should be created merely to fill a perceived gap.
 
 ## Execution relationship identity
 
-Family does not declare a second execution name for a Control it already owns.
+Family passes the semantic relationship directly to Execution:
 
 ~~~text
 activate(control)
--> act(currentState, control)
--> Begin relationship
--> execute(
-       owner = this live Family,
-       control = triggering Control kind,
-       arguments = optional ordered tuple
+-> Act.Begin(
+       approach,
+       arguments
    )
+-> VexExecution.Relationship(
+       owner = this live Family,
+       trigger = Control kind,
+       arguments = ordered tuple
+   )
+-> maintained execution map key
 ~~~
+
+There is no intermediate Family execution ID.
 
 Authoring stays small:
 
@@ -142,29 +147,19 @@ beginLatest(
 }
 ~~~
 
-Meaning:
+The Relationship answers **which executions belong together**. `VexExecution.Approach` answers
+**how overlaps are handled**.
 
 ~~~text
-no arguments
-    Family + Control
-
-one argument
-    Family + Control + arg1
-
-many arguments
-    Family + Control + arg1 + arg2 + ...
+Relationship = owner + trigger + arguments
+Approach     = Independent / Earliest / Latest / Queued
 ~~~
 
-The arguments are ordered relationship components, not automatic copies of the Control payload.
-Zero arguments and one explicit null argument are distinct. Use stable immutable semantic values
-whose equality remains stable while the relationship is alive.
+Zero arguments means Family + Control only. Arguments stack positionally when one Control needs
+narrower subrelationships. Zero arguments and one explicit null are distinct.
 
-Family derives the internal `VexExecution.Id` from this relationship. A direct non-Family
-VexExecution owner may still author an explicit Id when no Control exists to supply the semantic
-cause.
-
-`Begin` consumes `VexExecution.Relationship` directly and carries only its ordered arguments; it
-does not own a duplicate execution-ID vocabulary.
+Use stable immutable argument values. The full Control payload is request evidence; it is not
+automatically execution relationship identity.
 
 ## Logger boundary
 
