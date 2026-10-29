@@ -16,7 +16,7 @@ import kotlinx.coroutines.withContext
 /**
  * Root contract for Vex-owned coroutine execution.
  *
- * Identity is deliberately split:
+ * Execution meaning is split into distinct facts:
  *
  * SourceRef
  *     automatically derived from source code for diagnostics/navigation
@@ -24,16 +24,15 @@ import kotlinx.coroutines.withContext
  * InstanceId
  *     automatically generated for one exact admitted execution
  *
- * Id
- *     the one caller-authored identity, supplied only when several executions are intentionally
- *     related by Earliest / Latest / Queued semantics
+ * Relationship
+ *     the actual maintained-map coordinate: live owner + semantic trigger + ordered arguments
+ *
+ * Approach
+ *     how overlapping executions in that Relationship interact
  */
 abstract class VexExecution protected constructor(
     private val executionRoot: VexExecutionRoot,
 ) {
-    /** Caller-authored identity for executions that intentionally belong to one relationship. */
-    interface Id
-
     /** Diagnostic source identity derived automatically from the source callable. */
     @JvmInline
     value class SourceRef internal constructor(
@@ -62,7 +61,72 @@ abstract class VexExecution protected constructor(
         override fun toString(): String = value.toString()
     }
 
-    enum class Relationship {
+    /**
+     * Exact maintained execution relationship.
+     *
+     * Owner uses referential identity. Trigger and arguments use ordinary value equality.
+     * Arguments are copied at construction so the relationship tuple itself cannot be reordered.
+     */
+    class Relationship internal constructor(
+        internal val owner:
+            Any,
+        val trigger:
+            Any,
+        arguments:
+            List<Any?>,
+    ) {
+        val arguments:
+            List<Any?> =
+            arguments.toList()
+
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                Relationship &&
+                owner ===
+                other.owner &&
+                trigger ==
+                other.trigger &&
+                arguments ==
+                other.arguments
+
+        override fun hashCode():
+            Int {
+            var result =
+                System.identityHashCode(
+                    owner,
+                )
+            result =
+                31 *
+                    result +
+                    trigger.hashCode()
+            result =
+                31 *
+                    result +
+                    arguments.hashCode()
+            return result
+        }
+
+        override fun toString():
+            String =
+            buildString {
+                append(
+                    trigger,
+                )
+                if (
+                    arguments.isNotEmpty()
+                ) {
+                    append(
+                        arguments,
+                    )
+                }
+            }
+    }
+
+    enum class Approach {
         Independent,
         Earliest,
         Latest,
@@ -81,7 +145,6 @@ abstract class VexExecution protected constructor(
     data class State(
         val instanceId: InstanceId,
         val sourceRef: SourceRef,
-        val id: Id?,
         val status: Status,
         val attempt: Int,
         val restartCount: Int,
@@ -92,7 +155,6 @@ abstract class VexExecution protected constructor(
     interface Handle {
         val instanceId: InstanceId
         val sourceRef: SourceRef
-        val id: Id?
         val state: StateFlow<State>
 
         @Deprecated(
@@ -201,13 +263,17 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <Result> launchEarliest(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction0<Result>,
     ): Handle =
         executionRoot.coroutineLauncher.launchEarliest(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -217,14 +283,18 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <Argument, Result> launchEarliest(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction1<Argument, Result>,
         argument: Argument,
     ): Handle =
         executionRoot.coroutineLauncher.launchEarliest(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -236,15 +306,19 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <First, Second, Result> launchEarliest(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction2<First, Second, Result>,
         first: First,
         second: Second,
     ): Handle =
         executionRoot.coroutineLauncher.launchEarliest(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -257,13 +331,17 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <Result> launchLatest(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction0<Result>,
     ): Handle =
         executionRoot.coroutineLauncher.launchLatest(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -273,14 +351,18 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <Argument, Result> launchLatest(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction1<Argument, Result>,
         argument: Argument,
     ): Handle =
         executionRoot.coroutineLauncher.launchLatest(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -292,15 +374,19 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <First, Second, Result> launchLatest(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction2<First, Second, Result>,
         first: First,
         second: Second,
     ): Handle =
         executionRoot.coroutineLauncher.launchLatest(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -313,13 +399,17 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <Result> launchQueued(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction0<Result>,
     ): Handle =
         executionRoot.coroutineLauncher.launchQueued(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -329,14 +419,18 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <Argument, Result> launchQueued(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction1<Argument, Result>,
         argument: Argument,
     ): Handle =
         executionRoot.coroutineLauncher.launchQueued(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -348,15 +442,19 @@ abstract class VexExecution protected constructor(
         }
 
     protected fun <First, Second, Result> launchQueued(
-        id: Id,
+        trigger: Any,
         action: KSuspendFunction2<First, Second, Result>,
         first: First,
         second: Second,
     ): Handle =
         executionRoot.coroutineLauncher.launchQueued(
-            id = id,
-            relationshipOwner =
-                this,
+            relationship =
+                relationship(
+                    owner =
+                        this,
+                    trigger =
+                        trigger,
+                ),
             sourceRef =
                 sourceRef(
                     action,
@@ -464,6 +562,25 @@ abstract class VexExecution protected constructor(
         )
 
     companion object {
+        fun relationship(
+            owner:
+                Any,
+            trigger:
+                Any,
+            arguments:
+                List<Any?> =
+                emptyList(),
+        ):
+            Relationship =
+            Relationship(
+                owner =
+                    owner,
+                trigger =
+                    trigger,
+                arguments =
+                    arguments,
+            )
+
         fun <Argument, Result> begin(
             executionRoot: VexExecutionRoot,
             owner: Any,
@@ -496,8 +613,8 @@ abstract class VexExecution protected constructor(
 
         fun <Argument, Result> beginEarliest(
             executionRoot: VexExecutionRoot,
-            id: Id,
-            owner: Any,
+            relationship:
+                Relationship,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -505,12 +622,11 @@ abstract class VexExecution protected constructor(
             onFailure: (Throwable) -> Unit = {},
         ): Handle =
             executionRoot.coroutineLauncher.launchEarliest(
-                id = id,
-                relationshipOwner =
-                    owner,
+                relationship =
+                    relationship,
                 sourceRef =
                     sourceRef(
-                        owner,
+                        relationship.owner,
                         operation,
                     ),
             ) {
@@ -530,8 +646,8 @@ abstract class VexExecution protected constructor(
 
         fun <Argument, Result> beginLatest(
             executionRoot: VexExecutionRoot,
-            id: Id,
-            owner: Any,
+            relationship:
+                Relationship,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -539,12 +655,11 @@ abstract class VexExecution protected constructor(
             onFailure: (Throwable) -> Unit = {},
         ): Handle =
             executionRoot.coroutineLauncher.launchLatest(
-                id = id,
-                relationshipOwner =
-                    owner,
+                relationship =
+                    relationship,
                 sourceRef =
                     sourceRef(
-                        owner,
+                        relationship.owner,
                         operation,
                     ),
             ) {
@@ -564,8 +679,8 @@ abstract class VexExecution protected constructor(
 
         fun <Argument, Result> beginQueued(
             executionRoot: VexExecutionRoot,
-            id: Id,
-            owner: Any,
+            relationship:
+                Relationship,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -573,12 +688,11 @@ abstract class VexExecution protected constructor(
             onFailure: (Throwable) -> Unit = {},
         ): Handle =
             executionRoot.coroutineLauncher.launchQueued(
-                id = id,
-                relationshipOwner =
-                    owner,
+                relationship =
+                    relationship,
                 sourceRef =
                     sourceRef(
-                        owner,
+                        relationship.owner,
                         operation,
                     ),
             ) {
@@ -597,7 +711,7 @@ abstract class VexExecution protected constructor(
             }
 
         @Deprecated(
-            "Use beginLatest with an explicit VexExecution.Id",
+            "Use beginLatest with an explicit VexExecution.Relationship",
         )
         fun <Argument, Result> beginReplaceable(
             executionRoot: VexExecutionRoot,
@@ -615,11 +729,12 @@ abstract class VexExecution protected constructor(
                 )
 
             return executionRoot.coroutineLauncher.launchLatest(
-                relationshipOwner =
-                    owner,
-                id =
-                    LegacySourceId(
-                        sourceRef,
+                relationship =
+                    relationship(
+                        owner =
+                            owner,
+                        trigger =
+                            sourceRef,
                     ),
                 sourceRef =
                     sourceRef,
@@ -640,7 +755,7 @@ abstract class VexExecution protected constructor(
         }
 
         @Deprecated(
-            "Use beginQueued with an explicit VexExecution.Id",
+            "Use beginQueued with an explicit VexExecution.Relationship",
         )
         fun <Argument, Result> beginSequenced(
             executionRoot: VexExecutionRoot,
@@ -658,11 +773,12 @@ abstract class VexExecution protected constructor(
                 )
 
             return executionRoot.coroutineLauncher.launchQueued(
-                relationshipOwner =
-                    owner,
-                id =
-                    LegacySourceId(
-                        sourceRef,
+                relationship =
+                    relationship(
+                        owner =
+                            owner,
+                        trigger =
+                            sourceRef,
                     ),
                 sourceRef =
                     sourceRef,
@@ -681,11 +797,6 @@ abstract class VexExecution protected constructor(
                 )
             }
         }
-
-        private data class LegacySourceId(
-            val sourceRef: SourceRef,
-        ) :
-            Id
 
         private suspend fun <Argument, Result> executeOperation(
             operation: KSuspendFunction1<Argument, Result>,
