@@ -125,8 +125,10 @@ ConcreteFamily
 ~~~
 
 The runtime still owns automatic SourceRef and InstanceId. Family authors only the one relationship
-ID when it intentionally chooses Earliest / Latest / Queued. `Begin` consumes the
-`VexExecution.Relationship` directly; it does not own a duplicate mode vocabulary.
+ID when it intentionally chooses Earliest / Latest / Queued. That Id is automatically scoped to the
+live Family instance, so identical `ExecutionId` declarations on two live Families do not collide.
+`Begin` consumes the `VexExecution.Relationship` directly; it does not own a duplicate mode
+vocabulary.
 
 ## Logger boundary
 

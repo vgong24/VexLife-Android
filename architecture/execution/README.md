@@ -17,7 +17,7 @@ coroutine execution must make that role explicit by extending `VexExecution`.
 VexExecutionRoot
     -> internal VexCoroutineLauncher
     -> active[InstanceId]
-    -> lanes[Id] only when a maintained relationship is authored
+    -> relationships[live owner identity + Id] only when a maintained relationship is authored
 
 FeatureExecution : VexExecution
     -> launch(callable)
@@ -149,6 +149,10 @@ enum class ExecutionId :
 If a Family owns that relationship, `ConcreteFamily.ExecutionId` is the natural declaration. If a
 dedicated execution component owns it, that component holds its own `ExecutionId`. Do not create a
 global catalog.
+
+The single authored Id is automatically scoped to the **live owner instance**. Two live Families may
+both use `ExecutionId.Save` under the same `VexExecutionRoot` without sharing a relationship.
+Callers do not provide a second owner ID; the execution boundary already knows its live owner.
 
 The four shapes remain deliberately different:
 
@@ -289,7 +293,17 @@ SAME SOURCE
 ```
 
 The active registry is keyed by `InstanceId`, so the same callable may have several concurrent
-ordinary launches. Maintained relationships are keyed separately by `Id`.
+ordinary launches. Maintained relationships are keyed internally by the pair:
+
+```text
+live owner identity
++
+VexExecution.Id
+```
+
+The owner part is runtime referential identity, supplied automatically by the execution boundary.
+This prevents two live instances that use the same concrete enum/object Id from accidentally sharing
+one lane.
 
 The caller authors exactly one identity when a relationship is needed. It never supplies SourceRef or
 InstanceId.
@@ -367,12 +381,12 @@ Active custody and maintained relationships are separate:
 active
     LinkedHashMap<InstanceId, ManagedExecution>
 
-lanes
-    LinkedHashMap<Id, ordered InstanceIds>
+relationships
+    LinkedHashMap<RelationshipKey(live owner identity, Id), ordered InstanceIds>
 ```
 
 Every admitted launch receives a unique InstanceId. Earliest / Latest / Queued add that instance to
-the caller-authored Id relationship. Ordinary launch has no Id.
+the relationship formed from the live owner plus the caller-authored Id. Ordinary launch has no Id.
 
 A cancelling predecessor continues to occupy its maintained relationship until its Job is actually
 completed. This distinction is intentional: Kotlin may report `isActive == false` while
@@ -585,8 +599,9 @@ launch
     same SourceRef is preserved
 
 launchEarliest
-    later overlap -> same existing InstanceId
+    later overlap on the same live owner + Id -> same existing InstanceId
     duplicate operation does not begin
+    the same Id on a second live owner -> independent InstanceId / independent work
 
 launchLatest
     A begins

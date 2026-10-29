@@ -192,8 +192,8 @@ VexFamily
 does not exist as a peer package capability. Its construction is closed and a concrete Family only
 receives the protected `begin(...)` opening while authoring an Act.
 
-The current Begin mode names are only a provisional adapter to the not-yet-conformed VexExecution
-launch implementation; they are not a second owner of execution launch semantics.
+Begin does not own a second execution-mode vocabulary. It carries the relationship owned by
+`VexExecution`; maintained relationships receive the concrete owner's `ExecutionId`.
 
 ## Execution identity boundary
 
@@ -213,6 +213,10 @@ ConcreteFamily
 For example, `ConcreteFamily.ExecutionId.Save` is a concrete Family-owned declaration implementing
 the reusable execution contract. There is no global execution-ID catalog and callers do not author
 SourceRef or InstanceId.
+
+That one `ExecutionId` is automatically scoped to the **live Family instance**. Two live instances
+of the same Family may both use `ExecutionId.Save` under one execution root without sharing the
+same maintained relationship.
 
 ~~~text
 SourceRef
