@@ -7,13 +7,15 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Rightful lifetime owner for one Vex execution tree.
  *
- * The root may be retained by an Android/session/service composition owner, but it exposes no
- * coroutine-launch API. Managed coroutine capability is available only through [VexExecution].
+ * The root may be retained by an Android/session/service composition owner, but it exposes no raw
+ * coroutine-launch API. Managed coroutine capability remains behind [VexExecution].
  *
  * Product integration should create a root at the smallest truthful hard lifetime (for example one
- * VexLife session or one Android Service lifetime) and pass that root only to VexExecution
- * subclasses. UI, Experience, Behavior, repository, and ordinary domain classes should not receive
- * the root as a substitute for a CoroutineScope.
+ * VexLife session or one Android Service lifetime). Ordinary UI, Experience, repository, and domain
+ * classes should not receive the root as a substitute for a CoroutineScope. A foundation that
+ * already owns a semantic execution boundary may receive the root only through its foundation
+ * contract and realize that boundary through the sanctioned VexExecution bridge; V2 Behavior
+ * begin(...) is the current patient zero.
  *
  * IMPORTANT: own VexExecutionRoot => own its shutdown. This root has an independent SupervisorJob;
  * retaining it in a ViewModel, Service, or session does not automatically parent cancellation to
