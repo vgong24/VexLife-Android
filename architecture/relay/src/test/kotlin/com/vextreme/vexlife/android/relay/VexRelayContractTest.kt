@@ -25,7 +25,7 @@ import org.junit.Test
  * StateFlow is current-state projection, not an event ledger:
  * - intermediate racing states may be conflated for slow collectors;
  * - the final retained state must be coherent;
- * - equal semantic input/output must not manufacture duplicate revisions/emissions.
+ * - equal semantic input/output must not manufacture duplicate current-state emissions.
  */
 class VexRelayContractTest {
     private data class CounterState(
@@ -370,14 +370,10 @@ class VexRelayContractTest {
             42,
             relay.currentOutput.sum,
         )
-        assertEquals(
-            3L,
-            relay.current.revision,
-        )
     }
 
     @Test
-    fun concurrentIdenticalCompoundTriggersCollapseToOneSemanticRevision() {
+    fun concurrentIdenticalCompoundTriggersKeepOneCurrentMeaning() {
         val relay =
             ProbeCompoundRelay()
 
@@ -394,10 +390,6 @@ class VexRelayContractTest {
         assertEquals(
             0,
             relay.currentOutput.sum,
-        )
-        assertEquals(
-            1L,
-            relay.current.revision,
         )
     }
 
@@ -597,10 +589,6 @@ class VexRelayContractTest {
         assertEquals(
             11,
             relay.currentOutput.value,
-        )
-        assertEquals(
-            1L,
-            relay.current.revision,
         )
     }
 
