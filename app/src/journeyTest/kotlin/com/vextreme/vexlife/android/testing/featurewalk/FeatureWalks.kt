@@ -29,6 +29,12 @@ object FeatureWalks {
         }
     }
 
+    object themeMode {
+        val toggleFromDebugMenu: VexFeatureWalkCase
+            get() =
+                ThemeModeFeatureWalks.toggleThemeMode
+    }
+
     object vexMaps {
         object destinationNavigation {
             val destinationShell: VexFeatureWalkCase
@@ -66,6 +72,7 @@ object FeatureWalks {
     val features: List<VexFeatureWalkFeature> =
         listOf(
             ConversationFeatureWalks.feature,
+            ThemeModeFeatureWalks.feature,
             VexMapsFeatureWalks.feature,
             VexStreamFeatureWalks.feature,
         )

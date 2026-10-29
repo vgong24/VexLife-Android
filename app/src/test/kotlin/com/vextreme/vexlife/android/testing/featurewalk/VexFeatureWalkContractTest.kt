@@ -410,6 +410,17 @@ class VexFeatureWalkContractTest {
         )
         assertTrue(
             report.contains(
+                "${ThemeModeFeatureWalkRefs.TOGGLE_THEME_MODE} status=HELD journey=HELD",
+            ),
+        )
+        assertTrue(
+            report.contains(
+                "${ThemeModeFeatureWalkRefs.INSTALLED_TOGGLE_REALIZATION} state=HELD",
+            ),
+        )
+
+        assertTrue(
+            report.contains(
                 "${VexMapsFeatureWalkRefs.DESTINATION_SHELL} status=ACTIVE " +
                     "journey=shared.vex-maps/destination-shell",
             ),
