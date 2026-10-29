@@ -849,4 +849,349 @@ abstract class VexBehaviorV2Family<
     }
 }
 
+
+/**
+ * Input side of one Compound Family circuit.
+ *
+ * Incoming observations may be partial. [latest] owns how one partial observation is currentized
+ * against the already-retained complete input. [deepCopy] owns detachment only when this input
+ * contains mutable-backed data; immutable inputs may keep the default identity snapshot.
+ *
+ * Relationship calculation does NOT belong here. Once [latest] returns, process(...) should be able
+ * to read one complete current input without consulting previous Output or another hidden cache.
+ */
+interface VexBehaviorV2CompoundInputState<
+    Self : VexBehaviorV2CompoundInputState<Self>,
+> {
+    fun latest(
+        incoming: Self,
+    ): Self
+
+    @Suppress("UNCHECKED_CAST")
+    fun deepCopy(): Self =
+        this as Self
+}
+
+/**
+ * Current consequence of one complete Compound Family relationship.
+ *
+ * Output is not previous-process memory and is not another owner's State. It answers only what the
+ * complete latest input means now.
+ */
+interface VexBehaviorV2CompoundOutputState<
+    Self : VexBehaviorV2CompoundOutputState<Self>,
+> {
+    @Suppress("UNCHECKED_CAST")
+    fun deepCopy(): Self =
+        this as Self
+}
+
+/**
+ * CURRENT semantic State for a Compound Family.
+ *
+ * The Family owns this whole relationship State:
+ *
+ *     inputState
+ *       complete current facts needed for calculation
+ *
+ *     outputState
+ *       current consequence of those facts
+ *
+ *     revision
+ *       current-state lineage; advances when Input or Output meaning changes
+ *
+ * Revision is not an event ledger.
+ */
+data class VexBehaviorV2CompoundState<
+    Family,
+    InputState,
+    OutputState,
+>(
+    val inputState: InputState,
+    val outputState: OutputState,
+    val revision: Long = 0L,
+) :
+    VexBehaviorFamily.State<
+        Family
+    >
+    where Family :
+        VexBehaviorFamily<
+            Family
+        >,
+          InputState :
+        VexBehaviorV2CompoundInputState<
+            InputState
+        >,
+          OutputState :
+        VexBehaviorV2CompoundOutputState<
+            OutputState
+        > {
+    init {
+        require(
+            revision >=
+                0L,
+        ) {
+            "Compound Family revision must be non-negative"
+        }
+    }
+}
+
+/**
+ * Exact committed Output consequence produced by one Compound Family State transition.
+ *
+ * A receipt exists only when Output meaning changed. Input-only currentness movement still advances
+ * the Compound State revision, but it does not fabricate another Act consequence.
+ */
+data class VexBehaviorV2CommittedOutput<
+    OutputState,
+>(
+    val compoundRevision: Long,
+    val outputState: OutputState,
+) where OutputState :
+    VexBehaviorV2CompoundOutputState<
+        OutputState
+    >
+
+/**
+ * Family specialization for relationships formed from several CURRENT truths.
+ *
+ * This is still a V2 Family. The specialization adds exactly the reusable circuit discovered by the
+ * Origin Walk:
+ *
+ *     incoming partial Input
+ *     + retained CURRENT Input
+ *     -> Input.latest(incoming)
+ *     -> complete latestStateInput
+ *     -> process(latestStateInput)
+ *     -> Output
+ *     -> COMMIT Family.current CompoundState
+ *     -> Act only when Output meaning changed
+ *
+ * Concrete Families author relationship meaning in [process]. They do not re-author retained-current
+ * plumbing, Compound State assembly, revision movement, or output-change detection.
+ *
+ * [act] runs only AFTER the next Compound State is already CURRENT and after the process/commit lock
+ * is released. An Act may therefore request another rightful Family/owner to change and feed the
+ * observed resulting truth back through [observe] without recursive half-committed processing.
+ *
+ * This specialization does not claim that every Family is Compound. A simple local Family continues
+ * to use [VexBehaviorV2Family] directly.
+ */
+abstract class VexBehaviorV2CompoundFamily<
+    Family,
+    InputState,
+    OutputState,
+    Control,
+>(
+    initialInputState: InputState,
+    initialOutputState: OutputState,
+    executionRoot: VexExecutionRoot,
+    logger: VexFamilyLogger,
+) :
+    VexBehaviorV2Family<
+        Family,
+        VexBehaviorV2CompoundState<
+            Family,
+            InputState,
+            OutputState
+        >,
+        Control
+    >(
+        initialState =
+            VexBehaviorV2CompoundState(
+                inputState =
+                    initialInputState.deepCopy(),
+                outputState =
+                    initialOutputState.deepCopy(),
+            ),
+        executionRoot =
+            executionRoot,
+        logger =
+            logger,
+    )
+    where Family :
+        VexBehaviorV2CompoundFamily<
+            Family,
+            InputState,
+            OutputState,
+            Control
+        >,
+          InputState :
+        VexBehaviorV2CompoundInputState<
+            InputState
+        >,
+          OutputState :
+        VexBehaviorV2CompoundOutputState<
+            OutputState
+        >,
+          Control :
+        VexBehaviorFamily.Control<
+            Family
+        > {
+    private val compoundProcessLock =
+        Any()
+
+    val currentInput:
+        InputState
+        get() =
+            current
+                .inputState
+                .deepCopy()
+
+    val currentOutput:
+        OutputState
+        get() =
+            current
+                .outputState
+                .deepCopy()
+
+    /**
+     * The one concrete relationship-calculation override.
+     *
+     * Read this method as:
+     *
+     *     here is everything CURRENT
+     *     -> what does it mean?
+     *     -> return the Output consequence
+     *
+     * Do not mutate another owner, execute an Effect, consult previous Output as hidden input memory,
+     * or re-currentize partial observations here.
+     */
+    protected abstract fun process(
+        latestStateInput: InputState,
+    ): OutputState
+
+    /**
+     * React to one already-CURRENT Output consequence.
+     *
+     * Pure projection/convergence Families may keep the default no-op. A Family that owns a lawful
+     * consequence may override this and request change through the rightful target owner's semantic
+     * boundary. Resulting target truth must return as NEW input through [observe].
+     */
+    protected open fun act(
+        committed:
+            VexBehaviorV2CommittedOutput<
+                OutputState
+            >,
+    ) {
+    }
+
+    /**
+     * Admit one partial observation into this Family's current relationship.
+     *
+     * Exactly one process/commit decision is serialized at a time. The Act runs after commit and
+     * outside the lock so a resulting observation may safely re-enter this Family as new input.
+     */
+    protected fun observe(
+        inputState: InputState,
+    ):
+        VexBehaviorV2CommittedOutput<
+            OutputState
+        >? {
+        val committed =
+            synchronized(
+                compoundProcessLock,
+            ) {
+                val retained =
+                    current
+
+                val admittedPatch =
+                    inputState.deepCopy()
+
+                val processingCurrentInput =
+                    retained
+                        .inputState
+                        .deepCopy()
+
+                val latestStateInput =
+                    processingCurrentInput
+                        .latest(
+                            admittedPatch,
+                        )
+                        .deepCopy()
+
+                val latestStateOutput =
+                    process(
+                        latestStateInput
+                            .deepCopy(),
+                    )
+                        .deepCopy()
+
+                val inputChanged =
+                    latestStateInput !=
+                        retained.inputState
+                val outputChanged =
+                    latestStateOutput !=
+                        retained.outputState
+
+                if (
+                    !inputChanged &&
+                    !outputChanged
+                ) {
+                    return@synchronized null
+                }
+
+                val nextState =
+                    VexBehaviorV2CompoundState<
+                        Family,
+                        InputState,
+                        OutputState
+                    >(
+                        inputState =
+                            if (
+                                inputChanged
+                            ) {
+                                latestStateInput
+                                    .deepCopy()
+                            } else {
+                                retained
+                                    .inputState
+                            },
+                        outputState =
+                            if (
+                                outputChanged
+                            ) {
+                                latestStateOutput
+                                    .deepCopy()
+                            } else {
+                                retained
+                                    .outputState
+                            },
+                        revision =
+                            retained.revision +
+                                1L,
+                    )
+
+                /*
+                 * COMMIT — Family.current moves before any Act can observe this consequence.
+                 */
+                admit(
+                    nextState,
+                )
+
+                if (
+                    outputChanged
+                ) {
+                    VexBehaviorV2CommittedOutput(
+                        compoundRevision =
+                            nextState.revision,
+                        outputState =
+                            nextState
+                                .outputState
+                                .deepCopy(),
+                    )
+                } else {
+                    null
+                }
+            }
+
+        committed
+            ?.let(
+                ::act,
+            )
+
+        return committed
+    }
+}
+
 // [VXG RealForever]
