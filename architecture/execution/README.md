@@ -101,17 +101,74 @@ rightful responsibilities.
 
 ## Public authoring language
 
-Finite suspend work:
+### Draft finite-launch relationship — source conformance pending
 
-```kotlin
-launchOnce(repository::refreshCatalog)
+The current source still exposes `launchOnce`, `launchReplaceable`, and `launchSequenced`.
+Do **not** infer the final execution relationship from those names. This draft has now established the
+intended human-facing meanings below; implementation and tests still need to be brought into
+conformance.
+
+```text
+launch(...)
+    every invocation is an independent execution instance
+    the same callable may have many concurrent instances
+
+launchEarliest(...)
+    the earliest active execution for one maintained lane wins
+    overlapping later launches add no new execution while that one remains active
+
+launchLatest(...)
+    the latest launch supersedes the active execution for one maintained lane
+    predecessor cancellation/teardown completes before the latest begins
+
+launchQueued(...)
+    every launch for one maintained lane remains meaningful
+    launches execute in arrival order
 ```
 
-One-argument work stays type-safe:
+The four shapes are deliberately different:
 
-```kotlin
-launchOnce(repository::download, trackRef)
+```text
+launch
+
+A -------->
+  B -------->
+    C -------->
+
+
+launchEarliest
+
+A -------->
+  B x
+    C x
+
+
+launchLatest
+
+A ----x
+     B ----x
+          C -------->
+
+
+launchQueued
+
+A ----->
+       B ----->
+              C ----->
 ```
+
+`Earliest` is not an error/rejection policy. It means the already-active earliest launch is
+sufficient for that maintained relationship, so a colliding later request does not need a duplicate
+execution. `Queued` is different: the later request still matters and must run after its
+predecessor.
+
+The ordinary `launch(...)` form has **no maintained sibling relationship**. Calling the same
+operation ten times may produce ten concurrent execution instances. Extra relationship language is
+used only when extra coordination is actually intended.
+
+The current implementation has not yet been renamed or reshaped to this contract. Until that source
+conformance is completed, treat the older finite-launch method names as provisional implementation
+vocabulary rather than architectural authority.
 
 A maintained Flow observation may reference either a Flow-returning function or Flow property:
 
@@ -207,11 +264,37 @@ This is a source-derived runtime address, not a durable serialized product ident
 may rename the execution ref. That is deliberate: this foundation avoids a second hand-maintained ID
 catalog merely to address coroutine work.
 
-One active callable name may exist once within one `VexExecution`. Duplicate active refs fail closed.
-If two different operations in one Execution share a callable name, give the Execution-owned
-operation a distinct semantic source name instead of inventing an invisible runtime suffix.
-Concurrent instances of the same parameterized callable are deliberately held until a real consumer
-earns an instance-identity rule.
+The callable-derived ref is **source / operation identity**, not sufficient execution-instance
+identity and not automatically a maintained-lane identity.
+
+The intended distinction is:
+
+```text
+source identity
+    what operation/source is this?
+
+execution instance identity
+    which particular launch is this?
+
+maintained lane identity
+    only when Earliest / Latest / Queued explicitly relate repeated launches
+```
+
+Therefore:
+
+```text
+SAME CALLABLE
+!= SAME EXECUTION INSTANCE
+!= AUTOMATICALLY SAME MAINTAINED LANE
+```
+
+An ordinary `launch(...)` needs a distinct execution instance for every invocation even when the
+callable is the same. Earliest / Latest / Queued need an explicit stable lane relationship against
+which overlapping launches are compared.
+
+The current launcher still keys active custody by one callable-derived `VexCoroutineRef` and
+therefore does not yet satisfy this intended distinction. That implementation gap is part of the
+current draft refinement; do not preserve duplicate rejection merely because it is present today.
 
 ## Collection recovery boundary
 
@@ -276,9 +359,12 @@ Active runs are retained privately in insertion order:
 LinkedHashMap<VexCoroutineRef, ManagedCoroutine>
 ```
 
-This provides exact lookup, duplicate rejection, deterministic active-run order, and surgical
-cancellation. Terminal state remains available through the defensive `executions` projection after
-the active Job leaves custody.
+This currently provides exact lookup and deterministic active-run order, but the single-ref map also
+reveals the draft mismatch above: one callable-derived ref cannot represent several independent
+concurrent instances of the same source operation. The conformed design must preserve exact
+per-instance handle custody while giving maintained Earliest / Latest / Queued lanes their own
+explicit relationship identity. Terminal state must remain defensively observable without allowing
+an older execution/lane generation to overwrite newer lane truth.
 
 ## Ownership laws
 
@@ -302,9 +388,14 @@ the active Job leaves custody.
 - WorkManager or other process-death durability;
 - business retry/idempotency.
 
-Use Relay when several changing truths must converge. Use `launchOnce` when one already-defined
-semantic operation should execute once. Use `launchForCollect` only in an execution/runtime bridge
+Use Relay when several changing truths must converge. For finite work, choose the smallest relationship
+that matches the actual intention: independent `launch`, maintained `launchEarliest`,
+`launchLatest`, or `launchQueued`. Use `launchForCollect` only in an execution/runtime bridge
 that truly owns a sustained Flow observation.
+
+These finite-launch relationships govern coroutine custody only. They do not decide whether a
+Control is lawful, what semantic State should be admitted, whether an asynchronous result is still
+semantically current, or whether provider truth is fresh.
 
 ## Why the test fixture exists
 
@@ -467,10 +558,33 @@ still makes the underlying architecture obvious.
 
 ## Proof
 
-`VexExecutionTest` protects the inherited PR #3 execution laws plus the new public-language rules:
-source-derived refs, one-shot invocation, typed arguments, Flow-owned collection, sibling isolation,
-source-only bounded recovery, downstream-consumer failure without auto-restart, force-stop suppression,
-`joinStop` teardown proof, duplicate rejection, ordered registry exposure, defensive registry state,
-and post-shutdown admission rejection.
+The existing `VexExecutionTest` still protects inherited execution behavior such as typed callable
+invocation, Flow-owned collection, sibling isolation, bounded source recovery, cancellation/teardown,
+registry defensiveness, and post-shutdown admission rejection.
+
+The new finite-launch relationship is **not yet source-proved**. Its conformance proof must explicitly
+cover at least:
+
+```text
+launch
+    same callable may have several concurrent execution instances
+
+launchEarliest
+    first active lane execution remains
+    later overlapping launches do not create duplicate work
+
+launchLatest
+    predecessor is cancelled
+    predecessor teardown completes before latest begins
+
+launchQueued
+    every admitted launch runs in arrival order
+
+lane generations
+    predecessor terminal publication cannot overwrite newer maintained-lane truth
+```
+
+Until those tests exist at the exact current head, do not claim the finite-launch contract as
+implementation-complete.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
