@@ -730,3 +730,35 @@ OutputState is relationship consequence, not hidden process memory. Existing pro
 remain unchanged while this circuit is evaluated.
 
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PROCESS-ACT-CIRCUIT] -->
+
+### V2 Origin Walk — committed Output Act-runner pressure
+
+The fourth reference now pressures the next causal edge after process/commit:
+
+~~~text
+COMMITTED OutputState
+-> Act realization
+~~~
+
+The current test-only result is intentionally smaller than a production runner design:
+
+- only an **Output-changing** Compound commit forms an Act receipt;
+- the existing Compound revision identifies that exact commit, so no second Output counter/event
+  ledger is introduced;
+- an Input-only revision does not replay or stale the current Output consequence;
+- Replaceable is superseded by a newer Output-changing commit even when the newer Output is a no-op
+  Settled consequence;
+- Sequenced preserves accepted effect-bearing Output commits in order and does not duplicate an Act
+  when observation changes Input while Output remains the same;
+- cancellation affects execution lifetime, not already-committed relationship truth or external
+  reality that may already have changed;
+- target-owner truth still returns through observation as new Input.
+
+The pressure explicitly does **not** use outputStates as an effect queue. A production post-commit
+seam, if earned, must originate at the actual Compound commit boundary so dependency-driven send(...)
+cannot bypass it.
+
+No production Relay hook, Act runner, event ledger or new revision type is admitted yet.
+Repository Gradle/JVM proof remains pending.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][COMMITTED-OUTPUT-ACT-RUNNER-PRESSURE] -->
