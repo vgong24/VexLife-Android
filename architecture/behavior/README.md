@@ -16,11 +16,10 @@ This module preserves the geometry of **what a human can do from what is true no
   DisplayState. It proves stale rendered State is not activation authority. It does **not** prove
   Compose observation, provider-observation currentness, async-result staleness, or Store convergence.
 - **Family Circuit construction guide:** [`VexBehaviorV2FamilyCircuitTestSampleSuite`](src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorV2FamilyCircuitTestSampleSuite.kt)
-  — read this teaching suite when you need the current end-to-end Family Circuit construction shape
-  rather than historical pressure. ComplexFamily itself extends the Compound Family foundation and
-  owns ComplexCompoundState: partial Input -> latest complete Input -> process -> Output -> commit ->
-  Act -> ScreenFamily Control -> admitted target CURRENT State -> observed NEW Input. The scenario is
-  simulated and not product behavior.
+  — start with createSingleFamily(), createListFamily(), createBooleanFamily(), and
+  createMultiFamily(). The examples use generic data shapes so the Family structure is visible without
+  product context. MultiFamily demonstrates Input.latest(...) -> process(...) -> Output -> committed
+  Family State -> Act -> another Family -> observed NEW Input.
 - Review pressure/evidence:
   [`REVIEW-CHECKPOINT.md`](REVIEW-CHECKPOINT.md)
 
@@ -58,7 +57,8 @@ Both specializations share the same Family root without inheriting capabilities 
 The concrete Compound Family owns the relationship; there is no sibling Compound Relay required to
 own a second copy of current Input/Output truth.
 
-VexBehaviorV2FamilyCircuitTestSampleSuite is the teaching surface for this current structure.
+VexBehaviorV2FamilyCircuitTestSampleSuite is the teaching surface. Its examples are intentionally
+structural rather than feature-shaped: SingleFamily, ListFamily, BooleanFamily, and MultiFamily.
 
 ## V2 Origin-Walk test progression
 
@@ -68,18 +68,17 @@ Read them in this order:
 
 ~~~text
 0. VexBehaviorV2FamilyCircuitTestSampleSuite
-   current construction-teaching suite for the candidate Family Circuit Architecture
-   -> ComplexFamily extends VexBehaviorV2CompoundFamily
-   -> ComplexCompoundState is Family.current
-   -> ScreenFamily + two independently-owned observation-only CURRENT truths
-   -> partial ComplexInputState observations
-   -> InputState.latest(...) forms one complete current input
-   -> ComplexFamily.process(latestStateInput) calculates meaning only
-   -> ComplexOutputState is the current relationship consequence
-   -> Output-changing Family State commit becomes an Act consequence
-   -> Act enters the rightful target Family through Control
-   -> observed target CURRENT truth returns as NEW input
-   -> input-only Compound revisions do not fabricate another Act
+   current construction-teaching suite
+   -> SingleFamily: one current State
+   -> ListFamily: nested list State
+   -> BooleanFamily: Boolean State
+   -> MultiFamily: several Family currents
+   -> MultiInputState.latest(...) forms complete current input
+   -> MultiFamily.process(latestStateInput) returns relationship meaning
+   -> MultiOutputState becomes MultiCompoundState / Family.current
+   -> Output-changing commit produces Act
+   -> Act enters another Family through its Control
+   -> observed Family.current returns as NEW input
 
 1. VexBehaviorV2Test
    ThemeMode patient zero
