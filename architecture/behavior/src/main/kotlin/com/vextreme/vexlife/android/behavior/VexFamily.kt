@@ -136,8 +136,8 @@ abstract class VexFamily<
         class Begin<
             State : VexFamily.State<*>,
         > internal constructor(
-            internal val relationship:
-                VexExecution.Relationship,
+            internal val approach:
+                VexExecution.Approach,
             internal val arguments:
                 List<Any?>,
             internal val save:
@@ -172,8 +172,8 @@ abstract class VexFamily<
             class Scope<
                 State : VexFamily.State<*>,
             > internal constructor(
-                private val relationship:
-                    VexExecution.Relationship,
+                private val approach:
+                    VexExecution.Approach,
                 private val arguments:
                     List<Any?>,
             ) {
@@ -212,8 +212,8 @@ abstract class VexFamily<
                 internal fun build():
                     Begin<State> =
                     Begin(
-                        relationship =
-                            relationship,
+                        approach =
+                            approach,
                         arguments =
                             arguments,
                         save =
@@ -361,20 +361,6 @@ abstract class VexFamily<
         }
     }
 
-    /**
-     * Family-originated maintained execution identity.
-     *
-     * The live Family instance is already supplied separately to VexExecution as relationship owner.
-     * This value therefore contains only the triggering Control kind plus optional ordered arguments.
-     */
-    private data class ControlRelationship(
-        val control:
-            Any,
-        val arguments:
-            List<Any?>,
-    ) :
-        VexExecution.Id
-
     /*
      * One live State holder.
      *
@@ -470,8 +456,8 @@ abstract class VexFamily<
     ):
         Act.Begin<FamilyState> =
         buildBegin(
-            relationship =
-                VexExecution.Relationship.Independent,
+            approach =
+                VexExecution.Approach.Independent,
             arguments =
                 emptyList(),
             block =
@@ -494,8 +480,8 @@ abstract class VexFamily<
     ):
         Act.Begin<FamilyState> =
         buildBegin(
-            relationship =
-                VexExecution.Relationship.Earliest,
+            approach =
+                VexExecution.Approach.Earliest,
             arguments =
                 arguments.toList(),
             block =
@@ -515,8 +501,8 @@ abstract class VexFamily<
     ):
         Act.Begin<FamilyState> =
         buildBegin(
-            relationship =
-                VexExecution.Relationship.Latest,
+            approach =
+                VexExecution.Approach.Latest,
             arguments =
                 arguments.toList(),
             block =
@@ -536,8 +522,8 @@ abstract class VexFamily<
     ):
         Act.Begin<FamilyState> =
         buildBegin(
-            relationship =
-                VexExecution.Relationship.Queued,
+            approach =
+                VexExecution.Approach.Queued,
             arguments =
                 arguments.toList(),
             block =
@@ -545,8 +531,8 @@ abstract class VexFamily<
         )
 
     private fun buildBegin(
-        relationship:
-            VexExecution.Relationship,
+        approach:
+            VexExecution.Approach,
         arguments:
             List<Any?>,
         block:
@@ -554,8 +540,8 @@ abstract class VexFamily<
     ):
         Act.Begin<FamilyState> =
         Act.Begin.Scope<FamilyState>(
-            relationship =
-                relationship,
+            approach =
+                approach,
             arguments =
                 arguments,
         )
@@ -693,8 +679,8 @@ abstract class VexFamily<
             FamilyControl,
     ) {
         executeSave(
-            relationship =
-                begin.relationship,
+            approach =
+                begin.approach,
             control =
                 control,
             arguments =
@@ -705,8 +691,8 @@ abstract class VexFamily<
     }
 
     private fun executeSave(
-        relationship:
-            VexExecution.Relationship,
+        approach:
+            VexExecution.Approach,
         control:
             FamilyControl,
         arguments:
@@ -810,9 +796,9 @@ abstract class VexFamily<
             }
 
         when (
-            relationship
+            approach
         ) {
-            VexExecution.Relationship.Independent ->
+            VexExecution.Approach.Independent ->
                 VexExecution.begin(
                     executionRoot =
                         executionRoot,
@@ -830,19 +816,17 @@ abstract class VexFamily<
                         onFailure,
                 )
 
-            VexExecution.Relationship.Earliest ->
+            VexExecution.Approach.Earliest ->
                 VexExecution.beginEarliest(
-                    id =
-                        controlRelationship(
+                    executionRoot =
+                        executionRoot,
+                    relationship =
+                        executionRelationship(
                             control =
                                 control,
                             arguments =
                                 arguments,
                         ),
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this,
                     operation =
                         operation,
                     argument =
@@ -855,19 +839,17 @@ abstract class VexFamily<
                         onFailure,
                 )
 
-            VexExecution.Relationship.Latest ->
+            VexExecution.Approach.Latest ->
                 VexExecution.beginLatest(
-                    id =
-                        controlRelationship(
+                    executionRoot =
+                        executionRoot,
+                    relationship =
+                        executionRelationship(
                             control =
                                 control,
                             arguments =
                                 arguments,
                         ),
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this,
                     operation =
                         operation,
                     argument =
@@ -880,19 +862,17 @@ abstract class VexFamily<
                         onFailure,
                 )
 
-            VexExecution.Relationship.Queued ->
+            VexExecution.Approach.Queued ->
                 VexExecution.beginQueued(
-                    id =
-                        controlRelationship(
+                    executionRoot =
+                        executionRoot,
+                    relationship =
+                        executionRelationship(
                             control =
                                 control,
                             arguments =
                                 arguments,
                         ),
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this,
                     operation =
                         operation,
                     argument =
@@ -907,15 +887,17 @@ abstract class VexFamily<
         }
     }
 
-    private fun controlRelationship(
+    private fun executionRelationship(
         control:
             FamilyControl,
         arguments:
             List<Any?>,
     ):
-        VexExecution.Id =
-        ControlRelationship(
-            control =
+        VexExecution.Relationship =
+        VexExecution.relationship(
+            owner =
+                this,
+            trigger =
                 (control as? Enum<*>)
                     ?: control::class,
             arguments =
