@@ -62,6 +62,25 @@ states
 
 There is one live semantic State holder.
 
+## DisplayState responsibility
+
+`DisplayState` is part of the `VexFamily` contract rather than another Vex root:
+
+~~~text
+VexFamily
+-> DisplayState
+   -> StateOnly
+~~~
+
+`VexFamily.DisplayState.StateOnly(currentState)` is the complete default. It means current semantic
+State already carries all display meaning this Family has earned. It is not a placeholder and does
+not ask a feature to invent another ViewState / UiState / PresentationState.
+
+A concrete Family should override `displayState` only when real consumers would otherwise repeat the
+same derived interpretation of State. A richer feature-owned classification belongs under that
+concrete Family, for example `ThemeModeFamily.DisplayState`, and implements
+`VexFamily.DisplayState<ThemeModeFamily.State>`.
+
 ## Current feature-facing shape
 
 ~~~kotlin

@@ -22,7 +22,7 @@ custom State/Control branching DSL between activate(...) and the concrete Family
 
 ## Concrete Family
 
-A feature owns State, Control, DisplayState, and one direct function:
+A feature owns State, Control, one direct function, and only a richer DisplayState when real consumers earn one:
 
 ~~~kotlin
 override fun act(
@@ -68,6 +68,24 @@ activate(...)
 ~~~
 
 StateRelay remains the one live State holder.
+
+## DisplayState responsibility
+
+Display interpretation has an explicit place in the Family tree without requiring every Family to
+invent another state vocabulary:
+
+~~~text
+VexFamily
+-> DisplayState
+   -> StateOnly(currentState)
+
+ConcreteFamily
+-> DisplayState        # only when a richer repeated classification is earned
+~~~
+
+`VexFamily.DisplayState.StateOnly` is a complete default, not an unfinished placeholder. It tells a
+fresh reader that DisplayState already has a rightful owner and that no parallel ViewState / UiState /
+PresentationState should be created merely to fill a perceived gap.
 
 ## Act outcome
 

@@ -69,7 +69,7 @@ class VexFamilyHighConfidenceTest {
             val value:
                 String?,
         ) :
-            VexDisplayState<State>
+            VexFamily.DisplayState<State>
 
         /**
          * This is the function Family.activate(...) calls.
@@ -386,7 +386,7 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun displayStateRoleRemainsPresentWhenNoRicherProjectionIsEarned() {
+    fun displayStateDefaultsToStateOnlyWhenNoRicherClassificationIsEarned() {
         val root =
             VexExecutionRoot()
 
@@ -400,7 +400,7 @@ class VexFamilyHighConfidenceTest {
                 )
 
             assertEquals(
-                VexDisplayState.Empty(
+                VexFamily.DisplayState.StateOnly(
                     MinimalFamily.State.Idle,
                 ),
                 family.displayState,

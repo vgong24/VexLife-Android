@@ -7,25 +7,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Family-owned projectable output.
- *
- * DisplayState is not another semantic truth owner. It is the bounded outward meaning of
- * [VexFamily.currentState].
- */
-interface VexDisplayState<
-    out State,
-> {
-    data class Empty<
-        State,
-    >(
-        val state: State,
-    ) :
-        VexDisplayState<
-            State
-        >
-}
-
-/**
  * Live Family runtime for one semantic State and Control vocabulary.
  *
  * Human-visible runtime call:
@@ -52,6 +33,29 @@ abstract class VexFamily<
     protected val logger:
         VexFamilyLogger,
 ) {
+    /**
+     * Family-owned display classification.
+     *
+     * DisplayState is not another semantic truth owner. It is the bounded outward interpretation of
+     * [currentState] when a consumer has earned a repeated display distinction.
+     *
+     * [StateOnly] is the complete default contract: current semantic State already carries all
+     * display meaning this Family has earned. It is not a placeholder and it is not an instruction
+     * to invent another ViewState / UiState / PresentationState owner.
+     */
+    interface DisplayState<
+        out State,
+    > {
+        data class StateOnly<
+            State,
+        >(
+            val state: State,
+        ) :
+            DisplayState<
+                State
+            >
+    }
+
     /*
      * One live State holder.
      *
@@ -139,10 +143,17 @@ abstract class VexFamily<
         VexFamilyStore? =
         null
 
+    /**
+     * Current display classification for this Family.
+     *
+     * The default is complete and intentionally boring: no richer display classification has been
+     * earned beyond current semantic State. Override only when real consumers would otherwise repeat
+     * the same derived interpretation of State.
+     */
     open val displayState:
-        VexDisplayState<State>
+        DisplayState<State>
         get() =
-            VexDisplayState.Empty(
+            DisplayState.StateOnly(
                 currentState,
             )
 
