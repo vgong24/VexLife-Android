@@ -25,66 +25,74 @@ class VexLifeSessionTest {
     @Test
     fun repeatedUiEntryDoesNotRestartTheLoggerSession() = runTest {
         val executionRoot = VexExecutionRoot()
-        val session = VexLifeSession(
-            repositories = AppRepositories(
-                logHistory = InMemoryLogHistoryRepository(),
-                userProfile = InMemoryUserProfileRepository(),
-                vexMaps = InMemoryVexMapsRepository(),
-                vexMapsDistribution =
-                    InMemoryVexMapsDistributionRepository(),
-                vexStream = InMemoryVexStreamMusicRepository(),
-                events = RelayEventsRepository(),
-                eventsAttention = RelayEventsAttentionPreferenceRepository(),
-                eventsAttentionLab = RelayEventsAttentionLabRepository(),
-            ),
-            scope = backgroundScope,
-            executionRoot = executionRoot,
-        )
+        try {
+            val session = VexLifeSession(
+                repositories = AppRepositories(
+                    logHistory = InMemoryLogHistoryRepository(),
+                    userProfile = InMemoryUserProfileRepository(),
+                    vexMaps = InMemoryVexMapsRepository(),
+                    vexMapsDistribution =
+                        InMemoryVexMapsDistributionRepository(),
+                    vexStream = InMemoryVexStreamMusicRepository(),
+                    events = RelayEventsRepository(),
+                    eventsAttention = RelayEventsAttentionPreferenceRepository(),
+                    eventsAttentionLab = RelayEventsAttentionLabRepository(),
+                ),
+                scope = backgroundScope,
+                executionRoot = executionRoot,
+            )
 
-        // A new Compose tree can invoke the app entry effect again after configuration recreation.
-        // The retained VexLifeSession/runtime must treat that as the same semantic app session.
-        session.runtime.appOpened()
-        session.runtime.appOpened()
+            // A new Compose tree can invoke the app entry effect again after configuration recreation.
+            // The retained VexLifeSession/runtime must treat that as the same semantic app session.
+            session.runtime.appOpened()
+            session.runtime.appOpened()
 
-        assertEquals(
-            1,
-            session.logger.history.value.count { record ->
-                record.kind == VexLogKind.AppOpened
-            },
-        )
+            assertEquals(
+                1,
+                session.logger.history.value.count { record ->
+                    record.kind == VexLogKind.AppOpened
+                },
+            )
+        } finally {
+            executionRoot.forceStopAll()
+        }
     }
 
     @Test
     fun runtimeNavigationAndPresentationBelongToTheSessionNotTheComposable() = runTest {
         val executionRoot = VexExecutionRoot()
-        val session = VexLifeSession(
-            repositories = AppRepositories(
-                logHistory = InMemoryLogHistoryRepository(),
-                userProfile = InMemoryUserProfileRepository(),
-                vexMaps = InMemoryVexMapsRepository(),
-                vexMapsDistribution =
-                    InMemoryVexMapsDistributionRepository(),
-                vexStream = InMemoryVexStreamMusicRepository(),
-                events = RelayEventsRepository(),
-                eventsAttention = RelayEventsAttentionPreferenceRepository(),
-                eventsAttentionLab = RelayEventsAttentionLabRepository(),
-            ),
-            scope = backgroundScope,
-            executionRoot = executionRoot,
-        )
+        try {
+            val session = VexLifeSession(
+                repositories = AppRepositories(
+                    logHistory = InMemoryLogHistoryRepository(),
+                    userProfile = InMemoryUserProfileRepository(),
+                    vexMaps = InMemoryVexMapsRepository(),
+                    vexMapsDistribution =
+                        InMemoryVexMapsDistributionRepository(),
+                    vexStream = InMemoryVexStreamMusicRepository(),
+                    events = RelayEventsRepository(),
+                    eventsAttention = RelayEventsAttentionPreferenceRepository(),
+                    eventsAttentionLab = RelayEventsAttentionLabRepository(),
+                ),
+                scope = backgroundScope,
+                executionRoot = executionRoot,
+            )
 
-        session.runtime.activate(AppShell.Elements.DebugMenu)
-        session.runtime.activate(DebugMenuScreen.ShowLog)
+            session.runtime.activate(AppShell.Elements.DebugMenu)
+            session.runtime.activate(DebugMenuScreen.ShowLog)
 
-        val sameRuntimeAfterUiRecreation = session.runtime
+            val sameRuntimeAfterUiRecreation = session.runtime
 
-        assertSame(session.runtime, sameRuntimeAfterUiRecreation)
-        assertSame(DebugMenuScreen, sameRuntimeAfterUiRecreation.currentScreen)
-        assertTrue(
-            sameRuntimeAfterUiRecreation.presentation.isOpen(
-                DebugMenuScreen.LogSheet,
-            ),
-        )
+            assertSame(session.runtime, sameRuntimeAfterUiRecreation)
+            assertSame(DebugMenuScreen, sameRuntimeAfterUiRecreation.currentScreen)
+            assertTrue(
+                sameRuntimeAfterUiRecreation.presentation.isOpen(
+                    DebugMenuScreen.LogSheet,
+                ),
+            )
+        } finally {
+            executionRoot.forceStopAll()
+        }
     }
 
     @Test
