@@ -16,10 +16,14 @@ coroutine execution must make that role explicit by extending `VexExecution`.
 ```text
 VexExecutionRoot
     -> internal VexCoroutineLauncher
-    -> private LinkedHashMap<VexCoroutineRef, Job>
+    -> active[InstanceId]
+    -> lanes[Id] only when a maintained relationship is authored
 
 FeatureExecution : VexExecution
-    -> launchOnce(callable)
+    -> launch(callable)
+    -> launchEarliest(id, callable)
+    -> launchLatest(id, callable)
+    -> launchQueued(id, callable)
     -> launchForCollect(flowProvider) { value -> ... }
     -> forceStop(callable)
     -> joinStop(callable)
@@ -89,7 +93,7 @@ QUESTION
 
 VEX
     define one suspend operation when they are one intention
-    -> launchOnce(operationReference)
+    -> launch(operationReference)
 
 RESULT
     execution topology follows meaning rather than incidental call count
@@ -101,32 +105,52 @@ rightful responsibilities.
 
 ## Public authoring language
 
-### Draft finite-launch relationship — source conformance pending
-
-The current source still exposes `launchOnce`, `launchReplaceable`, and `launchSequenced`.
-Do **not** infer the final execution relationship from those names. This draft has now established the
-intended human-facing meanings below; implementation and tests still need to be brought into
-conformance.
+Finite work has four explicit shapes:
 
 ```text
 launch(...)
     every invocation is an independent execution instance
     the same callable may have many concurrent instances
 
-launchEarliest(...)
-    the earliest active execution for one maintained lane wins
-    overlapping later launches add no new execution while that one remains active
+launchEarliest(id, ...)
+    the earliest unfinished execution for this Id is sufficient
+    overlapping later calls return that same InstanceId
 
-launchLatest(...)
-    the latest launch supersedes the active execution for one maintained lane
-    predecessor cancellation/teardown completes before the latest begins
+launchLatest(id, ...)
+    newest launch supersedes every unfinished predecessor for this Id
+    all predecessor teardown completes before the newest begins
 
-launchQueued(...)
-    every launch for one maintained lane remains meaningful
+launchQueued(id, ...)
+    every launch for this Id remains meaningful
     launches execute in arrival order
 ```
 
-The four shapes are deliberately different:
+Only the maintained forms take caller-authored identity:
+
+```text
+launch
+    caller supplies no id
+
+Earliest / Latest / Queued
+    caller supplies one VexExecution.Id
+```
+
+The reusable contract is `VexExecution.Id`. The concrete name lives with the owner that understands
+the relationship:
+
+```kotlin
+enum class ExecutionId :
+    VexExecution.Id {
+    Save,
+    Refresh,
+}
+```
+
+If a Family owns that relationship, `ConcreteFamily.ExecutionId` is the natural declaration. If a
+dedicated execution component owns it, that component holds its own `ExecutionId`. Do not create a
+global catalog.
+
+The four shapes remain deliberately different:
 
 ```text
 launch
@@ -157,20 +181,11 @@ A ----->
               C ----->
 ```
 
-`Earliest` is not an error/rejection policy. It means the already-active earliest launch is
-sufficient for that maintained relationship, so a colliding later request does not need a duplicate
-execution. `Queued` is different: the later request still matters and must run after its
-predecessor.
+`Earliest` is not rejection/error. It means the already-unfinished earliest relationship instance is
+sufficient, so the later call receives that same Handle/InstanceId rather than creating duplicate
+work.
 
-The ordinary `launch(...)` form has **no maintained sibling relationship**. Calling the same
-operation ten times may produce ten concurrent execution instances. Extra relationship language is
-used only when extra coordination is actually intended.
-
-The current implementation has not yet been renamed or reshaped to this contract. Until that source
-conformance is completed, treat the older finite-launch method names as provisional implementation
-vocabulary rather than architectural authority.
-
-A maintained Flow observation may reference either a Flow-returning function or Flow property:
+A maintained Flow observation remains a separate contract:
 
 ```kotlin
 launchForCollect(repository::states) { state ->
@@ -178,18 +193,18 @@ launchForCollect(repository::states) { state ->
 }
 ```
 
-```kotlin
-launchForCollect(session::states) { state ->
-    accept(state)
-}
-```
+A second unfinished observation of the same source fails closed. That one-per-source observation law
+does not leak into ordinary finite `launch`.
 
-The callable is both the source reference and the thing Vex invokes. A callable is never passed only
-as a decorative label while unrelated work runs in a second lambda.
+The callable remains the thing Vex actually invokes, not a decorative label for unrelated lambda
+work.
 
-`launchOnce` never automatically retries. `launchForCollect` may use the root's bounded recovery only
-for source/subscription failure. A failure thrown while consuming a valid emitted value becomes
+`launch` never automatically retries. `launchForCollect` may use bounded recovery only for
+source/subscription failure. A failure thrown while consuming a valid emitted value becomes
 `FAILED` with no automatic resubscription. Intentional cancellation never restarts.
+
+`launchOnce` currently remains only as a deprecated compatibility alias to independent `launch`;
+it no longer owns duplicate-source semantics.
 
 ## Worker preparation and provider-affine commit
 
@@ -223,7 +238,7 @@ internal suspend fun playForExecution(
 }
 ```
 
-`launchOnce(::playForExecution, request)` owns the whole operation. The root dispatcher owns the
+`launch(::playForExecution, request)` owns the whole operation. The root dispatcher owns the
 ordinary worker phase. `handoff(dispatcher) { ... }` is only a structured context switch inside that
 same managed Job; it does not create another execution ref, retry boundary, detached coroutine or
 lifetime owner.
@@ -244,57 +259,46 @@ HANDOFF != RETRY_POLICY
 PROVIDER_AFFINITY != ALWAYS_MAIN
 ```
 
-## Source-derived execution identity
+## Execution identity
 
-The runtime ref is derived from:
-
-```text
-VexExecution source class
-+
-callable.name
-```
-
-For example:
+Execution identity is split into three truths rather than inferred from one string:
 
 ```text
-VexStreamExecution.refreshCatalog
-```
+VexExecution.SourceRef
+    automatic
+    source class + callable name
+    diagnostic / source-addressing identity
+    not durable product identity
 
-This is a source-derived runtime address, not a durable serialized product identity. Renaming source
-may rename the execution ref. That is deliberate: this foundation avoids a second hand-maintained ID
-catalog merely to address coroutine work.
+VexExecution.InstanceId
+    automatic
+    generated for every admitted execution
+    exact runtime invocation identity
 
-The callable-derived ref is **source / operation identity**, not sufficient execution-instance
-identity and not automatically a maintained-lane identity.
-
-The intended distinction is:
-
-```text
-source identity
-    what operation/source is this?
-
-execution instance identity
-    which particular launch is this?
-
-maintained lane identity
-    only when Earliest / Latest / Queued explicitly relate repeated launches
+VexExecution.Id
+    caller-authored
+    present only for Earliest / Latest / Queued relationships
 ```
 
 Therefore:
 
 ```text
-SAME CALLABLE
-!= SAME EXECUTION INSTANCE
-!= AUTOMATICALLY SAME MAINTAINED LANE
+SAME SOURCE
+!= SAME INSTANCE
+!= AUTOMATICALLY SAME RELATIONSHIP
 ```
 
-An ordinary `launch(...)` needs a distinct execution instance for every invocation even when the
-callable is the same. Earliest / Latest / Queued need an explicit stable lane relationship against
-which overlapping launches are compared.
+The active registry is keyed by `InstanceId`, so the same callable may have several concurrent
+ordinary launches. Maintained relationships are keyed separately by `Id`.
 
-The current launcher still keys active custody by one callable-derived `VexCoroutineRef` and
-therefore does not yet satisfy this intended distinction. That implementation gap is part of the
-current draft refinement; do not preserve duplicate rejection merely because it is present today.
+The caller authors exactly one identity when a relationship is needed. It never supplies SourceRef or
+InstanceId.
+
+`SourceRef` may change when source is renamed or obfuscated and therefore must not become durable
+semantic identity. Likewise, `Id` is an in-memory relationship key unless its concrete owner
+explicitly earns a persistence boundary. Do not derive durable identity from reflection names,
+enum `.name`, `toString()`, or an entire mutable argument. If persistence is genuinely required,
+the concrete owner supplies a stable serialized representation at that boundary.
 
 ## Collection recovery boundary
 
@@ -336,35 +340,47 @@ convenience or any lifecycle adapter.
 ## Control
 
 ```text
+handle.forceStop()
+    cancel this exact InstanceId
+
+handle.joinStop()
+    cancel + join this exact InstanceId
+
 forceStop(callable)
-    request cancellation of the exact registered run
-    return without waiting for teardown
+    cancel every currently unfinished instance from this SourceRef
 
 joinStop(callable)
-    request cancellation
-    wait until that Job reaches terminal state
+    cancel + join every currently unfinished instance from this SourceRef
 ```
 
-`joinStop` is the replacement/restart-safe control when the next operation must not begin until the
-old contained work is actually gone.
+Source-addressed control is deliberately plural because one source may now have several independent
+finite instances. Exact per-instance control belongs to the Handle.
 
 Cancellation remains Kotlin cooperative cancellation. Vex does not claim unsafe arbitrary JVM/native
 thread termination.
 
 ## Custody and sequence context
 
-Active runs are retained privately in insertion order:
+Active custody and maintained relationships are separate:
 
 ```text
-LinkedHashMap<VexCoroutineRef, ManagedCoroutine>
+active
+    LinkedHashMap<InstanceId, ManagedExecution>
+
+lanes
+    LinkedHashMap<Id, ordered InstanceIds>
 ```
 
-This currently provides exact lookup and deterministic active-run order, but the single-ref map also
-reveals the draft mismatch above: one callable-derived ref cannot represent several independent
-concurrent instances of the same source operation. The conformed design must preserve exact
-per-instance handle custody while giving maintained Earliest / Latest / Queued lanes their own
-explicit relationship identity. Terminal state must remain defensively observable without allowing
-an older execution/lane generation to overwrite newer lane truth.
+Every admitted launch receives a unique InstanceId. Earliest / Latest / Queued add that instance to
+the caller-authored Id relationship. Ordinary launch has no Id.
+
+A cancelling predecessor continues to occupy its maintained relationship until its Job is actually
+completed. This distinction is intentional: Kotlin may report `isActive == false` while
+non-cancellable/structured teardown is still running. A later Latest or Queued launch may not skip
+that unfinished predecessor.
+
+Retained root execution state is keyed by InstanceId. Handle state remains the exact lifecycle
+projection for one invocation.
 
 ## Ownership laws
 
@@ -558,33 +574,39 @@ still makes the underlying architecture obvious.
 
 ## Proof
 
-The existing `VexExecutionTest` still protects inherited execution behavior such as typed callable
-invocation, Flow-owned collection, sibling isolation, bounded source recovery, cancellation/teardown,
-registry defensiveness, and post-shutdown admission rejection.
+The focused `VexExecutionTest` source now protects both inherited behavior and the new identity
+relationships.
 
-The new finite-launch relationship is **not yet source-proved**. Its conformance proof must explicitly
-cover at least:
+Current relationship proofs present in source:
 
 ```text
 launch
-    same callable may have several concurrent execution instances
+    same callable -> distinct concurrent InstanceIds
+    same SourceRef is preserved
 
 launchEarliest
-    first active lane execution remains
-    later overlapping launches do not create duplicate work
+    later overlap -> same existing InstanceId
+    duplicate operation does not begin
 
 launchLatest
-    predecessor is cancelled
-    predecessor teardown completes before latest begins
+    A begins
+    B supersedes A
+    C arrives while A is still in non-cancellable teardown
+    C remains held until every unfinished predecessor completes
+    B never slips through
 
 launchQueued
-    every admitted launch runs in arrival order
+    A -> B -> C
+    every admitted launch executes in arrival order
 
-lane generations
-    predecessor terminal publication cannot overwrite newer maintained-lane truth
+launchForCollect
+    duplicate unfinished observation of the same source still fails closed
 ```
 
-Until those tests exist at the exact current head, do not claim the finite-launch contract as
-implementation-complete.
+The source also keeps sibling isolation, bounded source recovery, structured cancellation/teardown,
+registry defensiveness, typed callable invocation, and post-shutdown admission rejection.
+
+Repository Gradle/JVM execution proof remains **PENDING**. Source presence and the local isolated
+Kotlin smoke compile used during refinement do not substitute for repository build/test evidence.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
