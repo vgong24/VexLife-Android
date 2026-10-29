@@ -2211,3 +2211,139 @@ Isolated Kotlin circuit proof: PASS.
 Repository Gradle/JVM proof: PENDING.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][PROCESS-COMMIT-ACT-OBSERVE] -->
+
+## Committed Output -> Act runner pressure
+
+The next Origin pressure starts exactly where the ownership circuit above stops:
+
+~~~text
+COMMITTED OutputState
+-> lawful Act realization
+~~~
+
+The new test-only runner pressure rejects two tempting shortcuts.
+
+First, the full Compound revision is **not** itself an Act trigger. An InputState patch may change
+retained current facts and advance the Compound revision while producing the same OutputState. That
+is useful relationship currentness, but it is not a new consequence to execute.
+
+Second, outputStates is a current-state projection, not an event ledger or command queue. A
+production runner must not depend on collecting that projection later and pretending every committed
+consequence is recoverable as an execution event.
+
+The smallest current candidate is instead:
+
+~~~text
+process(latestStateInput)
+-> next OutputState
+-> COMMIT CompoundState(revision = N)
+
+if Output meaning changed:
+  form one ephemeral committed-Output receipt
+    commit identity = existing Compound revision N
+    output = committed OutputState
+
+  deliver that receipt at the commit boundary
+  -> Act runner
+
+if only Input meaning changed:
+  no Act receipt
+~~~
+
+No second Output revision counter is earned. The already-existing Compound revision is sufficient to
+identify the exact commit **when** that commit actually changed Output meaning.
+
+This distinction matters for both execution modes.
+
+### Replaceable
+
+~~~text
+Output commit N
+  NeedsApply(Dark)
+  -> begin Replaceable reaction
+
+new Compound revision N+1
+  input changed only
+  Output still NeedsApply(Dark)
+  -> reaction remains current
+  -> no replay / no cancellation
+
+new Output-changing commit N+2
+  Settled(Light)
+  -> supersedes N
+  -> cancel obsolete Replaceable reaction
+  -> even though Settled has no Operation of its own
+~~~
+
+So Replaceable currentness follows the latest **Output-changing committed consequence**, not every
+input/currentness revision and not merely the existence of another effect-bearing Act.
+
+Cancellation changes execution lifetime. It does not erase or roll back the already-committed
+relationship truth.
+
+### Sequenced
+
+~~~text
+commit N
+  NeedsApply(Dark)
+  -> accept Dark episode
+
+commit N+1
+  NeedsApply(Light)
+  -> accept Light episode after Dark
+
+Dark target truth returns
+  -> Input changes
+  -> Output still NeedsApply(Light)
+  -> Compound revision advances
+  -> NO second Light receipt
+
+Light target truth returns
+  -> Output changes to Settled(Light)
+  -> committed no-op consequence
+~~~
+
+Sequenced currentness is accepted episode custody/order. An older accepted episode does not become
+illegal merely because a newer Output consequence was committed after it.
+
+The pressure also delivers the same commit receipt twice and executes it once, making exact commit
+identity the duplicate boundary.
+
+### Cancellation and external reality
+
+The test gate is intentionally placed before the rightful target owner changes so cooperative
+Replaceable cancellation can prove the simplest case. This does **not** claim cancellation can undo
+an external effect that already happened.
+
+Permanent ownership remains:
+
+~~~text
+relationship commit
+  owns relationship truth
+
+Act runner
+  owns reaction execution lifetime
+
+target owner
+  owns whether target reality changes
+
+observation
+  returns actual target truth as NEW InputState
+
+cancellation
+  != relationship rollback
+  != external rollback
+~~~
+
+The current receipt helper wraps send(...) only inside the pressure fixture. That is not a
+production seam: dependency-driven VexCompoundRelay.send(...) could bypass an outer wrapper.
+
+If this law survives further pressure, a production post-commit seam must originate at the actual
+Compound commit boundary and expose only the smallest changed-Output receipt needed by the runner.
+
+No production Act runner, Relay hook, event ledger or new revision type is admitted by this
+checkpoint.
+
+Repository Gradle/JVM proof remains pending.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][COMMITTED-OUTPUT-ACT-RUNNER-PRESSURE] -->
