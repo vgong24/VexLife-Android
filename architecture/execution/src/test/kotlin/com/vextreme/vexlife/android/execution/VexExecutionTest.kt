@@ -185,8 +185,7 @@ class VexExecutionTest {
             CoroutineDispatcher? =
             null,
     ) : VexExecution(root) {
-        enum class ExecutionId :
-            VexExecution.Id {
+        enum class Trigger {
             Earliest,
             Latest,
             Queued,
@@ -209,8 +208,8 @@ class VexExecutionTest {
 
         fun runEarliest(value: String): VexExecution.Handle =
             launchEarliest(
-                id =
-                    ExecutionId.Earliest,
+                trigger =
+                    Trigger.Earliest,
                 action =
                     repository::earliestWork,
                 argument =
@@ -219,8 +218,8 @@ class VexExecutionTest {
 
         fun runLatest(value: String): VexExecution.Handle =
             launchLatest(
-                id =
-                    ExecutionId.Latest,
+                trigger =
+                    Trigger.Latest,
                 action =
                     repository::latestWork,
                 argument =
@@ -229,8 +228,8 @@ class VexExecutionTest {
 
         fun runQueued(value: String): VexExecution.Handle =
             launchQueued(
-                id =
-                    ExecutionId.Queued,
+                trigger =
+                    Trigger.Queued,
                 action =
                     repository::queuedWork,
                 argument =
@@ -953,14 +952,6 @@ class VexExecutionTest {
                     first.sourceRef,
                     second.sourceRef,
                 )
-                assertEquals(
-                    null,
-                    first.id,
-                )
-                assertEquals(
-                    null,
-                    second.id,
-                )
 
                 repository.independentRelease.complete(
                     Unit,
@@ -1020,10 +1011,6 @@ class VexExecutionTest {
                     repository.earliestStarted
                         .toList(),
                 )
-                assertEquals(
-                    TestExecution.ExecutionId.Earliest,
-                    first.id,
-                )
 
                 repository.earliestRelease.complete(
                     Unit,
@@ -1037,7 +1024,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun theSameExecutionIdOnDifferentLiveOwnersDoesNotShareARelationship(): Unit =
+    fun theSameTriggerOnDifferentLiveOwnersDoesNotShareARelationship(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot()
@@ -1078,15 +1065,6 @@ class VexExecutionTest {
                         kotlinx.coroutines.yield()
                     }
                 }
-
-                assertEquals(
-                    TestExecution.ExecutionId.Earliest,
-                    first.id,
-                )
-                assertEquals(
-                    TestExecution.ExecutionId.Earliest,
-                    second.id,
-                )
                 assertFalse(
                     first.instanceId ==
                         second.instanceId,
@@ -1198,10 +1176,6 @@ class VexExecutionTest {
                     repository.latestStarted
                         .toList(),
                 )
-                assertEquals(
-                    TestExecution.ExecutionId.Latest,
-                    latest.id,
-                )
             } finally {
                 root.joinStopAll(
                     "test complete",
@@ -1295,10 +1269,6 @@ class VexExecutionTest {
                     ),
                     repository.queuedStarted
                         .toList(),
-                )
-                assertEquals(
-                    TestExecution.ExecutionId.Queued,
-                    third.id,
                 )
             } finally {
                 root.joinStopAll(
