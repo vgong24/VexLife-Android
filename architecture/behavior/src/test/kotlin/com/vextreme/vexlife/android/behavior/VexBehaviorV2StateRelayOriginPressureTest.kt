@@ -119,6 +119,93 @@ class VexBehaviorV2StateRelayOriginPressureTest {
     }
 
     @Test
+    fun liveFamilyProcessesControlInsideStateRelayThenDisplayReadsSameCurrentTree() {
+        val family =
+            LiveTreeFamily(
+                initialState =
+                    LiveTreeFamily.State.Ready(
+                        tree =
+                            StateTreeSnapshot.of(
+                                rootRefs =
+                                    listOf(
+                                        "A1",
+                                        "A2",
+                                    ),
+                                nodes =
+                                    listOf(
+                                        StateTreeNode(
+                                            ref = "A1",
+                                            label = "A1",
+                                            childRefs = listOf("B1"),
+                                        ),
+                                        StateTreeNode(
+                                            ref = "B1",
+                                            label = "B1",
+                                            childRefs = listOf("C1"),
+                                        ),
+                                        StateTreeNode(
+                                            ref = "C1",
+                                            label = "C1",
+                                            childRefs = emptyList(),
+                                        ),
+                                        StateTreeNode(
+                                            ref = "A2",
+                                            label = "A2",
+                                            childRefs = listOf("B2"),
+                                        ),
+                                        StateTreeNode(
+                                            ref = "B2",
+                                            label = "B2",
+                                            childRefs = emptyList(),
+                                        ),
+                                    ),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                "A1",
+                "B1",
+                "C1",
+                "A2",
+                "B2",
+            ),
+            family.displayState.labels,
+        )
+
+        family.activate(
+            LiveTreeFamily.Control.RenameNode(
+                ref = "C1",
+                label = "C1-current",
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                "A1",
+                "B1",
+                "C1-current",
+                "A2",
+                "B2",
+            ),
+            family.displayState.labels,
+        )
+
+        val current =
+            family.current as
+                LiveTreeFamily.State.Ready
+
+        assertEquals(
+            listOf("B1"),
+            current.tree["A1"].childRefs,
+        )
+        assertEquals(
+            listOf("B2"),
+            current.tree["A2"].childRefs,
+        )
+    }
+    @Test
     fun arbitraryDepthNestedCurrentTreeUpdatesOneNodeWithoutRememberingAncestors() {
         val relay =
             NestedTreeStateRelay(
@@ -508,6 +595,187 @@ class VexBehaviorV2StateRelayOriginPressureTest {
         )
     }
 
+    /**
+     * Integrated candidate showing where StateRelay belongs in the live Family loop.
+     *
+     * Act resolution happens inside StateRelay.process(current -> ...). StateRelay therefore owns
+     * the exact CURRENT snapshot used for both Act selection and immediate State advancement.
+     * The normalized tree remains ordinary semantic State logic called by the Act consequence.
+     */
+    private class LiveTreeFamily(
+        initialState:
+            State,
+    ) :
+        VexBehaviorFamily<
+            LiveTreeFamily
+        > {
+        sealed interface State :
+            VexBehaviorFamily.State<
+                LiveTreeFamily
+            >,
+            VexState<
+                State
+            > {
+            data class Ready(
+                val tree:
+                    StateTreeSnapshot,
+            ) :
+                State {
+                override fun deepCopy():
+                    State =
+                    copy(
+                        tree =
+                            tree.detached(),
+                    )
+            }
+        }
+
+        sealed interface Control :
+            VexBehaviorFamily.Control<
+                LiveTreeFamily
+            > {
+            data class RenameNode(
+                val ref: String,
+                val label: String,
+            ) :
+                Control
+        }
+
+        data class DisplayState(
+            val labels:
+                List<String>,
+        )
+
+        private val stateRelay =
+            FamilyStateRelay(
+                relayRef =
+                    "origin-pressure.family.state-relay.live-tree",
+                initialState =
+                    initialState,
+            )
+
+        val current:
+            State
+            get() =
+                stateRelay.current
+
+        val displayState:
+            DisplayState
+            get() =
+                when (
+                    val currentState =
+                        current
+                ) {
+                    is State.Ready ->
+                        DisplayState(
+                            labels =
+                                currentState
+                                    .tree
+                                    .depthFirstLabels(),
+                        )
+                }
+
+        val acts =
+            vexActs<
+                LiveTreeFamily,
+                State,
+                Control
+            >(
+                family =
+                    this,
+                behaviorRef =
+                    "origin-pressure.family.state-relay.live-tree",
+            ) {
+                state<State.Ready> {
+                    on<Control.RenameNode>(
+                        whenCurrent = { currentState, rename ->
+                            runCatching {
+                                currentState.tree[rename.ref]
+                            }.isSuccess
+                        },
+                    ) { currentState, rename ->
+                        admit(
+                            currentState.copy(
+                                tree =
+                                    currentState.tree.updateLabel(
+                                        ref =
+                                            rename.ref,
+                                        label =
+                                            rename.label,
+                                    ),
+                            ),
+                        )
+                    }
+                }
+            }
+
+        fun activate(
+            control:
+                Control,
+        ):
+            VexBehaviorV2Act<
+                LiveTreeFamily,
+                State,
+                Control
+            >? {
+            var selected:
+                VexBehaviorV2Act<
+                    LiveTreeFamily,
+                    State,
+                    Control
+                >? =
+                null
+
+            stateRelay.process { currentState ->
+                val act =
+                    acts.resolve(
+                        current =
+                            currentState,
+                        control =
+                            control,
+                    )
+                        ?: return@process currentState
+
+                selected =
+                    act
+
+                act.immediateDisposition
+                    .admittedState
+                    ?: currentState
+            }
+
+            return selected
+        }
+    }
+
+    private class FamilyStateRelay<
+        State : VexState<
+            State
+        >,
+    >(
+        relayRef: String,
+        initialState: State,
+    ) :
+        VexRelay<
+            State
+        >(
+            relayRef =
+                relayRef,
+            initialState =
+                initialState,
+        ) {
+        fun process(
+            transform:
+                (
+                    State,
+                ) ->
+                    State,
+        ):
+            State =
+            update(
+                transform,
+            )
+    }
     /**
      * Origin candidate only: StateRelay.
      *
