@@ -8,8 +8,9 @@ This module preserves the geometry of **what a human can do from what is true no
 ## Start here
 
 - **Current Family Circuit foundation:** [`FAMILY-CIRCUIT.md`](FAMILY-CIRCUIT.md)
-  — current State ownership, Control Families, Compound Families, process/commit/Act/observe, and the
-  context-neutral TestSampleSuite.
+  — current State ownership through VexFamily, Control-driven VexBehaviorV2Family,
+  relationship-driven VexBehaviorV2CompoundFamily, process/commit/Act/observe, and the neutral
+  VexBehaviorV2FamilyCircuitTestSampleSuite.
 
 - IDE/code navigation: `VexBehaviorDocs`
 - Canonical family/package construction pattern:
