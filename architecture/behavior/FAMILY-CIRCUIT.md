@@ -11,7 +11,9 @@ This candidate keeps the Family language deliberately small and human-readable.
   State
   Control
   DisplayState
+  StateRelay
   currentState
+  states
   activate(Control)
   Store? / begin(...) when earned
 ~~~
@@ -60,6 +62,26 @@ family.activate(control)
 ~~~
 
 Family does not expose a resolve(...) API or an Act carrier.
+
+## StateRelay / current State
+
+~~~text
+StateRelay
+├─ current State -> Family.currentState
+└─ observable State -> Family.states
+~~~
+
+Family does not retain another semantic-State copy.
+
+~~~text
+admit(State)
+-> StateRelay
+-> currentState / states
+~~~
+
+The current candidate uses the existing StateFlow substrate for this holder; it does not add another
+Relay hierarchy or revision/currentness token. Competing-cause serialization/currentness remains the
+separate open pressure already identified by the Origin Walk.
 
 ## DisplayState
 

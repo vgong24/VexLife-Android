@@ -3,6 +3,9 @@ package com.vextreme.vexlife.android.behavior
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlin.reflect.KClass
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Family-owned projectable output.
@@ -276,15 +279,25 @@ abstract class VexFamily<
     protected val logger:
         VexFamilyLogger,
 ) {
-    @Volatile
-    private var retainedState:
-        State =
-        initialState
+    /*
+     * One live State holder.
+     *
+     * Family exposes the same StateRelay truth as currentState and states; it does not retain a
+     * second copy of semantic State.
+     */
+    private val stateRelay =
+        MutableStateFlow(
+            initialState,
+        )
+
+    val states:
+        StateFlow<State> =
+        stateRelay.asStateFlow()
 
     val currentState:
         State
         get() =
-            retainedState
+            states.value
 
     protected abstract val acts:
         VexActs<
@@ -390,14 +403,14 @@ abstract class VexFamily<
         state: State,
     ) {
         val before =
-            retainedState
+            currentState
 
-        retainedState =
+        stateRelay.value =
             state
 
         if (
             before !=
-            state
+            currentState
         ) {
             logger.record(
                 VexFamilyLogEvent.StateAdmitted(
@@ -406,7 +419,7 @@ abstract class VexFamily<
                     fromState =
                         before::class,
                     toState =
-                        state::class,
+                        currentState::class,
                 ),
             )
         }

@@ -124,12 +124,7 @@ class VexFamilyHighConfidenceTest {
                 }
 
                 state<State.Ready> {
-                    on<Control.Set>(
-                        whenCurrent = { currentState, control ->
-                            currentState.value !=
-                                control.value
-                        },
-                    ) { currentState, control ->
+                    on<Control.Set> { currentState, control ->
                         admit(
                             currentState.copy(
                                 value =
@@ -302,6 +297,30 @@ class VexFamilyHighConfidenceTest {
                 ),
                 family.displayState,
             )
+            assertEquals(
+                family.currentState,
+                family.states.value,
+            )
+
+            assertTrue(
+                family.activate(
+                    ValueFamily.Control.Set(
+                        value =
+                            "two",
+                    ),
+                ),
+            )
+            assertEquals(
+                ValueFamily.State.Ready(
+                    value =
+                        "two",
+                ),
+                family.currentState,
+            )
+            assertEquals(
+                family.currentState,
+                family.states.value,
+            )
         } finally {
             root.forceStopAll()
         }
@@ -335,15 +354,26 @@ class VexFamilyHighConfidenceTest {
                         "two",
                 )
 
-            assertFalse(
+            assertTrue(
                 family.isAvailable(
                     semanticNoOp,
                 ),
             )
-            assertFalse(
+            assertTrue(
                 family.activate(
                     semanticNoOp,
                 ),
+            )
+            assertEquals(
+                ValueFamily.State.Ready(
+                    value =
+                        "one",
+                ),
+                family.currentState,
+            )
+            assertEquals(
+                family.currentState,
+                family.states.value,
             )
             assertTrue(
                 family.isAvailable(
