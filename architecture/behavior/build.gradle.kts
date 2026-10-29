@@ -22,6 +22,7 @@ kotlin {
 }
 
 dependencies {
+    api(project(":architecture:execution"))
     implementation(libs.coroutinesCore)
     testImplementation(libs.junit)
 }
