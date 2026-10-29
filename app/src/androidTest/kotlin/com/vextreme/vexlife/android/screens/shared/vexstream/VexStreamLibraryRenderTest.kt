@@ -15,6 +15,7 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 import org.junit.Rule
 import org.junit.Test
 
@@ -31,7 +32,8 @@ class VexStreamLibraryRenderTest {
 
         compose.setContent {
             VexLifeTheme(
-                darkTheme = true,
+                presentation =
+                    VexThemePresentation.Dark,
             ) {
                 Surface {
                     VexStreamSongsPane(
@@ -85,7 +87,8 @@ class VexStreamLibraryRenderTest {
 
         compose.setContent {
             VexLifeTheme(
-                darkTheme = true,
+                presentation =
+                    VexThemePresentation.Dark,
             ) {
                 Surface {
                     Column {
@@ -139,7 +142,8 @@ class VexStreamLibraryRenderTest {
 
         compose.setContent {
             VexLifeTheme(
-                darkTheme = true,
+                presentation =
+                    VexThemePresentation.Dark,
             ) {
                 Surface {
                     VexStreamAlbumsPane(

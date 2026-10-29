@@ -12,6 +12,7 @@ import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -42,7 +43,8 @@ class VexMapsAppearanceControlRenderTest {
 
         compose.setContent {
             VexLifeTheme(
-                darkTheme = true,
+                presentation =
+                    VexThemePresentation.Dark,
             ) {
                 Surface {
                     VexMapsAppearanceControl(
