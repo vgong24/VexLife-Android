@@ -169,6 +169,8 @@ abstract class VexExecution protected constructor(
         action: KSuspendFunction0<Result>,
     ): Handle =
         executionRoot.coroutineLauncher.launchOnce(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -182,6 +184,8 @@ abstract class VexExecution protected constructor(
         argument: Argument,
     ): Handle =
         executionRoot.coroutineLauncher.launchOnce(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -198,6 +202,8 @@ abstract class VexExecution protected constructor(
         second: Second,
     ): Handle =
         executionRoot.coroutineLauncher.launchOnce(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -213,6 +219,8 @@ abstract class VexExecution protected constructor(
         action: KSuspendFunction0<Result>,
     ): Handle =
         executionRoot.coroutineLauncher.launch(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -226,6 +234,8 @@ abstract class VexExecution protected constructor(
         argument: Argument,
     ): Handle =
         executionRoot.coroutineLauncher.launch(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -242,6 +252,8 @@ abstract class VexExecution protected constructor(
         second: Second,
     ): Handle =
         executionRoot.coroutineLauncher.launch(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -265,6 +277,8 @@ abstract class VexExecution protected constructor(
         onEach: suspend (Value) -> Unit,
     ): Handle =
         executionRoot.coroutineLauncher.launchForCollect(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     source,
@@ -281,6 +295,8 @@ abstract class VexExecution protected constructor(
         onEach: suspend (Value) -> Unit,
     ): Handle =
         executionRoot.coroutineLauncher.launchForCollect(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     source,
@@ -298,6 +314,8 @@ abstract class VexExecution protected constructor(
         onEach: suspend (Value) -> Unit,
     ): Handle =
         executionRoot.coroutineLauncher.launchForCollect(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     source,
@@ -328,6 +346,8 @@ abstract class VexExecution protected constructor(
         reason: String = "force stopped",
     ): Boolean =
         executionRoot.coroutineLauncher.forceStopSource(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     reference,
@@ -341,6 +361,8 @@ abstract class VexExecution protected constructor(
         reason: String = "join stopped",
     ): Boolean =
         executionRoot.coroutineLauncher.joinStopSource(
+            sourceOwner =
+                this,
             sourceRef =
                 sourceRef(
                     reference,

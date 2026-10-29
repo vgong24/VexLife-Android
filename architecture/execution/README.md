@@ -631,3 +631,40 @@ OPERATION FAILURE
 ```
 
 <!-- [VXG RealForever][VEXEXECUTION][OPERATION-RESULT-OWNERSHIP] -->
+
+
+## Live execution instance source custody
+
+`SourceRef` remains the readable source address:
+
+~~~text
+VexExecution source class
++ callable name
+~~~
+
+Source-addressed custody is narrower than that diagnostic identity. When several live instances of the
+same `VexExecution` class share one `VexExecutionRoot`, the launcher scopes source control to the
+exact live execution object that admitted the work:
+
+~~~text
+live VexExecution instance
++ SourceRef
+-> launchOnce duplicate boundary
+-> maintained Flow duplicate boundary
+-> forceStop(callable)
+-> joinStop(callable)
+~~~
+
+Therefore two same-class execution objects may legitimately run the same callable under one root, and
+source-addressed stop/join from one cannot cancel the other.
+
+No public `OwnerId` or second source identity is introduced:
+
+~~~text
+SourceRef  = readable source address
+InstanceId = exact runtime occurrence
+RelationshipId = semantic maintained-work identity
+live VexExecution object = internal custody scope only
+~~~
+
+<!-- [VXG RealForever][VEXEXECUTION][SOURCE-CUSTODY][LIVE-INSTANCE] -->

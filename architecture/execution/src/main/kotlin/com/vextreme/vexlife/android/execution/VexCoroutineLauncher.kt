@@ -75,6 +75,8 @@ internal class VexCoroutineLauncher(
     private data class ManagedExecution(
         val instanceId:
             VexExecution.InstanceId,
+        val sourceOwner:
+            Any?,
         val sourceRef:
             VexExecution.SourceRef,
         val relationship:
@@ -129,6 +131,8 @@ internal class VexCoroutineLauncher(
         mutableExecutions.asStateFlow()
 
     fun launchOnce(
+        sourceOwner:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -142,7 +146,9 @@ internal class VexCoroutineLauncher(
 
             check(
                 active.values.none { managed ->
-                    managed.sourceRef ==
+                    managed.sourceOwner ===
+                        sourceOwner &&
+                        managed.sourceRef ==
                         sourceRef &&
                         !managed.job.isCompleted
                 },
@@ -153,6 +159,8 @@ internal class VexCoroutineLauncher(
             }
 
             createManagedLocked(
+                sourceOwner =
+                    sourceOwner,
                 sourceRef =
                     sourceRef,
                 relationship =
@@ -169,6 +177,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun launch(
+        sourceOwner:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -181,6 +191,8 @@ internal class VexCoroutineLauncher(
             requireAcceptingWorkLocked()
 
             createManagedLocked(
+                sourceOwner =
+                    sourceOwner,
                 sourceRef =
                     sourceRef,
                 relationship =
@@ -234,6 +246,8 @@ internal class VexCoroutineLauncher(
             }
 
             createManagedLocked(
+                sourceOwner =
+                    null,
                 sourceRef =
                     sourceRef,
                 relationship =
@@ -287,6 +301,8 @@ internal class VexCoroutineLauncher(
                 }
 
             createManagedLocked(
+                sourceOwner =
+                    null,
                 sourceRef =
                     sourceRef,
                 relationship =
@@ -333,6 +349,8 @@ internal class VexCoroutineLauncher(
                 )
 
             createManagedLocked(
+                sourceOwner =
+                    null,
                 sourceRef =
                     sourceRef,
                 relationship =
@@ -352,6 +370,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun <Value> launchForCollect(
+        sourceOwner:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         restartOnSourceFailure:
@@ -381,6 +401,8 @@ internal class VexCoroutineLauncher(
             }
 
             createManagedLocked(
+                sourceOwner =
+                    sourceOwner,
                 sourceRef =
                     sourceRef,
                 relationship =
@@ -431,6 +453,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun forceStopSource(
+        sourceOwner:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         reason:
@@ -443,6 +467,8 @@ internal class VexCoroutineLauncher(
             ) {
                 active.values
                     .filter { managed ->
+                        managed.sourceOwner ===
+                            sourceOwner &&
                         managed.sourceRef ==
                             sourceRef &&
                             !managed.job.isCompleted
@@ -469,6 +495,8 @@ internal class VexCoroutineLauncher(
     }
 
     suspend fun joinStopSource(
+        sourceOwner:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         reason:
@@ -481,6 +509,8 @@ internal class VexCoroutineLauncher(
             ) {
                 active.values
                     .filter { managed ->
+                        managed.sourceOwner ===
+                            sourceOwner &&
                         managed.sourceRef ==
                             sourceRef &&
                             !managed.job.isCompleted
@@ -642,6 +672,8 @@ internal class VexCoroutineLauncher(
     }
 
     private fun createManagedLocked(
+        sourceOwner:
+            Any?,
         sourceRef:
             VexExecution.SourceRef,
         relationship:
@@ -714,6 +746,8 @@ internal class VexCoroutineLauncher(
             ManagedExecution(
                 instanceId =
                     instanceId,
+                sourceOwner =
+                    sourceOwner,
                 sourceRef =
                     sourceRef,
                 relationship =

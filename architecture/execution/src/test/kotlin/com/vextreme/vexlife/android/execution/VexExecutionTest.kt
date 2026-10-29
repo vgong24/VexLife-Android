@@ -242,6 +242,13 @@ class VexExecutionTest {
                 value,
             )
 
+        fun stopIndependentSource():
+            Boolean =
+            forceStop(
+                repository::independentWork,
+                "test source stop",
+            )
+
         fun runEarliest(value: String): VexExecution.Handle =
             VexExecution.beginEarliest(
                 executionRoot =
@@ -1136,6 +1143,93 @@ class VexExecutionTest {
                 )
                 first.awaitCompletion()
             } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun sameClassExecutionInstancesDoNotShareSourceCustody(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val firstRepository =
+                TestRepository()
+            val secondRepository =
+                TestRepository()
+            val firstExecution =
+                TestExecution(
+                    root,
+                    firstRepository,
+                )
+            val secondExecution =
+                TestExecution(
+                    root,
+                    secondRepository,
+                )
+
+            try {
+                val first =
+                    firstExecution.runExclusive(
+                        "A",
+                    )
+                val second =
+                    secondExecution.runExclusive(
+                        "B",
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        firstRepository.independentStarted.isEmpty() ||
+                        secondRepository.independentStarted.isEmpty()
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertEquals(
+                    first.sourceRef,
+                    second.sourceRef,
+                )
+
+                assertTrue(
+                    firstExecution.stopIndependentSource(),
+                )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    first.awaitCompletion()
+                }
+
+                assertEquals(
+                    VexExecution.Status.CANCELLED,
+                    first.state.value.status,
+                )
+                assertEquals(
+                    VexExecution.Status.RUNNING,
+                    second.state.value.status,
+                )
+
+                secondRepository.independentRelease.complete(
+                    Unit,
+                )
+                second.awaitCompletion()
+
+                assertEquals(
+                    VexExecution.Status.COMPLETED,
+                    second.state.value.status,
+                )
+            } finally {
+                firstRepository.independentRelease.complete(
+                    Unit,
+                )
+                secondRepository.independentRelease.complete(
+                    Unit,
+                )
                 root.joinStopAll(
                     "test complete",
                 )
