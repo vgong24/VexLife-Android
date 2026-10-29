@@ -397,6 +397,11 @@ abstract class VexFamily<
      * relationship work. Controls with the exact same reviewed outcome may share one branch.
      *
      * Use [noAct] for a reviewed State + Control pair that has no lawful Act.
+     *
+     * This is relationship resolution, not execution. The same function is used by isAvailable(...)
+     * and activate(...), so implementations must not mutate Family State, invoke providers/Store,
+     * launch work, log accepted facts, or otherwise cause an external effect while resolving.
+     * begin(...) authors a consequence description only; it does not start that consequence here.
      */
     protected abstract fun act(
         currentState: FamilyState,
@@ -571,7 +576,10 @@ abstract class VexFamily<
     /**
      * Informative availability from the same direct act(currentState, control) relationship used by
      * activate(...). A Control is available exactly when current State + that Control produces a
-     * lawful Act; noAct() means unavailable. The returned Act is inspected but not applied.
+     * lawful Act; noAct() means unavailable.
+     *
+     * Availability resolves and inspects the Act only. It never admits State and never starts an
+     * authored Begin. This is why concrete act(...) must remain relationship-pure.
      */
     fun isAvailable(
         control: FamilyControl,

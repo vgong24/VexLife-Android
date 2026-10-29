@@ -6,6 +6,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -210,6 +211,9 @@ class VexFamilyHighConfidenceTest {
 
     private class GatedStore :
         ValueFamily.Store {
+        val started =
+            CompletableDeferred<Unit>()
+
         val gate =
             CompletableDeferred<Unit>()
 
@@ -218,6 +222,9 @@ class VexFamilyHighConfidenceTest {
                 ValueFamily.State,
         ):
             VexFamily.Store.WriteResult {
+            started.complete(
+                Unit,
+            )
             gate.await()
             return VexFamily.Store.WriteResult.Success
         }
@@ -360,6 +367,57 @@ class VexFamilyHighConfidenceTest {
                         "two",
                 ),
                 family.currentState,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
+    fun availabilityMayInspectAnActWithBeginWithoutStartingItsExecution() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            GatedStore()
+
+        try {
+            val family =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                    executionRoot =
+                        root,
+                    store =
+                        store,
+                )
+
+            assertTrue(
+                family.isAvailable(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "pending",
+                    ),
+                ),
+            )
+            assertFalse(
+                store.started.isCompleted,
+            )
+            assertEquals(
+                ValueFamily.State.Empty,
+                family.currentState,
+            )
+
+            assertTrue(
+                family.activate(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "pending",
+                    ),
+                ),
+            )
+
+            assertTrue(
+                store.started.isCompleted,
             )
         } finally {
             root.forceStopAll()
