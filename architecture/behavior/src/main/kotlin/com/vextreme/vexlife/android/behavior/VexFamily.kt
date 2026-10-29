@@ -56,6 +56,36 @@ abstract class VexFamily<
             >
     }
 
+    /**
+     * Exact Store capability the current Family runtime consumes.
+     *
+     * Store is a Family child, not an independent Vex root. A concrete Family may extend this
+     * locally when it truly needs more storage behavior, but the shared Family contract requires
+     * only the operation Family itself currently executes: save(State).
+     *
+     * Durable Store truth is not another live Family State holder.
+     */
+    interface Store<
+        State : Any,
+    > {
+        suspend fun save(
+            state: State,
+        ):
+            WriteResult
+
+        sealed interface WriteResult {
+            data object Success :
+                WriteResult
+
+            data class Failure(
+                val cause:
+                    Throwable? =
+                    null,
+            ) :
+                WriteResult
+        }
+    }
+
     /*
      * One live State holder.
      *
@@ -127,10 +157,10 @@ abstract class VexFamily<
     protected fun begin(
         mode: VexBeginMode,
         block:
-            VexBeginScope<State>.() -> Unit,
+            VexBegin.Scope<State>.() -> Unit,
     ):
         VexBegin<State> =
-        VexBeginScope<State>(
+        VexBegin.Scope<State>(
             mode =
                 mode,
         )
@@ -140,7 +170,7 @@ abstract class VexFamily<
             .build()
 
     open val store:
-        VexFamilyStore? =
+        Store<State>? =
         null
 
     /**
@@ -256,44 +286,20 @@ abstract class VexFamily<
         begin:
             VexBegin<State>,
     ) {
-        when (
-            val operation =
-                begin.operation
-        ) {
-            is VexSave<*> -> {
-                @Suppress(
-                    "UNCHECKED_CAST",
-                )
-                val save =
-                    operation as
-                        VexSave<State>
-
-                executeSave(
-                    mode =
-                        begin.mode,
-                    save =
-                        save,
-                )
-            }
-
-            else ->
-                error(
-                    "begin has no runtime realization for Operation " +
-                        (
-                            operation::class.qualifiedName
-                                ?: operation::class.simpleName
-                                ?: "Unknown"
-                        ),
-                )
-        }
+        executeSave(
+            mode =
+                begin.mode,
+            save =
+                begin.save,
+        )
     }
 
     private fun executeSave(
         mode: VexBeginMode,
         save:
-            VexSave<State>,
+            VexBegin.Save<State>,
     ) {
-        val familyStore =
+        val stateStore =
             requireNotNull(
                 store,
             ) {
@@ -302,24 +308,8 @@ abstract class VexFamily<
                     " but this live Family has no Store"
             }
 
-        val stateStore =
-            familyStore as?
-                VexFamilyStateStore<*>
-                ?: error(
-                    "Save requires a Family State Store; " +
-                        this::class.qualifiedName +
-                        ".Store does not expose VexFamilyStateStore",
-                )
-
-        @Suppress(
-            "UNCHECKED_CAST",
-        )
-        val typedStateStore =
-            stateStore as
-                VexFamilyStateStore<State>
-
         val operation =
-            typedStateStore::save
+            stateStore::save
 
         val beforeOperation = {
             logger.record(
@@ -336,12 +326,12 @@ abstract class VexFamily<
 
         val onResult:
             (
-                VexStoreWriteResult,
+                Store.WriteResult,
             ) -> Unit = { result ->
                 when (
                     result
                 ) {
-                    VexStoreWriteResult.Success -> {
+                    Store.WriteResult.Success -> {
                         logger.record(
                             VexFamilyLogEvent.OperationSuccess(
                                 family =
@@ -358,7 +348,7 @@ abstract class VexFamily<
                         )
                     }
 
-                    is VexStoreWriteResult.Failure -> {
+                    is Store.WriteResult.Failure -> {
                         logger.record(
                             VexFamilyLogEvent.OperationFailure(
                                 family =
@@ -447,7 +437,7 @@ abstract class VexFamily<
 
     private fun applyLaterResult(
         result:
-            VexResult<State>,
+            VexBegin.Result<State>,
     ) {
         result.admittedState
             ?.let(

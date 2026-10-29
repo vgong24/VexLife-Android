@@ -87,6 +87,32 @@ ConcreteFamily
 fresh reader that DisplayState already has a rightful owner and that no parallel ViewState / UiState /
 PresentationState should be created merely to fill a perceived gap.
 
+## Store / Save relationship
+
+The current earned storage path is deliberately narrow and tree-shaped:
+
+~~~text
+VexFamily
+-> Store<State>
+   -> save(State)
+   -> WriteResult
+      -> Success
+      -> Failure
+
+Begin
+-> Save
+   -> Results
+      -> Success
+      -> Failure
+~~~
+
+Family does not expose a broad Store and rediscover a narrower StateStore through runtime casts.
+The Store contract contains only the operation the current Family runtime consumes. Durable Store
+truth does not become a second live semantic State holder.
+
+There is also no generic Operation hierarchy around the one current Save operation. A common
+operation parent must be earned by another real operation, not anticipated.
+
 ## Act outcome
 
 act(currentState, control) returns the authored outcome that activate(...) applies:

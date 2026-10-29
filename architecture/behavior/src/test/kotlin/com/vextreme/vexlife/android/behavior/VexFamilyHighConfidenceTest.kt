@@ -4,8 +4,6 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -63,7 +61,7 @@ class VexFamilyHighConfidenceTest {
         }
 
         interface Store :
-            VexFamilyStateStore<State>
+            VexFamily.Store<State>
 
         data class DisplayState(
             val value:
@@ -208,37 +206,16 @@ class VexFamilyHighConfidenceTest {
 
     private class GatedStore :
         ValueFamily.Store {
-        private val mutableState =
-            MutableStateFlow<ValueFamily.State>(
-                ValueFamily.State.Empty,
-            )
-
-        override val observableState =
-            mutableState.asStateFlow()
-
         val gate =
             CompletableDeferred<Unit>()
-
-        override suspend fun get():
-            ValueFamily.State =
-            mutableState.value
 
         override suspend fun save(
             state:
                 ValueFamily.State,
         ):
-            VexStoreWriteResult {
+            VexFamily.Store.WriteResult {
             gate.await()
-            mutableState.value =
-                state
-            return VexStoreWriteResult.Success
-        }
-
-        override suspend fun forget():
-            VexStoreWriteResult {
-            mutableState.value =
-                ValueFamily.State.Empty
-            return VexStoreWriteResult.Success
+            return VexFamily.Store.WriteResult.Success
         }
     }
 

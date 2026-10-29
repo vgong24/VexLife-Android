@@ -81,6 +81,33 @@ same derived interpretation of State. A richer feature-owned classification belo
 concrete Family, for example `ThemeModeFamily.DisplayState`, and implements
 `VexFamily.DisplayState<ThemeModeFamily.State>`.
 
+## Store responsibility
+
+The current Family runtime consumes one exact storage capability:
+
+~~~text
+VexFamily
+-> Store<State>
+   -> save(State)
+   -> WriteResult
+      -> Success
+      -> Failure
+~~~
+
+There is no standalone `VexStore` root in this candidate and no marker-only Store hierarchy.
+A concrete Family may extend `VexFamily.Store<State>` locally if a real consumer earns more
+operations, but `get`, `forget`, or Store observation are not implied by Save.
+
+Store durability is also not another Family State owner:
+
+~~~text
+Store truth != Family.currentState
+~~~
+
+The Begin Save relationship owns its explicit success/failure consequences. There is no generic
+`Operation -> StoreOperation -> Save` taxonomy until a second real operation proves a common
+contract.
+
 ## Current feature-facing shape
 
 ~~~kotlin
