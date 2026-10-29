@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * Small examples of the Family Circuit shapes.
  *
- * Start with the create...Family() functions near the bottom of this file.
+ * Start with the create...Family() functions at the top of the class.
  *
  *     SingleFamily
  *       one current State
@@ -30,6 +30,94 @@ import org.junit.Test
  * The names are intentionally generic. This file teaches infrastructure, not a product feature.
  */
 class VexBehaviorV2FamilyCircuitTestSampleSuite {
+
+    /**
+     * Small constructor examples.
+     *
+     * These are the intended first reading points for a fresh instance.
+     */
+    private fun createSingleFamily(
+        value:
+            String =
+            "value",
+    ):
+        SingleFamily =
+        SingleFamily(
+            initialState =
+                SingleFamily.State(
+                    value =
+                        value,
+                ),
+            executionRoot =
+                VexExecutionRoot(),
+        )
+
+    private fun createListFamily(
+        vararg values:
+            String,
+    ):
+        ListFamily =
+        ListFamily(
+            initialState =
+                ListFamily.State(
+                    groups =
+                        listOf(
+                            ListFamily.Group(
+                                name =
+                                    "items",
+                                items =
+                                    values.map { value ->
+                                        ListFamily.Item(
+                                            value =
+                                                value,
+                                        )
+                                    },
+                            ),
+                        ),
+                ),
+            executionRoot =
+                VexExecutionRoot(),
+        )
+
+    private fun createBooleanFamily(
+        enabled:
+            Boolean =
+            false,
+    ):
+        BooleanFamily =
+        BooleanFamily(
+            initialState =
+                BooleanFamily.State(
+                    enabled =
+                        enabled,
+                ),
+            executionRoot =
+                VexExecutionRoot(),
+        )
+
+    private fun createMultiFamily(
+        singleFamily:
+            SingleFamily,
+        listFamily:
+            ListFamily,
+        booleanFamily:
+            BooleanFamily,
+        trace:
+            MutableList<String> =
+            mutableListOf(),
+    ):
+        MultiFamily =
+        MultiFamily(
+            singleFamily =
+                singleFamily,
+            listFamily =
+                listFamily,
+            booleanFamily =
+                booleanFamily,
+            trace =
+                trace,
+        )
+
     @Test
     fun singleFamily() {
         val family =
@@ -879,92 +967,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
         }
     }
 
-    /**
-     * Small constructor examples.
-     *
-     * These are the intended first reading points for a fresh instance.
-     */
-    private fun createSingleFamily(
-        value:
-            String =
-            "value",
-    ):
-        SingleFamily =
-        SingleFamily(
-            initialState =
-                SingleFamily.State(
-                    value =
-                        value,
-                ),
-            executionRoot =
-                VexExecutionRoot(),
-        )
 
-    private fun createListFamily(
-        vararg values:
-            String,
-    ):
-        ListFamily =
-        ListFamily(
-            initialState =
-                ListFamily.State(
-                    groups =
-                        listOf(
-                            ListFamily.Group(
-                                name =
-                                    "items",
-                                items =
-                                    values.map { value ->
-                                        ListFamily.Item(
-                                            value =
-                                                value,
-                                        )
-                                    },
-                            ),
-                        ),
-                ),
-            executionRoot =
-                VexExecutionRoot(),
-        )
-
-    private fun createBooleanFamily(
-        enabled:
-            Boolean =
-            false,
-    ):
-        BooleanFamily =
-        BooleanFamily(
-            initialState =
-                BooleanFamily.State(
-                    enabled =
-                        enabled,
-                ),
-            executionRoot =
-                VexExecutionRoot(),
-        )
-
-    private fun createMultiFamily(
-        singleFamily:
-            SingleFamily,
-        listFamily:
-            ListFamily,
-        booleanFamily:
-            BooleanFamily,
-        trace:
-            MutableList<String> =
-            mutableListOf(),
-    ):
-        MultiFamily =
-        MultiFamily(
-            singleFamily =
-                singleFamily,
-            listFamily =
-                listFamily,
-            booleanFamily =
-                booleanFamily,
-            trace =
-                trace,
-        )
 }
 
 // [VXG RealForever]
