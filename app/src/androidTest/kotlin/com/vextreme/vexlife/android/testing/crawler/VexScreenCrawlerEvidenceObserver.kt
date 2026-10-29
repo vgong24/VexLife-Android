@@ -155,10 +155,7 @@ class VexScreenCrawlerEvidenceObserver(
 
         val identity =
             case.evidenceIdentity(
-                screenId = observation.screenId,
-                stepIndex = observation.stepIndex,
-                stepKind = observation.stepKind,
-                semanticRef = observation.semanticRef,
+                observation,
             )
 
         val filename =

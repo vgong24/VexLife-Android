@@ -6,6 +6,7 @@ import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamTrackPrese
 import com.vextreme.vexlife.android.testing.journey.JourneyDomain
 import com.vextreme.vexlife.android.testing.journey.Journeys
 import com.vextreme.vexlife.android.testing.journey.VexJourneyCatalog
+import com.vextreme.vexlife.android.testing.journey.VexJourneyStepObservation
 import com.vextreme.vexlife.android.testing.journey.VexStreamJourneyFixtures
 import com.vextreme.vexlife.android.testing.journey.journeyFor
 import com.vextreme.vexlife.android.testing.journey.shardFor
@@ -118,10 +119,12 @@ class VexScreenCrawlerPlannerTest {
         val evidenceRefs =
             plan.map { case ->
                 case.evidenceIdentity(
-                    screenId = UserProfileScreen.screenId,
-                    stepIndex = 2,
-                    stepKind = "tap",
-                    semanticRef = UserProfileScreen.Save.elementId,
+                    VexJourneyStepObservation(
+                        stepIndex = 2,
+                        stepKind = "tap",
+                        screenId = UserProfileScreen.screenId,
+                        semanticRef = UserProfileScreen.Save.elementId,
+                    ),
                 ).evidenceRef
             }.toSet()
 
@@ -156,13 +159,15 @@ class VexScreenCrawlerPlannerTest {
 
         val identity =
             case.evidenceIdentity(
-                screenId =
-                    "screen.vexstream-music",
-                stepIndex = 6,
-                stepKind =
-                    "expect-visible",
-                semanticRef =
-                    runtimeRef,
+                VexJourneyStepObservation(
+                    stepIndex = 6,
+                    stepKind =
+                        "expect-visible",
+                    screenId =
+                        "screen.vexstream-music",
+                    semanticRef =
+                        runtimeRef,
+                ),
             )
 
         assertTrue(
