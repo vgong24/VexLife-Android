@@ -112,7 +112,7 @@ ConcreteFamily
 fresh reader that DisplayState already has a rightful owner and that no parallel ViewState / UiState /
 PresentationState should be created merely to fill a perceived gap.
 
-## Execution relationship identity
+## Execution RelationshipId material
 
 Family passes the semantic relationship directly to Execution:
 
@@ -122,7 +122,7 @@ activate(control)
        approach,
        arguments
    )
--> VexExecution.Relationship(
+-> VexExecution.RelationshipId(
        owner = this live Family,
        trigger = Control kind,
        arguments = ordered tuple
@@ -147,11 +147,11 @@ beginLatest(
 }
 ~~~
 
-The Relationship answers **which executions belong together**. `VexExecution.Approach` answers
+The RelationshipId answers **which executions belong together**. `VexExecution.Approach` answers
 **how overlaps are handled**.
 
 ~~~text
-Relationship = owner + trigger + arguments
+RelationshipId = owner + trigger + arguments
 Approach     = Independent / Earliest / Latest / Queued
 ~~~
 
@@ -159,7 +159,11 @@ Zero arguments means Family + Control only. Arguments stack positionally when on
 narrower subrelationships. Zero arguments and one explicit null are distinct.
 
 Use stable immutable argument values. The full Control payload is request evidence; it is not
-automatically execution relationship identity.
+automatically execution RelationshipId material.
+
+Runtime coordination is temporary: each completed Instance leaves its RelationshipId entry, and the
+entry is deleted when the final unfinished Instance leaves. A later equal RelationshipId therefore
+coordinates a fresh runtime occurrence rather than inheriting completed membership.
 
 ## Logger boundary
 
