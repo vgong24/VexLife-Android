@@ -152,13 +152,18 @@ class VexActs<
                             *
                         >
                 ) {
+                    @Suppress(
+                        "UNCHECKED_CAST",
+                    )
+                    val save =
+                        operation as
+                            VexSave<
+                                State
+                            >
+
                     require(
-                        operation
-                            .state
-                            .let {
-                                it::class in
-                                    states
-                            },
+                        save.state::class in
+                            states,
                     ) {
                         "Save State is not registered in " +
                             behaviorRef
