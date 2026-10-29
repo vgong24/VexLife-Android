@@ -606,7 +606,9 @@ launchForCollect
 The source also keeps sibling isolation, bounded source recovery, structured cancellation/teardown,
 registry defensiveness, typed callable invocation, and post-shutdown admission rejection.
 
-Repository Gradle/JVM execution proof remains **PENDING**. Source presence and the local isolated
-Kotlin smoke compile used during refinement do not substitute for repository build/test evidence.
+Repository Gradle/JVM execution proof remains **PENDING**. The repository-owned manual workflow
+`.github/workflows/vexstream-mobile-android.yml` runs `./gradlew vexVerifyLocal`, but no run/status
+exists for this current head. Earlier isolated smoke work predates the final direct-Relationship
+refactor and does not prove this head.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
