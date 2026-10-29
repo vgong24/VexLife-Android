@@ -17,20 +17,29 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Fourth V2 Origin-Walk reference: Family StateRelay / nested-currentness pressure.
+ * Fourth V2 Origin-Walk pressure reference.
  *
- * This class begins only after Playback established:
+ * Fresh readers who need the complete construction shape should read
+ * [VexBehaviorV2FamilyCircuitTestSampleSuite] first. That teaching suite builds the candidate
+ * Family Circuit Architecture one layer at a time:
  *
- *     actual runtime State + payload Control -> materialized Act
- *     provider observation -> feature reconciliation -> semantic State proposal
+ *     independently-owned CURRENT truths
+ *     -> partial ComplexInputState observations
+ *     -> latest complete input
+ *     -> process(latestStateInput)
+ *     -> committed ComplexOutputState
+ *     -> Act
+ *     -> rightful target owner
+ *     -> observed target CURRENT truth
+ *     -> NEW input
  *
- * The remaining question is how one Family safely owns CURRENT semantic State when several lawful
- * causes may arrive independently, and how nested/list currentness remains complete without relying
- * on object-reference continuity.
+ * This pressure class then explores the harder failure modes around that shape: stale async
+ * completion, nested identity/currentness, arbitrary depth, process-only Compound reuse and
+ * Replaceable / Sequenced committed-Output execution custody.
  *
- * Nothing in this class makes StateRelay, StateListSnapshot or Compound convergence a confirmed V2
- * Family standard. Each fixture exists to expose the failure it prevents and the ownership law it
- * may justify.
+ * Nothing in either class makes StateRelay, StateListSnapshot, Compound convergence or the candidate
+ * Family Circuit name a confirmed V2 production standard. Each fixture exists to expose the failure
+ * it prevents and the ownership law it may justify.
  */
 class VexBehaviorV2StateRelayOriginPressureTest {
     @Test
@@ -2694,3 +2703,1362 @@ class VexBehaviorV2StateRelayOriginPressureTest {
 }
 
 // [VXG RealForever]
+
+/**
+ * Construction-teaching suite for the candidate Family Circuit Architecture.
+ *
+ * This is deliberately a SAMPLE SUITE, not a product feature and not a completed template to copy
+ * mechanically. Read the tests from top to bottom. Every step introduces one additional ownership
+ * responsibility so a fresh human or AI can see WHY the full circuit has the shape it does.
+ *
+ * The simulated domain uses three independently-owned CURRENT truths:
+ *
+ *     ScreenState
+ *     MusicQueueState
+ *     ThemeModeState
+ *
+ * They stay outside [ComplexFamily]. ComplexFamily does not absorb their ownership. It receives
+ * snapshots of those truths as partial input observations and answers one question:
+ *
+ *     "What does the complete latest relationship mean?"
+ *
+ * The progression is:
+ *
+ *     STEP 1  rightful owners keep their own CURRENT State
+ *     STEP 2  ComplexInputState.latest(...) forms one complete current input
+ *     STEP 3  ComplexFamily.process(...) calculates relationship meaning only
+ *     STEP 4  an Output-changing Compound commit becomes an Act consequence
+ *     STEP 5  Act asks the rightful owner to change; observation returns as NEW input
+ *     STEP 6  input-only currentness changes do not fabricate a second Act consequence
+ *
+ * Important naming note:
+ *
+ *     VexCompoundState<ComplexInputState, ComplexOutputState>
+ *
+ * already IS the Compound State container. The sample intentionally does not invent another
+ * ComplexCompoundState wrapper, because feature authors should own Input / Output meaning rather
+ * than duplicate framework assembly.
+ */
+class VexBehaviorV2FamilyCircuitTestSampleSuite {
+    @Test
+    fun step1_independentOwnersKeepTheirOwnCurrentTruth() {
+        val callerGroups =
+            mutableListOf(
+                QueueGroup(
+                    groupName =
+                        "Up Next",
+                    items =
+                        mutableListOf(
+                            QueueItem(
+                                trackRef =
+                                    "track.alpha",
+                                title =
+                                    "Alpha",
+                            ),
+                            QueueItem(
+                                trackRef =
+                                    "track.beta",
+                                title =
+                                    "Beta",
+                            ),
+                        ),
+                ),
+            )
+
+        val screenOwner =
+            ScreenOwner(
+                initial =
+                    ScreenState(
+                        screenName =
+                            "BrowseSurface",
+                        transientBlocked =
+                            false,
+                    ),
+            )
+        val queueOwner =
+            MusicQueueOwner(
+                initial =
+                    MusicQueueState(
+                        groups =
+                            callerGroups,
+                        currentTrackRef =
+                            "track.alpha",
+                    ),
+            )
+        val themeOwner =
+            ThemeModeOwner(
+                initial =
+                    ThemeModeState(
+                        mode =
+                            SampleThemeMode.Dark,
+                        followsSystem =
+                            false,
+                    ),
+            )
+
+        /*
+         * Each owner exposes its own CURRENT truth. ComplexFamily does not exist yet.
+         */
+        assertEquals(
+            "BrowseSurface",
+            screenOwner.current.screenName,
+        )
+        assertEquals(
+            "track.alpha",
+            queueOwner.current.currentTrackRef,
+        )
+        assertEquals(
+            SampleThemeMode.Dark,
+            themeOwner.current.mode,
+        )
+
+        /*
+         * MusicQueueState deliberately contains a mutable nested list so the ownership rule is
+         * visible. The caller may mutate its original containers after construction without changing
+         * the queue owner's retained CURRENT truth.
+         */
+        callerGroups
+            .first()
+            .items
+            .clear()
+        callerGroups +=
+            QueueGroup(
+                groupName =
+                    "Caller Mutation",
+                items =
+                    mutableListOf(),
+            )
+
+        assertEquals(
+            listOf(
+                "track.alpha",
+                "track.beta",
+            ),
+            queueOwner
+                .current
+                .allTrackRefs(),
+        )
+    }
+
+    @Test
+    fun step2_latestBuildsOneCompleteCurrentInputFromPartialObservations() {
+        val retainedCurrentInput =
+            ComplexInputState(
+                screen =
+                    ScreenState(
+                        screenName =
+                            "BrowseSurface",
+                        transientBlocked =
+                            false,
+                    ),
+                musicQueue =
+                    musicQueue(
+                        currentTrackRef =
+                            "track.alpha",
+                        "track.alpha" to "Alpha",
+                    ),
+                themeMode =
+                    ThemeModeState(
+                        mode =
+                            SampleThemeMode.Light,
+                        followsSystem =
+                            true,
+                    ),
+            )
+
+        val incomingQueueGroups =
+            mutableListOf(
+                QueueGroup(
+                    groupName =
+                        "Replacement",
+                    items =
+                        mutableListOf(
+                            QueueItem(
+                                trackRef =
+                                    "track.beta",
+                                title =
+                                    "Beta",
+                            ),
+                        ),
+                ),
+            )
+
+        /*
+         * Only the queue changed. The incoming value is intentionally partial.
+         */
+        val latestStateInput =
+            retainedCurrentInput.latest(
+                ComplexInputState(
+                    musicQueue =
+                        MusicQueueState(
+                            groups =
+                                incomingQueueGroups,
+                            currentTrackRef =
+                                "track.beta",
+                        ),
+                ),
+            )
+
+        /*
+         * latest(...) owns partial-input -> complete-current-input formation.
+         *
+         * It is NOT relationship calculation. It does not decide whether navigation should happen or
+         * what the output consequence is. It only guarantees process(...) receives everything CURRENT.
+         */
+        assertEquals(
+            "BrowseSurface",
+            latestStateInput
+                .screen
+                ?.screenName,
+        )
+        assertEquals(
+            "track.beta",
+            latestStateInput
+                .musicQueue
+                ?.currentTrackRef,
+        )
+        assertEquals(
+            SampleThemeMode.Light,
+            latestStateInput
+                .themeMode
+                ?.mode,
+        )
+
+        /*
+         * latest(...) also owns the input snapshot boundary. Mutation of the incoming nested queue
+         * after currentization cannot mutate the completed latest input.
+         */
+        incomingQueueGroups
+            .first()
+            .items
+            .clear()
+
+        assertEquals(
+            listOf(
+                "track.beta",
+            ),
+            latestStateInput
+                .musicQueue
+                ?.allTrackRefs(),
+        )
+    }
+
+    @Test
+    fun step3_complexFamilyProcessReadsCompleteInputAndReturnsOnlyRelationshipMeaning() {
+        val trace =
+            mutableListOf<String>()
+        val family =
+            ComplexFamily(
+                trace =
+                    trace,
+            )
+
+        /*
+         * Each observation is partial. The reusable Compound foundation currentizes it before
+         * ComplexFamily.process(...) is called.
+         */
+        family.screenChanged(
+            ScreenState(
+                screenName =
+                    "BrowseSurface",
+                transientBlocked =
+                    false,
+            ),
+        )
+        assertEquals(
+            ComplexOutputState.Unobserved,
+            family.currentOutput,
+        )
+
+        family.musicQueueChanged(
+            musicQueue(
+                currentTrackRef =
+                    "track.alpha",
+                "track.alpha" to "Alpha",
+            ),
+        )
+        assertEquals(
+            ComplexOutputState.Unobserved,
+            family.currentOutput,
+        )
+
+        val committed =
+            family.themeModeChanged(
+                ThemeModeState(
+                    mode =
+                        SampleThemeMode.Dark,
+                    followsSystem =
+                        false,
+                ),
+            )
+
+        /*
+         * process(...) sees all three CURRENT inputs together and returns only relationship meaning.
+         * It does not mutate ScreenOwner, MusicQueueOwner or ThemeModeOwner.
+         */
+        assertEquals(
+            ComplexOutputState.NeedsPlayerScreen(
+                trackRef =
+                    "track.alpha",
+                targetScreenName =
+                    PLAYER_SCREEN,
+                themeMode =
+                    SampleThemeMode.Dark,
+            ),
+            committed.outputState,
+        )
+
+        assertEquals(
+            "BrowseSurface",
+            committed
+                .inputState
+                .screen
+                ?.screenName,
+        )
+        assertEquals(
+            "track.alpha",
+            committed
+                .inputState
+                .musicQueue
+                ?.currentTrackRef,
+        )
+        assertEquals(
+            SampleThemeMode.Dark,
+            committed
+                .inputState
+                .themeMode
+                ?.mode,
+        )
+    }
+
+    @Test
+    fun step4_and_5_commitThenActThenObserveNewOwnerTruthBackAsInput() {
+        val trace =
+            mutableListOf<String>()
+        val screenOwner =
+            ScreenOwner(
+                initial =
+                    ScreenState(
+                        screenName =
+                            "BrowseSurface",
+                        transientBlocked =
+                            false,
+                    ),
+                trace =
+                    trace,
+            )
+        val queueOwner =
+            MusicQueueOwner(
+                initial =
+                    musicQueue(
+                        currentTrackRef =
+                            "track.alpha",
+                        "track.alpha" to "Alpha",
+                    ),
+            )
+        val themeOwner =
+            ThemeModeOwner(
+                initial =
+                    ThemeModeState(
+                        mode =
+                            SampleThemeMode.Dark,
+                        followsSystem =
+                            false,
+                    ),
+            )
+        val family =
+            ComplexFamily(
+                trace =
+                    trace,
+            )
+        val circuit =
+            ComplexFamilyCircuit(
+                family =
+                    family,
+                screenOwner =
+                    screenOwner,
+                trace =
+                    trace,
+            )
+
+        /*
+         * Observe each rightful owner. The first two observations leave Output Unobserved. The final
+         * observation completes the input and creates the first Output-changing commit.
+         */
+        circuit.accept(
+            family.screenOutputCommitted(
+                screenOwner.current,
+            ),
+        )
+        circuit.accept(
+            family.musicQueueOutputCommitted(
+                queueOwner.current,
+            ),
+        )
+        circuit.accept(
+            family.themeModeOutputCommitted(
+                themeOwner.current,
+            ),
+        )
+
+        /*
+         * The first committed consequence requested PlayerSurface. Act asked ScreenOwner to change.
+         * ScreenOwner then owned the new truth. The circuit OBSERVED screenOwner.current and fed that
+         * value back as NEW input; process(...) then derived Settled.
+         */
+        assertEquals(
+            PLAYER_SCREEN,
+            screenOwner.current.screenName,
+        )
+        assertEquals(
+            ComplexOutputState.Settled(
+                screenName =
+                    PLAYER_SCREEN,
+                currentTrackRef =
+                    "track.alpha",
+                themeMode =
+                    SampleThemeMode.Dark,
+            ),
+            family.currentOutput,
+        )
+
+        assertEquals(
+            listOf(
+                "process:Unobserved",
+                "process:Unobserved",
+                "process:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
+                "commit:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
+                "act:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
+                "screen-owner:PlayerSurface",
+                "observe:screen:PlayerSurface",
+                "process:Settled(PlayerSurface,track.alpha,Dark)",
+                "commit:Settled(PlayerSurface,track.alpha,Dark)",
+                "act:Settled(PlayerSurface,track.alpha,Dark)",
+            ),
+            trace,
+        )
+    }
+
+    @Test
+    fun step6_inputOnlyCurrentnessChangeDoesNotCreateAnotherActConsequence() {
+        val trace =
+            mutableListOf<String>()
+        val family =
+            ComplexFamily(
+                trace =
+                    trace,
+            )
+
+        family.screenOutputCommitted(
+            ScreenState(
+                screenName =
+                    "BrowseSurface",
+                transientBlocked =
+                    false,
+            ),
+        )
+        family.musicQueueOutputCommitted(
+            musicQueue(
+                currentTrackRef =
+                    "track.alpha",
+                "track.alpha" to "Old title",
+            ),
+        )
+
+        val firstConsequence =
+            family.themeModeOutputCommitted(
+                ThemeModeState(
+                    mode =
+                        SampleThemeMode.Dark,
+                    followsSystem =
+                        false,
+                ),
+            )
+
+        val firstRevision =
+            checkNotNull(
+                firstConsequence,
+            ).compoundRevision
+
+        /*
+         * The queue title is CURRENT input truth, so the Compound revision advances.
+         *
+         * But the relationship still means exactly NeedsPlayerScreen(track.alpha, PlayerSurface,
+         * Dark). Because Output meaning did not change, this is NOT a second Act consequence.
+         */
+        val duplicateConsequence =
+            family.musicQueueOutputCommitted(
+                musicQueue(
+                    currentTrackRef =
+                        "track.alpha",
+                    "track.alpha" to "New title",
+                ),
+            )
+
+        assertEquals(
+            null,
+            duplicateConsequence,
+        )
+        assertEquals(
+            firstRevision +
+                1L,
+            family.current.revision,
+        )
+        assertEquals(
+            ComplexOutputState.NeedsPlayerScreen(
+                trackRef =
+                    "track.alpha",
+                targetScreenName =
+                    PLAYER_SCREEN,
+                themeMode =
+                    SampleThemeMode.Dark,
+            ),
+            family.currentOutput,
+        )
+    }
+
+    /**
+     * STEP 1 — three unrelated owners.
+     *
+     * These types intentionally live OUTSIDE ComplexFamily. They are complete current truths in
+     * their own right. ComplexFamily may observe them; it does not become their owner.
+     */
+    private data class ScreenState(
+        val screenName:
+            String,
+        val transientBlocked:
+            Boolean,
+    ) :
+        VexState<
+            ScreenState
+        > {
+        override fun deepCopy():
+            ScreenState =
+            copy()
+    }
+
+    private data class QueueItem(
+        val trackRef:
+            String,
+        val title:
+            String,
+    )
+
+    private data class QueueGroup(
+        val groupName:
+            String,
+        val items:
+            MutableList<
+                QueueItem
+            >,
+    ) {
+        fun deepCopy():
+            QueueGroup =
+            copy(
+                items =
+                    items
+                        .map { item ->
+                            item.copy()
+                        }
+                        .toMutableList(),
+            )
+    }
+
+    private data class MusicQueueState(
+        val groups:
+            MutableList<
+                QueueGroup
+            >,
+        val currentTrackRef:
+            String?,
+    ) :
+        VexState<
+            MusicQueueState
+        > {
+        /*
+         * This deepCopy() is deliberately non-trivial. It demonstrates the ownership boundary for a
+         * mutable nested list without forcing process(...) to repeat defensive-copy ceremony.
+         */
+        override fun deepCopy():
+            MusicQueueState =
+            copy(
+                groups =
+                    groups
+                        .map { group ->
+                            group.deepCopy()
+                        }
+                        .toMutableList(),
+            )
+
+        fun currentTrack():
+            QueueItem? =
+            currentTrackRef
+                ?.let { ref ->
+                    groups
+                        .asSequence()
+                        .flatMap { group ->
+                            group
+                                .items
+                                .asSequence()
+                        }
+                        .firstOrNull { item ->
+                            item.trackRef ==
+                                ref
+                        }
+                        ?.copy()
+                }
+
+        fun allTrackRefs():
+            List<String> =
+            groups
+                .flatMap { group ->
+                    group
+                        .items
+                        .map { item ->
+                            item.trackRef
+                        }
+                }
+    }
+
+    private enum class SampleThemeMode {
+        Light,
+        Dark,
+    }
+
+    private data class ThemeModeState(
+        val mode:
+            SampleThemeMode,
+        val followsSystem:
+            Boolean,
+    ) :
+        VexState<
+            ThemeModeState
+        > {
+        override fun deepCopy():
+            ThemeModeState =
+            copy()
+    }
+
+    private class ScreenOwner(
+        initial:
+            ScreenState,
+        private val trace:
+            MutableList<String>? =
+            null,
+    ) :
+        VexRelay<
+            ScreenState
+        >(
+            relayRef =
+                "sample.family-circuit.screen-owner",
+            initialState =
+                initial,
+        ) {
+        fun apply(
+            screenName:
+                String,
+        ):
+            ScreenState {
+            val next =
+                send(
+                    current.copy(
+                        screenName =
+                            screenName,
+                    ),
+                )
+
+            trace?.add(
+                "screen-owner:" +
+                    next.screenName,
+            )
+
+            return next
+        }
+    }
+
+    private class MusicQueueOwner(
+        initial:
+            MusicQueueState,
+    ) :
+        VexRelay<
+            MusicQueueState
+        >(
+            relayRef =
+                "sample.family-circuit.music-queue-owner",
+            initialState =
+                initial,
+        )
+
+    private class ThemeModeOwner(
+        initial:
+            ThemeModeState,
+    ) :
+        VexRelay<
+            ThemeModeState
+        >(
+            relayRef =
+                "sample.family-circuit.theme-mode-owner",
+            initialState =
+                initial,
+        )
+
+    /**
+     * STEP 2 — Input owns CURRENT fact formation.
+     *
+     * Every field is nullable because one observation may carry only one changed owner. latest(...)
+     * merges that partial observation with retained input so process(...) never has to guess which
+     * values are old, new or absent from this patch.
+     */
+    private interface LatestInputState<
+        Self : LatestInputState<
+            Self
+        >,
+    > :
+        VexInputState<
+            Self
+        > {
+        fun latest(
+            incoming:
+                Self,
+        ):
+            Self
+    }
+
+    private data class ComplexInputState(
+        val screen:
+            ScreenState? =
+            null,
+        val musicQueue:
+            MusicQueueState? =
+            null,
+        val themeMode:
+            ThemeModeState? =
+            null,
+    ) :
+        LatestInputState<
+            ComplexInputState
+        > {
+        override fun latest(
+            incoming:
+                ComplexInputState,
+        ):
+            ComplexInputState =
+            ComplexInputState(
+                screen =
+                    (
+                        incoming.screen
+                            ?: screen
+                    )?.deepCopy(),
+                musicQueue =
+                    (
+                        incoming.musicQueue
+                            ?: musicQueue
+                    )?.deepCopy(),
+                themeMode =
+                    (
+                        incoming.themeMode
+                            ?: themeMode
+                    )?.deepCopy(),
+            )
+
+        override fun deepCopy():
+            ComplexInputState =
+            ComplexInputState(
+                screen =
+                    screen?.deepCopy(),
+                musicQueue =
+                    musicQueue?.deepCopy(),
+                themeMode =
+                    themeMode?.deepCopy(),
+            )
+    }
+
+    /**
+     * STEP 3 — Output owns CONSEQUENCE, never previous-process memory.
+     */
+    private sealed interface ComplexOutputState :
+        VexOutputState<
+            ComplexOutputState
+        > {
+        data object Unobserved :
+            ComplexOutputState
+
+        data class HeldTransient(
+            val screenName:
+                String,
+        ) :
+            ComplexOutputState
+
+        data class NeedsPlayerScreen(
+            val trackRef:
+                String,
+            val targetScreenName:
+                String,
+            val themeMode:
+                SampleThemeMode,
+        ) :
+            ComplexOutputState
+
+        data class Settled(
+            val screenName:
+                String,
+            val currentTrackRef:
+                String?,
+            val themeMode:
+                SampleThemeMode,
+        ) :
+            ComplexOutputState
+
+        override fun deepCopy():
+            ComplexOutputState =
+            when (
+                this
+            ) {
+                Unobserved ->
+                    Unobserved
+
+                is HeldTransient ->
+                    copy()
+
+                is NeedsPlayerScreen ->
+                    copy()
+
+                is Settled ->
+                    copy()
+            }
+    }
+
+    /**
+     * STEP 3 infrastructure — reusable process-only Compound formation.
+     *
+     * Concrete relationships do not re-author:
+     *
+     *     partial input merging
+     *     current Compound assembly
+     *
+     * They author only process(latestStateInput).
+     */
+    private abstract class ProcessOnlyCompoundRelationship<
+        InputState,
+        OutputState,
+    >(
+        relayRef:
+            String,
+        initialInputState:
+            InputState,
+        initialOutputState:
+            OutputState,
+    ) :
+        VexCompoundRelay<
+            InputState,
+            OutputState
+        >(
+            relayRef =
+                relayRef,
+            initialInputState =
+                initialInputState,
+            initialOutputState =
+                initialOutputState,
+        )
+        where InputState :
+            LatestInputState<
+                InputState
+            >,
+              OutputState :
+            VexOutputState<
+                OutputState
+            > {
+        final override fun processStates(
+            inputState:
+                InputState,
+            currentState:
+                VexCompoundState<
+                    InputState,
+                    OutputState
+                >,
+        ):
+            VexCompoundState<
+                InputState,
+                OutputState
+            > {
+            /*
+             * OVERRIDE 1 — framework plumbing:
+             *
+             * current retained input + incoming partial observation
+             * -> one complete latestStateInput
+             */
+            val latestStateInput =
+                currentState
+                    .inputState
+                    .latest(
+                        inputState,
+                    )
+
+            /*
+             * OVERRIDE 2 — the ONLY concrete relationship calculation:
+             *
+             * here is everything CURRENT
+             * -> what does it mean?
+             * -> here is the Output
+             */
+            val latestStateOutput =
+                process(
+                    latestStateInput,
+                )
+
+            /*
+             * OVERRIDE 3 — generic Compound reassembly.
+             *
+             * The concrete relationship does not need to repeat this.
+             */
+            return currentState.copy(
+                inputState =
+                    latestStateInput,
+                outputState =
+                    latestStateOutput,
+            )
+        }
+
+        protected abstract fun process(
+            latestStateInput:
+                InputState,
+        ):
+            OutputState
+
+        protected fun receive(
+            inputState:
+                InputState,
+        ):
+            VexCompoundState<
+                InputState,
+                OutputState
+            > =
+            send(
+                inputState,
+            )
+
+        /*
+         * STEP 4 teaching seam.
+         *
+         * This wrapper exists ONLY so the sample can teach "Output changed after commit -> Act".
+         * It is not the accepted production seam: dependency-driven send(...) could bypass an outer
+         * wrapper. Production still needs the smallest post-commit hook at the atomic Relay boundary.
+         */
+        private val outputCommitLock =
+            Any()
+
+        protected fun receiveOutputCommit(
+            inputState:
+                InputState,
+        ):
+            CommittedOutput<
+                OutputState
+            >? =
+            synchronized(
+                outputCommitLock,
+            ) {
+                val beforeOutput =
+                    currentOutput
+                val committed =
+                    send(
+                        inputState,
+                    )
+
+                if (
+                    committed.outputState ==
+                    beforeOutput
+                ) {
+                    null
+                } else {
+                    CommittedOutput(
+                        compoundRevision =
+                            committed.revision,
+                        outputState =
+                            committed
+                                .outputState
+                                .deepCopy(),
+                    )
+                }
+            }
+    }
+
+    private data class CommittedOutput<
+        OutputState,
+    >(
+        val compoundRevision:
+            Long,
+        val outputState:
+            OutputState,
+    ) where OutputState :
+        VexOutputState<
+            OutputState
+        >
+
+    /**
+     * The first deliberately-complex Family Circuit relationship.
+     *
+     * Important:
+     *
+     *     ComplexFamily does NOT own ScreenState.
+     *     ComplexFamily does NOT own MusicQueueState.
+     *     ComplexFamily does NOT own ThemeModeState.
+     *
+     * Its Input contains observed snapshots of those independent CURRENT truths.
+     *
+     * Its only feature-specific override is process(latestStateInput).
+     */
+    private class ComplexFamily(
+        private val trace:
+            MutableList<String>,
+    ) :
+        ProcessOnlyCompoundRelationship<
+            ComplexInputState,
+            ComplexOutputState
+        >(
+            relayRef =
+                "sample.family-circuit.complex-family",
+            initialInputState =
+                ComplexInputState(),
+            initialOutputState =
+                ComplexOutputState.Unobserved,
+        ) {
+        fun screenChanged(
+            state:
+                ScreenState,
+        ):
+            VexCompoundState<
+                ComplexInputState,
+                ComplexOutputState
+            > =
+            receive(
+                ComplexInputState(
+                    screen =
+                        state,
+                ),
+            )
+
+        fun musicQueueChanged(
+            state:
+                MusicQueueState,
+        ):
+            VexCompoundState<
+                ComplexInputState,
+                ComplexOutputState
+            > =
+            receive(
+                ComplexInputState(
+                    musicQueue =
+                        state,
+                ),
+            )
+
+        fun themeModeChanged(
+            state:
+                ThemeModeState,
+        ):
+            VexCompoundState<
+                ComplexInputState,
+                ComplexOutputState
+            > =
+            receive(
+                ComplexInputState(
+                    themeMode =
+                        state,
+                ),
+            )
+
+        fun screenOutputCommitted(
+            state:
+                ScreenState,
+        ):
+            CommittedOutput<
+                ComplexOutputState
+            >? =
+            receiveOutputCommit(
+                ComplexInputState(
+                    screen =
+                        state,
+                ),
+            )
+                .also(::traceCommit)
+
+        fun musicQueueOutputCommitted(
+            state:
+                MusicQueueState,
+        ):
+            CommittedOutput<
+                ComplexOutputState
+            >? =
+            receiveOutputCommit(
+                ComplexInputState(
+                    musicQueue =
+                        state,
+                ),
+            )
+                .also(::traceCommit)
+
+        fun themeModeOutputCommitted(
+            state:
+                ThemeModeState,
+        ):
+            CommittedOutput<
+                ComplexOutputState
+            >? =
+            receiveOutputCommit(
+                ComplexInputState(
+                    themeMode =
+                        state,
+                ),
+            )
+                .also(::traceCommit)
+
+        /**
+         * This is the line fresh readers should be able to find immediately.
+         *
+         * No currentState parameter.
+         * No previousOutput parameter.
+         * No target mutation.
+         * No Effect execution.
+         *
+         * Just:
+         *
+         *     here is everything CURRENT
+         *     -> what does it mean?
+         *     -> return the consequence
+         */
+        override fun process(
+            latestStateInput:
+                ComplexInputState,
+        ):
+            ComplexOutputState {
+            val screen =
+                latestStateInput.screen
+            val queue =
+                latestStateInput.musicQueue
+            val theme =
+                latestStateInput.themeMode
+
+            val output =
+                when {
+                    screen ==
+                        null ||
+                        queue ==
+                        null ||
+                        theme ==
+                        null ->
+                        ComplexOutputState
+                            .Unobserved
+
+                    screen.transientBlocked ->
+                        ComplexOutputState
+                            .HeldTransient(
+                                screenName =
+                                    screen.screenName,
+                            )
+
+                    queue.currentTrack() !=
+                        null &&
+                        screen.screenName !=
+                        PLAYER_SCREEN ->
+                        ComplexOutputState
+                            .NeedsPlayerScreen(
+                                trackRef =
+                                    checkNotNull(
+                                        queue.currentTrack(),
+                                    ).trackRef,
+                                targetScreenName =
+                                    PLAYER_SCREEN,
+                                themeMode =
+                                    theme.mode,
+                            )
+
+                    else ->
+                        ComplexOutputState
+                            .Settled(
+                                screenName =
+                                    screen.screenName,
+                                currentTrackRef =
+                                    queue
+                                        .currentTrack()
+                                        ?.trackRef,
+                                themeMode =
+                                    theme.mode,
+                            )
+                }
+
+            trace +=
+                "process:" +
+                    output.traceValue()
+
+            return output
+        }
+
+        private fun traceCommit(
+            committed:
+                CommittedOutput<
+                    ComplexOutputState
+                >?,
+        ) {
+            if (
+                committed !=
+                null
+            ) {
+                trace +=
+                    "commit:" +
+                        committed
+                            .outputState
+                            .traceValue()
+            }
+        }
+    }
+
+    /**
+     * STEPS 4 + 5 — realization after established relationship truth.
+     *
+     * Act receives an ALREADY-COMMITTED Output. If that output asks for a screen change, Act calls
+     * ScreenOwner. It never writes ComplexFamily Output directly.
+     *
+     * After ScreenOwner changes, the circuit observes ScreenOwner.current and returns it as NEW
+     * ComplexInputState. That new input goes through latest(...) and process(...) again.
+     */
+    private class ComplexFamilyCircuit(
+        private val family:
+            ComplexFamily,
+        private val screenOwner:
+            ScreenOwner,
+        private val trace:
+            MutableList<String>,
+    ) {
+        fun accept(
+            committed:
+                CommittedOutput<
+                    ComplexOutputState
+                >?,
+        ) {
+            if (
+                committed ==
+                null
+            ) {
+                return
+            }
+
+            val output =
+                committed.outputState
+
+            trace +=
+                "act:" +
+                    output.traceValue()
+
+            when (
+                output
+            ) {
+                ComplexOutputState.Unobserved,
+                is ComplexOutputState.HeldTransient,
+                is ComplexOutputState.Settled,
+                ->
+                    Unit
+
+                is ComplexOutputState.NeedsPlayerScreen -> {
+                    screenOwner.apply(
+                        output.targetScreenName,
+                    )
+
+                    val observed =
+                        screenOwner.current
+
+                    trace +=
+                        "observe:screen:" +
+                            observed.screenName
+
+                    /*
+                     * Observation re-enters as NEW input. We recursively accept only if that new input
+                     * creates another Output-changing committed consequence.
+                     */
+                    accept(
+                        family.screenOutputCommitted(
+                            observed,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    private fun ComplexOutputState.traceValue():
+        String =
+        when (
+            this
+        ) {
+            ComplexOutputState.Unobserved ->
+                "Unobserved"
+
+            is ComplexOutputState.HeldTransient ->
+                "HeldTransient(" +
+                    screenName +
+                    ")"
+
+            is ComplexOutputState.NeedsPlayerScreen ->
+                "NeedsPlayerScreen(" +
+                    trackRef +
+                    "," +
+                    targetScreenName +
+                    "," +
+                    themeMode.name +
+                    ")"
+
+            is ComplexOutputState.Settled ->
+                "Settled(" +
+                    screenName +
+                    "," +
+                    (
+                        currentTrackRef
+                            ?: "none"
+                    ) +
+                    "," +
+                    themeMode.name +
+                    ")"
+        }
+
+    private fun musicQueue(
+        currentTrackRef:
+            String?,
+        vararg tracks:
+            Pair<
+                String,
+                String
+            >,
+    ):
+        MusicQueueState =
+        MusicQueueState(
+            groups =
+                mutableListOf(
+                    QueueGroup(
+                        groupName =
+                            "Teaching Queue",
+                        items =
+                            tracks
+                                .map { (
+                                    trackRef,
+                                    title,
+                                ) ->
+                                    QueueItem(
+                                        trackRef =
+                                            trackRef,
+                                        title =
+                                            title,
+                                    )
+                                }
+                                .toMutableList(),
+                    ),
+                ),
+            currentTrackRef =
+                currentTrackRef,
+        )
+
+    private companion object {
+        const val PLAYER_SCREEN:
+            String =
+            "PlayerSurface"
+    }
+}
+
