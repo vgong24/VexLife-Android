@@ -885,8 +885,8 @@ class VexExecutionTest {
                 val exposed =
                     root.executions.value
                         as MutableMap<
-                            VexCoroutineRef,
-                            VexCoroutineState
+                            VexExecution.InstanceId,
+                            VexExecution.State
                         >
 
                 val mutationAccepted =
