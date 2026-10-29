@@ -9,6 +9,7 @@ import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
 import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vex.TalkToVexScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -23,8 +24,12 @@ import org.junit.Test
 class FeatureActionRegistrationsTest {
     @Test
     fun registeredScreensAutomaticallyContributeTheirActionOwners() = runTest {
-        val registrations = VexLifeSession(
-            repositories = AppRepositories(
+        val executionRoot =
+            VexExecutionRoot()
+
+        try {
+            val registrations = VexLifeSession(
+                repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
                 userProfile = InMemoryUserProfileRepository(),
                 vexMaps = InMemoryVexMapsRepository(),
@@ -35,27 +40,31 @@ class FeatureActionRegistrationsTest {
                 eventsAttention = RelayEventsAttentionPreferenceRepository(),
                 eventsAttentionLab = RelayEventsAttentionLabRepository(),
             ),
-            scope = backgroundScope,
-        ).appActions
+                scope = backgroundScope,
+                executionRoot = executionRoot,
+            ).appActions
 
-        assertTrue(registrations[HomeScreen.VexStreamMusic].isEmpty())
-        assertTrue(registrations[HomeScreen.TalkToVex].isEmpty())
+            assertTrue(registrations[HomeScreen.VexStreamMusic].isEmpty())
+            assertTrue(registrations[HomeScreen.TalkToVex].isEmpty())
 
-        assertEquals(
-            VexStreamMusicScreen.screenId,
-            registrations[VexStreamMusicScreen.RefreshCatalog]
-                .single()
-                .ownerRef,
-        )
-        assertTrue(
-            registrations[VexStreamMusicScreen.TogglePlayback]
-                .isEmpty(),
-        )
-        assertEquals(
-            TalkToVexScreen.screenId,
-            registrations[TalkToVexScreen.PlaceholderAction]
-                .single()
-                .ownerRef,
-        )
+            assertEquals(
+                VexStreamMusicScreen.screenId,
+                registrations[VexStreamMusicScreen.RefreshCatalog]
+                    .single()
+                    .ownerRef,
+            )
+            assertTrue(
+                registrations[VexStreamMusicScreen.TogglePlayback]
+                    .isEmpty(),
+            )
+            assertEquals(
+                TalkToVexScreen.screenId,
+                registrations[TalkToVexScreen.PlaceholderAction]
+                    .single()
+                    .ownerRef,
+            )
+        } finally {
+            executionRoot.forceStopAll()
+        }
     }
 }
