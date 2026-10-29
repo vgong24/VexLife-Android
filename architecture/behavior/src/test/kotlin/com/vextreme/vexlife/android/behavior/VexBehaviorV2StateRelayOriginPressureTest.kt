@@ -1150,6 +1150,112 @@ class VexBehaviorV2StateRelayOriginPressureTest {
      * Independently-owned child currentness should converge by stable identity rather than being
      * recursively absorbed into parent State merely so presentation can render a list.
      */
+    private interface LatestInputState<
+        Self : LatestInputState<
+            Self
+        >,
+    > :
+        VexInputState<
+            Self
+        > {
+        /**
+         * Materialize the complete latest process input from one incoming partial patch.
+         *
+         * This is input-shape ownership, not feature relationship calculation. Once this returns,
+         * the Relay process should be able to reason from one complete latestStateInput.
+         */
+        fun latest(
+            incoming:
+                Self,
+        ):
+            Self
+    }
+
+    /**
+     * Test-only reusable Compound shape matching the Origin readability pressure:
+     *
+     * incoming patch + retained current input
+     * -> latestStateInput
+     * -> ONE feature-specific process(latestStateInput)
+     * -> generic CompoundState reassembly
+     *
+     * Concrete Relays do not repeat currentState.copy(...) or input/output plumbing.
+     */
+    private abstract class LatestInputCompoundRelay<
+        InputState,
+        OutputState,
+    >(
+        relayRef: String,
+        initialInputState:
+            InputState,
+        initialOutputState:
+            OutputState,
+    ) :
+        VexCompoundRelay<
+            InputState,
+            OutputState
+        >(
+            relayRef =
+                relayRef,
+            initialInputState =
+                initialInputState,
+            initialOutputState =
+                initialOutputState,
+        )
+        where InputState :
+            LatestInputState<
+                InputState
+            >,
+              OutputState :
+            VexOutputState<
+                OutputState
+            > {
+        final override fun processStates(
+            inputState:
+                InputState,
+            currentState:
+                VexCompoundState<
+                    InputState,
+                    OutputState
+                >,
+        ):
+            VexCompoundState<
+                InputState,
+                OutputState
+            > {
+            val latestStateInput =
+                currentState
+                    .inputState
+                    .latest(
+                        inputState,
+                    )
+
+            val latestStateOutput =
+                process(
+                    latestStateInput,
+                )
+
+            return currentState.copy(
+                inputState =
+                    latestStateInput,
+                outputState =
+                    latestStateOutput,
+            )
+        }
+
+        /**
+         * The one relationship-specific surface.
+         *
+         * At this point input patching/currentness plumbing is finished. The feature reads the whole
+         * latest input and answers only: "what does this current relationship mean?"
+         */
+        protected abstract fun process(
+            latestStateInput:
+                InputState,
+        ):
+            OutputState
+    }
+
     private data class NestedChildInputState(
         val parentOrder:
             List<String>? = null,
@@ -1159,9 +1265,24 @@ class VexBehaviorV2StateRelayOriginPressureTest {
                 ChildCurrentState
             >? = null,
     ) :
-        VexInputState<
+        LatestInputState<
             NestedChildInputState
         > {
+        override fun latest(
+            incoming:
+                NestedChildInputState,
+        ):
+            NestedChildInputState =
+            copy(
+                parentOrder =
+                    incoming.parentOrder
+                        ?: parentOrder,
+                childCurrentByRef =
+                    incoming.childCurrentByRef
+                        ?: childCurrentByRef,
+            )
+                .deepCopy()
+
         override fun deepCopy():
             NestedChildInputState =
             copy(
@@ -1197,7 +1318,7 @@ class VexBehaviorV2StateRelayOriginPressureTest {
     }
 
     private class NestedChildConvergenceRelay :
-        VexCompoundRelay<
+        LatestInputCompoundRelay<
             NestedChildInputState,
             NestedChildOutputState
         >(
@@ -1238,50 +1359,28 @@ class VexBehaviorV2StateRelayOriginPressureTest {
             )
         }
 
-        override fun processStates(
-            inputState:
+        override fun process(
+            latestStateInput:
                 NestedChildInputState,
-            currentState:
-                VexCompoundState<
-                    NestedChildInputState,
-                    NestedChildOutputState
-                >,
         ):
-            VexCompoundState<
-                NestedChildInputState,
-                NestedChildOutputState
-            > {
-            val previous =
-                currentState.inputState
-
+            NestedChildOutputState {
             val currentOrder =
-                inputState.parentOrder
-                    ?: previous.parentOrder
+                latestStateInput.parentOrder
             val currentChildren =
-                inputState.childCurrentByRef
-                    ?: previous.childCurrentByRef
+                latestStateInput
+                    .childCurrentByRef
 
-            val coherentInput =
-                NestedChildInputState(
-                    parentOrder =
-                        currentOrder
-                            ?.toList(),
-                    childCurrentByRef =
-                        currentChildren
-                            ?.mapValues { (_, child) ->
-                                child.copy()
-                            },
-                )
+            if (
+                currentOrder ==
+                null ||
+                currentChildren ==
+                null
+            ) {
+                return NestedChildOutputState()
+            }
 
-            val labels =
-                if (
-                    currentOrder ==
-                    null ||
-                    currentChildren ==
-                    null
-                ) {
-                    emptyList()
-                } else {
+            return NestedChildOutputState(
+                labels =
                     currentOrder.map { childRef ->
                         checkNotNull(
                             currentChildren[
@@ -1290,17 +1389,7 @@ class VexBehaviorV2StateRelayOriginPressureTest {
                         ) {
                             "current parent list ref $childRef has no current child State"
                         }.label
-                    }
-                }
-
-            return currentState.copy(
-                inputState =
-                    coherentInput,
-                outputState =
-                    NestedChildOutputState(
-                        labels =
-                            labels,
-                    ),
+                    },
             )
         }
     }
