@@ -381,6 +381,8 @@ abstract class VexExecution protected constructor(
             onFailure: (Throwable) -> Unit = {},
         ): Handle =
             executionRoot.coroutineLauncher.launch(
+                sourceOwner =
+                    null,
                 sourceRef =
                     sourceRef(
                         owner,
