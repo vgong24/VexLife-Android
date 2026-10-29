@@ -55,6 +55,22 @@ same exact reviewed outcome.
 A reader does not need to learn what state<State> or on<Control> means because those custom helpers
 are no longer part of the current Family path.
 
+## Family kinship
+
+State and Control are not merely arbitrary non-null types. One concrete Family coordinate binds the
+two vocabularies:
+
+~~~text
+VexFamily<Family, State, Control>
+    State   : VexFamily.State<Family>
+    Control : VexFamily.Control<Family>
+~~~
+
+Family-owned children that carry semantic State require that Family-bound State type, so
+DisplayState / Store / Act cannot be formed around an arbitrary unrelated value type.
+
+This restores compile-time Family safety without restoring the older recursive Family self-generic.
+
 ## State ownership
 
 ~~~text

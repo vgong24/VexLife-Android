@@ -25,15 +25,30 @@ import kotlinx.coroutines.flow.asStateFlow
  * meaning.
  */
 abstract class VexFamily<
-    State : Any,
-    Control : Any,
+    Family : Any,
+    FamilyState : VexFamily.State<Family>,
+    FamilyControl : VexFamily.Control<Family>,
 >(
-    initialState: State,
+    initialState: FamilyState,
     private val executionRoot:
         VexExecutionRoot,
     private val logger:
         VexLogger.Sink,
 ) {
+    /**
+     * Compile-time kinship marker for semantic State belonging to one exact Family coordinate.
+     */
+    interface State<
+        Family : Any,
+    >
+
+    /**
+     * Compile-time kinship marker for incoming Control belonging to one exact Family coordinate.
+     */
+    interface Control<
+        Family : Any,
+    >
+
     /**
      * Family-owned display classification.
      *
@@ -45,12 +60,12 @@ abstract class VexFamily<
      * to invent another ViewState / UiState / PresentationState owner.
      */
     interface DisplayState<
-        out State,
+        out State : VexFamily.State<*>,
     > {
         data class StateOnly<
-            State,
+            State : VexFamily.State<*>,
         >(
-            val state: State,
+            val state: FamilyState,
         ) :
             DisplayState<
                 State
@@ -67,10 +82,10 @@ abstract class VexFamily<
      * Durable Store truth is not another live Family State holder.
      */
     interface Store<
-        State : Any,
+        State : VexFamily.State<*>,
     > {
         suspend fun save(
-            state: State,
+            state: FamilyState,
         ):
             WriteResult
 
@@ -93,7 +108,7 @@ abstract class VexFamily<
      * Act belongs to Family. It is intentionally not another Vex root.
      */
     class Act<
-        State : Any,
+        State : VexFamily.State<*>,
     > internal constructor(
         internal val admittedState:
             State?,
@@ -108,7 +123,7 @@ abstract class VexFamily<
          * authoring an Act.
          */
         class Begin<
-            State : Any,
+            State : VexFamily.State<*>,
         > internal constructor(
             internal val mode:
                 Mode,
@@ -144,7 +159,7 @@ abstract class VexFamily<
             )
 
             internal data class Save<
-                State : Any,
+                State : VexFamily.State<*>,
             >(
                 val state:
                     State,
@@ -153,7 +168,7 @@ abstract class VexFamily<
             )
 
             class Scope<
-                State : Any,
+                State : VexFamily.State<*>,
             > internal constructor(
                 private val mode:
                     Mode,
@@ -163,7 +178,7 @@ abstract class VexFamily<
                     null
 
                 fun save(
-                    state: State,
+                    state: FamilyState,
                 ):
                     SaveDestination<State> {
                     require(
@@ -204,7 +219,7 @@ abstract class VexFamily<
                     )
 
                 class SaveDestination<
-                    State : Any,
+                    State : VexFamily.State<*>,
                 > internal constructor(
                     private val state:
                         State,
@@ -233,7 +248,7 @@ abstract class VexFamily<
                 }
 
                 class ResultsScope<
-                    State : Any,
+                    State : VexFamily.State<*>,
                 > internal constructor() {
                     private var success:
                         Result<State>? =
@@ -300,14 +315,14 @@ abstract class VexFamily<
                 }
 
                 class ResultScope<
-                    State : Any,
+                    State : VexFamily.State<*>,
                 > internal constructor() {
                     private var admittedState:
                         State? =
                         null
 
                     fun admit(
-                        state: State,
+                        state: FamilyState,
                     ) {
                         require(
                             admittedState ==
@@ -343,7 +358,7 @@ abstract class VexFamily<
         )
 
     val states:
-        StateFlow<State> =
+        StateFlow<FamilyState> =
         stateRelay.asStateFlow()
 
     val currentState:
@@ -365,19 +380,19 @@ abstract class VexFamily<
      */
     protected abstract fun act(
         currentState: State,
-        control: Control,
+        control: FamilyControl,
     ):
-        Act<State>?
+        Act<FamilyState>?
 
     /**
      * Authored Act outcome: keep current semantic State.
      */
     protected fun stay(
         begin:
-            Act.Begin<State>? =
+            Act.Begin<FamilyState>? =
             null,
     ):
-        Act<State> =
+        Act<FamilyState> =
         Act(
             admittedState =
                 null,
@@ -392,19 +407,19 @@ abstract class VexFamily<
      * source does not communicate semantic absence with a naked null.
      */
     protected fun noAct():
-        Act<State>? =
+        Act<FamilyState>? =
         null
 
     /**
      * Authored Act outcome: admit this semantic State when activate(...) applies the Act.
      */
     protected fun admit(
-        state: State,
+        state: FamilyState,
         begin:
-            Act.Begin<State>? =
+            Act.Begin<FamilyState>? =
             null,
     ):
-        Act<State> =
+        Act<FamilyState> =
         Act(
             admittedState =
                 state,
@@ -418,10 +433,10 @@ abstract class VexFamily<
     protected fun begin(
         mode: Act.Begin.Mode,
         block:
-            Act.Begin.Scope<State>.() -> Unit,
+            Act.Begin.Scope<FamilyState>.() -> Unit,
     ):
-        Act.Begin<State> =
-        Act.Begin.Scope<State>(
+        Act.Begin<FamilyState> =
+        Act.Begin.Scope<FamilyState>(
             mode =
                 mode,
         )
@@ -431,7 +446,7 @@ abstract class VexFamily<
             .build()
 
     open val store:
-        Store<State>? =
+        Store<FamilyState>? =
         null
 
     /**
@@ -442,7 +457,7 @@ abstract class VexFamily<
      * the same derived interpretation of State.
      */
     open val displayState:
-        DisplayState<State>
+        DisplayState<FamilyState>
         get() =
             DisplayState.StateOnly(
                 currentState,
@@ -454,7 +469,7 @@ abstract class VexFamily<
      * lawful Act; noAct() means unavailable. The returned Act is inspected but not applied.
      */
     fun isAvailable(
-        control: Control,
+        control: FamilyControl,
     ):
         Boolean =
         act(
@@ -474,7 +489,7 @@ abstract class VexFamily<
      *     -> act(currentState, control)
      */
     fun activate(
-        control: Control,
+        control: FamilyControl,
     ):
         Boolean {
         val before =
@@ -519,7 +534,7 @@ abstract class VexFamily<
      * StateRelay remains the single live holder.
      */
     private fun setCurrentState(
-        state: State,
+        state: FamilyState,
     ) {
         val before =
             currentState

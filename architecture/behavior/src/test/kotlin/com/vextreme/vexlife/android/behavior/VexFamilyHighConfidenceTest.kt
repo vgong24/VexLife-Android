@@ -26,6 +26,7 @@ class VexFamilyHighConfidenceTest {
             VexLogger.Sink.None,
     ) :
         VexFamily<
+            ValueFamily,
             ValueFamily.State,
             ValueFamily.Control
         >(
@@ -36,7 +37,8 @@ class VexFamilyHighConfidenceTest {
             logger =
                 logger,
         ) {
-        sealed interface State {
+        sealed interface State :
+            VexFamily.State<ValueFamily> {
             data object Empty :
                 State
 
@@ -47,7 +49,8 @@ class VexFamilyHighConfidenceTest {
                 State
         }
 
-        sealed interface Control {
+        sealed interface Control :
+            VexFamily.Control<ValueFamily> {
             data class Set(
                 val value:
                     String,
@@ -166,6 +169,7 @@ class VexFamilyHighConfidenceTest {
             VexExecutionRoot,
     ) :
         VexFamily<
+            MinimalFamily,
             MinimalFamily.State,
             MinimalFamily.Control
         >(
@@ -176,12 +180,14 @@ class VexFamilyHighConfidenceTest {
             logger =
                 VexLogger.Sink.None,
         ) {
-        sealed interface State {
+        sealed interface State :
+            VexFamily.State<MinimalFamily> {
             data object Idle :
                 State
         }
 
-        sealed interface Control {
+        sealed interface Control :
+            VexFamily.Control<MinimalFamily> {
             data object Keep :
                 Control
         }

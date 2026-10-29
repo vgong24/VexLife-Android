@@ -81,6 +81,52 @@ same derived interpretation of State. A richer feature-owned classification belo
 concrete Family, for example `ThemeModeFamily.DisplayState`, and implements
 `VexFamily.DisplayState<ThemeModeFamily.State>`.
 
+## Family kinship
+
+The direct Family keeps compile-time kinship without restoring the old recursive self-generic
+framework:
+
+~~~text
+VexFamily<Family, State, Control>
+
+State
+    -> VexFamily.State<Family>
+
+Control
+    -> VexFamily.Control<Family>
+~~~
+
+A concrete Family therefore binds its vocabulary to one exact Family coordinate:
+
+~~~kotlin
+class ThemeModeFamily(...) :
+    VexFamily<
+        ThemeModeFamily,
+        ThemeModeFamily.State,
+        ThemeModeFamily.Control
+    >(...) {
+
+    sealed interface State :
+        VexFamily.State<ThemeModeFamily>
+
+    sealed interface Control :
+        VexFamily.Control<ThemeModeFamily>
+}
+~~~
+
+This prevents another Family's Control from being combined with this Family's State. Family-owned
+children such as `DisplayState`, `Store`, and `Act` require a Family-bound State type, so kinship
+continues down the tree without repeating a large recursive generic equation at every call site.
+
+~~~text
+FAMILY SAFETY
+    ThemeModeFamily.State + MapsFamily.Control
+    -> does not satisfy VexFamily<ThemeModeFamily, ...>
+
+ROLE SAFETY
+    State and Control occupy different Family marker roles
+~~~
+
 ## State / Control relationship visibility
 
 The Family relationship surface is intentionally exhaustive rather than sparse-by-default:
@@ -188,14 +234,20 @@ contract.
 
 ~~~kotlin
 class ThemeModeFamily(...) :
-    VexFamily<State, Control>(...) {
+    VexFamily<
+        ThemeModeFamily,
+        ThemeModeFamily.State,
+        ThemeModeFamily.Control
+    >(...) {
 
-    sealed interface State {
+    sealed interface State :
+        VexFamily.State<ThemeModeFamily> {
         data object Light : State
         data object Dark : State
     }
 
-    sealed interface Control {
+    sealed interface Control :
+        VexFamily.Control<ThemeModeFamily> {
         data object Toggle : Control
     }
 
