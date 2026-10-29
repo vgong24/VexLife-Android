@@ -1112,7 +1112,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun launchEarliestReturnsTheExistingActiveRelationshipInstance(): Unit =
+    fun launchEarliestReturnsTheExistingActiveRelationshipIdInstance(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot()
@@ -1320,7 +1320,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun theSameTriggerOnDifferentLiveOwnersDoesNotShareARelationship(): Unit =
+    fun theSameTriggerOnDifferentLiveOwnersDoesNotShareARelationshipId(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot()
