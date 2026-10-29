@@ -38,6 +38,7 @@ import com.vextreme.vexlife.android.elements.ActionElement
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.TextFieldElement
 import com.vextreme.vexlife.android.elements.UIElement
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.ui.VexLifeApp
 import com.vextreme.vexlife.android.ui.VexLifeSession
 import androidx.test.espresso.Espresso
@@ -105,10 +106,13 @@ class VexTestEngine(
                 SupervisorJob() +
                     Dispatchers.Main.immediate,
             )
+        val executionRoot =
+            VexExecutionRoot()
         val session =
             VexLifeSession(
                 repositories = repositories,
                 scope = sessionScope,
+                executionRoot = executionRoot,
             )
         activeSession = session
 
@@ -135,6 +139,7 @@ class VexTestEngine(
             )
         } finally {
             activeSession = null
+            executionRoot.forceStopAll()
             sessionScope.cancel()
         }
     }

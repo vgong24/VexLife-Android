@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.screens.shared.maps
 
 import com.vextreme.vexlife.android.data.maps.VexMapsAppearancePreference
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 import org.junit.Assert.assertSame
 import org.junit.Test
 
@@ -12,7 +13,8 @@ class VexMapsAppearancePreferenceTest {
             VexMapsAppearancePreference
                 .AUTOMATIC
                 .resolveVexMapsOnlineStyle(
-                    darkTheme = false,
+                    themePresentation =
+                        VexThemePresentation.Light,
                 ),
         )
         assertSame(
@@ -20,7 +22,8 @@ class VexMapsAppearancePreferenceTest {
             VexMapsAppearancePreference
                 .AUTOMATIC
                 .resolveVexMapsOnlineStyle(
-                    darkTheme = true,
+                    themePresentation =
+                        VexThemePresentation.Dark,
                 ),
         )
     }
@@ -32,7 +35,8 @@ class VexMapsAppearancePreferenceTest {
             VexMapsAppearancePreference
                 .LIGHT
                 .resolveVexMapsOnlineStyle(
-                    darkTheme = true,
+                    themePresentation =
+                        VexThemePresentation.Dark,
                 ),
         )
         assertSame(
@@ -40,7 +44,8 @@ class VexMapsAppearancePreferenceTest {
             VexMapsAppearancePreference
                 .DARK
                 .resolveVexMapsOnlineStyle(
-                    darkTheme = false,
+                    themePresentation =
+                        VexThemePresentation.Light,
                 ),
         )
     }

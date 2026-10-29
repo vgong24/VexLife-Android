@@ -65,7 +65,6 @@ object EventsScreen : AppScreenBlueprint(
         runtime: VexRuntime,
         repositories: AppRepositories,
         relays: VexLifeRelays,
-        darkTheme: Boolean,
     ) {
         EventsScreenContent(
             runtime = runtime,

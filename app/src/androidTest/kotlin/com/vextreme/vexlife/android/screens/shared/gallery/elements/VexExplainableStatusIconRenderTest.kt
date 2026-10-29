@@ -24,6 +24,7 @@ import com.vextreme.vexlife.android.elements.VexComposeScope
 import com.vextreme.vexlife.android.elements.VexExplainableStatusIcon
 import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 import org.junit.Rule
@@ -44,7 +45,8 @@ class VexExplainableStatusIconRenderTest {
     fun statusIconExplainsItselfByTapAndLongPressNearWindowEdge() {
         compose.setContent {
             VexLifeTheme(
-                darkTheme = true,
+                presentation =
+                    VexThemePresentation.Dark,
             ) {
                 Surface {
                     Box(

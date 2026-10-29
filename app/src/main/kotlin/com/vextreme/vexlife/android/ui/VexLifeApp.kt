@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
@@ -19,6 +20,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.preview.VexPreviewRepositories
@@ -55,11 +57,24 @@ internal fun VexLifeApp(
     repositories: AppRepositories,
 ) {
     val scope = rememberCoroutineScope()
-    val session = remember(repositories, scope) {
+    val executionRoot =
+        remember {
+            VexExecutionRoot()
+        }
+    val session = remember(repositories, scope, executionRoot) {
         VexLifeSession(
             repositories = repositories,
             scope = scope,
+            executionRoot = executionRoot,
         )
+    }
+
+    DisposableEffect(executionRoot) {
+        onDispose {
+            executionRoot.forceStopAll(
+                "VexLife repository composition disposed",
+            )
+        }
     }
 
     VexLifeApp(session = session)
@@ -80,8 +95,6 @@ internal fun VexLifeApp(
     val repositories = session.repositories
     val relays = session.relays
     val sessionScope = session.scope
-    val darkTheme = session.darkTheme
-
     LaunchedEffect(runtime) {
         runtime.appOpened()
     }
@@ -101,13 +114,15 @@ internal fun VexLifeApp(
         )
     }
 
-    VexLifeTheme(darkTheme = darkTheme) {
+    VexLifeTheme(
+        themeModeFamily =
+            session.themeModeFamily,
+    ) {
         VexLifeScaffold(
             runtime = runtime,
             repositories = repositories,
             relays = relays,
             sessionScope = sessionScope,
-            darkTheme = darkTheme,
         )
     }
 }
@@ -118,7 +133,6 @@ private fun VexLifeScaffold(
     repositories: AppRepositories,
     relays: VexLifeRelays,
     sessionScope: CoroutineScope,
-    darkTheme: Boolean,
 ) {
     val primaryScreens = AppScreens.primary
     val pagerState = rememberPagerState(
@@ -187,7 +201,6 @@ private fun VexLifeScaffold(
                     repositories = repositories,
                     relays = relays,
                     sessionScope = sessionScope,
-                    darkTheme = darkTheme,
                 )
             }
         } else {
@@ -214,7 +227,6 @@ private fun VexLifeScaffold(
                     repositories = repositories,
                     relays = relays,
                     sessionScope = sessionScope,
-                    darkTheme = darkTheme,
                 )
             }
         }

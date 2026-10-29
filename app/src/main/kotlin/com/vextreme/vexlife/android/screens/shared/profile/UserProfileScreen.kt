@@ -129,7 +129,6 @@ object UserProfileScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
     ) {
         UserProfileScreenContent(
             runtime = runtime,

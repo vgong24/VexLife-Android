@@ -44,6 +44,7 @@ import com.vextreme.vexlife.android.conversation.VexFamilyConversationSendReques
 import com.vextreme.vexlife.android.conversation.VexFamilyConversationSurfaceSendAvailability
 import com.vextreme.vexlife.android.conversation.projectVexFamilyConversationSendAvailability
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
@@ -157,7 +158,8 @@ class VexConversationRoomRenderTest {
 
         compose.setContent {
             VexLifeTheme(
-                darkTheme = true,
+                presentation =
+                    VexThemePresentation.Dark,
             ) {
                 Surface(
                     modifier =

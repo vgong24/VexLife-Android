@@ -1,9 +1,6 @@
 package com.vextreme.vexlife.android.ui
 
 import android.app.Application
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vextreme.vexlife.android.data.AppRepositories
@@ -31,7 +28,7 @@ import kotlinx.coroutines.Dispatchers
  * - current Screen/navigation/presentation;
  * - current logger session;
  * - diagnostic persistence queue;
- * - current dark/light selection;
+ * - current ThemeMode Family;
  * - immutable app-action wiring.
  *
  * It does NOT claim process-death restoration. Production keeps this session inside
@@ -40,10 +37,14 @@ import kotlinx.coroutines.Dispatchers
 internal class VexLifeSession(
     val repositories: AppRepositories,
     val scope: CoroutineScope,
-    initialDarkTheme: Boolean = true,
+    executionRoot: VexExecutionRoot,
+    initialThemeMode: ThemeMode = ThemeMode.Dark,
 ) {
-    var darkTheme by mutableStateOf(initialDarkTheme)
-        private set
+    val themeModeFamily =
+        ThemeModeFamily(
+            initialState = initialThemeMode,
+            executionRoot = executionRoot,
+        )
 
     val logPersistence = LogHistoryPersistenceQueue(
         repository = repositories.logHistory,
@@ -84,7 +85,24 @@ internal class VexLifeSession(
     )
 
     private fun toggleDarkMode() {
-        darkTheme = !darkTheme
+        val selectedMode =
+            when (
+                themeModeFamily
+                    .currentState
+            ) {
+                ThemeMode.NotSet,
+                ThemeMode.Light ->
+                    ThemeMode.Dark
+
+                ThemeMode.Dark ->
+                    ThemeMode.Light
+            }
+
+        themeModeFamily.activate(
+            ThemeModeFamily.Control.Select(
+                selectedMode,
+            ),
+        )
     }
 }
 
@@ -125,6 +143,7 @@ internal class VexLifeViewModel(
         VexLifeSession(
             repositories = repositories,
             scope = viewModelScope,
+            executionRoot = executionRoot,
         )
 
     override fun onCleared() {

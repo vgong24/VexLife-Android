@@ -34,6 +34,7 @@ import com.vextreme.vexlife.android.elements.VexRow
 import com.vextreme.vexlife.android.elements.VexText
 import com.vextreme.vexlife.android.elements.vex
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 
@@ -158,7 +159,8 @@ private fun VexConversationRoomPreview() {
         rememberCoroutineScope()
 
     VexLifeTheme(
-        darkTheme = true,
+        presentation =
+            VexThemePresentation.Dark,
     ) {
         VexConversationRoom(
             projection = projection,

@@ -126,7 +126,6 @@ object VexFamilyConversationScreen : AppScreenBlueprint(
         runtime: VexRuntime,
         repositories: AppRepositories,
         relays: VexLifeRelays,
-        darkTheme: Boolean,
     ) {
         VexFamilyConversationScreenContent(
             repository =

@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.screens.shared.maps
 import androidx.annotation.StringRes
 import com.vextreme.vexlife.android.R
 import com.vextreme.vexlife.android.data.maps.VexMapsAppearancePreference
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 
 internal enum class VexMapsOnlineStyle(
     val styleRef: String,
@@ -26,14 +27,21 @@ internal enum class VexMapsOnlineStyle(
 }
 
 internal fun VexMapsAppearancePreference.resolveVexMapsOnlineStyle(
-    darkTheme: Boolean,
+    themePresentation: VexThemePresentation,
 ): VexMapsOnlineStyle =
     when (this) {
         VexMapsAppearancePreference.AUTOMATIC ->
-            if (darkTheme) {
-                VexMapsOnlineStyle.DARK
-            } else {
-                VexMapsOnlineStyle.LIBERTY
+            when (themePresentation) {
+                VexThemePresentation.Unresolved ->
+                    error(
+                        "Automatic VexMaps appearance requires resolved Vex theme presentation",
+                    )
+
+                VexThemePresentation.Light ->
+                    VexMapsOnlineStyle.LIBERTY
+
+                VexThemePresentation.Dark ->
+                    VexMapsOnlineStyle.DARK
             }
 
         VexMapsAppearancePreference.LIGHT ->

@@ -90,7 +90,7 @@ abstract class AppScreenBlueprint(
      * The app router supplies broad composition dependencies once. This Screen immediately narrows
      * them to whatever its actual renderer needs. Ordinary blueprint-only Screens inherit the
      * generic VexElementTree path; a Screen overrides this only when it owns custom realization,
-     * local state projection, or a repository/theme dependency.
+     * local state projection, or a repository dependency.
      *
      * A custom renderer does not turn [content] into a second hidden layout. [content] continues to
      * own static semantic registration while this method owns the pixels and native composition.
@@ -110,13 +110,11 @@ abstract class AppScreenBlueprint(
         repositories: AppRepositories,
         relays: VexLifeRelays,
         sessionScope: CoroutineScope,
-        darkTheme: Boolean,
     ) {
         renderContent(
             runtime = runtime,
             repositories = repositories,
             relays = relays,
-            darkTheme = darkTheme,
         )
     }
 
@@ -125,12 +123,10 @@ abstract class AppScreenBlueprint(
         runtime: VexRuntime,
         repositories: AppRepositories,
         relays: VexLifeRelays,
-        darkTheme: Boolean,
     ) {
         renderContent(
             runtime = runtime,
             repositories = repositories,
-            darkTheme = darkTheme,
         )
     }
 
@@ -138,7 +134,6 @@ abstract class AppScreenBlueprint(
     internal open fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
     ) {
         VexElementTree(
             placement = content,

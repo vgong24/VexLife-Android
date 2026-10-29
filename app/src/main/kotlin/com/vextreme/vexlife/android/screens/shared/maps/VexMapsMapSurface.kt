@@ -48,6 +48,7 @@ import com.vextreme.vexlife.android.elements.contextdock.VexContextDock
 import com.vextreme.vexlife.android.elements.contextdock.VexContextDockPageRef
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.ui.currentVexThemePresentation
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VEXMAPS_DISTRIBUTION_CONTEXT_DOCK_PAGE_REF
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.VexMapsDistributionUi
 import com.vextreme.vexlife.android.screens.shared.maps.distribution.vexMapsDistributionContextDockPage
@@ -90,9 +91,10 @@ internal fun VexMapsMapSurface(
     repository: VexMapsRepository,
     distributionRepository:
         VexMapsDistributionRepository,
-    darkTheme: Boolean,
 ) {
     val context = LocalContext.current
+    val themePresentation =
+        currentVexThemePresentation()
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
     val distributionSession =
@@ -701,7 +703,7 @@ internal fun VexMapsMapSurface(
      */
     LaunchedEffect(
         appearancePreference,
-        darkTheme,
+        themePresentation,
     ) {
         val preference =
             appearancePreference
@@ -709,7 +711,7 @@ internal fun VexMapsMapSurface(
         val resolvedStyle =
             preference
                 .resolveVexMapsOnlineStyle(
-                    darkTheme,
+                    themePresentation,
                 )
 
         if (
@@ -1016,7 +1018,7 @@ internal fun VexMapsMapSurface(
         val expectedStyle =
             preference
                 .resolveVexMapsOnlineStyle(
-                    darkTheme,
+                    themePresentation,
                 )
 
         if (

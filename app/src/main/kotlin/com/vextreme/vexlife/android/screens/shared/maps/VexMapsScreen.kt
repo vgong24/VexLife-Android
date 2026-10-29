@@ -424,14 +424,12 @@ object VexMapsScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
     ) {
         VexMapsMapSurface(
             runtime = runtime,
             repository = repositories.vexMaps,
             distributionRepository =
                 repositories.vexMapsDistribution,
-            darkTheme = darkTheme,
         )
     }
 }
