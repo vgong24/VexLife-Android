@@ -9,6 +9,7 @@ import com.vextreme.vexlife.android.data.maps.InMemoryVexMapsRepository
 import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.userprofile.InMemoryUserProfileRepository
 import com.vextreme.vexlife.android.data.vexstream.InMemoryVexStreamMusicRepository
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogKind
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.shell.AppShell
@@ -23,36 +24,80 @@ import org.junit.Test
 class VexLifeSessionTest {
     @Test
     fun repeatedUiEntryDoesNotRestartTheLoggerSession() = runTest {
-        val session = VexLifeSession(
-            repositories = AppRepositories(
-                logHistory = InMemoryLogHistoryRepository(),
-                userProfile = InMemoryUserProfileRepository(),
-                vexMaps = InMemoryVexMapsRepository(),
-                vexMapsDistribution =
-                    InMemoryVexMapsDistributionRepository(),
-                vexStream = InMemoryVexStreamMusicRepository(),
-                events = RelayEventsRepository(),
-                eventsAttention = RelayEventsAttentionPreferenceRepository(),
-                eventsAttentionLab = RelayEventsAttentionLabRepository(),
-            ),
-            scope = backgroundScope,
-        )
+        val executionRoot = VexExecutionRoot()
+        try {
+            val session = VexLifeSession(
+                repositories = AppRepositories(
+                    logHistory = InMemoryLogHistoryRepository(),
+                    userProfile = InMemoryUserProfileRepository(),
+                    vexMaps = InMemoryVexMapsRepository(),
+                    vexMapsDistribution =
+                        InMemoryVexMapsDistributionRepository(),
+                    vexStream = InMemoryVexStreamMusicRepository(),
+                    events = RelayEventsRepository(),
+                    eventsAttention = RelayEventsAttentionPreferenceRepository(),
+                    eventsAttentionLab = RelayEventsAttentionLabRepository(),
+                ),
+                scope = backgroundScope,
+                executionRoot = executionRoot,
+            )
 
-        // A new Compose tree can invoke the app entry effect again after configuration recreation.
-        // The retained VexLifeSession/runtime must treat that as the same semantic app session.
-        session.runtime.appOpened()
-        session.runtime.appOpened()
+            // A new Compose tree can invoke the app entry effect again after configuration recreation.
+            // The retained VexLifeSession/runtime must treat that as the same semantic app session.
+            session.runtime.appOpened()
+            session.runtime.appOpened()
 
-        assertEquals(
-            1,
-            session.logger.history.value.count { record ->
-                record.kind == VexLogKind.AppOpened
-            },
-        )
+            assertEquals(
+                1,
+                session.logger.history.value.count { record ->
+                    record.kind == VexLogKind.AppOpened
+                },
+            )
+        } finally {
+            executionRoot.forceStopAll()
+        }
     }
 
     @Test
     fun runtimeNavigationAndPresentationBelongToTheSessionNotTheComposable() = runTest {
+        val executionRoot = VexExecutionRoot()
+        try {
+            val session = VexLifeSession(
+                repositories = AppRepositories(
+                    logHistory = InMemoryLogHistoryRepository(),
+                    userProfile = InMemoryUserProfileRepository(),
+                    vexMaps = InMemoryVexMapsRepository(),
+                    vexMapsDistribution =
+                        InMemoryVexMapsDistributionRepository(),
+                    vexStream = InMemoryVexStreamMusicRepository(),
+                    events = RelayEventsRepository(),
+                    eventsAttention = RelayEventsAttentionPreferenceRepository(),
+                    eventsAttentionLab = RelayEventsAttentionLabRepository(),
+                ),
+                scope = backgroundScope,
+                executionRoot = executionRoot,
+            )
+
+            session.runtime.activate(AppShell.Elements.DebugMenu)
+            session.runtime.activate(DebugMenuScreen.ShowLog)
+
+            val sameRuntimeAfterUiRecreation = session.runtime
+
+            assertSame(session.runtime, sameRuntimeAfterUiRecreation)
+            assertSame(DebugMenuScreen, sameRuntimeAfterUiRecreation.currentScreen)
+            assertTrue(
+                sameRuntimeAfterUiRecreation.presentation.isOpen(
+                    DebugMenuScreen.LogSheet,
+                ),
+            )
+        } finally {
+            executionRoot.forceStopAll()
+        }
+    }
+
+    @Test
+    fun debugMenuThemeActionRoutesThroughTheSessionThemeModeFamily() = runTest {
+        val executionRoot = VexExecutionRoot()
         val session = VexLifeSession(
             repositories = AppRepositories(
                 logHistory = InMemoryLogHistoryRepository(),
@@ -66,19 +111,37 @@ class VexLifeSessionTest {
                 eventsAttentionLab = RelayEventsAttentionLabRepository(),
             ),
             scope = backgroundScope,
+            executionRoot = executionRoot,
         )
 
-        session.runtime.activate(AppShell.Elements.DebugMenu)
-        session.runtime.activate(DebugMenuScreen.ShowLog)
+        try {
+            assertEquals(
+                ThemeMode.Dark,
+                session.themeModeFamily.currentState,
+            )
 
-        val sameRuntimeAfterUiRecreation = session.runtime
+            session.runtime.activate(
+                AppShell.Elements.DebugMenu,
+            )
+            session.runtime.activate(
+                DebugMenuScreen.DarkMode,
+            )
 
-        assertSame(session.runtime, sameRuntimeAfterUiRecreation)
-        assertSame(DebugMenuScreen, sameRuntimeAfterUiRecreation.currentScreen)
-        assertTrue(
-            sameRuntimeAfterUiRecreation.presentation.isOpen(
-                DebugMenuScreen.LogSheet,
-            ),
-        )
+            assertEquals(
+                ThemeMode.Light,
+                session.themeModeFamily.currentState,
+            )
+            session.runtime.activate(
+                DebugMenuScreen.DarkMode,
+            )
+
+            assertEquals(
+                ThemeMode.Dark,
+                session.themeModeFamily.currentState,
+            )
+        } finally {
+            executionRoot.forceStopAll()
+        }
     }
+
 }

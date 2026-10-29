@@ -107,7 +107,6 @@ object HomeScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
     ) {
         HomeScreenContent(
             runtime = runtime,

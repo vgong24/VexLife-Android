@@ -772,7 +772,6 @@ object VexStreamMusicScreen : AppScreenBlueprint(
         repositories: AppRepositories,
         relays: VexLifeRelays,
         sessionScope: CoroutineScope,
-        darkTheme: Boolean,
     ) {
         VexStreamMusicScreenContent(
             runtime = runtime,
@@ -792,7 +791,6 @@ object VexStreamMusicScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
     ) {
         VexStreamMusicScreenContent(
             runtime = runtime,

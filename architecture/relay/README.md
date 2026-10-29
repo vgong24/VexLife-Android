@@ -238,7 +238,7 @@ A Compound Relay has three intentionally different observation surfaces:
 ~~~text
 states
   full retained totality:
-  inputState + outputState + revision
+  inputState + outputState
 
   use when:
   coordination/currentness/full internal relationship state actually matters
@@ -305,7 +305,8 @@ AttentionPreferenceRelay.states
          \     |     /
           -> Compound InputState
              -> processStates(...)
-             -> OutputState
+             -> Compound State
+                inputState + outputState
 ~~~
 
 The Compound `InputState` is the coherent retained snapshot/envelope of those dependencies. It is
@@ -325,7 +326,7 @@ inputs are available.
 - nullable top-level input patches as "no new dependency value supplied";
 - sibling patch serialization so concurrent inputs cannot erase one another;
 - semantic no-op suppression;
-- Compound revision only when retained/derived meaning changes;
+- Compound current State changes only when retained input or derived output meaning changes;
 - canonical distinct-by-output projection through `outputStates`;
 - defensively copied `currentOutput` for downstream initialization.
 

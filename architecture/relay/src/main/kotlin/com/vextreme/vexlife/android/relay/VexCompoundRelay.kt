@@ -208,7 +208,6 @@ abstract class VexCompoundRelay<
                     VexCompoundState(
                         inputState = processed.inputState.deepCopy(),
                         outputState = processed.outputState.deepCopy(),
-                        revision = current.revision + 1L,
                     )
 
                 mutableCurrentState.value =

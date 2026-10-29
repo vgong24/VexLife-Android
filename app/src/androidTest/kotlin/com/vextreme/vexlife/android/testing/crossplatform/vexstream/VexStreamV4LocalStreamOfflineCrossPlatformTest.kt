@@ -40,6 +40,7 @@ import com.vextreme.vexlife.android.data.vexstream.VexStreamRepositoryRejection
 import com.vextreme.vexlife.android.data.vexstream.VexStreamRepositoryResult
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackRef
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.media.vexstream.VexStreamPlaybackService
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.vexstream.VexStreamMusicScreen
@@ -2545,12 +2546,16 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                 SupervisorJob() +
                     Dispatchers.Main.immediate,
             )
+        val executionRoot =
+            VexExecutionRoot()
         val session =
             VexLifeSession(
                 repositories =
                     repositories,
                 scope =
                     sessionScope,
+                executionRoot =
+                    executionRoot,
             )
         val controllerFuture =
             onMainThread {
@@ -2605,6 +2610,7 @@ class VexStreamV4LocalStreamOfflineCrossPlatformTest {
                     }
                 }.exceptionOrNull()
 
+            executionRoot.forceStopAll()
             sessionScope.cancel()
 
             if (

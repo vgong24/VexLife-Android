@@ -253,7 +253,6 @@ object GalleryScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        darkTheme: Boolean,
     ) {
         GalleryScreenContent(runtime)
     }

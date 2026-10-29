@@ -32,6 +32,7 @@ import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.shell.AppFrame
 import com.vextreme.vexlife.android.ui.VexLifeRelays
 import com.vextreme.vexlife.android.ui.VexLifeTheme
+import com.vextreme.vexlife.android.ui.VexThemePresentation
 
 /**
  * Shared Android Studio preview ENVIRONMENT for Screen work.
@@ -76,7 +77,6 @@ internal data class VexPreviewContext(
     val runtime: VexRuntime,
     val repositories: AppRepositories,
     val relays: VexLifeRelays,
-    val darkTheme: Boolean,
 )
 
 /**
@@ -152,7 +152,12 @@ internal fun VexPreviewHost(
     previewSetup: VexPreviewSetup.() -> Unit = {},
     content: @Composable (VexPreviewContext) -> Unit,
 ) {
-    val darkTheme = isSystemInDarkTheme()
+    val themePresentation =
+        if (isSystemInDarkTheme()) {
+            VexThemePresentation.Dark
+        } else {
+            VexThemePresentation.Light
+        }
     val scope = rememberCoroutineScope()
     val context = remember(id, scope) {
         val repositories = repositoriesFactory()
@@ -180,7 +185,6 @@ internal fun VexPreviewHost(
             runtime = runtime,
             repositories = repositories,
             relays = relays,
-            darkTheme = darkTheme,
         )
     }
 
@@ -191,7 +195,7 @@ internal fun VexPreviewHost(
         )
     }
 
-    VexLifeTheme(darkTheme = context.darkTheme) {
+    VexLifeTheme(presentation = themePresentation) {
         val currentScreenBlueprint =
             AppScreens.require(
                 context.runtime.currentScreen.screenId,
@@ -231,7 +235,6 @@ internal fun VexRenderedScreenPreview(
             runtime = context.runtime,
             repositories = context.repositories,
             relays = context.relays,
-            darkTheme = context.darkTheme,
         )
     }
 }
