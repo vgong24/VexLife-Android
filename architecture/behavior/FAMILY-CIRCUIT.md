@@ -150,18 +150,20 @@ relationship string.
 Control name
     always included by Family foundation
 
-ResourceId<Family>
-    optional typed narrowing supplied by the concrete Control
+Control.Resource<Family, ExactId>
+    exact typed narrowing when this Control needs a ResourceId
 
 RelationshipId
-    live Family + Control name/type + optional ResourceId
+    live Family + Control kind/name + optional exact ResourceId object
 
 Approach
     Independent / Earliest / Latest / Queued
 ~~~
 
 The full Control payload is not automatically identity. If `Control.Play(trackId, position)` needs
-coordination per track, `trackId` can be the typed ResourceId while `position` remains request payload.
+coordination per track, `Play` declares `Control.Resource<Family, TrackId>`; the actual TrackId object
+is preserved in the relationship while `position` remains request payload. Enum Control entries are
+also distinct default Control identities rather than collapsing to their shared enum class.
 A future author cannot pass unrelated execution metadata into Begin because no such parameter exists.
 
 ## Logger boundary
