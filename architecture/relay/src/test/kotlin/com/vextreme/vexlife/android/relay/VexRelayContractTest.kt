@@ -373,23 +373,50 @@ class VexRelayContractTest {
     }
 
     @Test
-    fun concurrentIdenticalCompoundTriggersKeepOneCurrentMeaning() {
+    fun repeatedIdenticalCompoundMeaningDoesNotEmitAnotherCurrentState() = runBlocking {
         val relay =
             ProbeCompoundRelay()
+        val observed =
+            mutableListOf<VexCompoundState<ProbeInput, ProbeOutput>>()
 
-        runConcurrently(
-            count = 24,
-        ) {
+        val collection =
+            async(
+                start = CoroutineStart.UNDISPATCHED,
+            ) {
+                relay.states
+                    .take(3)
+                    .toList(observed)
+            }
+
+        relay.context("events")
+        repeat(24) {
             relay.context("events")
         }
 
+        yield()
+
+        // A genuinely different current meaning releases the third expected emission.
+        relay.left(5)
+
+        withTimeout(1_000L) {
+            collection.await()
+        }
+
         assertEquals(
-            "events",
-            relay.currentInput.context,
+            3,
+            observed.size,
         )
         assertEquals(
-            0,
-            relay.currentOutput.sum,
+            null,
+            observed[0].inputState.context,
+        )
+        assertEquals(
+            "events",
+            observed[1].inputState.context,
+        )
+        assertEquals(
+            5,
+            observed[2].inputState.left,
         )
     }
 
