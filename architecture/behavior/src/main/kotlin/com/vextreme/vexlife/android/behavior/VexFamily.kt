@@ -757,7 +757,7 @@ abstract class VexFamily<
                     executionRoot =
                         executionRoot,
                     owner =
-                        this::class,
+                        this,
                     operation =
                         operation,
                     argument =
@@ -781,7 +781,7 @@ abstract class VexFamily<
                     executionRoot =
                         executionRoot,
                     owner =
-                        this::class,
+                        this,
                     operation =
                         operation,
                     argument =
@@ -805,7 +805,7 @@ abstract class VexFamily<
                     executionRoot =
                         executionRoot,
                     owner =
-                        this::class,
+                        this,
                     operation =
                         operation,
                     argument =
@@ -829,7 +829,7 @@ abstract class VexFamily<
                     executionRoot =
                         executionRoot,
                     owner =
-                        this::class,
+                        this,
                     operation =
                         operation,
                     argument =
