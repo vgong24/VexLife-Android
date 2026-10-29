@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,6 +32,16 @@ class VexExecutionTest {
         val downstreamSourceSubscriptions = AtomicInteger(0)
         val childStarted = CompletableDeferred<Unit>()
         val childStopped = CompletableDeferred<Unit>()
+        val independentStarted = CopyOnWriteArrayList<String>()
+        val independentRelease = CompletableDeferred<Unit>()
+        val earliestStarted = CopyOnWriteArrayList<String>()
+        val earliestRelease = CompletableDeferred<Unit>()
+        val latestStarted = CopyOnWriteArrayList<String>()
+        val latestCleanupStarted = CompletableDeferred<Unit>()
+        val latestCleanupRelease = CompletableDeferred<Unit>()
+        val queuedStarted = CopyOnWriteArrayList<String>()
+        val queuedReleaseA = CompletableDeferred<Unit>()
+        val queuedReleaseB = CompletableDeferred<Unit>()
 
         suspend fun once() {
             onceCount += 1
@@ -37,6 +49,47 @@ class VexExecutionTest {
 
         suspend fun add(value: Int) {
             argumentTotal += value
+        }
+
+        suspend fun independentWork(value: String) {
+            independentStarted += value
+            independentRelease.await()
+        }
+
+        suspend fun earliestWork(value: String) {
+            earliestStarted += value
+            earliestRelease.await()
+        }
+
+        suspend fun latestWork(value: String) {
+            latestStarted += value
+
+            if (value == "A") {
+                try {
+                    awaitCancellation()
+                } finally {
+                    withContext(
+                        NonCancellable,
+                    ) {
+                        latestCleanupStarted.complete(
+                            Unit,
+                        )
+                        latestCleanupRelease.await()
+                    }
+                }
+            }
+        }
+
+        suspend fun queuedWork(value: String) {
+            queuedStarted += value
+
+            when (value) {
+                "A" ->
+                    queuedReleaseA.await()
+
+                "B" ->
+                    queuedReleaseB.await()
+            }
         }
 
         suspend fun structuredWork(): Unit =
@@ -132,22 +185,65 @@ class VexExecutionTest {
             CoroutineDispatcher? =
             null,
     ) : VexExecution(root) {
+        enum class ExecutionId :
+            VexExecution.Id {
+            Earliest,
+            Latest,
+            Queued,
+        }
+
         fun runOnce(): VexCoroutineHandle =
-            launchOnce(repository::once)
+            launch(repository::once)
 
         fun runWithArgument(value: Int): VexCoroutineHandle =
-            launchOnce(
+            launch(
                 repository::add,
                 value,
             )
 
+        fun runIndependent(value: String): VexExecution.Handle =
+            launch(
+                repository::independentWork,
+                value,
+            )
+
+        fun runEarliest(value: String): VexExecution.Handle =
+            launchEarliest(
+                id =
+                    ExecutionId.Earliest,
+                action =
+                    repository::earliestWork,
+                argument =
+                    value,
+            )
+
+        fun runLatest(value: String): VexExecution.Handle =
+            launchLatest(
+                id =
+                    ExecutionId.Latest,
+                action =
+                    repository::latestWork,
+                argument =
+                    value,
+            )
+
+        fun runQueued(value: String): VexExecution.Handle =
+            launchQueued(
+                id =
+                    ExecutionId.Queued,
+                action =
+                    repository::queuedWork,
+                argument =
+                    value,
+            )
+
         fun runStructured(): VexCoroutineHandle =
-            launchOnce(repository::structuredWork)
+            launch(repository::structuredWork)
 
         fun runHandoff(
             capture: HandoffCapture,
         ): VexCoroutineHandle =
-            launchOnce(
+            launch(
                 ::handoffForExecution,
                 capture,
             )
@@ -243,7 +339,7 @@ class VexExecutionTest {
     }
 
     @Test
-    fun launchOnceInvokesReferencedSuspendFunctionExactlyOnce(): Unit =
+    fun launchInvokesReferencedSuspendFunctionExactlyOnce(): Unit =
         runBlocking {
             val root =
                 VexExecutionRoot(
@@ -262,7 +358,7 @@ class VexExecutionTest {
                     handle.state.value.status,
                 )
                 assertTrue(
-                    handle.ref.value.endsWith(
+                    handle.sourceRef.value.endsWith(
                         ".TestExecution.once",
                     ),
                 )
@@ -272,7 +368,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun launchOnceKeepsOneArgumentInvocationTypeSafe(): Unit =
+    fun launchKeepsOneArgumentInvocationTypeSafe(): Unit =
         runBlocking {
             val root = VexExecutionRoot()
             val repository = TestRepository()
@@ -367,7 +463,7 @@ class VexExecutionTest {
                         .keys
                         .count {
                             it ==
-                                handle.ref
+                                handle.instanceId
                         },
                 )
             } finally {
@@ -776,8 +872,8 @@ class VexExecutionTest {
 
                 assertEquals(
                     listOf(
-                        first.ref,
-                        second.ref,
+                        first.instanceId,
+                        second.instanceId,
                     ),
                     root.executions
                         .value
@@ -801,7 +897,7 @@ class VexExecutionTest {
                 assertFalse(mutationAccepted)
                 assertNotNull(
                     root.executions.value[
-                        first.ref
+                        first.instanceId
                     ],
                 )
 
@@ -809,6 +905,319 @@ class VexExecutionTest {
                 second.joinStop("test complete")
             } finally {
                 root.joinStopAll("test complete")
+            }
+        }
+
+    @Test
+    fun launchAdmitsIndependentInstancesForTheSameCallable(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot(
+                    dispatcher =
+                        Dispatchers.Default,
+                )
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+
+            try {
+                val first =
+                    execution.runIndependent(
+                        "A",
+                    )
+                val second =
+                    execution.runIndependent(
+                        "B",
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        repository.independentStarted.size <
+                        2
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertFalse(
+                    first.instanceId ==
+                        second.instanceId,
+                )
+                assertEquals(
+                    first.sourceRef,
+                    second.sourceRef,
+                )
+                assertEquals(
+                    null,
+                    first.id,
+                )
+                assertEquals(
+                    null,
+                    second.id,
+                )
+
+                repository.independentRelease.complete(
+                    Unit,
+                )
+                first.awaitCompletion()
+                second.awaitCompletion()
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun launchEarliestReturnsTheExistingActiveRelationshipInstance(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+
+            try {
+                val first =
+                    execution.runEarliest(
+                        "A",
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        repository.earliestStarted
+                            .isEmpty()
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                val second =
+                    execution.runEarliest(
+                        "B",
+                    )
+
+                assertEquals(
+                    first.instanceId,
+                    second.instanceId,
+                )
+                assertEquals(
+                    listOf(
+                        "A",
+                    ),
+                    repository.earliestStarted
+                        .toList(),
+                )
+                assertEquals(
+                    TestExecution.ExecutionId.Earliest,
+                    first.id,
+                )
+
+                repository.earliestRelease.complete(
+                    Unit,
+                )
+                first.awaitCompletion()
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun launchLatestWaitsForEveryUnfinishedPredecessorTeardown(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+
+            try {
+                execution.runLatest(
+                    "A",
+                )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        !repository.latestStarted
+                            .contains(
+                                "A",
+                            )
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                execution.runLatest(
+                    "B",
+                )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    repository.latestCleanupStarted
+                        .await()
+                }
+
+                val latest =
+                    execution.runLatest(
+                        "C",
+                    )
+
+                kotlinx.coroutines.yield()
+
+                assertEquals(
+                    listOf(
+                        "A",
+                    ),
+                    repository.latestStarted
+                        .toList(),
+                )
+
+                repository.latestCleanupRelease
+                    .complete(
+                        Unit,
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    latest.awaitCompletion()
+                }
+
+                assertEquals(
+                    listOf(
+                        "A",
+                        "C",
+                    ),
+                    repository.latestStarted
+                        .toList(),
+                )
+                assertEquals(
+                    TestExecution.ExecutionId.Latest,
+                    latest.id,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun launchQueuedPreservesEveryLaunchInArrivalOrder(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+
+            try {
+                val first =
+                    execution.runQueued(
+                        "A",
+                    )
+                val second =
+                    execution.runQueued(
+                        "B",
+                    )
+                val third =
+                    execution.runQueued(
+                        "C",
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        repository.queuedStarted
+                            .isEmpty()
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertEquals(
+                    listOf(
+                        "A",
+                    ),
+                    repository.queuedStarted
+                        .toList(),
+                )
+
+                repository.queuedReleaseA.complete(
+                    Unit,
+                )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        repository.queuedStarted.size <
+                        2
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertEquals(
+                    listOf(
+                        "A",
+                        "B",
+                    ),
+                    repository.queuedStarted
+                        .toList(),
+                )
+
+                repository.queuedReleaseB.complete(
+                    Unit,
+                )
+
+                first.awaitCompletion()
+                second.awaitCompletion()
+                third.awaitCompletion()
+
+                assertEquals(
+                    listOf(
+                        "A",
+                        "B",
+                        "C",
+                    ),
+                    repository.queuedStarted
+                        .toList(),
+                )
+                assertEquals(
+                    TestExecution.ExecutionId.Queued,
+                    third.id,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
             }
         }
 
