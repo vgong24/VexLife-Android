@@ -327,6 +327,15 @@ abstract class VexFamily<
                         State? =
                         null
 
+                    /**
+                     * Authored later State after this execution result.
+                     *
+                     * This does not solve semantic currentness. A later result may only admit State
+                     * when the concrete Family's relationship guarantees that the result is still
+                     * current. Do not add a generic Family revision/sequence check here: unrelated
+                     * State changes are not automatically proof that the result is stale, and equal
+                     * State is not automatically proof that it is current.
+                     */
                     fun admit(
                         state: State,
                     ) {

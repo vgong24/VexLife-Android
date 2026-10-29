@@ -272,6 +272,7 @@ This PR does not add CompoundFamily, stateFactory, Family revision, or post-proc
 
 ~~~text
 serialized competing-cause State decision / stale async result
+    -> held until a concrete Family proves the rightful currentness identity
 cross-cycle relationship memory and its rightful explicit supplier
 provider / intent stable identity mapping
 exact Family + Relay Single/Compound composition

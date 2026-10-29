@@ -362,6 +362,8 @@ class ThemeModeFamily(...) :
 
 ~~~text
 serialized competing-cause State decision / stale async result
+    -> intentionally unresolved generically
+    -> do not reintroduce Family revision as a guessed currentness oracle
 provider/repository observation -> semantic Family State
 automatic UI observation/lifetime integration
 cross-cycle relationship memory
