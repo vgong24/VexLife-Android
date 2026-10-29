@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.execution
 
 import java.util.concurrent.CancellationException
 import kotlin.reflect.KCallable
-import kotlin.reflect.KClass
 import kotlin.reflect.KFunction0
 import kotlin.reflect.KFunction1
 import kotlin.reflect.KProperty0
@@ -207,6 +206,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchEarliest(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -222,6 +223,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchEarliest(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -240,6 +243,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchEarliest(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -257,6 +262,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchLatest(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -272,6 +279,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchLatest(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -290,6 +299,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchLatest(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -307,6 +318,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchQueued(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -322,6 +335,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchQueued(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -340,6 +355,8 @@ abstract class VexExecution protected constructor(
     ): Handle =
         executionRoot.coroutineLauncher.launchQueued(
             id = id,
+            relationshipOwner =
+                this,
             sourceRef =
                 sourceRef(
                     action,
@@ -449,7 +466,7 @@ abstract class VexExecution protected constructor(
     companion object {
         fun <Argument, Result> begin(
             executionRoot: VexExecutionRoot,
-            owner: KClass<*>,
+            owner: Any,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -480,7 +497,7 @@ abstract class VexExecution protected constructor(
         fun <Argument, Result> beginEarliest(
             executionRoot: VexExecutionRoot,
             id: Id,
-            owner: KClass<*>,
+            owner: Any,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -489,6 +506,8 @@ abstract class VexExecution protected constructor(
         ): Handle =
             executionRoot.coroutineLauncher.launchEarliest(
                 id = id,
+                relationshipOwner =
+                    owner,
                 sourceRef =
                     sourceRef(
                         owner,
@@ -512,7 +531,7 @@ abstract class VexExecution protected constructor(
         fun <Argument, Result> beginLatest(
             executionRoot: VexExecutionRoot,
             id: Id,
-            owner: KClass<*>,
+            owner: Any,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -521,6 +540,8 @@ abstract class VexExecution protected constructor(
         ): Handle =
             executionRoot.coroutineLauncher.launchLatest(
                 id = id,
+                relationshipOwner =
+                    owner,
                 sourceRef =
                     sourceRef(
                         owner,
@@ -544,7 +565,7 @@ abstract class VexExecution protected constructor(
         fun <Argument, Result> beginQueued(
             executionRoot: VexExecutionRoot,
             id: Id,
-            owner: KClass<*>,
+            owner: Any,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -553,6 +574,8 @@ abstract class VexExecution protected constructor(
         ): Handle =
             executionRoot.coroutineLauncher.launchQueued(
                 id = id,
+                relationshipOwner =
+                    owner,
                 sourceRef =
                     sourceRef(
                         owner,
@@ -578,7 +601,7 @@ abstract class VexExecution protected constructor(
         )
         fun <Argument, Result> beginReplaceable(
             executionRoot: VexExecutionRoot,
-            owner: KClass<*>,
+            owner: Any,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -592,6 +615,8 @@ abstract class VexExecution protected constructor(
                 )
 
             return executionRoot.coroutineLauncher.launchLatest(
+                relationshipOwner =
+                    owner,
                 id =
                     LegacySourceId(
                         sourceRef,
@@ -619,7 +644,7 @@ abstract class VexExecution protected constructor(
         )
         fun <Argument, Result> beginSequenced(
             executionRoot: VexExecutionRoot,
-            owner: KClass<*>,
+            owner: Any,
             operation: KSuspendFunction1<Argument, Result>,
             argument: Argument,
             beforeOperation: () -> Unit = {},
@@ -633,6 +658,8 @@ abstract class VexExecution protected constructor(
                 )
 
             return executionRoot.coroutineLauncher.launchQueued(
+                relationshipOwner =
+                    owner,
                 id =
                     LegacySourceId(
                         sourceRef,
@@ -690,13 +717,16 @@ abstract class VexExecution protected constructor(
         }
 
         private fun sourceRef(
-            owner: KClass<*>,
+            owner: Any,
             reference: KCallable<*>,
         ):
             SourceRef {
+            val ownerClass =
+                owner::class
+
             val ownerName =
-                owner.qualifiedName
-                    ?: owner.simpleName
+                ownerClass.qualifiedName
+                    ?: ownerClass.simpleName
                     ?: error(
                         "VexExecution begin owner requires a named source class",
                     )
