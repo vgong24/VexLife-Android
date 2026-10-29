@@ -536,14 +536,11 @@ class VexExecutionTest {
                     VexCoroutineStatus.COMPLETED,
                     handle.state.value.status,
                 )
-                assertEquals(
-                    1,
+                assertFalse(
                     root.executions.value
-                        .keys
-                        .count {
-                            it ==
-                                handle.instanceId
-                        },
+                        .containsKey(
+                            handle.instanceId,
+                        ),
                 )
             } finally {
                 root.joinStopAll(
@@ -602,6 +599,64 @@ class VexExecutionTest {
                     handle.state.value.failureMessage,
                 )
             } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun completedIndependentExecutionsDoNotAccumulateInRootRegistry(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+
+            try {
+                val handles =
+                    (0 until 32).map { index ->
+                        execution.runIndependent(
+                            index.toString(),
+                        )
+                    }
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        repository.independentStarted.size <
+                        handles.size
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                repository.independentRelease.complete(
+                    Unit,
+                )
+
+                handles.forEach { handle ->
+                    handle.awaitCompletion()
+
+                    assertEquals(
+                        VexExecution.Status.COMPLETED,
+                        handle.state.value.status,
+                    )
+                }
+
+                assertTrue(
+                    root.executions.value.isEmpty(),
+                )
+            } finally {
+                repository.independentRelease.complete(
+                    Unit,
+                )
                 root.joinStopAll(
                     "test complete",
                 )

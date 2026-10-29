@@ -7,7 +7,10 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Rightful lifetime owner for one Vex execution tree.
  *
- * The root owns shutdown and exposes retained execution state by exact per-launch InstanceId.
+ * The root owns shutdown and exposes current active execution custody by exact per-launch InstanceId.
+ *
+ * Exact terminal state remains on each returned VexExecution.Handle; this root projection is not an
+ * execution-history ledger.
  */
 class VexExecutionRoot(
     dispatcher:

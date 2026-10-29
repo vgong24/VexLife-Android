@@ -824,6 +824,10 @@ internal class VexCoroutineLauncher(
                     instanceId,
                 )
 
+                removeExecutionRegistryStateLocked(
+                    instanceId,
+                )
+
                 relationship?.let { key ->
                     relationships[
                         key
@@ -1129,6 +1133,30 @@ internal class VexCoroutineLauncher(
                 state,
             )
         }
+    }
+
+    private fun removeExecutionRegistryStateLocked(
+        instanceId:
+            VexExecution.InstanceId,
+    ) {
+        if (
+            instanceId !in
+            mutableExecutions.value
+        ) {
+            return
+        }
+
+        mutableExecutions.value =
+            java.util.Collections
+                .unmodifiableMap(
+                    LinkedHashMap(
+                        mutableExecutions.value,
+                    ).apply {
+                        remove(
+                            instanceId,
+                        )
+                    },
+                )
     }
 
     private fun updateRegistryLocked(
