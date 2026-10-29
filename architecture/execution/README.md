@@ -16,13 +16,20 @@ coroutine execution must make that role explicit by extending `VexExecution`.
 ```text
 VexExecutionRoot
     -> internal VexCoroutineLauncher
-    -> private LinkedHashMap<VexCoroutineRef, Job>
+    -> active[InstanceId]
+    -> relationships[RelationshipId] only for maintained semantic work
 
 FeatureExecution : VexExecution
-    -> launchOnce(callable)
+    -> launchOnce(callable)      # fail closed on an unfinished same-source invocation
+    -> launch(callable)          # every invocation intentionally independent
     -> launchForCollect(flowProvider) { value -> ... }
     -> forceStop(callable)
     -> joinStop(callable)
+
+semantic foundation owner
+    -> supplies RelationshipId
+    -> selects Approach
+    -> Execution coordinates Earliest / Latest / Queued
 ```
 
 ## Why this evolved from ordinary coroutine usage
@@ -89,7 +96,7 @@ QUESTION
 
 VEX
     define one suspend operation when they are one intention
-    -> launchOnce(operationReference)
+    -> launch(operationReference)
 
 RESULT
     execution topology follows meaning rather than incidental call count
@@ -101,19 +108,54 @@ rightful responsibilities.
 
 ## Public authoring language
 
-Finite suspend work:
+Finite direct execution keeps two explicit contracts:
 
-```kotlin
-launchOnce(repository::refreshCatalog)
-```
+~~~text
+launchOnce(...)
+    one unfinished invocation per SourceRef
+    second unfinished same-source invocation fails closed
 
-One-argument work stays type-safe:
+launch(...)
+    every invocation is intentionally independent
+    each admitted invocation receives a fresh InstanceId
+~~~
 
-```kotlin
-launchOnce(repository::download, trackRef)
-```
+Maintained overlap semantics are not authored from arbitrary direct `trigger` values. A semantic
+foundation such as Family supplies a `VexExecution.RelationshipId`, then chooses an Approach:
 
-A maintained Flow observation may reference either a Flow-returning function or Flow property:
+~~~text
+RelationshipId
+    WHICH semantic work intentionally coordinates?
+    supplied by the rightful semantic owner
+
+Approach.Earliest
+    earliest unfinished instance is sufficient
+
+Approach.Latest
+    newest supersedes predecessors
+    predecessor teardown completes before newest begins
+
+Approach.Queued
+    every admitted instance remains meaningful
+    execute in arrival order
+~~~
+
+Execution does not construct semantic identity from `Any`, string triggers, or ordered argument bags.
+
+For Family-originated work:
+
+~~~text
+live Family
++ Control name/type
++ optional typed Control ResourceId
+=
+Family RelationshipId
+-> VexExecution.RelationshipId
+~~~
+
+Begin chooses only Approach. Family owns the relationship composition.
+
+A maintained Flow observation remains a separate contract:
 
 ```kotlin
 launchForCollect(repository::states) { state ->
@@ -121,18 +163,18 @@ launchForCollect(repository::states) { state ->
 }
 ```
 
-```kotlin
-launchForCollect(session::states) { state ->
-    accept(state)
-}
-```
+A second unfinished observation of the same source fails closed. That one-per-source observation law
+does not leak into ordinary finite `launch`.
 
-The callable is both the source reference and the thing Vex invokes. A callable is never passed only
-as a decorative label while unrelated work runs in a second lambda.
+The callable remains the operation Vex actually invokes, not a decorative source label for unrelated
+lambda work.
 
-`launchOnce` never automatically retries. `launchForCollect` may use the root's bounded recovery only
-for source/subscription failure. A failure thrown while consuming a valid emitted value becomes
+`launch` never automatically retries. `launchForCollect` may use bounded recovery only for
+source/subscription failure. A failure thrown while consuming a valid emitted value becomes
 `FAILED` with no automatic resubscription. Intentional cancellation never restarts.
+
+`launchOnce` preserves its fail-closed same-source contract. `launch` is the separate explicit
+surface for intentionally independent finite invocations.
 
 ## Worker preparation and provider-affine commit
 
@@ -166,7 +208,7 @@ internal suspend fun playForExecution(
 }
 ```
 
-`launchOnce(::playForExecution, request)` owns the whole operation. The root dispatcher owns the
+`launch(::playForExecution, request)` owns the whole operation. The root dispatcher owns the
 ordinary worker phase. `handoff(dispatcher) { ... }` is only a structured context switch inside that
 same managed Job; it does not create another execution ref, retry boundary, detached coroutine or
 lifetime owner.
@@ -187,31 +229,68 @@ HANDOFF != RETRY_POLICY
 PROVIDER_AFFINITY != ALWAYS_MAIN
 ```
 
-## Source-derived execution identity
+## Execution identity and runtime instance
 
-The runtime ref is derived from:
+Execution keeps separate truths:
 
-```text
-VexExecution source class
+~~~text
+VexExecution.SourceRef
+    automatic
+    source class + callable name
+    diagnostic / source-addressing information
+
+VexExecution.InstanceId
+    automatic
+    generated for every admitted execution
+    exact runtime occurrence
+
+VexExecution.RelationshipId
+    semantic maintained-work identity
+    supplied by the rightful semantic owner
+    raw use is an error-level foundation opt-in
+
+VexExecution.Approach
+    Independent / Earliest / Latest / Queued
+    overlap handling
+~~~
+
+Therefore:
+
+~~~text
+SOURCE REF
+!= INSTANCE ID
+!= RELATIONSHIP ID
+!= APPROACH
+~~~
+
+The active execution registry is keyed by `InstanceId`. Maintained overlap coordination is keyed by
+`RelationshipId`:
+
+~~~text
+active[InstanceId]
+relationships[RelationshipId]
+~~~
+
+Execution does not add another owner/trigger/argument identity layer around the RelationshipId it receives.
+Raw RelationshipId implementation/bridging is guarded by `RelationshipFoundationApi`; product code
+should enter through its semantic owner's typed boundary instead.
+
+Family currently forms its RelationshipId from:
+
+~~~text
+live Family identity
 +
-callable.name
-```
+Control name/type
++
+optional typed ResourceId<Family>
+~~~
 
-For example:
+That composition belongs to Family because Family owns the Control vocabulary. Execution only owns
+coroutine custody and overlap behavior.
 
-```text
-VexStreamExecution.refreshCatalog
-```
-
-This is a source-derived runtime address, not a durable serialized product identity. Renaming source
-may rename the execution ref. That is deliberate: this foundation avoids a second hand-maintained ID
-catalog merely to address coroutine work.
-
-One active callable name may exist once within one `VexExecution`. Duplicate active refs fail closed.
-If two different operations in one Execution share a callable name, give the Execution-owned
-operation a distinct semantic source name instead of inventing an invisible runtime suffix.
-Concurrent instances of the same parameterized callable are deliberately held until a real consumer
-earns an instance-identity rule.
+`SourceRef` may change when source is renamed or obfuscated and is therefore not durable semantic
+identity. A RelationshipId is likewise a live runtime coordination identity unless its rightful semantic
+owner separately establishes a durable serialization contract.
 
 ## Collection recovery boundary
 
@@ -253,32 +332,47 @@ convenience or any lifecycle adapter.
 ## Control
 
 ```text
+handle.forceStop()
+    cancel this exact InstanceId
+
+handle.joinStop()
+    cancel + join this exact InstanceId
+
 forceStop(callable)
-    request cancellation of the exact registered run
-    return without waiting for teardown
+    cancel every currently unfinished instance from this SourceRef
 
 joinStop(callable)
-    request cancellation
-    wait until that Job reaches terminal state
+    cancel + join every currently unfinished instance from this SourceRef
 ```
 
-`joinStop` is the replacement/restart-safe control when the next operation must not begin until the
-old contained work is actually gone.
+Source-addressed control is deliberately plural because one source may now have several independent
+finite instances. Exact per-instance control belongs to the Handle.
 
 Cancellation remains Kotlin cooperative cancellation. Vex does not claim unsafe arbitrary JVM/native
 thread termination.
 
 ## Custody and sequence context
 
-Active runs are retained privately in insertion order:
+Active custody and maintained overlap handling are separate:
 
-```text
-LinkedHashMap<VexCoroutineRef, ManagedCoroutine>
-```
+~~~text
+active
+    LinkedHashMap<InstanceId, ManagedExecution>
 
-This provides exact lookup, duplicate rejection, deterministic active-run order, and surgical
-cancellation. Terminal state remains available through the defensive `executions` projection after
-the active Job leaves custody.
+relationships
+    LinkedHashMap<RelationshipId, MaintainedRelationship>
+~~~
+
+Every admitted launch receives a unique InstanceId. Earliest / Latest / Queued use an exact
+RelationshipId key. Ordinary independent launch has no maintained Relationship.
+
+A cancelling predecessor continues to occupy its RelationshipId until its Job is actually completed.
+Kotlin may report `isActive == false` while structured/non-cancellable teardown is still running; a
+later Latest or Queued launch may not skip that unfinished predecessor.
+
+The map value stores the active Approach and ordered instance membership. Attempting to use the same
+unfinished RelationshipId simultaneously with a different Approach fails closed rather than silently
+creating two lanes.
 
 ## Ownership laws
 
@@ -302,9 +396,15 @@ the active Job leaves custody.
 - WorkManager or other process-death durability;
 - business retry/idempotency.
 
-Use Relay when several changing truths must converge. Use `launchOnce` when one already-defined
-semantic operation should execute once. Use `launchForCollect` only in an execution/runtime bridge
-that truly owns a sustained Flow observation.
+Use Relay when several changing truths must converge. Direct finite execution chooses between
+fail-closed `launchOnce` and intentionally independent `launch`. Maintained Earliest / Latest /
+Queued coordination is admitted through a semantic foundation that supplies a RelationshipId; ordinary
+feature code does not author raw maintained triggers. Use `launchForCollect` only in an
+execution/runtime bridge that truly owns a sustained Flow observation.
+
+These finite-launch relationships govern coroutine custody only. They do not decide whether a
+Control is lawful, what semantic State should be admitted, whether an asynchronous result is still
+semantically current, or whether provider truth is fresh.
 
 ## Why the test fixture exists
 
@@ -467,10 +567,37 @@ still makes the underlying architecture obvious.
 
 ## Proof
 
-`VexExecutionTest` protects the inherited PR #3 execution laws plus the new public-language rules:
-source-derived refs, one-shot invocation, typed arguments, Flow-owned collection, sibling isolation,
-source-only bounded recovery, downstream-consumer failure without auto-restart, force-stop suppression,
-`joinStop` teardown proof, duplicate rejection, ordered registry exposure, defensive registry state,
-and post-shutdown admission rejection.
+The focused `VexExecutionTest` source now protects both inherited behavior and the new identity
+relationships.
+
+Current execution proofs present in source:
+
+~~~text
+launchOnce
+    second unfinished invocation from the same SourceRef -> rejected
+
+launch
+    same callable -> distinct concurrent InstanceIds
+    same SourceRef is preserved
+
+maintained RelationshipId
+    Earliest -> later overlap receives the existing unfinished InstanceId
+    Latest -> newest waits through predecessor teardown
+    Queued -> every admitted instance executes in arrival order
+
+launchForCollect
+    duplicate unfinished observation of the same source still fails closed
+~~~
+
+Family's focused proof separately establishes that Control name is always included, arbitrary Control
+payload is not identity, typed ResourceId narrows identity when provided, and two live Family instances
+remain distinct.
+
+The source also keeps sibling isolation, bounded source recovery, structured cancellation/teardown,
+registry defensiveness, typed callable invocation, and post-shutdown admission rejection.
+
+Repository Gradle/JVM execution proof remains **PENDING**. The repository-owned manual workflow
+`.github/workflows/vexstream-mobile-android.yml` runs `./gradlew vexVerifyLocal`, but no run/status
+exists for this current head. Earlier isolated smoke work predates the typed Control/RelationshipId refinement and does not prove this head.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->

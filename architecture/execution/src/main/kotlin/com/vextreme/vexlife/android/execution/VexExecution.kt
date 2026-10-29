@@ -1,6 +1,10 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.execution
 
+import java.util.concurrent.CancellationException
 import kotlin.reflect.KCallable
+import kotlin.reflect.KClass
 import kotlin.reflect.KFunction0
 import kotlin.reflect.KFunction1
 import kotlin.reflect.KProperty0
@@ -9,43 +13,144 @@ import kotlin.reflect.KSuspendFunction1
 import kotlin.reflect.KSuspendFunction2
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
 /**
- * Mandatory meta-pattern for Vex-owned coroutine execution.
+ * Root contract for Vex-owned coroutine execution.
  *
- * WHY THIS EXISTS:
- * Kotlin's raw launch/collect APIs correctly expose general coroutine freedom, but application code
- * then has to repeatedly decide ownership, containment, restart, keyed cancellation, and whether two
- * long-running collectors are actually concurrent. VexExecution centralizes those mechanics so a
- * feature author can focus on the semantic operation while the execution topology remains inspectable.
+ * Execution meaning is split into distinct facts:
  *
- * A class that needs managed coroutine capability must make that architectural role explicit by
- * extending [VexExecution]. Ordinary UI, Experience, Behavior, repository, and domain classes do
- * not receive [VexCoroutineLauncher]; that implementation remains internal to this module.
+ * SourceRef
+ *     automatically derived from source code for diagnostics/navigation
  *
- * Callable references are executable source references, not decorative labels:
+ * InstanceId
+ *     automatically generated for one exact admitted execution
  *
- * launchOnce(repository::refresh)
- *   -> derives the runtime ref from this Execution + "refresh"
- *   -> invokes refresh exactly once
+ * RelationshipId
+ *     semantic identity supplied by the rightful owner; Execution only coordinates it
  *
- * launchForCollect(repository::states) { state -> ... }
- *   -> derives the runtime ref from this Execution + "states"
- *   -> invokes states()
- *   -> owns the resulting Flow collection
- *
- * Execution-shape rule:
- * - [launchOnce] is for one finite suspend operation;
- * - each [launchForCollect] call owns exactly one Flow collector and therefore one managed Job;
- * - several independent Flow sources use several launchForCollect calls, producing sibling Jobs
- *   that collect concurrently;
- * - do not hide raw Flow.collect or raw coroutine launch inside launchOnce to recreate execution
- *   topology outside this boundary.
+ * Approach
+ *     how overlapping executions sharing that RelationshipId interact
  */
 abstract class VexExecution protected constructor(
     private val executionRoot: VexExecutionRoot,
 ) {
+    /** Diagnostic source identity derived automatically from the source callable. */
+    @JvmInline
+    value class SourceRef internal constructor(
+        val value: String,
+    ) {
+        init {
+            require(value.isNotBlank()) {
+                "VexExecution.SourceRef must be non-blank"
+            }
+        }
+
+        override fun toString(): String = value
+    }
+
+    /** Exact runtime identity of one admitted execution instance. */
+    @JvmInline
+    value class InstanceId internal constructor(
+        val value: Long,
+    ) {
+        init {
+            require(value > 0L) {
+                "VexExecution.InstanceId must be positive"
+            }
+        }
+
+        override fun toString(): String = value.toString()
+    }
+
+    /**
+     * Explicit opt-in for foundation code that bridges a rightful semantic relationship into the
+     * execution engine.
+     *
+     * Product/feature code should not implement RelationshipId directly. Direct Family owns the
+     * typed Control -> ResourceId -> Family RelationshipId boundary.
+     */
+    @RequiresOptIn(
+        message =
+            "Foundation relationship bridge only; use the rightful semantic owner's typed relationship boundary",
+        level =
+            RequiresOptIn.Level.ERROR,
+    )
+    @Retention(
+        AnnotationRetention.BINARY,
+    )
+    @Target(
+        AnnotationTarget.CLASS,
+        AnnotationTarget.FUNCTION,
+    )
+    annotation class RelationshipFoundationApi
+
+    /**
+     * Maintained semantic execution identity supplied by the rightful semantic owner.
+     *
+     * Execution coordinates this identity; it does not invent trigger strings, argument tuples,
+     * or a second semantic-ID vocabulary.
+     */
+    @RelationshipFoundationApi
+    interface RelationshipId
+
+    private data class LegacyRelationshipId(
+        val owner:
+            KClass<*>,
+        val sourceRef:
+            SourceRef,
+    ) :
+        RelationshipId
+
+    enum class Approach {
+        Independent,
+        Earliest,
+        Latest,
+        Queued,
+    }
+
+    enum class Status {
+        STARTING,
+        RUNNING,
+        RESTARTING,
+        COMPLETED,
+        CANCELLED,
+        FAILED,
+    }
+
+    data class State(
+        val instanceId: InstanceId,
+        val sourceRef: SourceRef,
+        val status: Status,
+        val attempt: Int,
+        val restartCount: Int,
+        val failureClass: String? = null,
+        val failureMessage: String? = null,
+    )
+
+    interface Handle {
+        val instanceId: InstanceId
+        val sourceRef: SourceRef
+        val state: StateFlow<State>
+
+        @Deprecated(
+            "Use sourceRef; ref was source identity, not execution-instance identity",
+        )
+        val ref: SourceRef
+            get() = sourceRef
+
+        fun forceStop(
+            reason: String = "force stopped",
+        ): Boolean
+
+        suspend fun joinStop(
+            reason: String = "join stopped",
+        ): Boolean
+
+        suspend fun awaitCompletion()
+    }
+
     private val executionName: String
         get() =
             this::class.qualifiedName
@@ -55,17 +160,19 @@ abstract class VexExecution protected constructor(
                 )
 
     /**
-     * Runs one already-defined finite suspend operation under Vex execution custody.
+     * Preserved fail-closed finite launch contract.
      *
-     * If one human/product intention requires several ordered suspend calls, compose those calls
-     * inside the referenced suspend function and launch that operation once. Do not use launchOnce
-     * as a container for sustained Flow collection.
+     * A second unfinished invocation from the same source is rejected. Use [launch] only when each
+     * invocation is intentionally independent.
      */
     protected fun <Result> launchOnce(
         action: KSuspendFunction0<Result>,
-    ): VexCoroutineHandle =
+    ): Handle =
         executionRoot.coroutineLauncher.launchOnce(
-            ref = ref(action),
+            sourceRef =
+                sourceRef(
+                    action,
+                ),
         ) {
             action()
         }
@@ -73,20 +180,72 @@ abstract class VexExecution protected constructor(
     protected fun <Argument, Result> launchOnce(
         action: KSuspendFunction1<Argument, Result>,
         argument: Argument,
-    ): VexCoroutineHandle =
+    ): Handle =
         executionRoot.coroutineLauncher.launchOnce(
-            ref = ref(action),
+            sourceRef =
+                sourceRef(
+                    action,
+                ),
         ) {
-            action(argument)
+            action(
+                argument,
+            )
         }
 
     protected fun <First, Second, Result> launchOnce(
         action: KSuspendFunction2<First, Second, Result>,
         first: First,
         second: Second,
-    ): VexCoroutineHandle =
+    ): Handle =
         executionRoot.coroutineLauncher.launchOnce(
-            ref = ref(action),
+            sourceRef =
+                sourceRef(
+                    action,
+                ),
+        ) {
+            action(
+                first,
+                second,
+            )
+        }
+
+    protected fun <Result> launch(
+        action: KSuspendFunction0<Result>,
+    ): Handle =
+        executionRoot.coroutineLauncher.launch(
+            sourceRef =
+                sourceRef(
+                    action,
+                ),
+        ) {
+            action()
+        }
+
+    protected fun <Argument, Result> launch(
+        action: KSuspendFunction1<Argument, Result>,
+        argument: Argument,
+    ): Handle =
+        executionRoot.coroutineLauncher.launch(
+            sourceRef =
+                sourceRef(
+                    action,
+                ),
+        ) {
+            action(
+                argument,
+            )
+        }
+
+    protected fun <First, Second, Result> launch(
+        action: KSuspendFunction2<First, Second, Result>,
+        first: First,
+        second: Second,
+    ): Handle =
+        executionRoot.coroutineLauncher.launch(
+            sourceRef =
+                sourceRef(
+                    action,
+                ),
         ) {
             action(
                 first,
@@ -95,75 +254,64 @@ abstract class VexExecution protected constructor(
         }
 
     /**
-     * Starts one maintained Flow observation.
+     * Maintained one-per-source Flow observation.
      *
-     * One invocation means:
-     *
-     * VexExecution
-     * -> one registered managed Job
-     * -> invoke [source]
-     * -> collect that one Flow
-     * -> deliver each value to [onEach]
-     *
-     * To observe several independent Flows concurrently, call launchForCollect once per source.
-     * The calls become independently addressable sibling Jobs; no second never-ending collect is
-     * placed sequentially behind the first.
-     *
-     * Recovery applies only to obtaining/subscribing to the source. If onEach throws while handling
-     * a valid emitted value, the execution becomes FAILED with no automatic resubscription. Feature
-     * and provider effects keep ownership of failure meaning and lawful retry.
+     * This is deliberately separate from finite launch relationships. A second active observation of
+     * the same source fails closed rather than inheriting ordinary launch's independent-instance law.
      */
     protected fun <Value, Source : Flow<Value>> launchForCollect(
         source: KFunction0<Source>,
         restartOnSourceFailure: Boolean = true,
         onEach: suspend (Value) -> Unit,
-    ): VexCoroutineHandle =
+    ): Handle =
         executionRoot.coroutineLauncher.launchForCollect(
-            ref = ref(source),
-            restartOnSourceFailure = restartOnSourceFailure,
+            sourceRef =
+                sourceRef(
+                    source,
+                ),
+            restartOnSourceFailure =
+                restartOnSourceFailure,
             source = source,
             onEach = onEach,
         )
 
-    /** Property-reference form of the same one-source / one-managed-Job collection contract. */
     protected fun <Value, Source : Flow<Value>> launchForCollect(
         source: KProperty0<Source>,
         restartOnSourceFailure: Boolean = true,
         onEach: suspend (Value) -> Unit,
-    ): VexCoroutineHandle =
+    ): Handle =
         executionRoot.coroutineLauncher.launchForCollect(
-            ref = ref(source),
-            restartOnSourceFailure = restartOnSourceFailure,
+            sourceRef =
+                sourceRef(
+                    source,
+                ),
+            restartOnSourceFailure =
+                restartOnSourceFailure,
             source = source::get,
             onEach = onEach,
         )
 
-    /** Argument-bearing form of the same one-source / one-managed-Job collection contract. */
     protected fun <Argument, Value, Source : Flow<Value>> launchForCollect(
         source: KFunction1<Argument, Source>,
         argument: Argument,
         restartOnSourceFailure: Boolean = true,
         onEach: suspend (Value) -> Unit,
-    ): VexCoroutineHandle =
+    ): Handle =
         executionRoot.coroutineLauncher.launchForCollect(
-            ref = ref(source),
-            restartOnSourceFailure = restartOnSourceFailure,
+            sourceRef =
+                sourceRef(
+                    source,
+                ),
+            restartOnSourceFailure =
+                restartOnSourceFailure,
             source = {
-                source(argument)
+                source(
+                    argument,
+                )
             },
             onEach = onEach,
         )
 
-    /**
-     * Temporarily hands the current managed execution to a caller-owned dispatcher.
-     *
-     * This is a structured context switch inside the same VexCoroutineHandle, not a second launch
-     * surface and not a new execution identity. Use it when expensive preparation belongs on the
-     * root's worker dispatcher but the final provider commit has an exact thread/looper affinity.
-     *
-     * The caller remains responsible for choosing the rightful dispatcher. VexExecution does not
-     * assume that every "foreground" effect belongs to Dispatchers.Main.
-     */
     protected suspend fun <Result> handoff(
         dispatcher: CoroutineDispatcher,
         action: suspend () -> Result,
@@ -174,28 +322,313 @@ abstract class VexExecution protected constructor(
             action()
         }
 
+    /** Stops every currently active execution instance sourced from [reference]. */
     protected fun forceStop(
         reference: KCallable<*>,
         reason: String = "force stopped",
     ): Boolean =
-        executionRoot.coroutineLauncher.forceStop(
-            ref = ref(reference),
+        executionRoot.coroutineLauncher.forceStopSource(
+            sourceRef =
+                sourceRef(
+                    reference,
+                ),
             reason = reason,
         )
 
+    /** Stops and joins every currently active execution instance sourced from [reference]. */
     protected suspend fun joinStop(
         reference: KCallable<*>,
         reason: String = "join stopped",
     ): Boolean =
-        executionRoot.coroutineLauncher.joinStop(
-            ref = ref(reference),
+        executionRoot.coroutineLauncher.joinStopSource(
+            sourceRef =
+                sourceRef(
+                    reference,
+                ),
             reason = reason,
         )
 
-    private fun ref(
+    companion object {
+        fun <Argument, Result> begin(
+            executionRoot: VexExecutionRoot,
+            owner: KClass<*>,
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit = {},
+            onResult: (Result) -> Unit = {},
+            onFailure: (Throwable) -> Unit = {},
+        ): Handle =
+            executionRoot.coroutineLauncher.launch(
+                sourceRef =
+                    sourceRef(
+                        owner,
+                        operation,
+                    ),
+            ) {
+                executeOperation(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+
+        @RelationshipFoundationApi
+        fun <Argument, Result> beginEarliest(
+            executionRoot: VexExecutionRoot,
+            owner:
+                KClass<*>,
+            relationshipId:
+                RelationshipId,
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit = {},
+            onResult: (Result) -> Unit = {},
+            onFailure: (Throwable) -> Unit = {},
+        ): Handle =
+            executionRoot.coroutineLauncher.launchEarliest(
+                relationship =
+                    relationshipId,
+                sourceRef =
+                    sourceRef(
+                        owner,
+                        operation,
+                    ),
+            ) {
+                executeOperation(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+
+        @RelationshipFoundationApi
+        fun <Argument, Result> beginLatest(
+            executionRoot: VexExecutionRoot,
+            owner:
+                KClass<*>,
+            relationshipId:
+                RelationshipId,
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit = {},
+            onResult: (Result) -> Unit = {},
+            onFailure: (Throwable) -> Unit = {},
+        ): Handle =
+            executionRoot.coroutineLauncher.launchLatest(
+                relationship =
+                    relationshipId,
+                sourceRef =
+                    sourceRef(
+                        owner,
+                        operation,
+                    ),
+            ) {
+                executeOperation(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+
+        @RelationshipFoundationApi
+        fun <Argument, Result> beginQueued(
+            executionRoot: VexExecutionRoot,
+            owner:
+                KClass<*>,
+            relationshipId:
+                RelationshipId,
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit = {},
+            onResult: (Result) -> Unit = {},
+            onFailure: (Throwable) -> Unit = {},
+        ): Handle =
+            executionRoot.coroutineLauncher.launchQueued(
+                relationship =
+                    relationshipId,
+                sourceRef =
+                    sourceRef(
+                        owner,
+                        operation,
+                    ),
+            ) {
+                executeOperation(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+
+        @Deprecated(
+            "Use beginLatest with an explicit VexExecution.RelationshipId",
+        )
+        fun <Argument, Result> beginReplaceable(
+            executionRoot: VexExecutionRoot,
+            owner: KClass<*>,
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit = {},
+            onResult: (Result) -> Unit = {},
+            onFailure: (Throwable) -> Unit = {},
+        ): Handle {
+            val sourceRef =
+                sourceRef(
+                    owner,
+                    operation,
+                )
+
+            return executionRoot.coroutineLauncher.launchLatest(
+                relationship =
+                    LegacyRelationshipId(
+                        owner =
+                            owner,
+                        sourceRef =
+                            sourceRef,
+                    ),
+                sourceRef =
+                    sourceRef,
+            ) {
+                executeOperation(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+        }
+
+        @Deprecated(
+            "Use beginQueued with an explicit VexExecution.RelationshipId",
+        )
+        fun <Argument, Result> beginSequenced(
+            executionRoot: VexExecutionRoot,
+            owner: KClass<*>,
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit = {},
+            onResult: (Result) -> Unit = {},
+            onFailure: (Throwable) -> Unit = {},
+        ): Handle {
+            val sourceRef =
+                sourceRef(
+                    owner,
+                    operation,
+                )
+
+            return executionRoot.coroutineLauncher.launchQueued(
+                relationship =
+                    LegacyRelationshipId(
+                        owner =
+                            owner,
+                        sourceRef =
+                            sourceRef,
+                    ),
+                sourceRef =
+                    sourceRef,
+            ) {
+                executeOperation(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+            }
+        }
+
+        private suspend fun <Argument, Result> executeOperation(
+            operation: KSuspendFunction1<Argument, Result>,
+            argument: Argument,
+            beforeOperation: () -> Unit,
+            onResult: (Result) -> Unit,
+            onFailure: (Throwable) -> Unit,
+        ) {
+            try {
+                beforeOperation()
+                onResult(
+                    operation(
+                        argument,
+                    ),
+                )
+            } catch (
+                cancelled:
+                    CancellationException,
+            ) {
+                throw cancelled
+            } catch (
+                failure:
+                    Throwable,
+            ) {
+                onFailure(
+                    failure,
+                )
+            }
+        }
+
+        private fun sourceRef(
+            owner: KClass<*>,
+            reference: KCallable<*>,
+        ):
+            SourceRef {
+            val ownerName =
+                owner.qualifiedName
+                    ?: owner.simpleName
+                    ?: error(
+                        "VexExecution begin owner requires a named source class",
+                    )
+
+            return SourceRef(
+                ownerName +
+                    "." +
+                    reference.name,
+            )
+        }
+    }
+
+    private fun sourceRef(
         reference: KCallable<*>,
-    ): VexCoroutineRef =
-        VexCoroutineRef(
+    ):
+        SourceRef =
+        SourceRef(
             "$executionName.${reference.name}",
         )
 }

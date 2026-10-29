@@ -15,6 +15,55 @@ A foundation earns a dedicated entry when it has a real recurring consumer, inva
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
 
+### Direct Family candidate
+
+Current review source:
+
+~~~text
+architecture/behavior/FAMILY-CIRCUIT.md
+architecture/behavior/src/main/.../VexFamily.kt
+architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
+~~~
+
+Current call graph:
+
+~~~text
+Family.activate(control)
+-> concrete Family.act(currentState, control)
+-> native when(currentState)
+-> native when(control)
+-> stay / admit / optional begin
+-> StateRelay / execution
+~~~
+
+The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
+or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
+
+Current PR #193 refinement also keeps execution identity inside the typed Family boundary:
+
+~~~text
+Control<Family>
+-> Control kind/name included automatically
+-> optional Control.Resource<Family, ExactId>
+-> exact ResourceId object retained
+-> Family-owned RelationshipId
+-> Begin chooses Approach only
+-> VexExecution coordinates that RelationshipId
+~~~
+
+There is no arbitrary Begin trigger/argument identity surface. This refinement remains a draft candidate
+until exact-head repository proof and lifecycle acceptance are complete.
+
+Compound/process integration remains separate and open:
+
+~~~text
+InputState -> process(InputState) -> OutputState
+OutputState -> ??? -> Family.currentState
+~~~
+
+<!-- [VXG RealForever][FOUNDATION][FAMILY][NATIVE-TRAVERSAL] -->
+
+
 ## Foundation establishment criteria
 
 The temporary incomplete notice can be removed when a fresh worker with repository access can:

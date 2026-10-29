@@ -59,6 +59,10 @@ internal data class VexMapsPlaceSearchWork(
  *
  * Search/import execution is delegated to [VexMapsPlaceSearchExecution] so Compose does not own
  * provider Jobs or stale-result admission.
+ *
+ * Each provider attempt is an independent execution instance. Cancellation is best-effort cleanup;
+ * the generation gates remain the semantic currentness owner when an older provider returns after
+ * cancellation.
  */
 internal class VexMapsPlaceSearchSession(
     private val source:
@@ -323,7 +327,7 @@ private class VexMapsPlaceSearchExecution(
             session::importForExecution,
             "VexMaps place-search import superseded",
         )
-        launchOnce(
+        launch(
             session::importForExecution,
             work,
         )
@@ -337,7 +341,7 @@ private class VexMapsPlaceSearchExecution(
             session::searchForExecution,
             "VexMaps place search superseded",
         )
-        launchOnce(
+        launch(
             session::searchForExecution,
             work,
         )

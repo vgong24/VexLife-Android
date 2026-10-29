@@ -15,6 +15,34 @@ runtime owner decides what happened
 -> readable history projects those scopes
 ~~~
 
+## Rooted structured event boundary
+
+`VexLogger` is the logging root. Foundations that need to report accepted structured facts depend
+on a child contract of that root rather than creating another `Vex*Logger` peer:
+
+~~~text
+VexLogger
+-> Sink
+   -> None
+
+VexLogger
+-> Event
+   -> Family
+      -> ControlAccepted
+      -> StateAdmitted
+      -> OperationBegan
+      -> OperationSuccess
+      -> OperationFailure
+~~~
+
+A `VexLogger.Sink` decides how structured foundation events are projected. Family events do not
+automatically become canonical UI-history `VexLogRecord` entries; this preserves the distinction
+between the logger root and its current UI-history projection.
+
+A consuming foundation should keep its logger dependency private and report only facts it has
+actually accepted. Concrete semantic decision functions should not gain logging capability merely
+because their parent uses the logger.
+
 ## Readable protocol
 
 The readable projection groups events by semantic Screen rather than repeating the Screen on every

@@ -22,6 +22,8 @@ kotlin {
 }
 
 dependencies {
+    api(project(":architecture:execution"))
+    api(project(":architecture:logging"))
     implementation(libs.coroutinesCore)
     testImplementation(libs.junit)
 }

@@ -111,6 +111,109 @@ CAPABILITY != AUTHORITY
 CODE_SYMBOL != SERIAL_NAME != SEMANTIC_FIELD_REF != HUMAN_LABEL
 ```
 
+## Rooted semantic trees; no orphan contracts
+
+Architecture should be recoverable from source as rooted semantic trees, not as a flat package of
+peer types that merely import, reference, or manually coordinate with one another.
+
+Every reusable Vex concept must have one explicit root path:
+
+```text
+Vex<Root>
+-> Child
+-> Child
+-> ...
+
+or
+
+<ConcreteRoot>
+-> Child
+-> Child
+-> ...
+```
+
+A child that exists only because its parent owns that responsibility belongs to the parent's
+contract. If that child owns further semantic children, those relationships must remain explicit
+under the child as well. Do not stop the tree halfway and leave lower-level types as package peers
+whose relationship has to be reconstructed from constructors, imports, naming similarity, or
+predecessor knowledge.
+
+```text
+GOOD
+
+VexFamily
+-> DisplayState
+   -> StateOnly
+-> Act
+   -> <only relationships Act actually owns>
+
+ThemeModeFamily
+-> State
+-> Control
+-> DisplayState
+
+NOT SUFFICIENT
+
+VexFamily
+VexDisplayState
+VexAct
+VexBegin
+VexResult
+
+# package proximity and cross-references do not establish semantic ownership
+```
+
+`Vex` names an independently meaningful **root**, not every descendant in that root's vocabulary.
+Once the root supplies scope, descendants use the ordinary name of the role unless another
+independent root has actually been earned:
+
+```text
+VexFamily.DisplayState
+VexFamily.DisplayState.StateOnly
+
+not
+
+VexFamily + VexDisplayState + VexDisplayStateEmpty
+```
+
+A dependency earns its own `Vex<Root>` only when it owns a distinct reusable responsibility that
+can be understood and contracted independently of the consumer. For example, execution custody or
+logging may be independent roots when their contracts stand on their own. Consumption does not
+collapse those roots into one tree:
+
+```text
+VexFamily
+-> explicit dependency on VexExecution
+-> explicit dependency on VexLogger
+
+VexExecution != VexFamily child
+VexLogger    != VexFamily child
+```
+
+When two roots interact, make the root-to-root boundary explicit. Do not extract a free-floating
+"shared" type merely because both use it. If the concept has independent meaning, prove that and
+give it a rightful root; otherwise keep each responsibility under its actual owner.
+
+Before adding, moving, renaming, or judging an architectural type, a fresh worker should be able to
+answer:
+
+```text
+What is this type's root?
+What parent owns this exact relationship?
+If it has children, where are those child relationships contracted?
+If it crosses to another root, where is that boundary explicit?
+If it has no parent, what independent responsibility earned it a Vex root?
+```
+
+If those answers are not recoverable from current source, investigate the current owner before
+creating another abstraction. Do not "complete" a tree by combining adjacent historical/legacy
+surfaces, and do not treat an unparented type as permission to invent a new root.
+
+This law constrains **representation of already-earned relationships**; it does not earn new
+relationships. First prove the responsibility is real. Then place it under the narrowest rightful
+root/parent so future humans and AI workers can build on the tree instead of reconstructing a graph
+from assumptions.
+
 ## Naming follows the boundary
 
 Naming style is part of the contract. Do not rename between styles merely because a worker/model

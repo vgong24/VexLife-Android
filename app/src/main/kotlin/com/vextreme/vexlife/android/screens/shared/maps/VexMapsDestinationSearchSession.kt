@@ -54,6 +54,10 @@ internal data class VexMapsDestinationSearchWork(
  *
  * This does not own local place-pack import, route planning, selected-destination truth, or provider
  * implementation. It answers only which submitted destination search attempt/result is current.
+ *
+ * Provider executions are independent runtime instances. Cancellation is best-effort resource cleanup;
+ * [VexMapsLatestRequestGate] remains the semantic currentness owner when an older provider ignores
+ * cancellation long enough to return late.
  */
 internal class VexMapsDestinationSearchSession(
     private val source:
@@ -223,7 +227,7 @@ private class VexMapsDestinationSearchExecution(
             session::searchForExecution,
             "VexMaps destination search superseded",
         )
-        launchOnce(
+        launch(
             session::searchForExecution,
             work,
         )
