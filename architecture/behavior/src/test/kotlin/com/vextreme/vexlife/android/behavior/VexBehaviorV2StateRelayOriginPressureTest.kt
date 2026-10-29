@@ -483,6 +483,84 @@ class VexBehaviorV2StateRelayOriginPressureTest {
     }
 
     @Test
+    fun committedOutputActsOnRightfulOwnerThenObservedTruthReturnsAsNewInput() {
+        val trace =
+            mutableListOf<String>()
+        val targetOwner =
+            TargetOwnerRelay(
+                trace =
+                    trace,
+            )
+        val relationship =
+            DesiredActualConvergenceRelay(
+                trace =
+                    trace,
+            )
+        val circuit =
+            DesiredActualCircuit(
+                relationship =
+                    relationship,
+                targetOwner =
+                    targetOwner,
+                trace =
+                    trace,
+            )
+
+        circuit.desiredChanged(
+            "Dark",
+        )
+
+        assertEquals(
+            TargetOwnerState(
+                value =
+                    "Dark",
+            ),
+            targetOwner.current,
+        )
+        assertEquals(
+            DesiredActualInputState(
+                desired =
+                    "Dark",
+                actual =
+                    "Dark",
+            ),
+            relationship.currentInput,
+        )
+        assertEquals(
+            DesiredActualOutputState.Settled(
+                value =
+                    "Dark",
+            ),
+            relationship.currentOutput,
+        )
+
+        /*
+         * The important order:
+         *
+         * 1. process derives NeedsApply from latest input;
+         * 2. CompoundState is committed and returned;
+         * 3. Act consumes that committed output;
+         * 4. rightful target owner changes;
+         * 5. target owner's observed current truth returns as NEW input;
+         * 6. process derives Settled.
+         *
+         * OutputState is never recycled as hidden process input.
+         */
+        assertEquals(
+            listOf(
+                "process:NeedsApply(Dark)",
+                "commit:NeedsApply(Dark)",
+                "act:NeedsApply(Dark)",
+                "target:Dark",
+                "process:Settled(Dark)",
+                "commit:Settled(Dark)",
+                "act:Settled(Dark)",
+            ),
+            trace,
+        )
+    }
+
+    @Test
     fun independentlyOwnedChildCurrentnessConvergesByStableRefWithoutParentAbsorption() {
         val relay =
             NestedChildConvergenceRelay()
@@ -1254,7 +1332,341 @@ class VexBehaviorV2StateRelayOriginPressureTest {
                 InputState,
         ):
             OutputState
+
+        /**
+         * One complete synchronous relationship admission.
+         *
+         * send(...) returns only after VexCompoundRelay has committed the resulting CompoundState.
+         * Any Act/Effect belongs outside this method and therefore outside processStates().
+         */
+        protected fun receive(
+            inputState:
+                InputState,
+        ):
+            VexCompoundState<
+                InputState,
+                OutputState
+            > =
+            send(
+                inputState,
+            )
     }
+
+    private data class DesiredActualInputState(
+        val desired:
+            String? = null,
+        val actual:
+            String? = null,
+    ) :
+        LatestInputState<
+            DesiredActualInputState
+        > {
+        override fun latest(
+            incoming:
+                DesiredActualInputState,
+        ):
+            DesiredActualInputState =
+            copy(
+                desired =
+                    incoming.desired
+                        ?: desired,
+                actual =
+                    incoming.actual
+                        ?: actual,
+            )
+
+        override fun deepCopy():
+            DesiredActualInputState =
+            copy()
+    }
+
+    private sealed interface DesiredActualOutputState :
+        VexOutputState<
+            DesiredActualOutputState
+        > {
+        data object Unobserved :
+            DesiredActualOutputState
+
+        data class NeedsApply(
+            val value: String,
+        ) :
+            DesiredActualOutputState
+
+        data class Settled(
+            val value: String,
+        ) :
+            DesiredActualOutputState
+
+        override fun deepCopy():
+            DesiredActualOutputState =
+            when (
+                this
+            ) {
+                Unobserved ->
+                    Unobserved
+
+                is NeedsApply ->
+                    copy()
+
+                is Settled ->
+                    copy()
+            }
+    }
+
+    /**
+     * Pure relationship owner.
+     *
+     * It never mutates TargetOwnerRelay. It only answers what desired + actual CURRENT truth means.
+     */
+    private class DesiredActualConvergenceRelay(
+        private val trace:
+            MutableList<String>,
+    ) :
+        LatestInputCompoundRelay<
+            DesiredActualInputState,
+            DesiredActualOutputState
+        >(
+            relayRef =
+                "origin-pressure.process-act.desired-actual",
+            initialInputState =
+                DesiredActualInputState(),
+            initialOutputState =
+                DesiredActualOutputState.Unobserved,
+        ) {
+        fun desiredChanged(
+            value: String,
+        ):
+            VexCompoundState<
+                DesiredActualInputState,
+                DesiredActualOutputState
+            > =
+            receive(
+                DesiredActualInputState(
+                    desired =
+                        value,
+                ),
+            )
+
+        fun actualChanged(
+            value: String,
+        ):
+            VexCompoundState<
+                DesiredActualInputState,
+                DesiredActualOutputState
+            > =
+            receive(
+                DesiredActualInputState(
+                    actual =
+                        value,
+                ),
+            )
+
+        override fun process(
+            latestStateInput:
+                DesiredActualInputState,
+        ):
+            DesiredActualOutputState {
+            val desired =
+                latestStateInput.desired
+            val actual =
+                latestStateInput.actual
+
+            val output =
+                when {
+                    desired == null ->
+                        DesiredActualOutputState
+                            .Unobserved
+
+                    actual ==
+                        desired ->
+                        DesiredActualOutputState
+                            .Settled(
+                                desired,
+                            )
+
+                    else ->
+                        DesiredActualOutputState
+                            .NeedsApply(
+                                desired,
+                            )
+                }
+
+            trace +=
+                "process:" +
+                    output.traceValue()
+
+            return output
+        }
+    }
+
+    private data class TargetOwnerState(
+        val value:
+            String? = null,
+    ) :
+        VexState<
+            TargetOwnerState
+        > {
+        override fun deepCopy():
+            TargetOwnerState =
+            copy()
+    }
+
+    /**
+     * Separate rightful current-State owner.
+     *
+     * The convergence relationship may ask it to change only after a committed OutputState says that
+     * change is currently required.
+     */
+    private class TargetOwnerRelay(
+        private val trace:
+            MutableList<String>,
+    ) :
+        VexRelay<
+            TargetOwnerState
+        >(
+            relayRef =
+                "origin-pressure.process-act.target-owner",
+            initialState =
+                TargetOwnerState(),
+        ) {
+        fun apply(
+            value: String,
+        ) {
+            update { current ->
+                trace +=
+                    "target:" +
+                        value
+
+                current.copy(
+                    value =
+                        value,
+                )
+            }
+        }
+    }
+
+    /**
+     * Act/realization side of the circuit.
+     *
+     * It receives a CompoundState only AFTER relationship processing has committed it. If the output
+     * requests another owner to change, the Act addresses that owner. The resulting owner truth then
+     * returns as a fresh InputState observation; OutputState itself is never reused as process input.
+     */
+    private class DesiredActualCircuit(
+        private val relationship:
+            DesiredActualConvergenceRelay,
+        private val targetOwner:
+            TargetOwnerRelay,
+        private val trace:
+            MutableList<String>,
+    ) {
+        fun desiredChanged(
+            value: String,
+        ) {
+            val committed =
+                relationship
+                    .desiredChanged(
+                        value,
+                    )
+
+            afterCommit(
+                committed,
+            )
+        }
+
+        private fun afterCommit(
+            committed:
+                VexCompoundState<
+                    DesiredActualInputState,
+                    DesiredActualOutputState
+                >,
+        ) {
+            check(
+                relationship.current ==
+                    committed
+            ) {
+                "Act must receive the relationship's already-committed current CompoundState"
+            }
+
+            trace +=
+                "commit:" +
+                    committed
+                        .outputState
+                        .traceValue()
+
+            act(
+                committed.outputState,
+            )
+        }
+
+        private fun act(
+            outputState:
+                DesiredActualOutputState,
+        ) {
+            trace +=
+                "act:" +
+                    outputState
+                        .traceValue()
+
+            when (
+                outputState
+            ) {
+                DesiredActualOutputState.Unobserved,
+                is DesiredActualOutputState.Settled,
+                ->
+                    Unit
+
+                is DesiredActualOutputState.NeedsApply -> {
+                    targetOwner.apply(
+                        outputState.value,
+                    )
+
+                    /*
+                     * This models observation crossing the ownership boundary:
+                     *
+                     * target owner CURRENT
+                     * -> NEW relationship InputState
+                     * -> process again
+                     *
+                     * Not:
+                     * previous OutputState -> process input.
+                     */
+                    val nextCommitted =
+                        relationship
+                            .actualChanged(
+                                requireNotNull(
+                                    targetOwner
+                                        .current
+                                        .value,
+                                ),
+                            )
+
+                    afterCommit(
+                        nextCommitted,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun DesiredActualOutputState.traceValue():
+        String =
+        when (
+            this
+        ) {
+            DesiredActualOutputState.Unobserved ->
+                "Unobserved"
+
+            is DesiredActualOutputState.NeedsApply ->
+                "NeedsApply(" +
+                    value +
+                    ")"
+
+            is DesiredActualOutputState.Settled ->
+                "Settled(" +
+                    value +
+                    ")"
+        }
 
     private data class NestedChildInputState(
         val parentOrder:
