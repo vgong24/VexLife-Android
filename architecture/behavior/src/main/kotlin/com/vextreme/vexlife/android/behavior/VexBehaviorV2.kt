@@ -1046,6 +1046,27 @@ abstract class VexBehaviorV2CompoundFamily<
     private val compoundProcessLock =
         Any()
 
+    init {
+        require(
+            current.inputState ==
+                initialInputState
+        ) {
+            "Compound Family stateFactory must preserve initial Input meaning"
+        }
+        require(
+            current.outputState ==
+                initialOutputState
+        ) {
+            "Compound Family stateFactory must preserve initial Output meaning"
+        }
+        require(
+            current.revision ==
+                0L
+        ) {
+            "Compound Family stateFactory must initialize revision at 0"
+        }
+    }
+
     val currentInput:
         InputState
         get() =
@@ -1171,10 +1192,39 @@ abstract class VexBehaviorV2CompoundFamily<
                     )
 
                 require(
-                    nextState.revision >=
-                        0L,
+                    nextState.inputState ==
+                        (
+                            if (
+                                inputChanged
+                            ) {
+                                latestStateInput
+                            } else {
+                                retained.inputState
+                            }
+                        ),
                 ) {
-                    "Compound Family revision must be non-negative"
+                    "Compound Family stateFactory must preserve committed Input meaning"
+                }
+                require(
+                    nextState.outputState ==
+                        (
+                            if (
+                                outputChanged
+                            ) {
+                                latestStateOutput
+                            } else {
+                                retained.outputState
+                            }
+                        ),
+                ) {
+                    "Compound Family stateFactory must preserve committed Output meaning"
+                }
+                require(
+                    nextState.revision ==
+                        retained.revision +
+                            1L,
+                ) {
+                    "Compound Family stateFactory must preserve framework revision"
                 }
 
                 /*
