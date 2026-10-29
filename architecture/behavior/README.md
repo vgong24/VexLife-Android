@@ -436,6 +436,32 @@ fun providerReconciled(observed: ProviderState) {
 `admitCurrent` is protected. The concrete Family/source relationship owns the visible method name
 and reconciliation meaning.
 
+Durable Family-State storage follows the same dependency law. When persistence is actually Family State,
+the earned specialization is:
+
+~~~text
+VexFamily.StateStore<State>
+  observableState
+  get()
+  save(State)
+  forget()
+~~~
+
+Its observation path is direct:
+
+~~~text
+StateStore.observableState
+-> VexExecution maintained observation custody
+-> Family.observeStore(CURRENT, stored)
+-> concrete Family decision
+-> admitCurrent(...)
+-> same StateRelay
+~~~
+
+Execution does not interpret stored State. Store does not own CURRENT State. No session/presentation
+owner observes the Store on Family's behalf.
+
+
 ## Compound current State
 
 For a Compound relationship, the processed result is already the complete current State:
