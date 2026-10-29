@@ -8,16 +8,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Focused proof of the high-confidence V2 Family surface.
- *
- * This suite intentionally does not model Compound Family / stateFactory / post-commit Act pressure.
+ * Focused proof of the human-readable Family surface.
  */
-class VexBehaviorV2HighConfidenceTest {
+class VexFamilyHighConfidenceTest {
     private class ValueFamily(
         initialState:
             State,
@@ -30,8 +27,7 @@ class VexBehaviorV2HighConfidenceTest {
             VexFamilyLogger =
             VexFamilyLogger.None,
     ) :
-        VexBehaviorV2Family<
-            ValueFamily,
+        VexFamily<
             ValueFamily.State,
             ValueFamily.Control
         >(
@@ -42,10 +38,7 @@ class VexBehaviorV2HighConfidenceTest {
             logger =
                 logger,
         ) {
-        sealed interface State :
-            VexBehaviorFamily.State<
-                ValueFamily
-            > {
+        sealed interface State {
             data object Empty :
                 State
 
@@ -56,10 +49,7 @@ class VexBehaviorV2HighConfidenceTest {
                 State
         }
 
-        sealed interface Control :
-            VexBehaviorFamily.Control<
-                ValueFamily
-            > {
+        sealed interface Control {
             data class Set(
                 val value:
                     String,
@@ -75,7 +65,6 @@ class VexBehaviorV2HighConfidenceTest {
 
         interface Store :
             VexFamilyStateStore<
-                ValueFamily,
                 State
             >
 
@@ -83,23 +72,20 @@ class VexBehaviorV2HighConfidenceTest {
             val value:
                 String?,
         ) :
-            VexBehaviorV2DisplayState<
+            VexDisplayState<
                 State
             >
 
-        override val acts =
+        protected override val acts =
             vexActs<
-                ValueFamily,
                 State,
                 Control
             >(
-                family =
-                    this,
                 behaviorRef =
-                    "test.family.high-confidence.value",
+                    "test.family.value",
             ) {
                 state<State.Empty> {
-                    on<Control.Set> { _, control ->
+                    on<Control.Set> { currentState, control ->
                         admit(
                             State.Ready(
                                 value =
@@ -108,12 +94,12 @@ class VexBehaviorV2HighConfidenceTest {
                         )
                     }
 
-                    on<Control.Commit> { _, control ->
+                    on<Control.Commit> { currentState, control ->
                         stay()
 
                         begin(
                             mode =
-                                VexBehaviorV2BeginMode.Sequenced,
+                                VexBeginMode.Sequenced,
                         ) {
                             save(
                                 State.Ready(
@@ -139,13 +125,13 @@ class VexBehaviorV2HighConfidenceTest {
 
                 state<State.Ready> {
                     on<Control.Set>(
-                        whenCurrent = { current, control ->
-                            current.value !=
+                        whenCurrent = { currentState, control ->
+                            currentState.value !=
                                 control.value
                         },
-                    ) { _, control ->
+                    ) { currentState, control ->
                         admit(
-                            State.Ready(
+                            currentState.copy(
                                 value =
                                     control.value,
                             ),
@@ -161,7 +147,7 @@ class VexBehaviorV2HighConfidenceTest {
                     value =
                         when (
                             val state =
-                                current
+                                currentState
                         ) {
                             State.Empty ->
                                 null
@@ -178,8 +164,7 @@ class VexBehaviorV2HighConfidenceTest {
         executionRoot:
             VexExecutionRoot,
     ) :
-        VexBehaviorV2Family<
-            MinimalFamily,
+        VexFamily<
             MinimalFamily.State,
             MinimalFamily.Control
         >(
@@ -190,37 +175,28 @@ class VexBehaviorV2HighConfidenceTest {
             logger =
                 VexFamilyLogger.None,
         ) {
-        sealed interface State :
-            VexBehaviorFamily.State<
-                MinimalFamily
-            > {
+        sealed interface State {
             data object Idle :
                 State
         }
 
-        sealed interface Control :
-            VexBehaviorFamily.Control<
-                MinimalFamily
-            > {
+        sealed interface Control {
             data object Keep :
                 Control
         }
 
-        override val acts =
+        protected override val acts =
             vexActs<
-                MinimalFamily,
                 State,
                 Control
             >(
-                family =
-                    this,
                 behaviorRef =
-                    "test.family.high-confidence.minimal",
+                    "test.family.minimal",
             ) {
                 state<State.Idle> {
                     on(
                         Control.Keep,
-                    ) {
+                    ) { currentState, control ->
                         stay()
                     }
                 }
@@ -283,7 +259,7 @@ class VexBehaviorV2HighConfidenceTest {
     }
 
     @Test
-    fun activateUsesCurrentStateAndPayloadControl() {
+    fun stateAndControlTraversalIsVisibleAtTheAuthoringSite() {
         val root =
             VexExecutionRoot()
 
@@ -307,25 +283,17 @@ class VexBehaviorV2HighConfidenceTest {
                     control,
                 ),
             )
-
-            val act =
+            assertTrue(
                 family.activate(
                     control,
-                )
-
-            assertEquals(
-                control,
-                act?.control,
-            )
-            assertNull(
-                act?.effect,
+                ),
             )
             assertEquals(
                 ValueFamily.State.Ready(
                     value =
                         "one",
                 ),
-                family.current,
+                family.currentState,
             )
             assertEquals(
                 ValueFamily.DisplayState(
@@ -340,7 +308,7 @@ class VexBehaviorV2HighConfidenceTest {
     }
 
     @Test
-    fun availabilityAndActivationUseTheSameCurrentStateControlLaw() {
+    fun availabilityAndActivationUseTheSameCurrentStateControlGrammar() {
         val root =
             VexExecutionRoot()
 
@@ -372,7 +340,7 @@ class VexBehaviorV2HighConfidenceTest {
                     semanticNoOp,
                 ),
             )
-            assertNull(
+            assertFalse(
                 family.activate(
                     semanticNoOp,
                 ),
@@ -382,9 +350,10 @@ class VexBehaviorV2HighConfidenceTest {
                     change,
                 ),
             )
-
-            family.activate(
-                change,
+            assertTrue(
+                family.activate(
+                    change,
+                ),
             )
 
             assertEquals(
@@ -392,7 +361,7 @@ class VexBehaviorV2HighConfidenceTest {
                     value =
                         "two",
                 ),
-                family.current,
+                family.currentState,
             )
         } finally {
             root.forceStopAll()
@@ -414,7 +383,7 @@ class VexBehaviorV2HighConfidenceTest {
                 )
 
             assertEquals(
-                VexBehaviorV2DisplayState.Empty(
+                VexDisplayState.Empty(
                     MinimalFamily.State.Idle,
                 ),
                 family.displayState,
@@ -457,25 +426,17 @@ class VexBehaviorV2HighConfidenceTest {
                         logger,
                 )
 
-            val act =
+            assertTrue(
                 family.activate(
                     ValueFamily.Control.Commit(
                         value =
                             "loaded",
                     ),
-                )
-
+                ),
+            )
             assertEquals(
                 ValueFamily.State.Empty,
-                family.current,
-            )
-            assertTrue(
-                act?.effect
-                    ?.operation is
-                    VexBehaviorV2Save<
-                        *,
-                        *
-                    >,
+                family.currentState,
             )
 
             store.gate.complete(
@@ -494,7 +455,7 @@ class VexBehaviorV2HighConfidenceTest {
                     value =
                         "loaded",
                 ),
-                family.current,
+                family.currentState,
             )
         } finally {
             root.forceStopAll()

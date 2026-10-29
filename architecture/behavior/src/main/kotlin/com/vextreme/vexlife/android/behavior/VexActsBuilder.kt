@@ -3,41 +3,24 @@ package com.vextreme.vexlife.android.behavior
 import kotlin.reflect.KClass
 
 /**
- * V2 Act-graph authoring scope produced by the Origin Walk.
+ * Human-readable Act authoring grammar.
  *
- * Singleton/exact Controls keep the smallest form:
- *
- *     state<State.Light> {
- *         on(Control.Toggle) {
- *             admit(State.Dark)
+ *     state<State.Idle> {
+ *         on<Control.Load> { currentState, control ->
+ *             admit(...)
+ *             begin(...) { ... }
  *         }
  *     }
  *
- * Runtime payload Controls materialize the Act from the actual CURRENT State + incoming Control:
- *
- *     state<State.Ready> {
- *         on<Control.Seek>(
- *             whenCurrent = { current, seek ->
- *                 current.mediaId == seek.mediaId
- *             },
- *         ) { current, seek ->
- *             admit(
- *                 current.copy(
- *                     requestedPositionMs = seek.positionMs,
- *                 ),
- *             )
- *         }
- *     }
- *
- * The dynamic block is declarative authoring. Resolving availability may materialize it without
- * executing begin(...); real Operation execution happens only after activate(Control) selects the Act.
+ * State traversal is explicit. Control payloads stay visible. Internal matching is not part of the
+ * feature-facing language.
  */
-class VexBehaviorV2Builder<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-    Control : VexBehaviorFamily.Control<Family>,
+class VexActsBuilder<
+    State : Any,
+    Control : Any,
 > internal constructor(
-    private val behaviorRef: String,
+    private val behaviorRef:
+        String,
 ) {
     @PublishedApi
     internal val stateTypes =
@@ -48,8 +31,7 @@ class VexBehaviorV2Builder<
     @PublishedApi
     internal val authoredRules =
         mutableListOf<
-            VexBehaviorV2ActRule<
-                Family,
+            VexActRule<
                 State,
                 Control
             >
@@ -59,8 +41,7 @@ class VexBehaviorV2Builder<
         reified Current : State,
     > state(
         block:
-            VexBehaviorV2StateScope<
-                Family,
+            VexStateScope<
                 State,
                 Control,
                 Current
@@ -69,8 +50,7 @@ class VexBehaviorV2Builder<
         stateTypes +=
             Current::class
 
-        VexBehaviorV2StateScope<
-            Family,
+        VexStateScope<
             State,
             Control,
             Current
@@ -88,8 +68,7 @@ class VexBehaviorV2Builder<
     @PublishedApi
     internal fun completeRule(
         rule:
-            VexBehaviorV2ActRule<
-                Family,
+            VexActRule<
                 State,
                 Control
             >,
@@ -98,17 +77,12 @@ class VexBehaviorV2Builder<
             rule
     }
 
-    internal fun build(
-        family: Family,
-    ):
-        VexBehaviorV2<
-            Family,
+    internal fun build():
+        VexActs<
             State,
             Control
         > =
-        VexBehaviorV2(
-            family =
-                family,
+        VexActs(
             behaviorRef =
                 behaviorRef,
             states =
@@ -118,10 +92,9 @@ class VexBehaviorV2Builder<
         )
 }
 
-class VexBehaviorV2StateScope<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-    Control : VexBehaviorFamily.Control<Family>,
+class VexStateScope<
+    State : Any,
+    Control : Any,
     Current : State,
 > @PublishedApi internal constructor(
     @PublishedApi
@@ -130,65 +103,56 @@ class VexBehaviorV2StateScope<
     @PublishedApi
     internal val completeRule:
         (
-            VexBehaviorV2ActRule<
-                Family,
+            VexActRule<
                 State,
                 Control
             >,
         ) -> Unit,
 ) {
     /**
-     * Exact-value Control form.
+     * Exact Control-value form.
      *
-     * This preserves the compact singleton-Control language already earned by ThemeMode.
+     * The lambda still receives the exact CURRENT State value and incoming Control so the causal
+     * inputs remain visible at the authoring site.
      */
     fun on(
-        control: Control,
-        conditionName: String? = null,
-        whenCurrent: (Current) -> Boolean = {
-            true
-        },
+        control:
+            Control,
+        conditionName:
+            String? =
+            null,
+        whenCurrent:
+            (
+                currentState: Current,
+                control: Control,
+            ) -> Boolean = {
+                _,
+                _,
+                ->
+                true
+            },
         block:
-            VexBehaviorV2ActScope<
-                Family,
+            VexActScope<
                 State,
                 Control,
                 Current
-            >.() -> Unit,
+            >.(
+                currentState: Current,
+                control: Control,
+            ) -> Unit,
     ) {
-        val act =
-            VexBehaviorV2ActScope<
-                Family,
-                State,
-                Control,
-                Current
-            >(
-                from =
-                    from,
-                control =
-                    control,
-                conditionName =
-                    conditionName,
-            )
-                .apply(
-                    block,
-                )
-                .build()
-
         completeRule(
-            VexBehaviorV2ActRule(
+            VexActRule(
                 from =
                     from,
                 controlDescription =
                     control.toString(),
                 conditionName =
                     conditionName,
-                staticAct =
-                    act,
-                resolveAct = { current, requestedControl ->
+                matchAct = { currentState, requestedControl ->
                     if (
                         !from.isInstance(
-                            current,
+                            currentState,
                         ) ||
                         requestedControl !=
                         control
@@ -198,14 +162,37 @@ class VexBehaviorV2StateScope<
                         @Suppress(
                             "UNCHECKED_CAST",
                         )
-                        val typedCurrent =
-                            current as
+                        val typedCurrentState =
+                            currentState as
                                 Current
 
-                        act.takeIf {
-                            whenCurrent(
-                                typedCurrent,
+                        if (
+                            !whenCurrent(
+                                typedCurrentState,
+                                requestedControl,
                             )
+                        ) {
+                            null
+                        } else {
+                            VexActScope<
+                                State,
+                                Control,
+                                Current
+                            >(
+                                from =
+                                    from,
+                                control =
+                                    requestedControl,
+                                conditionName =
+                                    conditionName,
+                            )
+                                .apply {
+                                    block(
+                                        typedCurrentState,
+                                        requestedControl,
+                                    )
+                                }
+                                .build()
                         }
                     }
                 },
@@ -214,20 +201,18 @@ class VexBehaviorV2StateScope<
     }
 
     /**
-     * Runtime Control-shape form.
-     *
-     * The actual CURRENT State value and actual incoming payload Control value materialize the Act.
-     * This is the minimum relationship needed by Seek/Select/Click-style Controls; it does not invent
-     * provider observation or provider Operation semantics.
+     * Runtime Control-shape form for payload Controls.
      */
     inline fun <
         reified RequestedControl : Control,
     > on(
-        conditionName: String? = null,
+        conditionName:
+            String? =
+            null,
         noinline whenCurrent:
             (
-                Current,
-                RequestedControl,
+                currentState: Current,
+                control: RequestedControl,
             ) -> Boolean = {
                 _,
                 _,
@@ -235,21 +220,20 @@ class VexBehaviorV2StateScope<
                 true
             },
         noinline block:
-            VexBehaviorV2ActScope<
-                Family,
+            VexActScope<
                 State,
                 Control,
                 Current
             >.(
-                Current,
-                RequestedControl,
+                currentState: Current,
+                control: RequestedControl,
             ) -> Unit,
     ) {
         val requestedType =
             RequestedControl::class
 
         completeRule(
-            VexBehaviorV2ActRule(
+            VexActRule(
                 from =
                     from,
                 controlDescription =
@@ -257,15 +241,13 @@ class VexBehaviorV2StateScope<
                         ?: requestedType.toString(),
                 conditionName =
                     conditionName,
-                staticAct =
-                    null,
-                resolveAct = { current, requestedControl ->
+                matchAct = { currentState, control ->
                     if (
                         !from.isInstance(
-                            current,
+                            currentState,
                         ) ||
                         !requestedType.isInstance(
-                            requestedControl,
+                            control,
                         )
                     ) {
                         null
@@ -273,27 +255,26 @@ class VexBehaviorV2StateScope<
                         @Suppress(
                             "UNCHECKED_CAST",
                         )
-                        val typedCurrent =
-                            current as
+                        val typedCurrentState =
+                            currentState as
                                 Current
 
                         @Suppress(
                             "UNCHECKED_CAST",
                         )
                         val typedControl =
-                            requestedControl as
+                            control as
                                 RequestedControl
 
                         if (
                             !whenCurrent(
-                                typedCurrent,
+                                typedCurrentState,
                                 typedControl,
                             )
                         ) {
                             null
                         } else {
-                            VexBehaviorV2ActScope<
-                                Family,
+                            VexActScope<
                                 State,
                                 Control,
                                 Current
@@ -307,7 +288,7 @@ class VexBehaviorV2StateScope<
                             )
                                 .apply {
                                     block(
-                                        typedCurrent,
+                                        typedCurrentState,
                                         typedControl,
                                     )
                                 }
@@ -320,10 +301,9 @@ class VexBehaviorV2StateScope<
     }
 }
 
-class VexBehaviorV2ActScope<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
-    Control : VexBehaviorFamily.Control<Family>,
+class VexActScope<
+    State : Any,
+    Control : Any,
     Current : State,
 > @PublishedApi internal constructor(
     private val from:
@@ -333,22 +313,21 @@ class VexBehaviorV2ActScope<
     private val conditionName:
         String?,
 ) {
-    private var effect:
-        VexBehaviorV2Begin<
-            Family,
+    private var begin:
+        VexBegin<
             State
         >? =
         null
 
     private var immediateDisposition:
-        VexBehaviorV2StateDisposition<
-            Family,
+        VexStateDisposition<
             State
         >? =
         null
 
     fun admit(
-        state: State,
+        state:
+            State,
     ) {
         require(
             immediateDisposition ==
@@ -358,9 +337,7 @@ class VexBehaviorV2ActScope<
         }
 
         immediateDisposition =
-            VexBehaviorV2StateDisposition(
-                kind =
-                    VexBehaviorV2StateDispositionKind.Admit,
+            VexStateDisposition(
                 admittedState =
                     state,
             )
@@ -375,32 +352,29 @@ class VexBehaviorV2ActScope<
         }
 
         immediateDisposition =
-            VexBehaviorV2StateDisposition(
-                kind =
-                    VexBehaviorV2StateDispositionKind.Stay,
+            VexStateDisposition(
                 admittedState =
                     null,
             )
     }
 
     fun begin(
-        mode: VexBehaviorV2BeginMode,
+        mode:
+            VexBeginMode,
         block:
-            VexBehaviorV2BeginScope<
-                Family,
+            VexBeginScope<
                 State
             >.() -> Unit,
     ) {
         require(
-            effect ==
+            begin ==
                 null,
         ) {
-            "one V2 Act currently admits at most one begin(...) Effect"
+            "one Act currently admits at most one begin(...)"
         }
 
-        effect =
-            VexBehaviorV2BeginScope<
-                Family,
+        begin =
+            VexBeginScope<
                 State
             >(
                 mode =
@@ -414,8 +388,7 @@ class VexBehaviorV2ActScope<
 
     @PublishedApi
     internal fun build():
-        VexBehaviorV2Act<
-            Family,
+        VexAct<
             State,
             Control
         > {
@@ -426,13 +399,13 @@ class VexBehaviorV2ActScope<
                 "on(Control) requires exactly one immediate stay() or admit(state)"
             }
 
-        return VexBehaviorV2Act(
+        return VexAct(
             from =
                 from,
             control =
                 control,
-            effect =
-                effect,
+            begin =
+                begin,
             immediateDisposition =
                 immediate,
             conditionName =
@@ -441,34 +414,33 @@ class VexBehaviorV2ActScope<
     }
 }
 
-class VexBehaviorV2BeginScope<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
+class VexBeginScope<
+    State : Any,
 > internal constructor(
-    private val mode: VexBehaviorV2BeginMode,
+    private val mode:
+        VexBeginMode,
 ) {
     private var operation:
         VexOperation<
-            Family,
             State
         >? =
         null
 
     fun save(
-        state: State,
+        state:
+            State,
     ):
-        VexBehaviorV2SaveDestination<
-            Family,
+        VexSaveDestination<
             State
         > {
         require(
             operation ==
                 null,
         ) {
-            "begin V2 currently admits one Operation"
+            "begin currently admits one Operation"
         }
 
-        return VexBehaviorV2SaveDestination(
+        return VexSaveDestination(
             state =
                 state,
             complete = { completed ->
@@ -486,50 +458,45 @@ class VexBehaviorV2BeginScope<
     }
 
     internal fun build():
-        VexBehaviorV2Begin<
-            Family,
+        VexBegin<
             State
         > =
-        VexBehaviorV2Begin(
+        VexBegin(
             mode =
                 mode,
             operation =
                 requireNotNull(
                     operation,
                 ) {
-                    "begin V2 requires one Operation; Save(...).results { ... } is the current patient zero"
+                    "begin requires one Operation; Save(...).results { ... } is the current patient zero"
                 },
         )
 }
 
-class VexBehaviorV2SaveDestination<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
+class VexSaveDestination<
+    State : Any,
 > internal constructor(
     private val state:
         State,
     private val complete:
         (
-            VexBehaviorV2Save<
-                Family,
+            VexSave<
                 State
             >,
         ) -> Unit,
 ) {
     fun results(
         block:
-            VexBehaviorV2ResultsScope<
-                Family,
+            VexResultsScope<
                 State
             >.() -> Unit,
     ) {
         complete(
-            VexBehaviorV2Save(
+            VexSave(
                 state =
                     state,
                 results =
-                    VexBehaviorV2ResultsScope<
-                        Family,
+                    VexResultsScope<
                         State
                     >()
                         .apply(
@@ -541,28 +508,24 @@ class VexBehaviorV2SaveDestination<
     }
 }
 
-class VexBehaviorV2ResultsScope<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
+class VexResultsScope<
+    State : Any,
 > internal constructor() {
     private var success:
-        VexBehaviorV2Result<
-            Family,
+        VexResult<
             State
         >? =
         null
 
     private var failure:
-        VexBehaviorV2Result<
-            Family,
+        VexResult<
             State
         >? =
         null
 
     fun success(
         block:
-            VexBehaviorV2ResultScope<
-                Family,
+            VexResultScope<
                 State
             >.() -> Unit = {},
     ) {
@@ -574,8 +537,7 @@ class VexBehaviorV2ResultsScope<
         }
 
         success =
-            VexBehaviorV2ResultScope<
-                Family,
+            VexResultScope<
                 State
             >()
                 .apply(
@@ -586,8 +548,7 @@ class VexBehaviorV2ResultsScope<
 
     fun failure(
         block:
-            VexBehaviorV2ResultScope<
-                Family,
+            VexResultScope<
                 State
             >.() -> Unit = {},
     ) {
@@ -599,8 +560,7 @@ class VexBehaviorV2ResultsScope<
         }
 
         failure =
-            VexBehaviorV2ResultScope<
-                Family,
+            VexResultScope<
                 State
             >()
                 .apply(
@@ -610,11 +570,10 @@ class VexBehaviorV2ResultsScope<
     }
 
     internal fun build():
-        VexBehaviorV2Results<
-            Family,
+        VexResults<
             State
         > =
-        VexBehaviorV2Results(
+        VexResults(
             success =
                 requireNotNull(
                     success,
@@ -630,16 +589,16 @@ class VexBehaviorV2ResultsScope<
         )
 }
 
-class VexBehaviorV2ResultScope<
-    Family : VexBehaviorFamily<Family>,
-    State : VexBehaviorFamily.State<Family>,
+class VexResultScope<
+    State : Any,
 > internal constructor() {
     private var admittedState:
         State? =
         null
 
     fun admit(
-        state: State,
+        state:
+            State,
     ) {
         require(
             admittedState ==
@@ -653,11 +612,10 @@ class VexBehaviorV2ResultScope<
     }
 
     internal fun build():
-        VexBehaviorV2Result<
-            Family,
+        VexResult<
             State
         > =
-        VexBehaviorV2Result(
+        VexResult(
             admittedState =
                 admittedState,
         )

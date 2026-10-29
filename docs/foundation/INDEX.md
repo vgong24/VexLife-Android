@@ -15,43 +15,45 @@ A foundation earns a dedicated entry when it has a real recurring consumer, inva
 burden. Add detail at the narrowest rightful source rather than turning this index into a second
 implementation manual.
 
-### V2 Family high-confidence candidate
+### Readable Family candidate
 
 Current review source:
 
 ~~~text
 architecture/behavior/FAMILY-CIRCUIT.md
-architecture/behavior/src/main/.../VexBehaviorV2.kt
-architecture/behavior/src/test/.../VexBehaviorV2HighConfidenceTest.kt
+architecture/behavior/src/main/.../VexFamily.kt
+architecture/behavior/src/main/.../VexActsBuilder.kt
+architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-The candidate currently preserves only the earned Family surface:
+Current Family-facing language:
 
 ~~~text
-Family
-  State
-  Control
-  DisplayState
-  current
-  acts
+VexFamily<State, Control>
+  currentState
+  displayState
   activate(Control)
-  optional Store / begin execution
+
+state<State.X> {
+  on<Control.Y> { currentState, control ->
+    stay() / admit(State)
+    optional begin(...)
+  }
+}
 ~~~
 
-Several-current-truth convergence remains owned by the Relay foundation:
+The current candidate deliberately removes the V2-named runtime surface, resolve(...) language,
+recursive Family self-generic, CompoundFamily/stateFactory formalization and public Act carrier.
+
+Convergence remains owned by the separate Relay/process pressure:
 
 ~~~text
-partial observations
--> coherent InputState
--> process(InputState)
--> OutputState(fields)
+InputState -> process(InputState) -> OutputState(fields)
 ~~~
 
-This PR deliberately does **not** admit a CompoundFamily superclass, CompoundFamilyState wrapper,
-stateFactory, Family-level revision, or arbitrary post-commit act(OutputState) callback. The exact
-Family/Relay composition remains open pressure.
+The exact Family/Relay composition remains OPEN.
 
-<!-- [VXG RealForever][FOUNDATION][V2-FAMILY][HIGH-CONFIDENCE] -->
+<!-- [VXG RealForever][FOUNDATION][FAMILY][READABLE-HIGH-CONFIDENCE] -->
 
 
 ## Foundation establishment criteria
