@@ -22,6 +22,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":architecture:behavior"))
     api(project(":architecture:elements"))
     implementation(platform(libs.composeBom))
     implementation(libs.composeRuntime)

@@ -2,6 +2,8 @@ package com.vextreme.vexlife.android.logging
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import com.vextreme.vexlife.android.behavior.VexFamilyLogEvent
+import com.vextreme.vexlife.android.behavior.VexFamilyLogger
 import com.vextreme.vexlife.android.elements.ScreenElement
 import com.vextreme.vexlife.android.elements.UIElement
 import java.time.Duration
@@ -14,6 +16,7 @@ enum class VexLogKind {
     AppOpened,
     Interaction,
     Gesture,
+    Family,
 }
 
 /**
@@ -57,7 +60,8 @@ class VexLogger(
     private val zoneId: () -> ZoneId = { ZoneId.systemDefault() },
     private val maxRecords: Int = 256,
     private val onRecord: (VexLogRecord) -> Unit = {},
-) {
+) :
+    VexFamilyLogger {
     private val lock = Any()
     private val _history = mutableStateOf<List<VexLogRecord>>(emptyList())
     private var nextSequence = 1L
@@ -69,6 +73,31 @@ class VexLogger(
 
     init {
         require(maxRecords > 0) { "maxRecords must be positive" }
+    }
+
+    /**
+     * Family accountant projection. The Family remains the truth owner; this logger only witnesses
+     * the accepted fact in sequence.
+     */
+    override fun record(
+        event: VexFamilyLogEvent,
+    ) {
+        append(
+            kind =
+                VexLogKind.Family,
+            subjectRef =
+                familySubjectRef(
+                    event,
+                ),
+            action =
+                familyAction(
+                    event,
+                ),
+            screenBeforeId =
+                null,
+            screenAfterId =
+                null,
+        )
     }
 
     fun appOpened(screen: ScreenElement) {
@@ -175,6 +204,14 @@ class VexLogger(
         zoneId = zoneId(),
     )
 
+    fun renderFamilyHistory(): String =
+        formatFamilyHistory(
+            records =
+                history.value,
+            zoneId =
+                zoneId(),
+        )
+
     private fun append(
         kind: VexLogKind,
         subjectRef: String,
@@ -255,6 +292,13 @@ class VexLogger(
             }
 
             records.forEach { record ->
+                if (
+                    record.kind ==
+                    VexLogKind.Family
+                ) {
+                    return@forEach
+                }
+
                 val eventScreenId = when {
                     record.kind == VexLogKind.AppOpened ->
                         record.screenAfterId ?: record.screenBeforeId
@@ -308,14 +352,23 @@ class VexLogger(
             records: List<VexLogRecord>,
             zoneId: ZoneId,
         ): String {
-            if (records.isEmpty()) return "No actions recorded yet."
+            val scopes =
+                screenScopes(
+                    records,
+                )
+
+            if (
+                scopes.isEmpty()
+            ) {
+                return "No actions recorded yet."
+            }
 
             val formatter = DateTimeFormatter
                 .ofPattern("h:mm:ssa MMM d, yyyy", Locale.US)
                 .withZone(zoneId)
 
             return buildString {
-                screenScopes(records).forEachIndexed { scopeIndex, scope ->
+                scopes.forEachIndexed { scopeIndex, scope ->
                     if (scopeIndex > 0) appendLine()
                     appendLine("---${screenName(scope.screenId)}---")
 
@@ -377,6 +430,172 @@ class VexLogger(
             return body.split('.')
                 .joinToString(".") { pascal(it) }
         }
+
+        fun formatFamilyHistory(
+            records: List<VexLogRecord>,
+            zoneId: ZoneId,
+        ): String {
+            val familyRecords =
+                records.filter { record ->
+                    record.kind ==
+                        VexLogKind.Family
+                }
+
+            if (
+                familyRecords.isEmpty()
+            ) {
+                return "No Family actions recorded yet."
+            }
+
+            val formatter =
+                DateTimeFormatter
+                    .ofPattern(
+                        "h:mm:ssa MMM d, yyyy",
+                        Locale.US,
+                    )
+                    .withZone(
+                        zoneId,
+                    )
+
+            return buildString {
+                familyRecords.forEachIndexed { index, record ->
+                    if (
+                        index >
+                        0
+                    ) {
+                        appendLine()
+                    }
+
+                    append(
+                        "[",
+                    )
+                    append(
+                        formatter.format(
+                            record.timestamp,
+                        ),
+                    )
+                    appendLine(
+                        "]",
+                    )
+                    append(
+                        record.subjectRef
+                            .substringAfterLast(
+                                '.',
+                            ),
+                    )
+                    append(
+                        " ",
+                    )
+                    appendLine(
+                        record.action,
+                    )
+                }
+            }.trimEnd()
+        }
+
+        private fun familySubjectRef(
+            event: VexFamilyLogEvent,
+        ): String =
+            event.family.qualifiedName
+                ?: event.family.simpleName
+                ?: "Family"
+
+        private fun familyAction(
+            event: VexFamilyLogEvent,
+        ): String =
+            when (
+                event
+            ) {
+                is VexFamilyLogEvent.ControlAccepted ->
+                    readableSourceName(
+                        event.control,
+                    ) +
+                        " Accepted @ " +
+                        readableSourceName(
+                            event.currentState,
+                        )
+
+                is VexFamilyLogEvent.StateAdmitted ->
+                    readableSourceName(
+                        event.fromState,
+                    ) +
+                        " -> " +
+                        readableSourceName(
+                            event.toState,
+                        ) +
+                        " Admitted"
+
+                is VexFamilyLogEvent.OperationBegan ->
+                    pascal(
+                        event.operation.name,
+                    ) +
+                        operationStateSuffix(
+                            event.state,
+                        ) +
+                        " Began"
+
+                is VexFamilyLogEvent.OperationSuccess ->
+                    pascal(
+                        event.operation.name,
+                    ) +
+                        operationStateSuffix(
+                            event.state,
+                        ) +
+                        " Success"
+
+                is VexFamilyLogEvent.OperationFailure ->
+                    buildString {
+                        append(
+                            pascal(
+                                event.operation.name,
+                            ),
+                        )
+                        append(
+                            operationStateSuffix(
+                                event.state,
+                            ),
+                        )
+                        append(
+                            " Failure",
+                        )
+                        event.failure
+                            ?.let { failure ->
+                                append(
+                                    " [",
+                                )
+                                append(
+                                    readableSourceName(
+                                        failure,
+                                    ),
+                                )
+                                append(
+                                    "]",
+                                )
+                            }
+                    }
+            }
+
+        private fun operationStateSuffix(
+            state:
+                kotlin.reflect.KClass<*>?,
+        ): String =
+            state
+                ?.let { current ->
+                    "(" +
+                        readableSourceName(
+                            current,
+                        ) +
+                        ")"
+                }
+                ?: ""
+
+        private fun readableSourceName(
+            source:
+                kotlin.reflect.KClass<*>,
+        ): String =
+            source.simpleName
+                ?: source.qualifiedName
+                ?: "Unknown"
 
         private fun pascal(value: String): String =
             value.split('-', '_')

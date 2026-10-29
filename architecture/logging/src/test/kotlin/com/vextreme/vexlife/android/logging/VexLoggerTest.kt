@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.logging
 
+import com.vextreme.vexlife.android.behavior.VexFamilyLogEvent
 import com.vextreme.vexlife.android.elements.ActionKey
 import com.vextreme.vexlife.android.elements.ButtonElement
 import com.vextreme.vexlife.android.elements.ScreenElement
@@ -188,4 +189,64 @@ class VexLoggerTest {
 
         assertTrue(locallyVisibleWhenObserved)
     }
+
+    @Test
+    fun familyAccountantWitnessesStoreProgressionWithoutBecomingTheTruthOwner() {
+        val logger =
+            VexLogger(
+                clock = {
+                    Instant.parse(
+                        "2026-10-28T10:00:00Z",
+                    )
+                },
+                zoneId = {
+                    ZoneId.of(
+                        "UTC",
+                    )
+                },
+            )
+
+        logger.record(
+            VexFamilyLogEvent.OperationBegan(
+                family =
+                    VexLoggerTest::class,
+                operation =
+                    logger::renderHistory,
+                state =
+                    String::class,
+            ),
+        )
+        logger.record(
+            VexFamilyLogEvent.OperationSuccess(
+                family =
+                    VexLoggerTest::class,
+                operation =
+                    logger::renderHistory,
+                state =
+                    String::class,
+            ),
+        )
+
+        assertEquals(
+            2,
+            logger.history.value.size,
+        )
+        assertTrue(
+            logger.renderFamilyHistory()
+                .contains(
+                    "RenderHistory(String) Began",
+                ),
+        )
+        assertTrue(
+            logger.renderFamilyHistory()
+                .contains(
+                    "RenderHistory(String) Success",
+                ),
+        )
+        assertEquals(
+            "No actions recorded yet.",
+            logger.renderHistory(),
+        )
+    }
+
 }

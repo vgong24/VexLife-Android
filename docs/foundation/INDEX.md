@@ -286,8 +286,15 @@ Code-navigation roots:
 
 ~~~text
 VexBehaviorDocs
+VexBehaviorUiRoundTripReferenceTest
 VexStreamPlaybackDocs
 ~~~
+
+Fresh-entry working reference:
+[`VexBehaviorUiRoundTripReferenceTest`](../../architecture/behavior/src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorUiRoundTripReferenceTest.kt)
+
+Use that reference when the question is the current end-to-end UI/SCAE/observation loop. It is a bounded
+JVM semantic specimen, not a replacement for Compose/Journey/ScreenCrawler/device proof.
 
 The candidate preserves one human-readable four-move vocabulary with explicit semantic equations:
 
@@ -535,3 +542,281 @@ When a block becomes real here, give it its own narrow source/doc only if this i
 carry the information without obscuring implementation or proof.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][FOUNDATION-INDEX] -->
+
+
+### V2 Behavior Origin Walk — Store/execution/accountant pressure
+
+The V2 Behavior draft now pressures a real background Store Operation:
+
+~~~text
+Family.activate(Control)
+-> immediate stay/admit
+-> begin(Replaceable | Sequenced)
+-> Family.Store Save(State)
+-> VexExecution custody
+-> Success / Failure
+-> optional later admit
+-> VexLogger Family witness
+~~~
+
+SharedPreferences appears only in the Android instrumented target proof; it is not the portable Store
+definition. Production ThemeMode/session migration remains outside this draft PR.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STORE-EXECUTION] -->
+
+
+### V2 Behavior Origin Walk — executable evolution references
+
+The V2 draft now carries three intentionally different test roles:
+
+~~~text
+VexBehaviorV2Test
+  -> local ThemeMode patient-zero language/runtime
+
+VexBehaviorUiRoundTripReferenceTest
+  -> stale-render activation-currentness reference
+
+VexBehaviorV2PlaybackOriginPressureTest
+  -> Playback edge pressure; NOT a confirmed V2 Playback template
+~~~
+
+The Playback pressure class lives in the app Playback test package so it can consume the real current
+Playback semantics rather than copying Media3/pending/Seek rules into the Behavior foundation. A
+passing pressure test preserves the unresolved requirement; it does not authorize production Playback
+refactoring.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PLAYBACK-PRESSURE] -->
+
+
+### V2 Behavior Origin Walk — runtime Act materialization threshold
+
+Playback pressure has now earned one candidate V2 refinement:
+
+~~~text
+actual CURRENT State value
++
+actual incoming payload Control value
+-> materialized Act
+~~~
+
+The singleton/exact `on(Control)` form remains unchanged. The runtime form
+`on<ControlType> { current, control -> ... }` uses the real values at resolution time.
+
+`Family.isAvailable(Control)` derives from the same Act rule as `activate(Control)`; activation
+re-resolves CURRENT State, so an earlier availability read never becomes authority.
+
+This threshold does **not** solve provider observation/reconciliation, async-result staleness, provider
+affinity, Compose observation or multi-instance execution identity.
+
+An isolated Kotlin language proof passed for the runtime State + payload Control materialization shape;
+repository Gradle/JVM execution remains pending.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][RUNTIME-ACT-MATERIALIZATION] -->
+
+
+### V2 Behavior Origin Walk — reconciled provider admission candidate
+
+Playback pressure now exercises:
+
+~~~text
+provider observation
+-> existing provider/Connection pending reconciliation
+-> reconciled semantic State
+-> concrete Family-specific admission method
+-> protected Family.admit(State)
+~~~
+
+The candidate deliberately does not add a generic public setter, fake provider Control, or universal
+observe/reconcile API. Concrete provider ownership remains visible.
+
+This is not yet production Playback architecture. Concurrency/serialization, provider-affine Operation
+execution, Compose observation and async-result staleness remain open.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PROVIDER-ADMISSION-CANDIDATE] -->
+
+
+### V2 Behavior Origin Walk — StateRelay currentness pressure
+
+The third Playback pressure reference now includes a test-only `StateRelay` candidate using the
+accepted V1 `VexRelay` law.
+
+~~~text
+newer semantic intent becomes CURRENT
+-> older async completion arrives
+-> completion is reevaluated against CURRENT State inside one serialized Relay boundary
+-> stale completion cannot regress semantic State
+~~~
+
+This does not yet make StateRelay a foundation member. The candidate intentionally leaves open whether
+Behavior Family State should implement `VexState`/deepCopy or whether both Relay forms should share a
+smaller current-state custody primitive.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-PRESSURE] -->
+
+
+### V2 Behavior Origin Walk — why StateRelay is pressure, not copied Relay
+
+The StateRelay candidate reuses V1 Relay only to pressure one already-earned law:
+
+~~~text
+incoming cause
++ exact CURRENT retained State
+-> one serialized non-suspending decision
+-> semantic no-op suppression
+~~~
+
+Do not infer that Family must therefore inherit all Relay mechanics. V1 defensive deep-copy,
+Compound dependency totality, revision, dependency collection and source-freshness rules each solve
+different ownership problems. The Origin Walk must keep those reasons distinct.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-WHY] -->
+
+
+### V2 Behavior Origin Walk — arbitrary-depth State tree currentness pressure
+
+The fourth StateRelay reference now replaces manual recursive list-copy pressure with a normalized
+identity tree:
+
+~~~text
+root refs + node index + child refs
+-> arbitrary-depth current hierarchy
+-> update one node by semantic ref
+-> untouched ancestors/siblings remain without feature-specific copy code
+~~~
+
+The exact `[A1[B1[C1]]], [A2[B2]]` shape and a generated 48-level chain are both pressure specimens.
+Dangling identities fail rather than silently shortening display.
+
+Independently-owned child currentness remains a separate Compound Convergence concern.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][NESTED-STATE-TREE-PRESSURE] -->
+
+
+### V2 Behavior Origin Walk — fourth StateRelay reference
+
+The executable evolution now includes:
+
+~~~text
+1 ThemeMode local Family language/runtime
+2 UI activation-currentness reference
+3 Playback payload/provider pressure
+4 StateRelay + nested current-list/convergence pressure
+~~~
+
+The fourth reference distinguishes parent-owned nested values from independently-owned child
+currentness and proves stable-ref convergence without silent display-layer loss.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-FOURTH-REFERENCE] -->
+
+
+### V2 Family Circuit — Compound Family baseline
+
+The process/Act feedback law has now moved from test-side Relay pressure into the V2 Family foundation.
+The common VexFamily root owns only CURRENT State / DisplayState / protected admission; Control behavior
+and Compound relationship processing are separate earned specializations.
+
+~~~text
+VexFamily
+  common CURRENT-State / DisplayState / admission root
+
+VexBehaviorV2Family : VexFamily
+  Control-driven Family
+
+VexBehaviorV2CompoundFamily : VexFamily
+  relationship-driven Family
+  -> concrete Family.current Compound State
+   InputState
+   OutputState
+   revision
+
+partial Input observation
+-> InputState.latest(incoming)
+-> complete latestStateInput
+-> process(latestStateInput)
+-> latest Output consequence
+-> COMMIT Family.current
+-> Act only when Output meaning changed
+-> rightful target Family / owner
+-> observed target CURRENT truth
+-> NEW Input
+-> process again
+~~~
+
+VexBehaviorV2FamilyCircuitTestSampleSuite is the clean teaching surface.
+
+~~~text
+createSingleFamily()
+  -> SingleFamily
+  -> one current State
+
+createListFamily()
+  -> ListFamily
+  -> nested list State
+
+createBooleanFamily()
+  -> BooleanFamily
+  -> Boolean State
+
+createMultiFamily(...)
+  -> MultiFamily
+  -> several Family currents
+  -> MultiInputState.latest(...)
+  -> process(...)
+  -> MultiOutputState
+  -> MultiCompoundState / Family.current
+  -> Act
+~~~
+
+The sample uses generic data shapes rather than app features so the infrastructure is the thing being
+taught. MultiFamily requests a list change through ListFamily.Control rather than a bespoke mutation
+escape hatch.
+
+Permanent ownership law:
+
+~~~text
+InputState.latest(...)
+  owns partial observation -> complete current input
+
+process(...)
+  owns relationship calculation only
+
+OutputState
+  owns current relationship consequence
+
+Family.current Compound State
+  owns the committed Input + Output relationship
+
+Act
+  reacts only after that consequence is CURRENT
+
+another Family / owner
+  owns its own resulting truth
+
+observation
+  returns that truth as NEW input
+~~~
+
+OutputState is not previous process memory and is not another owner's State. Existing Events / Maps /
+Navigation / Conversation Relays remain unchanged migration pressure rather than alternate standards.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][FAMILY-CIRCUIT][COMPOUND-FAMILY] -->
+
+### V2 Family Circuit — asynchronous Act custody still open
+
+The Compound Family foundation now owns the real post-commit seam for Family relationship State:
+an Output-changing commit produces one committed Output consequence and act(...) runs only after
+Family.current has moved.
+
+The earlier committed-Output runner pressure remains useful for the next execution-depth question:
+
+- Input-only Family State revisions must not replay an Act when Output meaning is unchanged;
+- Replaceable execution must be superseded by newer Output-changing meaning without uncommitting truth;
+- Sequenced execution must preserve accepted effect-bearing consequences in order;
+- cancellation changes execution lifetime, not already-committed Family relationship truth;
+- observed target truth must still return as NEW Input.
+
+This is now an **execution-custody** question, not a requirement for Relay to own the Compound Family
+commit. No generic asynchronous Act runner, event ledger or extra Output revision type is admitted yet.
+Repository Gradle/JVM proof for the new clean Family Circuit suite remains pending.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][FAMILY-CIRCUIT][ASYNC-ACT-CUSTODY] -->
