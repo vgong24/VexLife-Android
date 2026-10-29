@@ -102,7 +102,7 @@ private val VexTypography = Typography(
  * safeDrawing to the actual app shell inside that background.
  */
 @Composable
-fun VexLifeTheme(
+internal fun VexLifeTheme(
     themeMode: ThemeMode,
     content: @Composable () -> Unit,
 ) {
