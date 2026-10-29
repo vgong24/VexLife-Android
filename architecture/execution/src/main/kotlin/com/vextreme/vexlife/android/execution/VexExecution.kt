@@ -1,3 +1,5 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.execution
 
 import java.util.concurrent.CancellationException
@@ -63,11 +65,34 @@ abstract class VexExecution protected constructor(
     }
 
     /**
+     * Explicit opt-in for foundation code that bridges a rightful semantic relationship into the
+     * execution engine.
+     *
+     * Product/feature code should not implement RelationshipId directly. Direct Family owns the
+     * typed Control -> ResourceId -> Family RelationshipId boundary.
+     */
+    @RequiresOptIn(
+        message =
+            "Foundation relationship bridge only; use the rightful semantic owner's typed relationship boundary",
+        level =
+            RequiresOptIn.Level.ERROR,
+    )
+    @Retention(
+        AnnotationRetention.BINARY,
+    )
+    @Target(
+        AnnotationTarget.CLASS,
+        AnnotationTarget.FUNCTION,
+    )
+    annotation class RelationshipFoundationApi
+
+    /**
      * Maintained semantic execution identity supplied by the rightful semantic owner.
      *
      * Execution coordinates this identity; it does not invent trigger strings, argument tuples,
      * or a second semantic-ID vocabulary.
      */
+    @RelationshipFoundationApi
     interface RelationshipId
 
     private data class LegacyRelationshipId(
@@ -354,6 +379,7 @@ abstract class VexExecution protected constructor(
                 )
             }
 
+        @RelationshipFoundationApi
         fun <Argument, Result> beginEarliest(
             executionRoot: VexExecutionRoot,
             owner:
@@ -389,6 +415,7 @@ abstract class VexExecution protected constructor(
                 )
             }
 
+        @RelationshipFoundationApi
         fun <Argument, Result> beginLatest(
             executionRoot: VexExecutionRoot,
             owner:
@@ -424,6 +451,7 @@ abstract class VexExecution protected constructor(
                 )
             }
 
+        @RelationshipFoundationApi
         fun <Argument, Result> beginQueued(
             executionRoot: VexExecutionRoot,
             owner:
