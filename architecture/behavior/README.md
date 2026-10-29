@@ -17,9 +17,10 @@ This module preserves the geometry of **what a human can do from what is true no
   Compose observation, provider-observation currentness, async-result staleness, or Store convergence.
 - **Family Circuit construction guide:** [`VexBehaviorV2FamilyCircuitTestSampleSuite`](src/test/kotlin/com/vextreme/vexlife/android/behavior/VexBehaviorV2StateRelayOriginPressureTest.kt)
   — read this teaching suite when you need the end-to-end ownership circuit rather than one isolated
-  pressure. It deliberately builds from independent Screen / MusicQueue / ThemeMode current owners
-  through partial Input -> latest complete Input -> process -> Output -> commit -> Act -> rightful
-  owner -> observed NEW Input. The scenario is simulated and not product behavior.
+  pressure. It deliberately builds from a real Screen Family plus independent MusicQueue / ThemeMode
+  current owners through partial Input -> latest complete Input -> process -> Output -> commit -> Act
+  -> ScreenFamily Control -> admitted target CURRENT State -> observed NEW Input. The scenario is
+  simulated and not product behavior.
 - Review pressure/evidence:
   [`REVIEW-CHECKPOINT.md`](REVIEW-CHECKPOINT.md)
 
@@ -36,7 +37,7 @@ Read them in this order:
 ~~~text
 0. VexBehaviorV2FamilyCircuitTestSampleSuite
    construction-teaching suite for the candidate Family Circuit Architecture
-   -> three independently-owned CURRENT truths
+   -> ScreenFamily + two independently-owned observation-only CURRENT truths
    -> partial ComplexInputState observations
    -> InputState.latest(...) forms one complete current input
    -> ComplexFamily.process(latestStateInput) calculates meaning only
