@@ -118,141 +118,253 @@ class VexBehaviorV2StateRelayOriginPressureTest {
     }
 
     @Test
-    fun nestedCurrentListsPreserveEveryLayerByStableIdentity() {
+    fun arbitraryDepthNestedCurrentTreeUpdatesOneNodeWithoutRememberingAncestors() {
         val relay =
-            NestedListStateRelay(
+            NestedTreeStateRelay(
                 initialState =
-                    NestedListState.fixture(),
+                    NestedTreeState(
+                        tree =
+                            StateTreeSnapshot.of(
+                                rootRefs =
+                                    listOf(
+                                        "A1",
+                                        "A2",
+                                    ),
+                                nodes =
+                                    listOf(
+                                        StateTreeNode(
+                                            ref = "A1",
+                                            label = "A1",
+                                            childRefs = listOf("B1"),
+                                        ),
+                                        StateTreeNode(
+                                            ref = "B1",
+                                            label = "B1",
+                                            childRefs = listOf("C1"),
+                                        ),
+                                        StateTreeNode(
+                                            ref = "C1",
+                                            label = "C1",
+                                            childRefs = emptyList(),
+                                        ),
+                                        StateTreeNode(
+                                            ref = "A2",
+                                            label = "A2",
+                                            childRefs = listOf("B2"),
+                                        ),
+                                        StateTreeNode(
+                                            ref = "B2",
+                                            label = "B2",
+                                            childRefs = emptyList(),
+                                        ),
+                                    ),
+                            ),
+                    ),
             )
 
-        relay.updateItem(
-            sectionRef =
-                "section.alpha",
-            itemRef =
-                "item.alpha.two",
-        ) { item ->
-            item.copy(
-                label =
-                    "Alpha Two — updated",
-            )
-        }
-
-        assertEquals(
-            listOf(
-                "section.alpha",
-                "section.beta",
-            ),
-            relay.current.sections.refs,
+        /*
+         * Exact concern:
+         *
+         *     [A1[B1[C1]]], [A2[B2]]
+         *
+         * Updating C1 does not rebuild A1 or B1 and does not need feature code to remember A2/B2.
+         * Their hierarchy survives through stable semantic refs inside one coherent current snapshot.
+         */
+        relay.updateLabel(
+            ref =
+                "C1",
+            label =
+                "C1-current",
         )
+
         assertEquals(
             listOf(
-                "item.alpha.one",
-                "item.alpha.two",
+                "A1",
+                "B1",
+                "C1-current",
+                "A2",
+                "B2",
             ),
             relay.current
-                .sections[
-                    "section.alpha"
-                ]
-                .items
-                .refs,
+                .tree
+                .depthFirstLabels(),
         )
         assertEquals(
             listOf(
-                "Alpha One",
-                "Alpha Two — updated",
-                "Beta One",
+                "B1",
             ),
-            relay.current.displayLabels(),
+            relay.current
+                .tree[
+                    "A1"
+                ]
+                .childRefs,
+        )
+        assertEquals(
+            listOf(
+                "C1",
+            ),
+            relay.current
+                .tree[
+                    "B1"
+                ]
+                .childRefs,
+        )
+        assertEquals(
+            listOf(
+                "B2",
+            ),
+            relay.current
+                .tree[
+                    "A2"
+                ]
+                .childRefs,
         )
     }
 
     @Test
-    fun nestedCurrentSnapshotDetachesCallerOwnedMutableCollectionsWithoutLosingLayers() {
-        val itemRefs =
-            mutableListOf(
-                "item.alpha.one",
-                "item.alpha.two",
-            )
-        val itemValues =
-            mutableMapOf(
-                "item.alpha.one" to
-                    NestedItemState(
-                        itemRef =
-                            "item.alpha.one",
-                        label =
-                            "Alpha One",
-                    ),
-                "item.alpha.two" to
-                    NestedItemState(
-                        itemRef =
-                            "item.alpha.two",
-                        label =
-                            "Alpha Two",
-                    ),
-            )
-        val sectionRefs =
-            mutableListOf(
-                "section.alpha",
-            )
-        val sectionValues =
-            mutableMapOf(
-                "section.alpha" to
-                    NestedSectionState(
-                        sectionRef =
-                            "section.alpha",
-                        items =
-                            StateListSnapshot(
-                                refs =
-                                    itemRefs,
-                                valuesByRef =
-                                    itemValues,
+    fun nestedTreeDepthIsDataNotFeatureSpecificCopyCode() {
+        val depth =
+            48
+        val nodes =
+            (0 until depth).map { nodeIndex ->
+                val ref =
+                    "N" +
+                        nodeIndex
+                StateTreeNode(
+                    ref =
+                        ref,
+                    label =
+                        ref,
+                    childRefs =
+                        if (
+                            nodeIndex + 1 <
+                            depth
+                        ) {
+                            listOf(
+                                "N" +
+                                    (
+                                        nodeIndex +
+                                            1
+                                    ),
+                            )
+                        } else {
+                            emptyList()
+                        },
+                )
+            }
+        val relay =
+            NestedTreeStateRelay(
+                initialState =
+                    NestedTreeState(
+                        tree =
+                            StateTreeSnapshot.of(
+                                rootRefs =
+                                    listOf(
+                                        "N0",
+                                    ),
+                                nodes =
+                                    nodes,
                             ),
                     ),
+            )
+
+        relay.updateLabel(
+            ref =
+                "N47",
+            label =
+                "N47-current",
+        )
+
+        assertEquals(
+            depth,
+            relay.current
+                .tree
+                .depthFirstLabels()
+                .size,
+        )
+        assertEquals(
+            "N47-current",
+            relay.current
+                .tree
+                .depthFirstLabels()
+                .last(),
+        )
+    }
+
+    @Test
+    fun nestedTreeSnapshotDetachesCallerOwnedStructureWithoutRecursiveFeatureCopy() {
+        val rootRefs =
+            mutableListOf(
+                "A1",
+                "A2",
+            )
+        val a1Children =
+            mutableListOf(
+                "B1",
+            )
+        val b1Children =
+            mutableListOf(
+                "C1",
+            )
+        val nodes =
+            mutableListOf(
+                StateTreeNode(
+                    ref = "A1",
+                    label = "A1",
+                    childRefs = a1Children,
+                ),
+                StateTreeNode(
+                    ref = "B1",
+                    label = "B1",
+                    childRefs = b1Children,
+                ),
+                StateTreeNode(
+                    ref = "C1",
+                    label = "C1",
+                    childRefs = emptyList(),
+                ),
+                StateTreeNode(
+                    ref = "A2",
+                    label = "A2",
+                    childRefs = listOf("B2"),
+                ),
+                StateTreeNode(
+                    ref = "B2",
+                    label = "B2",
+                    childRefs = emptyList(),
+                ),
             )
 
         val relay =
-            NestedListStateRelay(
+            NestedTreeStateRelay(
                 initialState =
-                    NestedListState(
-                        sections =
-                            StateListSnapshot(
-                                refs =
-                                    sectionRefs,
-                                valuesByRef =
-                                    sectionValues,
+                    NestedTreeState(
+                        tree =
+                            StateTreeSnapshot.of(
+                                rootRefs =
+                                    rootRefs,
+                                nodes =
+                                    nodes,
                             ),
                     ),
             )
 
-        itemRefs.clear()
-        itemValues.clear()
-        sectionRefs.clear()
-        sectionValues.clear()
+        rootRefs.clear()
+        a1Children.clear()
+        b1Children.clear()
+        nodes.clear()
 
         assertEquals(
             listOf(
-                "section.alpha",
-            ),
-            relay.current.sections.refs,
-        )
-        assertEquals(
-            listOf(
-                "item.alpha.one",
-                "item.alpha.two",
+                "A1",
+                "B1",
+                "C1",
+                "A2",
+                "B2",
             ),
             relay.current
-                .sections[
-                    "section.alpha"
-                ]
-                .items
-                .refs,
-        )
-        assertEquals(
-            listOf(
-                "Alpha One",
-                "Alpha Two",
-            ),
-            relay.current.displayLabels(),
+                .tree
+                .depthFirstLabels(),
         )
     }
 
@@ -260,22 +372,24 @@ class VexBehaviorV2StateRelayOriginPressureTest {
         expected =
             IllegalArgumentException::class,
     )
-    fun nestedCurrentListRejectsDanglingDisplayIdentity() {
-        StateListSnapshot(
-            refs =
+    fun nestedTreeRejectsDanglingChildIdentityInsteadOfRenderingShorterTree() {
+        StateTreeSnapshot.of(
+            rootRefs =
                 listOf(
-                    "item.present",
-                    "item.missing",
+                    "A1",
                 ),
-            valuesByRef =
-                mapOf(
-                    "item.present" to
-                        NestedItemState(
-                            itemRef =
-                                "item.present",
-                            label =
-                                "Present",
-                        ),
+            nodes =
+                listOf(
+                    StateTreeNode(
+                        ref =
+                            "A1",
+                        label =
+                            "A1",
+                        childRefs =
+                            listOf(
+                                "B1",
+                            ),
+                    ),
                 ),
         )
     }
@@ -457,269 +571,307 @@ class VexBehaviorV2StateRelayOriginPressureTest {
     }
 
     /**
-     * Identity-first current list pressure.
+     * Identity-normalized current tree pressure.
      *
-     * refs owns traversal/order. valuesByRef must contain exactly those identities. Deep-copy
-     * detachment and semantic identity are deliberately different concerns.
+     * Hierarchy is data:
+     *
+     *     rootRefs
+     *     node.ref
+     *     node.childRefs
+     *
+     * A feature does not recursively rebuild ancestors merely to preserve descendants. Snapshot
+     * construction detaches the structural collections once; later node updates replace one node in
+     * the index while every untouched relationship remains addressable by ref.
+     *
+     * Node labels are immutable fixture values. A real domain value that owns mutable internals would
+     * still need its own immutable/snapshot boundary; StateTreeSnapshot solves structural identity and
+     * hierarchy preservation, not arbitrary mutable-value aliasing.
      */
-    private data class StateListSnapshot<
-        Ref,
-        Value,
-    >(
-        val refs:
-            List<Ref>,
-        val valuesByRef:
+    private data class StateTreeNode(
+        val ref: String,
+        val label: String,
+        val childRefs:
+            List<String>,
+    )
+
+    private class StateTreeSnapshot private constructor(
+        rootRefs:
+            List<String>,
+        nodes:
             Map<
-                Ref,
-                Value
+                String,
+                StateTreeNode
             >,
     ) {
+        private val retainedRootRefs =
+            rootRefs.toList()
+        private val retainedNodes =
+            nodes.mapValues { (_, node) ->
+                node.copy(
+                    childRefs =
+                        node.childRefs.toList(),
+                )
+            }
+
+        val rootRefs:
+            List<String>
+            get() =
+                retainedRootRefs.toList()
+
         init {
             require(
-                refs.distinct().size ==
-                    refs.size,
+                retainedRootRefs.distinct().size ==
+                    retainedRootRefs.size,
             ) {
-                "StateListSnapshot refs must be unique"
+                "StateTreeSnapshot root refs must be unique"
             }
+
             require(
-                refs.toSet() ==
-                    valuesByRef.keys,
+                retainedNodes.all { (ref, node) ->
+                    ref ==
+                        node.ref
+                },
             ) {
-                "StateListSnapshot refs and valuesByRef must describe the same complete current list"
+                "StateTreeSnapshot node keys must match node refs"
+            }
+
+            val allChildRefs =
+                retainedNodes.values
+                    .flatMap { node ->
+                        node.childRefs
+                    }
+
+            require(
+                (
+                    retainedRootRefs +
+                        allChildRefs
+                ).all(
+                    retainedNodes::containsKey,
+                ),
+            ) {
+                "StateTreeSnapshot every root/child ref must resolve to one current node"
+            }
+
+            val reachable =
+                linkedSetOf<String>()
+            val active =
+                linkedSetOf<String>()
+
+            fun visit(
+                ref: String,
+            ) {
+                require(
+                    ref !in
+                        active,
+                ) {
+                    "StateTreeSnapshot cannot contain a child cycle at $ref"
+                }
+
+                if (
+                    ref in
+                    reachable
+                ) {
+                    return
+                }
+
+                active +=
+                    ref
+                retainedNodes
+                    .getValue(
+                        ref,
+                    )
+                    .childRefs
+                    .forEach(
+                        ::visit,
+                    )
+                active -=
+                    ref
+                reachable +=
+                    ref
+            }
+
+            retainedRootRefs.forEach(
+                ::visit,
+            )
+
+            require(
+                reachable ==
+                    retainedNodes.keys,
+            ) {
+                "StateTreeSnapshot nodes must belong to the current rooted tree"
             }
         }
 
         operator fun get(
-            ref: Ref,
-        ): Value =
-            requireNotNull(
-                valuesByRef[
-                    ref
-                ],
-            ) {
-                "StateListSnapshot has no current value for ref $ref"
-            }
-
-        fun update(
-            ref: Ref,
-            transform:
-                (
-                    Value,
-                ) ->
-                    Value,
+            ref: String,
         ):
-            StateListSnapshot<
-                Ref,
-                Value
-            > {
+            StateTreeNode =
+            retainedNodes
+                .getValue(
+                    ref,
+                )
+                .let { node ->
+                    node.copy(
+                        childRefs =
+                            node.childRefs.toList(),
+                    )
+                }
+
+        fun updateLabel(
+            ref: String,
+            label: String,
+        ):
+            StateTreeSnapshot {
             require(
                 ref in
-                    valuesByRef,
+                    retainedNodes,
             ) {
-                "StateListSnapshot cannot update unknown ref $ref"
+                "StateTreeSnapshot cannot update unknown ref $ref"
             }
 
-            return copy(
-                refs =
-                    refs.toList(),
-                valuesByRef =
-                    valuesByRef
-                        .toMap() +
+            val current =
+                retainedNodes.getValue(
+                    ref,
+                )
+
+            return StateTreeSnapshot(
+                rootRefs =
+                    retainedRootRefs,
+                nodes =
+                    retainedNodes +
                         (
                             ref to
-                                transform(
-                                    get(
-                                        ref,
-                                    ),
+                                current.copy(
+                                    label =
+                                        label,
                                 )
                         ),
             )
         }
 
-        fun snapshot(
-            copyValue:
-                (
-                    Value,
-                ) ->
-                    Value,
-        ):
-            StateListSnapshot<
-                Ref,
-                Value
-            > =
-            StateListSnapshot(
-                refs =
-                    refs.toList(),
-                valuesByRef =
-                    refs.associateWith { ref ->
-                        copyValue(
-                            get(
-                                ref,
-                            ),
-                        )
-                    },
-            )
-    }
-
-    private data class NestedItemState(
-        val itemRef: String,
-        val label: String,
-    )
-
-    private data class NestedSectionState(
-        val sectionRef: String,
-        val items:
-            StateListSnapshot<
-                String,
-                NestedItemState
-            >,
-    )
-
-    private data class NestedListState(
-        val sections:
-            StateListSnapshot<
-                String,
-                NestedSectionState
-            >,
-    ) :
-        VexState<
-            NestedListState
-        > {
-        override fun deepCopy():
-            NestedListState =
-            copy(
-                sections =
-                    sections.snapshot { section ->
-                        section.copy(
-                            items =
-                                section.items.snapshot { item ->
-                                    item.copy()
-                                },
-                        )
-                    },
+        fun detached():
+            StateTreeSnapshot =
+            StateTreeSnapshot(
+                rootRefs =
+                    retainedRootRefs,
+                nodes =
+                    retainedNodes,
             )
 
-        fun displayLabels():
-            List<String> =
-            sections.refs.flatMap { sectionRef ->
-                val section =
-                    sections[
-                        sectionRef
-                    ]
+        fun depthFirstLabels():
+            List<String> {
+            val labels =
+                mutableListOf<String>()
+            val stack =
+                ArrayDeque<String>()
 
-                section.items.refs.map { itemRef ->
-                    section.items[
-                        itemRef
-                    ].label
-                }
+            retainedRootRefs
+                .asReversed()
+                .forEach(
+                    stack::addLast,
+                )
+
+            while (
+                stack.isNotEmpty()
+            ) {
+                val ref =
+                    stack.removeLast()
+                val node =
+                    retainedNodes.getValue(
+                        ref,
+                    )
+
+                labels +=
+                    node.label
+
+                node.childRefs
+                    .asReversed()
+                    .forEach(
+                        stack::addLast,
+                    )
             }
 
+            return labels
+        }
+
         companion object {
-            fun fixture():
-                NestedListState =
-                NestedListState(
-                    sections =
-                        StateListSnapshot(
-                            refs =
-                                listOf(
-                                    "section.alpha",
-                                    "section.beta",
-                                ),
-                            valuesByRef =
-                                mapOf(
-                                    "section.alpha" to
-                                        NestedSectionState(
-                                            sectionRef =
-                                                "section.alpha",
-                                            items =
-                                                StateListSnapshot(
-                                                    refs =
-                                                        listOf(
-                                                            "item.alpha.one",
-                                                            "item.alpha.two",
-                                                        ),
-                                                    valuesByRef =
-                                                        mapOf(
-                                                            "item.alpha.one" to
-                                                                NestedItemState(
-                                                                    itemRef =
-                                                                        "item.alpha.one",
-                                                                    label =
-                                                                        "Alpha One",
-                                                                ),
-                                                            "item.alpha.two" to
-                                                                NestedItemState(
-                                                                    itemRef =
-                                                                        "item.alpha.two",
-                                                                    label =
-                                                                        "Alpha Two",
-                                                                ),
-                                                        ),
-                                                ),
-                                        ),
-                                    "section.beta" to
-                                        NestedSectionState(
-                                            sectionRef =
-                                                "section.beta",
-                                            items =
-                                                StateListSnapshot(
-                                                    refs =
-                                                        listOf(
-                                                            "item.beta.one",
-                                                        ),
-                                                    valuesByRef =
-                                                        mapOf(
-                                                            "item.beta.one" to
-                                                                NestedItemState(
-                                                                    itemRef =
-                                                                        "item.beta.one",
-                                                                    label =
-                                                                        "Beta One",
-                                                                ),
-                                                        ),
-                                                ),
-                                        ),
-                                ),
+            fun of(
+                rootRefs:
+                    List<String>,
+                nodes:
+                    List<
+                        StateTreeNode
+                    >,
+            ):
+                StateTreeSnapshot {
+                require(
+                    nodes
+                        .map(
+                            StateTreeNode::ref,
+                        )
+                        .distinct()
+                        .size ==
+                        nodes.size,
+                ) {
+                    "StateTreeSnapshot node refs must be unique"
+                }
+
+                return StateTreeSnapshot(
+                    rootRefs =
+                        rootRefs,
+                    nodes =
+                        nodes.associateBy(
+                            StateTreeNode::ref,
                         ),
                 )
+            }
         }
     }
 
-    private class NestedListStateRelay(
+    private data class NestedTreeState(
+        val tree:
+            StateTreeSnapshot,
+    ) :
+        VexState<
+            NestedTreeState
+        > {
+        /*
+         * No descendant-specific copy logic lives here. StateTreeSnapshot owns structural detachment
+         * for arbitrary depth; the Family/root State only knows that it owns one snapshot value.
+         */
+        override fun deepCopy():
+            NestedTreeState =
+            copy(
+                tree =
+                    tree.detached(),
+            )
+    }
+
+    private class NestedTreeStateRelay(
         initialState:
-            NestedListState,
+            NestedTreeState,
     ) :
         VexRelay<
-            NestedListState
+            NestedTreeState
         >(
             relayRef =
-                "origin-pressure.family.state-relay.nested-list",
+                "origin-pressure.family.state-relay.nested-tree",
             initialState =
                 initialState,
         ) {
-        fun updateItem(
-            sectionRef: String,
-            itemRef: String,
-            transform:
-                (
-                    NestedItemState,
-                ) ->
-                    NestedItemState,
+        fun updateLabel(
+            ref: String,
+            label: String,
         ) {
             update { current ->
                 current.copy(
-                    sections =
-                        current.sections.update(
-                            sectionRef,
-                        ) { section ->
-                            section.copy(
-                                items =
-                                    section.items.update(
-                                        itemRef,
-                                        transform,
-                                    ),
-                            )
-                        },
+                    tree =
+                        current.tree.updateLabel(
+                            ref =
+                                ref,
+                            label =
+                                label,
+                        ),
                 )
             }
         }
