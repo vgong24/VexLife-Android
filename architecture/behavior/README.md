@@ -229,30 +229,34 @@ beginLatest {
 
 There is no `trigger: Any`, no `vararg Any?`, and no second Family `ExecutionId` authoring surface.
 
-A concrete Control may expose a typed ResourceId when Control name alone is too broad:
+A concrete Control may bind an exact ResourceId type when Control kind alone is too broad:
 
 ~~~kotlin
 data class TrackId(
-    override val value: String,
+    val value: String,
 ) : VexFamily.ResourceId<PlayerFamily>
 
 data class Play(
-    val trackId: TrackId,
-) : Control {
-    override val resourceId =
-        trackId
-}
+    override val resourceId: TrackId,
+    val position: Int,
+) :
+    Control,
+    VexFamily.Control.Resource<
+        PlayerFamily,
+        TrackId
+    >
 ~~~
 
-The foundation still supplies `Play` as part of the relationship identity. The Control contributes only
-the current typed ResourceId value. Other Control payload remains request evidence unless that Control
-explicitly exposes it as ResourceId.
+The foundation still supplies `Play` as part of the relationship identity. The concrete Control declares
+the exact ID type; an `AccountId` cannot be substituted into this `Play` merely because both IDs belong
+to the same Family. ResourceId itself is not flattened to a shared String inside the relationship key.
+Other Control payload such as `position` remains request evidence.
 
 ~~~text
 Control payload
 != automatic relationship identity
 
-Control name
+Control kind/name
 = always relationship identity
 
 typed ResourceId
