@@ -436,20 +436,33 @@ fun providerReconciled(observed: ProviderState) {
 `admitCurrent` is protected. The concrete Family/source relationship owns the visible method name
 and reconciliation meaning.
 
-## Family and Compound remain separate current owners
+## Compound current State
 
-`VexCompoundRelay` already owns its own current CompoundState / currentOutput. Direct Family
-StateRelay owns Family State. There is no generic:
+For a Compound relationship, the processed result is already the complete current State:
+
+~~~text
+incoming InputState
++ exact CURRENT VexCompoundState
+-> processStates(...)
+-> VexCompoundState(inputState, outputState)
+-> one current-State commit
+~~~
+
+`inputState` is the coherent retained input family and `outputState` is the meaning derived from
+that input by the processing layer. Either may change on a processing pass; when both change they are
+made current together rather than admitting OutputState separately afterward.
+
+The established Relay surfaces expose that same current relationship as `current`,
+`currentInput`, `currentOutput`, `states`, `inputStates`, and `outputStates`.
+
+Therefore the old:
 
 ~~~text
 Process OutputState -> Family.currentState
 ~~~
 
-handoff to fill.
-
-A concrete feature may use a relationship output to request another owner through that owner's
-existing semantic boundary, and observed truth may return as new Relay input, but that consequence is
-separate from who owns either current State.
+gap is not a missing Output bridge. OutputState alone was an incomplete representation of the
+processed Compound State.
 
 ## Deliberately still open
 
@@ -457,9 +470,9 @@ separate from who owns either current State.
 automatic UI observation/lifetime integration
 cross-cycle relationship memory
 provider / intent identity mapping
-exact future unification, if any, between Direct Family and Relay Single/Compound
+exact future Family + Relay Single/Compound composition beyond the established Compound current-State pattern
 ~~~
 
-Those are separate relationships, not missing layers in StateRelay.
+These remain separate questions; they do not require another State holder or an OutputState handoff.
 
 <!-- [VXG RealForever][VEX-FAMILY][CURRENT-ENTRY] -->
