@@ -596,8 +596,9 @@ remain distinct.
 The source also keeps sibling isolation, bounded source recovery, structured cancellation/teardown,
 registry defensiveness, typed callable invocation, and post-shutdown admission rejection.
 
-Repository Gradle/JVM execution proof remains **PENDING**. The repository-owned manual workflow
-`.github/workflows/vexstream-mobile-android.yml` runs `./gradlew vexVerifyLocal`, but no run/status
-exists for this current head. Earlier isolated smoke work predates the typed Control/RelationshipId refinement and does not prove this head.
+Exact-head repository-owned `vexVerifyJvm` proof passed for the typed Control/RelationshipId
+candidate in PR #193, and that exact candidate tree is now merged on main. GitHub-hosted workflow/status
+evidence was not produced for that head, so this remains a local/repository-owned proof claim rather
+than a hosted-CI claim. Device/Journey/ScreenCrawler and lived-product acceptance are separate.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->

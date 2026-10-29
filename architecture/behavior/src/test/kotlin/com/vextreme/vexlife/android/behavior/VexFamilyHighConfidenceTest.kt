@@ -5,6 +5,9 @@ import com.vextreme.vexlife.android.logging.VexLogger
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -758,6 +761,104 @@ class VexFamilyHighConfidenceTest {
                     MinimalFamily.State.Idle,
                 ),
                 family.displayState,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
+    fun throwingLoggerCannotChangeFamilyControlStateStoreOrSuccessSemantics() {
+        val root =
+            VexExecutionRoot()
+        val logger =
+            VexLogger.Sink {
+                throw IllegalStateException(
+                    "synthetic logger failure",
+                )
+            }
+
+        try {
+            val immediate =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
+                )
+
+            assertTrue(
+                immediate.activate(
+                    ValueFamily.Control.Set(
+                        value =
+                            "direct",
+                    ),
+                ),
+            )
+            assertEquals(
+                ValueFamily.State.Ready(
+                    value =
+                        "direct",
+                ),
+                immediate.currentState,
+            )
+
+            val store =
+                GatedStore()
+            val saved =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                    executionRoot =
+                        root,
+                    store =
+                        store,
+                    logger =
+                        logger,
+                )
+
+            assertTrue(
+                saved.activate(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "persisted",
+                    ),
+                ),
+            )
+            assertTrue(
+                "throwing logger prevented Store.save",
+                store.started.await(
+                    5,
+                    TimeUnit.SECONDS,
+                ),
+            )
+
+            store.gate.complete(
+                Unit,
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    saved.states.first { state ->
+                        state ==
+                            ValueFamily.State.Ready(
+                                value =
+                                    "persisted",
+                            )
+                    }
+                }
+            }
+
+            assertEquals(
+                ValueFamily.State.Ready(
+                    value =
+                        "persisted",
+                ),
+                saved.currentState,
             )
         } finally {
             root.forceStopAll()

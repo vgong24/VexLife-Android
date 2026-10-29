@@ -2,7 +2,8 @@
 
 [VXG RealForever]
 
-This module's current review candidate is the smallest readable Family circuit for:
+The Direct `VexFamily` foundation accepted on main through
+[PR #193](https://github.com/vgong24/VexLife-Android/pull/193) is the smallest readable Family circuit for:
 
 ~~~text
 CURRENT State + incoming Control
@@ -11,6 +12,27 @@ CURRENT State + incoming Control
 -> optional begin
 -> current State / execution
 ~~~
+
+## Current foundation state
+
+Two behavior foundations intentionally coexist today:
+
+~~~text
+existing VexBehaviorFamily / SCAE
+    accepted
+    still has production consumers
+
+Direct VexFamily
+    accepted on main through PR #193
+    owns the newer direct State + Control -> Act relationship model
+~~~
+
+Direct `VexFamily` did **not** wholesale replace the existing Behavior/SCAE implementation.
+Migration/evolution remains consumer-driven. A fresh worker should not delete or rewrite older
+Behavior source merely because the Direct Family foundation exists.
+
+PR #193 is the acceptance/origin reference for the Direct Family identity/custody refinement:
+https://github.com/vgong24/VexLife-Android/pull/193
 
 ## Start here
 

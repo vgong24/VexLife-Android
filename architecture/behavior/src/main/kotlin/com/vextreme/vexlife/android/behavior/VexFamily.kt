@@ -67,6 +67,10 @@ abstract class VexFamily<
      *
      * ResourceId deliberately has no shared String/value payload. The concrete ID type owns its own
      * representation and equality; Family preserves that typed object instead of flattening it.
+     *
+     * Equality and hashCode must remain stable for as long as the ID participates in a live
+     * relationship. Prefer immutable value identity. A mutable ID whose equality/hash changes while
+     * active would corrupt relationship lookup/custody rather than represent a new semantic request.
      */
     interface ResourceId<
         Family,
@@ -699,7 +703,7 @@ abstract class VexFamily<
             )
                 ?: return false
 
-        logger.record(
+        recordAcceptedFact(
             VexLogger.Event.Family.ControlAccepted(
                 family =
                     this::class,
@@ -746,7 +750,7 @@ abstract class VexFamily<
             before !=
             currentState
         ) {
-            logger.record(
+            recordAcceptedFact(
                 VexLogger.Event.Family.StateAdmitted(
                     family =
                         this::class,
@@ -796,7 +800,7 @@ abstract class VexFamily<
             stateStore::save
 
         val beforeOperation = {
-            logger.record(
+            recordAcceptedFact(
                 VexLogger.Event.Family.OperationBegan(
                     family =
                         this::class,
@@ -816,7 +820,7 @@ abstract class VexFamily<
                     result
                 ) {
                     Store.WriteResult.Success -> {
-                        logger.record(
+                        recordAcceptedFact(
                             VexLogger.Event.Family.OperationSuccess(
                                 family =
                                     this::class,
@@ -833,7 +837,7 @@ abstract class VexFamily<
                     }
 
                     is Store.WriteResult.Failure -> {
-                        logger.record(
+                        recordAcceptedFact(
                             VexLogger.Event.Family.OperationFailure(
                                 family =
                                     this::class,
@@ -860,7 +864,7 @@ abstract class VexFamily<
             (
                 Throwable,
             ) -> Unit = { failure ->
-                logger.record(
+                recordAcceptedFact(
                     VexLogger.Event.Family.OperationFailure(
                         family =
                             this::class,
@@ -1005,6 +1009,26 @@ abstract class VexFamily<
             resourceId =
                 resourceId,
         )
+    }
+
+    /**
+     * Best-effort observation of an already-authored/accepted Family fact.
+     *
+     * Logger projection is deliberately non-authoritative. A Sink failure must not reject a lawful
+     * Control, suppress State admission or Store execution, or convert a successful operation into
+     * the Family-authored failure result.
+     */
+    private fun recordAcceptedFact(
+        event:
+            VexLogger.Event,
+    ) {
+        try {
+            logger.record(
+                event,
+            )
+        } catch (_: Throwable) {
+            // Observation failure is not Family semantic failure.
+        }
     }
 
     private fun applyLaterResult(

@@ -66,6 +66,10 @@ class VexLogger(
      *
      * A Sink decides how these structured events are projected. They do not automatically become
      * VexLogRecord UI-history entries merely because they belong to VexLogger.
+     *
+     * Structured logging is observational, not semantic authority. A foundation emitting an already
+     * accepted fact must isolate Sink failure so logging cannot retroactively reject or rewrite that
+     * fact.
      */
     fun interface Sink {
         fun record(

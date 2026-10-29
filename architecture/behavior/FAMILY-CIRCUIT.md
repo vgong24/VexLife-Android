@@ -279,6 +279,8 @@ exact Family + Relay Single/Compound composition
 Process OutputState -> rightful Family.currentState handoff
 ~~~
 
-Repository Gradle/JVM proof remains PENDING.
+Exact-head repository-owned `vexVerifyJvm` proof passed for PR #193, and the reviewed candidate tree
+is the tree merged on main. This foundation does not claim device/Journey/ScreenCrawler or lived-product
+acceptance from that PR.
 
 <!-- [VXG RealForever][VEX-FAMILY][NATIVE-STATE-CONTROL-TRAVERSAL] -->
