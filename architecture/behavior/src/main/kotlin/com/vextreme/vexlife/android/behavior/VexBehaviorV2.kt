@@ -887,9 +887,10 @@ interface VexBehaviorV2CompoundOutputState<
 }
 
 /**
- * CURRENT semantic State for a Compound Family.
+ * CURRENT semantic State contract for a Compound Family.
  *
- * The Family owns this whole relationship State:
+ * A concrete Family gives this State an ordinary domain-readable name (for example
+ * ComplexCompoundState). The framework only requires these three coordinates:
  *
  *     inputState
  *       complete current facts needed for calculation
@@ -902,15 +903,11 @@ interface VexBehaviorV2CompoundOutputState<
  *
  * Revision is not an event ledger.
  */
-data class VexBehaviorV2CompoundState<
+interface VexBehaviorV2CompoundFamilyState<
     Family,
     InputState,
     OutputState,
->(
-    val inputState: InputState,
-    val outputState: OutputState,
-    val revision: Long = 0L,
-) :
+> :
     VexBehaviorFamily.State<
         Family
     >
@@ -926,14 +923,14 @@ data class VexBehaviorV2CompoundState<
         VexBehaviorV2CompoundOutputState<
             OutputState
         > {
-    init {
-        require(
-            revision >=
-                0L,
-        ) {
-            "Compound Family revision must be non-negative"
-        }
-    }
+    val inputState:
+        InputState
+
+    val outputState:
+        OutputState
+
+    val revision:
+        Long
 }
 
 /**
@@ -979,30 +976,32 @@ data class VexBehaviorV2CommittedOutput<
  */
 abstract class VexBehaviorV2CompoundFamily<
     Family,
+    State,
     InputState,
     OutputState,
     Control,
 >(
     initialInputState: InputState,
     initialOutputState: OutputState,
+    private val stateFactory:
+        (
+            inputState: InputState,
+            outputState: OutputState,
+            revision: Long,
+        ) -> State,
     executionRoot: VexExecutionRoot,
     logger: VexFamilyLogger,
 ) :
     VexBehaviorV2Family<
         Family,
-        VexBehaviorV2CompoundState<
-            Family,
-            InputState,
-            OutputState
-        >,
+        State,
         Control
     >(
         initialState =
-            VexBehaviorV2CompoundState(
-                inputState =
-                    initialInputState.deepCopy(),
-                outputState =
-                    initialOutputState.deepCopy(),
+            stateFactory(
+                initialInputState.deepCopy(),
+                initialOutputState.deepCopy(),
+                0L,
             ),
         executionRoot =
             executionRoot,
@@ -1012,9 +1011,16 @@ abstract class VexBehaviorV2CompoundFamily<
     where Family :
         VexBehaviorV2CompoundFamily<
             Family,
+            State,
             InputState,
             OutputState,
             Control
+        >,
+          State :
+        VexBehaviorV2CompoundFamilyState<
+            Family,
+            InputState,
+            OutputState
         >,
           InputState :
         VexBehaviorV2CompoundInputState<
@@ -1132,35 +1138,35 @@ abstract class VexBehaviorV2CompoundFamily<
                 }
 
                 val nextState =
-                    VexBehaviorV2CompoundState<
-                        Family,
-                        InputState,
-                        OutputState
-                    >(
-                        inputState =
-                            if (
-                                inputChanged
-                            ) {
-                                latestStateInput
-                                    .deepCopy()
-                            } else {
-                                retained
-                                    .inputState
-                            },
-                        outputState =
-                            if (
-                                outputChanged
-                            ) {
-                                latestStateOutput
-                                    .deepCopy()
-                            } else {
-                                retained
-                                    .outputState
-                            },
-                        revision =
-                            retained.revision +
-                                1L,
+                    stateFactory(
+                        if (
+                            inputChanged
+                        ) {
+                            latestStateInput
+                                .deepCopy()
+                        } else {
+                            retained
+                                .inputState
+                        },
+                        if (
+                            outputChanged
+                        ) {
+                            latestStateOutput
+                                .deepCopy()
+                        } else {
+                            retained
+                                .outputState
+                        },
+                        retained.revision +
+                            1L,
                     )
+
+                require(
+                    nextState.revision >=
+                        0L,
+                ) {
+                    "Compound Family revision must be non-negative"
+                }
 
                 /*
                  * COMMIT — Family.current moves before any Act can observe this consequence.
