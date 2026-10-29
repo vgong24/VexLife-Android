@@ -114,52 +114,55 @@ PresentationState should be created merely to fill a perceived gap.
 
 ## Execution relationship identity
 
-Family passes the semantic relationship directly to Execution:
+Family owns the relationship composition once:
 
 ~~~text
 activate(control)
--> Act.Begin(
-       approach,
-       arguments
-   )
--> VexExecution.Relationship(
-       owner = this live Family,
-       trigger = Control kind,
-       arguments = ordered tuple
-   )
--> maintained execution map key
+-> exact live Family
+-> exact Control belonging to that Family
+-> Control name/type included automatically
+-> optional typed Control.resourceId
+-> VexFamily.RelationshipId<Family>
+-> VexExecution.RelationshipId
+-> maintained execution coordination
 ~~~
 
-There is no intermediate Family execution ID.
-
-Authoring stays small:
+Concrete authoring stays intentionally small:
 
 ~~~kotlin
+beginEarliest {
+    ...
+}
+
 beginLatest {
     ...
 }
 
-beginLatest(
-    accountId,
-    itemId,
-) {
+beginQueued {
     ...
 }
 ~~~
 
-The Relationship answers **which executions belong together**. `VexExecution.Approach` answers
-**how overlaps are handled**.
+Begin chooses **Approach only**. It accepts no trigger, arbitrary argument tuple, or hand-authored
+relationship string.
 
 ~~~text
-Relationship = owner + trigger + arguments
-Approach     = Independent / Earliest / Latest / Queued
+Control name
+    always included by Family foundation
+
+ResourceId<Family>
+    optional typed narrowing supplied by the concrete Control
+
+RelationshipId
+    live Family + Control name/type + optional ResourceId
+
+Approach
+    Independent / Earliest / Latest / Queued
 ~~~
 
-Zero arguments means Family + Control only. Arguments stack positionally when one Control needs
-narrower subrelationships. Zero arguments and one explicit null are distinct.
-
-Use stable immutable argument values. The full Control payload is request evidence; it is not
-automatically execution relationship identity.
+The full Control payload is not automatically identity. If `Control.Play(trackId, position)` needs
+coordination per track, `trackId` can be the typed ResourceId while `position` remains request payload.
+A future author cannot pass unrelated execution metadata into Begin because no such parameter exists.
 
 ## Logger boundary
 

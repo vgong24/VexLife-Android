@@ -21,8 +21,8 @@ import kotlinx.coroutines.launch
  * Internal coroutine engine.
  *
  * Active custody is keyed by exact [VexExecution.InstanceId]. Maintained overlap handling is keyed
- * directly by [VexExecution.RelationshipId]: live owner + semantic trigger + ordered arguments.
- * Source identity remains diagnostic/source-addressing information only.
+ * by the [VexExecution.RelationshipId] supplied by the rightful semantic owner. Execution does not
+ * manufacture trigger strings or argument tuples. Source identity remains diagnostic only.
  */
 internal class VexCoroutineLauncher(
     dispatcher: CoroutineDispatcher,

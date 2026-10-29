@@ -25,11 +25,11 @@ import kotlinx.coroutines.withContext
  * InstanceId
  *     automatically generated for one exact admitted execution
  *
- * Relationship
- *     the actual maintained-map coordinate: live owner + semantic trigger + ordered arguments
+ * RelationshipId
+ *     semantic identity supplied by the rightful owner; Execution only coordinates it
  *
  * Approach
- *     how overlapping executions in that Relationship interact
+ *     how overlapping executions sharing that RelationshipId interact
  */
 abstract class VexExecution protected constructor(
     private val executionRoot: VexExecutionRoot,

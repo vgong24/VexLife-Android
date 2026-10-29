@@ -192,83 +192,81 @@ VexFamily
 does not exist as a peer package capability. Its construction is closed and a concrete Family only
 receives the protected `begin(...)` opening while authoring an Act.
 
-Begin does not own a second execution-mode vocabulary. It carries `VexExecution.Approach` plus
-optional ordered arguments; activation combines those with the live Family and triggering Control
-to form the exact `VexExecution.Relationship` map key.
+Begin carries only `VexExecution.Approach`. It does not accept relationship arguments or manufacture
+identity.
 
 ## Execution relationship identity
 
-Family-originated execution uses the same semantic relationship that the execution map uses. There is
-no intermediate Family `ExecutionId` and no conversion of Control meaning into a second ID vocabulary.
+Family owns the maintained relationship boundary:
 
 ~~~text
-VexExecution.Relationship
-    owner      = this live Family
-    trigger    = triggering Control kind
-    arguments  = optional ordered tuple
+VexFamily.Control<Family>
+    -> Control name is always included
+
+optional VexFamily.ResourceId<Family>
+    -> narrows repeated instances of that same Control
+
+live Family
++ Control name/type
++ optional typed ResourceId
+=
+VexFamily.RelationshipId<Family>
+    -> VexExecution.RelationshipId
 ~~~
 
-`activate(control)` already knows the Control that earned the Act, so Begin authoring only chooses
-the overlap approach and, when needed, the relationship arguments:
+`activate(control)` already owns the exact Control that earned the Act. The Family runtime therefore
+forms the relationship identity automatically. Concrete `beginEarliest { ... }`,
+`beginLatest { ... }`, and `beginQueued { ... }` choose only overlap behavior.
 
 ~~~kotlin
 beginLatest {
-    ...
-}
-
-beginLatest(
-    accountId,
-    itemId,
-) {
-    ...
+    save(nextState).results {
+        success()
+        failure()
+    }
 }
 ~~~
 
-Meaning:
+There is no `trigger: Any`, no `vararg Any?`, and no second Family `ExecutionId` authoring surface.
 
-~~~text
-no arguments
-    Family + Control
+A concrete Control may expose a typed ResourceId when Control name alone is too broad:
 
-one argument
-    Family + Control + arg1
+~~~kotlin
+data class TrackId(
+    override val value: String,
+) : VexFamily.ResourceId<PlayerFamily>
 
-many arguments
-    Family + Control + arg1 + arg2 + ...
+data class Play(
+    val trackId: TrackId,
+) : Control {
+    override val resourceId =
+        trackId
+}
 ~~~
 
-The resulting `VexExecution.Relationship` is the key used by the maintained execution map itself.
-There is no additional Id/key wrapper around it.
-
-The overlap behavior is a separate fact:
-
-~~~text
-VexExecution.Approach
-    Independent
-    Earliest
-    Latest
-    Queued
-~~~
-
-That separation matters:
+The foundation still supplies `Play` as part of the relationship identity. The Control contributes only
+the current typed ResourceId value. Other Control payload remains request evidence unless that Control
+explicitly exposes it as ResourceId.
 
 ~~~text
-Relationship
-    WHICH executions belong together?
+Control payload
+!= automatic relationship identity
+
+Control name
+= always relationship identity
+
+typed ResourceId
+= optional narrowing identity
 
 Approach
-    HOW overlapping executions in that Relationship interact?
+= Independent / Earliest / Latest / Queued
 ~~~
 
-Arguments are positional. `(A, B)` differs from `(B, A)`. Zero arguments differs from one explicit
-`null` argument. Use stable immutable semantic values whose equality remains stable while the
-relationship is alive. The exact Control payload is not automatically part of duplicate handling.
-
-Direct non-Family VexExecution code may use its own semantic trigger to construct a Relationship, but
-the architecture does not require a second `Id` concept.
+The live Family instance scopes the resulting RelationshipId, so equal Control/ResourceId values on two
+live Family instances remain separate.
 
 `SourceRef` remains automatic diagnostic/source information. `InstanceId` remains the exact
-per-launch occurrence. Neither substitutes for Relationship.
+per-launch occurrence. Neither substitutes for the semantic RelationshipId.
 
 ## Logger boundary
 

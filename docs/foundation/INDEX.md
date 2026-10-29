@@ -22,7 +22,6 @@ Current review source:
 ~~~text
 architecture/behavior/FAMILY-CIRCUIT.md
 architecture/behavior/src/main/.../VexFamily.kt
-architecture/behavior/src/main/.../VexAct.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
@@ -39,6 +38,20 @@ Family.activate(control)
 
 The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
 or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
+
+Current PR #193 refinement also keeps execution identity inside the typed Family boundary:
+
+~~~text
+Control<Family>
+-> Control name included automatically
+-> optional ResourceId<Family>
+-> Family-owned RelationshipId
+-> Begin chooses Approach only
+-> VexExecution coordinates that RelationshipId
+~~~
+
+There is no arbitrary Begin trigger/argument identity surface. This refinement remains a draft candidate
+until exact-head repository proof and lifecycle acceptance are complete.
 
 Compound/process integration remains separate and open:
 

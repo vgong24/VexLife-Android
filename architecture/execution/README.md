@@ -17,16 +17,19 @@ coroutine execution must make that role explicit by extending `VexExecution`.
 VexExecutionRoot
     -> internal VexCoroutineLauncher
     -> active[InstanceId]
-    -> relationships[live owner identity + Id] only when a maintained relationship is authored
+    -> relationships[RelationshipId] only for maintained semantic work
 
 FeatureExecution : VexExecution
-    -> launch(callable)
-    -> launchEarliest(relationship, callable)
-    -> launchLatest(relationship, callable)
-    -> launchQueued(relationship, callable)
+    -> launchOnce(callable)      # fail closed on an unfinished same-source invocation
+    -> launch(callable)          # every invocation intentionally independent
     -> launchForCollect(flowProvider) { value -> ... }
     -> forceStop(callable)
     -> joinStop(callable)
+
+semantic foundation owner
+    -> supplies RelationshipId
+    -> selects Approach
+    -> Execution coordinates Earliest / Latest / Queued
 ```
 
 ## Why this evolved from ordinary coroutine usage
@@ -105,61 +108,52 @@ rightful responsibilities.
 
 ## Public authoring language
 
-Finite work has four explicit approaches:
+Finite direct execution keeps two explicit contracts:
 
-```text
+~~~text
+launchOnce(...)
+    one unfinished invocation per SourceRef
+    second unfinished same-source invocation fails closed
+
 launch(...)
-    every invocation is an independent execution instance
-    no maintained Relationship is created
+    every invocation is intentionally independent
+    each admitted invocation receives a fresh InstanceId
+~~~
 
-launchEarliest(trigger, ...)
-    the earliest unfinished execution for this Relationship is sufficient
+Maintained overlap semantics are not authored from arbitrary direct `trigger` values. A semantic
+foundation such as Family supplies a `VexExecution.RelationshipId`, then chooses an Approach:
 
-launchLatest(trigger, ...)
-    the newest execution supersedes unfinished predecessors for this Relationship
-    predecessor teardown completes before the newest begins
+~~~text
+RelationshipId
+    WHICH semantic work intentionally coordinates?
+    supplied by the rightful semantic owner
 
-launchQueued(trigger, ...)
-    every launch for this Relationship remains meaningful
-    launches execute in arrival order
-```
+Approach.Earliest
+    earliest unfinished instance is sufficient
 
-For direct `VexExecution` subclasses, the protected maintained-launch methods take a semantic
-`trigger`. Execution automatically combines:
+Approach.Latest
+    newest supersedes predecessors
+    predecessor teardown completes before newest begins
 
-```text
-this live VexExecution instance
-+
-trigger
-```
+Approach.Queued
+    every admitted instance remains meaningful
+    execute in arrival order
+~~~
 
-into the exact `VexExecution.Relationship` used as the maintained-map key.
+Execution does not construct semantic identity from `Any`, string triggers, or ordered argument bags.
 
-Family-originated execution is richer because Family already has the semantic trigger:
+For Family-originated work:
 
-```text
+~~~text
 live Family
-+
-triggering Control kind
-+
-optional ordered arguments
++ Control name/type
++ optional typed Control ResourceId
 =
-VexExecution.Relationship
-```
+Family RelationshipId
+-> VexExecution.RelationshipId
+~~~
 
-There is no separate `ExecutionId` layer.
-
-The overlap behavior is represented separately as `VexExecution.Approach`:
-
-```text
-Independent
-Earliest
-Latest
-Queued
-```
-
-Relationship answers **which executions belong together**. Approach answers **how overlaps in that
-Relationship behave**.
+Begin chooses only Approach. Family owns the relationship composition.
 
 A maintained Flow observation remains a separate contract:
 
@@ -235,9 +229,9 @@ HANDOFF != RETRY_POLICY
 PROVIDER_AFFINITY != ALWAYS_MAIN
 ```
 
-## Execution relationship and instance identity
+## Execution identity and runtime instance
 
-Execution keeps separate truths instead of overloading one ID:
+Execution keeps separate truths:
 
 ~~~text
 VexExecution.SourceRef
@@ -250,54 +244,50 @@ VexExecution.InstanceId
     generated for every admitted execution
     exact runtime occurrence
 
-VexExecution.Relationship
-    maintained-map key
-    live owner identity + semantic trigger + ordered arguments
+VexExecution.RelationshipId
+    semantic maintained-work identity
+    supplied by the rightful semantic owner
 
 VexExecution.Approach
     Independent / Earliest / Latest / Queued
-    overlap handling for a Relationship
+    overlap handling
 ~~~
 
 Therefore:
 
 ~~~text
-SAME SOURCE
-!= SAME INSTANCE
-!= SAME RELATIONSHIP
-
-RELATIONSHIP
+SOURCE REF
+!= INSTANCE ID
+!= RELATIONSHIP ID
 != APPROACH
 ~~~
 
-The active execution registry is keyed by `InstanceId`. The maintained overlap map is keyed directly
-by `Relationship`:
+The active execution registry is keyed by `InstanceId`. Maintained overlap coordination is keyed by
+`RelationshipId`:
 
 ~~~text
 active[InstanceId]
-relationships[Relationship]
+relationships[RelationshipId]
 ~~~
 
-No intermediate execution ID is manufactured.
+Execution does not add another owner/trigger/argument identity layer around the RelationshipId it receives.
 
-For Family-originated work, the Relationship is formed from:
+Family currently forms its RelationshipId from:
 
 ~~~text
-live Family
+live Family identity
 +
-triggering Control kind
+Control name/type
 +
-optional ordered arguments
+optional typed ResourceId<Family>
 ~~~
 
-For direct VexExecution work, the concrete execution owner supplies a semantic trigger and the
-execution boundary scopes it to that live owner.
+That composition belongs to Family because Family owns the Control vocabulary. Execution only owns
+coroutine custody and overlap behavior.
 
 `SourceRef` may change when source is renamed or obfuscated and is therefore not durable semantic
-identity. Relationship arguments use ordinary value equality and should remain stable/immutable while
-the relationship is alive. If persistence is genuinely required, that concrete owner must define a
-stable serialized representation at the persistence boundary; the runtime Relationship itself is not
-a cross-build serialization format.
+identity. A RelationshipId is likewise a live runtime coordination identity unless its rightful semantic
+owner separately establishes a durable serialization contract.
 
 ## Collection recovery boundary
 
@@ -367,18 +357,18 @@ active
     LinkedHashMap<InstanceId, ManagedExecution>
 
 relationships
-    LinkedHashMap<Relationship, MaintainedRelationship>
+    LinkedHashMap<RelationshipId, MaintainedRelationship>
 ~~~
 
 Every admitted launch receives a unique InstanceId. Earliest / Latest / Queued use an exact
-Relationship key. Ordinary independent launch has no maintained Relationship.
+RelationshipId key. Ordinary independent launch has no maintained Relationship.
 
-A cancelling predecessor continues to occupy its Relationship until its Job is actually completed.
+A cancelling predecessor continues to occupy its RelationshipId until its Job is actually completed.
 Kotlin may report `isActive == false` while structured/non-cancellable teardown is still running; a
 later Latest or Queued launch may not skip that unfinished predecessor.
 
 The map value stores the active Approach and ordered instance membership. Attempting to use the same
-unfinished Relationship simultaneously with a different Approach fails closed rather than silently
+unfinished RelationshipId simultaneously with a different Approach fails closed rather than silently
 creating two lanes.
 
 ## Ownership laws
@@ -576,39 +566,34 @@ still makes the underlying architecture obvious.
 The focused `VexExecutionTest` source now protects both inherited behavior and the new identity
 relationships.
 
-Current relationship proofs present in source:
+Current execution proofs present in source:
 
-```text
+~~~text
+launchOnce
+    second unfinished invocation from the same SourceRef -> rejected
+
 launch
     same callable -> distinct concurrent InstanceIds
     same SourceRef is preserved
 
-launchEarliest
-    later overlap on the same live owner + Relationship -> same existing InstanceId
-    duplicate operation does not begin
-    the same Relationship on a second live owner -> independent InstanceId / independent work
-
-launchLatest
-    A begins
-    B supersedes A
-    C arrives while A is still in non-cancellable teardown
-    C remains held until every unfinished predecessor completes
-    B never slips through
-
-launchQueued
-    A -> B -> C
-    every admitted launch executes in arrival order
+maintained RelationshipId
+    Earliest -> later overlap receives the existing unfinished InstanceId
+    Latest -> newest waits through predecessor teardown
+    Queued -> every admitted instance executes in arrival order
 
 launchForCollect
     duplicate unfinished observation of the same source still fails closed
-```
+~~~
+
+Family's focused proof separately establishes that Control name is always included, arbitrary Control
+payload is not identity, typed ResourceId narrows identity when provided, and two live Family instances
+remain distinct.
 
 The source also keeps sibling isolation, bounded source recovery, structured cancellation/teardown,
 registry defensiveness, typed callable invocation, and post-shutdown admission rejection.
 
 Repository Gradle/JVM execution proof remains **PENDING**. The repository-owned manual workflow
 `.github/workflows/vexstream-mobile-android.yml` runs `./gradlew vexVerifyLocal`, but no run/status
-exists for this current head. Earlier isolated smoke work predates the final direct-Relationship
-refactor and does not prove this head.
+exists for this current head. Earlier isolated smoke work predates the typed Control/RelationshipId refinement and does not prove this head.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
