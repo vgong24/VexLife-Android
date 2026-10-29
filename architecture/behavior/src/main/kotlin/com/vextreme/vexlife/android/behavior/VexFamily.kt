@@ -5,6 +5,7 @@ package com.vextreme.vexlife.android.behavior
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -233,6 +234,27 @@ abstract class VexFamily<
             ) :
                 WriteResult
         }
+    }
+
+    /**
+     * Earned specialization when durable Store truth is exactly Family State.
+     *
+     * This restores the ThemeMode pressure already proved by the Origin Walk without claiming every
+     * Family Store is State-shaped. Observable durable State is a StateRelay dependency; it is not
+     * another live semantic-State holder.
+     */
+    interface StateStore<
+        State : VexFamily.State<*>,
+    > :
+        Store<State> {
+        val observableState:
+            Flow<State>
+
+        suspend fun get():
+            State
+
+        suspend fun forget():
+            Store.WriteResult
     }
 
     /**
@@ -670,6 +692,39 @@ abstract class VexFamily<
     open val store:
         Store<FamilyState>? =
         null
+
+    /**
+     * Observe one durable Family-State Store through the same StateRelay currentness boundary.
+     *
+     * Execution owns only maintained Flow custody. Store owns durable State. The concrete Family
+     * owns how stored State combines with exact CURRENT State. The decision re-enters through
+     * [admitCurrent], so no session/presentation observer or second current-State holder is created.
+     */
+    protected fun observeStore(
+        stateStore:
+            StateStore<FamilyState>,
+        decide:
+            (
+                currentState: FamilyState,
+                storedState: FamilyState,
+            ) -> FamilyState,
+    ):
+        VexExecution.Handle =
+        VexExecution.observe(
+            executionRoot =
+                executionRoot,
+            owner =
+                this::class,
+            source =
+                stateStore::observableState,
+        ) { storedState ->
+            admitCurrent { currentState ->
+                decide(
+                    currentState,
+                    storedState,
+                )
+            }
+        }
 
     /**
      * Current display classification for this Family.
