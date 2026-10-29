@@ -264,11 +264,15 @@ abstract class VexFamily<
                 Save<State>,
         ) {
 
-            internal data class Result<
+            internal class Result<
                 State,
-            >(
-                val admittedState:
-                    State?,
+            > internal constructor(
+                internal val admission:
+                    (
+                        (
+                            State,
+                        ) -> State
+                    )?,
             )
 
             internal data class Results<
@@ -439,38 +443,57 @@ abstract class VexFamily<
                 class ResultScope<
                     State : VexFamily.State<*>,
                 > internal constructor() {
-                    private var admittedState:
-                        State? =
+                    private var admission:
+                        (
+                            (
+                                State,
+                            ) -> State
+                        )? =
                         null
 
                     /**
-                     * Authored later State after this execution result.
+                     * Authored unconditional later State after this execution result.
                      *
-                     * This does not solve semantic currentness. A later result may only admit State
-                     * when the concrete Family's relationship guarantees that the result is still
-                     * current. Do not add a generic Family revision/sequence check here: unrelated
-                     * State changes are not automatically proof that the result is stale, and equal
-                     * State is not automatically proof that it is current.
+                     * The State is still admitted through the Family StateRelay boundary when the
+                     * result actually arrives.
                      */
                     fun admit(
                         state: State,
                     ) {
+                        admit {
+                            state
+                        }
+                    }
+
+                    /**
+                     * Authored later-State decision against exact CURRENT Family State.
+                     *
+                     * Use this when a delayed result is only lawful while some feature-owned
+                     * currentness condition still holds. Family supplies CURRENT State and
+                     * serialization; the feature supplies the meaning of "still current".
+                     */
+                    fun admit(
+                        decide:
+                            (
+                                currentState: State,
+                            ) -> State,
+                    ) {
                         require(
-                            admittedState ==
+                            admission ==
                                 null,
                         ) {
                             "one result may admit at most one later State"
                         }
 
-                        admittedState =
-                            state
+                        admission =
+                            decide
                     }
 
                     internal fun build():
                         Result<State> =
                         Result(
-                            admittedState =
-                                admittedState,
+                            admission =
+                                admission,
                         )
                 }
             }
@@ -483,6 +506,9 @@ abstract class VexFamily<
      * Family.currentState and Family.states expose this same StateRelay truth. Family does not retain
      * a second semantic-State copy.
      */
+    private val stateLock =
+        Any()
+
     private val stateRelay =
         MutableStateFlow(
             initialState,
@@ -671,13 +697,17 @@ abstract class VexFamily<
         control: FamilyControl,
     ):
         Boolean =
-        act(
-            currentState =
-                currentState,
-            control =
-                control,
-        ) !=
-            null
+        synchronized(
+            stateLock,
+        ) {
+            act(
+                currentState =
+                    stateRelay.value,
+                control =
+                    control,
+            ) !=
+                null
+        }
 
     /**
      * Runtime entrance.
@@ -691,35 +721,42 @@ abstract class VexFamily<
         control: FamilyControl,
     ):
         Boolean {
-        val before =
-            currentState
+        val accepted =
+            synchronized(
+                stateLock,
+            ) {
+                val before =
+                    stateRelay.value
 
-        val act =
-            act(
-                currentState =
-                    before,
-                control =
-                    control,
-            )
-                ?: return false
+                val act =
+                    act(
+                        currentState =
+                            before,
+                        control =
+                            control,
+                    )
+                        ?: return false
 
-        recordAcceptedFact(
-            VexLogger.Event.Family.ControlAccepted(
-                family =
-                    this::class,
-                control =
-                    control::class,
-                currentState =
-                    before::class,
-            ),
-        )
+                recordAcceptedFact(
+                    VexLogger.Event.Family.ControlAccepted(
+                        family =
+                            this::class,
+                        control =
+                            control::class,
+                        currentState =
+                            before::class,
+                    ),
+                )
 
-        act.admittedState
-            ?.let(
-                ::setCurrentState,
-            )
+                act.admittedState
+                    ?.let(
+                        ::setCurrentStateLocked,
+                    )
 
-        act.begin
+                act
+            }
+
+        accepted.begin
             ?.let { begin ->
                 execute(
                     begin =
@@ -733,22 +770,43 @@ abstract class VexFamily<
     }
 
     /**
-     * The write side of Family current State.
+     * One serialized Family StateRelay decision.
      *
-     * StateRelay remains the single live holder.
+     * The caller supplies meaning; this boundary supplies exact CURRENT State and one-at-a-time
+     * admission. StateRelay remains the single live holder.
      */
-    private fun setCurrentState(
+    private fun updateCurrentState(
+        decide:
+            (
+                currentState: FamilyState,
+            ) -> FamilyState,
+    ) {
+        synchronized(
+            stateLock,
+        ) {
+            setCurrentStateLocked(
+                decide(
+                    stateRelay.value,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Commit one already-resolved next State while [stateLock] is held.
+     */
+    private fun setCurrentStateLocked(
         state: FamilyState,
     ) {
         val before =
-            currentState
+            stateRelay.value
 
         stateRelay.value =
             state
 
         if (
             before !=
-            currentState
+            stateRelay.value
         ) {
             recordAcceptedFact(
                 VexLogger.Event.Family.StateAdmitted(
@@ -757,7 +815,7 @@ abstract class VexFamily<
                     fromState =
                         before::class,
                     toState =
-                        currentState::class,
+                        stateRelay.value::class,
                 ),
             )
         }
@@ -1035,9 +1093,9 @@ abstract class VexFamily<
         result:
             Act.Begin.Result<FamilyState>,
     ) {
-        result.admittedState
+        result.admission
             ?.let(
-                ::setCurrentState,
+                ::updateCurrentState,
             )
     }
 }

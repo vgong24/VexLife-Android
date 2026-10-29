@@ -251,6 +251,32 @@ process(...)
 
 Except for the Vex domain functions themselves, State/Control traversal is ordinary Kotlin.
 
+## StateRelay currentness
+
+StateRelay is still the one live Family State holder. The missing reusable law is the admission
+boundary around that holder:
+
+~~~text
+incoming Family-owned cause
++ exact CURRENT State
+-> one serialized non-suspending decision
+-> next CURRENT State
+~~~
+
+Control activation resolves `act(CURRENT State, Control)` and commits its immediate State inside that
+same boundary. Delayed Begin results also re-enter StateRelay and may author their result against
+exact CURRENT State:
+
+~~~kotlin
+success {
+    admit { current ->
+        if (/* still lawful */) nextState else current
+    }
+}
+~~~
+
+No revision/generation number is invented by Family. Currentness meaning remains feature-owned.
+
 ## Process remains separate
 
 ~~~kotlin
@@ -259,24 +285,32 @@ fun process(
 ): OutputState
 ~~~
 
-The unresolved seam remains visible:
+Current accepted Relay already owns its own Compound current State. Therefore there is no generic
+`OutputState -> Family.currentState` handoff to manufacture:
 
 ~~~text
-OutputState
--> rightful StateRelay / Family.currentState handoff
+Direct Family StateRelay
+    owns current Family State
+
+VexCompoundRelay
+    owns current Compound relationship State
+
+one current owner
+!= every current owner must be the same object
 ~~~
+
+If a relationship Output requests another owner to act, that is a cross-owner consequence after the
+relationship is current; it is not how StateRelay itself becomes current.
 
 This PR does not add CompoundFamily, stateFactory, Family revision, or post-process Act machinery.
 
 ## Current open edges
 
 ~~~text
-serialized competing-cause State decision / stale async result
-    -> held until a concrete Family proves the rightful currentness identity
+provider/repository observation -> semantic Family State when no existing Family Control owns that meaning
 cross-cycle relationship memory and its rightful explicit supplier
 provider / intent stable identity mapping
-exact Family + Relay Single/Compound composition
-Process OutputState -> rightful Family.currentState handoff
+exact future Family + Relay Single/Compound unification, if real consumers earn one
 ~~~
 
 Exact-head repository-owned `vexVerifyJvm` proof passed for PR #193, and the reviewed candidate tree

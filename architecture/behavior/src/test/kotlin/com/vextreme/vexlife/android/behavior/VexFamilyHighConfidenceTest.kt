@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.behavior
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
@@ -113,12 +114,20 @@ class VexFamilyHighConfidenceTest {
                                             ),
                                         ).results {
                                             success {
-                                                admit(
-                                                    State.Ready(
-                                                        value =
-                                                            control.value,
-                                                    ),
-                                                )
+                                                admit { current ->
+                                                    when (
+                                                        current
+                                                    ) {
+                                                        State.Empty ->
+                                                            State.Ready(
+                                                                value =
+                                                                    control.value,
+                                                            )
+
+                                                        is State.Ready ->
+                                                            current
+                                                    }
+                                                }
                                             }
 
                                             failure {
@@ -210,6 +219,58 @@ class VexFamilyHighConfidenceTest {
                     }
             }
 
+    }
+
+    private class CounterFamily(
+        executionRoot:
+            VexExecutionRoot,
+    ) :
+        VexFamily<
+            CounterFamily,
+            CounterFamily.State,
+            CounterFamily.Control
+        >(
+            initialState =
+                State(
+                    count =
+                        0,
+                ),
+            executionRoot =
+                executionRoot,
+            logger =
+                VexLogger.Sink.None,
+        ) {
+        data class State(
+            val count:
+                Int,
+        ) :
+            VexFamily.State<CounterFamily>
+
+        sealed interface Control :
+            VexFamily.Control<CounterFamily> {
+            data object Increment :
+                Control
+        }
+
+        override fun act(
+            currentState:
+                State,
+            control:
+                Control,
+        ):
+            VexFamily.Act<State> =
+            when (
+                control
+            ) {
+                Control.Increment ->
+                    admit(
+                        currentState.copy(
+                            count =
+                                currentState.count +
+                                    1,
+                        ),
+                    )
+            }
     }
 
     private class ResourceIdentityFamily(
@@ -859,6 +920,155 @@ class VexFamilyHighConfidenceTest {
                         "persisted",
                 ),
                 saved.currentState,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
+    fun concurrentActivationsResolveAgainstOneSerializedCurrentState() {
+        val root =
+            VexExecutionRoot()
+        val family =
+            CounterFamily(
+                executionRoot =
+                    root,
+            )
+        val count =
+            48
+        val ready =
+            CountDownLatch(
+                count,
+            )
+        val go =
+            CountDownLatch(
+                1,
+            )
+        val executor =
+            Executors.newFixedThreadPool(
+                8,
+            )
+
+        try {
+            val futures =
+                (0 until count).map {
+                    executor.submit {
+                        ready.countDown()
+                        go.await()
+                        family.activate(
+                            CounterFamily.Control.Increment,
+                        )
+                    }
+                }
+
+            assertTrue(
+                ready.await(
+                    5,
+                    TimeUnit.SECONDS,
+                ),
+            )
+            go.countDown()
+
+            futures.forEach { future ->
+                assertTrue(
+                    future.get(
+                        5,
+                        TimeUnit.SECONDS,
+                    ),
+                )
+            }
+
+            assertEquals(
+                CounterFamily.State(
+                    count =
+                        count,
+                ),
+                family.currentState,
+            )
+            assertEquals(
+                family.currentState,
+                family.states.value,
+            )
+        } finally {
+            executor.shutdownNow()
+            root.forceStopAll()
+        }
+    }
+
+    @Test
+    fun olderAsyncResultReevaluatesAgainstCurrentStateBeforeAdmission() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            GatedStore()
+        val operationSuccess =
+            CountDownLatch(
+                1,
+            )
+        val logger =
+            RecordingLogger { event ->
+                if (
+                    event is
+                        VexLogger.Event.Family.OperationSuccess
+                ) {
+                    operationSuccess.countDown()
+                }
+            }
+
+        try {
+            val family =
+                ValueFamily(
+                    initialState =
+                        ValueFamily.State.Empty,
+                    executionRoot =
+                        root,
+                    store =
+                        store,
+                    logger =
+                        logger,
+                )
+
+            assertTrue(
+                family.activate(
+                    ValueFamily.Control.Commit(
+                        value =
+                            "old-result",
+                    ),
+                ),
+            )
+            assertTrue(
+                store.started.await(
+                    5,
+                    TimeUnit.SECONDS,
+                ),
+            )
+
+            assertTrue(
+                family.activate(
+                    ValueFamily.Control.Set(
+                        value =
+                            "newer-current",
+                    ),
+                ),
+            )
+
+            store.gate.complete(
+                Unit,
+            )
+
+            assertTrue(
+                operationSuccess.await(
+                    5,
+                    TimeUnit.SECONDS,
+                ),
+            )
+            assertEquals(
+                ValueFamily.State.Ready(
+                    value =
+                        "newer-current",
+                ),
+                family.currentState,
             )
         } finally {
             root.forceStopAll()

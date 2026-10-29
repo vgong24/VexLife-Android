@@ -378,20 +378,72 @@ class ThemeModeFamily(...) :
 }
 ~~~
 
+## StateRelay currentness boundary
+
+StateRelay remains the one live Family State holder. Direct Family now also owns one serialized
+decision boundary around that holder:
+
+~~~text
+incoming Family-owned cause
++ exact CURRENT State
+-> one non-suspending decision
+-> publish only changed semantic meaning
+~~~
+
+For Control activation, `act(CURRENT State, Control)` and its immediate admission happen inside that
+same boundary. Concurrent Controls therefore cannot each resolve against the same stale snapshot and
+overwrite one another.
+
+A delayed Begin result may keep the simple form:
+
+~~~kotlin
+success {
+    admit(State.Ready)
+}
+~~~
+
+or re-evaluate exact CURRENT State when feature meaning requires it:
+
+~~~kotlin
+success {
+    admit { current ->
+        if (/* result is still lawful for current */) {
+            nextState
+        } else {
+            current
+        }
+    }
+}
+~~~
+
+Family supplies CURRENT State and serialization. The feature supplies what "still current" means.
+There is no generic Family revision/generation oracle.
+
+## Family and Compound remain separate current owners
+
+`VexCompoundRelay` already owns its own current CompoundState / currentOutput. Direct Family
+StateRelay owns Family State. There is no generic:
+
+~~~text
+Process OutputState -> Family.currentState
+~~~
+
+handoff to fill.
+
+A concrete feature may use a relationship output to request another owner through that owner's
+existing semantic boundary, and observed truth may return as new Relay input, but that consequence is
+separate from who owns either current State.
+
 ## Deliberately still open
 
 ~~~text
-serialized competing-cause State decision / stale async result
-    -> intentionally unresolved generically
-    -> do not reintroduce Family revision as a guessed currentness oracle
-provider/repository observation -> semantic Family State
+provider/repository observation -> semantic Family State when no existing Family Control owns that meaning
 automatic UI observation/lifetime integration
 cross-cycle relationship memory
 provider / intent identity mapping
-Process OutputState -> rightful Family.currentState handoff
-exact Family + Relay Single/Compound composition
+exact future unification, if any, between Direct Family and Relay Single/Compound
 ~~~
 
-The current candidate should not be enlarged merely to fill those boxes.
+Those are separate relationships, not missing layers in StateRelay.
 
 <!-- [VXG RealForever][VEX-FAMILY][CURRENT-ENTRY] -->
