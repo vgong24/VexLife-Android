@@ -709,56 +709,81 @@ currentness and proves stable-ref convergence without silent display-layer loss.
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-FOURTH-REFERENCE] -->
 
 
-### V2 Origin Walk — formalized process/Act feedback circuit
+### V2 Family Circuit — Compound Family baseline
 
-The fourth reference now proves one complete ownership loop:
+The process/Act feedback law has now moved from test-side Relay pressure into the V2 Family foundation.
 
 ~~~text
-partial InputState
--> latestStateInput
--> process
--> latestStateOutput
--> committed CompoundState
--> Act
--> rightful target owner
+VexBehaviorV2CompoundFamily
+-> concrete Family.current Compound State
+   InputState
+   OutputState
+   revision
+
+partial Input observation
+-> InputState.latest(incoming)
+-> complete latestStateInput
+-> process(latestStateInput)
+-> latest Output consequence
+-> COMMIT Family.current
+-> Act only when Output meaning changed
+-> rightful target Family / owner
 -> observed target CURRENT truth
--> NEW InputState
+-> NEW Input
 -> process again
 ~~~
 
-OutputState is relationship consequence, not hidden process memory. Existing production feature Relays
-remain unchanged while this circuit is evaluated.
+VexBehaviorV2FamilyCircuitTestSampleSuite is the clean teaching surface. Its deliberately generic
+ComplexFamily extends VexBehaviorV2CompoundFamily, owns ComplexCompoundState, observes Screen /
+MusicQueue / ThemeMode currents, and routes a required screen change through
+ScreenFamily.Control.Show(...) rather than a bespoke apply/setCurrent escape hatch.
 
-<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][PROCESS-ACT-CIRCUIT] -->
-
-### V2 Origin Walk — committed Output Act-runner pressure
-
-The fourth reference now pressures the next causal edge after process/commit:
+Permanent ownership law:
 
 ~~~text
-COMMITTED OutputState
--> Act realization
+InputState.latest(...)
+  owns partial observation -> complete current input
+
+process(...)
+  owns relationship calculation only
+
+OutputState
+  owns current relationship consequence
+
+Family.current Compound State
+  owns the committed Input + Output relationship
+
+Act
+  reacts only after that consequence is CURRENT
+
+another Family / owner
+  owns its own resulting truth
+
+observation
+  returns that truth as NEW input
 ~~~
 
-The current test-only result is intentionally smaller than a production runner design:
+OutputState is not previous process memory and is not another owner's State. Existing Events / Maps /
+Navigation / Conversation Relays remain unchanged migration pressure rather than alternate standards.
 
-- only an **Output-changing** Compound commit forms an Act receipt;
-- the existing Compound revision identifies that exact commit, so no second Output counter/event
-  ledger is introduced;
-- an Input-only revision does not replay or stale the current Output consequence;
-- Replaceable is superseded by a newer Output-changing commit even when the newer Output is a no-op
-  Settled consequence;
-- Sequenced preserves accepted effect-bearing Output commits in order and does not duplicate an Act
-  when observation changes Input while Output remains the same;
-- cancellation affects execution lifetime, not already-committed relationship truth or external
-  reality that may already have changed;
-- target-owner truth still returns through observation as new Input.
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][FAMILY-CIRCUIT][COMPOUND-FAMILY] -->
 
-The pressure explicitly does **not** use outputStates as an effect queue. A production post-commit
-seam, if earned, must originate at the actual Compound commit boundary so dependency-driven send(...)
-cannot bypass it.
+### V2 Family Circuit — asynchronous Act custody still open
 
-No production Relay hook, Act runner, event ledger or new revision type is admitted yet.
-Repository Gradle/JVM proof remains pending.
+The Compound Family foundation now owns the real post-commit seam for Family relationship State:
+an Output-changing commit produces one committed Output consequence and act(...) runs only after
+Family.current has moved.
 
-<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][COMMITTED-OUTPUT-ACT-RUNNER-PRESSURE] -->
+The earlier committed-Output runner pressure remains useful for the next execution-depth question:
+
+- Input-only Family State revisions must not replay an Act when Output meaning is unchanged;
+- Replaceable execution must be superseded by newer Output-changing meaning without uncommitting truth;
+- Sequenced execution must preserve accepted effect-bearing consequences in order;
+- cancellation changes execution lifetime, not already-committed Family relationship truth;
+- observed target truth must still return as NEW Input.
+
+This is now an **execution-custody** question, not a requirement for Relay to own the Compound Family
+commit. No generic asynchronous Act runner, event ledger or extra Output revision type is admitted yet.
+Repository Gradle/JVM proof for the new clean Family Circuit suite remains pending.
+
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][FAMILY-CIRCUIT][ASYNC-ACT-CUSTODY] -->
