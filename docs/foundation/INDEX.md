@@ -43,8 +43,9 @@ Current PR #193 refinement also keeps execution identity inside the typed Family
 
 ~~~text
 Control<Family>
--> Control name included automatically
--> optional ResourceId<Family>
+-> Control kind/name included automatically
+-> optional Control.Resource<Family, ExactId>
+-> exact ResourceId object retained
 -> Family-owned RelationshipId
 -> Begin chooses Approach only
 -> VexExecution coordinates that RelationshipId
