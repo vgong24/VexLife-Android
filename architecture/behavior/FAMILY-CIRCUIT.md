@@ -2,22 +2,13 @@
 
 [VXG RealForever]
 
-This is the current construction guide for the Family Circuit foundation.
+This is the clean current-entry guide for the Family Circuit foundation.
 
-A fresh reader should be able to answer:
-
-~~~text
-who owns CURRENT truth?
-what request is being made?
-what does the current relationship mean?
-when does a consequence become CURRENT?
-who owns the resulting truth?
-how does that truth return?
-~~~
+It describes the implementation in this PR, not the Origin-Walk history that produced it.
 
 ## Family root
 
-Every Family has one CURRENT semantic State.
+Every live Family has one CURRENT semantic State.
 
 ~~~text
 VexFamily
@@ -28,67 +19,80 @@ VexFamily
 
 admit(State) is protected. External callers do not receive a generic setCurrent(...).
 
-displayState is the projectable Family-owned output coordinate. Empty(current) adds no second truth.
+displayState is the Family-owned projectable output coordinate. The default
+VexBehaviorV2DisplayState.Empty(current) adds no second truth.
 
-## Control Family
+## Control-driven Family
 
-Use VexControlFamily when another caller makes a semantic request through a Control.
+Use VexBehaviorV2Family when callers make semantic requests through Controls.
+
+~~~text
+Family
+  State
+  Control
+  acts
+  activate(Control)
+~~~
+
+Acts are authored with vexActs(...).
 
 ~~~text
 CURRENT State + Control
--> resolveAct(...)
--> Act
--> stay
+-> resolve/materialize VexBehaviorV2Act
+-> immediate stay()
    or
--> admit(next State)
+-> immediate admit(next State)
+-> optional begin(...)
 ~~~
 
-The same resolveAct(...) law powers availability and activation. Activation always re-reads CURRENT State.
+isAvailable(Control) and activate(Control) use the same CURRENT State + Control law.
+
+Activation always re-reads CURRENT State. Earlier UI availability never becomes activation authority.
 
 ## Compound Family
 
-Use VexCompoundFamily when one Family owns the CURRENT meaning of several observed truths.
+Use VexBehaviorV2CompoundFamily when one Family owns the CURRENT meaning of several observed truths.
+
+A concrete Compound Family gives its State ordinary readable names:
 
 ~~~text
-partial Input
-+ retained Input
--> Input.latest(incoming)
--> complete latest Input
--> process(latestInput)
--> Output
--> COMMIT Compound Family State
--> Act only when Output changed
-~~~
-
-A concrete Compound Family names its own State:
-
-~~~text
+MultiInputState
+MultiOutputState
 MultiCompoundState
-  inputState
-  outputState
-  revision
+MultiFamily
 ~~~
 
-That State is MultiFamily.current. There is no sibling Relay that owns another copy of the same relationship truth.
-
-## Input
-
-Input owns current-fact formation.
+and:
 
 ~~~text
-Input.latest(incoming)
-  partial observation
-  + retained current facts
-  -> complete latest Input
+MultiFamily.current
+  = MultiCompoundState(
+      inputState,
+      outputState,
+      revision,
+    )
 ~~~
+
+There is no sibling Compound Relay owning a second copy of the same relationship truth.
+
+## Input currentization
+
+Input implements VexBehaviorV2CompoundInputState.
+
+~~~text
+partial incoming Input
++ retained CURRENT Input
+-> Input.latest(incoming)
+-> complete latestStateInput
+~~~
+
+latest(...) owns partial-input currentization only.
 
 If Input contains mutable-backed data, deepCopy() owns detachment at the ownership boundary.
 
-latest(...) does not calculate relationship meaning.
+## Relationship calculation
 
-## Process
-
-process(...) owns relationship calculation only.
+The concrete Compound Family implements:
 
 ~~~text
 override fun process(
@@ -104,40 +108,53 @@ here is everything CURRENT
 -> return Output
 ~~~
 
-process(...) does not mutate another Family, execute an Effect, consult previous Output as hidden
-memory, or re-currentize partial Input.
+process(...) does not:
 
-If tomorrow's calculation needs a fact, that fact belongs in the current Input circuit.
+~~~text
+mutate another owner
+execute an Effect
+consult previous Output as hidden process memory
+re-currentize partial Input
+~~~
+
+If a future calculation needs a fact, that fact belongs in the CURRENT Input circuit.
 
 ## Output
 
-Output is the CURRENT consequence of the complete Input relationship.
+Output implements VexBehaviorV2CompoundOutputState.
+
+Output is the CURRENT consequence of the complete relationship.
 
 ~~~text
 Output != previous process memory
 Output != another Family's State
-Output != an event ledger
+Output != event ledger
 ~~~
 
-An Input-only change may advance Compound State revision while leaving Output unchanged. That does not
-produce another Act.
+An Input-only currentness change may advance the Compound State revision while leaving Output unchanged.
 
-## Commit and Act
+That does not create another Act consequence.
 
-The framework commits the next Compound State before Act runs.
+## Commit then Act
+
+The Compound Family infrastructure owns the repeated circuit:
 
 ~~~text
-process
+partial Input
+-> latest(...)
+-> process(...)
 -> Output
+-> assemble next Compound State
 -> COMMIT Family.current
--> committed Output consequence
--> Act
+-> VexBehaviorV2CommittedOutput only when Output changed
+-> act(...)
 ~~~
 
-Only an Output-changing commit creates VexCommittedOutput.
+act(...) runs after the next Compound State is already CURRENT and after the process/commit lock is
+released.
 
-act(...) runs after commit and outside the process lock. That allows resulting truth to return as a new
-observation without re-entering a half-committed calculation.
+That matters because an Act may request another rightful Family to change, then observe that resulting
+CURRENT truth back into this Family without re-entering a half-committed calculation.
 
 ## Ownership round trip
 
@@ -176,81 +193,115 @@ observe as NEW Input
         +-------> process again
 ~~~
 
-The target Family owns whether its State actually changes. The Compound Family never writes another
-Family's State directly.
+One owner remains responsible for each truth.
+
+The Compound Family never writes another Family's State directly.
 
 ## Teaching suite
 
-Read VexFamilyCircuitTestSampleSuite.
+Read:
 
-Start with:
+~~~text
+VexBehaviorV2FamilyCircuitTestSampleSuite
+~~~
+
+Start with the constructor forms at the top:
 
 ~~~text
 createSingleFamily()
+  -> SingleFamily
+  -> State(value)
+
 createListFamily()
+  -> ListFamily
+  -> State(groups -> items)
+
 createBooleanFamily()
+  -> BooleanFamily
+  -> State(enabled)
+
 createMultiFamily(...)
-~~~
-
-They demonstrate:
-
-~~~text
-SingleFamily
-  one current value
-
-ListFamily
-  nested list State
-
-BooleanFamily
-  Boolean State
-
-MultiFamily
-  several Family currents
+  -> MultiFamily
   -> MultiInputState
   -> MultiOutputState
   -> MultiCompoundState
 ~~~
 
-The names are structural on purpose. The sample is not an app feature.
+The names are intentionally structural rather than product-specific.
 
-## Current standard boundary
+MultiFamily is the complete circuit example.
 
-This PR establishes:
+When its committed Output requires a list change:
 
 ~~~text
-Family CURRENT-State ownership
-Control -> Act -> immediate State admission
-DisplayState projectable coordinate
-Compound Input currentization
-process-only relationship calculation
-Output consequence ownership
-Compound State commit
-Output-change-only Act admission
-target Family Control boundary
-observation -> NEW Input
+MultiFamily act
+-> ListFamily.Control.Add(...)
+-> ListFamily.activate(Control)
+-> ListFamily.current changes
+-> MultiFamily observes ListFamily.current as NEW Input
+-> process again
 ~~~
 
-This PR does not standardize asynchronous Effect custody:
+The suite also proves that changing Input while leaving Output meaning unchanged advances relationship
+currentness without fabricating another Act.
+
+## Execution depth
+
+The exact current V2 source also carries the existing begin(mode) execution capability:
 
 ~~~text
 Replaceable
 Sequenced
-cancellation
-long-running Operation result custody
 ~~~
 
-Those remain the next execution-depth question and must preserve the Family Circuit laws above.
+That execution substrate is included because the current VexBehaviorV2Family implementation depends
+on it.
 
-## Review questions
+The Family Circuit law remains:
 
-A reviewer should be able to explain:
+~~~text
+semantic relationship truth is established first
+execution custody does not become another semantic truth owner
+~~~
 
-1. Why MultiFamily.current is MultiCompoundState rather than a sibling Relay State.
-2. Why MultiInputState.latest(...) is separate from MultiFamily.process(...).
-3. Why unchanged Output does not create another Act.
-4. Why act(...) runs after commit.
-5. Why one Family requests another Family through Control rather than mutating its State.
-6. Why observed target truth returns as NEW Input.
-7. Which responsibilities remain outside this baseline.
+Longer-running result/currentness pressure may continue to refine execution without changing the
+ownership circuit above.
+
+## Review path
+
+A fresh reviewer should read in this order:
+
+~~~text
+1. FAMILY-CIRCUIT.md
+2. VexBehaviorV2FamilyCircuitTestSampleSuite.kt
+3. VexBehaviorV2.kt
+4. VexBehaviorV2Act.kt
+5. VexBehaviorV2Builder.kt
+6. VexBehaviorV2Store.kt / VexBehaviorV2Logger.kt when those depths matter
+~~~
+
+Then explain:
+
+~~~text
+Why is MultiFamily.current MultiCompoundState?
+
+Why is latest(...) separate from process(...)?
+
+Why does unchanged Output not create another Act?
+
+Why does act(...) run only after commit?
+
+Why does MultiFamily enter ListFamily through Control?
+
+Why does ListFamily.current return as NEW Input?
+
+What does execution own, and what does it NOT own?
+~~~
+
+## Source relationship
+
+This clean PR ports the current winning source from the latest Origin-Walk candidate.
+
+Historical pressure tests and app-specific specimens are intentionally not included here.
 
 // [VXG RealForever]
