@@ -139,6 +139,24 @@ receives the protected `begin(...)` opening while authoring an Act.
 The current Begin mode names are only a provisional adapter to the not-yet-conformed VexExecution
 launch implementation; they are not a second owner of execution launch semantics.
 
+## Logger boundary
+
+Logging is an explicit dependency on the independent `VexLogger` root:
+
+~~~text
+VexFamily
+-> VexLogger.Sink
+
+VexLogger
+-> Event
+   -> Family
+      -> accepted Family facts
+~~~
+
+There is no `VexFamilyLogger` root. Family keeps the Sink private and concrete Family decision code
+does not receive logging capability. This keeps `act(currentState, control)` focused on relationship
+meaning while the Family runtime records only facts it actually applies.
+
 ## Store responsibility
 
 The current Family runtime consumes one exact storage capability:

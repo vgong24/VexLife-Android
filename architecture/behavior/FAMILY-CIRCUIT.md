@@ -93,6 +93,19 @@ ConcreteFamily
 fresh reader that DisplayState already has a rightful owner and that no parallel ViewState / UiState /
 PresentationState should be created merely to fill a perceived gap.
 
+## Logger boundary
+
+Family consumes logging through the independent logger root:
+
+~~~text
+VexFamily
+-> VexLogger.Sink
+   -> VexLogger.Event.Family.*
+~~~
+
+The Sink is private to the Family runtime. Concrete `act(...)` authoring does not receive logger
+access, so inspecting relationship meaning cannot accidentally emit accepted runtime facts.
+
 ## Store / Save relationship
 
 The current earned storage path is deliberately narrow and tree-shaped:

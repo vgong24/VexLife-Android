@@ -9,6 +9,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.reflect.KCallable
+import kotlin.reflect.KClass
 
 enum class VexLogKind {
     AppOpened,
@@ -58,6 +60,93 @@ class VexLogger(
     private val maxRecords: Int = 256,
     private val onRecord: (VexLogRecord) -> Unit = {},
 ) {
+    /**
+     * Root-owned structured logging boundary for foundations that need to report accepted facts
+     * without inventing another logger root.
+     *
+     * A Sink decides how these structured events are projected. They do not automatically become
+     * VexLogRecord UI-history entries merely because they belong to VexLogger.
+     */
+    fun interface Sink {
+        fun record(
+            event: Event,
+        )
+
+        companion object {
+            val None:
+                Sink =
+                Sink {
+                }
+        }
+    }
+
+    /**
+     * Structured events owned by the VexLogger root.
+     */
+    sealed interface Event {
+        /**
+         * Family-specific accepted facts. Family is a child namespace under the Logger event tree,
+         * not another logger root.
+         */
+        sealed interface Family :
+            Event {
+            val family:
+                KClass<*>
+
+            data class ControlAccepted(
+                override val family:
+                    KClass<*>,
+                val control:
+                    KClass<*>,
+                val currentState:
+                    KClass<*>,
+            ) :
+                Family
+
+            data class StateAdmitted(
+                override val family:
+                    KClass<*>,
+                val fromState:
+                    KClass<*>,
+                val toState:
+                    KClass<*>,
+            ) :
+                Family
+
+            data class OperationBegan(
+                override val family:
+                    KClass<*>,
+                val operation:
+                    KCallable<*>,
+                val state:
+                    KClass<*>?,
+            ) :
+                Family
+
+            data class OperationSuccess(
+                override val family:
+                    KClass<*>,
+                val operation:
+                    KCallable<*>,
+                val state:
+                    KClass<*>?,
+            ) :
+                Family
+
+            data class OperationFailure(
+                override val family:
+                    KClass<*>,
+                val operation:
+                    KCallable<*>,
+                val state:
+                    KClass<*>?,
+                val failure:
+                    KClass<out Throwable>?,
+            ) :
+                Family
+        }
+    }
+
     private val lock = Any()
     private val _history = mutableStateOf<List<VexLogRecord>>(emptyList())
     private var nextSequence = 1L

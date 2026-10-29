@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.logging.VexLogger
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
@@ -21,8 +22,8 @@ class VexFamilyHighConfidenceTest {
             Store? =
             null,
         logger:
-            VexFamilyLogger =
-            VexFamilyLogger.None,
+            VexLogger.Sink =
+            VexLogger.Sink.None,
     ) :
         VexFamily<
             ValueFamily.State,
@@ -173,7 +174,7 @@ class VexFamilyHighConfidenceTest {
             executionRoot =
                 executionRoot,
             logger =
-                VexFamilyLogger.None,
+                VexLogger.Sink.None,
         ) {
         sealed interface State {
             data object Idle :
@@ -222,13 +223,13 @@ class VexFamilyHighConfidenceTest {
     private class RecordingLogger(
         private val onRecord:
             (
-                VexFamilyLogEvent,
+                VexLogger.Event,
             ) -> Unit,
     ) :
-        VexFamilyLogger {
+        VexLogger.Sink {
         override fun record(
             event:
-                VexFamilyLogEvent,
+                VexLogger.Event,
         ) {
             onRecord(
                 event,
@@ -401,7 +402,7 @@ class VexFamilyHighConfidenceTest {
             RecordingLogger { event ->
                 if (
                     event is
-                        VexFamilyLogEvent.StateAdmitted
+                        VexLogger.Event.Family.StateAdmitted
                 ) {
                     laterAdmission.countDown()
                 }

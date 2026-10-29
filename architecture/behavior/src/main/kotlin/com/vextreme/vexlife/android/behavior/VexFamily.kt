@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,8 +31,8 @@ abstract class VexFamily<
     initialState: State,
     private val executionRoot:
         VexExecutionRoot,
-    protected val logger:
-        VexFamilyLogger,
+    private val logger:
+        VexLogger.Sink,
 ) {
     /**
      * Family-owned display classification.
@@ -489,7 +490,7 @@ abstract class VexFamily<
                 ?: return false
 
         logger.record(
-            VexFamilyLogEvent.ControlAccepted(
+            VexLogger.Event.Family.ControlAccepted(
                 family =
                     this::class,
                 control =
@@ -531,7 +532,7 @@ abstract class VexFamily<
             currentState
         ) {
             logger.record(
-                VexFamilyLogEvent.StateAdmitted(
+                VexLogger.Event.Family.StateAdmitted(
                     family =
                         this::class,
                     fromState =
@@ -574,7 +575,7 @@ abstract class VexFamily<
 
         val beforeOperation = {
             logger.record(
-                VexFamilyLogEvent.OperationBegan(
+                VexLogger.Event.Family.OperationBegan(
                     family =
                         this::class,
                     operation =
@@ -594,7 +595,7 @@ abstract class VexFamily<
                 ) {
                     Store.WriteResult.Success -> {
                         logger.record(
-                            VexFamilyLogEvent.OperationSuccess(
+                            VexLogger.Event.Family.OperationSuccess(
                                 family =
                                     this::class,
                                 operation =
@@ -611,7 +612,7 @@ abstract class VexFamily<
 
                     is Store.WriteResult.Failure -> {
                         logger.record(
-                            VexFamilyLogEvent.OperationFailure(
+                            VexLogger.Event.Family.OperationFailure(
                                 family =
                                     this::class,
                                 operation =
@@ -638,7 +639,7 @@ abstract class VexFamily<
                 Throwable,
             ) -> Unit = { failure ->
                 logger.record(
-                    VexFamilyLogEvent.OperationFailure(
+                    VexLogger.Event.Family.OperationFailure(
                         family =
                             this::class,
                         operation =
