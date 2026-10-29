@@ -14,6 +14,7 @@ import kotlin.reflect.KSuspendFunction2
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 
 /**
@@ -350,9 +351,11 @@ abstract class VexExecution protected constructor(
 
     companion object {
         /**
-         * Maintained observation bridge for another rightful semantic owner.
+         * Long-lived observation bridge for another rightful semantic owner.
          *
-         * Execution owns only coroutine lifetime/restart mechanics. The caller owns what an observed
+         * Execution owns coroutine lifetime only. SourceRef remains diagnostic source identity, so
+         * multiple live owners may observe the same source-shaped property under one execution root;
+         * InstanceId keeps those runtime occurrences distinct. The caller owns what an observed
          * value means and where that value is admitted.
          */
         @RelationshipFoundationApi
@@ -363,26 +366,24 @@ abstract class VexExecution protected constructor(
                 KClass<*>,
             source:
                 KProperty0<Source>,
-            restartOnSourceFailure:
-                Boolean =
-                true,
             onEach:
                 suspend (Value) -> Unit,
         ):
             Handle =
-            executionRoot.coroutineLauncher.launchForCollect(
+            executionRoot.coroutineLauncher.launch(
                 sourceRef =
                     sourceRef(
                         owner,
                         source,
                     ),
-                restartOnSourceFailure =
-                    restartOnSourceFailure,
-                source =
-                    source::get,
-                onEach =
-                    onEach,
-            )
+            ) {
+                source.get()
+                    .collect { value ->
+                        onEach(
+                            value,
+                        )
+                    }
+            }
 
         fun <Argument, Result> begin(
             executionRoot: VexExecutionRoot,

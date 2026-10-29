@@ -301,7 +301,7 @@ A State-shaped Family Store is itself a StateRelay dependency; it does not requi
 
 ~~~text
 StateStore.observableState
--> maintained execution observation
+-> execution-owned observation lifetime
 -> observeStore(CURRENT, stored)
 -> concrete Family decision
 -> admitCurrent

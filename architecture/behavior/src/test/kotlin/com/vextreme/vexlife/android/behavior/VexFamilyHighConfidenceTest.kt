@@ -1187,6 +1187,87 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
+    fun sameClassFamiliesObserveDistinctStateStoresUnderOneExecutionRoot() {
+        val root =
+            VexExecutionRoot()
+        val firstStore =
+            ObservableStore(
+                initialState =
+                    StoreObservedFamily.State.Current(
+                        value =
+                            "first",
+                    ),
+            )
+        val secondStore =
+            ObservableStore(
+                initialState =
+                    StoreObservedFamily.State.Current(
+                        value =
+                            "second",
+                    ),
+            )
+
+        try {
+            val firstFamily =
+                StoreObservedFamily(
+                    executionRoot =
+                        root,
+                    store =
+                        firstStore,
+                )
+            val secondFamily =
+                StoreObservedFamily(
+                    executionRoot =
+                        root,
+                    store =
+                        secondStore,
+                )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    firstFamily.states.first { state ->
+                        state ==
+                            StoreObservedFamily.State.Current(
+                                value =
+                                    "first",
+                            )
+                    }
+                }
+                withTimeout(
+                    5_000,
+                ) {
+                    secondFamily.states.first { state ->
+                        state ==
+                            StoreObservedFamily.State.Current(
+                                value =
+                                    "second",
+                            )
+                    }
+                }
+            }
+
+            assertEquals(
+                StoreObservedFamily.State.Current(
+                    value =
+                        "first",
+                ),
+                firstFamily.currentState,
+            )
+            assertEquals(
+                StoreObservedFamily.State.Current(
+                    value =
+                        "second",
+                ),
+                secondFamily.currentState,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
     fun providerReconciledTruthEntersTheSameStateRelay() {
         val root =
             VexExecutionRoot()

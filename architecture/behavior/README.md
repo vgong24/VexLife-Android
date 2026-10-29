@@ -451,7 +451,7 @@ Its observation path is direct:
 
 ~~~text
 StateStore.observableState
--> VexExecution maintained observation custody
+-> VexExecution observation lifetime custody
 -> Family.observeStore(CURRENT, stored)
 -> concrete Family decision
 -> admitCurrent(...)
