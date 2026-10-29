@@ -105,48 +105,37 @@ rightful responsibilities.
 
 ## Public authoring language
 
-Finite work has four explicit shapes:
+Finite work has four explicit approaches:
 
 ```text
 launch(...)
     every invocation is an independent execution instance
-    the same callable may have many concurrent instances
+    no maintained Relationship is created
 
-launchEarliest(relationship, ...)
+launchEarliest(trigger, ...)
     the earliest unfinished execution for this Relationship is sufficient
-    overlapping later calls return that same InstanceId
 
-launchLatest(relationship, ...)
-    newest launch supersedes every unfinished predecessor for this Id
-    all predecessor teardown completes before the newest begins
+launchLatest(trigger, ...)
+    the newest execution supersedes unfinished predecessors for this Relationship
+    predecessor teardown completes before the newest begins
 
-launchQueued(relationship, ...)
+launchQueued(trigger, ...)
     every launch for this Relationship remains meaningful
     launches execute in arrival order
 ```
 
-Only the maintained forms take Relationshipentity:
+For direct `VexExecution` subclasses, the protected maintained-launch methods take a semantic
+`trigger`. Execution automatically combines:
 
 ```text
-launch
-    caller supplies no id
-
-Earliest / Latest / Queued
-    caller supplies one VexExecution.Relationship
+this live VexExecution instance
++
+trigger
 ```
 
-The reusable contract is `VexExecution.Relationship`. Direct VexExecution owners that have no richer semantic
-cause may declare a typed Relationship vocabulary locally:
+into the exact `VexExecution.Relationship` used as the maintained-map key.
 
-```kotlin
-enum class ExecutionId :
-    VexExecution.Relationship {
-    Refresh,
-}
-```
-
-Family-originated execution is different: Family already owns the semantic cause as a Control, so it
-does **not** repeat `Control.Save` as `ExecutionId.Save`. Family derives the internal Relationship from:
+Family-originated execution is richer because Family already has the semantic trigger:
 
 ```text
 live Family
@@ -154,45 +143,23 @@ live Family
 triggering Control kind
 +
 optional ordered arguments
+=
+VexExecution.Relationship
 ```
 
-The optional arguments are chosen by the Family author only when one Control needs several separate
-maintained relationships.
+There is no separate `ExecutionId` layer.
 
-The four shapes remain deliberately different:
+The overlap behavior is represented separately as `VexExecution.Approach`:
 
 ```text
-launch
-
-A -------->
-  B -------->
-    C -------->
-
-
-launchEarliest
-
-A -------->
-  B x
-    C x
-
-
-launchLatest
-
-A ----x
-     B ----x
-          C -------->
-
-
-launchQueued
-
-A ----->
-       B ----->
-              C ----->
+Independent
+Earliest
+Latest
+Queued
 ```
 
-`Earliest` is not rejection/error. It means the already-unfinished earliest relationship instance is
-sufficient, so the later call receives that same Handle/InstanceId rather than creating duplicate
-work.
+Relationship answers **which executions belong together**. Approach answers **how overlaps in that
+Relationship behave**.
 
 A maintained Flow observation remains a separate contract:
 
@@ -205,15 +172,15 @@ launchForCollect(repository::states) { state ->
 A second unfinished observation of the same source fails closed. That one-per-source observation law
 does not leak into ordinary finite `launch`.
 
-The callable remains the thing Vex actually invokes, not a decorative label for unrelated lambda
-work.
+The callable remains the operation Vex actually invokes, not a decorative source label for unrelated
+lambda work.
 
 `launch` never automatically retries. `launchForCollect` may use bounded recovery only for
 source/subscription failure. A failure thrown while consuming a valid emitted value becomes
 `FAILED` with no automatic resubscription. Intentional cancellation never restarts.
 
-`launchOnce` currently remains only as a deprecated compatibility alias to independent `launch`;
-it no longer owns duplicate-source semantics.
+`launchOnce` remains only as a deprecated compatibility alias to independent `launch`; it no
+longer owns duplicate-source semantics.
 
 ## Worker preparation and provider-affine commit
 
