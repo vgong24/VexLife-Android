@@ -1,3 +1,5 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecution
@@ -6,6 +8,7 @@ import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.reflect.KClass
 
 /**
  * Live Family runtime for one semantic State and Control vocabulary.
@@ -59,8 +62,11 @@ abstract class VexFamily<
         >
 
     /**
-     * Typed resource identity contributed by a Control when Control name alone is not enough to
+     * Typed resource identity contributed by a Control when Control kind alone is not enough to
      * distinguish maintained execution relationships.
+     *
+     * ResourceId deliberately has no shared String/value payload. The concrete ID type owns its own
+     * representation and equality; Family preserves that typed object instead of flattening it.
      */
     interface ResourceId<
         Family,
@@ -69,17 +75,13 @@ abstract class VexFamily<
             Family,
             *,
             *
-        > {
-        val value:
-            String
-    }
+        >
 
     /**
      * Compile-time kinship marker for incoming Control belonging to one exact Family coordinate.
      *
-     * Control name is always part of the Family-owned relationship identity. A concrete Control only
-     * contributes [resourceId] when repeated instances of that same Control need a narrower typed
-     * identity. Begin never accepts arbitrary relationship arguments.
+     * Control kind is always part of the Family-owned relationship identity. A Control that needs
+     * narrower identity explicitly implements [Resource] with its exact ResourceId type.
      */
     interface Control<
         Family,
@@ -89,18 +91,28 @@ abstract class VexFamily<
             *,
             *
         > {
-        val resourceId:
-            ResourceId<Family>?
-            get() =
-                null
+        interface Resource<
+            Family,
+            out Id,
+        > :
+            Control<Family> where
+            Family : VexFamily<
+                Family,
+                *,
+                *
+            >,
+            Id : ResourceId<Family> {
+            val resourceId:
+                Id
+        }
     }
 
     /**
      * Exact Family-maintained execution identity.
      *
-     * The live Family instance scopes identity. Control name is always present. A typed ResourceId
-     * optionally narrows repeated instances of that same Control. Concrete Control code cannot
-     * replace this composition with a parallel ID convention.
+     * The live Family instance scopes identity. Control kind is always present. A typed ResourceId
+     * optionally narrows repeated instances of that same Control. The actual ResourceId object is
+     * retained so its concrete type/equality cannot collapse into a shared String convention.
      */
     internal class RelationshipId<
         Family,
@@ -111,12 +123,12 @@ abstract class VexFamily<
                 *,
                 *
             >,
-        val controlName:
+        internal val controlType:
+            KClass<*>,
+        internal val controlName:
             String,
-        private val controlTypeName:
-            String,
-        val resourceIdValue:
-            String?,
+        internal val resourceId:
+            ResourceId<*>?,
     ) :
         VexExecution.RelationshipId where
         Family : VexFamily<
@@ -133,10 +145,12 @@ abstract class VexFamily<
                 RelationshipId<*> &&
                 family ===
                 other.family &&
-                controlTypeName ==
-                other.controlTypeName &&
-                resourceIdValue ==
-                other.resourceIdValue
+                controlType ==
+                other.controlType &&
+                controlName ==
+                other.controlName &&
+                resourceId ==
+                other.resourceId
 
         override fun hashCode():
             Int {
@@ -147,31 +161,21 @@ abstract class VexFamily<
             result =
                 31 *
                     result +
-                    controlTypeName.hashCode()
+                    controlType.hashCode()
+            result =
+                31 *
+                    result +
+                    controlName.hashCode()
             result =
                 31 *
                     result +
                     (
-                        resourceIdValue
+                        resourceId
                             ?.hashCode()
                             ?: 0
                     )
             return result
         }
-
-        override fun toString():
-            String =
-            if (
-                resourceIdValue ==
-                null
-            ) {
-                controlName
-            } else {
-                controlName +
-                    "[" +
-                    resourceIdValue +
-                    "]"
-            }
     }
 
     /**
@@ -968,26 +972,38 @@ abstract class VexFamily<
             FamilyControl,
     ):
         RelationshipId<Family> {
-        val controlClass =
+        val controlType =
             control::class
         val controlName =
-            requireNotNull(
-                controlClass.simpleName,
-            ) {
-                "VexFamily Control requires a named class"
-            }
+            (
+                control as?
+                    Enum<*>
+            )
+                ?.name
+                ?: requireNotNull(
+                    controlType.simpleName,
+                ) {
+                    "VexFamily Control requires a named class or enum entry"
+                }
+        val resourceId =
+            (
+                control as?
+                    Control.Resource<
+                        *,
+                        *
+                    >
+            )
+                ?.resourceId
 
         return RelationshipId(
             family =
                 this,
+            controlType =
+                controlType,
             controlName =
                 controlName,
-            controlTypeName =
-                controlClass.qualifiedName
-                    ?: controlName,
-            resourceIdValue =
-                control.resourceId
-                    ?.value,
+            resourceId =
+                resourceId,
         )
     }
 
