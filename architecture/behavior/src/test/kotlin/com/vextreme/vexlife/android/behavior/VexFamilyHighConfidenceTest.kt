@@ -274,6 +274,71 @@ class VexFamilyHighConfidenceTest {
             }
     }
 
+    private class ObservedFamily(
+        executionRoot:
+            VexExecutionRoot,
+    ) :
+        VexFamily<
+            ObservedFamily,
+            ObservedFamily.State,
+            ObservedFamily.Control
+        >(
+            initialState =
+                State.Empty,
+            executionRoot =
+                executionRoot,
+            logger =
+                VexLogger.Sink.None,
+        ) {
+        sealed interface State :
+            VexFamily.State<ObservedFamily> {
+            data object Empty :
+                State
+
+            data class Current(
+                val value:
+                    String,
+            ) :
+                State
+        }
+
+        sealed interface Control :
+            VexFamily.Control<ObservedFamily> {
+            data object Keep :
+                Control
+        }
+
+        override fun act(
+            currentState:
+                State,
+            control:
+                Control,
+        ):
+            VexFamily.Act<State> =
+            when (
+                control
+            ) {
+                Control.Keep ->
+                    stay()
+            }
+
+        /**
+         * Concrete source vocabulary. The provider/Connection has already reconciled its own truth;
+         * Family owns only admission into its semantic CURRENT State.
+         */
+        fun providerReconciled(
+            value:
+                String,
+        ) {
+            admitCurrent {
+                State.Current(
+                    value =
+                        value,
+                )
+            }
+        }
+    }
+
     private class ResourceIdentityFamily(
         initialState:
             State,
@@ -921,6 +986,38 @@ class VexFamilyHighConfidenceTest {
                         "persisted",
                 ),
                 saved.currentState,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    @Test
+    fun providerReconciledTruthEntersTheSameStateRelay() {
+        val root =
+            VexExecutionRoot()
+
+        try {
+            val family =
+                ObservedFamily(
+                    executionRoot =
+                        root,
+                )
+
+            family.providerReconciled(
+                "provider-current",
+            )
+
+            assertEquals(
+                ObservedFamily.State.Current(
+                    value =
+                        "provider-current",
+                ),
+                family.currentState,
+            )
+            assertEquals(
+                family.currentState,
+                family.states.value,
             )
         } finally {
             root.forceStopAll()

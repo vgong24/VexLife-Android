@@ -277,6 +277,18 @@ success {
 
 No revision/generation number is invented by Family. Currentness meaning remains feature-owned.
 
+Already-reconciled external truth uses the same StateRelay boundary without becoming a fake Control:
+
+~~~text
+provider / repository observation
+-> rightful Connection/source reconciliation
+-> concrete Family source method
+-> admitCurrent { CURRENT -> next semantic State }
+-> StateRelay
+~~~
+
+`admitCurrent` is protected; there is still no public generic State setter.
+
 ## Process remains separate
 
 ~~~kotlin
@@ -307,7 +319,6 @@ This PR does not add CompoundFamily, stateFactory, Family revision, or post-proc
 ## Current open edges
 
 ~~~text
-provider/repository observation -> semantic Family State when no existing Family Control owns that meaning
 cross-cycle relationship memory and its rightful explicit supplier
 provider / intent stable identity mapping
 exact future Family + Relay Single/Compound unification, if real consumers earn one

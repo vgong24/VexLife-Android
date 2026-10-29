@@ -766,6 +766,31 @@ abstract class VexFamily<
         }
 
     /**
+     * Concrete-Family semantic admission for already-reconciled outside truth.
+     *
+     * Keep the public/source-specific name on the concrete Family (for example providerReconciled).
+     * This protected seam only supplies exact CURRENT State + serialization; it does not decide what
+     * an observation means and it must not be used from act(...), which remains relationship-pure.
+     */
+    protected fun admitCurrent(
+        decide:
+            (
+                currentState: FamilyState,
+            ) -> FamilyState,
+    ):
+        FamilyState =
+        synchronized(
+            stateLock,
+        ) {
+            setCurrentStateLocked(
+                decide(
+                    stateRelay.value,
+                ),
+            )
+            stateRelay.value
+        }
+
+    /**
      * One serialized Family StateRelay decision.
      *
      * The caller supplies meaning; this boundary supplies exact CURRENT State and one-at-a-time

@@ -419,6 +419,23 @@ success {
 Family supplies CURRENT State and serialization. The feature supplies what "still current" means.
 There is no generic Family revision/generation oracle.
 
+Already-reconciled external truth enters the same StateRelay through concrete Family vocabulary rather
+than a fake Control or public setter:
+
+~~~kotlin
+fun providerReconciled(observed: ProviderState) {
+    admitCurrent { current ->
+        reconcileSemanticState(
+            current = current,
+            observed = observed,
+        )
+    }
+}
+~~~
+
+`admitCurrent` is protected. The concrete Family/source relationship owns the visible method name
+and reconciliation meaning.
+
 ## Family and Compound remain separate current owners
 
 `VexCompoundRelay` already owns its own current CompoundState / currentOutput. Direct Family
@@ -437,7 +454,6 @@ separate from who owns either current State.
 ## Deliberately still open
 
 ~~~text
-provider/repository observation -> semantic Family State when no existing Family Control owns that meaning
 automatic UI observation/lifetime integration
 cross-cycle relationship memory
 provider / intent identity mapping
