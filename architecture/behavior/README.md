@@ -2090,7 +2090,7 @@ WHAT IS EXPOSED?
   latestStateOutput
 
 WHAT IS RETAINED?
-  generic VexCompoundState assembly
+  the concrete Family's CURRENT Compound State
 ~~~
 
 This is the scalability value: the framework owns the repeated causal skeleton; each feature owns only
@@ -2131,14 +2131,18 @@ latestStateInput
 -> latestStateOutput
 ~~~
 
-No production VexCompoundRelay contract is changed by this checkpoint.
+The earlier Relay pressure remains useful evidence, but the reusable law is now integrated into the
+V2 Family foundation as VexBehaviorV2CompoundFamily. Production VexCompoundRelay remains unchanged;
+a Compound Family no longer needs a sibling Relay merely to own a second copy of its Input/Output
+relationship truth.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][PROCESS-ONLY-COMPOUND] -->
 
 
 ## Formalized process -> commit -> Act -> observe circuit
 
-The process-only Compound pressure now has one complete executable circuit.
+The process-only circuit is now represented directly by the Compound Family foundation and the clean
+VexBehaviorV2FamilyCircuitTestSampleSuite teaching specimen.
 
 The reusable relationship loop is:
 
@@ -2152,7 +2156,7 @@ latestStateInput
 -> latestStateOutput
 
 latestStateInput + latestStateOutput
--> commit VexCompoundState
+-> commit concrete Family.current CompoundState
 
 COMMITTED OutputState
 -> Act / realization
@@ -2183,47 +2187,54 @@ Act
   does NOT run until the CompoundState carrying its OutputState is already committed
 ~~~
 
-### Executable specimen
+### Current teaching specimen
 
-The fourth Origin reference now contains:
+The clean construction suite now demonstrates the same law through a deliberately generic
+ComplexFamily:
 
 ~~~text
-DesiredActualConvergenceRelay
-  Input:
-    desired
-    actual
-
-  process(latestStateInput):
-    desired missing
-      -> Unobserved
-
-    actual != desired
-      -> NeedsApply(desired)
-
-    actual == desired
-      -> Settled(desired)
-
-TargetOwnerRelay
-  owns actual CURRENT value
-
-DesiredActualCircuit
-  receives committed relationship output
-  -> Act
-  -> tells TargetOwnerRelay to apply desired value
-  -> observes TargetOwnerRelay.current
-  -> returns that truth as NEW relationship InputState
+ScreenFamily.State
+MusicQueueState
+ThemeModeState
+        |
+        v
+ComplexInputState.latest(...)
+        |
+        v
+ComplexFamily.process(latestStateInput)
+        |
+        v
+ComplexOutputState
+        |
+        v
+ComplexCompoundState = ComplexFamily.current
+        |
+        v
+Act
+        |
+        v
+ScreenFamily.Control.Show(...)
+        |
+        v
+ScreenFamily CURRENT State
+        |
+        +---- observed as NEW ComplexInputState ----+
+                                                    |
+                                                    v
+                                                process again
 ~~~
 
-The proved trace is:
+The end-to-end trace is:
 
 ~~~text
-process:NeedsApply(Dark)
-commit:NeedsApply(Dark)
-act:NeedsApply(Dark)
-target:Dark
-process:Settled(Dark)
-commit:Settled(Dark)
-act:Settled(Dark)
+process:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)
+commit:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)
+act:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)
+screen-family:PlayerSurface
+observe:screen:PlayerSurface
+process:Settled(PlayerSurface,track.alpha,Dark)
+commit:Settled(PlayerSurface,track.alpha,Dark)
+act:Settled(PlayerSurface,track.alpha,Dark)
 ~~~
 
 This makes the ownership boundary explicit:
@@ -2251,8 +2262,9 @@ If the fact matters to today's calculation, it needs a truthful current owner an
 `latestStateInput`. Do not turn OutputState into a covert feedback channel merely to preserve reducer
 history.
 
-This checkpoint formalizes the circuit only. Existing Events, Maps, Navigation and Conversation Relay
-implementations are deliberately unchanged.
+The Family foundation and clean teaching suite now formalize this circuit. Existing Events, Maps,
+Navigation and Conversation Relay implementations are deliberately unchanged; they remain migration
+pressure rather than alternate standards.
 
 Isolated Kotlin circuit proof: PASS.
 Repository Gradle/JVM proof: PENDING.
