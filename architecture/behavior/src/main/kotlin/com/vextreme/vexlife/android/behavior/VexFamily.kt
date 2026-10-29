@@ -720,54 +720,50 @@ abstract class VexFamily<
     fun activate(
         control: FamilyControl,
     ):
-        Boolean {
-        val accepted =
-            synchronized(
-                stateLock,
-            ) {
-                val before =
-                    stateRelay.value
+        Boolean =
+        synchronized(
+            stateLock,
+        ) {
+            val before =
+                stateRelay.value
 
-                val act =
-                    act(
-                        currentState =
-                            before,
-                        control =
-                            control,
-                    )
-                        ?: return false
-
-                recordAcceptedFact(
-                    VexLogger.Event.Family.ControlAccepted(
-                        family =
-                            this::class,
-                        control =
-                            control::class,
-                        currentState =
-                            before::class,
-                    ),
-                )
-
-                act.admittedState
-                    ?.let(
-                        ::setCurrentStateLocked,
-                    )
-
-                act
-            }
-
-        accepted.begin
-            ?.let { begin ->
-                execute(
-                    begin =
-                        begin,
+            val act =
+                act(
+                    currentState =
+                        before,
                     control =
                         control,
                 )
-            }
+                    ?: return false
 
-        return true
-    }
+            recordAcceptedFact(
+                VexLogger.Event.Family.ControlAccepted(
+                    family =
+                        this::class,
+                    control =
+                        control::class,
+                    currentState =
+                        before::class,
+                ),
+            )
+
+            act.admittedState
+                ?.let(
+                    ::setCurrentStateLocked,
+                )
+
+            act.begin
+                ?.let { begin ->
+                    execute(
+                        begin =
+                            begin,
+                        control =
+                            control,
+                    )
+                }
+
+            true
+        }
 
     /**
      * One serialized Family StateRelay decision.
