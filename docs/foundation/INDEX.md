@@ -712,10 +712,19 @@ currentness and proves stable-ref convergence without silent display-layer loss.
 ### V2 Family Circuit — Compound Family baseline
 
 The process/Act feedback law has now moved from test-side Relay pressure into the V2 Family foundation.
+The common VexFamily root owns only CURRENT State / DisplayState / protected admission; Control behavior
+and Compound relationship processing are separate earned specializations.
 
 ~~~text
-VexBehaviorV2CompoundFamily
--> concrete Family.current Compound State
+VexFamily
+  common CURRENT-State / DisplayState / admission root
+
+VexBehaviorV2Family : VexFamily
+  Control-driven Family
+
+VexBehaviorV2CompoundFamily : VexFamily
+  relationship-driven Family
+  -> concrete Family.current Compound State
    InputState
    OutputState
    revision
