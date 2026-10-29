@@ -732,7 +732,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             observeList(
                 listFamily.current,
             )
-            observeSwitch(
+            observeBoolean(
                 booleanFamily.current,
             )
         }
@@ -765,7 +765,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 ),
             )
 
-        fun observeSwitch(
+        fun observeBoolean(
             state:
                 BooleanFamily.State,
         ):
