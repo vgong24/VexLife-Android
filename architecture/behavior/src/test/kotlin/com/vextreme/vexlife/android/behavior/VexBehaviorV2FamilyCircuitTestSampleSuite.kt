@@ -1,523 +1,204 @@
 package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.relay.VexRelay
-import com.vextreme.vexlife.android.relay.VexState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * Teaching suite for the candidate Family Circuit Architecture.
+ * Small examples of the Family Circuit shapes.
  *
- * This class is intentionally not a real app feature. It demonstrates how to BUILD the reusable
- * Family circuit from simple pieces without making a fresh reader reverse-engineer one completed
- * production specimen.
+ * Start with the create...Family() functions near the bottom of this file.
  *
- * Read the tests from top to bottom:
+ *     SingleFamily
+ *       one current State
  *
- *     STEP 1
- *       establish several rightful CURRENT owners
+ *     ListFamily
+ *       one current State with nested list data
  *
- *     STEP 2
- *       build partial Input -> latest complete Input
+ *     SwitchFamily
+ *       one current Boolean State
  *
- *     STEP 3
- *       make ComplexFamily itself own the Compound relationship State
+ *     MultiFamily
+ *       several Family currents
+ *       -> Input.latest(...)
+ *       -> process(...)
+ *       -> Output
+ *       -> MultiCompoundState
+ *       -> Act
  *
- *     STEP 4
- *       process(latestStateInput) returns relationship meaning only
- *
- *     STEP 5
- *       Output-changing commit -> Act -> rightful target Family Control
- *
- *     STEP 6
- *       observe target Family CURRENT truth -> NEW input -> process again
- *
- *     STEP 7
- *       input-only currentness movement does not fabricate another Act
- *
- * Family Circuit is the umbrella being pressured here. [VexFamily] is the common current-State
- * root. A Control-driven Family uses [VexBehaviorV2Family]. A Family whose semantic State is the
- * current relationship between several independently-owned truths uses
- * [VexBehaviorV2CompoundFamily].
+ * The names are intentionally generic. This file teaches infrastructure, not a product feature.
  */
 class VexBehaviorV2FamilyCircuitTestSampleSuite {
     @Test
-    fun step1_rightfulOwnersKeepTheirOwnCurrentTruth() {
-        val callerGroups =
-            mutableListOf(
-                QueueGroup(
-                    groupName =
-                        "Up Next",
-                    items =
-                        mutableListOf(
-                            QueueItem(
-                                trackRef =
-                                    "track.alpha",
-                                title =
-                                    "Alpha",
-                            ),
-                            QueueItem(
-                                trackRef =
-                                    "track.beta",
-                                title =
-                                    "Beta",
-                            ),
-                        ),
-                ),
+    fun singleFamily() {
+        val family =
+            createSingleFamily(
+                value =
+                    "one",
             )
 
-        val screenFamily =
-            ScreenFamily(
-                initialState =
-                    ScreenFamily.State(
-                        screenName =
-                            BROWSE_SCREEN,
-                        transientBlocked =
-                            false,
-                    ),
-                executionRoot =
-                    VexExecutionRoot(),
-            )
-
-        val queueOwner =
-            MusicQueueOwner(
-                initial =
-                    MusicQueueState(
-                        groups =
-                            callerGroups,
-                        currentTrackRef =
-                            "track.alpha",
-                    ),
-            )
-
-        val themeOwner =
-            ThemeModeOwner(
-                initial =
-                    ThemeModeState(
-                        mode =
-                            SampleThemeMode.Dark,
-                        followsSystem =
-                            false,
-                    ),
-            )
-
-        /*
-         * Screen is a real Family because another semantic circuit may REQUEST it to change.
-         *
-         * Queue and Theme are observation-only current owners in this sample. They do not receive fake
-         * Controls merely so every input looks symmetrical.
-         */
-        assertEquals(
-            BROWSE_SCREEN,
-            screenFamily.current.screenName,
-        )
-        assertEquals(
-            "track.alpha",
-            queueOwner.current.currentTrackRef,
-        )
-        assertEquals(
-            SampleThemeMode.Dark,
-            themeOwner.current.mode,
+        family.activate(
+            SingleFamily.Control.Set(
+                value =
+                    "two",
+            ),
         )
 
-        /*
-         * The queue contains a genuinely mutable nested list. VexRelay owns a detached retained copy,
-         * so later caller mutation does not mutate CURRENT queue truth.
-         *
-         * This is why deepCopy exists. It is ownership protection, not semantic identity.
-         */
-        callerGroups
-            .first()
-            .items
-            .clear()
-        callerGroups +=
-            QueueGroup(
-                groupName =
-                    "Caller Mutation",
-                items =
-                    mutableListOf(),
+        assertEquals(
+            SingleFamily.State(
+                value =
+                    "two",
+            ),
+            family.current,
+        )
+    }
+
+    @Test
+    fun listFamily() {
+        val family =
+            createListFamily(
+                "one",
+                "two",
             )
+
+        family.activate(
+            ListFamily.Control.Add(
+                value =
+                    "three",
+            ),
+        )
 
         assertEquals(
             listOf(
-                "track.alpha",
-                "track.beta",
+                "one",
+                "two",
+                "three",
             ),
-            queueOwner
+            family
                 .current
-                .allTrackRefs(),
+                .values(),
         )
     }
 
     @Test
-    fun step2_inputOwnsPartialObservationToCompleteCurrentInputFormation() {
-        val retained =
-            ComplexInputState(
-                screen =
-                    ScreenFamily.State(
-                        screenName =
-                            BROWSE_SCREEN,
-                        transientBlocked =
-                            false,
-                    ),
-                musicQueue =
-                    musicQueue(
-                        currentTrackRef =
-                            "track.alpha",
-                        "track.alpha" to "Alpha",
-                    ),
-                themeMode =
-                    ThemeModeState(
-                        mode =
-                            SampleThemeMode.Light,
-                        followsSystem =
-                            true,
-                    ),
-            )
-
-        val incomingGroups =
-            mutableListOf(
-                QueueGroup(
-                    groupName =
-                        "Replacement",
-                    items =
-                        mutableListOf(
-                            QueueItem(
-                                trackRef =
-                                    "track.beta",
-                                title =
-                                    "Beta",
-                            ),
-                        ),
-                ),
-            )
-
-        /*
-         * One source changed, so the incoming observation carries only that source.
-         */
-        val latestStateInput =
-            retained.latest(
-                ComplexInputState(
-                    musicQueue =
-                        MusicQueueState(
-                            groups =
-                                incomingGroups,
-                            currentTrackRef =
-                                "track.beta",
-                        ),
-                ),
-            )
-
-        /*
-         * latest(...) owns currentization only.
-         *
-         * It answers:
-         *
-         *     "Given what I already knew and this new partial observation,
-         *      what is the complete CURRENT input now?"
-         *
-         * It does NOT calculate relationship meaning.
-         */
-        assertEquals(
-            BROWSE_SCREEN,
-            latestStateInput
-                .screen
-                ?.screenName,
-        )
-        assertEquals(
-            "track.beta",
-            latestStateInput
-                .musicQueue
-                ?.currentTrackRef,
-        )
-        assertEquals(
-            SampleThemeMode.Light,
-            latestStateInput
-                .themeMode
-                ?.mode,
-        )
-
-        incomingGroups
-            .first()
-            .items
-            .clear()
-
-        assertEquals(
-            listOf(
-                "track.beta",
-            ),
-            latestStateInput
-                .musicQueue
-                ?.allTrackRefs(),
-        )
-    }
-
-    @Test
-    fun step3_and_4_complexFamilyOwnsCompoundStateAndProcessOnlyCalculatesMeaning() {
+    fun multiFamily() {
         val trace =
             mutableListOf<String>()
 
-        val screenFamily =
-            ScreenFamily(
-                initialState =
-                    ScreenFamily.State(
-                        screenName =
-                            PLAYER_SCREEN,
-                        transientBlocked =
-                            false,
-                    ),
-                executionRoot =
-                    VexExecutionRoot(),
+        val singleFamily =
+            createSingleFamily(
+                value =
+                    "two",
             )
-
-        val family =
-            ComplexFamily(
-                screenFamily =
-                    screenFamily,
+        val listFamily =
+            createListFamily(
+                "one",
+            )
+        val switchFamily =
+            createSwitchFamily(
+                enabled =
+                    true,
+            )
+        val multiFamily =
+            createMultiFamily(
+                singleFamily =
+                    singleFamily,
+                listFamily =
+                    listFamily,
+                switchFamily =
+                    switchFamily,
                 trace =
                     trace,
             )
 
+        multiFamily.refresh()
+
         /*
-         * ComplexFamily CURRENT State is the Compound relationship State itself.
+         * MultiFamily saw:
          *
-         * There is no sibling Relay that secretly owns Input/Output currentness.
+         *     single = "two"
+         *     list   = ["one"]
+         *     switch = true
+         *
+         * process(...) returned NeedsListValue("two").
+         *
+         * That Output became MultiFamily.current before act(...) asked ListFamily to add "two".
+         * ListFamily then owned the new list State. MultiFamily observed that CURRENT State as NEW
+         * input and processed again to Settled("two").
          */
         assertEquals(
-            0L,
-            family.current.revision,
-        )
-        assertEquals(
-            ComplexOutputState.Unobserved,
-            family.current.outputState,
-        )
-
-        family.observeScreen(
-            screenFamily.current,
-        )
-        family.observeMusicQueue(
-            musicQueue(
-                currentTrackRef =
-                    "track.alpha",
-                "track.alpha" to "Alpha",
+            listOf(
+                "one",
+                "two",
             ),
-        )
-        family.observeThemeMode(
-            ThemeModeState(
-                mode =
-                    SampleThemeMode.Dark,
-                followsSystem =
-                    false,
-            ),
-        )
-
-        /*
-         * Screen is already the target screen, so process(...) settles without asking another owner
-         * to change. The important part is that process(...) saw one COMPLETE latestStateInput and
-         * returned only relationship meaning.
-         */
-        assertEquals(
-            ComplexOutputState.Settled(
-                screenName =
-                    PLAYER_SCREEN,
-                currentTrackRef =
-                    "track.alpha",
-                themeMode =
-                    SampleThemeMode.Dark,
-            ),
-            family.current.outputState,
+            listFamily
+                .current
+                .values(),
         )
 
         assertEquals(
-            PLAYER_SCREEN,
-            family
+            MultiOutputState.Settled(
+                value =
+                    "two",
+            ),
+            multiFamily
                 .current
-                .inputState
-                .screen
-                ?.screenName,
-        )
-        assertEquals(
-            "track.alpha",
-            family
-                .current
-                .inputState
-                .musicQueue
-                ?.currentTrackRef,
-        )
-        assertEquals(
-            SampleThemeMode.Dark,
-            family
-                .current
-                .inputState
-                .themeMode
-                ?.mode,
+                .outputState,
         )
 
         assertEquals(
             listOf(
                 "process:Unobserved",
                 "process:Unobserved",
-                "process:Settled(PlayerSurface,track.alpha,Dark)",
-                "commit:Settled(PlayerSurface,track.alpha,Dark)",
-                "act:Settled(PlayerSurface,track.alpha,Dark)",
+                "process:NeedsListValue(two)",
+                "commit:NeedsListValue(two)",
+                "act:NeedsListValue(two)",
+                "list-family:one,two",
+                "observe:list",
+                "process:Settled(two)",
+                "commit:Settled(two)",
+                "act:Settled(two)",
             ),
             trace,
         )
     }
 
     @Test
-    fun step5_and_6_committedOutputActsThroughTargetFamilyThenObservedTruthReturnsAsNewInput() {
+    fun multiFamilyDoesNotActAgainWhenInputChangesButOutputDoesNot() {
         val trace =
             mutableListOf<String>()
 
-        val screenFamily =
-            ScreenFamily(
-                initialState =
-                    ScreenFamily.State(
-                        screenName =
-                            BROWSE_SCREEN,
-                        transientBlocked =
-                            false,
-                    ),
-                executionRoot =
-                    VexExecutionRoot(),
+        val singleFamily =
+            createSingleFamily(
+                value =
+                    "one",
             )
-
-        val queueOwner =
-            MusicQueueOwner(
-                initial =
-                    musicQueue(
-                        currentTrackRef =
-                            "track.alpha",
-                        "track.alpha" to "Alpha",
-                    ),
+        val listFamily =
+            createListFamily(
+                "one",
             )
-
-        val themeOwner =
-            ThemeModeOwner(
-                initial =
-                    ThemeModeState(
-                        mode =
-                            SampleThemeMode.Dark,
-                        followsSystem =
-                            false,
-                    ),
+        val switchFamily =
+            createSwitchFamily(
+                enabled =
+                    true,
             )
-
-        val family =
-            ComplexFamily(
-                screenFamily =
-                    screenFamily,
+        val multiFamily =
+            createMultiFamily(
+                singleFamily =
+                    singleFamily,
+                listFamily =
+                    listFamily,
+                switchFamily =
+                    switchFamily,
                 trace =
                     trace,
             )
 
-        family.observeScreen(
-            screenFamily.current,
-        )
-        family.observeMusicQueue(
-            queueOwner.current,
-        )
-        family.observeThemeMode(
-            themeOwner.current,
-        )
-
-        /*
-         * End-to-end circuit:
-         *
-         *     complete latest input
-         *     -> NeedsPlayerScreen
-         *     -> COMMIT ComplexCompoundState
-         *     -> Act
-         *     -> ScreenFamily.Control.Show(PlayerSurface)
-         *     -> ScreenFamily admits its own CURRENT State
-         *     -> ComplexFamily observes ScreenFamily.current as NEW input
-         *     -> process(...)
-         *     -> Settled
-         */
-        assertEquals(
-            PLAYER_SCREEN,
-            screenFamily.current.screenName,
-        )
-
-        assertEquals(
-            ComplexOutputState.Settled(
-                screenName =
-                    PLAYER_SCREEN,
-                currentTrackRef =
-                    "track.alpha",
-                themeMode =
-                    SampleThemeMode.Dark,
-            ),
-            family.current.outputState,
-        )
-
-        assertEquals(
-            listOf(
-                "process:Unobserved",
-                "process:Unobserved",
-                "process:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
-                "commit:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
-                "act:NeedsPlayerScreen(track.alpha,PlayerSurface,Dark)",
-                "screen-family:PlayerSurface",
-                "observe:screen:PlayerSurface",
-                "process:Settled(PlayerSurface,track.alpha,Dark)",
-                "commit:Settled(PlayerSurface,track.alpha,Dark)",
-                "act:Settled(PlayerSurface,track.alpha,Dark)",
-            ),
-            trace,
-        )
-    }
-
-    @Test
-    fun step7_inputOnlyCurrentnessMovementDoesNotFabricateAnotherAct() {
-        val trace =
-            mutableListOf<String>()
-
-        val screenFamily =
-            ScreenFamily(
-                initialState =
-                    ScreenFamily.State(
-                        screenName =
-                            PLAYER_SCREEN,
-                        transientBlocked =
-                            false,
-                    ),
-                executionRoot =
-                    VexExecutionRoot(),
-            )
-
-        val family =
-            ComplexFamily(
-                screenFamily =
-                    screenFamily,
-                trace =
-                    trace,
-            )
-
-        family.observeScreen(
-            screenFamily.current,
-        )
-        family.observeMusicQueue(
-            musicQueue(
-                currentTrackRef =
-                    "track.alpha",
-                "track.alpha" to "Old title",
-            ),
-        )
-        family.observeThemeMode(
-            ThemeModeState(
-                mode =
-                    SampleThemeMode.Dark,
-                followsSystem =
-                    false,
-            ),
-        )
+        multiFamily.refresh()
 
         val beforeRevision =
-            family.current.revision
+            multiFamily.current.revision
         val beforeActCount =
             trace.count { entry ->
                 entry.startsWith(
@@ -526,17 +207,21 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             }
 
         /*
-         * Title changes are CURRENT queue truth, so Input meaning changes and the Compound revision
-         * advances. But the relationship consequence remains exactly Settled(PlayerSurface,
-         * track.alpha, Dark), so no new committed Output / Act is formed.
+         * The nested list note changes, so Input changes.
+         * The list still contains "one", so Output remains Settled("one").
          */
+        listFamily.activate(
+            ListFamily.Control.SetNote(
+                value =
+                    "one",
+                note =
+                    "changed",
+            ),
+        )
+
         val committed =
-            family.observeMusicQueue(
-                musicQueue(
-                    currentTrackRef =
-                        "track.alpha",
-                    "track.alpha" to "New title",
-                ),
+            multiFamily.observeList(
+                listFamily.current,
             )
 
         assertNull(
@@ -545,7 +230,7 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
         assertEquals(
             beforeRevision +
                 1L,
-            family.current.revision,
+            multiFamily.current.revision,
         )
         assertEquals(
             beforeActCount,
@@ -558,28 +243,18 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
     }
 
     /**
-     * Target Family used by the teaching circuit.
-     *
-     * The important point is the request boundary:
-     *
-     *     another Family needs a screen change
-     *     -> ScreenFamily.Control.Show(...)
-     *     -> ScreenFamily.activate(Control)
-     *     -> ScreenFamily re-reads its own CURRENT State
-     *     -> Act admits ScreenFamily.State
-     *
-     * There is no apply(...), setCurrent(...), or cross-owner State mutation escape hatch.
+     * Simplest Control-driven Family.
      */
-    private class ScreenFamily(
+    private class SingleFamily(
         initialState:
             State,
         executionRoot:
             VexExecutionRoot,
     ) :
         VexBehaviorV2Family<
-            ScreenFamily,
-            ScreenFamily.State,
-            ScreenFamily.Control
+            SingleFamily,
+            SingleFamily.State,
+            SingleFamily.Control
         >(
             initialState =
                 initialState,
@@ -589,21 +264,19 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 VexFamilyLogger.None,
         ) {
         data class State(
-            val screenName:
+            val value:
                 String,
-            val transientBlocked:
-                Boolean,
         ) :
             VexBehaviorFamily.State<
-                ScreenFamily
+                SingleFamily
             >
 
         sealed interface Control :
             VexBehaviorFamily.Control<
-                ScreenFamily
+                SingleFamily
             > {
-            data class Show(
-                val screenName:
+            data class Set(
+                val value:
                     String,
             ) :
                 Control
@@ -611,21 +284,21 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
 
         override val acts =
             vexActs<
-                ScreenFamily,
+                SingleFamily,
                 State,
                 Control
             >(
                 family =
                     this,
                 behaviorRef =
-                    "sample.family-circuit.screen",
+                    "sample.family-circuit.single",
             ) {
                 state<State> {
-                    on<Control.Show> { current, control ->
+                    on<Control.Set> { current, control ->
                         admit(
                             current.copy(
-                                screenName =
-                                    control.screenName,
+                                value =
+                                    control.value,
                             ),
                         )
                     }
@@ -634,228 +307,344 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
     }
 
     /**
-     * Observation-only owner with deliberately mutable-backed nested data.
+     * Control-driven Family with nested list State.
      */
-    private class MusicQueueOwner(
-        initial:
-            MusicQueueState,
+    private class ListFamily(
+        initialState:
+            State,
+        executionRoot:
+            VexExecutionRoot,
     ) :
-        VexRelay<
-            MusicQueueState
+        VexBehaviorV2Family<
+            ListFamily,
+            ListFamily.State,
+            ListFamily.Control
         >(
-            relayRef =
-                "sample.family-circuit.music-queue-owner",
             initialState =
-                initial,
+                initialState,
+            executionRoot =
+                executionRoot,
+            logger =
+                VexFamilyLogger.None,
+        ) {
+        data class Item(
+            val value:
+                String,
+            val note:
+                String =
+                "",
         )
 
-    /**
-     * Observation-only owner. No fake Control is introduced because this sample never asks Theme to
-     * change.
-     */
-    private class ThemeModeOwner(
-        initial:
-            ThemeModeState,
-    ) :
-        VexRelay<
-            ThemeModeState
-        >(
-            relayRef =
-                "sample.family-circuit.theme-mode-owner",
-            initialState =
-                initial,
+        data class Group(
+            val name:
+                String,
+            val items:
+                List<
+                    Item
+                >,
         )
 
-    private data class QueueItem(
-        val trackRef:
-            String,
-        val title:
-            String,
-    )
-
-    private data class QueueGroup(
-        val groupName:
-            String,
-        val items:
-            MutableList<
-                QueueItem
-            >,
-    ) {
-        fun deepCopy():
-            QueueGroup =
-            copy(
-                items =
-                    items
-                        .map { item ->
-                            item.copy()
-                        }
-                        .toMutableList(),
-            )
-    }
-
-    private data class MusicQueueState(
-        val groups:
-            MutableList<
-                QueueGroup
-            >,
-        val currentTrackRef:
-            String?,
-    ) :
-        VexState<
-            MusicQueueState
-        > {
-        override fun deepCopy():
-            MusicQueueState =
-            copy(
-                groups =
-                    groups
-                        .map { group ->
-                            group.deepCopy()
-                        }
-                        .toMutableList(),
-            )
-
-        fun currentTrack():
-            QueueItem? =
-            currentTrackRef
-                ?.let { ref ->
-                    groups
-                        .asSequence()
-                        .flatMap { group ->
-                            group
-                                .items
-                                .asSequence()
-                        }
-                        .firstOrNull { item ->
-                            item.trackRef ==
-                                ref
-                        }
-                        ?.copy()
+        data class State(
+            val groups:
+                List<
+                    Group
+                >,
+        ) :
+            VexBehaviorFamily.State<
+                ListFamily
+            > {
+            fun values():
+                List<String> =
+                groups.flatMap { group ->
+                    group.items.map { item ->
+                        item.value
+                    }
                 }
 
-        fun allTrackRefs():
-            List<String> =
-            groups.flatMap { group ->
-                group.items.map { item ->
-                    item.trackRef
+            fun contains(
+                value:
+                    String,
+            ):
+                Boolean =
+                value in
+                    values()
+
+            fun snapshot():
+                State =
+                copy(
+                    groups =
+                        groups.map { group ->
+                            group.copy(
+                                items =
+                                    group.items.map { item ->
+                                        item.copy()
+                                    },
+                            )
+                        },
+                )
+        }
+
+        sealed interface Control :
+            VexBehaviorFamily.Control<
+                ListFamily
+            > {
+            data class Add(
+                val value:
+                    String,
+            ) :
+                Control
+
+            data class SetNote(
+                val value:
+                    String,
+                val note:
+                    String,
+            ) :
+                Control
+        }
+
+        override val acts =
+            vexActs<
+                ListFamily,
+                State,
+                Control
+            >(
+                family =
+                    this,
+                behaviorRef =
+                    "sample.family-circuit.list",
+            ) {
+                state<State> {
+                    on<Control.Add>(
+                        whenCurrent = { current, control ->
+                            !current.contains(
+                                control.value,
+                            )
+                        },
+                    ) { current, control ->
+                        val groups =
+                            if (
+                                current.groups.isEmpty()
+                            ) {
+                                listOf(
+                                    Group(
+                                        name =
+                                            "items",
+                                        items =
+                                            listOf(
+                                                Item(
+                                                    value =
+                                                        control.value,
+                                                ),
+                                            ),
+                                    ),
+                                )
+                            } else {
+                                current.groups.mapIndexed { index, group ->
+                                    if (
+                                        index ==
+                                        0
+                                    ) {
+                                        group.copy(
+                                            items =
+                                                group.items +
+                                                    Item(
+                                                        value =
+                                                            control.value,
+                                                    ),
+                                        )
+                                    } else {
+                                        group
+                                    }
+                                }
+                            }
+
+                        admit(
+                            State(
+                                groups =
+                                    groups,
+                            ),
+                        )
+                    }
+
+                    on<Control.SetNote>(
+                        whenCurrent = { current, control ->
+                            current.contains(
+                                control.value,
+                            )
+                        },
+                    ) { current, control ->
+                        admit(
+                            current.copy(
+                                groups =
+                                    current.groups.map { group ->
+                                        group.copy(
+                                            items =
+                                                group.items.map { item ->
+                                                    if (
+                                                        item.value ==
+                                                        control.value
+                                                    ) {
+                                                        item.copy(
+                                                            note =
+                                                                control.note,
+                                                        )
+                                                    } else {
+                                                        item
+                                                    }
+                                                },
+                                        )
+                                    },
+                            ),
+                        )
+                    }
                 }
             }
     }
 
-    private enum class SampleThemeMode {
-        Light,
-        Dark,
+    /**
+     * Another simple current-State shape.
+     */
+    private class SwitchFamily(
+        initialState:
+            State,
+        executionRoot:
+            VexExecutionRoot,
+    ) :
+        VexBehaviorV2Family<
+            SwitchFamily,
+            SwitchFamily.State,
+            SwitchFamily.Control
+        >(
+            initialState =
+                initialState,
+            executionRoot =
+                executionRoot,
+            logger =
+                VexFamilyLogger.None,
+        ) {
+        data class State(
+            val enabled:
+                Boolean,
+        ) :
+            VexBehaviorFamily.State<
+                SwitchFamily
+            >
+
+        sealed interface Control :
+            VexBehaviorFamily.Control<
+                SwitchFamily
+            > {
+            data class Set(
+                val enabled:
+                    Boolean,
+            ) :
+                Control
+        }
+
+        override val acts =
+            vexActs<
+                SwitchFamily,
+                State,
+                Control
+            >(
+                family =
+                    this,
+                behaviorRef =
+                    "sample.family-circuit.switch",
+            ) {
+                state<State> {
+                    on<Control.Set> { current, control ->
+                        admit(
+                            current.copy(
+                                enabled =
+                                    control.enabled,
+                            ),
+                        )
+                    }
+                }
+            }
     }
 
-    private data class ThemeModeState(
-        val mode:
-            SampleThemeMode,
-        val followsSystem:
-            Boolean,
-    ) :
-        VexState<
-            ThemeModeState
-        >
-
     /**
-     * Input owns partial-observation -> complete-current-input formation.
+     * Partial observations for MultiFamily.
      *
-     * Each nullable field means only:
+     * latest(...) owns:
      *
-     *     "this incoming observation did not supply that owner"
-     *
-     * It does NOT mean the retained current owner is absent.
+     *     partial Input
+     *     + retained Input
+     *     -> complete CURRENT Input
      */
-    private data class ComplexInputState(
-        val screen:
-            ScreenFamily.State? =
+    private data class MultiInputState(
+        val singleState:
+            SingleFamily.State? =
             null,
-        val musicQueue:
-            MusicQueueState? =
+        val listState:
+            ListFamily.State? =
             null,
-        val themeMode:
-            ThemeModeState? =
+        val switchState:
+            SwitchFamily.State? =
             null,
     ) :
         VexBehaviorV2CompoundInputState<
-            ComplexInputState
+            MultiInputState
         > {
         override fun latest(
             incoming:
-                ComplexInputState,
+                MultiInputState,
         ):
-            ComplexInputState =
-            ComplexInputState(
-                screen =
+            MultiInputState =
+            MultiInputState(
+                singleState =
                     (
-                        incoming.screen
-                            ?: screen
+                        incoming.singleState
+                            ?: singleState
                     )?.copy(),
-                musicQueue =
+                listState =
                     (
-                        incoming.musicQueue
-                            ?: musicQueue
-                    )?.deepCopy(),
-                themeMode =
+                        incoming.listState
+                            ?: listState
+                    )?.snapshot(),
+                switchState =
                     (
-                        incoming.themeMode
-                            ?: themeMode
+                        incoming.switchState
+                            ?: switchState
                     )?.copy(),
             )
 
         override fun deepCopy():
-            ComplexInputState =
-            ComplexInputState(
-                screen =
-                    screen?.copy(),
-                musicQueue =
-                    musicQueue?.deepCopy(),
-                themeMode =
-                    themeMode?.copy(),
+            MultiInputState =
+            MultiInputState(
+                singleState =
+                    singleState?.copy(),
+                listState =
+                    listState?.snapshot(),
+                switchState =
+                    switchState?.copy(),
             )
     }
 
     /**
-     * Output owns the CURRENT consequence of the relationship.
-     *
-     * It is never:
-     * - previous process memory;
-     * - ScreenFamily.State;
-     * - MusicQueueState;
-     * - ThemeModeState.
+     * Current meaning of MultiFamily's complete Input.
      */
-    private sealed interface ComplexOutputState :
+    private sealed interface MultiOutputState :
         VexBehaviorV2CompoundOutputState<
-            ComplexOutputState
+            MultiOutputState
         > {
         data object Unobserved :
-            ComplexOutputState
+            MultiOutputState
 
-        data class HeldTransient(
-            val screenName:
+        data class NeedsListValue(
+            val value:
                 String,
         ) :
-            ComplexOutputState
-
-        data class NeedsPlayerScreen(
-            val trackRef:
-                String,
-            val targetScreenName:
-                String,
-            val themeMode:
-                SampleThemeMode,
-        ) :
-            ComplexOutputState
+            MultiOutputState
 
         data class Settled(
-            val screenName:
+            val value:
                 String,
-            val currentTrackRef:
-                String?,
-            val themeMode:
-                SampleThemeMode,
         ) :
-            ComplexOutputState
+            MultiOutputState
 
         fun traceValue():
             String =
@@ -865,91 +654,66 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
                 Unobserved ->
                     "Unobserved"
 
-                is HeldTransient ->
-                    "HeldTransient(" +
-                        screenName +
-                        ")"
-
-                is NeedsPlayerScreen ->
-                    "NeedsPlayerScreen(" +
-                        trackRef +
-                        "," +
-                        targetScreenName +
-                        "," +
-                        themeMode.name +
+                is NeedsListValue ->
+                    "NeedsListValue(" +
+                        value +
                         ")"
 
                 is Settled ->
                     "Settled(" +
-                        screenName +
-                        "," +
-                        (
-                            currentTrackRef
-                                ?: "none"
-                        ) +
-                        "," +
-                        themeMode.name +
+                        value +
                         ")"
             }
     }
 
     /**
-     * The Family's actual CURRENT semantic State.
-     *
-     * Fresh readers should be able to see the whole relationship shape from this declaration:
-     *
-     *     complete current Input
-     *     + current Output consequence
-     *     + relationship revision/currentness
+     * MultiFamily's CURRENT State.
      */
-    private data class ComplexCompoundState(
+    private data class MultiCompoundState(
         override val inputState:
-            ComplexInputState,
+            MultiInputState,
         override val outputState:
-            ComplexOutputState,
+            MultiOutputState,
         override val revision:
             Long,
     ) :
         VexBehaviorV2CompoundFamilyState<
-            ComplexFamily,
-            ComplexInputState,
-            ComplexOutputState
+            MultiFamily,
+            MultiInputState,
+            MultiOutputState
         >
 
     /**
-     * The deliberately generic "complex" teaching Family.
+     * Compound Family example.
      *
-     * This is not a renamed feature specimen. It exists to demonstrate the reusable Family Circuit
-     * structure directly. It is a Family because ComplexCompoundState is its CURRENT semantic State;
-     * it does not inherit a Control API merely because ScreenFamily does.
+     * process(...) is the only relationship calculation:
      *
-     * ComplexFamily owns:
-     * - its Compound CURRENT State;
-     * - currentization through ComplexInputState.latest(...);
-     * - relationship calculation through process(...);
-     * - the consequence Act after an Output-changing commit.
-     *
-     * It does NOT own Screen, Queue or Theme truth. Those arrive as observations from their rightful
-     * owners.
+     *     here is everything CURRENT
+     *     -> what does it mean?
+     *     -> return Output
      */
-    private class ComplexFamily(
-        private val screenFamily:
-            ScreenFamily,
+    private class MultiFamily(
+        private val singleFamily:
+            SingleFamily,
+        private val listFamily:
+            ListFamily,
+        private val switchFamily:
+            SwitchFamily,
         private val trace:
             MutableList<String>,
     ) :
         VexBehaviorV2CompoundFamily<
-            ComplexFamily,
-            ComplexCompoundState,
-            ComplexInputState,
-            ComplexOutputState
+            MultiFamily,
+            MultiCompoundState,
+            MultiInputState,
+            MultiOutputState
         >(
             initialInputState =
-                ComplexInputState(),
+                MultiInputState(),
             initialOutputState =
-                ComplexOutputState.Unobserved,
+                MultiOutputState.Unobserved,
             stateFactory = { inputState, outputState, revision ->
-                ComplexCompoundState(
+                MultiCompoundState(
                     inputState =
                         inputState,
                     outputState =
@@ -961,117 +725,98 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             logger =
                 VexFamilyLogger.None,
         ) {
-        fun observeScreen(
+        fun refresh() {
+            observeSingle(
+                singleFamily.current,
+            )
+            observeList(
+                listFamily.current,
+            )
+            observeSwitch(
+                switchFamily.current,
+            )
+        }
+
+        fun observeSingle(
             state:
-                ScreenFamily.State,
+                SingleFamily.State,
         ):
             VexBehaviorV2CommittedOutput<
-                ComplexOutputState
+                MultiOutputState
             >? =
             observe(
-                ComplexInputState(
-                    screen =
+                MultiInputState(
+                    singleState =
                         state,
                 ),
             )
 
-        fun observeMusicQueue(
+        fun observeList(
             state:
-                MusicQueueState,
+                ListFamily.State,
         ):
             VexBehaviorV2CommittedOutput<
-                ComplexOutputState
+                MultiOutputState
             >? =
             observe(
-                ComplexInputState(
-                    musicQueue =
+                MultiInputState(
+                    listState =
                         state,
                 ),
             )
 
-        fun observeThemeMode(
+        fun observeSwitch(
             state:
-                ThemeModeState,
+                SwitchFamily.State,
         ):
             VexBehaviorV2CommittedOutput<
-                ComplexOutputState
+                MultiOutputState
             >? =
             observe(
-                ComplexInputState(
-                    themeMode =
+                MultiInputState(
+                    switchState =
                         state,
                 ),
             )
 
-        /**
-         * The one relationship-specific calculation.
-         *
-         * No currentState parameter.
-         * No previousOutput parameter.
-         * No target mutation.
-         * No Effect execution.
-         *
-         *     here is everything CURRENT
-         *     -> what does it mean?
-         *     -> return the Output consequence
-         */
         override fun process(
             latestStateInput:
-                ComplexInputState,
+                MultiInputState,
         ):
-            ComplexOutputState {
-            val screen =
-                latestStateInput.screen
-            val queue =
-                latestStateInput.musicQueue
-            val theme =
-                latestStateInput.themeMode
+            MultiOutputState {
+            val single =
+                latestStateInput.singleState
+            val list =
+                latestStateInput.listState
+            val switch =
+                latestStateInput.switchState
 
             val output =
                 when {
-                    screen ==
+                    single ==
                         null ||
-                        queue ==
+                        list ==
                         null ||
-                        theme ==
+                        switch ==
                         null ->
-                        ComplexOutputState
+                        MultiOutputState
                             .Unobserved
 
-                    screen.transientBlocked ->
-                        ComplexOutputState
-                            .HeldTransient(
-                                screenName =
-                                    screen.screenName,
-                            )
-
-                    queue.currentTrack() !=
-                        null &&
-                        screen.screenName !=
-                        PLAYER_SCREEN ->
-                        ComplexOutputState
-                            .NeedsPlayerScreen(
-                                trackRef =
-                                    checkNotNull(
-                                        queue.currentTrack(),
-                                    ).trackRef,
-                                targetScreenName =
-                                    PLAYER_SCREEN,
-                                themeMode =
-                                    theme.mode,
+                    switch.enabled &&
+                        !list.contains(
+                            single.value,
+                        ) ->
+                        MultiOutputState
+                            .NeedsListValue(
+                                value =
+                                    single.value,
                             )
 
                     else ->
-                        ComplexOutputState
+                        MultiOutputState
                             .Settled(
-                                screenName =
-                                    screen.screenName,
-                                currentTrackRef =
-                                    queue
-                                        .currentTrack()
-                                        ?.trackRef,
-                                themeMode =
-                                    theme.mode,
+                                value =
+                                    single.value,
                             )
                 }
 
@@ -1082,13 +827,10 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             return output
         }
 
-        /**
-         * Act reacts only after the Output consequence is already carried by Family.current.
-         */
         override fun act(
             committed:
                 VexBehaviorV2CommittedOutput<
-                    ComplexOutputState
+                    MultiOutputState
                 >,
         ) {
             val output =
@@ -1104,89 +846,125 @@ class VexBehaviorV2FamilyCircuitTestSampleSuite {
             when (
                 output
             ) {
-                ComplexOutputState.Unobserved,
-                is ComplexOutputState.HeldTransient,
-                is ComplexOutputState.Settled,
+                MultiOutputState.Unobserved,
+                is MultiOutputState.Settled,
                 ->
                     Unit
 
-                is ComplexOutputState.NeedsPlayerScreen -> {
-                    /*
-                     * Another Family owns Screen truth, so the request crosses its Control boundary.
-                     */
-                    screenFamily.activate(
-                        ScreenFamily.Control.Show(
-                            screenName =
-                                output.targetScreenName,
+                is MultiOutputState.NeedsListValue -> {
+                    listFamily.activate(
+                        ListFamily.Control.Add(
+                            value =
+                                output.value,
                         ),
                     )
 
-                    val observed =
-                        screenFamily.current
-
                     trace +=
-                        "screen-family:" +
-                            observed.screenName
+                        "list-family:" +
+                            listFamily
+                                .current
+                                .values()
+                                .joinToString(
+                                    separator =
+                                        ",",
+                                )
                     trace +=
-                        "observe:screen:" +
-                            observed.screenName
+                        "observe:list"
 
-                    /*
-                     * The target's resulting CURRENT truth returns as NEW input.
-                     */
-                    observeScreen(
-                        observed,
+                    observeList(
+                        listFamily.current,
                     )
                 }
             }
         }
     }
 
-    private fun musicQueue(
-        currentTrackRef:
-            String?,
-        vararg tracks:
-            Pair<
-                String,
-                String
-            >,
+    /**
+     * Small constructor examples.
+     *
+     * These are the intended first reading points for a fresh instance.
+     */
+    private fun createSingleFamily(
+        value:
+            String =
+            "value",
     ):
-        MusicQueueState =
-        MusicQueueState(
-            groups =
-                mutableListOf(
-                    QueueGroup(
-                        groupName =
-                            "Teaching Queue",
-                        items =
-                            tracks
-                                .map { (
-                                    trackRef,
-                                    title,
-                                ) ->
-                                    QueueItem(
-                                        trackRef =
-                                            trackRef,
-                                        title =
-                                            title,
-                                    )
-                                }
-                                .toMutableList(),
-                    ),
+        SingleFamily =
+        SingleFamily(
+            initialState =
+                SingleFamily.State(
+                    value =
+                        value,
                 ),
-            currentTrackRef =
-                currentTrackRef,
+            executionRoot =
+                VexExecutionRoot(),
         )
 
-    private companion object {
-        const val BROWSE_SCREEN:
-            String =
-            "BrowseSurface"
+    private fun createListFamily(
+        vararg values:
+            String,
+    ):
+        ListFamily =
+        ListFamily(
+            initialState =
+                ListFamily.State(
+                    groups =
+                        listOf(
+                            ListFamily.Group(
+                                name =
+                                    "items",
+                                items =
+                                    values.map { value ->
+                                        ListFamily.Item(
+                                            value =
+                                                value,
+                                        )
+                                    },
+                            ),
+                        ),
+                ),
+            executionRoot =
+                VexExecutionRoot(),
+        )
 
-        const val PLAYER_SCREEN:
-            String =
-            "PlayerSurface"
-    }
+    private fun createSwitchFamily(
+        enabled:
+            Boolean =
+            false,
+    ):
+        SwitchFamily =
+        SwitchFamily(
+            initialState =
+                SwitchFamily.State(
+                    enabled =
+                        enabled,
+                ),
+            executionRoot =
+                VexExecutionRoot(),
+        )
+
+    private fun createMultiFamily(
+        singleFamily:
+            SingleFamily,
+        listFamily:
+            ListFamily,
+        switchFamily:
+            SwitchFamily,
+        trace:
+            MutableList<String> =
+            mutableListOf(),
+    ):
+        MultiFamily =
+        MultiFamily(
+            singleFamily =
+                singleFamily,
+            listFamily =
+                listFamily,
+            switchFamily =
+                switchFamily,
+            trace =
+                trace,
+        )
 }
 
 // [VXG RealForever]
