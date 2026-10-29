@@ -1714,161 +1714,169 @@ open.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-WHY] -->
 
-## Nested current-State pressure — identity before object reference
+## Nested current-State pressure — depth is data, not copy code
 
-A second StateRelay pressure comes from nested collection snapshots.
+The earlier nested-list pressure exposed the right failure but still required feature-specific
+recursive copy knowledge. That is not sufficient as a reusable Family currentness model.
 
-The failure to prevent is:
-
-~~~text
-CURRENT parent snapshot
-  -> ordered list
-       -> item
-            -> nested ordered list
-                 -> nested current item
-
-one layer updates/copies
--> a nested list/value is accidentally omitted or aliased
--> DisplayState/UI traverses the copied parent
--> a row/layer silently disappears even though another owner still has the truth
-~~~
-
-The more complete relationship is identity-first:
+The refined pressure normalizes the owned hierarchy by stable semantic identity:
 
 ~~~text
-StateList snapshot
-  ordered semantic refs
-  +
-  complete valuesByRef for those exact refs
+[A1[B1[C1]]], [A2[B2]]
+
+becomes:
+
+rootRefs = [A1, A2]
+
+nodes:
+  A1 -> children [B1]
+  B1 -> children [C1]
+  C1 -> children []
+  A2 -> children [B2]
+  B2 -> children []
 ~~~
 
-and it is fractal:
+Now hierarchy depth is **data**, not handwritten preservation logic.
+
+Updating C1 means:
 
 ~~~text
-Parent State
-  sections:
-    refs = [A, B]
-    valuesByRef:
-      A -> Section State
-             items:
-               refs = [A1, A2]
-               valuesByRef:
-                 A1 -> Item State
-                 A2 -> Item State
-      B -> Section State
-             ...
+CURRENT tree
+-> resolve node C1 by ref
+-> replace C1
+-> retain the same root refs and every untouched node
+
+A1 / B1 / A2 / B2 do not need to be reconstructed or named merely to survive.
 ~~~
 
-### Why separate order from values
+The fourth Origin reference proves this at two scales:
+- the exact `[A1[B1[C1]]], [A2[B2]]` shape;
+- a generated 48-level chain where the deepest node changes without any feature-specific recursive
+  copy code.
 
-List position is presentation/traversal order. It is not identity.
+### Structural completeness
+
+The normalized tree owns:
 
 ~~~text
-INDEX != IDENTITY
+rootRefs
+node.ref
+node.childRefs
+node index
 ~~~
 
-Updating A2 therefore means:
+Every root/child ref must resolve to one current node. Dangling refs, duplicate refs, unreachable
+nodes and child cycles are rejected by the snapshot rather than becoming silent display omissions.
+
+Display traversal therefore reads one coherent current hierarchy:
 
 ~~~text
-CURRENT
--> resolve section A by ref
--> resolve item A2 by ref
--> replace only A2's immutable value
--> preserve section order
--> preserve item order
--> preserve every sibling value
+root refs
+-> node
+-> child refs
+-> child node
+-> ...
 ~~~
 
-Display walks the refs from that same coherent snapshot and resolves every ref. A dangling ref is an
-invariant failure, not permission to silently render fewer rows.
+It does not use list index or retained object reference as semantic identity.
 
-The third pressure test now proves:
-- a deep nested item update preserves parent order, sibling section, sibling item and nested order;
-- display resolves the complete current tree by stable refs;
-- a list snapshot with a missing ref/value pair fails construction.
+### Ownership detachment is separate
 
-### What belongs inline versus in another current owner
-
-Do not turn every list item into a Family.
-
-Inline nested value State is appropriate when the child:
-- exists as part of the parent semantic truth;
-- has no independent currentness/lifetime owner;
-- changes only through the parent owner.
-
-Use independent child currentness when the child:
-- changes independently;
-- is observed/used outside this parent;
-- has its own provider/repository/lifetime identity.
-
-Then the parent should retain stable child refs/order and a Convergence relationship may compose the
-children's current bounded projections into one coherent parent/list output. The parent should not
-recursively absorb another owner's entire mutable State merely to render a list.
-
-### Copy law
-
-Do not rely on object-reference continuity for semantic identity.
-
-For structurally immutable value snapshots, prefer:
+The snapshot detaches caller-owned structural collections at admission:
 
 ~~~text
-stable semantic refs
-+ immutable values
-+ data-class copy from CURRENT
+caller mutates original root list / child list / node list afterward
+-> retained current hierarchy remains unchanged
 ~~~
 
-over rebuilding a constructor from a hand-selected subset of fields.
+This preserves the V1 Relay reason for defensive detachment without making recursive deep-copy
+knowledge the identity model.
 
-That way a newly-added sibling field is preserved by default, while nested independently-owned truth
-does not need to be recursively cloned into the parent.
+Permanent distinction:
 
-V1 Relay deepCopy remains valuable where ownership detachment is required, but deep copy is not the
-identity model. Stable refs and coherent current snapshots are.
+~~~text
+STABLE REF
+  -> which semantic thing / relationship is this?
 
-<!-- [VXG RealForever][VEX-BEHAVIOR][V2][NESTED-STATE-LIST-PRESSURE] -->
+SNAPSHOT DETACHMENT
+  -> can another owner mutate my retained structure through an alias?
 
+DEEP COPY
+  != identity
+~~~
+
+The normalized tree pressure currently uses immutable fixture node values. A real node value that
+contains mutable owned internals still needs its own lawful immutable/snapshot boundary. The tree
+solves structural identity/hierarchy completeness; it does not magically freeze arbitrary mutable
+domain payloads.
+
+### Independently-owned child currentness remains Convergence
+
+If B1/B2 have their own currentness owners, do not absorb their whole State into the normalized parent
+tree merely for rendering.
+
+~~~text
+parent membership/hierarchy refs --------\
+                                          -> Compound Convergence
+child-owner current projections ---------/        |
+                                                   v
+                                            bounded current output
+~~~
+
+So the current law is:
+
+~~~text
+parent-owned nested structure
+  -> normalized identity tree
+
+independently-owned child currentness
+  -> stable refs + Convergence
+~~~
+
+No universal StateTree type is admitted yet. The test fixture exists to pressure the reusable law.
+
+<!-- [VXG RealForever][VEX-BEHAVIOR][V2][NESTED-STATE-TREE-PRESSURE] -->
 
 ## Fourth Origin reference — StateRelay and nested currentness
 
-StateRelay/current-list pressure has moved out of the Playback-specific class into:
+StateRelay/current-tree pressure lives in:
 
 ~~~text
 VexBehaviorV2StateRelayOriginPressureTest
 ~~~
 
-The fourth reference separates two kinds of nesting:
+The fourth reference now pressures three different responsibilities:
 
 ~~~text
-INLINE OWNED VALUE TREE
-  parent owns child meaning
-  -> stable refs + complete indexed snapshot
-  -> update by ref
-  -> nested copy/detachment preserves every layer
+StateRelay
+  serialized CURRENT-State decision
+  stale completion re-evaluated against CURRENT
 
-INDEPENDENT CHILD CURRENTNESS
-  child has its own owner/lifetime
-  -> parent keeps semantic refs/order
-  -> child owner exposes a coherent current-by-ref projection
-  -> Compound Convergence combines both
-  -> Display/output resolves exact refs
+normalized owned State tree
+  arbitrary-depth hierarchy by stable refs
+  complete current structural snapshot
+  no ancestor reconstruction required to preserve descendants
+
+Compound Convergence
+  parent refs/order/hierarchy + independently-owned child currentness
+  -> one bounded coherent output
 ~~~
 
-This avoids two opposite mistakes:
+This avoids both:
 
 ~~~text
-recursive object-reference tree
-  -> copies/aliases can lose layers or make identity accidental
+recursive manual copy chains
+  -> feature author must remember every descendant to preserve it
 
 Family-per-row explosion
-  -> every nested value gets an unnecessary independent owner
+  -> every nested value gains an unnecessary independent currentness owner
 ~~~
 
 The deciding question remains ownership/currentness, not collection depth.
 
-The test also proves a current list may not silently omit a missing nested identity. Once the
-relationship claims a complete current order + child projection, every ordered ref must resolve or the
-relationship fails instead of rendering a shorter list.
+The normalized-tree isolated Kotlin proof passes for a 48-level chain and for caller-owned mutable
+structural collections being detached after admission. Repository Gradle/JVM proof remains pending.
 
-No universal StateList type is admitted by this checkpoint.
+No universal StateTree or production StateRelay type is admitted by this checkpoint.
 
 <!-- [VXG RealForever][VEX-BEHAVIOR][V2][STATE-RELAY-FOURTH-REFERENCE] -->

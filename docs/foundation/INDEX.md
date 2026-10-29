@@ -672,25 +672,24 @@ different ownership problems. The Origin Walk must keep those reasons distinct.
 <!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][STATE-RELAY-WHY] -->
 
 
-### V2 Behavior Origin Walk — nested State/list currentness pressure
+### V2 Behavior Origin Walk — arbitrary-depth State tree currentness pressure
 
-StateRelay pressure now includes a nested list/list specimen.
+The fourth StateRelay reference now replaces manual recursive list-copy pressure with a normalized
+identity tree:
 
 ~~~text
-stable ordered refs
-+ complete values indexed by those refs
--> coherent current list snapshot
--> nested update by semantic ref
--> display resolves the same current refs
+root refs + node index + child refs
+-> arbitrary-depth current hierarchy
+-> update one node by semantic ref
+-> untouched ancestors/siblings remain without feature-specific copy code
 ~~~
 
-The specimen rejects dangling ref/value pairs rather than silently rendering a shorter copied tree.
+The exact `[A1[B1[C1]]], [A2[B2]]` shape and a generated 48-level chain are both pressure specimens.
+Dangling identities fail rather than silently shortening display.
 
-This is evidence for an identity-first snapshot law, not yet admission of a universal StateList type.
-Independently-owned child currentness should remain with the child and converge by stable ref rather
-than being recursively absorbed into a parent State.
+Independently-owned child currentness remains a separate Compound Convergence concern.
 
-<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][NESTED-STATE-LIST-PRESSURE] -->
+<!-- [VXG RealForever][FOUNDATION][BEHAVIOR-V2][NESTED-STATE-TREE-PRESSURE] -->
 
 
 ### V2 Behavior Origin Walk — fourth StateRelay reference
