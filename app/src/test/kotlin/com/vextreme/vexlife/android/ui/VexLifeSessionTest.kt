@@ -96,7 +96,7 @@ class VexLifeSessionTest {
     }
 
     @Test
-    fun debugMenuThemeActionRoutesThroughTheSessionThemeModeFamily() = runTest {
+    fun debugMenuThemeActionRoutesThroughTheSessionThemeModeConnection() = runTest {
         val executionRoot = VexExecutionRoot()
         val session = VexLifeSession(
             repositories = AppRepositories(
