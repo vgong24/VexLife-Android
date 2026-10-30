@@ -183,12 +183,16 @@ internal fun VexLifeTheme(
             .states
             .collectAsState()
 
+    val projection =
+        themeModeFamily
+            .projectionFor(
+                currentState,
+            )
+
     VexLifeTheme(
         presentation =
-            themeModeFamily
-                .displayStateFor(
-                    currentState,
-                )
+            projection
+                .displayState
                 .presentation,
         content = content,
     )
