@@ -39,22 +39,24 @@ Family.activate(control)
 The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
 or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
 
-Current PR #193 refinement also keeps execution identity inside the typed Family boundary:
+The current human-vetted Family relationship identity law is:
 
 ~~~text
-Control<Family>
--> Control kind/name included automatically
--> optional Control.Resource<Family, ExactId>
--> exact ResourceId object retained
--> Family-owned RelationshipId
--> Begin chooses Approach only
--> VexExecution coordinates that RelationshipId
+live Family
++ exact Control identity
++ optional stable Control.resourceId
+-> Family relationship identity
 ~~~
 
-There is no arbitrary Begin trigger/argument identity surface. This refinement is accepted on main
-through [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) after exact-head
-repository-owned `vexVerifyJvm` proof and Independent Assurance. That acceptance does not claim
-device/Journey/ScreenCrawler or lived-product proof for the Direct Family foundation.
+The optional resource narrows one Control's semantic lane; it never replaces Control identity.
+Ordinary Control payload is not automatically identity. Begin chooses Approach only and does not
+accept arbitrary identity arguments.
+
+PR #193 remains useful implementation/provenance history, but repository proof, Independent Assurance,
+merge status, or "foundation" wording do not themselves establish human architecture approval. The
+human-vetted semantic boundary is recorded directly in source with `@VettedWithHuman` on the
+relationship-carrying declarations. Downstream VexExecution custody remains a separate unvetted
+architecture question.
 
 Compound/process integration remains separate and open:
 
