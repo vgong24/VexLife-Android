@@ -72,8 +72,9 @@ class ThemeModeTest {
                 family.activate(
                     ThemeModeFamily.Control.Select(
                         ThemeMode.Dark,
-                    ),
-                ),
+                ) !=
+                    null,
+            ),
             )
             assertEquals(
                 ThemeMode.Dark,
@@ -85,8 +86,9 @@ class ThemeModeTest {
                 family.activate(
                     ThemeModeFamily.Control.Select(
                         ThemeMode.Dark,
-                    ),
-                ),
+                ) !=
+                    null,
+            ),
             )
             assertEquals(
                 ThemeMode.Dark,
@@ -97,8 +99,9 @@ class ThemeModeTest {
                 family.activate(
                     ThemeModeFamily.Control.Select(
                         ThemeMode.Light,
-                    ),
-                ),
+                ) !=
+                    null,
+            ),
             )
             assertEquals(
                 ThemeMode.Light,
@@ -122,8 +125,9 @@ class ThemeModeTest {
                 family.activate(
                     ThemeModeFamily.Control.Select(
                         ThemeMode.Light,
-                    ),
-                ),
+                ) !=
+                    null,
+            ),
             )
             assertEquals(
                 ThemeMode.Light,
