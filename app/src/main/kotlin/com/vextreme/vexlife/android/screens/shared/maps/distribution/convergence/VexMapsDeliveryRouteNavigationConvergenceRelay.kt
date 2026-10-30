@@ -136,15 +136,15 @@ internal data class VexMapsDeliveryRouteNavigationInputState(
 ) :
     VexInputState<VexMapsDeliveryRouteNavigationInputState> {
     override fun latest(
-        incoming:
+        incomingInputState:
             VexMapsDeliveryRouteNavigationInputState,
     ):
         VexMapsDeliveryRouteNavigationInputState {
         val latestDeliveryRoute =
-            incoming.deliveryRoute
+            incomingInputState.deliveryRoute
                 ?: deliveryRoute
         val latestNavigation =
-            incoming.navigation
+            incomingInputState.navigation
                 ?: navigation
 
         return VexMapsDeliveryRouteNavigationInputState(
@@ -156,10 +156,10 @@ internal data class VexMapsDeliveryRouteNavigationInputState(
             navigation =
                 latestNavigation?.copy(),
             expectedLeg =
-                incoming.expectedLeg
+                incomingInputState.expectedLeg
                     ?: expectedLeg,
             legAttempt =
-                incoming.legAttempt
+                incomingInputState.legAttempt
                     ?: legAttempt,
         )
     }
