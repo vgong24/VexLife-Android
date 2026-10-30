@@ -1118,7 +1118,7 @@ class VexMapsDistributionSessionTest {
                 )
                 assertTrue(
                     executionRoot
-                        .executions
+                        .activeExecutions
                         .value
                         .values
                         .none {
@@ -1268,7 +1268,7 @@ class VexMapsDistributionSessionTest {
                 )
                 assertTrue(
                     executionRoot
-                        .executions
+                        .activeExecutions
                         .value
                         .values
                         .none {
