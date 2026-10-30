@@ -292,7 +292,7 @@ data class EventsConvergenceOutputState(
  *
  * dependencies()   -> what continuously changes around Events?
  * public methods   -> what intentions/surface facts may enter?
- * processStates()  -> what does the latest combination mean?
+ * process()  -> what does the latest combination mean?
  * outputStates     -> what may Home/Events/other consumers observe?
  *
  * Dependency collectors are framework-owned and asynchronous. processStates remains a synchronous,
