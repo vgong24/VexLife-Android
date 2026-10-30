@@ -13,16 +13,16 @@ class VexCompoundRelayDependencyTest {
         val right: Int? = null,
     ) : VexInputState<DependencyInput> {
         override fun latest(
-            incoming:
+            incomingInputState:
                 DependencyInput,
         ):
             DependencyInput =
             DependencyInput(
                 left =
-                    incoming.left
+                    incomingInputState.left
                         ?: left,
                 right =
-                    incoming.right
+                    incomingInputState.right
                         ?: right,
             )
 
