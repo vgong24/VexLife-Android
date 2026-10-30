@@ -211,32 +211,44 @@ internal class VexMapsDestinationSearchSession(
         }
 }
 
+@OptIn(VexExecution.RelationshipFoundationApi::class)
 private class VexMapsDestinationSearchExecution(
     private val root:
         VexExecutionRoot,
     private val session:
         VexMapsDestinationSearchSession,
 ) :
-    VexExecution(
+    VexExecution<
+        VexMapsDestinationSearchSession
+    >(
         root,
     ) {
+    private object SearchRelationship :
+        VexExecution.RelationshipId<
+            VexMapsDestinationSearchSession
+        >
+
     fun search(
         work: VexMapsDestinationSearchWork,
     ) {
-        forceStop(
-            session::searchForExecution,
-            "VexMaps destination search superseded",
-        )
         launch(
-            session::searchForExecution,
-            work,
+            relationshipId =
+                SearchRelationship,
+            approach =
+                VexExecution.Approach.Latest,
+            action =
+                session::searchForExecution,
+            argument =
+                work,
         )
     }
 
     fun cancelSearch() {
         forceStop(
-            session::searchForExecution,
-            "VexMaps destination search invalidated",
+            relationshipId =
+                SearchRelationship,
+            reason =
+                "VexMaps destination search invalidated",
         )
     }
 
