@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.vextreme.vexlife.android.humanvetting.VettedWithHuman
 
 object VexMotionTokens {
     const val TactileMs = 90
@@ -42,6 +43,7 @@ object VexLayoutTokens {
     val BottomBarHeight = 70.dp
 }
 
+@VettedWithHuman("VexThemePresentation", "2026-10-29T22:46:00-07:00", "Victor Approved")
 internal sealed interface VexThemePresentation {
     val materialColorScheme:
         ColorScheme
