@@ -90,21 +90,21 @@ home says the full human Walk is still missing, preserve that incompleteness in 
 Keep one full reevaluation boundary, but keep the mechanics out of feature code:
 
 ~~~text
-retained InputState + incoming partial patch
--> InputState.latest(incoming)
--> one complete current InputState
--> process(complete InputState, retained State)
--> one fully-derived current OutputState
--> framework assembles VexCompoundState(InputState, OutputState)
+currentState.inputState + incomingInputState
+-> currentState.inputState.latest(incomingInputState)
+-> latestStateInput
+-> process(latestStateInput, currentState)
+-> latestStateOutput
+-> VexCompoundState(latestStateInput, latestStateOutput)
 ~~~
 
 `InputState.latest(...)` owns patch/currentization semantics. `process(...)` owns the bounded
 relationship calculation. The Compound base owns State assembly, comparison, and commit.
 
-Most relationships should ignore retained prior Output entirely. Existing Events and Navigation
-relationships currently retain specific cross-cycle meaning; the retained State parameter keeps that
-dependency visible until its rightful memory owner is re-derived. Do not introduce previous-Output
-reads merely to avoid modeling a real input.
+Most relationships should ignore `currentState.outputState` entirely. Existing Events and Navigation
+relationships currently use it for specific cross-cycle meaning; the `currentState` parameter keeps
+that dependency visible until its rightful memory owner is re-derived. Do not introduce previous
+Output reads merely to avoid modeling a real input.
 
 Any admitted dependency change may cause the complete bounded relationship to be recalculated. Do
 not introduce hand-maintained partial invalidation merely to make helpers look independent.
@@ -136,7 +136,7 @@ dependency observation
   may suspend while waiting for outside truth
 
 InputState.latest(...)
-  currentizes one partial patch against retained Input
+  currentizes `incomingInputState` against `currentState.inputState`
 
 process(...)
   non-suspending relationship calculation over complete Input
@@ -215,7 +215,7 @@ states
   coordination/currentness/full internal relationship state actually matters
 
 inputStates
-  coherent retained InputState
+  coherent current InputState
   distinct-by-input is built into VexCompoundRelay
 
   use when:
@@ -282,7 +282,7 @@ AttentionPreferenceRelay.states
                 inputState + outputState
 ~~~
 
-The Compound `InputState` is the coherent retained snapshot/envelope of those dependencies. It is
+The Compound `InputState` is the coherent current snapshot/envelope of those dependencies. It is
 not itself required to be a special Relay subtype.
 
 If presentation genuinely needs current dependency context, consume `inputStates/currentInput`.
