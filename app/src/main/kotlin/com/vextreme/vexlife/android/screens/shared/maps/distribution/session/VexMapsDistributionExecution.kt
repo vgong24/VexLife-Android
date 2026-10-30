@@ -22,58 +22,84 @@ internal class VexMapsDistributionExecution(
     >(
         root,
     ) {
-    private object ModeDeliveryRouteObservation :
-        VexExecution.RelationshipId<
-            VexMapsDistributionSession
-        >
+    private sealed interface RelationshipKind {
+        data object ModeDeliveryRouteObservation :
+            RelationshipKind
 
-    private object NavigationObservation :
-        VexExecution.RelationshipId<
-            VexMapsDistributionSession
-        >
+        data object NavigationObservation :
+            RelationshipKind
 
-    private object RestoreDraftRelationship :
-        VexExecution.RelationshipId<
-            VexMapsDistributionSession
-        >
+        data object RestoreDraft :
+            RelationshipKind
 
-    private object AddStopRelationship :
-        VexExecution.RelationshipId<
-            VexMapsDistributionSession
-        >
+        data object AddStop :
+            RelationshipKind
 
-    private data class RemoveStopRelationship(
-        val stopRef:
-            String,
+        data class RemoveStop(
+            val stopRef:
+                String,
+        ) :
+            RelationshipKind
+
+        data object ReturnToStart :
+            RelationshipKind
+
+        data object ClearDraft :
+            RelationshipKind
+
+        data object Preparation :
+            RelationshipKind
+
+        data object Leg :
+            RelationshipKind
+    }
+
+    private class Relationship(
+        private val session:
+            VexMapsDistributionSession,
+        private val kind:
+            RelationshipKind,
     ) :
         VexExecution.RelationshipId<
             VexMapsDistributionSession
-        >
+        > {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                Relationship &&
+                session ===
+                other.session &&
+                kind ==
+                other.kind
 
-    private object ReturnToStartRelationship :
-        VexExecution.RelationshipId<
-            VexMapsDistributionSession
-        >
+        override fun hashCode():
+            Int =
+            31 *
+                System.identityHashCode(
+                    session,
+                ) +
+                kind.hashCode()
+    }
 
-    private object ClearDraftRelationship :
-        VexExecution.RelationshipId<
-            VexMapsDistributionSession
-        >
-
-    private object PreparationRelationship :
-        VexExecution.RelationshipId<
-            VexMapsDistributionSession
-        >
-
-    private object LegRelationship :
-        VexExecution.RelationshipId<
-            VexMapsDistributionSession
-        >
+    private fun relationship(
+        kind:
+            RelationshipKind,
+    ):
+        Relationship =
+        Relationship(
+            session =
+                session,
+            kind =
+                kind,
+        )
 
     fun start() {
         launchForCollect(
             relationshipId =
-                ModeDeliveryRouteObservation,
+                relationship(\n                    RelationshipKind.ModeDeliveryRouteObservation,\n                ),
             source =
                 session::modeDeliveryRouteOutputsForExecution,
         ) { output ->
@@ -84,7 +110,7 @@ internal class VexMapsDistributionExecution(
 
         launchForCollect(
             relationshipId =
-                NavigationObservation,
+                relationship(\n                    RelationshipKind.NavigationObservation,\n                ),
             source =
                 session::navigationOutputsForExecution,
         ) { output ->
@@ -97,7 +123,7 @@ internal class VexMapsDistributionExecution(
     fun restoreDraft() {
         launch(
             relationshipId =
-                RestoreDraftRelationship,
+                relationship(\n                    RelationshipKind.RestoreDraft,\n                ),
             approach =
                 VexExecution.Approach.Earliest,
             action =
@@ -111,7 +137,7 @@ internal class VexMapsDistributionExecution(
     ) {
         launch(
             relationshipId =
-                AddStopRelationship,
+                relationship(\n                    RelationshipKind.AddStop,\n                ),
             approach =
                 VexExecution.Approach.Queued,
             action =
@@ -126,8 +152,10 @@ internal class VexMapsDistributionExecution(
     ) {
         launch(
             relationshipId =
-                RemoveStopRelationship(
-                    stopRef,
+                relationship(
+                    RelationshipKind.RemoveStop(
+                        stopRef,
+                    ),
                 ),
             approach =
                 VexExecution.Approach.Earliest,
@@ -143,7 +171,7 @@ internal class VexMapsDistributionExecution(
     ) {
         launch(
             relationshipId =
-                ReturnToStartRelationship,
+                relationship(\n                    RelationshipKind.ReturnToStart,\n                ),
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -156,7 +184,7 @@ internal class VexMapsDistributionExecution(
     fun clearDraft() {
         launch(
             relationshipId =
-                ClearDraftRelationship,
+                relationship(\n                    RelationshipKind.ClearDraft,\n                ),
             approach =
                 VexExecution.Approach.Earliest,
             action =
@@ -171,7 +199,7 @@ internal class VexMapsDistributionExecution(
         cancelLeg()
         launch(
             relationshipId =
-                PreparationRelationship,
+                relationship(\n                    RelationshipKind.Preparation,\n                ),
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -184,7 +212,7 @@ internal class VexMapsDistributionExecution(
     fun cancelPreparation() {
         forceStop(
             relationshipId =
-                PreparationRelationship,
+                relationship(\n                    RelationshipKind.Preparation,\n                ),
             reason =
                 "Distribution preparation superseded",
         )
@@ -196,7 +224,7 @@ internal class VexMapsDistributionExecution(
     ) {
         launch(
             relationshipId =
-                LegRelationship,
+                relationship(\n                    RelationshipKind.Leg,\n                ),
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -209,7 +237,7 @@ internal class VexMapsDistributionExecution(
     fun cancelLeg() {
         forceStop(
             relationshipId =
-                LegRelationship,
+                relationship(\n                    RelationshipKind.Leg,\n                ),
             reason =
                 "Distribution leg preparation superseded",
         )
