@@ -30,11 +30,7 @@ import org.junit.Test
 class VexExecutionVirtualTimeUsageTest {
     @get:Rule
     val vexExecution =
-        VexExecutionTestRule(
-            maxCollectRestarts = 1,
-            collectRestartDelayMillis =
-                1_000L,
-        )
+        VexExecutionTestRule()
 
     private lateinit var repository:
         ExampleRepository
@@ -125,7 +121,15 @@ class VexExecutionVirtualTimeUsageTest {
         fun observeRestartable():
             VexCoroutineHandle =
             observe(
-                repository::restartableStates,
+                source =
+                    repository::restartableStates,
+                recovery =
+                    ObservationRecovery(
+                        maxRestarts =
+                            1,
+                        restartDelayMillis =
+                            1_000L,
+                    ),
             ) {}
 
         fun runCleanupOperation():
