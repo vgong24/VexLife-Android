@@ -26,18 +26,9 @@ import kotlinx.coroutines.launch
  * VexExecution owner token, and maintained overlap is scoped by owner + [VexExecution.CoordinationKey].
  */
 internal class VexCoroutineLauncher(
-    dispatcher: CoroutineDispatcher,
-    private val maxCollectRestarts: Int,
-    private val collectRestartDelayMillis: Long,
+    dispatcher:
+        CoroutineDispatcher,
 ) {
-    init {
-        require(maxCollectRestarts >= 0) {
-            "maxCollectRestarts must be non-negative"
-        }
-        require(collectRestartDelayMillis >= 0L) {
-            "collectRestartDelayMillis must be non-negative"
-        }
-    }
 
     private val parentJob:
         Job =
@@ -207,8 +198,8 @@ internal class VexCoroutineLauncher(
                     emptyList(),
                 maintainedObservation =
                     false,
-                restartRecoverableFailure =
-                    false,
+                observationRecovery =
+                    null,
                 action =
                     action,
             )
@@ -243,8 +234,8 @@ internal class VexCoroutineLauncher(
                     emptyList(),
                 maintainedObservation =
                     false,
-                restartRecoverableFailure =
-                    false,
+                observationRecovery =
+                    null,
                 action =
                     action,
             )
@@ -306,8 +297,8 @@ internal class VexCoroutineLauncher(
                     emptyList(),
                 maintainedObservation =
                     false,
-                restartRecoverableFailure =
-                    false,
+                observationRecovery =
+                    null,
                 action =
                     action,
             )
@@ -372,8 +363,8 @@ internal class VexCoroutineLauncher(
                         },
                 maintainedObservation =
                     false,
-                restartRecoverableFailure =
-                    false,
+                observationRecovery =
+                    null,
                 action =
                     action,
             )
@@ -428,8 +419,8 @@ internal class VexCoroutineLauncher(
                         },
                 maintainedObservation =
                     false,
-                restartRecoverableFailure =
-                    false,
+                observationRecovery =
+                    null,
                 action =
                     action,
             )
@@ -442,8 +433,8 @@ internal class VexCoroutineLauncher(
             Any,
         sourceRef:
             VexExecution.SourceRef,
-        restartOnSourceFailure:
-            Boolean,
+        recovery:
+            VexExecution.ObservationRecovery,
         source:
             () -> Flow<Value>,
         onEach:
@@ -483,8 +474,8 @@ internal class VexCoroutineLauncher(
                     emptyList(),
                 maintainedObservation =
                     true,
-                restartRecoverableFailure =
-                    restartOnSourceFailure,
+                observationRecovery =
+                    recovery,
             ) {
                 val observed =
                     try {
@@ -849,8 +840,8 @@ internal class VexCoroutineLauncher(
             List<Job>,
         maintainedObservation:
             Boolean,
-        restartRecoverableFailure:
-            Boolean,
+        observationRecovery:
+            VexExecution.ObservationRecovery?,
         action:
             suspend () -> Unit,
     ):
@@ -900,8 +891,8 @@ internal class VexCoroutineLauncher(
                         instanceId,
                     sourceRef =
                         sourceRef,
-                    restartRecoverableFailure =
-                        restartRecoverableFailure,
+                    observationRecovery =
+                        observationRecovery,
                     mutableState =
                         mutableState,
                     action =
@@ -1099,8 +1090,8 @@ internal class VexCoroutineLauncher(
             VexExecution.InstanceId,
         sourceRef:
             VexExecution.SourceRef,
-        restartRecoverableFailure:
-            Boolean,
+        observationRecovery:
+            VexExecution.ObservationRecovery?,
         mutableState:
             MutableStateFlow<
                 VexExecution.State
@@ -1181,11 +1172,12 @@ internal class VexCoroutineLauncher(
                             ?: failure
 
                     val canRestart =
-                        restartRecoverableFailure &&
-                            sourceFailure !=
+                        sourceFailure !=
+                            null &&
+                            observationRecovery !=
                             null &&
                             restartCount <
-                            maxCollectRestarts
+                            observationRecovery.maxRestarts
 
                     if (
                         !canRestart
@@ -1239,12 +1231,17 @@ internal class VexCoroutineLauncher(
                             ),
                     )
 
+                    val restartDelayMillis =
+                        requireNotNull(
+                            observationRecovery,
+                        ).restartDelayMillis
+
                     if (
-                        collectRestartDelayMillis >
+                        restartDelayMillis >
                         0L
                     ) {
                         delay(
-                            collectRestartDelayMillis,
+                            restartDelayMillis,
                         )
                     }
                 }
