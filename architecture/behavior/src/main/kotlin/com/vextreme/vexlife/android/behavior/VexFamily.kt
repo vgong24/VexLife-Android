@@ -76,7 +76,6 @@ abstract class VexFamily<
      * relationship. Prefer immutable value identity. A mutable ID whose equality/hash changes while
      * active would corrupt relationship lookup/custody rather than represent a new semantic request.
      */
-    @VettedWithHuman("VexFamily.ResourceId", "2026-10-29T23:11:06-07:00", "Victor Approved")
     interface ResourceId<
         Family,
     > where
@@ -89,9 +88,22 @@ abstract class VexFamily<
     /**
      * Compile-time kinship marker for incoming Control belonging to one exact Family coordinate.
      *
-     * Control kind is always part of the Family-owned relationship identity. A Control that needs
-     * narrower identity explicitly implements [Resource] with its exact ResourceId type.
+     * Human-vetted relationship identity law:
+     *
+     *     live Family
+     *     + exact Control identity
+     *     + optional stable resourceId chosen by that Control
+     *     = Family relationship identity
+     *
+     * Control identity is always present. [resourceId] only narrows repeated semantic resources for
+     * that same Control kind (for example Play(trackA) vs Play(trackB)). Ordinary Control payload is
+     * not automatically identity. Two different Controls may expose equal resource values without
+     * colliding because the Control identity remains part of the relationship.
+     *
+     * This law does not vet VexExecution custody, InstanceId/Handle/Status, or any downstream
+     * execution representation.
      */
+    @VettedWithHuman("VexFamily.Control", "2026-10-29", "Victor Approved")
     interface Control<
         Family,
     > where
@@ -100,20 +112,17 @@ abstract class VexFamily<
             *,
             *
         > {
-        interface Resource<
-            Family,
-            out Id,
-        > :
-            Control<Family> where
-            Family : VexFamily<
-                Family,
-                *,
-                *
-            >,
-            Id : ResourceId<Family> {
-            val resourceId:
-                Id
-        }
+        /**
+         * Optional stable semantic resource identity for this Control's maintained relationship.
+         *
+         * Null means the exact Control identity is sufficient. A non-null value narrows only this
+         * Control's relationship; it is never an ID by itself.
+         */
+        @VettedWithHuman("VexFamily.Control.resourceId", "2026-10-29", "Victor Approved")
+        val resourceId:
+            ResourceId<Family>?
+            get() =
+                null
     }
 
     /**
@@ -1116,6 +1125,18 @@ abstract class VexFamily<
         }
     }
 
+    /**
+     * Forms the Family relationship identity from the human-vetted equation:
+     *
+     *     this live Family + exact Control identity + optional Control.resourceId
+     *
+     * The optional resource never replaces Control identity. Control payload that is not deliberately
+     * exposed as [Control.resourceId] does not silently participate in relationship equality.
+     *
+     * This marker vets only Family's semantic identity formation. The returned type's downstream
+     * VexExecution custody/coordination role remains outside this approval.
+     */
+    @VettedWithHuman("VexFamily.relationshipId", "2026-10-29", "Victor Approved")
     internal fun relationshipId(
         control:
             FamilyControl,
@@ -1134,15 +1155,6 @@ abstract class VexFamily<
                 ) {
                     "VexFamily Control requires a named class or enum entry"
                 }
-        val resourceId =
-            (
-                control as?
-                    Control.Resource<
-                        *,
-                        *
-                    >
-            )
-                ?.resourceId
 
         return RelationshipId(
             family =
@@ -1152,7 +1164,7 @@ abstract class VexFamily<
             controlName =
                 controlName,
             resourceId =
-                resourceId,
+                control.resourceId,
         )
     }
 
