@@ -183,7 +183,7 @@ abstract class VexCompoundRelay<
     ): OutputState
 
     protected fun send(
-        inputState: InputState,
+        incomingInputState: InputState,
     ): VexCompoundState<InputState, OutputState> =
         synchronized(lock) {
             check(!processing) {
@@ -199,7 +199,7 @@ abstract class VexCompoundRelay<
                     currentState
                         .inputState
                         .latest(
-                            inputState.deepCopy(),
+                            incomingInputState.deepCopy(),
                         )
                         .deepCopy()
 
