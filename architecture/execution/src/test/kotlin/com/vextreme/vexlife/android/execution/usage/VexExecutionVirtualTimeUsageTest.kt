@@ -124,7 +124,7 @@ class VexExecutionVirtualTimeUsageTest {
                 source =
                     repository::restartableStates,
                 recovery =
-                    ObservationRecovery(
+                    VexExecution.ObservationRecovery(
                         maxRestarts =
                             1,
                         restartDelayMillis =
