@@ -33,6 +33,36 @@ internal data class VexMapsDistributionModeDeliveryRouteInputState(
         null,
 ) :
     VexInputState<VexMapsDistributionModeDeliveryRouteInputState> {
+    override fun latest(
+        incoming:
+            VexMapsDistributionModeDeliveryRouteInputState,
+    ):
+        VexMapsDistributionModeDeliveryRouteInputState =
+        VexMapsDistributionModeDeliveryRouteInputState(
+            mode =
+                (
+                    incoming.mode
+                        ?: mode
+                )?.copy(
+                    controls =
+                        (
+                            incoming.mode
+                                ?: mode
+                        )!!.controls.toMap(),
+                ),
+            deliveryRoute =
+                (
+                    incoming.deliveryRoute
+                        ?: deliveryRoute
+                )?.copy(
+                    controls =
+                        (
+                            incoming.deliveryRoute
+                                ?: deliveryRoute
+                        )!!.controls.toMap(),
+                ),
+        )
+
     override fun deepCopy():
         VexMapsDistributionModeDeliveryRouteInputState =
         copy(
@@ -154,72 +184,31 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
             }
         }
 
-    override fun processStates(
-        inputState:
+    override fun process(
+        latestStateInput:
             VexMapsDistributionModeDeliveryRouteInputState,
-        currentState:
+        retainedState:
             VexCompoundState<
                 VexMapsDistributionModeDeliveryRouteInputState,
                 VexMapsDistributionModeDeliveryRouteOutput
             >,
     ):
-        VexCompoundState<
-            VexMapsDistributionModeDeliveryRouteInputState,
-            VexMapsDistributionModeDeliveryRouteOutput
-        > {
-        /*
-         * Restore the complete current pair before answering the feature-home coherence question.
-         * Either owner may publish first; arrival order is not relationship meaning.
-         */
-        val previousInput =
-            currentState.inputState
-
-        val currentMode =
-            inputState.mode
-                ?: previousInput.mode
-        val currentDeliveryRoute =
-            inputState.deliveryRoute
-                ?: previousInput.deliveryRoute
-
-        val currentInput =
-            VexMapsDistributionModeDeliveryRouteInputState(
-                mode =
-                    currentMode,
-                deliveryRoute =
-                    currentDeliveryRoute,
-            )
-
+        VexMapsDistributionModeDeliveryRouteOutput {
         val mode =
-            currentMode
-                ?: return currentState.copy(
-                    inputState =
-                        currentInput,
-                )
+            latestStateInput.mode
+                ?: return retainedState.outputState.deepCopy()
         val deliveryRoute =
-            currentDeliveryRoute
-                ?: return currentState.copy(
-                    inputState =
-                        currentInput,
-                )
+            latestStateInput.deliveryRoute
+                ?: return retainedState.outputState.deepCopy()
 
-        /*
-         * Project only the owned relationship answer: coherent, or a bounded Mode Control request.
-         */
-        val currentOutput =
-            projectModeDeliveryRoute(
-                mode =
-                    mode,
-                deliveryRoute =
-                    deliveryRoute,
-            )
-
-        return currentState.copy(
-            inputState =
-                currentInput,
-            outputState =
-                currentOutput,
+        return projectModeDeliveryRoute(
+            mode =
+                mode,
+            deliveryRoute =
+                deliveryRoute,
         )
     }
+
 }
 
 private fun projectModeDeliveryRoute(
