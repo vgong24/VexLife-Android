@@ -232,7 +232,7 @@ internal class VexMapsStyleConvergenceRelay :
     override fun process(
         latestStateInput:
             VexMapsStyleConvergenceInputState,
-        retainedState:
+        currentState:
             VexCompoundState<
                 VexMapsStyleConvergenceInputState,
                 VexMapsStyleConvergenceOutputState
