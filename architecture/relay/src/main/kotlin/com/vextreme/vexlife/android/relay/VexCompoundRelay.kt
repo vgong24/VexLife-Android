@@ -96,7 +96,7 @@ abstract class VexCompoundRelay<
     /**
      * Begins dependency observation under the supplied lifetime owner.
      *
-     * Dependency observation is asynchronous; [processStates] deliberately is not. Every observed
+     * Dependency observation is asynchronous; [process] deliberately is not. Every observed
      * value becomes one small partial InputState and enters the same serialized [send] boundary.
      */
     fun activate(scope: CoroutineScope) {
@@ -166,48 +166,66 @@ abstract class VexCompoundRelay<
     }
 
     /**
-     * Atomic in-memory reducer over facts that have already been observed.
+     * Calculate relationship meaning from one complete current Input.
      *
-     * Keep blocking IO, SDK waits and other suspending work in dependency owners. This method cannot
-     * suspend halfway through a transition, so each admitted patch reconciles against one exact
-     * retained current state before the next patch may enter.
+     * [VexInputState.latest] already owns partial-input currentization. This function returns Output
+     * meaning only; concrete Relays do not reconstruct [VexCompoundState].
+     *
+     * [retainedState] is available only for already-earned cross-cycle relationship memory. New
+     * relationships should prefer deriving Output from [latestStateInput] alone rather than using
+     * previous Output as an undocumented reducer input.
+     *
+     * Keep blocking IO, SDK waits and other suspending work in dependency owners.
      */
-    protected abstract fun processStates(
-        inputState: InputState,
-        currentState: VexCompoundState<InputState, OutputState>,
-    ): VexCompoundState<InputState, OutputState>
+    protected abstract fun process(
+        latestStateInput: InputState,
+        retainedState: VexCompoundState<InputState, OutputState>,
+    ): OutputState
 
     protected fun send(
         inputState: InputState,
     ): VexCompoundState<InputState, OutputState> =
         synchronized(lock) {
             check(!processing) {
-                "VexCompoundRelay cannot recursively send state from processStates"
+                "VexCompoundRelay cannot recursively send state from process"
             }
 
-            val current =
+            val retainedState =
                 mutableCurrentState.value.deepCopy()
 
             processing = true
             try {
-                val processed =
-                    processStates(
-                        inputState = inputState.deepCopy(),
-                        currentState = current.deepCopy(),
-                    ).deepCopy()
+                val latestStateInput =
+                    retainedState
+                        .inputState
+                        .latest(
+                            inputState.deepCopy(),
+                        )
+                        .deepCopy()
+
+                val latestStateOutput =
+                    process(
+                        latestStateInput =
+                            latestStateInput.deepCopy(),
+                        retainedState =
+                            retainedState.deepCopy(),
+                    )
+                        .deepCopy()
 
                 val meaningChanged =
-                    processed.inputState != current.inputState ||
-                        processed.outputState != current.outputState
+                    latestStateInput != retainedState.inputState ||
+                        latestStateOutput != retainedState.outputState
 
                 if (!meaningChanged) {
-                    return@synchronized current.deepCopy()
+                    return@synchronized retainedState.deepCopy()
                 }
 
                 val next =
                     VexCompoundState(
-                        inputState = processed.inputState.deepCopy(),
-                        outputState = processed.outputState.deepCopy(),
+                        inputState =
+                            latestStateInput.deepCopy(),
+                        outputState =
+                            latestStateOutput.deepCopy(),
                     )
 
                 mutableCurrentState.value =
