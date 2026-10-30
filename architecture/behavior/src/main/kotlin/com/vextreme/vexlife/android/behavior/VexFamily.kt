@@ -4,6 +4,7 @@ package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.humanvetting.VettedWithHuman
 import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ import kotlin.reflect.KClass
  * expressions; there is no custom state/on branching language between activate(...) and feature
  * meaning.
  */
+@VettedWithHuman("VexFamily", "2026-10-29T22:46:00-07:00", "Victor Approved")
 abstract class VexFamily<
     Family,
     FamilyState,
@@ -53,6 +55,7 @@ abstract class VexFamily<
     /**
      * Compile-time kinship marker for semantic State belonging to one exact Family coordinate.
      */
+    @VettedWithHuman("VexFamily.State", "2026-10-29T23:10:25-07:00", "Victor Approved")
     interface State<
         Family,
     > where
@@ -85,9 +88,22 @@ abstract class VexFamily<
     /**
      * Compile-time kinship marker for incoming Control belonging to one exact Family coordinate.
      *
-     * Control kind is always part of the Family-owned relationship identity. A Control that needs
-     * narrower identity explicitly implements [Resource] with its exact ResourceId type.
+     * Human-vetted relationship identity law:
+     *
+     *     live Family
+     *     + exact Control identity
+     *     + optional stable resourceId chosen by that Control
+     *     = Family relationship identity
+     *
+     * Control identity is always present. [resourceId] only narrows repeated semantic resources for
+     * that same Control kind (for example Play(trackA) vs Play(trackB)). Ordinary Control payload is
+     * not automatically identity. Two different Controls may expose equal resource values without
+     * colliding because the Control identity remains part of the relationship.
+     *
+     * This law does not vet VexExecution custody, InstanceId/Handle/Status, or any downstream
+     * execution representation.
      */
+    @VettedWithHuman("VexFamily.Control", "2026-10-29", "Victor Approved")
     interface Control<
         Family,
     > where
@@ -96,20 +112,17 @@ abstract class VexFamily<
             *,
             *
         > {
-        interface Resource<
-            Family,
-            out Id,
-        > :
-            Control<Family> where
-            Family : VexFamily<
-                Family,
-                *,
-                *
-            >,
-            Id : ResourceId<Family> {
-            val resourceId:
-                Id
-        }
+        /**
+         * Optional stable semantic resource identity for this Control's maintained relationship.
+         *
+         * Null means the exact Control identity is sufficient. A non-null value narrows only this
+         * Control's relationship; it is never an ID by itself.
+         */
+        @VettedWithHuman("VexFamily.Control.resourceId", "2026-10-29", "Victor Approved")
+        val resourceId:
+            ResourceId<Family>?
+            get() =
+                null
     }
 
     /**
@@ -193,9 +206,11 @@ abstract class VexFamily<
      * display meaning this Family has earned. It is not a placeholder and it is not an instruction
      * to invent another ViewState / UiState / PresentationState owner.
      */
+    @VettedWithHuman("VexFamily.DisplayState", "2026-10-29T22:46:00-07:00", "Victor Approved")
     interface DisplayState<
         out State : VexFamily.State<*>,
     > {
+        @VettedWithHuman("VexFamily.DisplayState.StateOnly", "2026-10-29T22:46:00-07:00", "Victor Approved")
         data class StateOnly<
             State : VexFamily.State<*>,
         >(
@@ -247,14 +262,15 @@ abstract class VexFamily<
         State : VexFamily.State<*>,
     > :
         Store<State> {
+        /**
+         * Current durable State followed by subsequent durable changes.
+         *
+         * Observation does not make Store another Family State owner. A concrete Family still
+         * decides what each durable value means against exact CURRENT semantic State before the
+         * result re-enters StateRelay.
+         */
         val observableState:
             Flow<State>
-
-        suspend fun get():
-            State
-
-        suspend fun forget():
-            Store.WriteResult
     }
 
     /**
@@ -531,15 +547,18 @@ abstract class VexFamily<
     private val stateLock =
         Any()
 
+    @VettedWithHuman("VexFamily.stateRelay", "2026-10-29T22:46:00-07:00", "Victor Approved")
     private val stateRelay =
         MutableStateFlow(
             initialState,
         )
 
+    @VettedWithHuman("VexFamily.states", "2026-10-29T22:46:00-07:00", "Victor Approved")
     val states:
         StateFlow<FamilyState> =
         stateRelay.asStateFlow()
 
+    @VettedWithHuman("VexFamily.currentState", "2026-10-29T22:46:00-07:00", "Victor Approved")
     val currentState:
         FamilyState
         get() =
@@ -551,17 +570,17 @@ abstract class VexFamily<
      * A concrete Family implements this function directly. State is traversed first because current
      * State is the truth against which the incoming Control receives meaning.
      *
-     * Both State and Control traversal stay exhaustive at this semantic boundary. Do not use an
-     * else branch to absorb future vocabulary: a new State or Control should create compiler-visible
-     * relationship work. Controls with the exact same reviewed outcome may share one branch.
-     *
-     * Use [noAct] for a reviewed State + Control pair that has no lawful Act.
+     * [act] returns nullable meaning: an [Act] means this exact current State + Control has a lawful
+     * consequence; null means it does not. A concrete Family may therefore use nested
+     * when(currentState) / when(control) branches with else -> null so adding one new Control does
+     * not force meaningless branches into every State.
      *
      * This is relationship resolution, not execution. The same function is used by isAvailable(...)
      * and activate(...), so implementations must not mutate Family State, invoke providers/Store,
      * launch work, log accepted facts, or otherwise cause an external effect while resolving.
      * begin(...) authors a consequence description only; it does not start that consequence here.
      */
+    @VettedWithHuman("VexFamily.act", "2026-10-29T23:47:00-07:00", "Victor Approved")
     protected abstract fun act(
         currentState: FamilyState,
         control: FamilyControl,
@@ -583,16 +602,6 @@ abstract class VexFamily<
             begin =
                 begin,
         )
-
-    /**
-     * Reviewed absence of a lawful Act for this exact current State + incoming Control pair.
-     *
-     * This intentionally returns the nullable representation used by act(...), but concrete Family
-     * source does not communicate semantic absence with a naked null.
-     */
-    protected fun noAct():
-        Act<FamilyState>? =
-        null
 
     /**
      * Authored Act outcome: admit this semantic State when activate(...) applies the Act.
@@ -733,6 +742,7 @@ abstract class VexFamily<
      * earned beyond current semantic State. Override only when real consumers would otherwise repeat
      * the same derived interpretation of State.
      */
+    @VettedWithHuman("VexFamily.displayState", "2026-10-29T22:46:00-07:00", "Victor Approved")
     open val displayState:
         DisplayState<FamilyState>
         get() =
@@ -743,7 +753,7 @@ abstract class VexFamily<
     /**
      * Informative availability from the same direct act(currentState, control) relationship used by
      * activate(...). A Control is available exactly when current State + that Control produces a
-     * lawful Act; noAct() means unavailable.
+     * lawful Act; null means unavailable.
      *
      * Availability resolves and inspects the Act only. It never admits State and never starts an
      * authored Begin. This is why concrete act(...) must remain relationship-pure.
@@ -844,29 +854,6 @@ abstract class VexFamily<
             )
             stateRelay.value
         }
-
-    /**
-     * One serialized Family StateRelay decision.
-     *
-     * The caller supplies meaning; this boundary supplies exact CURRENT State and one-at-a-time
-     * admission. StateRelay remains the single live holder.
-     */
-    private fun updateCurrentState(
-        decide:
-            (
-                currentState: FamilyState,
-            ) -> FamilyState,
-    ) {
-        synchronized(
-            stateLock,
-        ) {
-            setCurrentStateLocked(
-                decide(
-                    stateRelay.value,
-                ),
-            )
-        }
-    }
 
     /**
      * Commit one already-resolved next State while [stateLock] is held.
@@ -1105,6 +1092,18 @@ abstract class VexFamily<
         }
     }
 
+    /**
+     * Forms the Family relationship identity from the human-vetted equation:
+     *
+     *     this live Family + exact Control identity + optional Control.resourceId
+     *
+     * The optional resource never replaces Control identity. Control payload that is not deliberately
+     * exposed as [Control.resourceId] does not silently participate in relationship equality.
+     *
+     * This marker vets only Family's semantic identity formation. The returned type's downstream
+     * VexExecution custody/coordination role remains outside this approval.
+     */
+    @VettedWithHuman("VexFamily.relationshipId", "2026-10-29", "Victor Approved")
     internal fun relationshipId(
         control:
             FamilyControl,
@@ -1123,15 +1122,6 @@ abstract class VexFamily<
                 ) {
                     "VexFamily Control requires a named class or enum entry"
                 }
-        val resourceId =
-            (
-                control as?
-                    Control.Resource<
-                        *,
-                        *
-                    >
-            )
-                ?.resourceId
 
         return RelationshipId(
             family =
@@ -1141,7 +1131,7 @@ abstract class VexFamily<
             controlName =
                 controlName,
             resourceId =
-                resourceId,
+                control.resourceId,
         )
     }
 
@@ -1170,9 +1160,11 @@ abstract class VexFamily<
             Act.Begin.Result<FamilyState>,
     ) {
         result.admission
-            ?.let(
-                ::updateCurrentState,
-            )
+            ?.let { admission ->
+                admitCurrent(
+                    admission,
+                )
+            }
     }
 }
 

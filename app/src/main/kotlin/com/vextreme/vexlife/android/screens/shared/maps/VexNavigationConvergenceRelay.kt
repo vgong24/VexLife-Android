@@ -95,6 +95,24 @@ data class VexNavigationConvergenceInputState(
     val route: VexNavigationRoute? = null,
     val fix: VexNavigationFix? = null,
 ) : VexInputState<VexNavigationConvergenceInputState> {
+    override fun latest(
+        incomingInputState:
+            VexNavigationConvergenceInputState,
+    ):
+        VexNavigationConvergenceInputState =
+        VexNavigationConvergenceInputState(
+            route =
+                (
+                    incomingInputState.route
+                        ?: route
+                )?.deepCopy(),
+            fix =
+                (
+                    incomingInputState.fix
+                        ?: fix
+                )?.deepCopy(),
+        )
+
     override fun deepCopy(): VexNavigationConvergenceInputState =
         copy(
             route = route?.deepCopy(),
@@ -175,39 +193,25 @@ class VexNavigationConvergenceRelay(
         )
     }
 
-    override fun processStates(
-        inputState: VexNavigationConvergenceInputState,
-        currentState: VexCompoundState<
+    override fun process(
+        latestStateInput:
             VexNavigationConvergenceInputState,
-            VexNavigationConvergenceOutputState
-        >,
-    ): VexCompoundState<
-        VexNavigationConvergenceInputState,
-        VexNavigationConvergenceOutputState
-    > {
+        currentState:
+            VexCompoundState<
+                VexNavigationConvergenceInputState,
+                VexNavigationConvergenceOutputState
+            >,
+    ):
+        VexNavigationConvergenceOutputState {
         val previousInput =
             currentState.inputState
-
         val route =
-            inputState.route
-                ?: previousInput.route
-
+            latestStateInput.route
         val fix =
-            inputState.fix
-                ?: previousInput.fix
-
-        val coherentInput =
-            VexNavigationConvergenceInputState(
-                route = route?.deepCopy(),
-                fix = fix?.deepCopy(),
-            )
+            latestStateInput.fix
 
         if (route == null) {
-            return currentState.copy(
-                inputState = coherentInput,
-                outputState =
-                    VexNavigationConvergenceOutputState(),
-            )
+            return VexNavigationConvergenceOutputState()
         }
 
         val sameRouteIdentity =
@@ -233,7 +237,9 @@ class VexNavigationConvergenceRelay(
             if (sameRouteIdentity) {
                 currentState.outputState
                     .issuedCueKeys
-                    .map { key -> key.copy() }
+                    .map { key ->
+                        key.copy()
+                    }
                     .toSet()
             } else {
                 emptySet()
@@ -249,15 +255,13 @@ class VexNavigationConvergenceRelay(
             }
 
         if (fix == null) {
-            return currentState.copy(
-                inputState = coherentInput,
-                outputState =
-                    VexNavigationConvergenceOutputState(
-                        availability =
-                            VexNavigationConvergenceAvailability.ROUTE_PREVIEW,
-                        issuedCueKeys = issuedCueKeys,
-                        latestIssuedCue = latestIssuedCue,
-                    ),
+            return VexNavigationConvergenceOutputState(
+                availability =
+                    VexNavigationConvergenceAvailability.ROUTE_PREVIEW,
+                issuedCueKeys =
+                    issuedCueKeys,
+                latestIssuedCue =
+                    latestIssuedCue,
             )
         }
 
@@ -270,47 +274,42 @@ class VexNavigationConvergenceRelay(
             currentState.outputState.availability ==
             VexNavigationConvergenceAvailability.ARRIVED
         ) {
-            return currentState.copy(
-                inputState = coherentInput,
-                outputState =
-                    currentState.outputState.deepCopy(),
-            )
+            return currentState.outputState.deepCopy()
         }
 
         if (
             fix.routeRef != route.routeRef ||
             fix.routeRevision != route.routeRevision
         ) {
-            return currentState.copy(
-                inputState = coherentInput,
-                outputState =
-                    VexNavigationConvergenceOutputState(
-                        availability =
-                            VexNavigationConvergenceAvailability
-                                .HELD_FIX_ROUTE_MISMATCH,
-                        issuedCueKeys = issuedCueKeys,
-                        latestIssuedCue = latestIssuedCue,
-                    ),
+            return VexNavigationConvergenceOutputState(
+                availability =
+                    VexNavigationConvergenceAvailability
+                        .HELD_FIX_ROUTE_MISMATCH,
+                issuedCueKeys =
+                    issuedCueKeys,
+                latestIssuedCue =
+                    latestIssuedCue,
             )
         }
 
         val progress =
             VexNavigationRouteProgressOwner.project(
-                route = route,
-                fix = fix,
+                route =
+                    route,
+                fix =
+                    fix,
             )
 
         if (progress.arrived) {
-            return currentState.copy(
-                inputState = coherentInput,
-                outputState =
-                    VexNavigationConvergenceOutputState(
-                        availability =
-                            VexNavigationConvergenceAvailability.ARRIVED,
-                        progress = progress,
-                        issuedCueKeys = issuedCueKeys,
-                        latestIssuedCue = latestIssuedCue,
-                    ),
+            return VexNavigationConvergenceOutputState(
+                availability =
+                    VexNavigationConvergenceAvailability.ARRIVED,
+                progress =
+                    progress,
+                issuedCueKeys =
+                    issuedCueKeys,
+                latestIssuedCue =
+                    latestIssuedCue,
             )
         }
 
@@ -330,13 +329,16 @@ class VexNavigationConvergenceRelay(
                 cueBand != null
             ) {
                 VexNavigationGuidanceCueKey(
-                    routeRef = route.routeRef,
-                    routeRevision = route.routeRevision,
+                    routeRef =
+                        route.routeRef,
+                    routeRevision =
+                        route.routeRevision,
                     maneuverRef =
                         nextManeuver
                             .maneuver
                             .maneuverRef,
-                    cueBand = cueBand,
+                    cueBand =
+                        cueBand,
                 )
             } else {
                 null
@@ -349,16 +351,15 @@ class VexNavigationConvergenceRelay(
                 }
                 ?.let { key ->
                     VexNavigationGuidanceCue(
-                        key = key,
+                        key =
+                            key,
                         instructionProjection =
                             nextManeuver
-                                ?.maneuver
-                                ?.instructionProjection
-                                .orEmpty(),
+                                .maneuver
+                                .instructionProjection,
                         distanceToManeuverMeters =
                             nextManeuver
-                                ?.distanceToManeuverMeters
-                                ?: 0,
+                                .distanceToManeuverMeters,
                     )
                 }
 
@@ -370,20 +371,19 @@ class VexNavigationConvergenceRelay(
                     newlyIssuedCue.key
             }
 
-        return currentState.copy(
-            inputState = coherentInput,
-            outputState =
-                VexNavigationConvergenceOutputState(
-                    availability =
-                        VexNavigationConvergenceAvailability.NAVIGATING,
-                    progress = progress,
-                    latestIssuedCue =
-                        newlyIssuedCue
-                            ?: latestIssuedCue,
-                    issuedCueKeys = nextIssuedCueKeys,
-                ),
+        return VexNavigationConvergenceOutputState(
+            availability =
+                VexNavigationConvergenceAvailability.NAVIGATING,
+            progress =
+                progress,
+            latestIssuedCue =
+                newlyIssuedCue
+                    ?: latestIssuedCue,
+            issuedCueKeys =
+                nextIssuedCueKeys,
         )
     }
+
 }
 
 // [VXG RealForever]

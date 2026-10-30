@@ -60,7 +60,7 @@ internal class SharedPreferencesThemeModeStore(
             }
         }
 
-    override suspend fun get():
+    suspend fun get():
         ThemeMode =
         readCurrent()
 
@@ -91,7 +91,7 @@ internal class SharedPreferencesThemeModeStore(
                 )
         }
 
-    override suspend fun forget():
+    suspend fun forget():
         VexFamily.Store.WriteResult =
         write(
             preferences

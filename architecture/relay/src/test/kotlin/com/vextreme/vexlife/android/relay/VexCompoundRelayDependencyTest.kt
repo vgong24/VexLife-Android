@@ -12,6 +12,20 @@ class VexCompoundRelayDependencyTest {
         val left: Int? = null,
         val right: Int? = null,
     ) : VexInputState<DependencyInput> {
+        override fun latest(
+            incomingInputState:
+                DependencyInput,
+        ):
+            DependencyInput =
+            DependencyInput(
+                left =
+                    incomingInputState.left
+                        ?: left,
+                right =
+                    incomingInputState.right
+                        ?: right,
+            )
+
         override fun deepCopy(): DependencyInput =
             copy()
     }
@@ -52,33 +66,22 @@ class VexCompoundRelayDependencyTest {
                 }
             }
 
-        override fun processStates(
-            inputState: DependencyInput,
-            currentState: VexCompoundState<DependencyInput, DependencyOutput>,
-        ): VexCompoundState<DependencyInput, DependencyOutput> {
-            val currentInput =
-                currentState.inputState
-
-            val coherent =
-                DependencyInput(
-                    left =
-                        inputState.left
-                            ?: currentInput.left,
-                    right =
-                        inputState.right
-                            ?: currentInput.right,
-                )
-
-            return currentState.copy(
-                inputState = coherent,
-                outputState =
-                    DependencyOutput(
-                        sum =
-                            (coherent.left ?: 0) +
-                                (coherent.right ?: 0),
-                    ),
+        override fun process(
+            latestStateInput:
+                DependencyInput,
+            currentState:
+                VexCompoundState<
+                    DependencyInput,
+                    DependencyOutput
+                >,
+        ):
+            DependencyOutput =
+            DependencyOutput(
+                sum =
+                    (latestStateInput.left ?: 0) +
+                        (latestStateInput.right ?: 0),
             )
-        }
+
     }
 
     @Test

@@ -34,7 +34,7 @@ Several related truths:
 
 ~~~text
 current screen ----\
-external feed ------+-> EventsConvergenceRelay.processStates(...) -> current Events projection
+external feed ------+-> EventsConvergenceRelay.process(...) -> current Events projection
 ack/preference -----/
 ~~~
 
@@ -42,7 +42,7 @@ The concrete Relay should be boring to inspect:
 
 1. read `dependencies()` to see what continuously changes around it;
 2. read its public intention/surface methods to see what callers may explicitly ask;
-3. read `processState / processStates` to see the reconciliation law;
+3. read `processState / process` to see the reconciliation law;
 4. read its output state to see what consumers are allowed to depend on.
 
 ### Compound Relay / Convergence authoring context
@@ -67,7 +67,7 @@ rightful SCAE family
 That same pattern may compose local families, higher relationship projections, or other complete
 truths without flattening them into one mega-State.
 
-processStates() should be the perceivable calculation center, but its purpose must be recoverable
+process() should be the perceivable calculation center, but its purpose must be recoverable
 without reverse-engineering the reducer.
 
 Before authoring or documenting a Compound Relay, establish:
@@ -82,67 +82,32 @@ whole-human Walk/Journey when present, otherwise explicit absence/hold
 focused proof of the narrower relationship
 ~~~
 
-Do not derive a whole product story from processStates() or from a focused test. When the feature
+Do not derive a whole product story from process() or from a focused test. When the feature
 home says the full human Walk is still missing, preserve that incompleteness in the Relay explanation.
 
-#### processStates() source shape
+#### process() source shape
 
-Keep one full reevaluation boundary:
+Keep one full reevaluation boundary, but keep the mechanics out of feature code:
 
 ~~~text
-incoming partial patch + previous retained truth
--> current independently-owned input values
--> one coherent current InputState
--> named relationship calculations
--> one fully-derived current OutputState
--> one final Compound State
+currentState.inputState + incomingInputState
+-> currentState.inputState.latest(incomingInputState)
+-> latestStateInput
+-> process(latestStateInput, currentState)
+-> latestStateOutput
+-> VexCompoundState(latestStateInput, latestStateOutput)
 ~~~
+
+`InputState.latest(...)` owns patch/currentization semantics. `process(...)` owns the bounded
+relationship calculation. The Compound base owns State assembly, comparison, and commit.
+
+Most relationships should ignore `currentState.outputState` entirely. Existing Events and Navigation
+relationships currently use it for specific cross-cycle meaning; the `currentState` parameter keeps
+that dependency visible until its rightful memory owner is re-derived. Do not introduce previous
+Output reads merely to avoid modeling a real input.
 
 Any admitted dependency change may cause the complete bounded relationship to be recalculated. Do
 not introduce hand-maintained partial invalidation merely to make helpers look independent.
-
-The final output constructor should be assembly, not another decision surface:
-
-~~~kotlin
-val queuedAfterCurrentCount = ...
-val availability = ...
-
-val currentOutput =
-    ExampleOutputState(
-        availability = availability,
-        queuedAfterCurrentCount = queuedAfterCurrentCount,
-    )
-
-return currentState.copy(
-    inputState = currentInput,
-    outputState = currentOutput,
-)
-~~~
-
-Avoid hiding relationship rules inside constructor arguments when naming the result would make the
-dependency map clearer.
-
-#### Relationship comments
-
-Comments near a Compound Relay should answer:
-
-~~~text
-What feature question does this relationship serve?
-Which accepted source owns that question?
-What independent truths participate?
-What output relationship does this Relay own?
-What bounded request may leave this owner?
-What whole-human proof exists—or is explicitly absent?
-~~~
-
-Then use process-stage comments only where they preserve meaning that the code shape does not reveal,
-for example candidate identity versus presentation availability or foreign-route identity versus a
-Navigation phase.
-
-This rule is intentionally compatible with both current pressures: Events has a canonical executable
-Journey, while VexMaps Distribution currently has focused relationship proof and an explicitly
-unclosed full Delivery Route human walk. The Relay must preserve whichever truth the feature owner
-actually supplies rather than normalizing both into the same documentation story.
 
 ### Declarative Compound dependencies
 
@@ -170,14 +135,20 @@ The boundary is intentional:
 dependency observation
   may suspend while waiting for outside truth
 
-processStates()
-  non-suspending atomic in-memory reducer
+InputState.latest(...)
+  currentizes `incomingInputState` against `currentState.inputState`
+
+process(...)
+  non-suspending relationship calculation over complete Input
   one admitted patch at a time
+
+VexCompoundRelay
+  assembles and commits Input + Output
 ~~~
 
 `suspend` is not used as an ordering substitute. Concurrent dependency arrivals are serialized by
 the Relay; semantic freshness/order still belongs to each rightful source (for example a provider
-revision). Blocking IO or SDK waits do not belong inside `processStates()`.
+revision). Blocking IO or SDK waits do not belong inside `InputState.latest(...)` or `process(...)`.
 
 ### IDE authoring perk — reveal optional InputState fields
 
@@ -244,7 +215,7 @@ states
   coordination/currentness/full internal relationship state actually matters
 
 inputStates
-  coherent retained InputState
+  coherent current InputState
   distinct-by-input is built into VexCompoundRelay
 
   use when:
@@ -303,13 +274,15 @@ ExternalFeedRelay.states
 AttentionPreferenceRelay.states
         \      |      /
          \     |     /
-          -> Compound InputState
-             -> processStates(...)
+          -> partial Compound InputState
+             -> InputState.latest(...)
+             -> complete current InputState
+             -> process(...)
              -> Compound State
                 inputState + outputState
 ~~~
 
-The Compound `InputState` is the coherent retained snapshot/envelope of those dependencies. It is
+The Compound `InputState` is the coherent current snapshot/envelope of those dependencies. It is
 not itself required to be a special Relay subtype.
 
 If presentation genuinely needs current dependency context, consume `inputStates/currentInput`.
@@ -385,7 +358,7 @@ The current Events consumer composes the kernel like this:
 ~~~text
 provider-specific source truth
 -> normalized EventsRepository feed
--> EventsConvergenceRelay.processStates(...)
+-> EventsConvergenceRelay.process(...)
 -> candidate identity + availability
 -> anchored presentation
 ~~~

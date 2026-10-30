@@ -38,7 +38,7 @@ internal data class VexConversationAuthenticatedParticipantObservation(
  * Current facts that may change independently around a selected Conversation.
  *
  * Nullable fields are partial-patch semantics. [VexConversationHybridRelay] retains the last
- * observed value for each dependency and reconciles them in one serialized [processStates] call.
+ * observed value for each dependency and reconciles them in one serialized Compound boundary before [process].
  */
 internal data class VexConversationHybridInputState(
     val conversation:
@@ -57,6 +57,40 @@ internal data class VexConversationHybridInputState(
     val lab:
         VexConversationLabState? = null,
 ) : VexInputState<VexConversationHybridInputState> {
+    override fun latest(
+        incomingInputState:
+            VexConversationHybridInputState,
+    ):
+        VexConversationHybridInputState =
+        VexConversationHybridInputState(
+            conversation =
+                (
+                    incomingInputState.conversation
+                        ?: conversation
+                )?.deepCopyForConversationHybrid(),
+            selectedThreadRef =
+                incomingInputState.selectedThreadRef
+                    ?: selectedThreadRef,
+            authenticatedParticipant =
+                (
+                    incomingInputState.authenticatedParticipant
+                        ?: authenticatedParticipant
+                )?.deepCopy(),
+            homeAvailability =
+                incomingInputState.homeAvailability
+                    ?: homeAvailability,
+            companionAvailabilityByParticipantRef =
+                (
+                    incomingInputState.companionAvailabilityByParticipantRef
+                        ?: companionAvailabilityByParticipantRef
+                )?.toMap(),
+            lab =
+                (
+                    incomingInputState.lab
+                        ?: lab
+                )?.deepCopyForConversationHybrid(),
+        )
+
     override fun deepCopy():
         VexConversationHybridInputState =
         copy(
@@ -110,7 +144,7 @@ internal data class VexConversationHybridOutputState(
  *
  * dependencies()   -> which long-lived feature truths are observed continuously?
  * public methods   -> which explicit runtime/surface facts may enter?
- * processStates()  -> how do observed facts + Lab overrides become one effective meaning?
+ * process()  -> how do observed facts + Lab overrides become one effective meaning?
  * outputStates     -> what effective Conversation meaning may downstream consumers depend on?
  *
  * Important ownership rule:
@@ -121,7 +155,7 @@ internal data class VexConversationHybridOutputState(
  * Lab override
  *     remains an independently owned developer condition
  *
- * processStates()
+ * process()
  *     is the one place that decides their effective relationship
  *
  * projectVexConversationSurface(...)
@@ -284,41 +318,29 @@ internal class VexConversationHybridRelay(
         )
     }
 
-    override fun processStates(
-        inputState:
+    override fun process(
+        latestStateInput:
             VexConversationHybridInputState,
         currentState:
             VexCompoundState<
                 VexConversationHybridInputState,
                 VexConversationHybridOutputState
             >,
-    ): VexCompoundState<
-        VexConversationHybridInputState,
-        VexConversationHybridOutputState
-    > {
-        val previous =
-            currentState.inputState
-
+    ):
+        VexConversationHybridOutputState {
         val conversation =
-            inputState.conversation
-                ?: previous.conversation
+            latestStateInput.conversation
         val selectedThreadRef =
-            inputState.selectedThreadRef
-                ?: previous.selectedThreadRef
+            latestStateInput.selectedThreadRef
         val authenticatedParticipant =
-            inputState.authenticatedParticipant
-                ?: previous.authenticatedParticipant
+            latestStateInput.authenticatedParticipant
         val observedHomeAvailability =
-            inputState.homeAvailability
-                ?: previous.homeAvailability
+            latestStateInput.homeAvailability
         val observedCompanionAvailability =
-            inputState
+            latestStateInput
                 .companionAvailabilityByParticipantRef
-                ?: previous
-                    .companionAvailabilityByParticipantRef
         val lab =
-            inputState.lab
-                ?: previous.lab
+            latestStateInput.lab
 
         val homeAvailability =
             lab
@@ -411,45 +433,21 @@ internal class VexConversationHybridRelay(
                         }
                 }
 
-        val coherentInput =
-            VexConversationHybridInputState(
-                conversation =
-                    conversation
-                        ?.deepCopyForConversationHybrid(),
-                selectedThreadRef =
-                    selectedThreadRef,
-                authenticatedParticipant =
-                    authenticatedParticipant
-                        ?.deepCopy(),
-                homeAvailability =
-                    observedHomeAvailability,
-                companionAvailabilityByParticipantRef =
-                    observedCompanionAvailability
-                        ?.toMap(),
-                lab =
-                    lab?.deepCopyForConversationHybrid(),
-            )
-
         val labOverridesActive =
             lab?.homeAvailabilityOverride != null ||
                 lab
                     ?.companionAvailabilityOverrides
                     ?.isNotEmpty() == true
 
-        return currentState.copy(
-            inputState =
-                coherentInput,
-            outputState =
-                VexConversationHybridOutputState(
-                    surface =
-                        surface,
-                    homeAvailabilityProvenance =
-                        homeAvailabilityProvenance,
-                    companionAvailabilityProvenanceByParticipantRef =
-                        companionProvenance,
-                    labOverridesActive =
-                        labOverridesActive,
-                ),
+        return VexConversationHybridOutputState(
+            surface =
+                surface,
+            homeAvailabilityProvenance =
+                homeAvailabilityProvenance,
+            companionAvailabilityProvenanceByParticipantRef =
+                companionProvenance,
+            labOverridesActive =
+                labOverridesActive,
         )
     }
 

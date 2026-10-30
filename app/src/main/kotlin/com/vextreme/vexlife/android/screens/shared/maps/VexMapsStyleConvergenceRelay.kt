@@ -42,6 +42,61 @@ internal data class VexMapsStyleConvergenceInputState(
     val loaded: VexMapsStyleSelection? = null,
     val failure: VexMapsStyleFailure? = null,
 ) : VexInputState<VexMapsStyleConvergenceInputState> {
+    override fun latest(
+        incomingInputState:
+            VexMapsStyleConvergenceInputState,
+    ):
+        VexMapsStyleConvergenceInputState {
+        val latestSelection =
+            incomingInputState.selection
+                ?: selection
+
+        if (latestSelection == null) {
+            return VexMapsStyleConvergenceInputState()
+        }
+
+        val selectionChanged =
+            incomingInputState.selection != null &&
+                incomingInputState.selection.revision !=
+                selection?.revision
+
+        val latestFailure =
+            if (selectionChanged) {
+                null
+            } else {
+                incomingInputState.failure
+                    ?: failure
+            }
+
+        return VexMapsStyleConvergenceInputState(
+            selection =
+                latestSelection.copy(),
+            requested =
+                if (selectionChanged) {
+                    null
+                } else {
+                    (
+                        incomingInputState.requested
+                            ?: requested
+                    )?.copy()
+                },
+            loaded =
+                if (selectionChanged) {
+                    null
+                } else {
+                    (
+                        incomingInputState.loaded
+                            ?: loaded
+                    )?.copy()
+                },
+            failure =
+                latestFailure?.copy(
+                    selection =
+                        latestFailure.selection.copy(),
+                ),
+        )
+    }
+
     override fun deepCopy():
         VexMapsStyleConvergenceInputState =
         copy(
@@ -174,77 +229,25 @@ internal class VexMapsStyleConvergenceRelay :
         )
     }
 
-    override fun processStates(
-        inputState:
+    override fun process(
+        latestStateInput:
             VexMapsStyleConvergenceInputState,
-        currentState: VexCompoundState<
-            VexMapsStyleConvergenceInputState,
-            VexMapsStyleConvergenceOutputState
-        >,
-    ): VexCompoundState<
-        VexMapsStyleConvergenceInputState,
-        VexMapsStyleConvergenceOutputState
-    > {
-        val previousInput =
-            currentState.inputState
-        val incomingSelection =
-            inputState.selection
+        currentState:
+            VexCompoundState<
+                VexMapsStyleConvergenceInputState,
+                VexMapsStyleConvergenceOutputState
+            >,
+    ):
+        VexMapsStyleConvergenceOutputState {
         val selection =
-            incomingSelection
-                ?: previousInput.selection
-
-        if (selection == null) {
-            return currentState.copy(
-                inputState =
-                    VexMapsStyleConvergenceInputState(),
-                outputState =
-                    VexMapsStyleConvergenceOutputState(),
-            )
-        }
-
-        val selectionChanged =
-            incomingSelection != null &&
-                incomingSelection.revision !=
-                previousInput.selection?.revision
-
+            latestStateInput.selection
+                ?: return VexMapsStyleConvergenceOutputState()
         val requested =
-            if (selectionChanged) {
-                null
-            } else {
-                inputState.requested
-                    ?: previousInput.requested
-            }
-
+            latestStateInput.requested
         val loaded =
-            if (selectionChanged) {
-                null
-            } else {
-                inputState.loaded
-                    ?: previousInput.loaded
-            }
-
+            latestStateInput.loaded
         val failure =
-            if (selectionChanged) {
-                null
-            } else {
-                inputState.failure
-                    ?: previousInput.failure
-            }
-
-        val coherentInput =
-            VexMapsStyleConvergenceInputState(
-                selection =
-                    selection.copy(),
-                requested =
-                    requested?.copy(),
-                loaded =
-                    loaded?.copy(),
-                failure =
-                    failure?.copy(
-                        selection =
-                            failure.selection.copy(),
-                    ),
-            )
+            latestStateInput.failure
 
         fun VexMapsStyleSelection.matchesCurrent():
             Boolean =
@@ -277,18 +280,16 @@ internal class VexMapsStyleConvergenceRelay :
                         .NEEDS_APPLY
             }
 
-        return currentState.copy(
-            inputState = coherentInput,
-            outputState =
-                VexMapsStyleConvergenceOutputState(
-                    status = status,
-                    selection =
-                        selection.copy(),
-                    failureMessage =
-                        currentFailure?.message,
-                ),
+        return VexMapsStyleConvergenceOutputState(
+            status =
+                status,
+            selection =
+                selection.copy(),
+            failureMessage =
+                currentFailure?.message,
         )
     }
+
 }
 
 // [VXG RealForever]

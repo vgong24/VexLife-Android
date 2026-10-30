@@ -180,11 +180,11 @@ added State or Control should create compiler-visible relationship work so its p
 silently forgotten. Controls may share one branch only when their reviewed authored outcome is
 exactly the same.
 
-Use:
+Use the nullable Act contract directly:
 
 ~~~text
-noAct()
-    reviewed State + Control pair has no lawful Act
+null
+    no lawful Act exists for this exact State + Control pair
 
 stay()
     lawful Act; current State remains current
@@ -193,8 +193,9 @@ admit(State)
     lawful Act; admit State
 ~~~
 
-`noAct()` is explicit authoring language for absence; concrete Family source should not use a naked
-`null` to communicate that semantic decision.
+A Family may use nested `when(currentState) / when(control)` branches with `else -> null` so a new
+Control does not force meaningless branches into every State. `null` is absence of a lawful Act;
+`stay()` is an accepted Act whose immediate semantic State does not change.
 
 ## Act / Begin ownership
 
@@ -441,10 +442,8 @@ the earned specialization is:
 
 ~~~text
 VexFamily.StateStore<State>
-  observableState
-  get()
   save(State)
-  forget()
+  observableState
 ~~~
 
 Its observation path is direct:
@@ -464,19 +463,21 @@ owner observes the Store on Family's behalf.
 
 ## Compound current State
 
-For a Compound relationship, the processed result is already the complete current State:
+For a Compound relationship, the reusable boundary owns currentization and State assembly:
 
 ~~~text
-incoming InputState
-+ exact CURRENT VexCompoundState
--> processStates(...)
--> VexCompoundState(inputState, outputState)
--> one current-State commit
+currentState.inputState + incomingInputState
+-> currentState.inputState.latest(incomingInputState)
+-> latestStateInput
+-> process(latestStateInput, currentState)
+-> latestStateOutput
+-> VexCompoundState(latestStateInput, latestStateOutput)
+-> next current State
 ~~~
 
-`inputState` is the coherent retained input family and `outputState` is the meaning derived from
-that input by the processing layer. Either may change on a processing pass; when both change they are
-made current together rather than admitting OutputState separately afterward.
+Concrete Relays return Output meaning; they do not reconstruct Compound State. Existing Events and Navigation relationships still use `currentState.outputState` inside
+`process(...)` because they already carry cross-cycle relationship memory. That is an explicit held
+dependency, not the default law for new Relays.
 
 The established Relay surfaces expose that same current relationship as `current`,
 `currentInput`, `currentOutput`, `states`, `inputStates`, and `outputStates`.

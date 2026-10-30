@@ -89,6 +89,29 @@ class VexRelayEventsPracticumTest {
         val feed: ExternalFeedState? = null,
         val preference: AttentionPreferenceState? = null,
     ) : VexInputState<EventsInputState> {
+        override fun latest(
+            incomingInputState:
+                EventsInputState,
+        ):
+            EventsInputState =
+            EventsInputState(
+                screen =
+                    (
+                        incomingInputState.screen
+                            ?: screen
+                    )?.deepCopy(),
+                feed =
+                    (
+                        incomingInputState.feed
+                            ?: feed
+                    )?.deepCopy(),
+                preference =
+                    (
+                        incomingInputState.preference
+                            ?: preference
+                    )?.deepCopy(),
+            )
+
         override fun deepCopy(): EventsInputState =
             copy(
                 screen = screen?.deepCopy(),
@@ -123,35 +146,32 @@ class VexRelayEventsPracticumTest {
             send(EventsInputState(preference = state))
         }
 
-        override fun processStates(
-            inputState: EventsInputState,
-            currentState: VexCompoundState<EventsInputState, EventsOutputState>,
-        ): VexCompoundState<EventsInputState, EventsOutputState> {
-            val previous =
-                currentState.inputState
-
-            val screen =
-                inputState.screen ?: previous.screen
-            val feed =
-                inputState.feed ?: previous.feed
-            val preference =
-                inputState.preference ?: previous.preference
-
-            val coherentInput =
-                EventsInputState(
-                    screen = screen?.deepCopy(),
-                    feed = feed?.deepCopy(),
-                    preference = preference?.deepCopy(),
-                )
-
+        override fun process(
+            latestStateInput:
+                EventsInputState,
+            currentState:
+                VexCompoundState<
+                    EventsInputState,
+                    EventsOutputState
+                >,
+        ):
+            EventsOutputState {
             val items =
-                feed?.items.orEmpty()
+                latestStateInput.feed
+                    ?.items
+                    .orEmpty()
 
             val acknowledged =
-                preference?.acknowledgedEventRefs.orEmpty()
+                latestStateInput.preference
+                    ?.acknowledgedEventRefs
+                    .orEmpty()
 
             val attentionCandidate =
-                if (screen?.currentScreenId == "events") {
+                if (
+                    latestStateInput.screen
+                        ?.currentScreenId ==
+                    "events"
+                ) {
                     items.firstOrNull { item ->
                         item.eventRef !in acknowledged
                     }?.eventRef
@@ -159,15 +179,16 @@ class VexRelayEventsPracticumTest {
                     null
                 }
 
-            return currentState.copy(
-                inputState = coherentInput,
-                outputState =
-                    EventsOutputState(
-                        eventRefs = items.map(EventItem::eventRef),
-                        attentionCandidateEventRef = attentionCandidate,
+            return EventsOutputState(
+                eventRefs =
+                    items.map(
+                        EventItem::eventRef,
                     ),
+                attentionCandidateEventRef =
+                    attentionCandidate,
             )
         }
+
     }
 
     @Test

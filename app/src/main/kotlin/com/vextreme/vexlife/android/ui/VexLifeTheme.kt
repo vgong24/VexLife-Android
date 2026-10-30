@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.vextreme.vexlife.android.humanvetting.VettedWithHuman
 
 object VexMotionTokens {
     const val TactileMs = 90
@@ -42,6 +43,7 @@ object VexLayoutTokens {
     val BottomBarHeight = 70.dp
 }
 
+@VettedWithHuman("VexThemePresentation", "2026-10-29T22:46:00-07:00", "Victor Approved")
 internal sealed interface VexThemePresentation {
     val materialColorScheme:
         ColorScheme
@@ -133,6 +135,7 @@ internal sealed interface VexThemePresentation {
     }
 }
 
+@VettedWithHuman("LocalVexThemePresentation", "2026-10-29T22:46:00-07:00", "Victor Approved")
 private val LocalVexThemePresentation =
     staticCompositionLocalOf<VexThemePresentation> {
         error(
@@ -141,6 +144,7 @@ private val LocalVexThemePresentation =
     }
 
 @Composable
+@VettedWithHuman("currentVexThemePresentation", "2026-10-29T22:46:00-07:00", "Victor Approved")
 internal fun currentVexThemePresentation():
     VexThemePresentation =
     LocalVexThemePresentation.current
@@ -174,6 +178,7 @@ private val VexTypography = Typography(
  * safeDrawing to the actual app shell inside that background.
  */
 @Composable
+@VettedWithHuman("VexLifeTheme(ThemeModeFamily)", "2026-10-29T22:46:00-07:00", "Victor Approved")
 internal fun VexLifeTheme(
     themeModeFamily: ThemeModeFamily,
     content: @Composable () -> Unit,
@@ -195,6 +200,7 @@ internal fun VexLifeTheme(
 }
 
 @Composable
+@VettedWithHuman("VexLifeTheme(VexThemePresentation)", "2026-10-29T22:46:00-07:00", "Victor Approved")
 internal fun VexLifeTheme(
     presentation: VexThemePresentation,
     content: @Composable () -> Unit,

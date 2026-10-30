@@ -73,6 +73,64 @@ data class EventsConvergenceInputState(
     val visibleEventRefsBySurface: Map<String, Set<String>>? = null,
     val transientBlocked: Boolean? = null,
 ) : VexInputState<EventsConvergenceInputState> {
+    override fun latest(
+        incomingInputState:
+            EventsConvergenceInputState,
+    ):
+        EventsConvergenceInputState =
+        EventsConvergenceInputState(
+            currentScreenId =
+                incomingInputState.currentScreenId
+                    ?: currentScreenId,
+            feed =
+                (
+                    incomingInputState.feed
+                        ?: feed
+                )?.deepCopy(),
+            preferences =
+                (
+                    incomingInputState.preferences
+                        ?: preferences
+                )?.deepCopy(),
+            lab =
+                (
+                    incomingInputState.lab
+                        ?: lab
+                )?.deepCopy(),
+            profile =
+                (
+                    incomingInputState.profile
+                        ?: profile
+                )?.deepCopy(),
+            visibleEventRefsBySurface =
+                when {
+                    incomingInputState.visibleEventRefsBySurface == null ->
+                        visibleEventRefsBySurface
+                            ?.mapValues { (_, refs) ->
+                                refs.toSet()
+                            }
+
+                    visibleEventRefsBySurface == null ->
+                        incomingInputState.visibleEventRefsBySurface
+                            .mapValues { (_, refs) ->
+                                refs.toSet()
+                            }
+
+                    else ->
+                        visibleEventRefsBySurface
+                            .mapValues { (_, refs) ->
+                                refs.toSet()
+                            } +
+                            incomingInputState.visibleEventRefsBySurface
+                                .mapValues { (_, refs) ->
+                                    refs.toSet()
+                                }
+                },
+            transientBlocked =
+                incomingInputState.transientBlocked
+                    ?: transientBlocked,
+        )
+
     override fun deepCopy(): EventsConvergenceInputState =
         copy(
             feed = feed?.deepCopy(),
@@ -248,7 +306,7 @@ data class EventsConvergenceOutputState(
  *
  * dependencies()   -> what continuously changes around Events?
  * public methods   -> what intentions/surface facts may enter?
- * processStates()  -> what does the latest combination mean?
+ * process()  -> what does the latest combination mean?
  * outputStates     -> what may Home/Events/other consumers observe?
  *
  * Dependency collectors are framework-owned and asynchronous. processStates remains a synchronous,
@@ -437,16 +495,16 @@ class EventsConvergenceRelay internal constructor(
         )
     }
 
-    override fun processStates(
-        inputState: EventsConvergenceInputState,
-        currentState: VexCompoundState<
+    override fun process(
+        latestStateInput:
             EventsConvergenceInputState,
-            EventsConvergenceOutputState
-        >,
-    ): VexCompoundState<
-        EventsConvergenceInputState,
-        EventsConvergenceOutputState
-    > {
+        currentState:
+            VexCompoundState<
+                EventsConvergenceInputState,
+                EventsConvergenceOutputState
+            >,
+    ):
+        EventsConvergenceOutputState {
         /*
          * Decide from one coherent picture of the person's current Events situation.
          *
@@ -460,55 +518,17 @@ class EventsConvergenceRelay internal constructor(
             currentState.outputState
 
         val currentScreenId =
-            inputState.currentScreenId
-                ?: previousInput.currentScreenId
+            latestStateInput.currentScreenId
         val currentFeed =
-            inputState.feed
-                ?: previousInput.feed
+            latestStateInput.feed
         val currentPreferences =
-            inputState.preferences
-                ?: previousInput.preferences
+            latestStateInput.preferences
         val currentLab =
-            inputState.lab
-                ?: previousInput.lab
-        val currentProfile =
-            inputState.profile
-                ?: previousInput.profile
+            latestStateInput.lab
         val currentVisibleEventRefsBySurface =
-            mergeVisibleSurfacePatches(
-                previous =
-                    previousInput.visibleEventRefsBySurface,
-                patch =
-                    inputState.visibleEventRefsBySurface,
-            )
+            latestStateInput.visibleEventRefsBySurface
         val currentTransientBlocked =
-            inputState.transientBlocked
-                ?: previousInput.transientBlocked
-
-        val currentInput =
-            EventsConvergenceInputState(
-                currentScreenId =
-                    currentScreenId,
-                feed =
-                    currentFeed
-                        ?.deepCopy(),
-                preferences =
-                    currentPreferences
-                        ?.deepCopy(),
-                lab =
-                    currentLab
-                        ?.deepCopy(),
-                profile =
-                    currentProfile
-                        ?.deepCopy(),
-                visibleEventRefsBySurface =
-                    currentVisibleEventRefsBySurface
-                        ?.mapValues { (_, refs) ->
-                            refs.toSet()
-                        },
-                transientBlocked =
-                    currentTransientBlocked,
-            )
+            latestStateInput.transientBlocked
 
         /*
          * Form the information that Events should currently preserve for the person.
@@ -522,7 +542,7 @@ class EventsConvergenceRelay internal constructor(
                 previousProfile =
                     previousInput.profile,
                 incomingProfile =
-                    inputState.profile,
+                    latestStateInput.profile,
             )
                 ?: previousOutput
                     .latestProfileNameChange
@@ -812,12 +832,7 @@ class EventsConvergenceRelay internal constructor(
                     nextSequenceCount,
             )
 
-        return currentState.copy(
-            inputState =
-                currentInput,
-            outputState =
-                currentOutput,
-        )
+        return currentOutput
     }
 
     private fun requireAttentionPreferences(): EventsAttentionPreferenceRepository =
@@ -828,31 +843,6 @@ class EventsConvergenceRelay internal constructor(
     private fun requireAttentionLab(): EventsAttentionLabRepository =
         checkNotNull(attentionLab) {
             "EventsConvergenceRelay lab methods require a lab repository"
-        }
-
-    private fun mergeVisibleSurfacePatches(
-        previous: Map<String, Set<String>>?,
-        patch: Map<String, Set<String>>?,
-    ): Map<String, Set<String>>? =
-        when {
-            patch == null ->
-                previous?.mapValues { (_, refs) ->
-                    refs.toSet()
-                }
-
-            previous == null ->
-                patch.mapValues { (_, refs) ->
-                    refs.toSet()
-                }
-
-            else ->
-                previous
-                    .mapValues { (_, refs) ->
-                        refs.toSet()
-                    } +
-                    patch.mapValues { (_, refs) ->
-                        refs.toSet()
-                    }
         }
 
     private fun profileNameChangeFromPatch(

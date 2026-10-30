@@ -39,29 +39,38 @@ Family.activate(control)
 The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
 or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
 
-Current PR #193 refinement also keeps execution identity inside the typed Family boundary:
+The current human-vetted Family relationship identity law is:
 
 ~~~text
-Control<Family>
--> Control kind/name included automatically
--> optional Control.Resource<Family, ExactId>
--> exact ResourceId object retained
--> Family-owned RelationshipId
--> Begin chooses Approach only
--> VexExecution coordinates that RelationshipId
+live Family
++ exact Control identity
++ optional stable Control.resourceId
+-> Family relationship identity
 ~~~
 
-There is no arbitrary Begin trigger/argument identity surface. This refinement is accepted on main
-through [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) after exact-head
-repository-owned `vexVerifyJvm` proof and Independent Assurance. That acceptance does not claim
-device/Journey/ScreenCrawler or lived-product proof for the Direct Family foundation.
+The optional resource narrows one Control's semantic lane; it never replaces Control identity.
+Ordinary Control payload is not automatically identity. Begin chooses Approach only and does not
+accept arbitrary identity arguments.
 
-Compound/process integration remains separate and open:
+PR #193 remains useful implementation/provenance history, but repository proof, Independent Assurance,
+merge status, or "foundation" wording do not themselves establish human architecture approval. The
+human-vetted semantic boundary is recorded directly in source with `@VettedWithHuman` on the
+relationship-carrying declarations. Downstream VexExecution custody remains a separate unvetted
+architecture question.
+
+Current Compound processing keeps currentization, meaning and assembly distinct:
 
 ~~~text
-InputState -> process(InputState) -> OutputState
-OutputState -> ??? -> Family.currentState
+currentState.inputState + incomingInputState
+-> currentState.inputState.latest(incomingInputState)
+-> latestStateInput
+-> process(latestStateInput, currentState)
+-> latestStateOutput
+-> VexCompoundState(latestStateInput, latestStateOutput)
 ~~~
+
+The reusable Relay owns currentization sequencing and Compound assembly. Existing `currentState.outputState` use in Events/Navigation remains an explicit open ownership
+question rather than being normalized into the default processing law.
 
 <!-- [VXG RealForever][FOUNDATION][FAMILY][NATIVE-TRAVERSAL] -->
 
@@ -518,8 +527,8 @@ eligibility and anchored evidence without making Events the owner of the origina
 
 This is the first current-main Relay consumer and a reverse-protocol reference for future real
 service adapters. The current refinement makes its Compound Relay session-owned and declarative
-about repository/Flow dependencies, while keeping `processStates()` as the synchronous serialized
-semantic reducer and keeping Compose as an output/presentation observer. It also exercises a real
+about repository/Flow dependencies, while keeping `InputState.latest(...)` + `process(...)` as the synchronous serialized
+currentization/semantic boundary and keeping Compose as an output/presentation observer. It also exercises a real
 cross-domain UserProfile name-change input. It remains a draft/refinement candidate until exact
 Gradle/Android proof closes.
 
