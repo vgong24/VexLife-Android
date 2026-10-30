@@ -60,9 +60,9 @@ internal data class VexMapsPlaceSearchWork(
  * Search/import execution is delegated to [VexMapsPlaceSearchExecution] so Compose does not own
  * provider Jobs or stale-result admission.
  *
- * Each provider attempt is an independent execution instance. Cancellation is best-effort cleanup;
- * the generation gates remain the semantic currentness owner when an older provider returns after
- * cancellation.
+ * Provider attempts are separately admitted through Session-owned relationships. Cancellation is
+ * best-effort cleanup; the generation gates remain the semantic currentness owner when an older
+ * provider returns after cancellation.
  */
 internal class VexMapsPlaceSearchSession(
     private val source:
@@ -322,15 +322,56 @@ private class VexMapsPlaceSearchExecution(
     >(
         root,
     ) {
-    private object ImportRelationship :
-        VexExecution.RelationshipId<
-            VexMapsPlaceSearchSession
-        >
+    private enum class RelationshipKind {
+        Import,
+        Search,
+    }
 
-    private object SearchRelationship :
+    private class Relationship(
+        private val session:
+            VexMapsPlaceSearchSession,
+        private val kind:
+            RelationshipKind,
+    ) :
         VexExecution.RelationshipId<
             VexMapsPlaceSearchSession
-        >
+        > {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                Relationship &&
+                session ===
+                other.session &&
+                kind ==
+                other.kind
+
+        override fun hashCode():
+            Int =
+            31 *
+                System.identityHashCode(
+                    session,
+                ) +
+                kind.hashCode()
+    }
+
+    private val importRelationship =
+        Relationship(
+            session =
+                session,
+            kind =
+                RelationshipKind.Import,
+        )
+
+    private val searchRelationship =
+        Relationship(
+            session =
+                session,
+            kind =
+                RelationshipKind.Search,
+        )
 
     fun importPack(
         work:
@@ -338,7 +379,7 @@ private class VexMapsPlaceSearchExecution(
     ) {
         launch(
             relationshipId =
-                ImportRelationship,
+                importRelationship,
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -354,7 +395,7 @@ private class VexMapsPlaceSearchExecution(
     ) {
         launch(
             relationshipId =
-                SearchRelationship,
+                searchRelationship,
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -367,7 +408,7 @@ private class VexMapsPlaceSearchExecution(
     fun cancelSearch() {
         forceStop(
             relationshipId =
-                SearchRelationship,
+                searchRelationship,
             reason =
                 "VexMaps place search invalidated",
         )
