@@ -262,14 +262,15 @@ abstract class VexFamily<
         State : VexFamily.State<*>,
     > :
         Store<State> {
+        /**
+         * Current durable State followed by subsequent durable changes.
+         *
+         * Observation does not make Store another Family State owner. A concrete Family still
+         * decides what each durable value means against exact CURRENT semantic State before the
+         * result re-enters StateRelay.
+         */
         val observableState:
             Flow<State>
-
-        suspend fun get():
-            State
-
-        suspend fun forget():
-            Store.WriteResult
     }
 
     /**
@@ -569,17 +570,17 @@ abstract class VexFamily<
      * A concrete Family implements this function directly. State is traversed first because current
      * State is the truth against which the incoming Control receives meaning.
      *
-     * Both State and Control traversal stay exhaustive at this semantic boundary. Do not use an
-     * else branch to absorb future vocabulary: a new State or Control should create compiler-visible
-     * relationship work. Controls with the exact same reviewed outcome may share one branch.
-     *
-     * Use [noAct] for a reviewed State + Control pair that has no lawful Act.
+     * [act] returns nullable meaning: an [Act] means this exact current State + Control has a lawful
+     * consequence; null means it does not. A concrete Family may therefore use nested
+     * when(currentState) / when(control) branches with else -> null so adding one new Control does
+     * not force meaningless branches into every State.
      *
      * This is relationship resolution, not execution. The same function is used by isAvailable(...)
      * and activate(...), so implementations must not mutate Family State, invoke providers/Store,
      * launch work, log accepted facts, or otherwise cause an external effect while resolving.
      * begin(...) authors a consequence description only; it does not start that consequence here.
      */
+    @VettedWithHuman("VexFamily.act", "2026-10-29T23:47:00-07:00", "Victor Approved")
     protected abstract fun act(
         currentState: FamilyState,
         control: FamilyControl,
@@ -601,16 +602,6 @@ abstract class VexFamily<
             begin =
                 begin,
         )
-
-    /**
-     * Reviewed absence of a lawful Act for this exact current State + incoming Control pair.
-     *
-     * This intentionally returns the nullable representation used by act(...), but concrete Family
-     * source does not communicate semantic absence with a naked null.
-     */
-    protected fun noAct():
-        Act<FamilyState>? =
-        null
 
     /**
      * Authored Act outcome: admit this semantic State when activate(...) applies the Act.
@@ -762,7 +753,7 @@ abstract class VexFamily<
     /**
      * Informative availability from the same direct act(currentState, control) relationship used by
      * activate(...). A Control is available exactly when current State + that Control produces a
-     * lawful Act; noAct() means unavailable.
+     * lawful Act; null means unavailable.
      *
      * Availability resolves and inspects the Act only. It never admits State and never starts an
      * authored Begin. This is why concrete act(...) must remain relationship-pure.
@@ -863,29 +854,6 @@ abstract class VexFamily<
             )
             stateRelay.value
         }
-
-    /**
-     * One serialized Family StateRelay decision.
-     *
-     * The caller supplies meaning; this boundary supplies exact CURRENT State and one-at-a-time
-     * admission. StateRelay remains the single live holder.
-     */
-    private fun updateCurrentState(
-        decide:
-            (
-                currentState: FamilyState,
-            ) -> FamilyState,
-    ) {
-        synchronized(
-            stateLock,
-        ) {
-            setCurrentStateLocked(
-                decide(
-                    stateRelay.value,
-                ),
-            )
-        }
-    }
 
     /**
      * Commit one already-resolved next State while [stateLock] is held.
@@ -1193,9 +1161,11 @@ abstract class VexFamily<
             Act.Begin.Result<FamilyState>,
     ) {
         result.admission
-            ?.let(
-                ::updateCurrentState,
-            )
+            ?.let { admission ->
+                admitCurrent(
+                    admission,
+                )
+            }
     }
 }
 
