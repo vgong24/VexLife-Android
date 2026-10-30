@@ -60,6 +60,14 @@ internal data class VexMapsStyleConvergenceInputState(
                 incoming.selection.revision !=
                 selection?.revision
 
+        val latestFailure =
+            if (selectionChanged) {
+                null
+            } else {
+                incoming.failure
+                    ?: failure
+            }
+
         return VexMapsStyleConvergenceInputState(
             selection =
                 latestSelection.copy(),
@@ -82,20 +90,10 @@ internal data class VexMapsStyleConvergenceInputState(
                     )?.copy()
                 },
             failure =
-                if (selectionChanged) {
-                    null
-                } else {
-                    (
-                        incoming.failure
-                            ?: failure
-                    )?.copy(
-                        selection =
-                            (
-                                incoming.failure
-                                    ?: failure
-                            )!!.selection.copy(),
-                    )
-                },
+                latestFailure?.copy(
+                    selection =
+                        latestFailure.selection.copy(),
+                ),
         )
     }
 
