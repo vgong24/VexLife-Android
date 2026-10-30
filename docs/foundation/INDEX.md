@@ -181,7 +181,7 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **ACCEPTED ON MAIN / PR #88 / A013 LOCAL + PHYSICAL DEVICE PASS / ADVISORY MIGRATION ACTIVE** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | migrate one real consumer at a time; preserve exact runtime identities; keep raw-Compose findings advisory until replacements are earned |
 | ANDROID_WIDGET_SURFACE | Glance App Widget projection/callback boundary | **DRAFT CANDIDATE / SOURCE PROOF PENDING** | Let home-screen widgets consume feature-owned projections and return stable interaction identity without becoming product State or Effect owners | prove :architecture:widget + aggregate local build, then pressure with the compact VexStream playback patient zero |
-| EXECUTION_BRIDGE | VexExecution + source-referenced coroutine ownership | **ACCEPTED ON MAIN / PR #87 / EXACT MODULE + `vexVerifyJvm` PASS** | Put coroutine execution behind one compiler-visible meta-pattern with keyed custody, bounded collection recovery, and exact stop/join control | first production consumer + owner-bound shutdown proof; do not enlarge the kernel from infrastructure-only speculation |
+| EXECUTION_BRIDGE | `VexExecution<Owner>` + owner-bound `RelationshipId<Owner>` Job custody | **CURRENT REFINEMENT CANDIDATE / SOURCE PROOF PENDING** | Keep Jobs internal; use the rightful semantic relationship as the only custody/control address; let `Approach` own overlap; keep `SourceRef` diagnostic only | exact execution/Family/Maps JVM proof + aggregate `vexVerifyJvm`; preserve Family-contained relationship formation and root shutdown |
 | BODY_SEMANTIC_BLUEPRINT | first-principle purpose -> primitive -> relationship -> form orientation | **DOCUMENTATION FOUNDATION / NO NEW RUNTIME CONTRACT** | Let a fresh human/AI recognize reusable semantic roles across differently named domains without turning the map into one class hierarchy | pressure the map against live feature/foundation examples; promote a primitive to a type/interface only when addressability or an executable invariant earns it |
 | BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational Behavior foundation | **ACCEPTED ON MAIN / PR #82 + #85 / EXACT `vexVerifyLocal` PASS / VEXSTREAM PLAYBACK CONSUMER CURRENT** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | extend from independent real behavioral questions; keep runtime request payloads and generic Experience abstraction held until repeated consumers earn them |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
@@ -297,26 +297,63 @@ Entry:
 ### Intention
 
 A developer should not decide coroutine ownership ad hoc from whichever Screen, repository, Service,
-or callback happens to need asynchronous work. The execution foundation makes that role explicit:
+or callback happens to need asynchronous work. The execution foundation owns Jobs internally while
+the semantic owner supplies the relationship that makes the work addressable:
 
-```text
-FeatureExecution : VexExecution
--> launchOnce(callable)
--> launchForCollect(flowProvider)
--> private ordered Job custody
--> forceStop / joinStop
-```
+~~~text
+semantic owner
+-> RelationshipId<Owner>
+-> VexExecution<Owner>
+   -> launch(RelationshipId, Approach, callable)
+   -> launchForCollect(RelationshipId, source)
+   -> forceStop(RelationshipId)
+   -> joinStop(RelationshipId)
+   -> private Job custody
+~~~
 
-The actual `VexCoroutineLauncher` remains internal foundation machinery. Source callables supply both
-the executed function and the source-derived runtime ref, avoiding a parallel hand-maintained ID
-catalog. `launchOnce` never silently retries finite operations; sustained Flow collection owns a
-bounded recovery path where requested. Cancellation is terminal and exact root shutdown closes work
-admission before cancelling the supervised tree.
+The key is the already-earned semantic relationship, not a second runtime identity layer:
 
-This candidate is intentionally not yet wired through Relay/Maps/VexStream. PR #77 independently
-identified continuous dependency collector death/restart as execution-lifetime work, while current
-main still contains repeated raw `CoroutineScope`/Job ownership in app/runtime surfaces. Those are
-real consumers, but migration follows only after this kernel passes repository-native Gradle proof.
+~~~text
+RelationshipId<Owner>
+    custody + control address
+
+Approach
+    Independent / Earliest / Latest / Queued overlap law
+
+SourceRef
+    source class + callable
+    diagnostics/navigation only
+
+NO public Handle
+NO public InstanceId
+NO callable-addressed stop/join
+NO SourceRef duplicate identity
+~~~
+
+For Direct Family, Family alone forms the Family execution relationship:
+
+~~~text
+live Family
++ Control type/name
++ optional typed ResourceId<Family>
+-> VexFamily.RelationshipId<Family>
+-> VexExecution.RelationshipId<Family>
+~~~
+
+Family-contained Begin authoring chooses Approach only. The Family bridge passes its own typed
+relationship into Execution; no external execution operation reconstructs Family meaning from a
+callable or class name. Family StateStore observation follows the same law with a Family-owned
+observation relationship rooted in the live Family + exact StateStore object.
+
+The actual `VexCoroutineLauncher` remains internal machinery. Its relationship registry owns the
+ordered Jobs and retained execution-state evidence for that relationship. Bounded Flow
+source/subscription recovery remains execution-lifetime behavior; downstream consumer failure does
+not become source retry. Root shutdown remains the terminal whole-tree control.
+
+VexMaps destination search, place search and Distribution are current non-Family pressure consumers:
+their execution wrappers now declare local typed relationship keys instead of cancelling by callable.
+This refinement is a source candidate until exact repository-native JVM proof passes; it does not
+retroactively rewrite earlier proof claims or add a new cross-domain semantic owner.
 
 ## Behavior Blueprint experiment
 
