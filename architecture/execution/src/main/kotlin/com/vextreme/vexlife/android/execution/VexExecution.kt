@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
  * CoordinationKey
  *     owner-local key for overlap policy when work intentionally coordinates
  *
- * Status / State / Handle
+ * Status / Snapshot / Handle
  *     runtime observation and cancellation
  *
  * A live VexExecution instance is itself the runtime owner boundary. Source-derived operations are
@@ -131,7 +131,7 @@ abstract class VexExecution protected constructor(
         FAILED,
     }
 
-    data class State(
+    data class Snapshot(
         val instanceId:
             InstanceId,
         val sourceRef:
@@ -155,8 +155,8 @@ abstract class VexExecution protected constructor(
             InstanceId
         val sourceRef:
             SourceRef
-        val state:
-            StateFlow<State>
+        val snapshot:
+            StateFlow<Snapshot>
 
         fun forceStop(
             reason:
