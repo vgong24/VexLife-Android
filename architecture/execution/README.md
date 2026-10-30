@@ -186,13 +186,22 @@ downstream onEach fails
 
 This prevents a consumer bug from being misclassified as provider/source instability.
 
-The default policy preserves bounded recovery, while an owner may use:
+The default is:
 
 ~~~text
 ObservationRecovery.None
 ~~~
 
-when restart is not lawful.
+so generic observation never silently assumes retry is lawful.
+
+A sustained owner that has actually earned source recovery states it explicitly at the callsite:
+
+~~~text
+observe(
+    source = ...,
+    recovery = ObservationRecovery(...),
+)
+~~~
 
 ## Runtime occurrence observation
 
