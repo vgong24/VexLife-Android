@@ -7,7 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Rightful lifetime owner for one Vex execution tree.
  *
- * The root owns shutdown and exposes retained execution state by exact per-launch InstanceId.
+ * The root owns shutdown and exposes the current active execution projection by semantic
+ * RelationshipId. Job objects remain internal to VexExecution.
  */
 class VexExecutionRoot(
     dispatcher:
@@ -33,8 +34,10 @@ class VexExecutionRoot(
     val executions:
         StateFlow<
             Map<
-                VexExecution.InstanceId,
-                VexExecution.State
+                VexExecution.RelationshipId<*>,
+                List<
+                    VexExecution.State
+                >
             >
         >
         get() =
