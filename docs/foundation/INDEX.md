@@ -61,17 +61,16 @@ architecture question.
 Current Compound processing keeps currentization, meaning and assembly distinct:
 
 ~~~text
-retained InputState + incoming partial InputState
--> InputState.latest(incoming)
--> complete current InputState
--> process(...)
--> OutputState
--> VexCompoundState(inputState, outputState)
+currentState.inputState + incomingInputState
+-> currentState.inputState.latest(incomingInputState)
+-> latestStateInput
+-> process(latestStateInput, currentState)
+-> latestStateOutput
+-> VexCompoundState(latestStateInput, latestStateOutput)
 ~~~
 
-The reusable Relay owns currentization sequencing and Compound assembly. Existing retained-Output
-memory in Events/Navigation remains an explicit open ownership question rather than being normalized
-into the default processing law.
+The reusable Relay owns currentization sequencing and Compound assembly. Existing `currentState.outputState` use in Events/Navigation remains an explicit open ownership
+question rather than being normalized into the default processing law.
 
 <!-- [VXG RealForever][FOUNDATION][FAMILY][NATIVE-TRAVERSAL] -->
 
