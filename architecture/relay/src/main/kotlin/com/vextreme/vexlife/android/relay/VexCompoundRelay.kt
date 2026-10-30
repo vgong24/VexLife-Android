@@ -171,7 +171,7 @@ abstract class VexCompoundRelay<
      * [VexInputState.latest] already owns partial-input currentization. This function returns Output
      * meaning only; concrete Relays do not reconstruct [VexCompoundState].
      *
-     * [retainedState] is available only for already-earned cross-cycle relationship memory. New
+     * [currentState] is available only for already-earned cross-cycle relationship memory. New
      * relationships should prefer deriving Output from [latestStateInput] alone rather than using
      * previous Output as an undocumented reducer input.
      *
@@ -179,7 +179,7 @@ abstract class VexCompoundRelay<
      */
     protected abstract fun process(
         latestStateInput: InputState,
-        retainedState: VexCompoundState<InputState, OutputState>,
+        currentState: VexCompoundState<InputState, OutputState>,
     ): OutputState
 
     protected fun send(
@@ -190,13 +190,13 @@ abstract class VexCompoundRelay<
                 "VexCompoundRelay cannot recursively send state from process"
             }
 
-            val retainedState =
+            val currentState =
                 mutableCurrentState.value.deepCopy()
 
             processing = true
             try {
                 val latestStateInput =
-                    retainedState
+                    currentState
                         .inputState
                         .latest(
                             inputState.deepCopy(),
@@ -207,17 +207,17 @@ abstract class VexCompoundRelay<
                     process(
                         latestStateInput =
                             latestStateInput.deepCopy(),
-                        retainedState =
-                            retainedState.deepCopy(),
+                        currentState =
+                            currentState.deepCopy(),
                     )
                         .deepCopy()
 
                 val meaningChanged =
-                    latestStateInput != retainedState.inputState ||
-                        latestStateOutput != retainedState.outputState
+                    latestStateInput != currentState.inputState ||
+                        latestStateOutput != currentState.outputState
 
                 if (!meaningChanged) {
-                    return@synchronized retainedState.deepCopy()
+                    return@synchronized currentState.deepCopy()
                 }
 
                 val next =
