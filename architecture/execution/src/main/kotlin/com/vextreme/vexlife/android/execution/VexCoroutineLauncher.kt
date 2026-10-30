@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.execution
 
 import java.util.concurrent.CancellationException
+import kotlin.reflect.KCallable
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -49,9 +50,6 @@ internal class VexCoroutineLauncher(
     private var acceptingWork =
         true
 
-    private var nextInstanceValue =
-        1L
-
     private enum class CoordinationPolicy {
         Earliest,
         Latest,
@@ -60,7 +58,7 @@ internal class VexCoroutineLauncher(
 
     private class CoordinationIdentity(
         val ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         val key:
             VexExecution.CoordinationKey,
     ) {
@@ -97,11 +95,11 @@ internal class VexCoroutineLauncher(
 
     private data class ManagedExecution(
         val ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         val instanceId:
             VexExecution.InstanceId,
         val sourceIdentity:
-            Any,
+            KCallable<*>,
         val sourceRef:
             VexExecution.SourceRef,
         val coordination:
@@ -157,9 +155,9 @@ internal class VexCoroutineLauncher(
 
     fun launchOnce(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -207,9 +205,9 @@ internal class VexCoroutineLauncher(
 
     fun launch(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -243,11 +241,11 @@ internal class VexCoroutineLauncher(
 
     fun launchEarliest(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         key:
             VexExecution.CoordinationKey,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -306,11 +304,11 @@ internal class VexCoroutineLauncher(
 
     fun launchLatest(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         key:
             VexExecution.CoordinationKey,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -372,11 +370,11 @@ internal class VexCoroutineLauncher(
 
     fun launchQueued(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         key:
             VexExecution.CoordinationKey,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -428,9 +426,9 @@ internal class VexCoroutineLauncher(
 
     fun <Value> observe(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         sourceRef:
             VexExecution.SourceRef,
         recovery:
@@ -517,9 +515,9 @@ internal class VexCoroutineLauncher(
 
     fun forceStopSource(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         reason:
             String,
     ):
@@ -559,9 +557,9 @@ internal class VexCoroutineLauncher(
 
     suspend fun joinStopSource(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         reason:
             String,
     ):
@@ -606,7 +604,7 @@ internal class VexCoroutineLauncher(
 
     fun forceStopOwner(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         reason:
             String,
     ):
@@ -644,7 +642,7 @@ internal class VexCoroutineLauncher(
 
     suspend fun joinStopOwner(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         reason:
             String,
     ):
@@ -733,7 +731,7 @@ internal class VexCoroutineLauncher(
 
     private fun coordinationLocked(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         key:
             VexExecution.CoordinationKey,
         policy:
@@ -825,9 +823,9 @@ internal class VexCoroutineLauncher(
 
     private fun createManagedLocked(
         ownerToken:
-            Any,
+            VexExecution.OwnerToken,
         sourceIdentity:
-            Any,
+            KCallable<*>,
         sourceRef:
             VexExecution.SourceRef,
         coordination:
@@ -843,9 +841,7 @@ internal class VexCoroutineLauncher(
     ):
         VexExecution.Handle {
         val instanceId =
-            VexExecution.InstanceId(
-                nextInstanceValue++,
-            )
+            VexExecution.nextInstanceId()
 
         val mutableState =
             MutableStateFlow(
