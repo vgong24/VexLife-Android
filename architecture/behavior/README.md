@@ -235,53 +235,27 @@ act(CURRENT State, Control)
 
 before another State can be admitted.
 
-## Execution relationship identity
+## Durable Save ordering
 
-Family owns the maintained Save relationship identity once:
+Direct Family currently has one maintained asynchronous operation: Store.save(State).
+
+All accepted Saves for one live Family share one private execution queue:
 
 ~~~text
 live Family
-+ exact Control identity
-+ optional stable Control.resourceId
-=
-VexFamily.RelationshipId<Family>
--> VexExecution.RelationshipId
+-> one private Save queue
+-> accepted saveState values run in Control-acceptance order
 ~~~
 
-Control identity is always present. resourceId only narrows repeated semantic resources for that
-same Control kind; ordinary Control payload does not silently become relationship identity.
+That queue identity is runtime mechanics. Controls do not author execution identity, and feature code
+does not choose overlap policy.
 
-Feature authoring does **not** choose Earliest / Latest / Queued. The semantic surface is only:
+This narrower shape matters because Store.save persists whole Family State. If two different Control
+kinds both author Saves, they must not create independent queues that allow an older whole-State Save
+to finish after a newer one.
 
-~~~kotlin
-stay(
-    saveState = state,
-)
-
-admit(
-    state,
-    saveState = state,
-)
-~~~
-
-The current runtime persists accepted Save consequences in Control-acceptance order. That execution
-strategy is mechanics beneath Family; it is not another feature-facing semantic vocabulary.
-
-A concrete Control may expose an exact typed ResourceId when Control kind alone is too broad:
-
-~~~kotlin
-data class TrackId(
-    val value: String,
-) : VexFamily.ResourceId<PlayerFamily>
-
-data class Play(
-    override val resourceId: TrackId,
-    val position: Int,
-) : Control
-~~~
-
-position remains request payload. Equal resource values on different Control kinds do not collide
-because exact Control identity remains part of the relationship.
+If a future non-Store effect demonstrates a real need for resource-scoped maintained identity, that
+relationship can be earned then from its actual semantics rather than preserved speculatively now.
 
 ## Logger boundary
 
