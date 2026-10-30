@@ -25,8 +25,8 @@ internal enum class ThemeMode :
  * than making today's two-state Switch the semantic contract. A target may realize Light/Dark with
  * a toggle, segmented control, menu, or another presentation without changing this relationship.
  *
- * The selected mode is Control payload. Direct Family does not currently expose feature-authored
- * execution identity; ThemeMode persistence is ordered privately per live Family.
+ * The selected mode is Control payload. Runtime persistence identity/order belong to
+ * ThemeModeConnection, not to this semantic Family.
  */
 internal class ThemeModeFamily(
     initialState:
