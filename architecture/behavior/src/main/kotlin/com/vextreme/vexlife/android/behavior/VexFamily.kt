@@ -40,6 +40,9 @@ abstract class VexFamily<
         VexExecutionRoot,
     private val logger:
         VexLogger.Sink,
+    private val store:
+        Store<FamilyState>? =
+        null,
 ) where
     Family : VexFamily<
         Family,
@@ -229,12 +232,6 @@ abstract class VexFamily<
             saveState =
                 saveState,
         )
-
-    open val store:
-        Store<FamilyState>? =
-        null
-
-
 
     /**
      * Current display classification for this Family.
