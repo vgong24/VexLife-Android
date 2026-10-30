@@ -71,11 +71,14 @@ internal class VexCoroutineLauncher(
     private data class MaintainedRelationship(
         var approach:
             VexExecution.Approach,
-        val executions:
+        val active:
             LinkedHashSet<
                 ManagedExecution
             > =
             linkedSetOf(),
+        var latestTerminalState:
+            VexExecution.State? =
+            null,
     )
 
     private class ManagedExecution(
@@ -544,10 +547,12 @@ internal class VexCoroutineLauncher(
         List<
             ManagedExecution
         > {
-        return maintained.executions
-            .filter {
-                !it.job.isCompleted
-            }
+        maintained.active.removeAll { managed ->
+            managed.job.isCompleted
+        }
+
+        return maintained.active
+            .toList()
     }
 
     private fun createManagedLocked(
@@ -617,7 +622,7 @@ internal class VexCoroutineLauncher(
                     mutableState,
             )
 
-        maintained.executions +=
+        maintained.active +=
             managed
 
         updateRegistryLocked()
@@ -654,6 +659,11 @@ internal class VexCoroutineLauncher(
             synchronized(
                 registryLock,
             ) {
+                maintained.active.remove(
+                    managed,
+                )
+                maintained.latestTerminalState =
+                    mutableState.value
                 updateRegistryLocked()
             }
         }
@@ -865,18 +875,33 @@ internal class VexCoroutineLauncher(
         relationships.forEach {
                 (relationship, maintained),
             ->
-            val states =
-                maintained.executions
+            val activeStates =
+                maintained.active
                     .map {
                         it.mutableState.value
                     }
 
-            projection[
-                relationship
-            ] =
-                java.util.Collections.unmodifiableList(
-                    states,
-                )
+            val states =
+                if (
+                    activeStates.isNotEmpty()
+                ) {
+                    activeStates
+                } else {
+                    listOfNotNull(
+                        maintained.latestTerminalState,
+                    )
+                }
+
+            if (
+                states.isNotEmpty()
+            ) {
+                projection[
+                    relationship
+                ] =
+                    java.util.Collections.unmodifiableList(
+                        states,
+                    )
+            }
         }
 
         mutableExecutions.value =
