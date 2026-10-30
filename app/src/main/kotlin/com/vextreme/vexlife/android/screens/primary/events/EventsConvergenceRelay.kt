@@ -498,7 +498,7 @@ class EventsConvergenceRelay internal constructor(
     override fun process(
         latestStateInput:
             EventsConvergenceInputState,
-        retainedState:
+        currentState:
             VexCompoundState<
                 EventsConvergenceInputState,
                 EventsConvergenceOutputState
@@ -513,9 +513,9 @@ class EventsConvergenceRelay internal constructor(
          * and accidentally change what the person is being shown or asked to deal with.
          */
         val previousInput =
-            retainedState.inputState
+            currentState.inputState
         val previousOutput =
-            retainedState.outputState
+            currentState.outputState
 
         val currentScreenId =
             latestStateInput.currentScreenId
