@@ -477,6 +477,87 @@ class VexExecutionTest {
         }
 
     @Test
+    fun executionContractHasNoHandleInstanceIdOrCallableControlSurface() {
+        val nestedNames =
+            VexExecution::class.java
+                .declaredClasses
+                .map {
+                    it.simpleName
+                }
+                .toSet()
+
+        assertFalse(
+            "Handle" in
+                nestedNames,
+        )
+        assertFalse(
+            "InstanceId" in
+                nestedNames,
+        )
+
+        val executionMethods =
+            VexExecution::class.java
+                .declaredMethods
+                .filterNot {
+                    it.isSynthetic
+                }
+
+        assertFalse(
+            executionMethods.any {
+                it.name ==
+                    "launchOnce"
+            },
+        )
+
+        executionMethods
+            .filter {
+                it.name ==
+                    "forceStop" ||
+                    it.name ==
+                    "joinStop" ||
+                    it.name ==
+                    "awaitCompletion"
+            }
+            .forEach { method ->
+                assertEquals(
+                    VexExecution.RelationshipId::class.java,
+                    method.parameterTypes.first(),
+                )
+            }
+
+        val beginMethods =
+            VexExecution.Companion::class.java
+                .declaredMethods
+                .filterNot {
+                    it.isSynthetic
+                }
+                .filter {
+                    it.name.startsWith(
+                        "begin",
+                    )
+                }
+
+        assertEquals(
+            listOf(
+                "begin",
+            ),
+            beginMethods
+                .map {
+                    it.name
+                }
+                .distinct()
+                .sorted(),
+        )
+        assertTrue(
+            beginMethods.all { method ->
+                method.parameterTypes.contains(
+                    VexExecution.RelationshipId::class.java,
+                )
+            },
+        )
+    }
+
+    @Test
     fun sameCallableUnderDifferentRelationshipKeysRemainsIndependent(): Unit =
         runBlocking {
             val root =
