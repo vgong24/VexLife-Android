@@ -101,6 +101,71 @@ When human-vetted architecture changes, reopen only the exact changed semantic d
 connections. Do not backdate, broaden, or preserve approval across changed meaning. Unchanged
 semantic laws keep their provenance; changed laws require fresh human review of the exact source.
 
+## Mastered architecture
+
+Human vetting is provenance, not a claim that architecture has reached its best possible form.
+
+~~~text
+VETTED
+    Victor explicitly reviewed this exact semantic law.
+
+MASTERED
+    the current architecture has also been deliberately challenged against the full set of known
+    demonstrated pressures, stripped of accidental implementation coupling, and shaped as the
+    smallest complete long-term semantic grammar we currently know how to build.
+~~~
+
+Do not preserve a weaker design merely because it was previously vetted. If a better end-state is
+recovered, make the semantic change visible, preserve the old approval as history, and seek fresh
+human vetting for the changed law.
+
+Mastery is also not permission to speculate without pressure. The target is neither:
+
+~~~text
+first consumer only
+-> underfit architecture
+~~~
+
+nor:
+
+~~~text
+imagined every possible future
+-> framework maximalism
+~~~
+
+Use all **demonstrated** pressures available across current consumers, lived product requirements,
+Origin Walk history, provider/runtime boundaries, and adjacent accepted architecture. Then choose
+the smallest grammar that can express those pressures without changing its semantic nouns for each
+new realization.
+
+A mastered semantic root should not depend on one realization merely because that realization was
+the first patient zero. For example:
+
+~~~text
+semantic Effect
+!= SharedPreferences
+!= network request
+!= coroutine
+!= provider callback
+
+Connection/reality boundary
+owns those realization mechanics.
+~~~
+
+Before calling an architecture slice mastered, ask:
+
+~~~text
+Would another already-demonstrated consumer force us to rename the semantic nouns?
+Does a semantic root depend on Android/provider/storage/execution mechanics it does not own?
+Are two different causes being hidden behind one convenient API?
+Are two APIs authoring the same semantic truth?
+Can a feature-specific mechanism be replaced by an already-earned semantic role?
+Have we replayed known failure modes against the end-state rather than only the current example?
+~~~
+
+Mastered architecture may still have explicitly open boundaries. The requirement is that the
+settled grammar remains truthful about those unknowns instead of filling them with guessed machinery.
+
 ## Foundation before features
 
 Build outward only when the layer underneath is stable enough to explain, test, and recover.
