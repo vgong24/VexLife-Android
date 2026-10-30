@@ -145,7 +145,7 @@ internal class VexCoroutineLauncher(
             MaintainedCoordination
         >()
 
-    private val mutableExecutions =
+    private val mutableActiveExecutions =
         MutableStateFlow<
             Map<
                 VexExecution.InstanceId,
@@ -155,14 +155,14 @@ internal class VexCoroutineLauncher(
             emptyMap(),
         )
 
-    val executions:
+    val activeExecutions:
         StateFlow<
             Map<
                 VexExecution.InstanceId,
                 VexExecution.State
             >
         > =
-        mutableExecutions.asStateFlow()
+        mutableActiveExecutions.asStateFlow()
 
     fun launchOnce(
         ownerToken:
@@ -946,7 +946,7 @@ internal class VexCoroutineLauncher(
                 instanceId
         }
 
-        updateRegistryLocked(
+        updateActiveRegistryLocked(
             mutableState.value,
         )
 
@@ -986,6 +986,9 @@ internal class VexCoroutineLauncher(
                 registryLock,
             ) {
                 active.remove(
+                    instanceId,
+                )
+                removeActiveRegistryLocked(
                     instanceId,
                 )
 
@@ -1290,26 +1293,53 @@ internal class VexCoroutineLauncher(
         synchronized(
             registryLock,
         ) {
-            updateRegistryLocked(
+            updateActiveRegistryLocked(
                 state,
             )
         }
     }
 
-    private fun updateRegistryLocked(
+    private fun updateActiveRegistryLocked(
         state:
             VexExecution.State,
     ) {
-        mutableExecutions.value =
+        mutableActiveExecutions.value =
             java.util.Collections
                 .unmodifiableMap(
                     LinkedHashMap(
-                        mutableExecutions.value,
+                        mutableActiveExecutions.value,
                     ).apply {
                         this[
                             state.instanceId
                         ] =
                             state
+                    },
+                )
+    }
+
+    private fun removeActiveRegistryLocked(
+        instanceId:
+            VexExecution.InstanceId,
+    ) {
+        if (
+            !mutableActiveExecutions
+                .value
+                .containsKey(
+                    instanceId,
+                )
+        ) {
+            return
+        }
+
+        mutableActiveExecutions.value =
+            java.util.Collections
+                .unmodifiableMap(
+                    LinkedHashMap(
+                        mutableActiveExecutions.value,
+                    ).apply {
+                        remove(
+                            instanceId,
+                        )
                     },
                 )
     }
