@@ -520,8 +520,6 @@ internal class VexCoroutineLauncher(
             Any,
         sourceIdentity:
             Any,
-        sourceRef:
-            VexExecution.SourceRef,
         reason:
             String,
     ):
@@ -564,8 +562,6 @@ internal class VexCoroutineLauncher(
             Any,
         sourceIdentity:
             Any,
-        sourceRef:
-            VexExecution.SourceRef,
         reason:
             String,
     ):
