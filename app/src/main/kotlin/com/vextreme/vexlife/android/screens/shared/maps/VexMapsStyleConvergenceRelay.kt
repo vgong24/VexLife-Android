@@ -43,12 +43,12 @@ internal data class VexMapsStyleConvergenceInputState(
     val failure: VexMapsStyleFailure? = null,
 ) : VexInputState<VexMapsStyleConvergenceInputState> {
     override fun latest(
-        incoming:
+        incomingInputState:
             VexMapsStyleConvergenceInputState,
     ):
         VexMapsStyleConvergenceInputState {
         val latestSelection =
-            incoming.selection
+            incomingInputState.selection
                 ?: selection
 
         if (latestSelection == null) {
@@ -56,15 +56,15 @@ internal data class VexMapsStyleConvergenceInputState(
         }
 
         val selectionChanged =
-            incoming.selection != null &&
-                incoming.selection.revision !=
+            incomingInputState.selection != null &&
+                incomingInputState.selection.revision !=
                 selection?.revision
 
         val latestFailure =
             if (selectionChanged) {
                 null
             } else {
-                incoming.failure
+                incomingInputState.failure
                     ?: failure
             }
 
@@ -76,7 +76,7 @@ internal data class VexMapsStyleConvergenceInputState(
                     null
                 } else {
                     (
-                        incoming.requested
+                        incomingInputState.requested
                             ?: requested
                     )?.copy()
                 },
@@ -85,7 +85,7 @@ internal data class VexMapsStyleConvergenceInputState(
                     null
                 } else {
                     (
-                        incoming.loaded
+                        incomingInputState.loaded
                             ?: loaded
                     )?.copy()
                 },
