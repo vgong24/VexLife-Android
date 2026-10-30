@@ -154,7 +154,7 @@ class VexFamilyHighConfidenceTest {
                             )
 
                         is Control.Commit ->
-                            noAct()
+                            null
                     }
             }
 
@@ -419,7 +419,7 @@ class VexFamilyHighConfidenceTest {
             Flow<StoreObservedFamily.State> =
             mutableState
 
-        override suspend fun get():
+        suspend fun get():
             StoreObservedFamily.State =
             mutableState.value
 
@@ -433,7 +433,7 @@ class VexFamilyHighConfidenceTest {
             return VexFamily.Store.WriteResult.Success
         }
 
-        override suspend fun forget():
+        suspend fun forget():
             VexFamily.Store.WriteResult {
             mutableState.value =
                 StoreObservedFamily.State.Empty
