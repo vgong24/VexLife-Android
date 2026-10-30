@@ -252,7 +252,15 @@ class VexExecutionTest {
         ):
             Handle =
             observe(
-                repository::restartableStates,
+                source =
+                    repository::restartableStates,
+                recovery =
+                    ObservationRecovery(
+                        maxRestarts =
+                            2,
+                        restartDelayMillis =
+                            0L,
+                    ),
             ) { value ->
                 values +=
                     value
@@ -790,12 +798,7 @@ class VexExecutionTest {
     fun sourceFailureMayRestartButDownstreamFailureDoesNot() =
         runBlocking {
             val root =
-                VexExecutionRoot(
-                    maxCollectRestarts =
-                        2,
-                    collectRestartDelayMillis =
-                        0L,
-                )
+                VexExecutionRoot()
             val repository =
                 TestRepository()
             val execution =
