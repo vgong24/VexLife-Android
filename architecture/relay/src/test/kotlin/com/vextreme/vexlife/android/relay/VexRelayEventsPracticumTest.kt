@@ -149,7 +149,7 @@ class VexRelayEventsPracticumTest {
         override fun process(
             latestStateInput:
                 EventsInputState,
-            retainedState:
+            currentState:
                 VexCompoundState<
                     EventsInputState,
                     EventsOutputState
