@@ -107,38 +107,21 @@ class VexFamilyHighConfidenceTest {
                                 ),
                             )
 
-                        is Control.Commit ->
-                            stay(
-                                begin =
-                                    beginQueued {
-                                        save(
-                                            State.Ready(
-                                                value =
-                                                    control.value,
-                                            ),
-                                        ).results {
-                                            success {
-                                                admit { current ->
-                                                    when (
-                                                        current
-                                                    ) {
-                                                        State.Empty ->
-                                                            State.Ready(
-                                                                value =
-                                                                    control.value,
-                                                            )
+                        is Control.Commit -> {
+                            val nextState =
+                                State.Ready(
+                                    value =
+                                        control.value,
+                                )
 
-                                                        is State.Ready ->
-                                                            current
-                                                    }
-                                                }
-                                            }
-
-                                            failure {
-                                            }
-                                        }
-                                    },
+                            admit(
+                                nextState,
+                                save =
+                                    saveLatest(
+                                        nextState,
+                                    ),
                             )
+                        }
                     }
 
                 is State.Ready ->
@@ -154,7 +137,7 @@ class VexFamilyHighConfidenceTest {
                             )
 
                         is Control.Commit ->
-                            noAct()
+                            null
                     }
             }
 
@@ -309,6 +292,12 @@ class VexFamilyHighConfidenceTest {
             VexFamily.Control<ObservedFamily> {
             data object Keep :
                 Control
+
+            data class ProviderReconciled(
+                val value:
+                    String,
+            ) :
+                Control
         }
 
         override fun act(
@@ -318,27 +307,33 @@ class VexFamilyHighConfidenceTest {
                 Control,
         ):
             VexFamily.Act<State> =
-            when (
-                control
-            ) {
+            when (control) {
                 Control.Keep ->
                     stay()
+
+                is Control.ProviderReconciled ->
+                    admit(
+                        State.Current(
+                            value =
+                                control.value,
+                        ),
+                    )
             }
 
         /**
-         * Concrete source vocabulary. The provider/Connection has already reconciled its own truth;
-         * Family owns only admission into its semantic CURRENT State.
+         * Concrete source vocabulary. Provider truth returns as typed Family input and is resolved
+         * against exact CURRENT State by the same act(...) relationship as every other cause.
          */
         fun providerReconciled(
             value:
                 String,
         ) {
-            admitCurrent {
-                State.Current(
+            activate(
+                Control.ProviderReconciled(
                     value =
                         value,
-                )
-            }
+                ),
+            )
         }
     }
 
@@ -376,6 +371,12 @@ class VexFamilyHighConfidenceTest {
             VexFamily.Control<StoreObservedFamily> {
             data object Keep :
                 Control
+
+            data class Stored(
+                val state:
+                    State,
+            ) :
+                Control
         }
 
         interface Store :
@@ -385,8 +386,11 @@ class VexFamilyHighConfidenceTest {
             observeStore(
                 stateStore =
                     store,
-            ) { _, storedState ->
-                storedState
+            ) { storedState ->
+                Control.Stored(
+                    state =
+                        storedState,
+                )
             }
         }
 
@@ -397,11 +401,21 @@ class VexFamilyHighConfidenceTest {
                 Control,
         ):
             VexFamily.Act<State> =
-            when (
-                control
-            ) {
+            when (control) {
                 Control.Keep ->
                     stay()
+
+                is Control.Stored ->
+                    if (
+                        currentState ==
+                        control.state
+                    ) {
+                        stay()
+                    } else {
+                        admit(
+                            control.state,
+                        )
+                    }
             }
     }
 
@@ -419,10 +433,6 @@ class VexFamilyHighConfidenceTest {
             Flow<StoreObservedFamily.State> =
             mutableState
 
-        override suspend fun get():
-            StoreObservedFamily.State =
-            mutableState.value
-
         override suspend fun save(
             state:
                 StoreObservedFamily.State,
@@ -430,13 +440,6 @@ class VexFamilyHighConfidenceTest {
             VexFamily.Store.WriteResult {
             mutableState.value =
                 state
-            return VexFamily.Store.WriteResult.Success
-        }
-
-        override suspend fun forget():
-            VexFamily.Store.WriteResult {
-            mutableState.value =
-                StoreObservedFamily.State.Empty
             return VexFamily.Store.WriteResult.Success
         }
 
@@ -493,11 +496,7 @@ class VexFamilyHighConfidenceTest {
                 val position:
                     Int,
             ) :
-                Control,
-                VexFamily.Control.Resource<
-                    ResourceIdentityFamily,
-                    TrackId
-                >
+                Control
 
             data class Search(
                 val query:
@@ -924,7 +923,7 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun availabilityMayInspectAnActWithBeginWithoutStartingItsExecution() {
+    fun availabilityMayInspectAnActWithSaveWithoutStartingItsExecution() {
         val root =
             VexExecutionRoot()
         val store =
@@ -966,9 +965,16 @@ class VexFamilyHighConfidenceTest {
                     ),
                 ),
             )
+            assertEquals(
+                ValueFamily.State.Ready(
+                    value =
+                        "pending",
+                ),
+                family.currentState,
+            )
 
             assertTrue(
-                "activated Begin did not reach Store.save",
+                "activated Save did not reach Store.save",
                 store.started.await(
                     5,
                     TimeUnit.SECONDS,
@@ -1005,7 +1011,7 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun throwingLoggerCannotChangeFamilyControlStateStoreOrSuccessSemantics() {
+    fun throwingLoggerCannotChangeFamilyControlStateOrStoreSemantics() {
         val root =
             VexExecutionRoot()
         val logger =
@@ -1373,7 +1379,7 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun olderAsyncResultReevaluatesAgainstCurrentStateBeforeAdmission() {
+    fun saveCompletionCannotOverwriteNewerFamilyState() {
         val root =
             VexExecutionRoot()
         val store =
@@ -1466,12 +1472,12 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun beginSaveSuccessMayAdmitTheAuthoredLaterState() {
+    fun saveRunsAfterImmediateAdmissionAndOwnsNoLaterStateDoor() {
         val root =
             VexExecutionRoot()
         val store =
             GatedStore()
-        val laterAdmission =
+        val operationSuccess =
             CountDownLatch(
                 1,
             )
@@ -1479,9 +1485,9 @@ class VexFamilyHighConfidenceTest {
             RecordingLogger { event ->
                 if (
                     event is
-                        VexLogger.Event.Family.StateAdmitted
+                        VexLogger.Event.Family.OperationSuccess
                 ) {
-                    laterAdmission.countDown()
+                    operationSuccess.countDown()
                 }
             }
 
@@ -1507,17 +1513,24 @@ class VexFamilyHighConfidenceTest {
                 ),
             )
             assertEquals(
-                ValueFamily.State.Empty,
+                ValueFamily.State.Ready(
+                    value =
+                        "loaded",
+                ),
                 family.currentState,
+            )
+            assertTrue(
+                store.started.await(
+                    5,
+                    TimeUnit.SECONDS,
+                ),
             )
 
             store.gate.complete(
                 Unit,
             )
-
             assertTrue(
-                "later State admission was not observed",
-                laterAdmission.await(
+                operationSuccess.await(
                     5,
                     TimeUnit.SECONDS,
                 ),
