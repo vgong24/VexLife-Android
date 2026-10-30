@@ -69,7 +69,7 @@ class VexCompoundRelayDependencyTest {
         override fun process(
             latestStateInput:
                 DependencyInput,
-            retainedState:
+            currentState:
                 VexCompoundState<
                     DependencyInput,
                     DependencyOutput
