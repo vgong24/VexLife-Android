@@ -321,7 +321,7 @@ internal class VexConversationHybridRelay(
     override fun process(
         latestStateInput:
             VexConversationHybridInputState,
-        retainedState:
+        currentState:
             VexCompoundState<
                 VexConversationHybridInputState,
                 VexConversationHybridOutputState
