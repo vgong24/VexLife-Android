@@ -18,18 +18,18 @@ class ThemeModePersistenceTest {
             )
 
         try {
-            val family =
-                ThemeModeFamily(
-                    initialState =
-                        ThemeMode.Dark,
-                    executionRoot =
-                        root,
+            val connection =
+                ThemeModeConnection(
                     store =
                         store,
+                    executionRoot =
+                        root,
+                    initialState =
+                        ThemeMode.Dark,
                 )
 
             assertTrue(
-                family.activate(
+                connection.activate(
                     ThemeModeFamily.Control.Select(
                         ThemeMode.Dark,
                     ),
@@ -54,7 +54,7 @@ class ThemeModePersistenceTest {
             )
             assertEquals(
                 ThemeMode.Dark,
-                family.currentState,
+                connection.family.currentState,
             )
         } finally {
             root.forceStopAll()
@@ -62,7 +62,7 @@ class ThemeModePersistenceTest {
     }
 
     @Test
-    fun durableSelectionSeedsFreshFamilyAtConstruction() {
+    fun durableSelectionSeedsFreshConnectionFamily() {
         val root =
             VexExecutionRoot()
         val store =
@@ -71,23 +71,21 @@ class ThemeModePersistenceTest {
             )
 
         try {
-            val family =
-                ThemeModeFamily(
-                    initialState =
-                        store.current(),
-                    executionRoot =
-                        root,
+            val connection =
+                ThemeModeConnection(
                     store =
                         store,
+                    executionRoot =
+                        root,
                 )
 
             assertEquals(
                 ThemeMode.Light,
-                family.currentState,
+                connection.family.currentState,
             )
             assertEquals(
-                family.currentState,
-                family.states.value,
+                connection.family.currentState,
+                connection.family.states.value,
             )
             assertTrue(
                 store.savedStates.isEmpty(),
@@ -101,7 +99,7 @@ class ThemeModePersistenceTest {
         initialState:
             ThemeMode,
     ) :
-        ThemeModeFamily.Store {
+        ThemeModeStore {
         @Volatile
         private var currentState =
             initialState
@@ -114,7 +112,7 @@ class ThemeModePersistenceTest {
                 1,
             )
 
-        fun current():
+        override fun current():
             ThemeMode =
             currentState
 
@@ -129,7 +127,7 @@ class ThemeModePersistenceTest {
             saved.countDown()
         }
 
-        fun forget() {
+        override fun forget() {
             currentState =
                 ThemeMode.NotSet
         }
