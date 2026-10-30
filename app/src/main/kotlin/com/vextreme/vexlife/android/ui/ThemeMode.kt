@@ -27,8 +27,8 @@ internal enum class ThemeMode :
  * than making today's two-state Switch the semantic contract. A target may realize Light/Dark with
  * a toggle, segmented control, menu, or another presentation without changing this relationship.
  *
- * Control kind alone is sufficient relationship identity: ThemeMode has no repeated resource whose
- * identity would earn a ResourceId. The selected mode is Control payload, not a ResourceId.
+ * The selected mode is Control payload. Direct Family does not currently expose feature-authored
+ * execution identity; ThemeMode persistence is ordered privately per live Family.
  */
 internal class ThemeModeFamily(
     initialState: ThemeMode,
