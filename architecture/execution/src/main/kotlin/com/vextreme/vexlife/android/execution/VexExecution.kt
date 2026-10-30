@@ -509,7 +509,7 @@ abstract class VexExecution protected constructor(
             KFunction0<Source>,
         recovery:
             ObservationRecovery =
-            ObservationRecovery(),
+            ObservationRecovery.None,
         onEach:
             suspend (Value) -> Unit,
     ):
@@ -536,7 +536,7 @@ abstract class VexExecution protected constructor(
             KProperty0<Source>,
         recovery:
             ObservationRecovery =
-            ObservationRecovery(),
+            ObservationRecovery.None,
         onEach:
             suspend (Value) -> Unit,
     ):
@@ -568,7 +568,7 @@ abstract class VexExecution protected constructor(
             Argument,
         recovery:
             ObservationRecovery =
-            ObservationRecovery(),
+            ObservationRecovery.None,
         onEach:
             suspend (Value) -> Unit,
     ):
