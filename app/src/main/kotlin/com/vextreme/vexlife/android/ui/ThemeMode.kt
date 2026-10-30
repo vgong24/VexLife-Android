@@ -46,14 +46,14 @@ internal class ThemeModeFamily(
         logger = logger,
     ) {
     /**
-     * Android ThemeMode durable StateStore.
+     * Android ThemeMode durable Store.
      *
-     * Durable selection truth remains distinct from CURRENT semantic ThemeMode. The Family observes
-     * this dependency through the shared StateRelay boundary; UI/session code never observes Store
-     * directly.
+     * A fresh process reads the durable selection before constructing this Family. During the live
+     * Family lifetime, explicit Select Controls may author Save consequences; Store does not become
+     * another live State owner or another semantic input stream.
      */
     interface Store :
-        VexFamily.StateStore<ThemeMode>
+        VexFamily.Store<ThemeMode>
 
 
 
