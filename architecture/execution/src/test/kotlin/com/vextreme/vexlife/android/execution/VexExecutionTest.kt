@@ -164,19 +164,19 @@ class VexExecutionTest {
             root,
         ) {
         private data object EarliestWork :
-            CoordinationKey
+            VexExecution.CoordinationKey
 
         private data object LatestWork :
-            CoordinationKey
+            VexExecution.CoordinationKey
 
         private data object QueuedWork :
-            CoordinationKey
+            VexExecution.CoordinationKey
 
         fun runIndependent(
             value:
                 String,
         ):
-            Handle =
+            VexExecution.Handle =
             launch(
                 repository::independentWork,
                 value,
@@ -186,7 +186,7 @@ class VexExecutionTest {
             value:
                 String,
         ):
-            Handle =
+            VexExecution.Handle =
             launchOnce(
                 repository::independentWork,
                 value,
@@ -196,7 +196,7 @@ class VexExecutionTest {
             value:
                 String,
         ):
-            Handle =
+            VexExecution.Handle =
             launchEarliest(
                 key =
                     EarliestWork,
@@ -210,7 +210,7 @@ class VexExecutionTest {
             value:
                 String,
         ):
-            Handle =
+            VexExecution.Handle =
             launchLatest(
                 key =
                     LatestWork,
@@ -224,7 +224,7 @@ class VexExecutionTest {
             value:
                 String,
         ):
-            Handle =
+            VexExecution.Handle =
             launchQueued(
                 key =
                     QueuedWork,
@@ -238,7 +238,7 @@ class VexExecutionTest {
             values:
                 MutableList<Int>,
         ):
-            Handle =
+            VexExecution.Handle =
             observe(
                 repository::states,
             ) { value ->
@@ -250,12 +250,12 @@ class VexExecutionTest {
             values:
                 MutableList<Int>,
         ):
-            Handle =
+            VexExecution.Handle =
             observe(
                 source =
                     repository::restartableStates,
                 recovery =
-                    ObservationRecovery(
+                    VexExecution.ObservationRecovery(
                         maxRestarts =
                             2,
                         restartDelayMillis =
@@ -270,7 +270,7 @@ class VexExecutionTest {
             callbackCount:
                 AtomicInteger,
         ):
-            Handle =
+            VexExecution.Handle =
             observe(
                 repository::downstreamFailureStates,
             ) {
