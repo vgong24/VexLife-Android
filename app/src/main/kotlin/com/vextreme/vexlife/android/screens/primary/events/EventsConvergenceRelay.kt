@@ -74,44 +74,44 @@ data class EventsConvergenceInputState(
     val transientBlocked: Boolean? = null,
 ) : VexInputState<EventsConvergenceInputState> {
     override fun latest(
-        incoming:
+        incomingInputState:
             EventsConvergenceInputState,
     ):
         EventsConvergenceInputState =
         EventsConvergenceInputState(
             currentScreenId =
-                incoming.currentScreenId
+                incomingInputState.currentScreenId
                     ?: currentScreenId,
             feed =
                 (
-                    incoming.feed
+                    incomingInputState.feed
                         ?: feed
                 )?.deepCopy(),
             preferences =
                 (
-                    incoming.preferences
+                    incomingInputState.preferences
                         ?: preferences
                 )?.deepCopy(),
             lab =
                 (
-                    incoming.lab
+                    incomingInputState.lab
                         ?: lab
                 )?.deepCopy(),
             profile =
                 (
-                    incoming.profile
+                    incomingInputState.profile
                         ?: profile
                 )?.deepCopy(),
             visibleEventRefsBySurface =
                 when {
-                    incoming.visibleEventRefsBySurface == null ->
+                    incomingInputState.visibleEventRefsBySurface == null ->
                         visibleEventRefsBySurface
                             ?.mapValues { (_, refs) ->
                                 refs.toSet()
                             }
 
                     visibleEventRefsBySurface == null ->
-                        incoming.visibleEventRefsBySurface
+                        incomingInputState.visibleEventRefsBySurface
                             .mapValues { (_, refs) ->
                                 refs.toSet()
                             }
@@ -121,13 +121,13 @@ data class EventsConvergenceInputState(
                             .mapValues { (_, refs) ->
                                 refs.toSet()
                             } +
-                            incoming.visibleEventRefsBySurface
+                            incomingInputState.visibleEventRefsBySurface
                                 .mapValues { (_, refs) ->
                                     refs.toSet()
                                 }
                 },
             transientBlocked =
-                incoming.transientBlocked
+                incomingInputState.transientBlocked
                     ?: transientBlocked,
         )
 
