@@ -7,7 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Rightful lifetime owner for one Vex execution tree.
  *
- * The root owns shutdown and exposes retained execution state by exact per-launch InstanceId.
+ * The root owns terminal shutdown and exposes only current active execution custody. Terminal
+ * history belongs to each Handle or a separate diagnostic/event surface; this StateFlow is not an
+ * unbounded execution ledger.
  */
 class VexExecutionRoot(
     dispatcher:
@@ -30,7 +32,7 @@ class VexExecutionRoot(
                 collectRestartDelayMillis,
         )
 
-    val executions:
+    val activeExecutions:
         StateFlow<
             Map<
                 VexExecution.InstanceId,
@@ -38,7 +40,7 @@ class VexExecutionRoot(
             >
         >
         get() =
-            coroutineLauncher.executions
+            coroutineLauncher.activeExecutions
 
     fun forceStopAll(
         reason:
