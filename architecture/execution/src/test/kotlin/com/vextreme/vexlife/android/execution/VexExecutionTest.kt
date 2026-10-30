@@ -525,34 +525,39 @@ class VexExecutionTest {
                 )
             }
 
-        val beginMethods =
+        val companionMethods =
             VexExecution.Companion::class.java
                 .declaredMethods
                 .filterNot {
                     it.isSynthetic
                 }
-                .filter {
-                    it.name.startsWith(
-                        "begin",
-                    )
+
+        val begin =
+            companionMethods
+                .single { method ->
+                    method.name ==
+                        "begin"
                 }
 
-        assertEquals(
-            listOf(
-                "begin",
-            ),
-            beginMethods
-                .map {
-                    it.name
-                }
-                .distinct()
-                .sorted(),
-        )
         assertTrue(
-            beginMethods.all { method ->
-                method.parameterTypes.contains(
-                    VexExecution.RelationshipId::class.java,
-                )
+            begin.parameterTypes.contains(
+                VexExecution.RelationshipId::class.java,
+            ),
+        )
+
+        val forbiddenLegacyBeginNames =
+            setOf(
+                "beginEarliest",
+                "beginLatest",
+                "beginQueued",
+                "beginReplaceable",
+                "beginSequenced",
+            )
+
+        assertFalse(
+            companionMethods.any { method ->
+                method.name in
+                    forbiddenLegacyBeginNames
             },
         )
     }
