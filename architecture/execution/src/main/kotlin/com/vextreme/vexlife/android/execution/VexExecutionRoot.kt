@@ -15,21 +15,11 @@ class VexExecutionRoot(
     dispatcher:
         CoroutineDispatcher =
         Dispatchers.Default,
-    maxCollectRestarts:
-        Int =
-        3,
-    collectRestartDelayMillis:
-        Long =
-        250L,
 ) {
     internal val coroutineLauncher =
         VexCoroutineLauncher(
             dispatcher =
                 dispatcher,
-            maxCollectRestarts =
-                maxCollectRestarts,
-            collectRestartDelayMillis =
-                collectRestartDelayMillis,
         )
 
     val activeExecutions:
