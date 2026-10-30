@@ -7,7 +7,6 @@ import androidx.compose.runtime.remember
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
-import com.vextreme.vexlife.android.execution.VexCoroutineHandle
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.data.vexstream.VexStreamTrackAvailability
@@ -377,8 +376,11 @@ internal class Media3VexStreamTrackPlaybackConnection(
     }
 }
 
+@OptIn(VexExecution.RelationshipFoundationApi::class)
 internal class VexStreamTrackPlaybackExecution(
     root: VexExecutionRoot,
+    private val owner:
+        Media3VexStreamTrackPlaybackConnection,
     private val providerDispatcher:
         CoroutineDispatcher,
     private val resolver:
@@ -391,9 +393,61 @@ internal class VexStreamTrackPlaybackExecution(
             MediaItem,
         ) -> Boolean,
 ) :
-    VexExecution(
+    VexExecution<
+        Media3VexStreamTrackPlaybackConnection
+    >(
         root,
     ) {
+    private enum class RelationshipKind {
+        PlayRequests,
+        QueueRequests,
+    }
+
+    private class Relationship(
+        private val owner:
+            Media3VexStreamTrackPlaybackConnection,
+        private val kind:
+            RelationshipKind,
+    ) :
+        VexExecution.RelationshipId<
+            Media3VexStreamTrackPlaybackConnection
+        > {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                Relationship &&
+                owner ===
+                other.owner &&
+                kind ==
+                other.kind
+
+        override fun hashCode():
+            Int =
+            31 *
+                System.identityHashCode(
+                    owner,
+                ) +
+                kind.hashCode()
+    }
+
+    private val playRequestsRelationship =
+        Relationship(
+            owner =
+                owner,
+            kind =
+                RelationshipKind.PlayRequests,
+        )
+    private val queueRequestsRelationship =
+        Relationship(
+            owner =
+                owner,
+            kind =
+                RelationshipKind.QueueRequests,
+        )
+
     private data class PlayIntent(
         val sequence: Long,
         val request:
@@ -419,6 +473,8 @@ internal class VexStreamTrackPlaybackExecution(
 
     init {
         launchForCollect(
+            relationshipId =
+                playRequestsRelationship,
             source =
                 ::playRequestsForExecution,
             restartOnSourceFailure =
@@ -429,6 +485,8 @@ internal class VexStreamTrackPlaybackExecution(
             )
         }
         launchForCollect(
+            relationshipId =
+                queueRequestsRelationship,
             source =
                 ::queueRequestsForExecution,
             restartOnSourceFailure =
