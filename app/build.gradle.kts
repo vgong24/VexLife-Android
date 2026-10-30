@@ -66,6 +66,7 @@ kotlin {
 
 dependencies {
     implementation(project(":architecture:behavior"))
+    implementation(project(":architecture:human-vetting"))
     implementation(project(":architecture:elements"))
     implementation(project(":architecture:execution"))
     implementation(project(":architecture:logging"))
