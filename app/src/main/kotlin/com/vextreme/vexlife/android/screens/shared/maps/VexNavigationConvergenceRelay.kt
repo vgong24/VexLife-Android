@@ -96,19 +96,19 @@ data class VexNavigationConvergenceInputState(
     val fix: VexNavigationFix? = null,
 ) : VexInputState<VexNavigationConvergenceInputState> {
     override fun latest(
-        incoming:
+        incomingInputState:
             VexNavigationConvergenceInputState,
     ):
         VexNavigationConvergenceInputState =
         VexNavigationConvergenceInputState(
             route =
                 (
-                    incoming.route
+                    incomingInputState.route
                         ?: route
                 )?.deepCopy(),
             fix =
                 (
-                    incoming.fix
+                    incomingInputState.fix
                         ?: fix
                 )?.deepCopy(),
         )
