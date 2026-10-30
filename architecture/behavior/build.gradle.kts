@@ -22,6 +22,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":architecture:human-vetting"))
     api(project(":architecture:execution"))
     api(project(":architecture:logging"))
     implementation(libs.coroutinesCore)
