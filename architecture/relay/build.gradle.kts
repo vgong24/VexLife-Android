@@ -22,6 +22,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":architecture:human-vetting"))
     implementation(libs.coroutinesAndroid)
     testImplementation(libs.junit)
 }
