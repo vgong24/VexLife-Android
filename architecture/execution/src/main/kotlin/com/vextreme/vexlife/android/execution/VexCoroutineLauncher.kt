@@ -509,13 +509,13 @@ internal class VexCoroutineLauncher(
             }
         }
 
-        activeRelationshipMembersLocked(
-            existing,
-        )
+        val active =
+            activeRelationshipMembersLocked(
+                existing,
+            )
 
         if (
-            existing.executions
-                .isEmpty()
+            active.isEmpty()
         ) {
             existing.approach =
                 approach
@@ -544,12 +544,10 @@ internal class VexCoroutineLauncher(
         List<
             ManagedExecution
         > {
-        maintained.executions.removeAll { managed ->
-            managed.job.isCompleted
-        }
-
         return maintained.executions
-            .toList()
+            .filter {
+                !it.job.isCompleted
+            }
     }
 
     private fun createManagedLocked(
@@ -656,19 +654,6 @@ internal class VexCoroutineLauncher(
             synchronized(
                 registryLock,
             ) {
-                maintained.executions.remove(
-                    managed,
-                )
-
-                if (
-                    maintained.executions
-                        .isEmpty()
-                ) {
-                    relationships.remove(
-                        relationship,
-                    )
-                }
-
                 updateRegistryLocked()
             }
         }
@@ -882,23 +867,16 @@ internal class VexCoroutineLauncher(
             ->
             val states =
                 maintained.executions
-                    .filter {
-                        !it.job.isCompleted
-                    }
                     .map {
                         it.mutableState.value
                     }
 
-            if (
-                states.isNotEmpty()
-            ) {
-                projection[
-                    relationship
-                ] =
-                    java.util.Collections.unmodifiableList(
-                        states,
-                    )
-            }
+            projection[
+                relationship
+            ] =
+                java.util.Collections.unmodifiableList(
+                    states,
+                )
         }
 
         mutableExecutions.value =
