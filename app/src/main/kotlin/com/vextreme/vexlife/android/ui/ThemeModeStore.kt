@@ -84,7 +84,9 @@ internal class SharedPreferencesThemeModeStore(
                         .edit()
                         .putString(
                             KEY_THEME_MODE,
-                            state.name,
+                            storedValueFor(
+                                state,
+                            ),
                         ),
                 )
         }
@@ -107,14 +109,32 @@ internal class SharedPreferencesThemeModeStore(
                 null,
             )
         ) {
-            ThemeMode.Light.name ->
+            STORED_LIGHT ->
                 ThemeMode.Light
 
-            ThemeMode.Dark.name ->
+            STORED_DARK ->
                 ThemeMode.Dark
 
             else ->
                 ThemeMode.NotSet
+        }
+
+    private fun storedValueFor(
+        state:
+            ThemeMode,
+    ):
+        String =
+        when (state) {
+            ThemeMode.Light ->
+                STORED_LIGHT
+
+            ThemeMode.Dark ->
+                STORED_DARK
+
+            ThemeMode.NotSet ->
+                error(
+                    "ThemeMode.NotSet is never persisted as an explicit durable selection",
+                )
         }
 
     private fun write(
@@ -135,6 +155,10 @@ internal class SharedPreferencesThemeModeStore(
             "vexlife-theme-mode"
         const val KEY_THEME_MODE =
             "explicit-selection"
+        const val STORED_LIGHT =
+            "LIGHT"
+        const val STORED_DARK =
+            "DARK"
     }
 }
 

@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.ui
 
+import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vextreme.vexlife.android.behavior.VexFamily
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
@@ -44,6 +45,18 @@ class ThemeModeStoreInstrumentedTest {
             assertEquals(
                 ThemeMode.Light,
                 firstStore.get(),
+            )
+            assertEquals(
+                "LIGHT",
+                context
+                    .getSharedPreferences(
+                        "vexlife-theme-mode",
+                        Context.MODE_PRIVATE,
+                    )
+                    .getString(
+                        "explicit-selection",
+                        null,
+                    ),
             )
         }
 
