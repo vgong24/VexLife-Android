@@ -119,7 +119,7 @@ abstract class VexFamily<
      * optionally narrows repeated instances of that same Control. The actual ResourceId object is
      * retained so its concrete type/equality cannot collapse into a shared String convention.
      */
-    internal class RelationshipId<
+    private class RelationshipId<
         Family,
     > internal constructor(
         private val family:
@@ -128,11 +128,11 @@ abstract class VexFamily<
                 *,
                 *
             >,
-        internal val controlType:
+        private val controlType:
             KClass<*>,
-        internal val controlName:
+        private val controlName:
             String,
-        internal val resourceId:
+        private val resourceId:
             ResourceId<*>?,
     ) :
         VexExecution.RelationshipId<Family> where
@@ -1094,7 +1094,7 @@ abstract class VexFamily<
         )
     }
 
-    internal fun relationshipId(
+    private fun relationshipId(
         control:
             FamilyControl,
     ):
