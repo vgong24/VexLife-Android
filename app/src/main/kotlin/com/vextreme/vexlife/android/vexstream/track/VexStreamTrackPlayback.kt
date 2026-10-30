@@ -163,6 +163,8 @@ internal class Media3VexStreamTrackPlaybackConnection(
         lazy {
             VexStreamTrackPlaybackExecution(
             root = executionRoot,
+            owner =
+                this@Media3VexStreamTrackPlaybackConnection,
             providerDispatcher =
                 Handler(
                     controller.applicationLooper,
