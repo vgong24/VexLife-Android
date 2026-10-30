@@ -103,15 +103,29 @@ data class EventsConvergenceInputState(
                         ?: profile
                 )?.deepCopy(),
             visibleEventRefsBySurface =
-                mergeVisibleSurfacePatches(
-                    previous =
-                        visibleEventRefsBySurface,
-                    patch =
-                        incoming.visibleEventRefsBySurface,
-                )
-                    ?.mapValues { (_, refs) ->
-                        refs.toSet()
-                    },
+                when {
+                    incoming.visibleEventRefsBySurface == null ->
+                        visibleEventRefsBySurface
+                            ?.mapValues { (_, refs) ->
+                                refs.toSet()
+                            }
+
+                    visibleEventRefsBySurface == null ->
+                        incoming.visibleEventRefsBySurface
+                            .mapValues { (_, refs) ->
+                                refs.toSet()
+                            }
+
+                    else ->
+                        visibleEventRefsBySurface
+                            .mapValues { (_, refs) ->
+                                refs.toSet()
+                            } +
+                            incoming.visibleEventRefsBySurface
+                                .mapValues { (_, refs) ->
+                                    refs.toSet()
+                                }
+                },
             transientBlocked =
                 incoming.transientBlocked
                     ?: transientBlocked,
@@ -511,8 +525,6 @@ class EventsConvergenceRelay internal constructor(
             latestStateInput.preferences
         val currentLab =
             latestStateInput.lab
-        val currentProfile =
-            latestStateInput.profile
         val currentVisibleEventRefsBySurface =
             latestStateInput.visibleEventRefsBySurface
         val currentTransientBlocked =
@@ -831,31 +843,6 @@ class EventsConvergenceRelay internal constructor(
     private fun requireAttentionLab(): EventsAttentionLabRepository =
         checkNotNull(attentionLab) {
             "EventsConvergenceRelay lab methods require a lab repository"
-        }
-
-    private fun mergeVisibleSurfacePatches(
-        previous: Map<String, Set<String>>?,
-        patch: Map<String, Set<String>>?,
-    ): Map<String, Set<String>>? =
-        when {
-            patch == null ->
-                previous?.mapValues { (_, refs) ->
-                    refs.toSet()
-                }
-
-            previous == null ->
-                patch.mapValues { (_, refs) ->
-                    refs.toSet()
-                }
-
-            else ->
-                previous
-                    .mapValues { (_, refs) ->
-                        refs.toSet()
-                    } +
-                    patch.mapValues { (_, refs) ->
-                        refs.toSet()
-                    }
         }
 
     private fun profileNameChangeFromPatch(
