@@ -344,10 +344,39 @@ class VexFamilyHighConfidenceTest {
             )
 
         assertEquals(
-            VexFamily.DisplayState.StateOnly(
+            VexFamily.DisplayState.StateOnly<
+                ValueFamily,
+                ValueFamily.State
+            >(
                 ValueFamily.State.Empty,
             ),
             family.displayState,
+        )
+    }
+
+    @Test
+    fun projectionBindsExactFamilyStateToDisplayDerivedFromThatSameSnapshot() {
+        val family =
+            ValueFamily(
+                initialState =
+                    ValueFamily.State.Empty,
+            )
+
+        val projection =
+            family.currentProjection
+
+        assertEquals(
+            ValueFamily.State.Empty,
+            projection.state,
+        )
+        assertEquals(
+            VexFamily.DisplayState.StateOnly<
+                ValueFamily,
+                ValueFamily.State
+            >(
+                ValueFamily.State.Empty,
+            ),
+            projection.displayState,
         )
     }
 
