@@ -37,9 +37,11 @@ abstract class VexFamily<
 >(
     initialState: FamilyState,
     private val executionRoot:
-        VexExecutionRoot,
+        VexExecutionRoot? =
+        null,
     private val logger:
-        VexLogger.Sink,
+        VexLogger.Sink =
+        VexLogger.Sink.None,
     private val store:
         Store<FamilyState>? =
         null,
@@ -51,6 +53,17 @@ abstract class VexFamily<
     >,
     FamilyState : VexFamily.State<Family>,
     FamilyControl : VexFamily.Control<Family> {
+    init {
+        require(
+            store ==
+                null ||
+                executionRoot !=
+                null,
+        ) {
+            "A VexFamily with a Store requires an executionRoot"
+        }
+    }
+
     /**
      * Compile-time kinship marker for semantic State belonging to one exact Family coordinate.
      */
@@ -367,6 +380,13 @@ abstract class VexFamily<
                     " but this live Family has no Store"
             }
 
+        val saveExecutionRoot =
+            requireNotNull(
+                executionRoot,
+            ) {
+                "A VexFamily Save requires an executionRoot"
+            }
+
         val operation =
             stateStore::save
 
@@ -377,7 +397,7 @@ abstract class VexFamily<
          */
         VexExecution.beginQueued(
             executionRoot =
-                executionRoot,
+                saveExecutionRoot,
             owner =
                 this::class,
             relationshipId =
