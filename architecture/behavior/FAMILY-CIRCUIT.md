@@ -114,57 +114,60 @@ PresentationState should be created merely to fill a perceived gap.
 
 ## Execution relationship identity
 
-Family owns the relationship composition once:
+The human-vetted Family identity law is the relationship equation, not a particular wrapper type:
 
 ~~~text
-activate(control)
--> exact live Family
--> exact Control belonging to that Family
--> Control name/type included automatically
--> optional typed Control.resourceId
--> VexFamily.RelationshipId<Family>
--> VexExecution.RelationshipId
--> maintained execution coordination
+live Family
++ exact Control identity
++ optional stable Control.resourceId
+= Family relationship identity
 ~~~
 
-Concrete authoring stays intentionally small:
+That preserves the earlier Control + selected-value intention without letting an arbitrary value become
+an ID by itself.
+
+~~~text
+different Control + same resource
+    -> different relationship
+
+same Control + different resource
+    -> different relationship
+
+same Control + same resource
+    -> same relationship within one live Family
+
+same Control + same resource + different live Family
+    -> different relationship
+~~~
+
+A Control exposes `resourceId` only when one Control kind needs several distinct semantic resource
+lanes. Ordinary Control payload is not automatically identity. For example:
 
 ~~~kotlin
-beginEarliest {
-    ...
-}
-
-beginLatest {
-    ...
-}
-
-beginQueued {
-    ...
-}
+Control.Play(
+    trackId = trackA,
+    position = 10,
+)
 ~~~
 
-Begin chooses **Approach only**. It accepts no trigger, arbitrary argument tuple, or hand-authored
-relationship string.
+may expose `trackA` as its stable `resourceId`, while `position` remains request payload.
 
-~~~text
-Control name
-    always included by Family foundation
+Concrete Begin authoring remains intentionally small:
 
-Control.Resource<Family, ExactId>
-    exact typed narrowing when this Control needs a ResourceId
-
-RelationshipId
-    live Family + Control kind/name + optional exact ResourceId object
-
-Approach
-    Independent / Earliest / Latest / Queued
+~~~kotlin
+beginEarliest { ... }
+beginLatest { ... }
+beginQueued { ... }
 ~~~
 
-The full Control payload is not automatically identity. If `Control.Play(trackId, position)` needs
-coordination per track, `Play` declares `Control.Resource<Family, TrackId>`; the actual TrackId object
-is preserved in the relationship while `position` remains request payload. Enum Control entries are
-also distinct default Control identities rather than collapsing to their shared enum class.
-A future author cannot pass unrelated execution metadata into Begin because no such parameter exists.
+Begin chooses **Approach only**. It accepts no trigger, arbitrary ordered identity tuple, or
+hand-authored relationship string. Family forms the identity from the triggering Control itself.
+
+The previous nested `Control.Resource<Family, ExactId>` wrapper was a later implementation refinement,
+not part of the human-vetted law, and is not required by the current source.
+
+The resulting Family identity is handed to Execution for custody/overlap mechanics. That handoff does
+not human-vet VexExecution's Handle / InstanceId / Status / State / stop / join / observation machinery.
 
 ## Logger boundary
 
