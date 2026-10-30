@@ -82,6 +82,46 @@ abstract class VexExecution protected constructor(
      */
     interface CoordinationKey
 
+    /**
+     * Recovery policy for one long-lived observation source.
+     *
+     * Only source creation/upstream collection failure is recoverable. Downstream consumer failure
+     * remains an execution failure and is never rewritten as a source retry.
+     */
+    data class ObservationRecovery(
+        val maxRestarts:
+            Int =
+            3,
+        val restartDelayMillis:
+            Long =
+            250L,
+    ) {
+        init {
+            require(
+                maxRestarts >=
+                    0,
+            ) {
+                "ObservationRecovery.maxRestarts must be non-negative"
+            }
+            require(
+                restartDelayMillis >=
+                    0L,
+            ) {
+                "ObservationRecovery.restartDelayMillis must be non-negative"
+            }
+        }
+
+        companion object {
+            val None =
+                ObservationRecovery(
+                    maxRestarts =
+                        0,
+                    restartDelayMillis =
+                        0L,
+                )
+        }
+    }
+
     enum class Status {
         STARTING,
         RUNNING,
@@ -459,9 +499,9 @@ abstract class VexExecution protected constructor(
     protected fun <Value, Source : Flow<Value>> observe(
         source:
             KFunction0<Source>,
-        restartOnSourceFailure:
-            Boolean =
-            true,
+        recovery:
+            ObservationRecovery =
+            ObservationRecovery(),
         onEach:
             suspend (Value) -> Unit,
     ):
@@ -475,8 +515,8 @@ abstract class VexExecution protected constructor(
                 sourceRef(
                     source,
                 ),
-            restartOnSourceFailure =
-                restartOnSourceFailure,
+            recovery =
+                recovery,
             source =
                 source,
             onEach =
@@ -486,9 +526,9 @@ abstract class VexExecution protected constructor(
     protected fun <Value, Source : Flow<Value>> observe(
         source:
             KProperty0<Source>,
-        restartOnSourceFailure:
-            Boolean =
-            true,
+        recovery:
+            ObservationRecovery =
+            ObservationRecovery(),
         onEach:
             suspend (Value) -> Unit,
     ):
@@ -502,8 +542,8 @@ abstract class VexExecution protected constructor(
                 sourceRef(
                     source,
                 ),
-            restartOnSourceFailure =
-                restartOnSourceFailure,
+            recovery =
+                recovery,
             source =
                 source::get,
             onEach =
@@ -518,9 +558,9 @@ abstract class VexExecution protected constructor(
             >,
         argument:
             Argument,
-        restartOnSourceFailure:
-            Boolean =
-            true,
+        recovery:
+            ObservationRecovery =
+            ObservationRecovery(),
         onEach:
             suspend (Value) -> Unit,
     ):
@@ -534,8 +574,8 @@ abstract class VexExecution protected constructor(
                 sourceRef(
                     source,
                 ),
-            restartOnSourceFailure =
-                restartOnSourceFailure,
+            recovery =
+                recovery,
             source = {
                 source(
                     argument,
