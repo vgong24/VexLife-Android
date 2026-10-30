@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.behavior
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
+import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -1326,13 +1327,15 @@ class VexFamilyHighConfidenceTest {
         try {
             val futures =
                 (0 until count).map {
-                    executor.submit {
-                        ready.countDown()
-                        go.await()
-                        family.activate(
-                            CounterFamily.Control.Increment,
-                        )
-                    }
+                    executor.submit(
+                        Callable<Boolean> {
+                            ready.countDown()
+                            go.await()
+                            family.activate(
+                                CounterFamily.Control.Increment,
+                            )
+                        },
+                    )
                 }
 
             assertTrue(
