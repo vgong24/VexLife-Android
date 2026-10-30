@@ -196,7 +196,7 @@ class VexNavigationConvergenceRelay(
     override fun process(
         latestStateInput:
             VexNavigationConvergenceInputState,
-        retainedState:
+        currentState:
             VexCompoundState<
                 VexNavigationConvergenceInputState,
                 VexNavigationConvergenceOutputState
@@ -204,7 +204,7 @@ class VexNavigationConvergenceRelay(
     ):
         VexNavigationConvergenceOutputState {
         val previousInput =
-            retainedState.inputState
+            currentState.inputState
         val route =
             latestStateInput.route
         val fix =
@@ -235,7 +235,7 @@ class VexNavigationConvergenceRelay(
 
         val issuedCueKeys =
             if (sameRouteIdentity) {
-                retainedState.outputState
+                currentState.outputState
                     .issuedCueKeys
                     .map { key ->
                         key.copy()
@@ -247,7 +247,7 @@ class VexNavigationConvergenceRelay(
 
         val latestIssuedCue =
             if (sameRouteIdentity) {
-                retainedState.outputState
+                currentState.outputState
                     .latestIssuedCue
                     ?.deepCopy()
             } else {
@@ -271,10 +271,10 @@ class VexNavigationConvergenceRelay(
          */
         if (
             sameRouteIdentity &&
-            retainedState.outputState.availability ==
+            currentState.outputState.availability ==
             VexNavigationConvergenceAvailability.ARRIVED
         ) {
-            return retainedState.outputState.deepCopy()
+            return currentState.outputState.deepCopy()
         }
 
         if (
