@@ -260,6 +260,159 @@ class VexStreamMusicStateTest {
     }
 
     @Test
+    fun artworkCacheMutationInvalidatesOnlyMatchingDurableMediaProjection() {
+        val fetchedIdentity =
+            track(
+                ref = "hub.artwork.before-refresh",
+                digest = DIGEST_A,
+            )
+        val currentIdentity =
+            track(
+                ref = "hub.artwork.after-refresh",
+                digest = DIGEST_A,
+            )
+        val otherTrack =
+            track(
+                ref = "hub.artwork.other",
+                digest = DIGEST_B,
+            )
+        val localCopy =
+            VexStreamLocalCopyState.Downloaded(
+                mediaSha256 =
+                    currentIdentity.mediaSha256,
+                byteLength =
+                    currentIdentity.mediaByteLength,
+                localMediaRef =
+                    "content://media/external/audio/media/77",
+            )
+        val prior =
+            VexStreamMusicState(
+                tracks =
+                    listOf(
+                        VexStreamTrackState(
+                            track = currentIdentity,
+                            hubAvailable = true,
+                            localCopy = localCopy,
+                        ),
+                        VexStreamTrackState(
+                            track = otherTrack,
+                            hubAvailable = true,
+                        ),
+                    ),
+            )
+
+        val next =
+            prior.withArtworkCacheMutation(
+                fetchedIdentity,
+            )
+        val updated =
+            requireNotNull(
+                next.track(
+                    currentIdentity.trackRef,
+                ),
+            )
+        val untouched =
+            requireNotNull(
+                next.track(
+                    otherTrack.trackRef,
+                ),
+            )
+
+        assertEquals(
+            1L,
+            updated.artworkPresentationRevision,
+        )
+        assertEquals(
+            localCopy,
+            updated.localCopy,
+        )
+        assertEquals(
+            VexStreamTrackAvailability.HUB_AND_LOCAL,
+            updated.availability,
+        )
+        assertEquals(
+            0L,
+            untouched.artworkPresentationRevision,
+        )
+    }
+
+    @Test
+    fun artworkCacheMutationInvalidatesEveryTrackSharingTheCachedSource() {
+        val sharedArtworkUrl =
+            "https://images.example.test/shared-cover.jpg"
+        val fetched =
+            track(
+                ref = "hub.artwork.shared.fetch",
+                digest = DIGEST_A,
+            ).copy(
+                artworkUrl = sharedArtworkUrl,
+            )
+        val sameSourceOtherMedia =
+            track(
+                ref = "hub.artwork.shared.other",
+                digest = DIGEST_B,
+            ).copy(
+                artworkUrl = sharedArtworkUrl,
+            )
+        val unrelated =
+            track(
+                ref = "hub.artwork.unrelated",
+                digest = DIGEST_C,
+            ).copy(
+                artworkUrl =
+                    "https://images.example.test/other-cover.jpg",
+            )
+        val prior =
+            VexStreamMusicState(
+                tracks =
+                    listOf(
+                        VexStreamTrackState(
+                            track = fetched,
+                            hubAvailable = true,
+                        ),
+                        VexStreamTrackState(
+                            track = sameSourceOtherMedia,
+                            hubAvailable = true,
+                        ),
+                        VexStreamTrackState(
+                            track = unrelated,
+                            hubAvailable = true,
+                        ),
+                    ),
+            )
+
+        val next =
+            prior.withArtworkCacheMutation(
+                fetched,
+            )
+
+        assertEquals(
+            1L,
+            requireNotNull(
+                next.track(
+                    fetched.trackRef,
+                ),
+            ).artworkPresentationRevision,
+        )
+        assertEquals(
+            1L,
+            requireNotNull(
+                next.track(
+                    sameSourceOtherMedia.trackRef,
+                ),
+            ).artworkPresentationRevision,
+        )
+        assertEquals(
+            0L,
+            requireNotNull(
+                next.track(
+                    unrelated.trackRef,
+                ),
+            ).artworkPresentationRevision,
+        )
+    }
+
+    @Test
     fun catalogMergePreservesRememberedPairingLifecycle() {
         val prior = VexStreamMusicState(
             connectionState = VexStreamConnectionState.Paired(
@@ -505,6 +658,8 @@ class VexStreamMusicStateTest {
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         const val DIGEST_B =
             "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        const val DIGEST_C =
+            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
     }
 }
 

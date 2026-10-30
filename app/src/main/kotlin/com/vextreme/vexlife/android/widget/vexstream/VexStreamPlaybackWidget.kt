@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -400,9 +401,17 @@ private suspend fun VexStreamPlaybackWidgetSurfaceState.toWidgetProjection(
                             uri,
                         )
                 }
-                ?.let(
-                    ::decodeWidgetArtwork,
-                )
+                ?.let { file ->
+                    decodeWidgetArtwork(
+                        file = file,
+                        targetPx =
+                            vexStreamPlaybackWidgetArtworkTargetPx(
+                                context.resources
+                                    .displayMetrics
+                                    .density,
+                            ),
+                    )
+                }
         }
 
     return VexStreamPlaybackWidgetProjection(
@@ -1021,7 +1030,11 @@ private suspend fun <
                     VexStreamPlaybackService::class.java,
                 ),
             ),
-        ).buildAsync()
+        )
+            .setApplicationLooper(
+                Looper.getMainLooper(),
+            )
+            .buildAsync()
 
     return try {
         val controller =
@@ -1069,10 +1082,73 @@ private suspend fun <
             stage =
                 "widget.controller.release",
         )
-        MediaController.releaseFuture(
-            controllerFuture,
-        )
+        Handler(
+            Looper.getMainLooper(),
+        ).post {
+            MediaController.releaseFuture(
+                controllerFuture,
+            )
+        }
     }
+}
+
+/**
+ * Re-project every widget from fresh Media3 current-playback truth.
+ *
+ * This is intentionally a read/publish boundary only. Artwork fetch/cache remains repository-owned;
+ * the widget merely re-reads Media3 after current-artwork convergence and resolves any already-local
+ * cache bytes through VexStreamArtworkStore.
+ */
+internal suspend fun refreshVexStreamPlaybackWidgetsFromCurrentPlayback(
+    context: Context,
+) {
+    val appContext =
+        context.applicationContext
+    val observation =
+        withVexStreamWidgetController(
+            appContext,
+        ) { controller ->
+            controller
+                .toVexStreamCurrentPlaybackObservation()
+        } ?: return
+
+    VexStreamPlaybackTrace.record(
+        stage =
+            "widget.current-playback.refresh",
+        mediaId =
+            observation.readState
+                .currentMediaId,
+        title =
+            observation.readState
+                .currentTitle,
+        artist =
+            observation.readState
+                .currentArtist,
+        detail =
+            "artworkUri=" +
+                observation.readState
+                    .currentArtworkUri
+                    .orEmpty(),
+    )
+
+    val surfaceState =
+        vexStreamPlaybackWidgetSurfaceState(
+            context =
+                appContext,
+            fallbackTitle =
+                appContext.getString(
+                    R.string.vexstream_music_title,
+                ),
+            observation =
+                observation,
+        )
+
+    updateVexStreamPlaybackWidgets(
+        context =
+            appContext,
+        surfaceState =
+            surfaceState,
+    )
 }
 
 internal suspend fun retryVexStreamPlaybackWidgetPublication(
@@ -1157,9 +1233,37 @@ internal suspend fun updateVexStreamPlaybackWidgets(
     )
 }
 
+internal fun vexStreamPlaybackWidgetArtworkTargetPx(
+    density: Float,
+): Int {
+    require(
+        density >
+            0f,
+    ) {
+        "widget display density must be positive"
+    }
+
+    return (
+        VEXSTREAM_WIDGET_ARTWORK_SIZE_DP *
+            density
+    ).toInt()
+        .coerceIn(
+            VEXSTREAM_WIDGET_ARTWORK_SIZE_DP,
+            WIDGET_ARTWORK_MAX_DECODE_PX,
+        )
+}
+
 private fun decodeWidgetArtwork(
     file: File,
+    targetPx: Int,
 ): Bitmap? {
+    require(
+        targetPx >
+            0,
+    ) {
+        "widget artwork targetPx must be positive"
+    }
+
     val bounds =
         BitmapFactory.Options().apply {
             inJustDecodeBounds =
@@ -1177,19 +1281,15 @@ private fun decodeWidgetArtwork(
         return null
     }
 
-    var sampleSize =
-        1
-    while (
-        bounds.outWidth /
-        sampleSize >
-        WIDGET_ARTWORK_MAX_PX ||
-        bounds.outHeight /
-        sampleSize >
-        WIDGET_ARTWORK_MAX_PX
-    ) {
-        sampleSize *=
-            2
-    }
+    val sampleSize =
+        vexStreamPlaybackWidgetArtworkSampleSize(
+            sourceWidth =
+                bounds.outWidth,
+            sourceHeight =
+                bounds.outHeight,
+            targetPx =
+                targetPx,
+        )
 
     return BitmapFactory.decodeFile(
         file.absolutePath,
@@ -1200,6 +1300,47 @@ private fun decodeWidgetArtwork(
                 Bitmap.Config.RGB_565
         },
     )
+}
+
+internal fun vexStreamPlaybackWidgetArtworkSampleSize(
+    sourceWidth: Int,
+    sourceHeight: Int,
+    targetPx: Int,
+): Int {
+    require(
+        sourceWidth >
+            0 &&
+            sourceHeight >
+            0 &&
+            targetPx >
+            0,
+    ) {
+        "widget artwork sample dimensions must be positive"
+    }
+
+    var sampleSize =
+        1
+    while (
+        (
+            sourceWidth /
+                (sampleSize * 2) >=
+                targetPx &&
+                sourceHeight /
+                (sampleSize * 2) >=
+                targetPx
+        ) ||
+        sourceWidth /
+            sampleSize >
+            targetPx * 2 ||
+        sourceHeight /
+            sampleSize >
+            targetPx * 2
+    ) {
+        sampleSize *=
+            2
+    }
+
+    return sampleSize
 }
 
 internal const val VEXSTREAM_WIDGET_ENTRY_ACTIVITY_FLAGS =
@@ -1219,7 +1360,7 @@ internal const val VEXSTREAM_WIDGET_PUBLICATION_RETRY_MILLIS =
 
 private const val CONTROLLER_CONNECT_TIMEOUT_MS =
     2_000L
-private const val WIDGET_ARTWORK_MAX_PX =
-    128
+private const val WIDGET_ARTWORK_MAX_DECODE_PX =
+    512
 
 // [VXG RealForever]

@@ -17,9 +17,15 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
+import com.vextreme.vexlife.android.vexstream.playback.convergeVexStreamCurrentPlaybackArtwork
+import com.vextreme.vexlife.android.vexstream.playback.shouldRefreshWidgetProjection
+import com.vextreme.vexlife.android.vexstream.playback.vexStreamCurrentPlaybackArtworkTriggers
+import com.vextreme.vexlife.android.widget.vexstream.refreshVexStreamPlaybackWidgetsFromCurrentPlayback
 import com.vextreme.vexlife.android.widget.vexstream.updateVexStreamPlaybackWidgets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * One in-process VexLife app session.
@@ -189,21 +195,64 @@ private class VexStreamArtworkExecution(
 ) : VexExecution(
         executionRoot,
     ) {
+    private val convergenceMutex =
+        Mutex()
+
     fun start() {
         launchForCollect(
             repository::state,
         ) { state ->
             if (
                 state.hubState is
-                VexStreamHubState.Ready &&
-                state.tracks.any {
-                    it.localCopy is
-                        VexStreamLocalCopyState.Downloaded
-                }
+                VexStreamHubState.Ready
             ) {
-                repository
-                    .backfillOfflineArtwork()
-                updateVexStreamPlaybackWidgets(
+                if (
+                    state.tracks.any {
+                        it.localCopy is
+                            VexStreamLocalCopyState.Downloaded
+                    }
+                ) {
+                    repository
+                        .backfillOfflineArtwork()
+                    updateVexStreamPlaybackWidgets(
+                        context,
+                    )
+                }
+
+                convergeCurrentArtworkAndRefreshWidget()
+            }
+        }
+
+        launchForCollect(
+            source =
+                ::vexStreamCurrentPlaybackArtworkTriggers,
+            argument =
+                context,
+        ) {
+            if (
+                repository.state.value.hubState is
+                VexStreamHubState.Ready
+            ) {
+                convergeCurrentArtworkAndRefreshWidget()
+            }
+        }
+    }
+
+    private suspend fun convergeCurrentArtworkAndRefreshWidget() {
+        convergenceMutex.withLock {
+            val convergence =
+                convergeVexStreamCurrentPlaybackArtwork(
+                    context =
+                        context,
+                    repository =
+                        repository,
+                )
+
+            if (
+                convergence
+                    .shouldRefreshWidgetProjection
+            ) {
+                refreshVexStreamPlaybackWidgetsFromCurrentPlayback(
                     context,
                 )
             }
