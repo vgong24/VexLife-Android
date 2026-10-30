@@ -166,6 +166,41 @@ Have we replayed known failure modes against the end-state rather than only the 
 Mastered architecture may still have explicitly open boundaries. The requirement is that the
 settled grammar remains truthful about those unknowns instead of filling them with guessed machinery.
 
+### Preserve known owner coordinates in reusable types
+
+When reusable infrastructure already knows the rightful semantic owner coordinates, carry those
+coordinates in the type rather than relying on naming/proximity/documentation.
+
+~~~text
+WEAKER
+
+DisplayState<State>
+Projection<State>
+
+STRONGER WHEN FAMILY OWNERSHIP IS KNOWN
+
+DisplayState<Family, State>
+Projection<Family, State, Display>
+~~~
+
+The goal is not generic maximalism. Preserve the **strongest already-known ownership coordinates**
+that prevent invalid composition.
+
+If a child is derived by its parent, make the derivation seam compiler-visible through an override or
+parent-owned factory rather than inviting adjacent code to reconstruct the relationship.
+
+~~~text
+State
+-> Family.displayStateFor(State)
+-> Family.projectionFor(State)
+~~~
+
+Prefer compiler-visible ownership to comments such as "these two values must belong together."
+
+This is especially important for AI-authored work: if the type system can reject a wrong owner,
+wrong State, wrong DisplayState, or wrong projection composition, do not leave that correctness as a
+prompt-memory requirement.
+
 ## Foundation before features
 
 Build outward only when the layer underneath is stable enough to explain, test, and recover.
