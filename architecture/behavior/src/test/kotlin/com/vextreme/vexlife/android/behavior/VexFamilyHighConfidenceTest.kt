@@ -24,7 +24,7 @@ class VexFamilyHighConfidenceTest {
             State,
         executionRoot:
             VexExecutionRoot,
-        override val store:
+        private val store:
             Store? =
             null,
         logger:
@@ -42,6 +42,8 @@ class VexFamilyHighConfidenceTest {
                 executionRoot,
             logger =
                 logger,
+            store =
+                store,
         ) {
         sealed interface State :
             VexFamily.State<ValueFamily> {
