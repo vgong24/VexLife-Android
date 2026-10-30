@@ -142,18 +142,20 @@ Approach.Queued
 
 Execution does not construct semantic identity from `Any`, string triggers, or ordered argument bags.
 
-For current Direct Family Store work, the semantic surface is narrower:
+Current Direct VexFamily does not depend on VexExecution.
+
+A concrete Family Connection may use VexExecution to realize one of that Family's Effects when the
+runtime relationship requires it. For example, ThemeModeConnection currently uses one private queued
+relationship to realize PersistSelection effects in acceptance order.
 
 ~~~text
-live Family
--> one private Save queue identity
--> VexExecution.RelationshipId
--> Approach.Queued mechanics
+VexFamily Effect
+-> concrete Connection
+-> optional VexExecution mechanics
 ~~~
 
-Control does not author execution identity in the current Direct Family surface. The private Save
-queue exists only to preserve whole-State Save order for one live Family. Any future Family effect
-that needs richer maintained identity must earn that relationship separately from its real semantics.
+Execution identity/Approach remain runtime-owner choices; they are not Direct-Family semantic
+vocabulary.
 
 A maintained Flow observation remains a separate contract:
 
@@ -590,13 +592,13 @@ launchForCollect
 ~~~
 
 Direct Family no longer treats its historical Control-scoped execution-identity proof as current
-architecture. PR #193 remains provenance for that earlier candidate; the current Direct Family
-candidate reduces Store persistence to one private per-live-Family Save queue.
+architecture. PR #193 remains provenance for that earlier candidate. The mastered Direct Family core
+is execution-independent; concrete Connections decide whether a particular Effect needs maintained
+execution identity at all.
 
 The execution source still keeps sibling isolation, bounded source recovery, structured
 cancellation/teardown, registry defensiveness, typed callable invocation, and post-shutdown admission
-rejection. Those execution-engine behaviors remain separate from whether a particular semantic owner
-currently needs a public maintained-identity vocabulary.
+rejection. Those execution-engine behaviors remain separate from Family semantic meaning.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
 
