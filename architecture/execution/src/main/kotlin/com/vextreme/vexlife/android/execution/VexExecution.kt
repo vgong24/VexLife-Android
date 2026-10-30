@@ -599,10 +599,6 @@ abstract class VexExecution protected constructor(
                 ownerToken,
             sourceIdentity =
                 reference,
-            sourceRef =
-                sourceRef(
-                    reference,
-                ),
             reason =
                 reason,
         )
