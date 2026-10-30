@@ -1445,10 +1445,12 @@ class VexFamilyHighConfidenceTest {
                     5_000,
                 ) {
                     root.executions.first { executions ->
-                        executions.values.any { state ->
-                            state.status ==
-                                VexExecution.Status.COMPLETED
-                        }
+                        executions.values
+                            .flatten()
+                            .any { state ->
+                                state.status ==
+                                    VexExecution.Status.COMPLETED
+                            }
                     }
                 }
             }
