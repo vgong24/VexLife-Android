@@ -51,8 +51,10 @@ Control<Family>
 -> VexExecution coordinates that RelationshipId
 ~~~
 
-There is no arbitrary Begin trigger/argument identity surface. This refinement remains a draft candidate
-until exact-head repository proof and lifecycle acceptance are complete.
+There is no arbitrary Begin trigger/argument identity surface. This refinement is accepted on main
+through [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) after exact-head
+repository-owned `vexVerifyJvm` proof and Independent Assurance. That acceptance does not claim
+device/Journey/ScreenCrawler or lived-product proof for the Direct Family foundation.
 
 Compound/process integration remains separate and open:
 
