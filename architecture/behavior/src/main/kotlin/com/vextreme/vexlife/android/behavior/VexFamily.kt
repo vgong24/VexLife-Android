@@ -5,7 +5,6 @@ package com.vextreme.vexlife.android.behavior
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +24,7 @@ import kotlin.reflect.KClass
  *     -> when (currentState)
  *     -> when (control)
  *     -> stay() or admit(State)
- *     -> optional saveLatest(State)
+ *     -> optional durable Save
  *     -> StateRelay / execution
  *
  * The concrete Family owns [act]. State and Control traversal use native Kotlin sealed-type when
@@ -215,43 +214,18 @@ abstract class VexFamily<
     interface Store<
         State : VexFamily.State<*>,
     > {
+        /**
+         * Persist one Family State.
+         *
+         * Successful return means the Save completed. Failure is reported by throwing; Family does
+         * not invent a second operation-result vocabulary when execution already owns failure.
+         */
         suspend fun save(
             state: State,
-        ):
-            WriteResult
-
-        sealed interface WriteResult {
-            data object Success :
-                WriteResult
-
-            data class Failure(
-                val cause:
-                    Throwable? =
-                    null,
-            ) :
-                WriteResult
-        }
+        )
     }
 
-    /**
-     * Earned specialization when durable Store truth is exactly Family State.
-     *
-     * This restores the ThemeMode pressure already proved by the Origin Walk without claiming every
-     * Family Store is State-shaped. Observable durable State is a StateRelay dependency; it is not
-     * another live semantic-State holder.
-     */
-    interface StateStore<
-        State : VexFamily.State<*>,
-    > :
-        Store<State> {
-        /**
-         * Current durable State followed by subsequent durable changes.
-         *
-         * Store observation is input to Family meaning; it is never another live Family State owner.
-         */
-        val observableState:
-            Flow<State>
-    }
+
 
     /**
      * One lawful outcome authored by [act] for an exact current State + incoming Control pair.
@@ -263,23 +237,10 @@ abstract class VexFamily<
     > internal constructor(
         internal val admittedState:
             State?,
-        internal val save:
-            Save<State>?,
-    ) {
-        /**
-         * The one execution consequence Direct Family has actually earned in production today.
-         *
-         * Save does not author later Family State. Save success/failure are execution/storage facts.
-         * If a future result changes Family meaning, that result must return as a typed Control and
-         * re-enter act(CURRENT State, Control).
-         */
-        class Save<
-            State : VexFamily.State<*>,
-        > internal constructor(
-            internal val state:
-                State,
-        )
-    }
+        internal val saveState:
+            State?,
+    )
+
 
     /*
      * One live State holder.
@@ -317,7 +278,8 @@ abstract class VexFamily<
      * This is relationship resolution, not execution. The same function is used by isAvailable(...)
      * and activate(...), so implementations must not mutate Family State, invoke providers/Store,
      * launch work, log accepted facts, or otherwise cause an external effect while resolving.
-     * saveLatest(...) authors a Save consequence only; it does not start that consequence here.
+     * An optional saveState carried by stay()/admit(...) describes a durable consequence only; it
+     * does not start that consequence here.
      */
     protected abstract fun act(
         currentState: FamilyState,
@@ -329,16 +291,16 @@ abstract class VexFamily<
      * Authored Act outcome: keep current semantic State.
      */
     protected fun stay(
-        save:
-            Act.Save<FamilyState>? =
+        saveState:
+            FamilyState? =
             null,
     ):
         Act<FamilyState> =
         Act(
             admittedState =
                 null,
-            save =
-                save,
+            saveState =
+                saveState,
         )
 
     /**
@@ -346,68 +308,23 @@ abstract class VexFamily<
      */
     protected fun admit(
         state: FamilyState,
-        save:
-            Act.Save<FamilyState>? =
+        saveState:
+            FamilyState? =
             null,
     ):
         Act<FamilyState> =
         Act(
             admittedState =
                 state,
-            save =
-                save,
-        )
-
-    /**
-     * Author the currently earned durable consequence: persist this Family State using Latest
-     * relationship semantics for the triggering Control.
-     *
-     * Save completion cannot author Family State from this path. Any future semantically meaningful
-     * completion must return as a typed Control and re-enter act(CURRENT State, Control).
-     */
-    protected fun saveLatest(
-        state: FamilyState,
-    ):
-        Act.Save<FamilyState> =
-        Act.Save(
-            state =
-                state,
+            saveState =
+                saveState,
         )
 
     open val store:
         Store<FamilyState>? =
         null
 
-    /**
-     * Observe durable Family-State truth as typed Family input.
-     *
-     * Store owns durable State. Execution owns only observation lifetime. The concrete Family turns
-     * each observed State into a typed Control, and activate(...) re-resolves that Control against
-     * exact CURRENT semantic State. Store observation therefore gets no second State-writing door.
-     */
-    protected fun observeStore(
-        stateStore:
-            StateStore<FamilyState>,
-        toControl:
-            (
-                storedState: FamilyState,
-            ) -> FamilyControl,
-    ) {
-        VexExecution.observe(
-            executionRoot =
-                executionRoot,
-            owner =
-                this::class,
-            source =
-                stateStore::observableState,
-        ) { storedState ->
-            activate(
-                toControl(
-                    storedState,
-                ),
-            )
-        }
-    }
+
 
     /**
      * Current display classification for this Family.
@@ -490,11 +407,11 @@ abstract class VexFamily<
                     ::setCurrentStateLocked,
                 )
 
-            act.save
-                ?.let { save ->
+            act.saveState
+                ?.let { saveState ->
                     executeSave(
-                        save =
-                            save,
+                        state =
+                            saveState,
                         control =
                             control,
                     )
@@ -533,8 +450,8 @@ abstract class VexFamily<
     }
 
     private fun executeSave(
-        save:
-            Act.Save<FamilyState>,
+        state:
+            FamilyState,
         control:
             FamilyControl,
     ) {
@@ -550,7 +467,12 @@ abstract class VexFamily<
         val operation =
             stateStore::save
 
-        VexExecution.beginLatest(
+        /*
+         * Persist accepted Save consequences in acceptance order. This is execution mechanics, not
+         * another Family semantic law: Family has already admitted immediate State before reaching
+         * this point, and Save completion has no State-writing callback.
+         */
+        VexExecution.beginQueued(
             executionRoot =
                 executionRoot,
             owner =
@@ -562,7 +484,7 @@ abstract class VexFamily<
             operation =
                 operation,
             argument =
-                save.state,
+                state,
             beforeOperation = {
                 recordAcceptedFact(
                     VexLogger.Event.Family.OperationBegan(
@@ -571,41 +493,21 @@ abstract class VexFamily<
                         operation =
                             operation,
                         state =
-                            save.state::class,
+                            state::class,
                     ),
                 )
             },
-            onResult = { result ->
-                when (result) {
-                    Store.WriteResult.Success ->
-                        recordAcceptedFact(
-                            VexLogger.Event.Family.OperationSuccess(
-                                family =
-                                    this::class,
-                                operation =
-                                    operation,
-                                state =
-                                    save.state::class,
-                            ),
-                        )
-
-                    is Store.WriteResult.Failure ->
-                        recordAcceptedFact(
-                            VexLogger.Event.Family.OperationFailure(
-                                family =
-                                    this::class,
-                                operation =
-                                    operation,
-                                state =
-                                    save.state::class,
-                                failure =
-                                    result.cause
-                                        ?.let { cause ->
-                                            cause::class
-                                        },
-                            ),
-                        )
-                }
+            onResult = {
+                recordAcceptedFact(
+                    VexLogger.Event.Family.OperationSuccess(
+                        family =
+                            this::class,
+                        operation =
+                            operation,
+                        state =
+                            state::class,
+                    ),
+                )
             },
             onFailure = { failure ->
                 recordAcceptedFact(
@@ -615,7 +517,7 @@ abstract class VexFamily<
                         operation =
                             operation,
                         state =
-                            save.state::class,
+                            state::class,
                         failure =
                             failure::class,
                     ),
