@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.behavior.VexFamily
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.humanvetting.VettedWithHuman
 import com.vextreme.vexlife.android.logging.VexLogger
 
 /**
@@ -91,6 +92,7 @@ internal class ThemeModeFamily(
         }
     }
 
+    @VettedWithHuman("ThemeModeFamily.DisplayState", "2026-10-29T22:46:00-07:00", "Victor Approved")
     sealed interface DisplayState :
         VexFamily.DisplayState<ThemeMode> {
         val presentation:
