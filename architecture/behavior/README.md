@@ -93,24 +93,86 @@ states
 
 There is one live semantic State holder.
 
-## DisplayState responsibility
+## DisplayState / Projection responsibility
 
-`DisplayState` is part of the `VexFamily` contract rather than another Vex root:
+Display interpretation stays under the exact Family coordinate:
 
 ~~~text
-VexFamily
--> DisplayState
-   -> StateOnly
+VexFamily.DisplayState<Family, State>
 ~~~
 
-`VexFamily.DisplayState.StateOnly(currentState)` is the complete default. It means current semantic
-State already carries all display meaning this Family has earned. It is not a placeholder and does
-not ask a feature to invent another ViewState / UiState / PresentationState.
+not merely:
 
-A concrete Family should override `displayState` only when real consumers would otherwise repeat the
-same derived interpretation of State. A richer feature-owned classification belongs under that
-concrete Family, for example `ThemeModeFamily.DisplayState`, and implements
-`VexFamily.DisplayState<ThemeModeFamily.State>`.
+~~~text
+DisplayState<State>
+~~~
+
+The extra Family coordinate is intentional compiler-visible ownership. A DisplayState for one Family
+cannot be assembled as though it belonged to another Family that happens to use a similar State type.
+
+The complete default remains:
+
+~~~text
+DisplayState.StateOnly<Family, State>(state)
+~~~
+
+which means semantic State already carries all display meaning this Family has earned.
+
+When richer repeated interpretation is earned, the concrete Family overrides the derivation seam:
+
+~~~kotlin
+override fun displayStateFor(
+    state: FamilyState,
+): ConcreteDisplayState
+~~~
+
+The Family also manufactures outward snapshots:
+
+~~~text
+State
+-> displayStateFor(State)
+-> Projection<Family, State, DisplayState>
+~~~
+
+Projection is immutable and contains:
+
+~~~text
+exact State snapshot
++
+DisplayState derived from that same State value
+~~~
+
+It is not another truth owner.
+
+The reusable type preserves all known coordinates:
+
+~~~text
+Projection<Family, State, Display>
+where
+    State   belongs to Family
+    Display is DisplayState<Family, State>
+~~~
+
+This prevents AI/humans from reconstructing a projection by pairing unrelated "state-looking" and
+"display-looking" objects.
+
+Concrete Families may covariantly narrow both displayStateFor(...) and projectionFor(...), making
+their exact outward type discoverable through ordinary overrides.
+
+ThemeMode demonstrates:
+
+~~~text
+ThemeModeFamily
+-> ThemeMode State
+-> ThemeModeFamily.DisplayState
+-> Projection<ThemeModeFamily, ThemeMode, ThemeModeFamily.DisplayState>
+-> VexThemePresentation
+-> inherited UI
+~~~
+
+The Family root does not add DisplayState as a fifth root generic merely to force every Family to
+name a richer display subtype. Family + State binding plus explicit derivation/projection overrides
+give the compiler the ownership coordinates without imposing that permanent generic tax.
 
 ## Family kinship
 
