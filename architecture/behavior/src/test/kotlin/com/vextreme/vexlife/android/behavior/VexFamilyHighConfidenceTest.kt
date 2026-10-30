@@ -493,11 +493,7 @@ class VexFamilyHighConfidenceTest {
                 val position:
                     Int,
             ) :
-                Control,
-                VexFamily.Control.Resource<
-                    ResourceIdentityFamily,
-                    TrackId
-                >
+                Control
 
             data class Search(
                 val query:
