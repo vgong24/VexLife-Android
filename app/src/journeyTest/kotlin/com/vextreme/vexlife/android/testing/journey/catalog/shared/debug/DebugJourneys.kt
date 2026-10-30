@@ -3,9 +3,28 @@ package com.vextreme.vexlife.android.testing.journey
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.screens.shared.debug.DebugMenuScreen
 import com.vextreme.vexlife.android.shell.AppShell
+import com.vextreme.vexlife.android.testing.featurewalk.FeatureWalks
+import com.vextreme.vexlife.android.testing.featurewalk.vexFeatureWalkJourney
 
 object DebugJourneys : VexJourneyShard {
     override val shardId = "shared.debug"
+
+    private val toggleThemeModeFeatureWalk =
+        vexFeatureWalkJourney(
+            featureWalkCase =
+                FeatureWalks
+                    .themeMode
+                    .toggleFromDebugMenu,
+        ) {
+            start(HomeScreen)
+            tap(AppShell.Elements.Add)
+            tap(AppShell.Elements.DebugMenu)
+            tap(DebugMenuScreen.DarkMode)
+            tap(AppShell.Elements.Back)
+        }
+
+    val toggleThemeMode =
+        toggleThemeModeFeatureWalk.journey
 
     val logHistoryDismiss = vexJourney(
         id = "log-history-dismiss",
@@ -51,8 +70,15 @@ object DebugJourneys : VexJourneyShard {
         tap(AppShell.Elements.Back)
     }
 
-    override val journeys = listOf(
-        logHistoryDismiss,
-        resetFreshHistory,
-    )
+    override val journeys =
+        listOf(
+            toggleThemeMode,
+            logHistoryDismiss,
+            resetFreshHistory,
+        )
+
+    override val featureWalkJourneys =
+        listOf(
+            toggleThemeModeFeatureWalk,
+        )
 }
