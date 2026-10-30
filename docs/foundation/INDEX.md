@@ -25,36 +25,31 @@ architecture/behavior/src/main/.../VexFamily.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-Current semantic call graph:
+Current live semantic call graph:
 
 ~~~text
-typed Family Control
+Family Control
 -> Family.activate(control)
--> concrete Family.act(CURRENT State, control)
+-> Family.act(CURRENT State, control)
 -> null / stay / admit
--> optional saveLatest(State)
--> same StateRelay / storage execution
+-> same StateRelay
 ~~~
 
-StateRelay remains the one live Family State holder. Direct Family has one semantic State-authoring
-doorway: act(CURRENT State, Control). Provider/repository truth and durable Store observations return
-as typed Controls rather than receiving a second setter/admission API.
-
-The currently earned durable consequence is deliberately specific:
+An Act may also carry `saveState`. activate(...) applies immediate State first, then starts the
+durable Save. Save completion has no State-writing callback.
 
 ~~~text
 Act
--> immediate admitted State?
--> optional Save<State>
+-> admittedState?
+-> saveState?
 
-Save success/failure
--> storage/execution fact
--> no direct Family State write
+Store<State>
+-> save(State)
+-> successful return OR thrown failure
 ~~~
 
-A future asynchronous completion that changes Family meaning must return as typed Control input and
-be re-resolved against CURRENT State. Any required request/resource identity belongs to that concrete
-feature meaning; serialization is not treated as a generic stale-result oracle.
+Feature authoring does not choose an execution Approach. The current runtime persists accepted Save
+consequences in Control-acceptance order beneath the Family semantic surface.
 
 Maintained Save relationship identity remains:
 
@@ -66,12 +61,24 @@ live Family
 -> VexExecution custody
 ~~~
 
-Generic StateStore is only Store.save(State) + observableState. Concrete storage may expose local
-read/reset helpers without teaching them to every Family Store.
+Control remains an affordance/request vocabulary. Direct Family does not currently claim a generic
+live provider/repository observation -> Family State reconciliation API.
+
+ThemeMode's demonstrated durability requirement is narrower:
+
+~~~text
+fresh process/session
+-> read durable ThemeMode once
+-> construct ThemeModeFamily(initialState = durable value)
+
+live Select(mode)
+-> stay/admit + optional saveState
+-> Store.save(mode)
+~~~
 
 Repository-wide architecture review follows docs/CULTURE.md Subtractive Completion: additions start
-rejected, the original failure must be replayed against a proposed fix, and mechanics are not promoted
-to architecture when removing them loses no demonstrated requirement.
+rejected, the original failure must be replayed against a proposed fix, and mechanics are not
+promoted to architecture when removing them loses no demonstrated requirement.
 
 <!-- [VXG RealForever][FOUNDATION][FAMILY][SUBTRACTIVE-COMPLETION] -->
 
