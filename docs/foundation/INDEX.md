@@ -25,46 +25,55 @@ architecture/behavior/src/main/.../VexFamily.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-Current call graph:
+Current semantic call graph:
 
 ~~~text
-Family.activate(control)
--> concrete Family.act(currentState, control)
--> native when(currentState)
--> native when(control)
--> stay / admit / optional begin
--> StateRelay / execution
+typed Family Control
+-> Family.activate(control)
+-> concrete Family.act(CURRENT State, control)
+-> null / stay / admit
+-> optional saveLatest(State)
+-> same StateRelay / storage execution
 ~~~
 
-The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
-or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
+StateRelay remains the one live Family State holder. Direct Family has one semantic State-authoring
+doorway: act(CURRENT State, Control). Provider/repository truth and durable Store observations return
+as typed Controls rather than receiving a second setter/admission API.
 
-Current PR #193 refinement also keeps execution identity inside the typed Family boundary:
+The currently earned durable consequence is deliberately specific:
 
 ~~~text
-Control<Family>
--> Control kind/name included automatically
--> optional Control.Resource<Family, ExactId>
--> exact ResourceId object retained
+Act
+-> immediate admitted State?
+-> optional Save<State>
+
+Save success/failure
+-> storage/execution fact
+-> no direct Family State write
+~~~
+
+A future asynchronous completion that changes Family meaning must return as typed Control input and
+be re-resolved against CURRENT State. Any required request/resource identity belongs to that concrete
+feature meaning; serialization is not treated as a generic stale-result oracle.
+
+Maintained Save relationship identity remains:
+
+~~~text
+live Family
++ exact Control identity
++ optional stable Control.resourceId
 -> Family-owned RelationshipId
--> Begin chooses Approach only
--> VexExecution coordinates that RelationshipId
+-> VexExecution custody
 ~~~
 
-There is no arbitrary Begin trigger/argument identity surface. This refinement is accepted on main
-through [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) after exact-head
-repository-owned `vexVerifyJvm` proof and Independent Assurance. That acceptance does not claim
-device/Journey/ScreenCrawler or lived-product proof for the Direct Family foundation.
+Generic StateStore is only Store.save(State) + observableState. Concrete storage may expose local
+read/reset helpers without teaching them to every Family Store.
 
-Compound/process integration remains separate and open:
+Repository-wide architecture review follows docs/CULTURE.md Subtractive Completion: additions start
+rejected, the original failure must be replayed against a proposed fix, and mechanics are not promoted
+to architecture when removing them loses no demonstrated requirement.
 
-~~~text
-InputState -> process(InputState) -> OutputState
-OutputState -> ??? -> Family.currentState
-~~~
-
-<!-- [VXG RealForever][FOUNDATION][FAMILY][NATIVE-TRAVERSAL] -->
-
+<!-- [VXG RealForever][FOUNDATION][FAMILY][SUBTRACTIVE-COMPLETION] -->
 
 ## Foundation establishment criteria
 
