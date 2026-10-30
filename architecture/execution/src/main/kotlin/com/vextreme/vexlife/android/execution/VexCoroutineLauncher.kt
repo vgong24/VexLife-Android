@@ -22,20 +22,29 @@ import kotlinx.coroutines.launch
 /**
  * Internal coroutine engine.
  *
- * Active custody is keyed by exact [VexExecution.InstanceId]. Maintained overlap handling is keyed
- * by the [VexExecution.RelationshipId] supplied by the rightful semantic owner. Execution does not
- * manufacture trigger strings or argument tuples. Source identity remains diagnostic only.
+ * Active Job custody is rooted in semantic [VexExecution.RelationshipId] keys. A relationship owns
+ * the active Jobs admitted for it and [VexExecution.Approach] is the only overlap policy.
+ * [VexExecution.SourceRef] is retained only for diagnostics.
  */
 internal class VexCoroutineLauncher(
-    dispatcher: CoroutineDispatcher,
-    private val maxCollectRestarts: Int,
-    private val collectRestartDelayMillis: Long,
+    dispatcher:
+        CoroutineDispatcher,
+    private val maxCollectRestarts:
+        Int,
+    private val collectRestartDelayMillis:
+        Long,
 ) {
     init {
-        require(maxCollectRestarts >= 0) {
+        require(
+            maxCollectRestarts >=
+                0,
+        ) {
             "maxCollectRestarts must be non-negative"
         }
-        require(collectRestartDelayMillis >= 0L) {
+        require(
+            collectRestartDelayMillis >=
+                0L,
+        ) {
             "collectRestartDelayMillis must be non-negative"
         }
     }
@@ -59,34 +68,25 @@ internal class VexCoroutineLauncher(
     private var acceptingWork =
         true
 
-    private var nextInstanceValue =
-        1L
-
     private data class MaintainedRelationship(
         var approach:
             VexExecution.Approach,
-        val instances:
+        val executions:
             LinkedHashSet<
-                VexExecution.InstanceId
+                ManagedExecution
             > =
             linkedSetOf(),
     )
 
-    private data class ManagedExecution(
-        val instanceId:
-            VexExecution.InstanceId,
+    private class ManagedExecution(
         val sourceRef:
             VexExecution.SourceRef,
-        val relationship:
-            VexExecution.RelationshipId?,
         val job:
             Job,
         val mutableState:
             MutableStateFlow<
                 VexExecution.State
             >,
-        val maintainedObservation:
-            Boolean,
     )
 
     private class VexCollectionSourceFailure(
@@ -97,23 +97,19 @@ internal class VexCoroutineLauncher(
             sourceFailure,
         )
 
-    private val active =
-        LinkedHashMap<
-            VexExecution.InstanceId,
-            ManagedExecution
-        >()
-
     private val relationships =
         LinkedHashMap<
-            VexExecution.RelationshipId,
+            VexExecution.RelationshipId<*>,
             MaintainedRelationship
         >()
 
     private val mutableExecutions =
         MutableStateFlow<
             Map<
-                VexExecution.InstanceId,
-                VexExecution.State
+                VexExecution.RelationshipId<*>,
+                List<
+                    VexExecution.State
+                >
             >
         >(
             emptyMap(),
@@ -122,236 +118,41 @@ internal class VexCoroutineLauncher(
     val executions:
         StateFlow<
             Map<
-                VexExecution.InstanceId,
-                VexExecution.State
+                VexExecution.RelationshipId<*>,
+                List<
+                    VexExecution.State
+                >
             >
         > =
         mutableExecutions.asStateFlow()
 
-    fun launchOnce(
-        sourceRef:
-            VexExecution.SourceRef,
-        action:
-            suspend () -> Unit,
-    ):
-        VexExecution.Handle =
-        synchronized(
-            registryLock,
-        ) {
-            requireAcceptingWorkLocked()
-
-            check(
-                active.values.none { managed ->
-                    managed.sourceRef ==
-                        sourceRef &&
-                        !managed.job.isCompleted
-                },
-            ) {
-                "Coroutine " +
-                    sourceRef.value +
-                    " is already active"
-            }
-
-            createManagedLocked(
-                sourceRef =
-                    sourceRef,
-                relationship =
-                    null,
-                predecessors =
-                    emptyList(),
-                maintainedObservation =
-                    false,
-                restartRecoverableFailure =
-                    false,
-                action =
-                    action,
-            )
-        }
-
     fun launch(
-        sourceRef:
-            VexExecution.SourceRef,
-        action:
-            suspend () -> Unit,
-    ):
-        VexExecution.Handle =
-        synchronized(
-            registryLock,
-        ) {
-            requireAcceptingWorkLocked()
-
-            createManagedLocked(
-                sourceRef =
-                    sourceRef,
-                relationship =
-                    null,
-                predecessors =
-                    emptyList(),
-                maintainedObservation =
-                    false,
-                restartRecoverableFailure =
-                    false,
-                action =
-                    action,
-            )
-        }
-
-    fun launchEarliest(
         relationship:
-            VexExecution.RelationshipId,
+            VexExecution.RelationshipId<*>,
+        approach:
+            VexExecution.Approach,
         sourceRef:
             VexExecution.SourceRef,
         action:
             suspend () -> Unit,
     ):
-        VexExecution.Handle =
-        synchronized(
-            registryLock,
-        ) {
-            requireAcceptingWorkLocked()
-
-            val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
-                    approach =
-                        VexExecution.Approach.Earliest,
-                )
-
-            val existing =
-                activeRelationshipMembersLocked(
-                    maintained,
-                )
-                    .firstOrNull()
-
-            if (
-                existing !=
-                null
-            ) {
-                return@synchronized handleFor(
-                    existing,
-                )
-            }
-
-            createManagedLocked(
-                sourceRef =
-                    sourceRef,
-                relationship =
-                    relationship,
-                predecessors =
-                    emptyList(),
-                maintainedObservation =
-                    false,
-                restartRecoverableFailure =
-                    false,
-                action =
-                    action,
-            )
-        }
-
-    fun launchLatest(
-        relationship:
-            VexExecution.RelationshipId,
-        sourceRef:
-            VexExecution.SourceRef,
-        action:
-            suspend () -> Unit,
-    ):
-        VexExecution.Handle =
-        synchronized(
-            registryLock,
-        ) {
-            requireAcceptingWorkLocked()
-
-            val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
-                    approach =
-                        VexExecution.Approach.Latest,
-                )
-
-            val predecessors =
-                activeRelationshipMembersLocked(
-                    maintained,
-                )
-
-            predecessors
-                .forEach { predecessor ->
-                    predecessor.job.cancel(
-                        CancellationException(
-                            "superseded by latest execution for " +
-                                relationship,
-                        ),
-                    )
-                }
-
-            createManagedLocked(
-                sourceRef =
-                    sourceRef,
-                relationship =
-                    relationship,
-                predecessors =
-                    predecessors
-                        .map {
-                            it.job
-                        },
-                maintainedObservation =
-                    false,
-                restartRecoverableFailure =
-                    false,
-                action =
-                    action,
-            )
-        }
-
-    fun launchQueued(
-        relationship:
-            VexExecution.RelationshipId,
-        sourceRef:
-            VexExecution.SourceRef,
-        action:
-            suspend () -> Unit,
-    ):
-        VexExecution.Handle =
-        synchronized(
-            registryLock,
-        ) {
-            requireAcceptingWorkLocked()
-
-            val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
-                    approach =
-                        VexExecution.Approach.Queued,
-                )
-
-            val predecessors =
-                activeRelationshipMembersLocked(
-                    maintained,
-                )
-
-            createManagedLocked(
-                sourceRef =
-                    sourceRef,
-                relationship =
-                    relationship,
-                predecessors =
-                    predecessors
-                        .map {
-                            it.job
-                        },
-                maintainedObservation =
-                    false,
-                restartRecoverableFailure =
-                    false,
-                action =
-                    action,
-            )
-        }
+        Boolean =
+        launchManaged(
+            relationship =
+                relationship,
+            approach =
+                approach,
+            sourceRef =
+                sourceRef,
+            restartRecoverableFailure =
+                false,
+            action =
+                action,
+        )
 
     fun <Value> launchForCollect(
+        relationship:
+            VexExecution.RelationshipId<*>,
         sourceRef:
             VexExecution.SourceRef,
         restartOnSourceFailure:
@@ -361,96 +162,65 @@ internal class VexCoroutineLauncher(
         onEach:
             suspend (Value) -> Unit,
     ):
-        VexExecution.Handle =
-        synchronized(
-            registryLock,
+        Boolean =
+        launchManaged(
+            relationship =
+                relationship,
+            approach =
+                VexExecution.Approach.Earliest,
+            sourceRef =
+                sourceRef,
+            restartRecoverableFailure =
+                restartOnSourceFailure,
         ) {
-            requireAcceptingWorkLocked()
+            val observed =
+                try {
+                    source()
+                } catch (
+                    cancelled:
+                        CancellationException,
+                ) {
+                    throw cancelled
+                } catch (
+                    failure:
+                        Throwable,
+                ) {
+                    throw VexCollectionSourceFailure(
+                        failure,
+                    )
+                }
 
-            check(
-                active.values.none { managed ->
-                    managed.maintainedObservation &&
-                        managed.sourceRef ==
-                        sourceRef &&
-                        !managed.job.isCompleted
-                },
-            ) {
-                "Flow source " +
-                    sourceRef.value +
-                    " is already actively observed"
-            }
-
-            createManagedLocked(
-                sourceRef =
-                    sourceRef,
-                relationship =
-                    null,
-                predecessors =
-                    emptyList(),
-                maintainedObservation =
-                    true,
-                restartRecoverableFailure =
-                    restartOnSourceFailure,
-            ) {
-                val observed =
-                    try {
-                        source()
-                    } catch (
-                        cancelled:
-                            CancellationException,
+            observed
+                .catch { failure ->
+                    if (
+                        failure is
+                            CancellationException
                     ) {
-                        throw cancelled
-                    } catch (
-                        failure:
-                            Throwable,
-                    ) {
-                        throw VexCollectionSourceFailure(
-                            failure,
-                        )
+                        throw failure
                     }
 
-                observed
-                    .catch { failure ->
-                        if (
-                            failure is
-                                CancellationException
-                        ) {
-                            throw failure
-                        }
-
-                        throw VexCollectionSourceFailure(
-                            failure,
-                        )
-                    }
-                    .collect { value ->
-                        onEach(
-                            value,
-                        )
-                    }
-            }
+                    throw VexCollectionSourceFailure(
+                        failure,
+                    )
+                }
+                .collect { value ->
+                    onEach(
+                        value,
+                    )
+                }
         }
 
-    fun forceStopSource(
-        sourceRef:
-            VexExecution.SourceRef,
+    fun forceStopRelationship(
+        relationship:
+            VexExecution.RelationshipId<*>,
         reason:
             String,
     ):
         Boolean {
         val jobs =
-            synchronized(
-                registryLock,
-            ) {
-                active.values
-                    .filter { managed ->
-                        managed.sourceRef ==
-                            sourceRef &&
-                            !managed.job.isCompleted
-                    }
-                    .map {
-                        it.job
-                    }
-            }
+            activeJobs(
+                relationship,
+            )
 
         if (
             jobs.isEmpty()
@@ -468,27 +238,17 @@ internal class VexCoroutineLauncher(
         return true
     }
 
-    suspend fun joinStopSource(
-        sourceRef:
-            VexExecution.SourceRef,
+    suspend fun joinStopRelationship(
+        relationship:
+            VexExecution.RelationshipId<*>,
         reason:
             String,
     ):
         Boolean {
         val jobs =
-            synchronized(
-                registryLock,
-            ) {
-                active.values
-                    .filter { managed ->
-                        managed.sourceRef ==
-                            sourceRef &&
-                            !managed.job.isCompleted
-                    }
-                    .map {
-                        it.job
-                    }
-            }
+            activeJobs(
+                relationship,
+            )
 
         if (
             jobs.isEmpty()
@@ -502,6 +262,29 @@ internal class VexCoroutineLauncher(
                     reason,
                 ),
             )
+        }
+
+        jobs.forEach { job ->
+            job.join()
+        }
+
+        return true
+    }
+
+    suspend fun awaitRelationship(
+        relationship:
+            VexExecution.RelationshipId<*>,
+    ):
+        Boolean {
+        val jobs =
+            activeJobs(
+                relationship,
+            )
+
+        if (
+            jobs.isEmpty()
+        ) {
+            return false
         }
 
         jobs.forEach { job ->
@@ -549,6 +332,147 @@ internal class VexCoroutineLauncher(
         parentJob.join()
     }
 
+    private fun launchManaged(
+        relationship:
+            VexExecution.RelationshipId<*>,
+        approach:
+            VexExecution.Approach,
+        sourceRef:
+            VexExecution.SourceRef,
+        restartRecoverableFailure:
+            Boolean,
+        action:
+            suspend () -> Unit,
+    ):
+        Boolean =
+        synchronized(
+            registryLock,
+        ) {
+            requireAcceptingWorkLocked()
+
+            val maintained =
+                relationshipLocked(
+                    relationship =
+                        relationship,
+                    approach =
+                        approach,
+                )
+
+            val active =
+                activeRelationshipMembersLocked(
+                    maintained,
+                )
+
+            when (
+                approach
+            ) {
+                VexExecution.Approach.Independent ->
+                    createManagedLocked(
+                        relationship =
+                            relationship,
+                        maintained =
+                            maintained,
+                        sourceRef =
+                            sourceRef,
+                        predecessors =
+                            emptyList(),
+                        restartRecoverableFailure =
+                            restartRecoverableFailure,
+                        action =
+                            action,
+                    )
+
+                VexExecution.Approach.Earliest -> {
+                    if (
+                        active.isNotEmpty()
+                    ) {
+                        false
+                    } else {
+                        createManagedLocked(
+                            relationship =
+                                relationship,
+                            maintained =
+                                maintained,
+                            sourceRef =
+                                sourceRef,
+                            predecessors =
+                                emptyList(),
+                            restartRecoverableFailure =
+                                restartRecoverableFailure,
+                            action =
+                                action,
+                        )
+                    }
+                }
+
+                VexExecution.Approach.Latest -> {
+                    active.forEach { predecessor ->
+                        predecessor.job.cancel(
+                            CancellationException(
+                                "superseded by latest execution for " +
+                                    relationship,
+                            ),
+                        )
+                    }
+
+                    createManagedLocked(
+                        relationship =
+                            relationship,
+                        maintained =
+                            maintained,
+                        sourceRef =
+                            sourceRef,
+                        predecessors =
+                            active.map {
+                                it.job
+                            },
+                        restartRecoverableFailure =
+                            restartRecoverableFailure,
+                        action =
+                            action,
+                    )
+                }
+
+                VexExecution.Approach.Queued ->
+                    createManagedLocked(
+                        relationship =
+                            relationship,
+                        maintained =
+                            maintained,
+                        sourceRef =
+                            sourceRef,
+                        predecessors =
+                            active.map {
+                                it.job
+                            },
+                        restartRecoverableFailure =
+                            restartRecoverableFailure,
+                        action =
+                            action,
+                    )
+            }
+        }
+
+    private fun activeJobs(
+        relationship:
+            VexExecution.RelationshipId<*>,
+    ):
+        List<Job> =
+        synchronized(
+            registryLock,
+        ) {
+            relationships[
+                relationship
+            ]
+                ?.let(
+                    ::activeRelationshipMembersLocked,
+                )
+                .orEmpty()
+                .map {
+                    it.job
+                }
+        }
+
     private fun requireAcceptingWorkLocked() {
         check(
             acceptingWork &&
@@ -560,7 +484,7 @@ internal class VexCoroutineLauncher(
 
     private fun relationshipLocked(
         relationship:
-            VexExecution.RelationshipId,
+            VexExecution.RelationshipId<*>,
         approach:
             VexExecution.Approach,
     ):
@@ -590,7 +514,7 @@ internal class VexCoroutineLauncher(
         )
 
         if (
-            existing.instances
+            existing.executions
                 .isEmpty()
         ) {
             existing.approach =
@@ -620,52 +544,32 @@ internal class VexCoroutineLauncher(
         List<
             ManagedExecution
         > {
-        val members =
-            maintained.instances
-                .mapNotNull(
-                    active::get,
-                )
-                .filter {
-                    !it.job.isCompleted
-                }
+        maintained.executions.removeAll { managed ->
+            managed.job.isCompleted
+        }
 
-        maintained.instances.retainAll(
-            members
-                .mapTo(
-                    linkedSetOf(),
-                ) {
-                    it.instanceId
-                },
-        )
-
-        return members
+        return maintained.executions
+            .toList()
     }
 
     private fun createManagedLocked(
+        relationship:
+            VexExecution.RelationshipId<*>,
+        maintained:
+            MaintainedRelationship,
         sourceRef:
             VexExecution.SourceRef,
-        relationship:
-            VexExecution.RelationshipId?,
         predecessors:
             List<Job>,
-        maintainedObservation:
-            Boolean,
         restartRecoverableFailure:
             Boolean,
         action:
             suspend () -> Unit,
     ):
-        VexExecution.Handle {
-        val instanceId =
-            VexExecution.InstanceId(
-                nextInstanceValue++,
-            )
-
+        Boolean {
         val mutableState =
             MutableStateFlow(
                 VexExecution.State(
-                    instanceId =
-                        instanceId,
                     sourceRef =
                         sourceRef,
                     status =
@@ -684,21 +588,16 @@ internal class VexCoroutineLauncher(
             scope.launch(
                 context =
                     CoroutineName(
-                        sourceRef.value +
-                            "#" +
-                            instanceId.value,
+                        sourceRef.value,
                     ),
                 start =
                     CoroutineStart.LAZY,
             ) {
-                predecessors
-                    .forEach { predecessor ->
-                        predecessor.join()
-                    }
+                predecessors.forEach { predecessor ->
+                    predecessor.join()
+                }
 
                 runManagedCoroutine(
-                    instanceId =
-                        instanceId,
                     sourceRef =
                         sourceRef,
                     restartRecoverableFailure =
@@ -712,49 +611,24 @@ internal class VexCoroutineLauncher(
 
         val managed =
             ManagedExecution(
-                instanceId =
-                    instanceId,
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
                 job =
                     job,
                 mutableState =
                     mutableState,
-                maintainedObservation =
-                    maintainedObservation,
             )
 
-        active[
-            instanceId
-        ] =
+        maintained.executions +=
             managed
 
-        relationship?.let { key ->
-            requireNotNull(
-                relationships[
-                    key
-                ],
-            ) {
-                "Execution relationship " +
-                    key +
-                    " must be established before admission"
-            }
-                .instances +=
-                instanceId
-        }
-
-        updateRegistryLocked(
-            mutableState.value,
-        )
+        updateRegistryLocked()
 
         job.invokeOnCompletion { cause ->
             if (
                 cause is
                     CancellationException &&
-                !mutableState
-                    .value
+                !mutableState.value
                     .status
                     .isTerminal()
             ) {
@@ -763,8 +637,6 @@ internal class VexCoroutineLauncher(
                         mutableState,
                     state =
                         VexExecution.State(
-                            instanceId =
-                                instanceId,
                             sourceRef =
                                 sourceRef,
                             status =
@@ -784,115 +656,28 @@ internal class VexCoroutineLauncher(
             synchronized(
                 registryLock,
             ) {
-                active.remove(
-                    instanceId,
+                maintained.executions.remove(
+                    managed,
                 )
 
-                relationship?.let { key ->
-                    relationships[
-                        key
-                    ]
-                        ?.let { maintained ->
-                            maintained.instances.remove(
-                                instanceId,
-                            )
-
-                            if (
-                                maintained.instances
-                                    .isEmpty()
-                            ) {
-                                relationships.remove(
-                                    key,
-                                )
-                            }
-                        }
+                if (
+                    maintained.executions
+                        .isEmpty()
+                ) {
+                    relationships.remove(
+                        relationship,
+                    )
                 }
+
+                updateRegistryLocked()
             }
         }
 
         job.start()
-
-        return handleFor(
-            managed,
-        )
+        return true
     }
 
-    private fun handleFor(
-        managed:
-            ManagedExecution,
-    ):
-        VexExecution.Handle =
-        object :
-            VexExecution.Handle {
-            override val instanceId:
-                VexExecution.InstanceId =
-                managed.instanceId
-
-            override val sourceRef:
-                VexExecution.SourceRef =
-                managed.sourceRef
-
-            override val state:
-                StateFlow<
-                    VexExecution.State
-                > =
-                managed.mutableState
-                    .asStateFlow()
-
-            override fun forceStop(
-                reason:
-                    String,
-            ):
-                Boolean {
-                if (
-                    !managed.job
-                        .isActive
-                ) {
-                    return false
-                }
-
-                managed.job.cancel(
-                    CancellationException(
-                        reason,
-                    ),
-                )
-                return true
-            }
-
-            override suspend fun joinStop(
-                reason:
-                    String,
-            ):
-                Boolean {
-                if (
-                    !managed.job.isActive &&
-                    managed.job.isCompleted
-                ) {
-                    return false
-                }
-
-                if (
-                    managed.job.isActive
-                ) {
-                    managed.job.cancel(
-                        CancellationException(
-                            reason,
-                        ),
-                    )
-                }
-
-                managed.job.join()
-                return true
-            }
-
-            override suspend fun awaitCompletion() {
-                managed.job.join()
-            }
-        }
-
     private suspend fun runManagedCoroutine(
-        instanceId:
-            VexExecution.InstanceId,
         sourceRef:
             VexExecution.SourceRef,
         restartRecoverableFailure:
@@ -922,8 +707,6 @@ internal class VexCoroutineLauncher(
                         mutableState,
                     state =
                         VexExecution.State(
-                            instanceId =
-                                instanceId,
                             sourceRef =
                                 sourceRef,
                             status =
@@ -945,8 +728,6 @@ internal class VexCoroutineLauncher(
                             mutableState,
                         state =
                             VexExecution.State(
-                                instanceId =
-                                    instanceId,
                                 sourceRef =
                                     sourceRef,
                                 status =
@@ -991,8 +772,6 @@ internal class VexCoroutineLauncher(
                                 mutableState,
                             state =
                                 VexExecution.State(
-                                    instanceId =
-                                        instanceId,
                                     sourceRef =
                                         sourceRef,
                                     status =
@@ -1018,8 +797,6 @@ internal class VexCoroutineLauncher(
                             mutableState,
                         state =
                             VexExecution.State(
-                                instanceId =
-                                    instanceId,
                                 sourceRef =
                                     sourceRef,
                                 status =
@@ -1054,8 +831,6 @@ internal class VexCoroutineLauncher(
                     mutableState,
                 state =
                     VexExecution.State(
-                        instanceId =
-                            instanceId,
                         sourceRef =
                             sourceRef,
                         status =
@@ -1089,28 +864,47 @@ internal class VexCoroutineLauncher(
         synchronized(
             registryLock,
         ) {
-            updateRegistryLocked(
-                state,
-            )
+            updateRegistryLocked()
         }
     }
 
-    private fun updateRegistryLocked(
-        state:
-            VexExecution.State,
-    ) {
+    private fun updateRegistryLocked() {
+        val projection =
+            linkedMapOf<
+                VexExecution.RelationshipId<*>,
+                List<
+                    VexExecution.State
+                >
+            >()
+
+        relationships.forEach {
+                (relationship, maintained),
+            ->
+            val states =
+                maintained.executions
+                    .filter {
+                        !it.job.isCompleted
+                    }
+                    .map {
+                        it.mutableState.value
+                    }
+
+            if (
+                states.isNotEmpty()
+            ) {
+                projection[
+                    relationship
+                ] =
+                    java.util.Collections.unmodifiableList(
+                        states,
+                    )
+            }
+        }
+
         mutableExecutions.value =
-            java.util.Collections
-                .unmodifiableMap(
-                    LinkedHashMap(
-                        mutableExecutions.value,
-                    ).apply {
-                        this[
-                            state.instanceId
-                        ] =
-                            state
-                    },
-                )
+            java.util.Collections.unmodifiableMap(
+                projection,
+            )
     }
 
     private companion object {
