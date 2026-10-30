@@ -199,8 +199,6 @@ VexFamily
 -> StateStore<State>
    -> Store<State>
    -> observableState
-   -> get()
-   -> forget()
 
 VexFamily
 -> Act
@@ -223,8 +221,8 @@ operation parent must be earned by another real operation, not anticipated.
 act(currentState, control) returns the authored outcome that activate(...) applies:
 
 ~~~text
-noAct()
-  reviewed absence: no lawful Act exists for this exact State + Control pair
+null
+  no lawful Act exists for this exact State + Control pair
 
 stay()
   current State stays current
@@ -253,7 +251,7 @@ activate(control)
 act(currentState, control)
 when (currentState)
 when (control)
-noAct()
+else -> null
 stay()
 admit(State)
 begin(...)
@@ -311,43 +309,49 @@ StateStore.observableState
 -> same StateRelay
 ~~~
 
-`StateStore` carries the already-earned `observableState / get / save / forget` capability. Plain
-`Store` remains the smaller save-only capability for Families that have not earned durable State
-observation.
+`StateStore` adds only observable durable State to the already-earned `Store.save(State)` capability.
+Direct snapshot reads or reset/forget operations remain concrete Store concerns until another real
+Family consumer earns them as shared architecture.
 
 
 ## Process / Compound current State
 
-Current accepted Relay already carries the complete processed relationship as
-`VexCompoundState<InputState, OutputState>`:
-
-~~~kotlin
-protected abstract fun processStates(
-    inputState: InputState,
-    currentState: VexCompoundState<InputState, OutputState>,
-): VexCompoundState<InputState, OutputState>
-~~~
-
-`processStates(...)` returns the coherent next InputState + derived OutputState together. The
-Compound Relay then admits that whole result as one current State:
+Compound processing now keeps mechanics and relationship meaning separate:
 
 ~~~text
-incoming InputState
-+ exact CURRENT VexCompoundState
--> processStates(...)
--> next VexCompoundState(inputState, outputState)
+retained InputState
++ incoming partial InputState
+-> InputState.latest(incoming)
+-> complete CURRENT InputState
+
+complete CURRENT InputState
+-> process(...)
+-> OutputState
+
+framework
+-> VexCompoundState(
+       inputState = complete CURRENT InputState,
+       outputState = OutputState
+   )
 -> one current-State commit
 ~~~
 
-If only retained Input meaning changes, current State changes while `outputStates` stays quiet. If
-derived Output meaning changes too, the same current-State commit carries both changes. UI and other
-consumers may read `current`, `currentInput`, or `currentOutput` without reconstructing the
-relationship.
+Concrete Relays therefore do **not** rebuild `VexCompoundState` and do not repeat partial-input merge
+plumbing. `InputState.latest(...)` owns currentization; `process(...)` owns relationship meaning; the
+reusable Compound boundary owns assembly and commit.
 
-The old `OutputState -> Family.currentState` gap was incomplete because OutputState is only one
-part of the processed Compound State; it is not separately admitted after processing.
+The current production signature still supplies the prior retained Compound State alongside the
+complete Input because two existing relationships have already-earned cross-cycle memory
+(Events attention-target retention and Navigation guidance/arrival memory). That prior State is an
+explicit hold, not permission for new Relays to use previous Output as convenient hidden reducer
+input. New relationships should derive Output from the complete Input alone unless a real product
+requirement earns retained relationship memory.
 
-This PR does not add CompoundFamily, stateFactory, Family revision, or post-process Act machinery.
+If only retained Input meaning changes while derived Output remains equal, Compound current State
+still changes while `outputStates` remains quiet. Consumers may read `current`, `currentInput`, or
+`currentOutput` without reconstructing the relationship.
+
+This does not add CompoundFamily, stateFactory, Family revision, or post-process Act machinery.
 
 ## Current open edges
 
