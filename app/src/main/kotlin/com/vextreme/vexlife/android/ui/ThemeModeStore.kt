@@ -11,8 +11,10 @@ import kotlinx.coroutines.flow.callbackFlow
  * Android-local durable realization of ThemeMode explicit selection.
  *
  * SharedPreferences is platform storage mechanics, not portable ThemeMode meaning. The Store exposes
- * only the Family-owned StateStore contract. Collection lifetime belongs to VexExecution through
- * ThemeModeFamily.observeStore(...); the Store registers its listener only while that Flow is observed.
+ * the Family-owned StateStore contract required by production: save(State) + observableState.
+ * Direct get()/forget() helpers remain concrete ThemeMode storage mechanics for local reset/proof use.
+ * Collection lifetime belongs to VexExecution through ThemeModeFamily.observeStore(...); the Store
+ * registers its listener only while that Flow is observed.
  */
 internal class SharedPreferencesThemeModeStore(
     context: Context,
@@ -60,7 +62,7 @@ internal class SharedPreferencesThemeModeStore(
             }
         }
 
-    override suspend fun get():
+    suspend fun get():
         ThemeMode =
         readCurrent()
 
@@ -91,7 +93,7 @@ internal class SharedPreferencesThemeModeStore(
                 )
         }
 
-    override suspend fun forget():
+    suspend fun forget():
         VexFamily.Store.WriteResult =
         write(
             preferences
