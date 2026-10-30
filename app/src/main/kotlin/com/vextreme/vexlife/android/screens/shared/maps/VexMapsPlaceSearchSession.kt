@@ -310,26 +310,41 @@ internal class VexMapsPlaceSearchSession(
     }
 }
 
+@OptIn(VexExecution.RelationshipFoundationApi::class)
 private class VexMapsPlaceSearchExecution(
     private val root:
         VexExecutionRoot,
     private val session:
         VexMapsPlaceSearchSession,
 ) :
-    VexExecution(
+    VexExecution<
+        VexMapsPlaceSearchSession
+    >(
         root,
     ) {
+    private object ImportRelationship :
+        VexExecution.RelationshipId<
+            VexMapsPlaceSearchSession
+        >
+
+    private object SearchRelationship :
+        VexExecution.RelationshipId<
+            VexMapsPlaceSearchSession
+        >
+
     fun importPack(
         work:
             VexMapsPlaceSearchImportWork,
     ) {
-        forceStop(
-            session::importForExecution,
-            "VexMaps place-search import superseded",
-        )
         launch(
-            session::importForExecution,
-            work,
+            relationshipId =
+                ImportRelationship,
+            approach =
+                VexExecution.Approach.Latest,
+            action =
+                session::importForExecution,
+            argument =
+                work,
         )
     }
 
@@ -337,20 +352,24 @@ private class VexMapsPlaceSearchExecution(
         work:
             VexMapsPlaceSearchWork,
     ) {
-        forceStop(
-            session::searchForExecution,
-            "VexMaps place search superseded",
-        )
         launch(
-            session::searchForExecution,
-            work,
+            relationshipId =
+                SearchRelationship,
+            approach =
+                VexExecution.Approach.Latest,
+            action =
+                session::searchForExecution,
+            argument =
+                work,
         )
     }
 
     fun cancelSearch() {
         forceStop(
-            session::searchForExecution,
-            "VexMaps place search invalidated",
+            relationshipId =
+                SearchRelationship,
+            reason =
+                "VexMaps place search invalidated",
         )
     }
 
