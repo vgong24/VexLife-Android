@@ -31,9 +31,10 @@ import kotlinx.coroutines.Dispatchers
  * - current ThemeMode Family;
  * - immutable app-action wiring.
  *
- * The session itself remains process-local. Feature-owned durable truth may restore into a fresh
- * session through its rightful Store; ThemeMode now does exactly that. Production keeps this session
- * inside [VexLifeViewModel]; Preview/tests may construct one without durable feature Stores.
+ * The session itself remains process-local. Feature-owned durable truth may seed a fresh session
+ * before its Family is constructed; ThemeMode does exactly that from SharedPreferences. Production
+ * keeps this session inside [VexLifeViewModel]; Preview/tests may construct one without durable
+ * feature Stores.
  */
 internal class VexLifeSession(
     val repositories: AppRepositories,
@@ -152,6 +153,8 @@ internal class VexLifeViewModel(
             scope = viewModelScope,
             executionRoot = executionRoot,
             themeModeStore = themeModeStore,
+            initialThemeMode =
+                themeModeStore.current(),
         )
 
     override fun onCleared() {
