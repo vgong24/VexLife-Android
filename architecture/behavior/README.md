@@ -466,19 +466,18 @@ owner observes the Store on Family's behalf.
 For a Compound relationship, the reusable boundary owns currentization and State assembly:
 
 ~~~text
-retained InputState + incoming partial InputState
--> InputState.latest(incoming)
--> complete current InputState
--> process(...)
--> OutputState
--> VexCompoundState(inputState, outputState)
--> one current-State commit
+currentState.inputState + incomingInputState
+-> currentState.inputState.latest(incomingInputState)
+-> latestStateInput
+-> process(latestStateInput, currentState)
+-> latestStateOutput
+-> VexCompoundState(latestStateInput, latestStateOutput)
+-> next current State
 ~~~
 
-Concrete Relays return Output meaning; they do not reconstruct Compound State. Existing Events and
-Navigation relationships still expose prior retained State to `process(...)` because they already
-carry cross-cycle relationship memory. That is an explicit held dependency, not the default law for
-new Relays.
+Concrete Relays return Output meaning; they do not reconstruct Compound State. Existing Events and Navigation relationships still use `currentState.outputState` inside
+`process(...)` because they already carry cross-cycle relationship memory. That is an explicit held
+dependency, not the default law for new Relays.
 
 The established Relay surfaces expose that same current relationship as `current`,
 `currentInput`, `currentOutput`, `states`, `inputStates`, and `outputStates`.
