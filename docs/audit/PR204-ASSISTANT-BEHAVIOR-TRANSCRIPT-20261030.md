@@ -2,11 +2,13 @@
 
 [VXG RealForever]
 
-This file preserves the user-visible conversation beginning with the assistant statement:
+This file preserves the user-visible conversation beginning earlier, before the disputed source edit, with the assistant statement:
 
 - Audit PR: https://github.com/vgong24/VexLife-Android/pull/205
 
-> "Yep — PR #204 is now updated to the cleaner architecture we just recovered. ✅"
+> "Yes — your memory is substantially right, and I found an important distinction between **the original production Relay shape** and the later simplification that was being pressure-tested."
+
+This earlier start point is deliberate: it preserves the architecture language used before the code edit that introduced `retainedState`, rather than beginning only after that identifier already existed in source.
 
 It is an accountability/audit record, not architecture authority.
 
@@ -94,7 +96,347 @@ ahead_by: 24
 behind_by: 0
 ```
 
+### Pre-change conversation chronology
+
+The transcript below now begins **before** the source commit that introduced `retainedState`.
+
+In that pre-change discussion, the assistant explicitly showed the then-current production signature as:
+
+```kotlin
+protected abstract fun processStates(
+    inputState: InputState,
+    currentState: VexCompoundState<InputState, OutputState>,
+): VexCompoundState<InputState, OutputState>
+```
+
+and described the cleaner extracted calculation as:
+
+```kotlin
+protected abstract fun process(
+    latestStateInput: InputState,
+): OutputState
+```
+
+The earlier discussion did use descriptive phrases such as **"retained current InputState"** and **"retained Input"** for the input-currentization role. It did **not** present `retainedState` as the name of the Compound-State parameter.
+
+The literal source identifier `retainedState` is independently pinned above to commit
+`970da19660ba7eee85d51a321a09dbbaa3b9931d`, where the `process(...)` parameter appears at historical line 182.
+
 ## User-visible transcript
+
+### Assistant
+
+Yes — your memory is substantially right, and I found an important distinction between **the original production Relay shape** and the later simplification that was being pressure-tested.
+
+### The clean process idea you remember
+
+The later Origin work explicitly moved toward:
+
+```text
+incoming partial InputState
++ retained current InputState
+→ InputState.latest(incoming)
+→ complete CURRENT InputState
+
+complete CURRENT InputState
+→ process(...)
+→ OutputState
+
+framework
+→ combines current InputState + new OutputState
+→ next CompoundState
+```
+
+And the only feature-specific calculation override was:
+
+```kotlin
+protected abstract fun process(
+    latestStateInput: InputState,
+): OutputState
+```
+
+That was deliberate. Its own source comment said, essentially:
+
+> here is everything CURRENT → what does it mean? → return the Output consequence.
+
+So yes: **feature code was being reduced to the relationship calculation itself**.
+
+The reusable layer kept control of:
+
+```text
+partial-input currentization
+serialization
+retained current Input
+calling process(...)
+comparing changed meaning
+Compound State assembly
+committing current State
+```
+
+That’s the architecture I think you’re remembering by “commandeered”: the infrastructure owns the boring mechanical construction so each feature cannot reimplement it differently.
+
+### One correction: it wasn’t a standalone `Process` interface
+
+The contracts were split like this:
+
+```text
+VexBehaviorV2CompoundInputState
+    latest(incoming)
+    deepCopy()
+
+VexBehaviorV2CompoundOutputState
+    deepCopy()
+
+VexBehaviorV2CompoundFamily
+    protected abstract process(latestStateInput): OutputState
+```
+
+So **Input currentization was an interface contract**, while `process()` itself was the single abstract override of the reusable Compound Family base.
+
+That distinction actually seems pretty good to me:
+
+```text
+InputState owns:
+"how does a partial observation become complete current input?"
+
+Feature/relationship owns:
+"what does this complete input mean?"
+
+Compound machinery owns:
+"how do I retain and commit Input + Output coherently?"
+```
+
+## The current production Relay is actually less clean
+
+Current `VexCompoundRelay` still exposes:
+
+```kotlin
+protected abstract fun processStates(
+    inputState: InputState,
+    currentState: VexCompoundState<InputState, OutputState>,
+): VexCompoundState<InputState, OutputState>
+```
+
+That means the concrete feature receives both the incoming patch **and the whole previous Compound State**, and returns the entire next Compound State.
+
+So the feature can potentially re-author:
+
+```text
+input merging
+retained-input behavior
+Output calculation
+Compound reconstruction
+```
+
+inside one function.
+
+The later Origin work was specifically trying to remove that repeated ceremony.
+
+So I think there is a **real vetted architecture candidate** here:
+
+```text
+PARTIAL INPUT
+    ↓
+InputState.latest(...)
+    ↓
+COMPLETE CURRENT INPUT
+    ↓
+process(completeCurrentInput)
+    ↓
+OUTPUT MEANING
+    ↓
+framework constructs:
+VexCompoundState(
+    inputState = completeCurrentInput,
+    outputState = outputMeaning,
+)
+```
+
+That fits extremely well with the thing you already vetted:
+
+```text
+VexCompoundState
+=
+inputState + outputState
+```
+
+No feature should have to manually reassemble that if the construction is invariant.
+
+---
+
+## But some junk got attached to that later experiment
+
+I would **not** vet the whole `VexBehaviorV2CompoundFamily` experiment.
+
+It also introduced:
+
+```text
+stateFactory(...)
+revision
+VexBehaviorV2CommittedOutput
+post-commit act(...)
+CompoundFamily subtype hierarchy
+```
+
+And we already know `revision` was later removed because current Compound State should just be:
+
+```text
+inputState + outputState
+```
+
+So I'd salvage the one strong idea without inheriting that whole apparatus.
+
+### What I'd call human-vettable
+
+```text
+1. Incoming Compound observations may be partial.
+
+2. InputState owns how:
+   retained current Input + incoming partial Input
+   → complete latest Input.
+
+3. process(...) receives that complete latest Input only.
+
+4. process(...) owns relationship meaning only:
+   complete Input → Output.
+
+5. process(...) does not reconstruct Compound State,
+   mutate another owner,
+   or use previous Output as hidden input memory.
+
+6. The reusable Compound boundary constructs current State:
+   VexCompoundState(latestInput, output).
+
+7. Therefore feature code does not repeatedly author
+   merge/copy/Compound assembly mechanics.
+```
+
+That seems **very strong** to me.
+
+And it resolves one of the smells in current `processStates(...)`: giving process both the partial incoming patch and old Output is a temptation to build reducer memory into every feature.
+
+---
+
+### One thing I would *not* make universal yet
+
+This part:
+
+```text
+InputState.latest(incoming)
+```
+
+is conceptually right, but I wouldn't insist that the method must literally be named `latest()` or even live on that exact interface forever.
+
+The vetted law should be:
+
+```text
+retained current Input
++ incoming partial Input
+→ one complete current Input
+BEFORE process()
+```
+
+The currentization rule logically belongs with the Input shape because the Input type knows what “missing field means retain previous” actually means.
+
+That is stronger than vetting the exact method spelling.
+
+---
+
+And this ties neatly back to your `when(State) / when(Control) / null` approval:
+
+```text
+CONTROL FAMILY
+
+CURRENT State + Control
+→ act(...)
+→ Act? / null
+```
+
+```text
+COMPOUND RELATIONSHIP
+
+retained Input + incoming partial Input
+→ complete CURRENT Input
+→ process(...)
+→ Output
+→ framework forms Compound State
+```
+
+Those are almost parallel structures:
+
+> **Infrastructure supplies CURRENT coherent input; feature code supplies meaning; infrastructure commits the result.**
+
+That feels like one of the cleaner architectural laws we've uncovered so far.
+
+One caveat: the exact later `VexBehaviorV2CompoundFamily` carrier was explicitly experimental/history, not production standard. So I would vet **this process boundary**, not resurrect that class wholesale.
+
+### User
+
+okay so can you update to the 'latest clean code approach' that reduces additional complexity
+
+### Assistant work update
+
+Yes. I’m going to reduce the surface to the clean laws we’ve actually earned, rather than preserve helper names just because they exist now: **nullable Act instead of `noAct()`, a smaller StateStore contract, one current-State admission path, and Compound processing where feature code owns only `complete Input → Output` while the reusable layer owns currentization + Compound assembly.**
+
+### Assistant work update
+
+I’ve confirmed PR #204 is still cleanly based on the same main and mergeable. I’m checking every current Compound consumer before changing the base contract, because this is exactly where a “simplification” can secretly push complexity outward into each feature if we don’t inspect the callers.
+
+### Assistant work update
+
+I’m applying the low-risk cleanup first: `null` becomes the only “no lawful Act” representation; generic `StateStore` loses `get/forget`; and delayed/outside current-State decisions share the same `admitCurrent` admission seam. None of that depends on deciding Execution yet.
+
+### Assistant work update
+
+The first cleanup is in. For Compound, two existing features (`Events` and `Navigation`) expose a real wrinkle the old experiment had already noticed: they use previous Output as cross-cycle memory. I’m not going to hide that just to get a prettier `process(Input)`. I’m reducing the framework ceremony while keeping that memory explicit until its rightful owner is re-derived.
+
+### Assistant work update
+
+The reusable Relay core is now in the cleaner shape: `InputState.latest(...)` owns patch currentization, `process(...)` returns only Output meaning, and the base constructs `VexCompoundState(input, output)` once. I’m migrating each existing consumer now; the two that truly need retained Output memory keep it explicit through the `retainedState` parameter instead of hiding it inside whole-state reconstruction.
+
+### Assistant work update
+
+Three consumers are migrated cleanly now. The remaining two interesting ones are exactly the ones we expected: Style has **input reset semantics** when a selection revision changes, and Events/Navigation have **real retained relationship memory**. I’m moving only the first kind into `InputState.latest(...)`; I’m keeping the second explicit instead of pretending it vanished.
+
+### Assistant work update
+
+I caught one mechanical syntax scar from the automated Navigation rewrite before treating it as finished. I’m replacing that whole function cleanly by hand now; the semantic behavior is unchanged — route identity and cue-history memory remain explicit in `retainedState`, while Compound construction stays framework-owned.
+
+### Assistant work update
+
+The production consumers are now on the new shape. I’m aligning the Relay fixtures next so they prove the mechanics we actually care about — currentization and assembly — without turning those tests into architecture authority.
+
+### Assistant work update
+
+The core migration is done. I’m doing a consistency pass now for exactly the kind of hidden residue we’re trying to eliminate: old `processStates` implementations, stale `noAct` wording, generic `get/forget` obligations, and accidental null-assertion/whole-State reconstruction left behind by the rewrite.
+
+### Assistant work update
+
+The implementation is now ahead of the prose, so I’m correcting the canonical docs before I call this clean. The key sentence will be explicit: **partial input is currentized once, `process` returns Output only, Compound assembly is framework-owned; retained prior State is an explicit exception for already-earned cross-cycle memory, not a default reducer habit.**
+
+### Assistant work update
+
+The code is now smaller, but the docs still contain the old vocabulary in a few places. I’m aligning those next so a future AI can’t “restore” `noAct`, `get/forget`, or whole-Compound `processStates(...)` just because stale prose still tells it to.
+
+### Assistant work update
+
+The main source path is coherent now. I’m checking the two remaining likely drift surfaces — Behavior README and the PR narrative — and I’m also reassessing one earlier marker: the private `setCurrentStateLocked` helper is mechanics, whereas `admitCurrent` is the meaningful arrival seam. I don’t want the annotation system to freeze an implementation detail by accident.
+
+### Assistant work update
+
+The cleanup is now represented consistently in source and architecture docs. I’m checking the final PR shape and the remaining Store review thread; then I’ll tell you exactly what was simplified, what is now vetted, and what I deliberately left unvetted rather than smuggling it in under the cleanup.
+
+### Assistant work update
+
+PR #204 is still mergeable and draft after the larger cleanup. I’m doing a lightweight syntax-structure pass now—not treating it as architecture proof, just checking that the edits themselves didn’t leave unmatched Kotlin delimiters before I update/resolve the review thread.
+
+### Assistant work update
+
+The main source path is coherent now. I’m checking the two remaining likely drift surfaces — Behavior README and the PR narrative — and I’m also reassessing one earlier marker: the private `setCurrentStateLocked` helper is mechanics, whereas `admitCurrent` is the meaningful arrival seam. I don’t want the annotation system to freeze an implementation detail by accident.
+
+### Assistant work update
+
+The cleanup is now represented consistently in source and architecture docs. I’m checking the final PR shape and the remaining Store review thread; then I’ll tell you exactly what was simplified, what is now vetted, and what I deliberately left unvetted rather than smuggling it in under the cleanup.
 
 ### Assistant
 
