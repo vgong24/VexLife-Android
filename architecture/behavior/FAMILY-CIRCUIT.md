@@ -319,35 +319,33 @@ Family consumer earns them as shared architecture.
 Compound processing now keeps mechanics and relationship meaning separate:
 
 ~~~text
-retained InputState
-+ incoming partial InputState
--> InputState.latest(incoming)
--> complete CURRENT InputState
+currentState.inputState
++ incomingInputState
+-> currentState.inputState.latest(incomingInputState)
+-> latestStateInput
 
-complete CURRENT InputState
--> process(...)
--> OutputState
+process(latestStateInput, currentState)
+-> latestStateOutput
 
-framework
--> VexCompoundState(
-       inputState = complete CURRENT InputState,
-       outputState = OutputState
-   )
--> one current-State commit
+VexCompoundState(
+    latestStateInput,
+    latestStateOutput
+)
+-> next current State
 ~~~
 
 Concrete Relays therefore do **not** rebuild `VexCompoundState` and do not repeat partial-input merge
 plumbing. `InputState.latest(...)` owns currentization; `process(...)` owns relationship meaning; the
 reusable Compound boundary owns assembly and commit.
 
-The current production signature still supplies the prior retained Compound State alongside the
-complete Input because two existing relationships have already-earned cross-cycle memory
-(Events attention-target retention and Navigation guidance/arrival memory). That prior State is an
-explicit hold, not permission for new Relays to use previous Output as convenient hidden reducer
-input. New relationships should derive Output from the complete Input alone unless a real product
-requirement earns retained relationship memory.
+The current production signature supplies `currentState` alongside `latestStateInput` because two
+existing relationships already use `currentState.outputState` for cross-cycle memory (Events
+attention-target continuity and Navigation guidance/arrival memory). That is an explicit hold, not
+permission for new Relays to use previous Output as convenient hidden reducer input. New
+relationships should derive Output from `latestStateInput` alone unless a real product requirement
+earns cross-cycle relationship memory.
 
-If only retained Input meaning changes while derived Output remains equal, Compound current State
+If only `latestStateInput` meaning changes while derived Output remains equal, Compound current State
 still changes while `outputStates` remains quiet. Consumers may read `current`, `currentInput`, or
 `currentOutput` without reconstructing the relationship.
 
