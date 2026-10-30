@@ -10,17 +10,70 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
  * owns only execution mechanics: maintained convergence observation plus finite draft/preparation/
  * leg operations through the accepted VexExecution foundation.
  */
+@OptIn(VexExecution.RelationshipFoundationApi::class)
 internal class VexMapsDistributionExecution(
     private val root:
         VexExecutionRoot,
     private val session:
         VexMapsDistributionSession,
 ) :
-    VexExecution(
+    VexExecution<
+        VexMapsDistributionSession
+    >(
         root,
     ) {
+    private object ModeDeliveryRouteObservation :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
+    private object NavigationObservation :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
+    private object RestoreDraftRelationship :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
+    private object AddStopRelationship :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
+    private data class RemoveStopRelationship(
+        val stopRef:
+            String,
+    ) :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
+    private object ReturnToStartRelationship :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
+    private object ClearDraftRelationship :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
+    private object PreparationRelationship :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
+    private object LegRelationship :
+        VexExecution.RelationshipId<
+            VexMapsDistributionSession
+        >
+
     fun start() {
         launchForCollect(
+            relationshipId =
+                ModeDeliveryRouteObservation,
             source =
                 session::modeDeliveryRouteOutputsForExecution,
         ) { output ->
@@ -30,6 +83,8 @@ internal class VexMapsDistributionExecution(
         }
 
         launchForCollect(
+            relationshipId =
+                NavigationObservation,
             source =
                 session::navigationOutputsForExecution,
         ) { output ->
@@ -40,8 +95,13 @@ internal class VexMapsDistributionExecution(
     }
 
     fun restoreDraft() {
-        launchOnce(
-            session::restoreDraftForExecution,
+        launch(
+            relationshipId =
+                RestoreDraftRelationship,
+            approach =
+                VexExecution.Approach.Earliest,
+            action =
+                session::restoreDraftForExecution,
         )
     }
 
@@ -49,33 +109,58 @@ internal class VexMapsDistributionExecution(
         work:
             VexMapsDistributionAddStopWork,
     ) {
-        launchOnce(
-            session::addStopForExecution,
-            work,
+        launch(
+            relationshipId =
+                AddStopRelationship,
+            approach =
+                VexExecution.Approach.Queued,
+            action =
+                session::addStopForExecution,
+            argument =
+                work,
         )
     }
 
     fun removeStop(
         stopRef: String,
     ) {
-        launchOnce(
-            session::removeStopForExecution,
-            stopRef,
+        launch(
+            relationshipId =
+                RemoveStopRelationship(
+                    stopRef,
+                ),
+            approach =
+                VexExecution.Approach.Earliest,
+            action =
+                session::removeStopForExecution,
+            argument =
+                stopRef,
         )
     }
 
     fun setReturnToStart(
         enabled: Boolean,
     ) {
-        launchOnce(
-            session::setReturnToStartForExecution,
-            enabled,
+        launch(
+            relationshipId =
+                ReturnToStartRelationship,
+            approach =
+                VexExecution.Approach.Latest,
+            action =
+                session::setReturnToStartForExecution,
+            argument =
+                enabled,
         )
     }
 
     fun clearDraft() {
-        launchOnce(
-            session::clearDraftForExecution,
+        launch(
+            relationshipId =
+                ClearDraftRelationship,
+            approach =
+                VexExecution.Approach.Earliest,
+            action =
+                session::clearDraftForExecution,
         )
     }
 
@@ -83,18 +168,25 @@ internal class VexMapsDistributionExecution(
         work:
             VexMapsDistributionPreparationWork,
     ) {
-        cancelPreparation()
         cancelLeg()
-        launchOnce(
-            session::prepareForExecution,
-            work,
+        launch(
+            relationshipId =
+                PreparationRelationship,
+            approach =
+                VexExecution.Approach.Latest,
+            action =
+                session::prepareForExecution,
+            argument =
+                work,
         )
     }
 
     fun cancelPreparation() {
         forceStop(
-            session::prepareForExecution,
-            "Distribution preparation superseded",
+            relationshipId =
+                PreparationRelationship,
+            reason =
+                "Distribution preparation superseded",
         )
     }
 
@@ -102,17 +194,24 @@ internal class VexMapsDistributionExecution(
         work:
             VexMapsDistributionLegWork,
     ) {
-        cancelLeg()
-        launchOnce(
-            session::prepareLegForExecution,
-            work,
+        launch(
+            relationshipId =
+                LegRelationship,
+            approach =
+                VexExecution.Approach.Latest,
+            action =
+                session::prepareLegForExecution,
+            argument =
+                work,
         )
     }
 
     fun cancelLeg() {
         forceStop(
-            session::prepareLegForExecution,
-            "Distribution leg preparation superseded",
+            relationshipId =
+                LegRelationship,
+            reason =
+                "Distribution leg preparation superseded",
         )
     }
 
