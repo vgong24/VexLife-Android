@@ -7,14 +7,13 @@ The current candidate keeps the runtime call graph visible in ordinary Kotlin.
 ## Runtime
 
 ~~~text
-caller / UI / provider / Store observation
--> typed Family Control
+caller / UI
 -> Family.activate(control)
 -> concrete Family.act(currentState, control)
 -> when (currentState)
 -> when (control)
 -> null / stay() / admit(State)
--> optional saveLatest(State)
+-> optional saveState
 -> StateRelay / storage execution
 ~~~
 
@@ -128,13 +127,9 @@ activate(control)
 -> maintained execution coordination
 ~~~
 
-Concrete maintained Save authoring stays intentionally small:
+Feature authoring does not choose an execution Approach.
 
-~~~kotlin
-saveLatest(
-    nextState,
-)
-~~~
+The maintained Save relationship identity is still formed once:
 
 ~~~text
 Control identity
@@ -145,17 +140,17 @@ Control.resourceId
 
 RelationshipId
     live Family + exact Control identity + optional exact ResourceId object
-
-SaveLatest
-    storage execution for the triggering Control using Latest relationship semantics
 ~~~
+
+An Act may carry a `saveState`. activate(...) applies immediate State meaning first, then hands that
+State to the current execution implementation for ordered persistence.
 
 The full Control payload is not automatically identity. If Control.Play(trackId, position) needs
 coordination per track, Play exposes resourceId = trackId; position remains request payload.
 Enum Control entries remain distinct exact Control identities.
 
-There is no generic Begin authoring tree or arbitrary execution argument bag on the Direct Family
-surface.
+There is no generic Begin authoring tree, no feature-facing Earliest/Latest/Queued selection, and no
+arbitrary execution argument bag on the Direct Family surface.
 
 ## Logger boundary
 
@@ -178,25 +173,16 @@ The current earned storage path is:
 VexFamily
 -> Store<State>
    -> save(State)
-   -> WriteResult
-      -> Success
-      -> Failure
+   -> successful return OR thrown failure
 
 VexFamily
--> StateStore<State>
-   -> Store<State>
-   -> observableState
-
-VexFamily
--> Act
-   -> immediate admitted State?
-   -> optional Save<State>
+-> Act<State>
+   -> admittedState?
+   -> saveState?
 ~~~
 
-StateStore adds only the capability Direct Family actually needs generically: durable State
-observation. Concrete storage may keep local read/reset helpers without making them architecture.
-
-Save success/failure are storage/execution facts. They have no direct State-writing path.
+Family does not create a second shared operation-result vocabulary. Save completion is an
+execution/storage fact and has no direct Family State-writing path.
 
 ## Act outcome
 
@@ -210,14 +196,14 @@ stay()
   lawful Act; immediate State remains CURRENT
 
 admit(State)
-  lawful Act; activate(...) admits State to StateRelay before Save starts
+  lawful Act; activate(...) admits State to StateRelay
 
-optional saveLatest(State)
-  activate(...) starts the authored durable Save after immediate State meaning is applied
+saveState
+  optional durable State carried by stay()/admit(...)
+  Store.save(saveState) begins only after immediate State meaning is applied
 ~~~
 
-The return carrier is VexFamily.Act<State>. The source does not carry a second result-side State
-admission grammar.
+The return carrier is VexFamily.Act<State>. There is no second result-side State admission grammar.
 
 ## Human-visible language
 
@@ -236,42 +222,49 @@ when (control)
 null
 stay()
 admit(State)
-saveLatest(State)
+saveState
 process(...)
 ~~~
 
 Except for the Vex domain functions themselves, State/Control traversal is ordinary Kotlin.
 
-## One semantic State doorway
+## One live Control-to-State doorway
 
-StateRelay is the one live Family State holder, and act(CURRENT State, Control) is the only semantic
-doorway that may author Family State:
+StateRelay is the one live Family State holder. During a live Family lifetime, semantic Control
+meaning enters through:
 
 ~~~text
-incoming semantic cause
-+ exact CURRENT State
--> typed Control
--> act(CURRENT State, Control)
+Control
+-> activate(control)
+-> act(CURRENT State, control)
 -> null / stay / admit
 -> same StateRelay
 ~~~
 
-Provider/repository reconciliation and durable Store observation do not receive a second setter-like
-path. They return typed Control meaning:
+activate(...) serializes that sequence and applies immediate State before starting optional durable
+Save.
+
+Control remains the finite affordance/request vocabulary. Provider/repository observations are not
+silently relabeled as Controls merely to force every kind of truth through one API.
+
+ThemeMode durability does not need a live Store observer:
 
 ~~~text
-provider / repository / Store observation
--> concrete Family Control
--> activate(control)
--> act(CURRENT State, control)
--> stay / admit / null
+fresh process/session
+-> read durable ThemeMode once
+-> ThemeModeFamily(initialState = durable value)
+
+live Select(mode)
+-> act(CURRENT State, Select)
+-> stay/admit + optional saveState
 ~~~
 
-The runtime serializes activate(...) so each Control resolves against exact CURRENT State.
+Generic live provider/repository observation -> Family State reconciliation remains deliberately
+unclaimed until a real Direct-Family consumer earns that boundary.
 
-A future asynchronous completion that changes Family meaning must also return as a typed Control.
-The feature must carry whatever identity is truly required to reject obsolete results; serialization
-is not claimed to solve stale-result identity by itself.
+Save completion likewise has no State-writing callback. If a future asynchronous result changes
+Family meaning, that feature must earn its exact semantic return path and whatever identity is
+required to reject obsolete results.
 
 ## Process / Compound current State
 
