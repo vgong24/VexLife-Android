@@ -183,7 +183,7 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
     override fun process(
         latestStateInput:
             VexMapsDistributionModeDeliveryRouteInputState,
-        retainedState:
+        currentState:
             VexCompoundState<
                 VexMapsDistributionModeDeliveryRouteInputState,
                 VexMapsDistributionModeDeliveryRouteOutput
@@ -192,10 +192,10 @@ internal class VexMapsDistributionModeDeliveryRouteConvergenceRelay(
         VexMapsDistributionModeDeliveryRouteOutput {
         val mode =
             latestStateInput.mode
-                ?: return retainedState.outputState.deepCopy()
+                ?: return currentState.outputState.deepCopy()
         val deliveryRoute =
             latestStateInput.deliveryRoute
-                ?: return retainedState.outputState.deepCopy()
+                ?: return currentState.outputState.deepCopy()
 
         return projectModeDeliveryRoute(
             mode =
