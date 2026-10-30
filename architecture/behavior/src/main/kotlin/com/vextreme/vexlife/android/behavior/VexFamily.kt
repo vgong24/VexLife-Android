@@ -82,18 +82,70 @@ abstract class VexFamily<
     /**
      * Family-owned display classification.
      *
-     * DisplayState is derived outward interpretation of [currentState], never another truth owner.
+     * The exact Family + State coordinates remain in the reusable type so display interpretation
+     * cannot silently detach from its semantic owner.
+     *
+     * DisplayState is derived outward interpretation of State, never another truth owner.
      */
     interface DisplayState<
-        out State : VexFamily.State<*>,
-    > {
+        Family,
+        State,
+    > where
+        Family : VexFamily<
+            Family,
+            State,
+            *,
+            *
+        >,
+        State : VexFamily.State<Family> {
         data class StateOnly<
-            State : VexFamily.State<*>,
+            Family,
+            State,
         >(
-            val state: State,
+            val state:
+                State,
         ) :
-            DisplayState<State>
+            DisplayState<
+                Family,
+                State
+            > where
+            Family : VexFamily<
+                Family,
+                State,
+                *,
+                *
+            >,
+            State : VexFamily.State<Family>
     }
+
+    /**
+     * Immutable outward snapshot of one exact Family State and the DisplayState derived from that
+     * same State value.
+     *
+     * Projection is not another truth owner. The Family coordinate prevents unrelated State /
+     * DisplayState pairs from being assembled into one apparently valid projection.
+     */
+    data class Projection<
+        Family,
+        State,
+        out Display,
+    >(
+        val state:
+            State,
+        val displayState:
+            Display,
+    ) where
+        Family : VexFamily<
+            Family,
+            State,
+            *,
+            *
+        >,
+        State : VexFamily.State<Family>,
+        Display : DisplayState<
+            Family,
+            State
+        >
 
     /**
      * One lawful outcome resolved from exact CURRENT State + Control.
@@ -181,12 +233,76 @@ abstract class VexFamily<
                 effect,
         )
 
-    open val displayState:
-        DisplayState<FamilyState>
+    /**
+     * Derive outward display meaning from one exact semantic State snapshot.
+     *
+     * Concrete Families override this seam when richer repeated display interpretation is earned.
+     */
+    open fun displayStateFor(
+        state:
+            FamilyState,
+    ):
+        DisplayState<
+            Family,
+            FamilyState
+        > =
+        DisplayState.StateOnly<
+            Family,
+            FamilyState
+        >(
+            state,
+        )
+
+    /**
+     * Bind one exact State snapshot to the DisplayState derived from that same value.
+     */
+    open fun projectionFor(
+        state:
+            FamilyState,
+    ):
+        Projection<
+            Family,
+            FamilyState,
+            DisplayState<
+                Family,
+                FamilyState
+            >
+        > =
+        Projection(
+            state =
+                state,
+            displayState =
+                displayStateFor(
+                    state,
+                ),
+        )
+
+    open val currentProjection:
+        Projection<
+            Family,
+            FamilyState,
+            DisplayState<
+                Family,
+                FamilyState
+            >
+        >
         get() =
-            DisplayState.StateOnly(
-                currentState,
-            )
+            synchronized(
+                stateLock,
+            ) {
+                projectionFor(
+                    stateRelay.value,
+                )
+            }
+
+    open val displayState:
+        DisplayState<
+            Family,
+            FamilyState
+        >
+        get() =
+            currentProjection
+                .displayState
 
     /**
      * Availability and activation resolve through the exact same semantic relationship.
