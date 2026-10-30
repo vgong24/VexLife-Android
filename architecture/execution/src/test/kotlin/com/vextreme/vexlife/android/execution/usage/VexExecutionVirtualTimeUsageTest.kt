@@ -174,11 +174,11 @@ class VexExecutionVirtualTimeUsageTest {
             )
             assertEquals(
                 VexCoroutineStatus.RUNNING,
-                first.state.value.status,
+                first.snapshot.value.status,
             )
             assertEquals(
                 VexCoroutineStatus.RUNNING,
-                second.state.value.status,
+                second.snapshot.value.status,
             )
         }
 
@@ -200,7 +200,7 @@ class VexExecutionVirtualTimeUsageTest {
             assertEquals(
                 VexCoroutineStatus
                     .RESTARTING,
-                handle.state.value.status,
+                handle.snapshot.value.status,
             )
 
             advanceTimeBy(
@@ -228,7 +228,7 @@ class VexExecutionVirtualTimeUsageTest {
             )
             assertEquals(
                 VexCoroutineStatus.FAILED,
-                handle.state.value.status,
+                handle.snapshot.value.status,
             )
         }
 
@@ -280,7 +280,7 @@ class VexExecutionVirtualTimeUsageTest {
             )
             assertEquals(
                 VexCoroutineStatus.CANCELLED,
-                handle.state.value.status,
+                handle.snapshot.value.status,
             )
         }
 }
