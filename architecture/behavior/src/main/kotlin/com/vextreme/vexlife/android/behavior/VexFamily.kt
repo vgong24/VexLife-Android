@@ -25,7 +25,7 @@ import kotlin.reflect.KClass
  *     -> when (currentState)
  *     -> when (control)
  *     -> stay() or admit(State)
- *     -> optional begin(...)
+ *     -> optional saveLatest(State)
  *     -> StateRelay / execution
  *
  * The concrete Family owns [act]. State and Control traversal use native Kotlin sealed-type when
@@ -96,20 +96,16 @@ abstract class VexFamily<
             *,
             *
         > {
-        interface Resource<
-            Family,
-            out Id,
-        > :
-            Control<Family> where
-            Family : VexFamily<
-                Family,
-                *,
-                *
-            >,
-            Id : ResourceId<Family> {
-            val resourceId:
-                Id
-        }
+        /**
+         * Optional stable semantic resource identity for this Control's maintained relationship.
+         *
+         * Control identity is always present. A non-null resourceId narrows repeated resources for
+         * this exact Control kind; ordinary Control payload does not silently become identity.
+         */
+        val resourceId:
+            ResourceId<Family>?
+            get() =
+                null
     }
 
     /**
@@ -247,14 +243,13 @@ abstract class VexFamily<
         State : VexFamily.State<*>,
     > :
         Store<State> {
+        /**
+         * Current durable State followed by subsequent durable changes.
+         *
+         * Store observation is input to Family meaning; it is never another live Family State owner.
+         */
         val observableState:
             Flow<State>
-
-        suspend fun get():
-            State
-
-        suspend fun forget():
-            Store.WriteResult
     }
 
     /**
@@ -267,259 +262,22 @@ abstract class VexFamily<
     > internal constructor(
         internal val admittedState:
             State?,
-        internal val begin:
-            Begin<State>?,
+        internal val save:
+            Save<State>?,
     ) {
         /**
-         * Optional execution consequence opened by an Act.
+         * The one execution consequence Direct Family has actually earned in production today.
          *
-         * Begin is not a standalone package capability. Its constructors are closed; concrete
-         * Families receive the protected VexFamily.begin(...) opening only because they are
-         * authoring an Act.
+         * Save does not author later Family State. Save success/failure are execution/storage facts.
+         * If a future result changes Family meaning, that result must return as a typed Control and
+         * re-enter act(CURRENT State, Control).
          */
-        class Begin<
+        class Save<
             State : VexFamily.State<*>,
         > internal constructor(
-            internal val approach:
-                VexExecution.Approach,
-            internal val save:
-                Save<State>,
-        ) {
-
-            internal class Result<
+            internal val state:
                 State,
-            > internal constructor(
-                internal val admission:
-                    (
-                        (
-                            State,
-                        ) -> State
-                    )?,
-            )
-
-            internal data class Results<
-                State,
-            >(
-                val success:
-                    Result<State>,
-                val failure:
-                    Result<State>,
-            )
-
-            internal data class Save<
-                State : VexFamily.State<*>,
-            >(
-                val state:
-                    State,
-                val results:
-                    Results<State>,
-            )
-
-            class Scope<
-                State : VexFamily.State<*>,
-            > internal constructor(
-                private val approach:
-                    VexExecution.Approach,
-            ) {
-                private var save:
-                    Save<State>? =
-                    null
-
-                fun save(
-                    state: State,
-                ):
-                    SaveDestination<State> {
-                    require(
-                        save ==
-                            null,
-                    ) {
-                        "begin currently admits one Save"
-                    }
-
-                    return SaveDestination(
-                        state =
-                            state,
-                        complete = { completed ->
-                            require(
-                                save ==
-                                    null,
-                            ) {
-                                "begin Save was already completed"
-                            }
-
-                            save =
-                                completed
-                        },
-                    )
-                }
-
-                internal fun build():
-                    Begin<State> =
-                    Begin(
-                        approach =
-                            approach,
-                        save =
-                            requireNotNull(
-                                save,
-                            ) {
-                                "begin requires one Save"
-                            },
-                    )
-
-                class SaveDestination<
-                    State : VexFamily.State<*>,
-                > internal constructor(
-                    private val state:
-                        State,
-                    private val complete:
-                        (
-                            Save<State>,
-                        ) -> Unit,
-                ) {
-                    fun results(
-                        block:
-                            ResultsScope<State>.() -> Unit,
-                    ) {
-                        complete(
-                            Save(
-                                state =
-                                    state,
-                                results =
-                                    ResultsScope<State>()
-                                        .apply(
-                                            block,
-                                        )
-                                        .build(),
-                            ),
-                        )
-                    }
-                }
-
-                class ResultsScope<
-                    State : VexFamily.State<*>,
-                > internal constructor() {
-                    private var success:
-                        Result<State>? =
-                        null
-
-                    private var failure:
-                        Result<State>? =
-                        null
-
-                    fun success(
-                        block:
-                            ResultScope<State>.() -> Unit = {},
-                    ) {
-                        require(
-                            success ==
-                                null,
-                        ) {
-                            "Success result was declared more than once"
-                        }
-
-                        success =
-                            ResultScope<State>()
-                                .apply(
-                                    block,
-                                )
-                                .build()
-                    }
-
-                    fun failure(
-                        block:
-                            ResultScope<State>.() -> Unit = {},
-                    ) {
-                        require(
-                            failure ==
-                                null,
-                        ) {
-                            "Failure result was declared more than once"
-                        }
-
-                        failure =
-                            ResultScope<State>()
-                                .apply(
-                                    block,
-                                )
-                                .build()
-                    }
-
-                    internal fun build():
-                        Results<State> =
-                        Results(
-                            success =
-                                requireNotNull(
-                                    success,
-                                ) {
-                                    "results requires explicit Success"
-                                },
-                            failure =
-                                requireNotNull(
-                                    failure,
-                                ) {
-                                    "results requires explicit Failure"
-                                },
-                        )
-                }
-
-                class ResultScope<
-                    State : VexFamily.State<*>,
-                > internal constructor() {
-                    private var admission:
-                        (
-                            (
-                                State,
-                            ) -> State
-                        )? =
-                        null
-
-                    /**
-                     * Authored unconditional later State after this execution result.
-                     *
-                     * The State is still admitted through the Family StateRelay boundary when the
-                     * result actually arrives.
-                     */
-                    fun admit(
-                        state: State,
-                    ) {
-                        admit {
-                            state
-                        }
-                    }
-
-                    /**
-                     * Authored later-State decision against exact CURRENT Family State.
-                     *
-                     * Use this when a delayed result is only lawful while some feature-owned
-                     * currentness condition still holds. Family supplies CURRENT State and
-                     * serialization; the feature supplies the meaning of "still current".
-                     */
-                    fun admit(
-                        decide:
-                            (
-                                currentState: State,
-                            ) -> State,
-                    ) {
-                        require(
-                            admission ==
-                                null,
-                        ) {
-                            "one result may admit at most one later State"
-                        }
-
-                        admission =
-                            decide
-                    }
-
-                    internal fun build():
-                        Result<State> =
-                        Result(
-                            admission =
-                                admission,
-                        )
-                }
-            }
-        }
+        )
     }
 
     /*
@@ -551,16 +309,14 @@ abstract class VexFamily<
      * A concrete Family implements this function directly. State is traversed first because current
      * State is the truth against which the incoming Control receives meaning.
      *
-     * Both State and Control traversal stay exhaustive at this semantic boundary. Do not use an
-     * else branch to absorb future vocabulary: a new State or Control should create compiler-visible
-     * relationship work. Controls with the exact same reviewed outcome may share one branch.
-     *
-     * Use [noAct] for a reviewed State + Control pair that has no lawful Act.
+     * null means this exact current State + Control has no lawful Act. stay() means the Control is
+     * lawful while immediate semantic State remains CURRENT. admit(State) means the returned Act
+     * carries that immediate semantic State admission.
      *
      * This is relationship resolution, not execution. The same function is used by isAvailable(...)
      * and activate(...), so implementations must not mutate Family State, invoke providers/Store,
      * launch work, log accepted facts, or otherwise cause an external effect while resolving.
-     * begin(...) authors a consequence description only; it does not start that consequence here.
+     * saveLatest(...) authors a Save consequence only; it does not start that consequence here.
      */
     protected abstract fun act(
         currentState: FamilyState,
@@ -572,144 +328,70 @@ abstract class VexFamily<
      * Authored Act outcome: keep current semantic State.
      */
     protected fun stay(
-        begin:
-            Act.Begin<FamilyState>? =
+        save:
+            Act.Save<FamilyState>? =
             null,
     ):
         Act<FamilyState> =
         Act(
             admittedState =
                 null,
-            begin =
-                begin,
+            save =
+                save,
         )
-
-    /**
-     * Reviewed absence of a lawful Act for this exact current State + incoming Control pair.
-     *
-     * This intentionally returns the nullable representation used by act(...), but concrete Family
-     * source does not communicate semantic absence with a naked null.
-     */
-    protected fun noAct():
-        Act<FamilyState>? =
-        null
 
     /**
      * Authored Act outcome: admit this semantic State when activate(...) applies the Act.
      */
     protected fun admit(
         state: FamilyState,
-        begin:
-            Act.Begin<FamilyState>? =
+        save:
+            Act.Save<FamilyState>? =
             null,
     ):
         Act<FamilyState> =
         Act(
             admittedState =
                 state,
-            begin =
-                begin,
+            save =
+                save,
         )
 
     /**
-     * Optional independent execution consequence carried by an Act.
-     */
-    protected fun begin(
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
-    ):
-        Act.Begin<FamilyState> =
-        buildBegin(
-            approach =
-                VexExecution.Approach.Independent,
-            block =
-                block,
-        )
-
-    /**
-     * Earliest maintained relationship for the triggering Control.
+     * Author the currently earned durable consequence: persist this Family State using Latest
+     * relationship semantics for the triggering Control.
      *
-     * Relationship identity comes from the live Family + Control name + optional typed ResourceId.
+     * Save completion cannot author Family State from this path. Any future semantically meaningful
+     * completion must return as a typed Control and re-enter act(CURRENT State, Control).
      */
-    protected fun beginEarliest(
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
+    protected fun saveLatest(
+        state: FamilyState,
     ):
-        Act.Begin<FamilyState> =
-        buildBegin(
-            approach =
-                VexExecution.Approach.Earliest,
-            block =
-                block,
+        Act.Save<FamilyState> =
+        Act.Save(
+            state =
+                state,
         )
-
-    /**
-     * Latest maintained relationship for the triggering Control.
-     */
-    protected fun beginLatest(
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
-    ):
-        Act.Begin<FamilyState> =
-        buildBegin(
-            approach =
-                VexExecution.Approach.Latest,
-            block =
-                block,
-        )
-
-    /**
-     * Queued maintained relationship for the triggering Control.
-     */
-    protected fun beginQueued(
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
-    ):
-        Act.Begin<FamilyState> =
-        buildBegin(
-            approach =
-                VexExecution.Approach.Queued,
-            block =
-                block,
-        )
-
-    private fun buildBegin(
-        approach:
-            VexExecution.Approach,
-        block:
-            Act.Begin.Scope<FamilyState>.() -> Unit,
-    ):
-        Act.Begin<FamilyState> =
-        Act.Begin.Scope<FamilyState>(
-            approach =
-                approach,
-        )
-            .apply(
-                block,
-            )
-            .build()
 
     open val store:
         Store<FamilyState>? =
         null
 
     /**
-     * Observe one durable Family-State Store through the same StateRelay currentness boundary.
+     * Observe durable Family-State truth as typed Family input.
      *
-     * Execution owns only maintained Flow custody. Store owns durable State. The concrete Family
-     * owns how stored State combines with exact CURRENT State. The decision re-enters through
-     * [admitCurrent], so no session/presentation observer or second current-State holder is created.
+     * Store owns durable State. Execution owns only observation lifetime. The concrete Family turns
+     * each observed State into a typed Control, and activate(...) re-resolves that Control against
+     * exact CURRENT semantic State. Store observation therefore gets no second State-writing door.
      */
     protected fun observeStore(
         stateStore:
             StateStore<FamilyState>,
-        decide:
+        toControl:
             (
-                currentState: FamilyState,
                 storedState: FamilyState,
-            ) -> FamilyState,
-    ):
-        VexExecution.Handle =
+            ) -> FamilyControl,
+    ) {
         VexExecution.observe(
             executionRoot =
                 executionRoot,
@@ -718,13 +400,13 @@ abstract class VexFamily<
             source =
                 stateStore::observableState,
         ) { storedState ->
-            admitCurrent { currentState ->
-                decide(
-                    currentState,
+            activate(
+                toControl(
                     storedState,
-                )
-            }
+                ),
+            )
         }
+    }
 
     /**
      * Current display classification for this Family.
@@ -743,10 +425,10 @@ abstract class VexFamily<
     /**
      * Informative availability from the same direct act(currentState, control) relationship used by
      * activate(...). A Control is available exactly when current State + that Control produces a
-     * lawful Act; noAct() means unavailable.
+     * lawful Act; null means unavailable.
      *
      * Availability resolves and inspects the Act only. It never admits State and never starts an
-     * authored Begin. This is why concrete act(...) must remain relationship-pure.
+     * authored Save. This is why concrete act(...) must remain relationship-pure.
      */
     fun isAvailable(
         control: FamilyControl,
@@ -807,11 +489,11 @@ abstract class VexFamily<
                     ::setCurrentStateLocked,
                 )
 
-            act.begin
-                ?.let { begin ->
-                    execute(
-                        begin =
-                            begin,
+            act.save
+                ?.let { save ->
+                    executeSave(
+                        save =
+                            save,
                         control =
                             control,
                     )
@@ -819,54 +501,6 @@ abstract class VexFamily<
 
             true
         }
-
-    /**
-     * Concrete-Family semantic admission for already-reconciled outside truth.
-     *
-     * Keep the public/source-specific name on the concrete Family (for example providerReconciled).
-     * This protected seam only supplies exact CURRENT State + serialization; it does not decide what
-     * an observation means and it must not be used from act(...), which remains relationship-pure.
-     */
-    protected fun admitCurrent(
-        decide:
-            (
-                currentState: FamilyState,
-            ) -> FamilyState,
-    ):
-        FamilyState =
-        synchronized(
-            stateLock,
-        ) {
-            setCurrentStateLocked(
-                decide(
-                    stateRelay.value,
-                ),
-            )
-            stateRelay.value
-        }
-
-    /**
-     * One serialized Family StateRelay decision.
-     *
-     * The caller supplies meaning; this boundary supplies exact CURRENT State and one-at-a-time
-     * admission. StateRelay remains the single live holder.
-     */
-    private fun updateCurrentState(
-        decide:
-            (
-                currentState: FamilyState,
-            ) -> FamilyState,
-    ) {
-        synchronized(
-            stateLock,
-        ) {
-            setCurrentStateLocked(
-                decide(
-                    stateRelay.value,
-                ),
-            )
-        }
-    }
 
     /**
      * Commit one already-resolved next State while [stateLock] is held.
@@ -897,29 +531,11 @@ abstract class VexFamily<
         }
     }
 
-    private fun execute(
-        begin:
-            Act.Begin<FamilyState>,
-        control:
-            FamilyControl,
-    ) {
-        executeSave(
-            approach =
-                begin.approach,
-            control =
-                control,
-            save =
-                begin.save,
-        )
-    }
-
     private fun executeSave(
-        approach:
-            VexExecution.Approach,
+        save:
+            Act.Save<FamilyState>,
         control:
             FamilyControl,
-        save:
-            Act.Begin.Save<FamilyState>,
     ) {
         val stateStore =
             requireNotNull(
@@ -933,27 +549,34 @@ abstract class VexFamily<
         val operation =
             stateStore::save
 
-        val beforeOperation = {
-            recordAcceptedFact(
-                VexLogger.Event.Family.OperationBegan(
-                    family =
-                        this::class,
-                    operation =
-                        operation,
-                    state =
-                        save.state::class,
+        VexExecution.beginLatest(
+            executionRoot =
+                executionRoot,
+            owner =
+                this::class,
+            relationshipId =
+                relationshipId(
+                    control,
                 ),
-            )
-        }
-
-        val onResult:
-            (
-                Store.WriteResult,
-            ) -> Unit = { result ->
-                when (
-                    result
-                ) {
-                    Store.WriteResult.Success -> {
+            operation =
+                operation,
+            argument =
+                save.state,
+            beforeOperation = {
+                recordAcceptedFact(
+                    VexLogger.Event.Family.OperationBegan(
+                        family =
+                            this::class,
+                        operation =
+                            operation,
+                        state =
+                            save.state::class,
+                    ),
+                )
+            },
+            onResult = { result ->
+                when (result) {
+                    Store.WriteResult.Success ->
                         recordAcceptedFact(
                             VexLogger.Event.Family.OperationSuccess(
                                 family =
@@ -965,12 +588,7 @@ abstract class VexFamily<
                             ),
                         )
 
-                        applyLaterResult(
-                            save.results.success,
-                        )
-                    }
-
-                    is Store.WriteResult.Failure -> {
+                    is Store.WriteResult.Failure ->
                         recordAcceptedFact(
                             VexLogger.Event.Family.OperationFailure(
                                 family =
@@ -986,18 +604,9 @@ abstract class VexFamily<
                                         },
                             ),
                         )
-
-                        applyLaterResult(
-                            save.results.failure,
-                        )
-                    }
                 }
-            }
-
-        val onFailure:
-            (
-                Throwable,
-            ) -> Unit = { failure ->
+            },
+            onFailure = { failure ->
                 recordAcceptedFact(
                     VexLogger.Event.Family.OperationFailure(
                         family =
@@ -1010,99 +619,8 @@ abstract class VexFamily<
                             failure::class,
                     ),
                 )
-
-                applyLaterResult(
-                    save.results.failure,
-                )
-            }
-
-        when (
-            approach
-        ) {
-            VexExecution.Approach.Independent ->
-                VexExecution.begin(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Earliest ->
-                VexExecution.beginEarliest(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Latest ->
-                VexExecution.beginLatest(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Queued ->
-                VexExecution.beginQueued(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-        }
+            },
+        )
     }
 
     internal fun relationshipId(
@@ -1123,16 +641,6 @@ abstract class VexFamily<
                 ) {
                     "VexFamily Control requires a named class or enum entry"
                 }
-        val resourceId =
-            (
-                control as?
-                    Control.Resource<
-                        *,
-                        *
-                    >
-            )
-                ?.resourceId
-
         return RelationshipId(
             family =
                 this,
@@ -1141,7 +649,7 @@ abstract class VexFamily<
             controlName =
                 controlName,
             resourceId =
-                resourceId,
+                control.resourceId,
         )
     }
 
@@ -1149,8 +657,7 @@ abstract class VexFamily<
      * Best-effort observation of an already-authored/accepted Family fact.
      *
      * Logger projection is deliberately non-authoritative. A Sink failure must not reject a lawful
-     * Control, suppress State admission or Store execution, or convert a successful operation into
-     * the Family-authored failure result.
+     * Control, suppress State admission, or suppress Store execution.
      */
     private fun recordAcceptedFact(
         event:
@@ -1165,15 +672,7 @@ abstract class VexFamily<
         }
     }
 
-    private fun applyLaterResult(
-        result:
-            Act.Begin.Result<FamilyState>,
-    ) {
-        result.admission
-            ?.let(
-                ::updateCurrentState,
-            )
-    }
+
 }
 
 // [VXG RealForever]
