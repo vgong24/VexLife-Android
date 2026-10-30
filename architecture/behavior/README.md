@@ -7,10 +7,10 @@ The Direct `VexFamily` foundation accepted on main through
 
 ~~~text
 CURRENT State + incoming Control
--> Act outcome
--> stay / admit
--> optional begin
--> current State / execution
+-> Act?
+-> null / stay / admit
+-> optional saveLatest(State)
+-> current State / storage execution
 ~~~
 
 ## Current foundation state
@@ -34,6 +34,11 @@ Behavior source merely because the Direct Family foundation exists.
 PR #193 is the acceptance/origin reference for the Direct Family identity/custody refinement:
 https://github.com/vgong24/VexLife-Android/pull/193
 
+Architecture evolution in this repository now applies the repo-owned **Subtractive Completion**
+posture from docs/CULTURE.md: additions start rejected, original failures must be replayed against
+proposed fixes, and mechanics stay private unless removing them would lose a demonstrated semantic
+requirement.
+
 ## Start here
 
 Read FAMILY-CIRCUIT.md, then VexFamilyHighConfidenceTest.
@@ -45,8 +50,9 @@ Family.activate(control)
 -> concrete Family.act(currentState, control)
 -> when (currentState)
 -> when (control)
--> stay / admit / optional begin
--> StateRelay / execution
+-> null / stay / admit
+-> optional saveLatest(State)
+-> StateRelay / storage execution
 ~~~
 
 State and Control traversal are native Kotlin sealed-type when expressions. The current candidate
@@ -183,75 +189,77 @@ exactly the same.
 Use:
 
 ~~~text
-noAct()
-    reviewed State + Control pair has no lawful Act
+null
+    no lawful Act exists for this exact CURRENT State + Control
 
 stay()
-    lawful Act; current State remains current
+    lawful Act; immediate semantic State remains CURRENT
 
 admit(State)
-    lawful Act; admit State
+    lawful Act; State is admitted before any authored Save begins
 ~~~
 
-`noAct()` is explicit authoring language for absence; concrete Family source should not use a naked
-`null` to communicate that semantic decision.
+## Act / Save ownership
 
-## Act / Begin ownership
-
-The authored outcome tree is rooted under Family:
+The current earned outcome tree is deliberately small:
 
 ~~~text
 VexFamily
 -> Act<State>
-   -> optional Begin<State>
-      -> Save
-         -> Results
-            -> Success
-            -> Failure
+   -> immediate admitted State?
+   -> optional Save<State>
 ~~~
 
-`Act` is the lawful outcome of one exact current State + incoming Control relationship. `Begin`
-does not exist as a peer package capability. Its construction is closed and a concrete Family only
-receives the protected `begin(...)` opening while authoring an Act.
+Act is the lawful outcome of one exact CURRENT State + incoming Control relationship.
 
-Begin carries only `VexExecution.Approach`. It does not accept relationship arguments or manufacture
-identity.
+Direct Family no longer carries a nested result-side State-writing language. The only execution
+consequence currently earned by a real Direct-Family production consumer is durable Save(State), so
+the source names that capability directly instead of generalizing ahead of a second effect.
+
+~~~text
+Act immediate State
+-> applied first
+
+optional Save
+-> starts afterward
+-> success/failure are storage/execution facts
+-> cannot author Family State
+~~~
+
+If a future asynchronous result changes Family meaning, that meaning must return as a typed Control
+and re-enter:
+
+~~~text
+act(CURRENT State, Control)
+~~~
+
+before another State can be admitted.
 
 ## Execution relationship identity
 
-Family owns the maintained relationship boundary:
+Family owns the maintained Save relationship boundary:
 
 ~~~text
-VexFamily.Control<Family>
-    -> Control name is always included
-
-optional VexFamily.ResourceId<Family>
-    -> narrows repeated instances of that same Control
-
 live Family
-+ Control name/type
-+ optional typed ResourceId
++ exact Control identity
++ optional stable Control.resourceId
 =
 VexFamily.RelationshipId<Family>
-    -> VexExecution.RelationshipId
+-> VexExecution.RelationshipId
 ~~~
 
-`activate(control)` already owns the exact Control that earned the Act. The Family runtime therefore
-forms the relationship identity automatically. Concrete `beginEarliest { ... }`,
-`beginLatest { ... }`, and `beginQueued { ... }` choose only overlap behavior.
+Control identity is always present. resourceId only narrows repeated semantic resources for that
+same Control kind; ordinary Control payload does not silently become relationship identity.
+
+The only currently earned maintained execution authoring surface is:
 
 ~~~kotlin
-beginLatest {
-    save(nextState).results {
-        success()
-        failure()
-    }
-}
+saveLatest(state)
 ~~~
 
-There is no `trigger: Any`, no `vararg Any?`, and no second Family `ExecutionId` authoring surface.
+which means the Save associated with the triggering Control uses Latest relationship semantics.
 
-A concrete Control may bind an exact ResourceId type when Control kind alone is too broad:
+A concrete Control may expose an exact typed ResourceId when Control kind alone is too broad:
 
 ~~~kotlin
 data class TrackId(
@@ -261,38 +269,11 @@ data class TrackId(
 data class Play(
     override val resourceId: TrackId,
     val position: Int,
-) :
-    Control,
-    VexFamily.Control.Resource<
-        PlayerFamily,
-        TrackId
-    >
+) : Control
 ~~~
 
-The foundation still supplies `Play` as part of the relationship identity. The concrete Control declares
-the exact ID type; an `AccountId` cannot be substituted into this `Play` merely because both IDs belong
-to the same Family. ResourceId itself is not flattened to a shared String inside the relationship key.
-Other Control payload such as `position` remains request evidence.
-
-~~~text
-Control payload
-!= automatic relationship identity
-
-Control kind/name
-= always relationship identity
-
-typed ResourceId
-= optional narrowing identity
-
-Approach
-= Independent / Earliest / Latest / Queued
-~~~
-
-The live Family instance scopes the resulting RelationshipId, so equal Control/ResourceId values on two
-live Family instances remain separate.
-
-`SourceRef` remains automatic diagnostic/source information. `InstanceId` remains the exact
-per-launch occurrence. Neither substitutes for the semantic RelationshipId.
+position remains request payload. Equal resource values on different Control kinds do not collide
+because exact Control identity remains part of the relationship.
 
 ## Logger boundary
 
@@ -314,30 +295,40 @@ meaning while the Family runtime records only facts it actually applies.
 
 ## Store responsibility
 
-The current Family runtime consumes one exact storage capability:
+The shared storage contract carries only capabilities currently required by Direct Family:
 
 ~~~text
-VexFamily
+VexFamily.Store<State>
+-> save(State)
+-> WriteResult
+
+VexFamily.StateStore<State>
 -> Store<State>
-   -> save(State)
-   -> WriteResult
-      -> Success
-      -> Failure
+-> observableState
 ~~~
 
-There is no standalone `VexStore` root in this candidate and no marker-only Store hierarchy.
-A concrete Family may extend `VexFamily.Store<State>` locally if a real consumer earns more
-operations, but `get`, `forget`, or Store observation are not implied by Save.
+get() and forget() are not generic Family architecture. A concrete storage realization may expose
+read/reset helpers for its own local needs without teaching that CRUD shape to every future Store.
 
-Store durability is also not another Family State owner:
+Store truth is not another Family State owner:
 
 ~~~text
 Store truth != Family.currentState
 ~~~
 
-The Begin Save relationship owns its explicit success/failure consequences. There is no generic
-`Operation -> StoreOperation -> Save` taxonomy until a second real operation proves a common
-contract.
+Durable State observation has no direct State-writing privilege. An observed State is turned into a
+typed Family Control and enters the same semantic doorway:
+
+~~~text
+StateStore.observableState
+-> typed Control
+-> act(CURRENT State, Control)
+-> null / stay / admit
+-> same StateRelay
+~~~
+
+Execution owns observation lifetime only. Store owns durable bytes/State. Family owns what the
+observation means.
 
 ## Current feature-facing shape
 
@@ -378,89 +369,49 @@ class ThemeModeFamily(...) :
 }
 ~~~
 
-## StateRelay currentness boundary
+## One semantic State doorway
 
-StateRelay remains the one live Family State holder. Direct Family now also owns one serialized
-decision boundary around that holder:
-
-~~~text
-incoming Family-owned cause
-+ exact CURRENT State
--> one non-suspending decision
--> publish only changed semantic meaning
-~~~
-
-For Control activation, `act(CURRENT State, Control)` and its immediate admission happen inside that
-same boundary. Concurrent Controls therefore cannot each resolve against the same stale snapshot and
-overwrite one another.
-
-A delayed Begin result may keep the simple form:
-
-~~~kotlin
-success {
-    admit(State.Ready)
-}
-~~~
-
-or re-evaluate exact CURRENT State when feature meaning requires it:
-
-~~~kotlin
-success {
-    admit { current ->
-        if (/* result is still lawful for current */) {
-            nextState
-        } else {
-            current
-        }
-    }
-}
-~~~
-
-Family supplies CURRENT State and serialization. The feature supplies what "still current" means.
-There is no generic Family revision/generation oracle.
-
-Already-reconciled external truth enters the same StateRelay through concrete Family vocabulary rather
-than a fake Control or public setter:
-
-~~~kotlin
-fun providerReconciled(observed: ProviderState) {
-    admitCurrent { current ->
-        reconcileSemanticState(
-            current = current,
-            observed = observed,
-        )
-    }
-}
-~~~
-
-`admitCurrent` is protected. The concrete Family/source relationship owns the visible method name
-and reconciliation meaning.
-
-Durable Family-State storage follows the same dependency law. When persistence is actually Family State,
-the earned specialization is:
+StateRelay remains the one live Family State holder, and act(CURRENT State, Control) is the one
+semantic State-authoring doorway.
 
 ~~~text
-VexFamily.StateStore<State>
-  observableState
-  get()
-  save(State)
-  forget()
-~~~
-
-Its observation path is direct:
-
-~~~text
-StateStore.observableState
--> VexExecution observation lifetime custody
--> Family.observeStore(CURRENT, stored)
--> concrete Family decision
--> admitCurrent(...)
+incoming semantic cause
+-> typed Family Control
+-> act(CURRENT State, Control)
+-> null / stay / admit
 -> same StateRelay
 ~~~
 
-Execution does not interpret stored State. Store does not own CURRENT State. No session/presentation
-owner observes the Store on Family's behalf.
+This applies equally to human intent, provider/repository reconciliation, and durable Store
+observation. Those sources may use different concrete methods/adapters, but if they change Family
+State they must eventually present typed Control meaning to the Family.
 
+The runtime serializes activate(...), so Control meaning is resolved against exact CURRENT State.
+There is no second protected setter-like semantic API and no delayed result callback that can write
+State behind act(...).
+
+The current durable path is therefore:
+
+~~~text
+StateStore.observableState
+-> Family-owned Control.Stored(...)
+-> activate(control)
+-> act(CURRENT State, control)
+-> stay / admit
+-> same StateRelay
+~~~
+
+A future asynchronous result that has semantic meaning follows the same law:
+
+~~~text
+operation result
+-> typed result Control
+-> act(CURRENT State, resultControl)
+-> stay / admit / null
+~~~
+
+The feature must carry whatever identity is actually required to distinguish an obsolete result from
+the current request. Serialization alone is not claimed to solve stale-result identity.
 
 ## Compound current State
 
