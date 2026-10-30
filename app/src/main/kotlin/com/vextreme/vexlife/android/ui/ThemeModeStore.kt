@@ -13,7 +13,7 @@ import android.content.SharedPreferences
  * PersistSelection Effect; forget() is concrete reset/proof mechanics.
  */
 internal interface ThemeModeStore {
-    override fun current():
+    fun current():
         ThemeMode
 
     suspend fun save(
@@ -38,8 +38,7 @@ internal class SharedPreferencesThemeModeStore(
             )
 
 
-
-    fun current():
+    override fun current():
         ThemeMode =
         readCurrent()
 
