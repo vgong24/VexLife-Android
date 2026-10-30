@@ -11,13 +11,13 @@ interface VexState<Self : VexState<Self>> : VexDeepCopyable<Self>
 interface VexInputState<Self : VexInputState<Self>> :
     VexState<Self> {
     /**
-     * Currentize one incoming partial observation against this retained Input.
+     * Currentize one incoming partial observation against this current Input.
      *
      * This owns Input coherence only. Relationship meaning belongs to the Compound Relay's process
      * function, and Compound State assembly belongs to the reusable Relay boundary.
      */
     fun latest(
-        incoming: Self,
+        incomingInputState: Self,
     ): Self
 }
 
