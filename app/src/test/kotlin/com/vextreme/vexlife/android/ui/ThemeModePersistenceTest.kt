@@ -177,7 +177,7 @@ class ThemeModePersistenceTest {
             Flow<ThemeMode> =
             mutableState
 
-        override suspend fun get():
+        suspend fun get():
             ThemeMode =
             mutableState.value
 
@@ -193,7 +193,7 @@ class ThemeModePersistenceTest {
             return VexFamily.Store.WriteResult.Success
         }
 
-        override suspend fun forget():
+        suspend fun forget():
             VexFamily.Store.WriteResult {
             mutableState.value =
                 ThemeMode.NotSet
