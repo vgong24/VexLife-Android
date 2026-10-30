@@ -9,7 +9,7 @@ The Direct `VexFamily` foundation accepted on main through
 CURRENT State + incoming Control
 -> Act?
 -> null / stay / admit
--> optional saveLatest(State)
+-> optional saveState
 -> current State / storage execution
 ~~~
 
@@ -51,7 +51,7 @@ Family.activate(control)
 -> when (currentState)
 -> when (control)
 -> null / stay / admit
--> optional saveLatest(State)
+-> optional saveState
 -> StateRelay / storage execution
 ~~~
 
@@ -206,8 +206,8 @@ The current earned outcome tree is deliberately small:
 ~~~text
 VexFamily
 -> Act<State>
-   -> immediate admitted State?
-   -> optional Save<State>
+   -> admittedState?
+   -> saveState?
 ~~~
 
 Act is the lawful outcome of one exact CURRENT State + incoming Control relationship.
@@ -220,9 +220,9 @@ the source names that capability directly instead of generalizing ahead of a sec
 Act immediate State
 -> applied first
 
-optional Save
--> starts afterward
--> success/failure are storage/execution facts
+optional saveState
+-> starts Store.save(saveState) afterward
+-> successful return / thrown failure are execution facts
 -> cannot author Family State
 ~~~
 
@@ -237,7 +237,7 @@ before another State can be admitted.
 
 ## Execution relationship identity
 
-Family owns the maintained Save relationship boundary:
+Family owns the maintained Save relationship identity once:
 
 ~~~text
 live Family
@@ -251,13 +251,21 @@ VexFamily.RelationshipId<Family>
 Control identity is always present. resourceId only narrows repeated semantic resources for that
 same Control kind; ordinary Control payload does not silently become relationship identity.
 
-The only currently earned maintained execution authoring surface is:
+Feature authoring does **not** choose Earliest / Latest / Queued. The semantic surface is only:
 
 ~~~kotlin
-saveLatest(state)
+stay(
+    saveState = state,
+)
+
+admit(
+    state,
+    saveState = state,
+)
 ~~~
 
-which means the Save associated with the triggering Control uses Latest relationship semantics.
+The current runtime persists accepted Save consequences in Control-acceptance order. That execution
+strategy is mechanics beneath Family; it is not another feature-facing semantic vocabulary.
 
 A concrete Control may expose an exact typed ResourceId when Control kind alone is too broad:
 
@@ -295,40 +303,39 @@ meaning while the Family runtime records only facts it actually applies.
 
 ## Store responsibility
 
-The shared storage contract carries only capabilities currently required by Direct Family:
+The shared Family storage contract is deliberately one operation:
 
 ~~~text
 VexFamily.Store<State>
 -> save(State)
--> WriteResult
-
-VexFamily.StateStore<State>
--> Store<State>
--> observableState
+-> successful return OR thrown failure
 ~~~
 
-get() and forget() are not generic Family architecture. A concrete storage realization may expose
-read/reset helpers for its own local needs without teaching that CRUD shape to every future Store.
+Family does not invent a second shared result wrapper when VexExecution already owns operation
+success/failure.
 
-Store truth is not another Family State owner:
+Store truth is not another live Family State owner:
 
 ~~~text
 Store truth != Family.currentState
 ~~~
 
-Durable State observation has no direct State-writing privilege. An observed State is turned into a
-typed Family Control and enters the same semantic doorway:
+Direct Family currently has **no generic live Store-observation contract**. ThemeMode's demonstrated
+durability requirement is smaller:
 
 ~~~text
-StateStore.observableState
--> typed Control
--> act(CURRENT State, Control)
--> null / stay / admit
--> same StateRelay
+fresh process/session
+-> read durable ThemeMode once
+-> construct ThemeModeFamily(initialState = durable value)
+
+accepted Select(mode)
+-> immediate stay/admit
+-> optional saveState = mode
+-> Store.save(mode)
 ~~~
 
-Execution owns observation lifetime only. Store owns durable bytes/State. Family owns what the
-observation means.
+Concrete storage may keep local current()/forget() mechanics without teaching those operations to
+every future Family Store.
 
 ## Current feature-facing shape
 
@@ -369,49 +376,33 @@ class ThemeModeFamily(...) :
 }
 ~~~
 
-## One semantic State doorway
+## One live Control-to-State doorway
 
-StateRelay remains the one live Family State holder, and act(CURRENT State, Control) is the one
-semantic State-authoring doorway.
+Inside a live Direct Family, StateRelay is the one State holder and Control meaning enters through:
 
 ~~~text
-incoming semantic cause
--> typed Family Control
--> act(CURRENT State, Control)
+Control
+-> activate(control)
+-> act(CURRENT State, control)
 -> null / stay / admit
 -> same StateRelay
 ~~~
 
-This applies equally to human intent, provider/repository reconciliation, and durable Store
-observation. Those sources may use different concrete methods/adapters, but if they change Family
-State they must eventually present typed Control meaning to the Family.
+activate(...) serializes this sequence and applies an Act's immediate admitted State **before**
+starting its optional durable Save.
 
-The runtime serializes activate(...), so Control meaning is resolved against exact CURRENT State.
-There is no second protected setter-like semantic API and no delayed result callback that can write
-State behind act(...).
+Control remains the finite affordance/request vocabulary. Provider/repository observations are not
+silently reclassified as Controls merely to force every kind of truth through one API.
 
-The current durable path is therefore:
+No generic live external-truth reconciliation API is claimed by Direct Family today. A concrete
+consumer must first demonstrate that need and its rightful semantics. ThemeMode does not need one:
+its durable selection is read once before fresh Family construction, then explicit Controls own live
+changes.
 
-~~~text
-StateStore.observableState
--> Family-owned Control.Stored(...)
--> activate(control)
--> act(CURRENT State, control)
--> stay / admit
--> same StateRelay
-~~~
-
-A future asynchronous result that has semantic meaning follows the same law:
-
-~~~text
-operation result
--> typed result Control
--> act(CURRENT State, resultControl)
--> stay / admit / null
-~~~
-
-The feature must carry whatever identity is actually required to distinguish an obsolete result from
-the current request. Serialization alone is not claimed to solve stale-result identity.
+Likewise, Save completion has no State-writing callback. If a future asynchronous result must change
+Family State, that feature must first earn the exact semantic return path and any identity required
+to distinguish obsolete results; the current architecture does not pretend serialization alone
+solves that problem.
 
 ## Compound current State
 
@@ -444,6 +435,7 @@ processed Compound State.
 ## Deliberately still open
 
 ~~~text
+generic live provider/repository observation -> Family State reconciliation
 automatic UI observation/lifetime integration
 cross-cycle relationship memory
 provider / intent identity mapping
