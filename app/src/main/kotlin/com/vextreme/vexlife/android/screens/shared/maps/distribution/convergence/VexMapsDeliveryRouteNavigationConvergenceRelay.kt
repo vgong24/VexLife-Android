@@ -135,6 +135,36 @@ internal data class VexMapsDeliveryRouteNavigationInputState(
         null,
 ) :
     VexInputState<VexMapsDeliveryRouteNavigationInputState> {
+    override fun latest(
+        incoming:
+            VexMapsDeliveryRouteNavigationInputState,
+    ):
+        VexMapsDeliveryRouteNavigationInputState =
+        VexMapsDeliveryRouteNavigationInputState(
+            deliveryRoute =
+                (
+                    incoming.deliveryRoute
+                        ?: deliveryRoute
+                )?.copy(
+                    controls =
+                        (
+                            incoming.deliveryRoute
+                                ?: deliveryRoute
+                        )!!.controls.toMap(),
+                ),
+            navigation =
+                (
+                    incoming.navigation
+                        ?: navigation
+                )?.copy(),
+            expectedLeg =
+                incoming.expectedLeg
+                    ?: expectedLeg,
+            legAttempt =
+                incoming.legAttempt
+                    ?: legAttempt,
+        )
+
     override fun deepCopy():
         VexMapsDeliveryRouteNavigationInputState =
         copy(
@@ -326,94 +356,41 @@ internal class VexMapsDeliveryRouteNavigationConvergenceRelay(
             }
         }
 
-    override fun processStates(
-        inputState:
+    override fun process(
+        latestStateInput:
             VexMapsDeliveryRouteNavigationInputState,
-        currentState:
+        retainedState:
             VexCompoundState<
                 VexMapsDeliveryRouteNavigationInputState,
                 VexMapsDeliveryRouteNavigationOutput
             >,
     ):
-        VexCompoundState<
-            VexMapsDeliveryRouteNavigationInputState,
-            VexMapsDeliveryRouteNavigationOutput
-        > {
-        /*
-         * Restore the complete current relationship before classifying it. Delivery Route,
-         * Navigation and Session facts publish independently; arrival order is not relationship
-         * identity.
-         */
-        val previousInput =
-            currentState.inputState
-
-        val currentDeliveryRoute =
-            inputState.deliveryRoute
-                ?: previousInput.deliveryRoute
-        val currentNavigation =
-            inputState.navigation
-                ?: previousInput.navigation
-        val currentExpectedLeg =
-            inputState.expectedLeg
-                ?: previousInput.expectedLeg
-        val currentLegAttempt =
-            inputState.legAttempt
-                ?: previousInput.legAttempt
-
-        val currentInput =
-            VexMapsDeliveryRouteNavigationInputState(
-                deliveryRoute =
-                    currentDeliveryRoute,
-                navigation =
-                    currentNavigation,
-                expectedLeg =
-                    currentExpectedLeg,
-                legAttempt =
-                    currentLegAttempt,
-            )
-
+        VexMapsDeliveryRouteNavigationOutput {
         val deliveryRoute =
-            currentDeliveryRoute
-                ?: return currentState.copy(
-                    inputState =
-                        currentInput,
-                )
+            latestStateInput.deliveryRoute
+                ?: return retainedState.outputState.deepCopy()
         val navigation =
-            currentNavigation
-                ?: return currentState.copy(
-                    inputState =
-                        currentInput,
-                )
+            latestStateInput.navigation
+                ?: return retainedState.outputState.deepCopy()
         val expectedLeg =
-            currentExpectedLeg
+            latestStateInput.expectedLeg
                 ?: VexMapsDeliveryRouteExpectedLegState.None
         val legAttempt =
-            currentLegAttempt
+            latestStateInput.legAttempt
                 ?: VexMapsDeliveryRouteLegAttempt.Idle
 
-        /*
-         * Project relationship status plus at most one bounded reconciliation request. Execution and
-         * resulting State remain with the rightful Session / Navigation / Delivery Route owner.
-         */
-        val currentOutput =
-            projectDeliveryRouteNavigation(
-                deliveryRoute =
-                    deliveryRoute,
-                navigation =
-                    navigation,
-                expectedLeg =
-                    expectedLeg,
-                legAttempt =
-                    legAttempt,
-            )
-
-        return currentState.copy(
-            inputState =
-                currentInput,
-            outputState =
-                currentOutput,
+        return projectDeliveryRouteNavigation(
+            deliveryRoute =
+                deliveryRoute,
+            navigation =
+                navigation,
+            expectedLeg =
+                expectedLeg,
+            legAttempt =
+                legAttempt,
         )
     }
+
 }
 
 private fun projectDeliveryRouteNavigation(
