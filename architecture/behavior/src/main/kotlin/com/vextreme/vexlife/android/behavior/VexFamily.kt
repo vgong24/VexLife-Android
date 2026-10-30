@@ -8,7 +8,6 @@ import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.reflect.KClass
 
 /**
  * Live Family runtime for one semantic State and Control vocabulary.
@@ -62,31 +61,11 @@ abstract class VexFamily<
         >
 
     /**
-     * Typed resource identity contributed by a Control when Control kind alone is not enough to
-     * distinguish maintained execution relationships.
-     *
-     * ResourceId deliberately has no shared String/value payload. The concrete ID type owns its own
-     * representation and equality; Family preserves that typed object instead of flattening it.
-     *
-     * Equality and hashCode must remain stable for as long as the ID participates in a live
-     * relationship. Prefer immutable value identity. A mutable ID whose equality/hash changes while
-     * active would corrupt relationship lookup/custody rather than represent a new semantic request.
-     */
-    interface ResourceId<
-        Family,
-    > where
-        Family : VexFamily<
-            Family,
-            *,
-            *
-        >
-
-    /**
      * Compile-time kinship marker for incoming Control belonging to one exact Family coordinate.
      *
-     * Exact Control identity is always part of the Family-owned relationship identity. A Control
-     * that needs narrower repeated-resource identity exposes [resourceId] with its exact ResourceId
-     * type.
+     * Control remains the finite affordance/request vocabulary resolved by act(CURRENT State,
+     * Control). Execution identity is not authored through Control in the current Direct Family
+     * surface.
      */
     interface Control<
         Family,
@@ -95,89 +74,8 @@ abstract class VexFamily<
             Family,
             *,
             *
-        > {
-        /**
-         * Optional stable semantic resource identity for this Control's maintained relationship.
-         *
-         * Control identity is always present. A non-null resourceId narrows repeated resources for
-         * this exact Control kind; ordinary Control payload does not silently become identity.
-         */
-        val resourceId:
-            ResourceId<Family>?
-            get() =
-                null
-    }
+        >
 
-    /**
-     * Exact Family-maintained execution identity.
-     *
-     * The live Family instance scopes identity. Control kind is always present. A typed ResourceId
-     * optionally narrows repeated instances of that same Control. The actual ResourceId object is
-     * retained so its concrete type/equality cannot collapse into a shared String convention.
-     */
-    internal class RelationshipId<
-        Family,
-    > internal constructor(
-        private val family:
-            VexFamily<
-                Family,
-                *,
-                *
-            >,
-        internal val controlType:
-            KClass<*>,
-        internal val controlName:
-            String,
-        internal val resourceId:
-            ResourceId<*>?,
-    ) :
-        VexExecution.RelationshipId where
-        Family : VexFamily<
-            Family,
-            *,
-            *
-        > {
-        override fun equals(
-            other:
-                Any?,
-        ):
-            Boolean =
-            other is
-                RelationshipId<*> &&
-                family ===
-                other.family &&
-                controlType ==
-                other.controlType &&
-                controlName ==
-                other.controlName &&
-                resourceId ==
-                other.resourceId
-
-        override fun hashCode():
-            Int {
-            var result =
-                System.identityHashCode(
-                    family,
-                )
-            result =
-                31 *
-                    result +
-                    controlType.hashCode()
-            result =
-                31 *
-                    result +
-                    controlName.hashCode()
-            result =
-                31 *
-                    result +
-                    (
-                        resourceId
-                            ?.hashCode()
-                            ?: 0
-                    )
-            return result
-        }
-    }
 
     /**
      * Family-owned display classification.
@@ -250,6 +148,18 @@ abstract class VexFamily<
      */
     private val stateLock =
         Any()
+
+    /*
+     * One maintained Store.save queue per live Family.
+     *
+     * This is execution mechanics, not a feature-authored semantic identity. All accepted saves for
+     * this Family share the same queue so a later accepted whole-State save cannot be overtaken by
+     * an earlier save from a different Control.
+     */
+    private val saveRelationshipId:
+        VexExecution.RelationshipId =
+        object :
+            VexExecution.RelationshipId {}
 
     private val stateRelay =
         MutableStateFlow(
@@ -412,8 +322,6 @@ abstract class VexFamily<
                     executeSave(
                         state =
                             saveState,
-                        control =
-                            control,
                     )
                 }
 
@@ -452,8 +360,6 @@ abstract class VexFamily<
     private fun executeSave(
         state:
             FamilyState,
-        control:
-            FamilyControl,
     ) {
         val stateStore =
             requireNotNull(
@@ -478,9 +384,7 @@ abstract class VexFamily<
             owner =
                 this::class,
             relationshipId =
-                relationshipId(
-                    control,
-                ),
+                saveRelationshipId,
             operation =
                 operation,
             argument =
@@ -526,35 +430,6 @@ abstract class VexFamily<
         )
     }
 
-    internal fun relationshipId(
-        control:
-            FamilyControl,
-    ):
-        RelationshipId<Family> {
-        val controlType =
-            control::class
-        val controlName =
-            (
-                control as?
-                    Enum<*>
-            )
-                ?.name
-                ?: requireNotNull(
-                    controlType.simpleName,
-                ) {
-                    "VexFamily Control requires a named class or enum entry"
-                }
-        return RelationshipId(
-            family =
-                this,
-            controlType =
-                controlType,
-            controlName =
-                controlName,
-            resourceId =
-                control.resourceId,
-        )
-    }
 
     /**
      * Best-effort observation of an already-authored/accepted Family fact.
