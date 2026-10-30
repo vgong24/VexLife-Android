@@ -1,5 +1,3 @@
-@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
-
 package com.vextreme.vexlife.android.execution
 
 import java.util.concurrent.CancellationException
@@ -22,9 +20,10 @@ import kotlinx.coroutines.launch
 /**
  * Internal coroutine engine.
  *
- * Active custody is keyed by exact [VexExecution.InstanceId]. Maintained overlap handling is keyed
- * by the [VexExecution.RelationshipId] supplied by the rightful semantic owner. Execution does not
- * manufacture trigger strings or argument tuples. Source identity remains diagnostic only.
+ * Active custody is keyed by exact [VexExecution.InstanceId].
+ *
+ * SourceRef remains diagnostic only. Source uniqueness/cancellation is scoped by the exact live
+ * VexExecution owner token, and maintained overlap is scoped by owner + [VexExecution.CoordinationKey].
  */
 internal class VexCoroutineLauncher(
     dispatcher: CoroutineDispatcher,
@@ -62,9 +61,42 @@ internal class VexCoroutineLauncher(
     private var nextInstanceValue =
         1L
 
-    private data class MaintainedRelationship(
-        var approach:
-            VexExecution.Approach,
+    private enum class CoordinationPolicy {
+        Earliest,
+        Latest,
+        Queued,
+    }
+
+    private class CoordinationIdentity(
+        val ownerToken:
+            Any,
+        val key:
+            VexExecution.CoordinationKey,
+    ) {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                CoordinationIdentity &&
+                ownerToken ===
+                other.ownerToken &&
+                key ==
+                other.key
+
+        override fun hashCode():
+            Int =
+            31 *
+                System.identityHashCode(
+                    ownerToken,
+                ) +
+                key.hashCode()
+    }
+
+    private data class MaintainedCoordination(
+        var policy:
+            CoordinationPolicy,
         val instances:
             LinkedHashSet<
                 VexExecution.InstanceId
@@ -73,12 +105,14 @@ internal class VexCoroutineLauncher(
     )
 
     private data class ManagedExecution(
+        val ownerToken:
+            Any,
         val instanceId:
             VexExecution.InstanceId,
         val sourceRef:
             VexExecution.SourceRef,
-        val relationship:
-            VexExecution.RelationshipId?,
+        val coordination:
+            CoordinationIdentity?,
         val job:
             Job,
         val mutableState:
@@ -103,10 +137,10 @@ internal class VexCoroutineLauncher(
             ManagedExecution
         >()
 
-    private val relationships =
+    private val coordinations =
         LinkedHashMap<
-            VexExecution.RelationshipId,
-            MaintainedRelationship
+            CoordinationIdentity,
+            MaintainedCoordination
         >()
 
     private val mutableExecutions =
@@ -129,6 +163,8 @@ internal class VexCoroutineLauncher(
         mutableExecutions.asStateFlow()
 
     fun launchOnce(
+        ownerToken:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -153,9 +189,11 @@ internal class VexCoroutineLauncher(
             }
 
             createManagedLocked(
+                ownerToken =
+                    ownerToken,
                 sourceRef =
                     sourceRef,
-                relationship =
+                coordination =
                     null,
                 predecessors =
                     emptyList(),
@@ -169,6 +207,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun launch(
+        ownerToken:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -181,9 +221,11 @@ internal class VexCoroutineLauncher(
             requireAcceptingWorkLocked()
 
             createManagedLocked(
+                ownerToken =
+                    ownerToken,
                 sourceRef =
                     sourceRef,
-                relationship =
+                coordination =
                     null,
                 predecessors =
                     emptyList(),
@@ -197,8 +239,10 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchEarliest(
-        relationship:
-            VexExecution.RelationshipId,
+        ownerToken:
+            Any,
+        key:
+            VexExecution.CoordinationKey,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -210,17 +254,19 @@ internal class VexCoroutineLauncher(
         ) {
             requireAcceptingWorkLocked()
 
-            val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
-                    approach =
-                        VexExecution.Approach.Earliest,
+            val coordination =
+                coordinationLocked(
+                    ownerToken =
+                        ownerToken,
+                    key =
+                        key,
+                    policy =
+                        CoordinationPolicy.Earliest,
                 )
 
             val existing =
-                activeRelationshipMembersLocked(
-                    maintained,
+                activeCoordinationMembersLocked(
+                    coordination,
                 )
                     .firstOrNull()
 
@@ -234,10 +280,12 @@ internal class VexCoroutineLauncher(
             }
 
             createManagedLocked(
+                ownerToken =
+                    ownerToken,
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
+                coordination =
+                    coordination,
                 predecessors =
                     emptyList(),
                 maintainedObservation =
@@ -250,8 +298,10 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchLatest(
-        relationship:
-            VexExecution.RelationshipId,
+        ownerToken:
+            Any,
+        key:
+            VexExecution.CoordinationKey,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -263,34 +313,38 @@ internal class VexCoroutineLauncher(
         ) {
             requireAcceptingWorkLocked()
 
-            val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
-                    approach =
-                        VexExecution.Approach.Latest,
+            val coordination =
+                coordinationLocked(
+                    ownerToken =
+                        ownerToken,
+                    key =
+                        key,
+                    policy =
+                        CoordinationPolicy.Latest,
                 )
 
             val predecessors =
-                activeRelationshipMembersLocked(
-                    maintained,
+                activeCoordinationMembersLocked(
+                    coordination,
                 )
 
             predecessors
                 .forEach { predecessor ->
                     predecessor.job.cancel(
                         CancellationException(
-                            "superseded by latest execution for " +
-                                relationship,
+                            "superseded by latest execution for coordination key " +
+                                key,
                         ),
                     )
                 }
 
             createManagedLocked(
+                ownerToken =
+                    ownerToken,
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
+                coordination =
+                    coordination,
                 predecessors =
                     predecessors
                         .map {
@@ -306,8 +360,10 @@ internal class VexCoroutineLauncher(
         }
 
     fun launchQueued(
-        relationship:
-            VexExecution.RelationshipId,
+        ownerToken:
+            Any,
+        key:
+            VexExecution.CoordinationKey,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -319,24 +375,28 @@ internal class VexCoroutineLauncher(
         ) {
             requireAcceptingWorkLocked()
 
-            val maintained =
-                relationshipLocked(
-                    relationship =
-                        relationship,
-                    approach =
-                        VexExecution.Approach.Queued,
+            val coordination =
+                coordinationLocked(
+                    ownerToken =
+                        ownerToken,
+                    key =
+                        key,
+                    policy =
+                        CoordinationPolicy.Queued,
                 )
 
             val predecessors =
-                activeRelationshipMembersLocked(
-                    maintained,
+                activeCoordinationMembersLocked(
+                    coordination,
                 )
 
             createManagedLocked(
+                ownerToken =
+                    ownerToken,
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
+                coordination =
+                    coordination,
                 predecessors =
                     predecessors
                         .map {
@@ -351,7 +411,9 @@ internal class VexCoroutineLauncher(
             )
         }
 
-    fun <Value> launchForCollect(
+    fun <Value> observe(
+        ownerToken:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         restartOnSourceFailure:
@@ -369,7 +431,9 @@ internal class VexCoroutineLauncher(
 
             check(
                 active.values.none { managed ->
-                    managed.maintainedObservation &&
+                    managed.ownerToken ===
+                        ownerToken &&
+                        managed.maintainedObservation &&
                         managed.sourceRef ==
                         sourceRef &&
                         !managed.job.isCompleted
@@ -381,9 +445,11 @@ internal class VexCoroutineLauncher(
             }
 
             createManagedLocked(
+                ownerToken =
+                    ownerToken,
                 sourceRef =
                     sourceRef,
-                relationship =
+                coordination =
                     null,
                 predecessors =
                     emptyList(),
@@ -431,6 +497,8 @@ internal class VexCoroutineLauncher(
         }
 
     fun forceStopSource(
+        ownerToken:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         reason:
@@ -443,7 +511,9 @@ internal class VexCoroutineLauncher(
             ) {
                 active.values
                     .filter { managed ->
-                        managed.sourceRef ==
+                        managed.ownerToken ===
+                            ownerToken &&
+                            managed.sourceRef ==
                             sourceRef &&
                             !managed.job.isCompleted
                     }
@@ -469,6 +539,8 @@ internal class VexCoroutineLauncher(
     }
 
     suspend fun joinStopSource(
+        ownerToken:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         reason:
@@ -481,7 +553,9 @@ internal class VexCoroutineLauncher(
             ) {
                 active.values
                     .filter { managed ->
-                        managed.sourceRef ==
+                        managed.ownerToken ===
+                            ownerToken &&
+                            managed.sourceRef ==
                             sourceRef &&
                             !managed.job.isCompleted
                     }
@@ -508,6 +582,86 @@ internal class VexCoroutineLauncher(
             job.join()
         }
 
+        return true
+    }
+
+    fun forceStopOwner(
+        ownerToken:
+            Any,
+        reason:
+            String,
+    ):
+        Boolean {
+        val jobs =
+            synchronized(
+                registryLock,
+            ) {
+                active.values
+                    .filter { managed ->
+                        managed.ownerToken ===
+                            ownerToken &&
+                            !managed.job.isCompleted
+                    }
+                    .map {
+                        it.job
+                    }
+            }
+
+        if (
+            jobs.isEmpty()
+        ) {
+            return false
+        }
+
+        jobs.forEach { job ->
+            job.cancel(
+                CancellationException(
+                    reason,
+                ),
+            )
+        }
+        return true
+    }
+
+    suspend fun joinStopOwner(
+        ownerToken:
+            Any,
+        reason:
+            String,
+    ):
+        Boolean {
+        val jobs =
+            synchronized(
+                registryLock,
+            ) {
+                active.values
+                    .filter { managed ->
+                        managed.ownerToken ===
+                            ownerToken &&
+                            !managed.job.isCompleted
+                    }
+                    .map {
+                        it.job
+                    }
+            }
+
+        if (
+            jobs.isEmpty()
+        ) {
+            return false
+        }
+
+        jobs.forEach { job ->
+            job.cancel(
+                CancellationException(
+                    reason,
+                ),
+            )
+        }
+
+        jobs.forEach { job ->
+            job.join()
+        }
         return true
     }
 
@@ -558,34 +712,43 @@ internal class VexCoroutineLauncher(
         }
     }
 
-    private fun relationshipLocked(
-        relationship:
-            VexExecution.RelationshipId,
-        approach:
-            VexExecution.Approach,
+    private fun coordinationLocked(
+        ownerToken:
+            Any,
+        key:
+            VexExecution.CoordinationKey,
+        policy:
+            CoordinationPolicy,
     ):
-        MaintainedRelationship {
+        MaintainedCoordination {
+        val identity =
+            CoordinationIdentity(
+                ownerToken =
+                    ownerToken,
+                key =
+                    key,
+            )
         val existing =
-            relationships[
-                relationship
+            coordinations[
+                identity
             ]
 
         if (
             existing ==
             null
         ) {
-            return MaintainedRelationship(
-                approach =
-                    approach,
+            return MaintainedCoordination(
+                policy =
+                    policy,
             ).also { maintained ->
-                relationships[
-                    relationship
+                coordinations[
+                    identity
                 ] =
                     maintained
             }
         }
 
-        activeRelationshipMembersLocked(
+        activeCoordinationMembersLocked(
             existing,
         )
 
@@ -593,29 +756,29 @@ internal class VexCoroutineLauncher(
             existing.instances
                 .isEmpty()
         ) {
-            existing.approach =
-                approach
+            existing.policy =
+                policy
             return existing
         }
 
         check(
-            existing.approach ==
-                approach,
+            existing.policy ==
+                policy,
         ) {
-            "Execution relationship " +
-                relationship +
+            "Execution coordination key " +
+                key +
                 " is already active as " +
-                existing.approach +
+                existing.policy +
                 " and cannot also be " +
-                approach
+                policy
         }
 
         return existing
     }
 
-    private fun activeRelationshipMembersLocked(
+    private fun activeCoordinationMembersLocked(
         maintained:
-            MaintainedRelationship,
+            MaintainedCoordination,
     ):
         List<
             ManagedExecution
@@ -642,10 +805,12 @@ internal class VexCoroutineLauncher(
     }
 
     private fun createManagedLocked(
+        ownerToken:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
-        relationship:
-            VexExecution.RelationshipId?,
+        coordination:
+            CoordinationIdentity?,
         predecessors:
             List<Job>,
         maintainedObservation:
@@ -712,12 +877,14 @@ internal class VexCoroutineLauncher(
 
         val managed =
             ManagedExecution(
+                ownerToken =
+                    ownerToken,
                 instanceId =
                     instanceId,
                 sourceRef =
                     sourceRef,
-                relationship =
-                    relationship,
+                coordination =
+                    coordination,
                 job =
                     job,
                 mutableState =
@@ -731,15 +898,13 @@ internal class VexCoroutineLauncher(
         ] =
             managed
 
-        relationship?.let { key ->
+        coordination?.let { identity ->
             requireNotNull(
-                relationships[
-                    key
+                coordinations[
+                    identity
                 ],
             ) {
-                "Execution relationship " +
-                    key +
-                    " must be established before admission"
+                "Execution coordination must be established before admission"
             }
                 .instances +=
                 instanceId
@@ -788,9 +953,9 @@ internal class VexCoroutineLauncher(
                     instanceId,
                 )
 
-                relationship?.let { key ->
-                    relationships[
-                        key
+                coordination?.let { identity ->
+                    coordinations[
+                        identity
                     ]
                         ?.let { maintained ->
                             maintained.instances.remove(
@@ -801,8 +966,8 @@ internal class VexCoroutineLauncher(
                                 maintained.instances
                                     .isEmpty()
                             ) {
-                                relationships.remove(
-                                    key,
+                                coordinations.remove(
+                                    identity,
                                 )
                             }
                         }
