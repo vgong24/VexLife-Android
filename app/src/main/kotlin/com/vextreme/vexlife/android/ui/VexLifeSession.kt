@@ -203,7 +203,10 @@ private class VexStreamArtworkExecution(
     ) {
     fun start() {
         observe(
-            repository::state,
+            source =
+                repository::state,
+            recovery =
+                VexExecution.ObservationRecovery(),
         ) { state ->
             if (
                 state.hubState is
