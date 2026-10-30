@@ -63,19 +63,17 @@ class ThemeModeStoreInstrumentedTest {
                 SharedPreferencesThemeModeStore(
                     context,
                 )
-            val recreatedFamily =
-                ThemeModeFamily(
-                    initialState =
-                        recreatedStore.current(),
-                    executionRoot =
-                        root,
+            val recreatedConnection =
+                ThemeModeConnection(
                     store =
                         recreatedStore,
+                    executionRoot =
+                        root,
                 )
 
             assertEquals(
                 ThemeMode.Light,
-                recreatedFamily.currentState,
+                recreatedConnection.family.currentState,
             )
         } finally {
             root.forceStopAll()
