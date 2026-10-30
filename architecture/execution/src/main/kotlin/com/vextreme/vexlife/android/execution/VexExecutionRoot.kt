@@ -26,7 +26,7 @@ class VexExecutionRoot(
         StateFlow<
             Map<
                 VexExecution.InstanceId,
-                VexExecution.State
+                VexExecution.Snapshot
             >
         >
         get() =
