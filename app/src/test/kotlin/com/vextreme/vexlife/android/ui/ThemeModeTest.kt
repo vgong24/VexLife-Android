@@ -1,6 +1,5 @@
 package com.vextreme.vexlife.android.ui
 
-import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -30,16 +29,10 @@ class ThemeModeTest {
 
     @Test
     fun displayStateOwnsTheExpectedVexThemePresentation() {
-        val root =
-            VexExecutionRoot()
-
-        try {
             val family =
                 ThemeModeFamily(
                     initialState =
                         ThemeMode.Light,
-                    executionRoot =
-                        root,
                 )
 
             assertEquals(
@@ -65,23 +58,14 @@ class ThemeModeTest {
                 VexThemePresentation.Dark,
                 family.displayState.presentation,
             )
-        } finally {
-            root.forceStopAll()
-        }
     }
 
     @Test
     fun selectUsesTheAcceptedFamilyCircuitWithoutBinaryInversion() {
-        val root =
-            VexExecutionRoot()
-
-        try {
             val family =
                 ThemeModeFamily(
                     initialState =
                         ThemeMode.Light,
-                    executionRoot =
-                        root,
                 )
 
             assertTrue(
@@ -124,23 +108,14 @@ class ThemeModeTest {
                 family.currentState,
                 family.states.value,
             )
-        } finally {
-            root.forceStopAll()
-        }
     }
 
     @Test
     fun explicitSelectionResolvesNotSetWithoutInventingADefault() {
-        val root =
-            VexExecutionRoot()
-
-        try {
             val family =
                 ThemeModeFamily(
                     initialState =
                         ThemeMode.NotSet,
-                    executionRoot =
-                        root,
                 )
 
             assertTrue(
@@ -166,8 +141,5 @@ class ThemeModeTest {
                 invalidSelection is
                     IllegalArgumentException,
             )
-        } finally {
-            root.forceStopAll()
-        }
     }
 }
