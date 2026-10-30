@@ -103,13 +103,13 @@ internal class ThemeModeConnection(
             executionRoot,
         ) {
         private data object Persistence :
-            CoordinationKey
+            VexExecution.CoordinationKey
 
         fun persist(
             mode:
                 ThemeMode,
         ):
-            Handle =
+            VexExecution.Handle =
             launchQueued(
                 key =
                     Persistence,
