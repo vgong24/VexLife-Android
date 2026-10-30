@@ -142,18 +142,18 @@ Approach.Queued
 
 Execution does not construct semantic identity from `Any`, string triggers, or ordered argument bags.
 
-For Family-originated work:
+For current Direct Family Store work, the semantic surface is narrower:
 
 ~~~text
 live Family
-+ Control name/type
-+ optional typed Control ResourceId
-=
-Family RelationshipId
+-> one private Save queue identity
 -> VexExecution.RelationshipId
+-> Approach.Queued mechanics
 ~~~
 
-Begin chooses only Approach. Family owns the relationship composition.
+Control does not author execution identity in the current Direct Family surface. The private Save
+queue exists only to preserve whole-State Save order for one live Family. Any future Family effect
+that needs richer maintained identity must earn that relationship separately from its real semantics.
 
 A maintained Flow observation remains a separate contract:
 
@@ -589,17 +589,14 @@ launchForCollect
     duplicate unfinished observation of the same source still fails closed
 ~~~
 
-Family's focused proof separately establishes that Control name is always included, arbitrary Control
-payload is not identity, typed ResourceId narrows identity when provided, and two live Family instances
-remain distinct.
+Direct Family no longer treats its historical Control-scoped execution-identity proof as current
+architecture. PR #193 remains provenance for that earlier candidate; the current Direct Family
+candidate reduces Store persistence to one private per-live-Family Save queue.
 
-The source also keeps sibling isolation, bounded source recovery, structured cancellation/teardown,
-registry defensiveness, typed callable invocation, and post-shutdown admission rejection.
-
-Exact-head repository-owned `vexVerifyJvm` proof passed for the typed Control/RelationshipId
-candidate in PR #193, and that exact candidate tree is now merged on main. GitHub-hosted workflow/status
-evidence was not produced for that head, so this remains a local/repository-owned proof claim rather
-than a hosted-CI claim. Device/Journey/ScreenCrawler and lived-product acceptance are separate.
+The execution source still keeps sibling isolation, bounded source recovery, structured
+cancellation/teardown, registry defensiveness, typed callable invocation, and post-shutdown admission
+rejection. Those execution-engine behaviors remain separate from whether a particular semantic owner
+currently needs a public maintained-identity vocabulary.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
 
