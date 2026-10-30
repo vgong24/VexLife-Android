@@ -58,12 +58,20 @@ human-vetted semantic boundary is recorded directly in source with `@VettedWithH
 relationship-carrying declarations. Downstream VexExecution custody remains a separate unvetted
 architecture question.
 
-Compound/process integration remains separate and open:
+Current Compound processing keeps currentization, meaning and assembly distinct:
 
 ~~~text
-InputState -> process(InputState) -> OutputState
-OutputState -> ??? -> Family.currentState
+retained InputState + incoming partial InputState
+-> InputState.latest(incoming)
+-> complete current InputState
+-> process(...)
+-> OutputState
+-> VexCompoundState(inputState, outputState)
 ~~~
+
+The reusable Relay owns currentization sequencing and Compound assembly. Existing retained-Output
+memory in Events/Navigation remains an explicit open ownership question rather than being normalized
+into the default processing law.
 
 <!-- [VXG RealForever][FOUNDATION][FAMILY][NATIVE-TRAVERSAL] -->
 
@@ -520,8 +528,8 @@ eligibility and anchored evidence without making Events the owner of the origina
 
 This is the first current-main Relay consumer and a reverse-protocol reference for future real
 service adapters. The current refinement makes its Compound Relay session-owned and declarative
-about repository/Flow dependencies, while keeping `processStates()` as the synchronous serialized
-semantic reducer and keeping Compose as an output/presentation observer. It also exercises a real
+about repository/Flow dependencies, while keeping `InputState.latest(...)` + `process(...)` as the synchronous serialized
+currentization/semantic boundary and keeping Compose as an output/presentation observer. It also exercises a real
 cross-domain UserProfile name-change input. It remains a draft/refinement candidate until exact
 Gradle/Android proof closes.
 
