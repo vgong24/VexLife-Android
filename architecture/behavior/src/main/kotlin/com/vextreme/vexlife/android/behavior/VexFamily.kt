@@ -55,6 +55,7 @@ abstract class VexFamily<
     /**
      * Compile-time kinship marker for semantic State belonging to one exact Family coordinate.
      */
+    @VettedWithHuman("VexFamily.State", "2026-10-29T22:46:00-07:00", "Victor Approved")
     interface State<
         Family,
     > where
@@ -75,6 +76,7 @@ abstract class VexFamily<
      * relationship. Prefer immutable value identity. A mutable ID whose equality/hash changes while
      * active would corrupt relationship lookup/custody rather than represent a new semantic request.
      */
+    @VettedWithHuman("VexFamily.ResourceId", "2026-10-29T22:46:00-07:00", "Victor Approved")
     interface ResourceId<
         Family,
     > where
