@@ -7,14 +7,15 @@ The current candidate keeps the runtime call graph visible in ordinary Kotlin.
 ## Runtime
 
 ~~~text
-caller / UI
+caller / UI / provider / Store observation
+-> typed Family Control
 -> Family.activate(control)
 -> concrete Family.act(currentState, control)
 -> when (currentState)
 -> when (control)
--> stay() or admit(State)
--> optional begin(...)
--> StateRelay / execution
+-> null / stay() / admit(State)
+-> optional saveLatest(State)
+-> StateRelay / storage execution
 ~~~
 
 There is no separately constructed Acts table, builder, rule registry, hidden invoke operator, or
@@ -127,44 +128,34 @@ activate(control)
 -> maintained execution coordination
 ~~~
 
-Concrete authoring stays intentionally small:
+Concrete maintained Save authoring stays intentionally small:
 
 ~~~kotlin
-beginEarliest {
-    ...
-}
-
-beginLatest {
-    ...
-}
-
-beginQueued {
-    ...
-}
+saveLatest(
+    nextState,
+)
 ~~~
-
-Begin chooses **Approach only**. It accepts no trigger, arbitrary argument tuple, or hand-authored
-relationship string.
 
 ~~~text
-Control name
+Control identity
     always included by Family foundation
 
-Control.Resource<Family, ExactId>
-    exact typed narrowing when this Control needs a ResourceId
+Control.resourceId
+    optional typed narrowing when this Control needs resource identity
 
 RelationshipId
-    live Family + Control kind/name + optional exact ResourceId object
+    live Family + exact Control identity + optional exact ResourceId object
 
-Approach
-    Independent / Earliest / Latest / Queued
+SaveLatest
+    storage execution for the triggering Control using Latest relationship semantics
 ~~~
 
-The full Control payload is not automatically identity. If `Control.Play(trackId, position)` needs
-coordination per track, `Play` declares `Control.Resource<Family, TrackId>`; the actual TrackId object
-is preserved in the relationship while `position` remains request payload. Enum Control entries are
-also distinct default Control identities rather than collapsing to their shared enum class.
-A future author cannot pass unrelated execution metadata into Begin because no such parameter exists.
+The full Control payload is not automatically identity. If Control.Play(trackId, position) needs
+coordination per track, Play exposes resourceId = trackId; position remains request payload.
+Enum Control entries remain distinct exact Control identities.
+
+There is no generic Begin authoring tree or arbitrary execution argument bag on the Direct Family
+surface.
 
 ## Logger boundary
 
@@ -181,8 +172,7 @@ access, so inspecting relationship meaning cannot accidentally emit accepted run
 
 ## Store / Save relationship
 
-The current earned storage path remains tree-shaped. A plain Store supports authored Save; a StateStore
-specialization is earned only when durable truth is exactly Family State:
+The current earned storage path is:
 
 ~~~text
 VexFamily
@@ -196,45 +186,38 @@ VexFamily
 -> StateStore<State>
    -> Store<State>
    -> observableState
-   -> get()
-   -> forget()
 
 VexFamily
 -> Act
-   -> Begin
-      -> Save
-         -> Results
-            -> Success
-            -> Failure
+   -> immediate admitted State?
+   -> optional Save<State>
 ~~~
 
-Family does not expose a broad untyped Store and rediscover State semantics through runtime casts.
-The StateStore specialization is explicit in the type system and exists only where durable truth is
-actually Family State. Durable Store truth still does not become a second live semantic State holder.
+StateStore adds only the capability Direct Family actually needs generically: durable State
+observation. Concrete storage may keep local read/reset helpers without making them architecture.
 
-There is also no generic Operation hierarchy around the one current Save operation. A common
-operation parent must be earned by another real operation, not anticipated.
+Save success/failure are storage/execution facts. They have no direct State-writing path.
 
 ## Act outcome
 
 act(currentState, control) returns the authored outcome that activate(...) applies:
 
 ~~~text
-noAct()
-  reviewed absence: no lawful Act exists for this exact State + Control pair
+null
+  no lawful Act exists for this exact CURRENT State + Control
 
 stay()
-  current State stays current
+  lawful Act; immediate State remains CURRENT
 
 admit(State)
-  activate(...) writes State into StateRelay
+  lawful Act; activate(...) admits State to StateRelay before Save starts
 
-optional begin(...)
-  activate(...) starts the authored execution consequence
+optional saveLatest(State)
+  activate(...) starts the authored durable Save after immediate State meaning is applied
 ~~~
 
-The return carrier is `VexFamily.Act<State>`. Act is a Family child rather than another Vex root.
-Its optional Begin child is opened only through Family's protected Act-authoring surface.
+The return carrier is VexFamily.Act<State>. The source does not carry a second result-side State
+admission grammar.
 
 ## Human-visible language
 
@@ -250,68 +233,45 @@ activate(control)
 act(currentState, control)
 when (currentState)
 when (control)
-noAct()
+null
 stay()
 admit(State)
-begin(...)
+saveLatest(State)
 process(...)
 ~~~
 
 Except for the Vex domain functions themselves, State/Control traversal is ordinary Kotlin.
 
-## StateRelay currentness
+## One semantic State doorway
 
-StateRelay is still the one live Family State holder. The missing reusable law is the admission
-boundary around that holder:
+StateRelay is the one live Family State holder, and act(CURRENT State, Control) is the only semantic
+doorway that may author Family State:
 
 ~~~text
-incoming Family-owned cause
+incoming semantic cause
 + exact CURRENT State
--> one serialized non-suspending decision
--> next CURRENT State
-~~~
-
-Control activation resolves `act(CURRENT State, Control)` and commits its immediate State inside that
-same boundary. Delayed Begin results also re-enter StateRelay and may author their result against
-exact CURRENT State:
-
-~~~kotlin
-success {
-    admit { current ->
-        if (/* still lawful */) nextState else current
-    }
-}
-~~~
-
-No revision/generation number is invented by Family. Currentness meaning remains feature-owned.
-
-Already-reconciled external truth uses the same StateRelay boundary without becoming a fake Control:
-
-~~~text
-provider / repository observation
--> rightful Connection/source reconciliation
--> concrete Family source method
--> admitCurrent { CURRENT -> next semantic State }
--> StateRelay
-~~~
-
-`admitCurrent` is protected; there is still no public generic State setter.
-
-A State-shaped Family Store is itself a StateRelay dependency; it does not require another observer owner:
-
-~~~text
-StateStore.observableState
--> execution-owned observation lifetime
--> observeStore(CURRENT, stored)
--> concrete Family decision
--> admitCurrent
+-> typed Control
+-> act(CURRENT State, Control)
+-> null / stay / admit
 -> same StateRelay
 ~~~
 
-`StateStore` carries the already-earned `observableState / get / save / forget` capability. Plain
-`Store` remains the smaller save-only capability for Families that have not earned durable State
-observation.
+Provider/repository reconciliation and durable Store observation do not receive a second setter-like
+path. They return typed Control meaning:
 
+~~~text
+provider / repository / Store observation
+-> concrete Family Control
+-> activate(control)
+-> act(CURRENT State, control)
+-> stay / admit / null
+~~~
+
+The runtime serializes activate(...) so each Control resolves against exact CURRENT State.
+
+A future asynchronous completion that changes Family meaning must also return as a typed Control.
+The feature must carry whatever identity is truly required to reject obsolete results; serialization
+is not claimed to solve stale-result identity by itself.
 
 ## Process / Compound current State
 
