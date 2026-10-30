@@ -38,7 +38,7 @@ internal data class VexConversationAuthenticatedParticipantObservation(
  * Current facts that may change independently around a selected Conversation.
  *
  * Nullable fields are partial-patch semantics. [VexConversationHybridRelay] retains the last
- * observed value for each dependency and reconciles them in one serialized [processStates] call.
+ * observed value for each dependency and reconciles them in one serialized Compound boundary before [process].
  */
 internal data class VexConversationHybridInputState(
     val conversation:
