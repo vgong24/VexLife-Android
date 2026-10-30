@@ -178,7 +178,9 @@ internal class VexCoroutineLauncher(
 
             check(
                 active.values.none { managed ->
-                    managed.sourceRef ==
+                    managed.ownerToken ===
+                        ownerToken &&
+                        managed.sourceRef ==
                         sourceRef &&
                         !managed.job.isCompleted
                 },
