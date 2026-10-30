@@ -4,6 +4,8 @@
 
 This file preserves the user-visible conversation beginning with the assistant statement:
 
+- Audit PR: https://github.com/vgong24/VexLife-Android/pull/205
+
 > "Yep — PR #204 is now updated to the cleaner architecture we just recovered. ✅"
 
 It is an accountability/audit record, not architecture authority.
