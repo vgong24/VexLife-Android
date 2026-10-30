@@ -64,23 +64,23 @@ class VexRelayContractTest {
         val notes: MutableList<String>? = null,
     ) : VexInputState<ProbeInput> {
         override fun latest(
-            incoming:
+            incomingInputState:
                 ProbeInput,
         ):
             ProbeInput =
             ProbeInput(
                 left =
-                    incoming.left
+                    incomingInputState.left
                         ?: left,
                 right =
-                    incoming.right
+                    incomingInputState.right
                         ?: right,
                 context =
-                    incoming.context
+                    incomingInputState.context
                         ?: context,
                 notes =
                     (
-                        incoming.notes
+                        incomingInputState.notes
                             ?: notes
                     )?.toMutableList(),
             )
@@ -206,16 +206,16 @@ class VexRelayContractTest {
         val fail: Boolean? = null,
     ) : VexInputState<RecoverableCompoundInput> {
         override fun latest(
-            incoming:
+            incomingInputState:
                 RecoverableCompoundInput,
         ):
             RecoverableCompoundInput =
             RecoverableCompoundInput(
                 value =
-                    incoming.value
+                    incomingInputState.value
                         ?: value,
                 fail =
-                    incoming.fail
+                    incomingInputState.fail
                         ?: fail,
             )
 
