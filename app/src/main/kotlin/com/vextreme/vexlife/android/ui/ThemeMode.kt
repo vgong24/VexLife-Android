@@ -34,7 +34,7 @@ internal class ThemeModeFamily(
     initialState: ThemeMode,
     executionRoot: VexExecutionRoot,
     logger: VexLogger.Sink = VexLogger.Sink.None,
-    override val store: Store? = null,
+    private val store: Store? = null,
 ) :
     VexFamily<
         ThemeModeFamily,
@@ -44,6 +44,7 @@ internal class ThemeModeFamily(
         initialState = initialState,
         executionRoot = executionRoot,
         logger = logger,
+        store = store,
     ) {
     /**
      * Android ThemeMode durable Store.
