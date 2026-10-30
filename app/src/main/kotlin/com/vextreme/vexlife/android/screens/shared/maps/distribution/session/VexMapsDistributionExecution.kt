@@ -99,7 +99,9 @@ internal class VexMapsDistributionExecution(
     fun start() {
         launchForCollect(
             relationshipId =
-                relationship(\n                    RelationshipKind.ModeDeliveryRouteObservation,\n                ),
+                relationship(
+                    RelationshipKind.ModeDeliveryRouteObservation,
+                ),
             source =
                 session::modeDeliveryRouteOutputsForExecution,
         ) { output ->
@@ -110,7 +112,9 @@ internal class VexMapsDistributionExecution(
 
         launchForCollect(
             relationshipId =
-                relationship(\n                    RelationshipKind.NavigationObservation,\n                ),
+                relationship(
+                    RelationshipKind.NavigationObservation,
+                ),
             source =
                 session::navigationOutputsForExecution,
         ) { output ->
@@ -123,7 +127,9 @@ internal class VexMapsDistributionExecution(
     fun restoreDraft() {
         launch(
             relationshipId =
-                relationship(\n                    RelationshipKind.RestoreDraft,\n                ),
+                relationship(
+                    RelationshipKind.RestoreDraft,
+                ),
             approach =
                 VexExecution.Approach.Earliest,
             action =
@@ -137,7 +143,9 @@ internal class VexMapsDistributionExecution(
     ) {
         launch(
             relationshipId =
-                relationship(\n                    RelationshipKind.AddStop,\n                ),
+                relationship(
+                    RelationshipKind.AddStop,
+                ),
             approach =
                 VexExecution.Approach.Queued,
             action =
@@ -171,7 +179,9 @@ internal class VexMapsDistributionExecution(
     ) {
         launch(
             relationshipId =
-                relationship(\n                    RelationshipKind.ReturnToStart,\n                ),
+                relationship(
+                    RelationshipKind.ReturnToStart,
+                ),
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -184,7 +194,9 @@ internal class VexMapsDistributionExecution(
     fun clearDraft() {
         launch(
             relationshipId =
-                relationship(\n                    RelationshipKind.ClearDraft,\n                ),
+                relationship(
+                    RelationshipKind.ClearDraft,
+                ),
             approach =
                 VexExecution.Approach.Earliest,
             action =
@@ -199,7 +211,9 @@ internal class VexMapsDistributionExecution(
         cancelLeg()
         launch(
             relationshipId =
-                relationship(\n                    RelationshipKind.Preparation,\n                ),
+                relationship(
+                    RelationshipKind.Preparation,
+                ),
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -212,7 +226,9 @@ internal class VexMapsDistributionExecution(
     fun cancelPreparation() {
         forceStop(
             relationshipId =
-                relationship(\n                    RelationshipKind.Preparation,\n                ),
+                relationship(
+                    RelationshipKind.Preparation,
+                ),
             reason =
                 "Distribution preparation superseded",
         )
@@ -224,7 +240,9 @@ internal class VexMapsDistributionExecution(
     ) {
         launch(
             relationshipId =
-                relationship(\n                    RelationshipKind.Leg,\n                ),
+                relationship(
+                    RelationshipKind.Leg,
+                ),
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -237,7 +255,9 @@ internal class VexMapsDistributionExecution(
     fun cancelLeg() {
         forceStop(
             relationshipId =
-                relationship(\n                    RelationshipKind.Leg,\n                ),
+                relationship(
+                    RelationshipKind.Leg,
+                ),
             reason =
                 "Distribution leg preparation superseded",
         )
