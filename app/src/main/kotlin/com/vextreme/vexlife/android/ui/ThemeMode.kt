@@ -34,6 +34,7 @@ internal class ThemeModeFamily(
     initialState: ThemeMode,
     executionRoot: VexExecutionRoot,
     logger: VexLogger.Sink = VexLogger.Sink.None,
+    override val store: Store? = null,
 ) :
     VexFamily<
         ThemeModeFamily,
@@ -44,6 +45,35 @@ internal class ThemeModeFamily(
         executionRoot = executionRoot,
         logger = logger,
     ) {
+    /**
+     * Android ThemeMode durable StateStore.
+     *
+     * Durable selection truth remains distinct from CURRENT semantic ThemeMode. The Family observes
+     * this dependency through the shared StateRelay boundary; UI/session code never observes Store
+     * directly.
+     */
+    interface Store :
+        VexFamily.StateStore<ThemeMode>
+
+    init {
+        store
+            ?.let { stateStore ->
+                observeStore(
+                    stateStore =
+                        stateStore,
+                ) { currentState, storedState ->
+                    when (storedState) {
+                        ThemeMode.NotSet ->
+                            currentState
+
+                        ThemeMode.Light,
+                        ThemeMode.Dark ->
+                            storedState
+                    }
+                }
+            }
+    }
+
     sealed interface Control :
         VexFamily.Control<ThemeModeFamily> {
         data class Select(
@@ -113,11 +143,26 @@ internal class ThemeModeFamily(
     ):
         VexFamily.Act<ThemeMode>? =
         when (control) {
-            is Control.Select ->
+            is Control.Select -> {
+                val persistence =
+                    store
+                        ?.let {
+                            beginLatest {
+                                save(
+                                    control.mode,
+                                ).results {
+                                    success()
+                                    failure()
+                                }
+                            }
+                        }
+
                 when (currentState) {
                     ThemeMode.NotSet ->
                         admit(
                             control.mode,
+                            begin =
+                                persistence,
                         )
 
                     ThemeMode.Light,
@@ -126,12 +171,22 @@ internal class ThemeModeFamily(
                             currentState ==
                             control.mode
                         ) {
-                            stay()
+                            /*
+                             * Explicitly selecting the already-current peer still means "remember
+                             * this choice durably"; same semantic State is not a reason to skip Save.
+                             */
+                            stay(
+                                begin =
+                                    persistence,
+                            )
                         } else {
                             admit(
                                 control.mode,
+                                begin =
+                                    persistence,
                             )
                         }
                 }
+            }
         }
 }

@@ -31,19 +31,22 @@ import kotlinx.coroutines.Dispatchers
  * - current ThemeMode Family;
  * - immutable app-action wiring.
  *
- * It does NOT claim process-death restoration. Production keeps this session inside
- * [VexLifeViewModel]; Preview/tests may construct one with their own repositories/scope.
+ * The session itself remains process-local. Feature-owned durable truth may restore into a fresh
+ * session through its rightful Store; ThemeMode now does exactly that. Production keeps this session
+ * inside [VexLifeViewModel]; Preview/tests may construct one without durable feature Stores.
  */
 internal class VexLifeSession(
     val repositories: AppRepositories,
     val scope: CoroutineScope,
     executionRoot: VexExecutionRoot,
+    themeModeStore: ThemeModeFamily.Store? = null,
     initialThemeMode: ThemeMode = ThemeMode.Dark,
 ) {
     val themeModeFamily =
         ThemeModeFamily(
             initialState = initialThemeMode,
             executionRoot = executionRoot,
+            store = themeModeStore,
         )
 
     val logPersistence = LogHistoryPersistenceQueue(
@@ -123,6 +126,10 @@ internal class VexLifeViewModel(
         AppRepositoryFactory.production(
             application,
         )
+    private val themeModeStore =
+        SharedPreferencesThemeModeStore(
+            application.applicationContext,
+        )
     private val vexStreamStartupExecution =
         VexStreamStartupExecution(
             executionRoot = executionRoot,
@@ -144,6 +151,7 @@ internal class VexLifeViewModel(
             repositories = repositories,
             scope = viewModelScope,
             executionRoot = executionRoot,
+            themeModeStore = themeModeStore,
         )
 
     override fun onCleared() {
