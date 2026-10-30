@@ -142,7 +142,7 @@ class VexRelayContractTest {
         override fun process(
             latestStateInput:
                 ProbeInput,
-            retainedState:
+            currentState:
                 VexCompoundState<
                     ProbeInput,
                     ProbeOutput
@@ -259,7 +259,7 @@ class VexRelayContractTest {
         override fun process(
             latestStateInput:
                 RecoverableCompoundInput,
-            retainedState:
+            currentState:
                 VexCompoundState<
                     RecoverableCompoundInput,
                     RecoverableCompoundOutput
