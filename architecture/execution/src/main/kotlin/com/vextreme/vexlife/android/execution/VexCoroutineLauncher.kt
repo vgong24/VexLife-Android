@@ -109,6 +109,8 @@ internal class VexCoroutineLauncher(
             Any,
         val instanceId:
             VexExecution.InstanceId,
+        val sourceIdentity:
+            Any,
         val sourceRef:
             VexExecution.SourceRef,
         val coordination:
@@ -165,6 +167,8 @@ internal class VexCoroutineLauncher(
     fun launchOnce(
         ownerToken:
             Any,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -180,8 +184,8 @@ internal class VexCoroutineLauncher(
                 active.values.none { managed ->
                     managed.ownerToken ===
                         ownerToken &&
-                        managed.sourceRef ==
-                        sourceRef &&
+                        managed.sourceIdentity ==
+                        sourceIdentity &&
                         !managed.job.isCompleted
                 },
             ) {
@@ -193,6 +197,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 ownerToken =
                     ownerToken,
+                sourceIdentity =
+                    sourceIdentity,
                 sourceRef =
                     sourceRef,
                 coordination =
@@ -211,6 +217,8 @@ internal class VexCoroutineLauncher(
     fun launch(
         ownerToken:
             Any,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -225,6 +233,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 ownerToken =
                     ownerToken,
+                sourceIdentity =
+                    sourceIdentity,
                 sourceRef =
                     sourceRef,
                 coordination =
@@ -245,6 +255,8 @@ internal class VexCoroutineLauncher(
             Any,
         key:
             VexExecution.CoordinationKey,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -284,6 +296,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 ownerToken =
                     ownerToken,
+                sourceIdentity =
+                    sourceIdentity,
                 sourceRef =
                     sourceRef,
                 coordination =
@@ -304,6 +318,8 @@ internal class VexCoroutineLauncher(
             Any,
         key:
             VexExecution.CoordinationKey,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -343,6 +359,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 ownerToken =
                     ownerToken,
+                sourceIdentity =
+                    sourceIdentity,
                 sourceRef =
                     sourceRef,
                 coordination =
@@ -366,6 +384,8 @@ internal class VexCoroutineLauncher(
             Any,
         key:
             VexExecution.CoordinationKey,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         action:
@@ -395,6 +415,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 ownerToken =
                     ownerToken,
+                sourceIdentity =
+                    sourceIdentity,
                 sourceRef =
                     sourceRef,
                 coordination =
@@ -416,6 +438,8 @@ internal class VexCoroutineLauncher(
     fun <Value> observe(
         ownerToken:
             Any,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         restartOnSourceFailure:
@@ -436,8 +460,8 @@ internal class VexCoroutineLauncher(
                     managed.ownerToken ===
                         ownerToken &&
                         managed.maintainedObservation &&
-                        managed.sourceRef ==
-                        sourceRef &&
+                        managed.sourceIdentity ==
+                        sourceIdentity &&
                         !managed.job.isCompleted
                 },
             ) {
@@ -449,6 +473,8 @@ internal class VexCoroutineLauncher(
             createManagedLocked(
                 ownerToken =
                     ownerToken,
+                sourceIdentity =
+                    sourceIdentity,
                 sourceRef =
                     sourceRef,
                 coordination =
@@ -501,6 +527,8 @@ internal class VexCoroutineLauncher(
     fun forceStopSource(
         ownerToken:
             Any,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         reason:
@@ -515,8 +543,8 @@ internal class VexCoroutineLauncher(
                     .filter { managed ->
                         managed.ownerToken ===
                             ownerToken &&
-                            managed.sourceRef ==
-                            sourceRef &&
+                            managed.sourceIdentity ==
+                            sourceIdentity &&
                             !managed.job.isCompleted
                     }
                     .map {
@@ -543,6 +571,8 @@ internal class VexCoroutineLauncher(
     suspend fun joinStopSource(
         ownerToken:
             Any,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         reason:
@@ -557,8 +587,8 @@ internal class VexCoroutineLauncher(
                     .filter { managed ->
                         managed.ownerToken ===
                             ownerToken &&
-                            managed.sourceRef ==
-                            sourceRef &&
+                            managed.sourceIdentity ==
+                            sourceIdentity &&
                             !managed.job.isCompleted
                     }
                     .map {
@@ -809,6 +839,8 @@ internal class VexCoroutineLauncher(
     private fun createManagedLocked(
         ownerToken:
             Any,
+        sourceIdentity:
+            Any,
         sourceRef:
             VexExecution.SourceRef,
         coordination:
@@ -881,6 +913,8 @@ internal class VexCoroutineLauncher(
             ManagedExecution(
                 ownerToken =
                     ownerToken,
+                sourceIdentity =
+                    sourceIdentity,
                 instanceId =
                     instanceId,
                 sourceRef =
