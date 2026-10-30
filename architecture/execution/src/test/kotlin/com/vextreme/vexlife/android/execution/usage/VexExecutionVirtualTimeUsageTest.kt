@@ -1,7 +1,5 @@
 package com.vextreme.vexlife.android.execution.usage
 
-import com.vextreme.vexlife.android.execution.VexCoroutineHandle
-import com.vextreme.vexlife.android.execution.VexCoroutineStatus
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.execution.testing.VexExecutionTestRule
@@ -102,7 +100,7 @@ class VexExecutionVirtualTimeUsageTest {
     ) : VexExecution(root) {
         fun observePrimary(
             values: MutableList<Int>,
-        ): VexCoroutineHandle =
+        ): VexExecution.Handle =
             observe(
                 repository::primaryStates,
             ) { value ->
@@ -111,7 +109,7 @@ class VexExecutionVirtualTimeUsageTest {
 
         fun observeSecondary(
             values: MutableList<Int>,
-        ): VexCoroutineHandle =
+        ): VexExecution.Handle =
             observe(
                 repository::secondaryStates,
             ) { value ->
@@ -119,7 +117,7 @@ class VexExecutionVirtualTimeUsageTest {
             }
 
         fun observeRestartable():
-            VexCoroutineHandle =
+            VexExecution.Handle =
             observe(
                 source =
                     repository::restartableStates,
@@ -133,7 +131,7 @@ class VexExecutionVirtualTimeUsageTest {
             ) {}
 
         fun runCleanupOperation():
-            VexCoroutineHandle =
+            VexExecution.Handle =
             launchOnce(
                 repository::
                     operationWithCleanup,
@@ -173,11 +171,11 @@ class VexExecutionVirtualTimeUsageTest {
                 secondary,
             )
             assertEquals(
-                VexCoroutineStatus.RUNNING,
+                VexExecution.Status.RUNNING,
                 first.snapshot.value.status,
             )
             assertEquals(
-                VexCoroutineStatus.RUNNING,
+                VexExecution.Status.RUNNING,
                 second.snapshot.value.status,
             )
         }
@@ -227,7 +225,7 @@ class VexExecutionVirtualTimeUsageTest {
                     .get(),
             )
             assertEquals(
-                VexCoroutineStatus.FAILED,
+                VexExecution.Status.FAILED,
                 handle.snapshot.value.status,
             )
         }
@@ -279,7 +277,7 @@ class VexExecutionVirtualTimeUsageTest {
                 stopCompleted,
             )
             assertEquals(
-                VexCoroutineStatus.CANCELLED,
+                VexExecution.Status.CANCELLED,
                 handle.snapshot.value.status,
             )
         }
