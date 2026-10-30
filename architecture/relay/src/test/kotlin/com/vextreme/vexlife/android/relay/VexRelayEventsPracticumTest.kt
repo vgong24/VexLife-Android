@@ -90,24 +90,24 @@ class VexRelayEventsPracticumTest {
         val preference: AttentionPreferenceState? = null,
     ) : VexInputState<EventsInputState> {
         override fun latest(
-            incoming:
+            incomingInputState:
                 EventsInputState,
         ):
             EventsInputState =
             EventsInputState(
                 screen =
                     (
-                        incoming.screen
+                        incomingInputState.screen
                             ?: screen
                     )?.deepCopy(),
                 feed =
                     (
-                        incoming.feed
+                        incomingInputState.feed
                             ?: feed
                     )?.deepCopy(),
                 preference =
                     (
-                        incoming.preference
+                        incomingInputState.preference
                             ?: preference
                     )?.deepCopy(),
             )
