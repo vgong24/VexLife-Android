@@ -430,11 +430,11 @@ class VexExecutionTest {
 
                 assertEquals(
                     VexExecution.Status.CANCELLED,
-                    firstHandle.state.value.status,
+                    firstHandle.snapshot.value.status,
                 )
                 assertEquals(
                     VexExecution.Status.RUNNING,
-                    secondHandle.state.value.status,
+                    secondHandle.snapshot.value.status,
                 )
 
                 secondRepository
@@ -481,7 +481,7 @@ class VexExecutionTest {
                 withTimeout(
                     2_000L,
                 ) {
-                    firstHandle.state.first { state ->
+                    firstHandle.snapshot.first { state ->
                         state.status ==
                             VexExecution.Status.RUNNING
                     }
@@ -943,11 +943,11 @@ class VexExecutionTest {
                 )
                 assertEquals(
                     VexExecution.Status.CANCELLED,
-                    firstHandle.state.value.status,
+                    firstHandle.snapshot.value.status,
                 )
                 assertEquals(
                     VexExecution.Status.RUNNING,
-                    secondHandle.state.value.status,
+                    secondHandle.snapshot.value.status,
                 )
 
                 secondRepository
@@ -1009,7 +1009,7 @@ class VexExecutionTest {
 
             assertEquals(
                 VexExecution.Status.CANCELLED,
-                running.state.value.status,
+                running.snapshot.value.status,
             )
 
             assertFalse(
