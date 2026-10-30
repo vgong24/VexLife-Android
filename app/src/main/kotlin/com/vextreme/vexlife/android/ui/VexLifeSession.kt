@@ -202,7 +202,7 @@ private class VexStreamArtworkExecution(
         executionRoot,
     ) {
     fun start() {
-        launchForCollect(
+        observe(
             repository::state,
         ) { state ->
             if (
