@@ -1,7 +1,7 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.execution.usage
 
-import com.vextreme.vexlife.android.execution.VexCoroutineHandle
-import com.vextreme.vexlife.android.execution.VexCoroutineStatus
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.execution.testing.VexExecutionTestRule
@@ -23,9 +23,8 @@ import org.junit.Test
 /**
  * Consumer-side execution test blueprint.
  *
- * The reusable rule owns scheduler/root setup and guaranteed teardown. This class deliberately owns
- * its feature-like dependency construction in [setUp] so a developer can see the real pieces under
- * test without command-clicking through a hidden "buildFeature()" scenario framework.
+ * The consumer supplies semantic relationship keys. VexExecution owns Jobs and their lifetime; no
+ * Job handle or runtime occurrence ID escapes back into the feature.
  */
 class VexExecutionVirtualTimeUsageTest {
     @get:Rule
@@ -83,11 +82,6 @@ class VexExecutionVirtualTimeUsageTest {
             try {
                 awaitCancellation()
             } finally {
-                /*
-                 * Simulate teardown that must finish before replacement work may start.
-                 * NonCancellable is intentional in this test fake only to prove joinStop waits
-                 * through a resource cleanup boundary.
-                 */
                 withContext(
                     NonCancellable,
                 ) {
@@ -100,64 +94,119 @@ class VexExecutionVirtualTimeUsageTest {
     }
 
     private class ExampleFeatureExecution(
-        root: VexExecutionRoot,
+        root:
+            VexExecutionRoot,
         private val repository:
             ExampleRepository,
-    ) : VexExecution(root) {
+    ) :
+        VexExecution<
+            ExampleFeatureExecution
+        >(
+            root,
+        ) {
+        enum class Relationship :
+            VexExecution.RelationshipId<
+                ExampleFeatureExecution
+            > {
+            Primary,
+            Secondary,
+            Restartable,
+            Cleanup,
+        }
+
         fun observePrimary(
-            values: MutableList<Int>,
-        ): VexCoroutineHandle =
+            values:
+                MutableList<Int>,
+        ):
+            Boolean =
             launchForCollect(
-                repository::primaryStates,
+                relationshipId =
+                    Relationship.Primary,
+                source =
+                    repository::primaryStates,
             ) { value ->
-                values += value
+                values +=
+                    value
             }
 
         fun observeSecondary(
-            values: MutableList<Int>,
-        ): VexCoroutineHandle =
+            values:
+                MutableList<Int>,
+        ):
+            Boolean =
             launchForCollect(
-                repository::secondaryStates,
+                relationshipId =
+                    Relationship.Secondary,
+                source =
+                    repository::secondaryStates,
             ) { value ->
-                values += value
+                values +=
+                    value
             }
 
         fun observeRestartable():
-            VexCoroutineHandle =
+            Boolean =
             launchForCollect(
-                repository::restartableStates,
+                relationshipId =
+                    Relationship.Restartable,
+                source =
+                    repository::restartableStates,
             ) {}
 
         fun runCleanupOperation():
-            VexCoroutineHandle =
-            launchOnce(
-                repository::
-                    operationWithCleanup,
+            Boolean =
+            launch(
+                relationshipId =
+                    Relationship.Cleanup,
+                approach =
+                    VexExecution.Approach.Earliest,
+                action =
+                    repository::operationWithCleanup,
+            )
+
+        suspend fun joinCleanup():
+            Boolean =
+            joinStop(
+                relationshipId =
+                    Relationship.Cleanup,
+                reason =
+                    "replace operation",
             )
     }
 
+    private fun state(
+        relationship:
+            ExampleFeatureExecution.Relationship,
+    ):
+        VexExecution.State =
+        requireNotNull(
+            vexExecution.root
+                .executions
+                .value[
+                    relationship
+                ],
+        )
+            .last()
+
     @Test
-    fun independentFlowSourcesStartAsConcurrentSiblingJobs() =
+    fun independentFlowRelationshipsStartAsConcurrentSiblingJobs() =
         vexExecution.runTest {
             val primary =
                 mutableListOf<Int>()
             val secondary =
                 mutableListOf<Int>()
 
-            val first =
+            assertTrue(
                 execution.observePrimary(
                     primary,
-                )
-            val second =
+                ),
+            )
+            assertTrue(
                 execution.observeSecondary(
                     secondary,
-                )
+                ),
+            )
 
-            /*
-             * Both managed Jobs are admitted before the scheduler runs either one. runCurrent()
-             * therefore proves the second collector is not sequenced behind the first forever
-             * collection.
-             */
             runCurrent()
 
             assertEquals(
@@ -169,21 +218,25 @@ class VexExecutionVirtualTimeUsageTest {
                 secondary,
             )
             assertEquals(
-                VexCoroutineStatus.RUNNING,
-                first.state.value.status,
+                VexExecution.Status.RUNNING,
+                state(
+                    ExampleFeatureExecution.Relationship.Primary,
+                ).status,
             )
             assertEquals(
-                VexCoroutineStatus.RUNNING,
-                second.state.value.status,
+                VexExecution.Status.RUNNING,
+                state(
+                    ExampleFeatureExecution.Relationship.Secondary,
+                ).status,
             )
         }
 
     @Test
     fun restartDelayCanBeProvedWithoutWallClockWaiting() =
         vexExecution.runTest {
-            val handle =
-                execution
-                    .observeRestartable()
+            assertTrue(
+                execution.observeRestartable(),
+            )
 
             runCurrent()
 
@@ -194,9 +247,10 @@ class VexExecutionVirtualTimeUsageTest {
                     .get(),
             )
             assertEquals(
-                VexCoroutineStatus
-                    .RESTARTING,
-                handle.state.value.status,
+                VexExecution.Status.RESTARTING,
+                state(
+                    ExampleFeatureExecution.Relationship.Restartable,
+                ).status,
             )
 
             advanceTimeBy(
@@ -223,32 +277,32 @@ class VexExecutionVirtualTimeUsageTest {
                     .get(),
             )
             assertEquals(
-                VexCoroutineStatus.FAILED,
-                handle.state.value.status,
+                VexExecution.Status.FAILED,
+                state(
+                    ExampleFeatureExecution.Relationship.Restartable,
+                ).status,
             )
         }
 
     @Test
-    fun joinStopWaitsUntilStructuredCleanupActuallyFinishes() =
+    fun relationshipJoinStopWaitsUntilStructuredCleanupActuallyFinishes() =
         vexExecution.runTest {
-            val handle =
+            assertTrue(
                 execution
-                    .runCleanupOperation()
+                    .runCleanupOperation(),
+            )
 
             runCurrent()
 
-            /*
-             * Start joinStop as a separately scheduled test action so the test can inspect the
-             * interval while cleanup is still pending.
-             */
-            var stopCompleted = false
+            var stopCompleted =
+                false
+
             kotlinx.coroutines.CoroutineScope(
                 kotlinx.coroutines.currentCoroutineContext(),
             ).launch {
-                handle.joinStop(
-                    "replace operation",
-                )
-                stopCompleted = true
+                execution.joinCleanup()
+                stopCompleted =
+                    true
             }
 
             runCurrent()
@@ -275,8 +329,10 @@ class VexExecutionVirtualTimeUsageTest {
                 stopCompleted,
             )
             assertEquals(
-                VexCoroutineStatus.CANCELLED,
-                handle.state.value.status,
+                VexExecution.Status.CANCELLED,
+                state(
+                    ExampleFeatureExecution.Relationship.Cleanup,
+                ).status,
             )
         }
 }
