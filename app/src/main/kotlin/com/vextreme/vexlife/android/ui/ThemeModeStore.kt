@@ -3,18 +3,14 @@ package com.vextreme.vexlife.android.ui
 import android.content.Context
 import android.content.SharedPreferences
 import com.vextreme.vexlife.android.behavior.VexFamily
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 
 /**
  * Android-local durable realization of ThemeMode explicit selection.
  *
  * SharedPreferences is platform storage mechanics, not portable ThemeMode meaning. The Store exposes
- * the Family-owned StateStore contract required by production: save(State) + observableState.
- * Direct get()/forget() helpers remain concrete ThemeMode storage mechanics for local reset/proof use.
- * Collection lifetime belongs to VexExecution through ThemeModeFamily.observeStore(...); the Store
- * registers its listener only while that Flow is observed.
+ * the Family-owned Store contract required by production: save(State).
+ * current()/forget() remain concrete ThemeMode storage mechanics for process-start restoration and
+ * local reset/proof use; they are not promoted into generic Family Store architecture.
  */
 internal class SharedPreferencesThemeModeStore(
     context: Context,
@@ -29,54 +25,20 @@ internal class SharedPreferencesThemeModeStore(
                 Context.MODE_PRIVATE,
             )
 
-    override val observableState:
-        Flow<ThemeMode> =
-        callbackFlow {
-            val listener =
-                SharedPreferences
-                    .OnSharedPreferenceChangeListener { _, key ->
-                        if (
-                            key ==
-                            KEY_THEME_MODE
-                        ) {
-                            trySend(
-                                readCurrent(),
-                            )
-                        }
-                    }
 
-            preferences
-                .registerOnSharedPreferenceChangeListener(
-                    listener,
-                )
 
-            trySend(
-                readCurrent(),
-            )
-
-            awaitClose {
-                preferences
-                    .unregisterOnSharedPreferenceChangeListener(
-                        listener,
-                    )
-            }
-        }
-
-    suspend fun get():
+    fun current():
         ThemeMode =
         readCurrent()
 
     override suspend fun save(
         state:
             ThemeMode,
-    ):
-        VexFamily.Store.WriteResult =
+    ) {
         when (state) {
             ThemeMode.NotSet ->
-                VexFamily.Store.WriteResult.Failure(
-                    IllegalArgumentException(
-                        "ThemeMode.NotSet is absence of an explicit durable selection; use forget()",
-                    ),
+                throw IllegalArgumentException(
+                    "ThemeMode.NotSet is absence of an explicit durable selection; use forget()",
                 )
 
             ThemeMode.Light,
@@ -92,9 +54,9 @@ internal class SharedPreferencesThemeModeStore(
                         ),
                 )
         }
+    }
 
-    suspend fun forget():
-        VexFamily.Store.WriteResult =
+    fun forget() {
         write(
             preferences
                 .edit()
@@ -102,6 +64,7 @@ internal class SharedPreferencesThemeModeStore(
                     KEY_THEME_MODE,
                 ),
         )
+    }
 
     private fun readCurrent():
         ThemeMode =
@@ -142,15 +105,13 @@ internal class SharedPreferencesThemeModeStore(
     private fun write(
         editor:
             SharedPreferences.Editor,
-    ):
-        VexFamily.Store.WriteResult =
-        if (
-            editor.commit()
+    ) {
+        check(
+            editor.commit(),
         ) {
-            VexFamily.Store.WriteResult.Success
-        } else {
-            VexFamily.Store.WriteResult.Failure()
+            "ThemeMode durable write failed"
         }
+    }
 
     private companion object {
         const val PREFERENCES_NAME =
