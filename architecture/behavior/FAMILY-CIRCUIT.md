@@ -112,45 +112,24 @@ ConcreteFamily
 fresh reader that DisplayState already has a rightful owner and that no parallel ViewState / UiState /
 PresentationState should be created merely to fill a perceived gap.
 
-## Execution relationship identity
+## Durable Save ordering
 
-Family owns the relationship composition once:
-
-~~~text
-activate(control)
--> exact live Family
--> exact Control belonging to that Family
--> Control name/type included automatically
--> optional typed Control.resourceId
--> VexFamily.RelationshipId<Family>
--> VexExecution.RelationshipId
--> maintained execution coordination
-~~~
-
-Feature authoring does not choose an execution Approach.
-
-The maintained Save relationship identity is still formed once:
+Direct Family currently has one maintained asynchronous operation: Store.save(State).
 
 ~~~text
-Control identity
-    always included by Family foundation
-
-Control.resourceId
-    optional typed narrowing when this Control needs resource identity
-
-RelationshipId
-    live Family + exact Control identity + optional exact ResourceId object
+live Family
+-> one private Save queue
+-> every accepted saveState runs in Control-acceptance order
 ~~~
 
-An Act may carry a `saveState`. activate(...) applies immediate State meaning first, then hands that
-State to the current execution implementation for ordered persistence.
+That queue identity is execution mechanics. Control remains semantic affordance/request vocabulary
+and does not carry execution identity in the current Direct Family surface.
 
-The full Control payload is not automatically identity. If Control.Play(trackId, position) needs
-coordination per track, Play exposes resourceId = trackId; position remains request payload.
-Enum Control entries remain distinct exact Control identities.
+This matters because each Save persists whole Family State. Two different Controls must not create
+independent Save queues where an older State can finish after a newer accepted State.
 
-There is no generic Begin authoring tree, no feature-facing Earliest/Latest/Queued selection, and no
-arbitrary execution argument bag on the Direct Family surface.
+No feature-facing overlap policy or resource-scoped execution-ID vocabulary is preserved here. If a
+future effect demonstrates that need, it must earn the relationship from its actual semantics.
 
 ## Logger boundary
 
