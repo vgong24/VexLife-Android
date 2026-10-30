@@ -23,6 +23,8 @@ internal class VexMapsDistributionExecution(
         observe(
             source =
                 session::modeDeliveryRouteOutputsForExecution,
+            recovery =
+                VexExecution.ObservationRecovery(),
         ) { output ->
             session.acceptModeDeliveryRouteOutput(
                 output,
@@ -32,6 +34,8 @@ internal class VexMapsDistributionExecution(
         observe(
             source =
                 session::navigationOutputsForExecution,
+            recovery =
+                VexExecution.ObservationRecovery(),
         ) { output ->
             session.acceptNavigationOutput(
                 output,
