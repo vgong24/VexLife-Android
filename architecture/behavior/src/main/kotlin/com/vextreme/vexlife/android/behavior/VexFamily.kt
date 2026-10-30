@@ -119,7 +119,7 @@ abstract class VexFamily<
      * optionally narrows repeated instances of that same Control. The actual ResourceId object is
      * retained so its concrete type/equality cannot collapse into a shared String convention.
      */
-    internal class RelationshipId<
+    private class RelationshipId<
         Family,
     > internal constructor(
         private val family:
@@ -128,14 +128,14 @@ abstract class VexFamily<
                 *,
                 *
             >,
-        internal val controlType:
+        private val controlType:
             KClass<*>,
-        internal val controlName:
+        private val controlName:
             String,
-        internal val resourceId:
+        private val resourceId:
             ResourceId<*>?,
     ) :
-        VexExecution.RelationshipId where
+        VexExecution.RelationshipId<Family> where
         Family : VexFamily<
             Family,
             *,
@@ -181,6 +181,53 @@ abstract class VexFamily<
                     )
             return result
         }
+    }
+
+    /**
+     * Family-owned execution relationship for one durable StateStore observation.
+     *
+     * The live Family and exact StateStore object form the key. Execution never derives this
+     * relationship from the observable property callable.
+     */
+    private class StateStoreRelationshipId<
+        Family,
+    >(
+        private val family:
+            VexFamily<
+                Family,
+                *,
+                *
+            >,
+        private val stateStore:
+            StateStore<*>,
+    ) :
+        VexExecution.RelationshipId<Family> where
+        Family : VexFamily<
+            Family,
+            *,
+            *
+        > {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                StateStoreRelationshipId<*> &&
+                family ===
+                other.family &&
+                stateStore ===
+                other.stateStore
+
+        override fun hashCode():
+            Int =
+            31 *
+                System.identityHashCode(
+                    family,
+                ) +
+                System.identityHashCode(
+                    stateStore,
+                )
     }
 
     /**
@@ -709,12 +756,19 @@ abstract class VexFamily<
                 storedState: FamilyState,
             ) -> FamilyState,
     ):
-        VexExecution.Handle =
+        Boolean =
         VexExecution.observe(
             executionRoot =
                 executionRoot,
             owner =
                 this::class,
+            relationshipId =
+                StateStoreRelationshipId(
+                    family =
+                        this,
+                    stateStore =
+                        stateStore,
+                ),
             source =
                 stateStore::observableState,
         ) { storedState ->
@@ -1016,96 +1070,31 @@ abstract class VexFamily<
                 )
             }
 
-        when (
-            approach
-        ) {
-            VexExecution.Approach.Independent ->
-                VexExecution.begin(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Earliest ->
-                VexExecution.beginEarliest(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Latest ->
-                VexExecution.beginLatest(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-
-            VexExecution.Approach.Queued ->
-                VexExecution.beginQueued(
-                    executionRoot =
-                        executionRoot,
-                    owner =
-                        this::class,
-                    relationshipId =
-                        relationshipId(
-                            control,
-                        ),
-                    operation =
-                        operation,
-                    argument =
-                        save.state,
-                    beforeOperation =
-                        beforeOperation,
-                    onResult =
-                        onResult,
-                    onFailure =
-                        onFailure,
-                )
-        }
+        VexExecution.begin(
+            executionRoot =
+                executionRoot,
+            owner =
+                this::class,
+            relationshipId =
+                relationshipId(
+                    control,
+                ),
+            approach =
+                approach,
+            operation =
+                operation,
+            argument =
+                save.state,
+            beforeOperation =
+                beforeOperation,
+            onResult =
+                onResult,
+            onFailure =
+                onFailure,
+        )
     }
 
-    internal fun relationshipId(
+    private fun relationshipId(
         control:
             FamilyControl,
     ):

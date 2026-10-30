@@ -79,6 +79,8 @@ class VexStreamPlaybackService : MediaSessionService() {
             VexStreamPlaybackWidgetUpdateExecution(
                 root =
                     widgetExecutionRoot,
+                owner =
+                    this,
                 context =
                     applicationContext,
                 observations =

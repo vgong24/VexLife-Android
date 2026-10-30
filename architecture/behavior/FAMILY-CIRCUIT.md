@@ -114,7 +114,7 @@ PresentationState should be created merely to fill a perceived gap.
 
 ## Execution relationship identity
 
-Family owns the relationship composition once:
+Family owns the relationship composition once and keeps it inside the Family contract:
 
 ~~~text
 activate(control)
@@ -123,13 +123,18 @@ activate(control)
 -> Control name/type included automatically
 -> optional typed Control.resourceId
 -> VexFamily.RelationshipId<Family>
--> VexExecution.RelationshipId
--> maintained execution coordination
+-> VexExecution.RelationshipId<Family>
+-> Approach
+-> VexExecution-owned Job custody
 ~~~
 
-Concrete authoring stays intentionally small:
+Concrete Family authoring stays intentionally small:
 
 ~~~kotlin
+begin {
+    ...
+}
+
 beginEarliest {
     ...
 }
@@ -143,8 +148,8 @@ beginQueued {
 }
 ~~~
 
-Begin chooses **Approach only**. It accepts no trigger, arbitrary argument tuple, or hand-authored
-relationship string.
+Those functions are Family children. They do not expose Execution identity construction to the
+caller. Family supplies its own typed relationship key and only the authored Approach changes.
 
 ~~~text
 Control name
@@ -153,7 +158,7 @@ Control name
 Control.Resource<Family, ExactId>
     exact typed narrowing when this Control needs a ResourceId
 
-RelationshipId
+RelationshipId<Family>
     live Family + Control kind/name + optional exact ResourceId object
 
 Approach
@@ -161,10 +166,52 @@ Approach
 ~~~
 
 The full Control payload is not automatically identity. If `Control.Play(trackId, position)` needs
-coordination per track, `Play` declares `Control.Resource<Family, TrackId>`; the actual TrackId object
-is preserved in the relationship while `position` remains request payload. Enum Control entries are
-also distinct default Control identities rather than collapsing to their shared enum class.
-A future author cannot pass unrelated execution metadata into Begin because no such parameter exists.
+coordination per track, `Play` declares `Control.Resource<Family, TrackId>`; the actual TrackId
+object is preserved in the relationship while `position` remains request payload.
+
+Execution does not add another address around that Family relationship:
+
+~~~text
+NO Family -> public execution Handle
+NO Family -> public execution InstanceId
+NO Family -> callable-addressed forceStop / joinStop
+NO Family -> SourceRef duplicate identity
+
+VexExecution.SourceRef
+    diagnostic source location only
+~~~
+
+If Family-owned work needs later control, the Family-owned RelationshipId is the address. Execution
+owns the actual Jobs, cancellation, joining, queueing and overlap mechanics beneath that key.
+
+Family StateStore observation follows the same rooted law:
+
+~~~text
+live Family
++ exact StateStore object
+-> Family-owned StateStore observation relationship
+-> VexExecution observation custody
+-> observeStore(CURRENT, stored)
+-> admitCurrent(...)
+-> same StateRelay
+~~~
+
+The observation key is contained in Family; it is not a free-standing public operation and is not
+derived from `StateStore::observableState` callable identity.
+
+This keeps the semantic tree explicit:
+
+~~~text
+VexFamily
+-> Control / ResourceId
+-> RelationshipId
+-> Begin
+   -> VexExecution dependency
+
+VexExecution
+-> owns Job mechanics
+-> does not become Family's semantic owner
+~~~
 
 ## Logger boundary
 

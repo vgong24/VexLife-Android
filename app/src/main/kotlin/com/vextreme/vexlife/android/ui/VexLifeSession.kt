@@ -162,15 +162,71 @@ internal class VexLifeViewModel(
     }
 }
 
+private sealed interface VexStreamSessionRelationshipKind {
+    data object StartupRestore :
+        VexStreamSessionRelationshipKind
+
+    data object ArtworkObservation :
+        VexStreamSessionRelationshipKind
+}
+
+@OptIn(VexExecution.RelationshipFoundationApi::class)
+private class VexStreamSessionRelationship(
+    private val repository:
+        VexStreamMusicRepository,
+    private val kind:
+        VexStreamSessionRelationshipKind,
+) :
+    VexExecution.RelationshipId<
+        VexStreamMusicRepository
+    > {
+    override fun equals(
+        other:
+            Any?,
+    ):
+        Boolean =
+        other is
+            VexStreamSessionRelationship &&
+            repository ===
+            other.repository &&
+            kind ==
+            other.kind
+
+    override fun hashCode():
+        Int =
+        31 *
+            System.identityHashCode(
+                repository,
+            ) +
+            kind.hashCode()
+}
+
+@OptIn(VexExecution.RelationshipFoundationApi::class)
 private class VexStreamStartupExecution(
     executionRoot: VexExecutionRoot,
     private val repository: VexStreamMusicRepository,
-) : VexExecution(
+) :
+    VexExecution<
+        VexStreamMusicRepository
+    >(
         executionRoot,
     ) {
+    private val startupRelationship =
+        VexStreamSessionRelationship(
+            repository =
+                repository,
+            kind =
+                VexStreamSessionRelationshipKind.StartupRestore,
+        )
+
     fun start() {
-        launchOnce(
-            repository::restorePersistedState,
+        launch(
+            relationshipId =
+                startupRelationship,
+            approach =
+                VexExecution.Approach.Earliest,
+            action =
+                repository::restorePersistedState,
         )
     }
 }
@@ -179,19 +235,34 @@ private class VexStreamStartupExecution(
  * Session-owned background custody for ancillary downloaded artwork.
  *
  * The repository owns which current downloaded tracks need artwork and how those bytes are stored.
- * This Execution only gives that finite network/filesystem work an explicit non-UI lifetime whenever
- * current Hub/catalog truth becomes available.
+ * This Execution only gives that sustained observation an explicit non-UI lifetime whenever current
+ * Hub/catalog truth becomes available.
  */
+@OptIn(VexExecution.RelationshipFoundationApi::class)
 private class VexStreamArtworkExecution(
     executionRoot: VexExecutionRoot,
     private val repository: VexStreamMusicRepository,
     private val context: android.content.Context,
-) : VexExecution(
+) :
+    VexExecution<
+        VexStreamMusicRepository
+    >(
         executionRoot,
     ) {
+    private val artworkObservationRelationship =
+        VexStreamSessionRelationship(
+            repository =
+                repository,
+            kind =
+                VexStreamSessionRelationshipKind.ArtworkObservation,
+        )
+
     fun start() {
         launchForCollect(
-            repository::state,
+            relationshipId =
+                artworkObservationRelationship,
+            source =
+                repository::state,
         ) { state ->
             if (
                 state.hubState is

@@ -925,18 +925,55 @@ class VexStreamPlaybackWidgetActionCallback :
  * Exactly one ordered provider observation stream feeds this execution. Widget callbacks only issue
  * Controls; they never become a second playback read/publication producer.
  */
+@OptIn(VexExecution.RelationshipFoundationApi::class)
 internal class VexStreamPlaybackWidgetUpdateExecution(
     root: VexExecutionRoot,
+    private val owner:
+        VexStreamPlaybackService,
     private val context: Context,
     private val observations:
         Flow<
             VexStreamCurrentPlaybackObservation
         >,
-) : VexExecution(
+) :
+    VexExecution<
+        VexStreamPlaybackService
+    >(
         root,
     ) {
+    private class PublicationRelationship(
+        private val owner:
+            VexStreamPlaybackService,
+    ) :
+        VexExecution.RelationshipId<
+            VexStreamPlaybackService
+        > {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                PublicationRelationship &&
+                owner ===
+                other.owner
+
+        override fun hashCode():
+            Int =
+            System.identityHashCode(
+                owner,
+            )
+    }
+
+    private val publicationRelationship =
+        PublicationRelationship(
+            owner,
+        )
+
     init {
         launchForCollect(
+            relationshipId =
+                publicationRelationship,
             source =
                 ::observationsForExecution,
         ) { observation ->

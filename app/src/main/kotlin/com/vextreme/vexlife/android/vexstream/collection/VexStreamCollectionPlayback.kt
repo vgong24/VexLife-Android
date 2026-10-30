@@ -103,6 +103,8 @@ internal class Media3VexStreamCollectionPlaybackConnection(
         lazy {
             VexStreamCollectionPlaybackExecution(
                 root = executionRoot,
+                owner =
+                    this@Media3VexStreamCollectionPlaybackConnection,
                 providerDispatcher =
                     Handler(
                         controller.applicationLooper,
@@ -202,8 +204,11 @@ internal class Media3VexStreamCollectionPlaybackConnection(
         )
 }
 
+@OptIn(VexExecution.RelationshipFoundationApi::class)
 internal class VexStreamCollectionPlaybackExecution(
     root: VexExecutionRoot,
+    private val owner:
+        Media3VexStreamCollectionPlaybackConnection,
     private val providerDispatcher:
         CoroutineDispatcher,
     private val resolver:
@@ -211,9 +216,40 @@ internal class VexStreamCollectionPlaybackExecution(
     private val commitPlay:
         (ResolvedCollectionPlayback) -> Boolean,
 ) :
-    VexExecution(
+    VexExecution<
+        Media3VexStreamCollectionPlaybackConnection
+    >(
         root,
     ) {
+    private class Relationship(
+        private val owner:
+            Media3VexStreamCollectionPlaybackConnection,
+    ) :
+        VexExecution.RelationshipId<
+            Media3VexStreamCollectionPlaybackConnection
+        > {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                Relationship &&
+                owner ===
+                other.owner
+
+        override fun hashCode():
+            Int =
+            System.identityHashCode(
+                owner,
+            )
+    }
+
+    private val playRequestsRelationship =
+        Relationship(
+            owner,
+        )
+
     private data class PlayIntent(
         val sequence: Long,
         val request:
@@ -234,6 +270,8 @@ internal class VexStreamCollectionPlaybackExecution(
 
     init {
         launchForCollect(
+            relationshipId =
+                playRequestsRelationship,
             source =
                 ::requestsForExecution,
             restartOnSourceFailure =

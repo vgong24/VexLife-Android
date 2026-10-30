@@ -16,20 +16,18 @@ coroutine execution must make that role explicit by extending `VexExecution`.
 ```text
 VexExecutionRoot
     -> internal VexCoroutineLauncher
-    -> active[InstanceId]
-    -> relationships[RelationshipId] only for maintained semantic work
+    -> relationships[RelationshipId] -> owned Jobs
 
-FeatureExecution : VexExecution
-    -> launchOnce(callable)      # fail closed on an unfinished same-source invocation
-    -> launch(callable)          # every invocation intentionally independent
-    -> launchForCollect(flowProvider) { value -> ... }
-    -> forceStop(callable)
-    -> joinStop(callable)
+FeatureExecution<Owner> : VexExecution<Owner>
+    -> launch(RelationshipId<Owner>, Approach, callable)
+    -> launchForCollect(RelationshipId<Owner>, flowProvider) { value -> ... }
+    -> forceStop(RelationshipId<Owner>)
+    -> joinStop(RelationshipId<Owner>)
 
-semantic foundation owner
-    -> supplies RelationshipId
+semantic owner
+    -> supplies its typed RelationshipId<Owner>
     -> selects Approach
-    -> Execution coordinates Earliest / Latest / Queued
+    -> Execution owns Job custody only
 ```
 
 ## Why this evolved from ordinary coroutine usage
@@ -108,39 +106,29 @@ rightful responsibilities.
 
 ## Public authoring language
 
-Finite direct execution keeps two explicit contracts:
+Execution has one overlap contract:
 
 ~~~text
-launchOnce(...)
-    one unfinished invocation per SourceRef
-    second unfinished same-source invocation fails closed
-
-launch(...)
-    every invocation is intentionally independent
-    each admitted invocation receives a fresh InstanceId
-~~~
-
-Maintained overlap semantics are not authored from arbitrary direct `trigger` values. A semantic
-foundation such as Family supplies a `VexExecution.RelationshipId`, then chooses an Approach:
-
-~~~text
-RelationshipId
-    WHICH semantic work intentionally coordinates?
+RelationshipId<Owner>
+    WHICH semantic work is this?
     supplied by the rightful semantic owner
 
+Approach.Independent
+    every admitted Job remains independent even when the relationship key is the same
+
 Approach.Earliest
-    earliest unfinished instance is sufficient
+    the already-running Job remains sufficient; a duplicate admission adds no Job
 
 Approach.Latest
-    newest supersedes predecessors
-    predecessor teardown completes before newest begins
+    newest admission supersedes unfinished predecessors
+    predecessor teardown completes before newest work begins
 
 Approach.Queued
-    every admitted instance remains meaningful
+    every admitted Job remains meaningful
     execute in arrival order
 ~~~
 
-Execution does not construct semantic identity from `Any`, string triggers, or ordered argument bags.
+A callable never decides whether work is a duplicate. Its automatic `SourceRef` remains useful for diagnostics/navigation, but custody and control always use the relationship key.
 
 For Family-originated work:
 
@@ -149,32 +137,26 @@ live Family
 + Control name/type
 + optional typed Control ResourceId
 =
-Family RelationshipId
--> VexExecution.RelationshipId
+Family RelationshipId<Family>
+-> VexExecution RelationshipId<Family>
 ~~~
 
-Begin chooses only Approach. Family owns the relationship composition.
+Family owns that composition. Concrete Family authoring chooses `begin` / `beginEarliest` / `beginLatest` / `beginQueued`; the Family bridge translates those authored meanings into the single Execution contract of `RelationshipId + Approach`. No product caller receives a Job handle or generated runtime ID.
 
-A maintained Flow observation remains a separate contract:
+A maintained Flow observation also receives a semantic relationship key:
 
-```kotlin
-launchForCollect(repository::states) { state ->
+~~~kotlin
+launchForCollect(
+    relationshipId = Relationship.RepositoryStates,
+    source = repository::states,
+) { state ->
     accept(state)
 }
-```
+~~~
 
-A second unfinished observation of the same source fails closed. That one-per-source observation law
-does not leak into ordinary finite `launch`.
+A duplicate observation for the same relationship uses Earliest semantics. Two different rightful relationships may observe the same source callable independently.
 
-The callable remains the operation Vex actually invokes, not a decorative source label for unrelated
-lambda work.
-
-`launch` never automatically retries. `launchForCollect` may use bounded recovery only for
-source/subscription failure. A failure thrown while consuming a valid emitted value becomes
-`FAILED` with no automatic resubscription. Intentional cancellation never restarts.
-
-`launchOnce` preserves its fail-closed same-source contract. `launch` is the separate explicit
-surface for intentionally independent finite invocations.
+Finite execution never automatically retries. `launchForCollect` may use bounded recovery only for source/subscription failure. A failure thrown while consuming a valid emitted value becomes `FAILED` with no automatic resubscription. Intentional cancellation never restarts.
 
 ## Worker preparation and provider-affine commit
 
@@ -229,53 +211,45 @@ HANDOFF != RETRY_POLICY
 PROVIDER_AFFINITY != ALWAYS_MAIN
 ```
 
-## Execution identity and runtime instance
+## Execution relationship identity
 
-Execution keeps separate truths:
+Execution keeps two distinct truths:
 
 ~~~text
-VexExecution.SourceRef
-    automatic
-    source class + callable name
-    diagnostic / source-addressing information
-
-VexExecution.InstanceId
-    automatic
-    generated for every admitted execution
-    exact runtime occurrence
-
-VexExecution.RelationshipId
-    semantic maintained-work identity
+VexExecution.RelationshipId<Owner>
+    semantic execution key
     supplied by the rightful semantic owner
-    raw use is an error-level foundation opt-in
+    generic Owner binding prevents cross-owner key substitution
+
+VexExecution.SourceRef
+    automatic source class + callable name
+    diagnostic/navigation information only
 
 VexExecution.Approach
     Independent / Earliest / Latest / Queued
-    overlap handling
+    overlap handling for one RelationshipId
 ~~~
 
 Therefore:
 
 ~~~text
-SOURCE REF
-!= INSTANCE ID
-!= RELATIONSHIP ID
-!= APPROACH
+RELATIONSHIP ID = CONTROL / CUSTODY ADDRESS
+SOURCE REF      = DIAGNOSTIC SOURCE ADDRESS
+SOURCE REF != RELATIONSHIP ID
 ~~~
 
-The active execution registry is keyed by `InstanceId`. Maintained overlap coordination is keyed by
-`RelationshipId`:
+The execution registry itself is relationship-keyed:
 
 ~~~text
-active[InstanceId]
 relationships[RelationshipId]
+    -> Approach
+    -> ordered Jobs
+    -> retained execution State evidence
 ~~~
 
-Execution does not add another owner/trigger/argument identity layer around the RelationshipId it receives.
-Raw RelationshipId implementation/bridging is guarded by `RelationshipFoundationApi`; product code
-should enter through its semantic owner's typed boundary instead.
+There is deliberately no public runtime occurrence ID, returned Job control object, source-addressed stop API, or second owner/trigger/argument identity catalog. If a caller needs to stop or join work later, it uses the same semantic relationship key that admitted the work.
 
-Family currently forms its RelationshipId from:
+Family currently forms its relationship key from:
 
 ~~~text
 live Family identity
@@ -285,12 +259,9 @@ Control name/type
 optional typed ResourceId<Family>
 ~~~
 
-That composition belongs to Family because Family owns the Control vocabulary. Execution only owns
-coroutine custody and overlap behavior.
+That composition remains inside Family because Family owns the Control vocabulary. Execution owns coroutine custody and overlap behavior only.
 
-`SourceRef` may change when source is renamed or obfuscated and is therefore not durable semantic
-identity. A RelationshipId is likewise a live runtime coordination identity unless its rightful semantic
-owner separately establishes a durable serialization contract.
+`SourceRef` may change when source is renamed or obfuscated and is therefore not durable semantic identity. A RelationshipId is likewise a live runtime coordination identity unless its rightful semantic owner separately establishes a durable serialization contract.
 
 ## Collection recovery boundary
 
@@ -329,50 +300,39 @@ must call `forceStopAll` / `joinStopAll` at its real terminal boundary.
 
 A real production consumer should prove that custody before the foundation considers parent-Job
 convenience or any lifecycle adapter.
-## Control
+## Control and custody
 
-```text
-handle.forceStop()
-    cancel this exact InstanceId
-
-handle.joinStop()
-    cancel + join this exact InstanceId
-
-forceStop(callable)
-    cancel every currently unfinished instance from this SourceRef
-
-joinStop(callable)
-    cancel + join every currently unfinished instance from this SourceRef
-```
-
-Source-addressed control is deliberately plural because one source may now have several independent
-finite instances. Exact per-instance control belongs to the Handle.
-
-Cancellation remains Kotlin cooperative cancellation. Vex does not claim unsafe arbitrary JVM/native
-thread termination.
-
-## Custody and sequence context
-
-Active custody and maintained overlap handling are separate:
+Control uses the same semantic key that admission used:
 
 ~~~text
-active
-    LinkedHashMap<InstanceId, ManagedExecution>
+forceStop(RelationshipId)
+    cancel every currently unfinished Job owned by that relationship
 
-relationships
-    LinkedHashMap<RelationshipId, MaintainedRelationship>
+joinStop(RelationshipId)
+    cancel + join every currently unfinished Job owned by that relationship
+
+VexExecutionRoot.forceStopAll / joinStopAll
+    terminal control for the whole execution tree
 ~~~
 
-Every admitted launch receives a unique InstanceId. Earliest / Latest / Queued use an exact
-RelationshipId key. Ordinary independent launch has no maintained Relationship.
+There is no callable/source lookup for control and no returned Job control object to retain externally.
 
-A cancelling predecessor continues to occupy its RelationshipId until its Job is actually completed.
-Kotlin may report `isActive == false` while structured/non-cancellable teardown is still running; a
-later Latest or Queued launch may not skip that unfinished predecessor.
+The internal relationship map owns both active Jobs and retained terminal State evidence:
 
-The map value stores the active Approach and ordered instance membership. Attempting to use the same
-unfinished RelationshipId simultaneously with a different Approach fails closed rather than silently
-creating two lanes.
+~~~text
+relationships
+    LinkedHashMap<RelationshipId, MaintainedRelationship>
+
+MaintainedRelationship
+    Approach
+    ordered managed Jobs / terminal evidence
+~~~
+
+A cancelling predecessor continues to occupy the relationship's active set until its Job is actually completed. Kotlin may report `isActive == false` while structured/non-cancellable teardown is still running; Latest or Queued admission may not skip that unfinished predecessor.
+
+When a relationship has no unfinished Job, a later admission may choose a different Approach. While unfinished work exists, attempting to reinterpret the same relationship with a different Approach fails closed.
+
+Cancellation remains Kotlin cooperative cancellation. Vex does not claim unsafe arbitrary JVM/native thread termination.
 
 ## Ownership laws
 
@@ -396,11 +356,7 @@ creating two lanes.
 - WorkManager or other process-death durability;
 - business retry/idempotency.
 
-Use Relay when several changing truths must converge. Direct finite execution chooses between
-fail-closed `launchOnce` and intentionally independent `launch`. Maintained Earliest / Latest /
-Queued coordination is admitted through a semantic foundation that supplies a RelationshipId; ordinary
-feature code does not author raw maintained triggers. Use `launchForCollect` only in an
-execution/runtime bridge that truly owns a sustained Flow observation.
+Use Relay when several changing truths must converge. Execution work is always admitted under a semantic RelationshipId and explicit Approach; ordinary feature code does not derive coordination from callable identity. Use `launchForCollect` only in an execution/runtime bridge that truly owns a sustained Flow observation.
 
 These finite-launch relationships govern coroutine custody only. They do not decide whether a
 Control is lawful, what semantic State should be admitted, whether an asynchronous result is still
@@ -573,20 +529,25 @@ relationships.
 Current execution proofs present in source:
 
 ~~~text
-launchOnce
-    second unfinished invocation from the same SourceRef -> rejected
+same callable + different RelationshipIds
+    both Jobs admitted
+    stopping one relationship leaves the other running
 
-launch
-    same callable -> distinct concurrent InstanceIds
-    same SourceRef is preserved
+same RelationshipId + Independent
+    multiple concurrent Jobs admitted
 
-maintained RelationshipId
-    Earliest -> later overlap receives the existing unfinished InstanceId
-    Latest -> newest waits through predecessor teardown
-    Queued -> every admitted instance executes in arrival order
+same RelationshipId + Earliest
+    later duplicate admission adds no Job
+
+same RelationshipId + Latest
+    newest waits through predecessor teardown
+
+same RelationshipId + Queued
+    every admitted Job executes in arrival order
 
 launchForCollect
-    duplicate unfinished observation of the same source still fails closed
+    same relationship -> one active observation
+    different relationships -> same source may be observed independently
 ~~~
 
 Family's focused proof separately establishes that Control name is always included, arbitrary Control

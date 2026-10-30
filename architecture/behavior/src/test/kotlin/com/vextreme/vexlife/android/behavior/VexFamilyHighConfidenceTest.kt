@@ -1,3 +1,5 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecution
@@ -454,6 +456,8 @@ class VexFamilyHighConfidenceTest {
             State,
         executionRoot:
             VexExecutionRoot,
+        override val store:
+            Store,
     ) :
         VexFamily<
             ResourceIdentityFamily,
@@ -506,6 +510,9 @@ class VexFamilyHighConfidenceTest {
                 Control
         }
 
+        interface Store :
+            VexFamily.Store<State>
+
         override fun act(
             currentState:
                 State,
@@ -521,12 +528,42 @@ class VexFamilyHighConfidenceTest {
                         control
                     ) {
                         is Control.Play ->
-                            stay()
+                            stay(
+                                begin =
+                                    beginEarliest {
+                                        save(
+                                            State.Idle,
+                                        ).results {
+                                            success()
+                                            failure()
+                                        }
+                                    },
+                            )
 
                         is Control.Search ->
-                            stay()
+                            stay(
+                                begin =
+                                    beginEarliest {
+                                        save(
+                                            State.Idle,
+                                        ).results {
+                                            success()
+                                            failure()
+                                        }
+                                    },
+                            )
                     }
             }
+    }
+
+    private class ImmediateResourceIdentityStore :
+        ResourceIdentityFamily.Store {
+        override suspend fun save(
+            state:
+                ResourceIdentityFamily.State,
+        ):
+            VexFamily.Store.WriteResult =
+            VexFamily.Store.WriteResult.Success
     }
 
     private class EnumControlFamily(
@@ -534,6 +571,8 @@ class VexFamilyHighConfidenceTest {
             State,
         executionRoot:
             VexExecutionRoot,
+        override val store:
+            Store,
     ) :
         VexFamily<
             EnumControlFamily,
@@ -559,6 +598,9 @@ class VexFamilyHighConfidenceTest {
             Pause,
         }
 
+        interface Store :
+            VexFamily.Store<State>
+
         override fun act(
             currentState:
                 State,
@@ -576,9 +618,29 @@ class VexFamilyHighConfidenceTest {
                         Control.Play,
                         Control.Pause,
                         ->
-                            stay()
+                            stay(
+                                begin =
+                                    beginEarliest {
+                                        save(
+                                            State.Idle,
+                                        ).results {
+                                            success()
+                                            failure()
+                                        }
+                                    },
+                            )
                     }
             }
+    }
+
+    private class ImmediateEnumControlStore :
+        EnumControlFamily.Store {
+        override suspend fun save(
+            state:
+                EnumControlFamily.State,
+        ):
+            VexFamily.Store.WriteResult =
+            VexFamily.Store.WriteResult.Success
     }
 
     /**
@@ -756,71 +818,19 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun relationshipIdentityPreservesControlKindExactResourceTypeAndLiveFamilyScope() {
+    fun relationshipIdentityIsContainedInFamilyAndProvedByExecutionBehavior() {
         val root =
             VexExecutionRoot()
 
         try {
-            val firstValueFamily =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Empty,
-                    executionRoot =
-                        root,
-                )
-            val secondValueFamily =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Empty,
-                    executionRoot =
-                        root,
-                )
-
-            val defaultFirst =
-                firstValueFamily.relationshipId(
-                    ValueFamily.Control.Set(
-                        value =
-                            "first payload",
-                    ),
-                )
-            val defaultSecond =
-                firstValueFamily.relationshipId(
-                    ValueFamily.Control.Set(
-                        value =
-                            "second payload",
-                    ),
-                )
-            val otherLiveFamily =
-                secondValueFamily.relationshipId(
-                    ValueFamily.Control.Set(
-                        value =
-                            "first payload",
-                    ),
-                )
-
-            assertEquals(
-                defaultFirst,
-                defaultSecond,
-            )
-            assertFalse(
-                defaultFirst ==
-                    otherLiveFamily,
-            )
-            assertEquals(
-                "Set",
-                defaultFirst.controlName,
-            )
-            assertEquals(
-                null,
-                defaultFirst.resourceId,
-            )
-
             val resourceFamily =
                 ResourceIdentityFamily(
                     initialState =
                         ResourceIdentityFamily.State.Idle,
                     executionRoot =
                         root,
+                    store =
+                        ImmediateResourceIdentityStore(),
                 )
             val trackA =
                 ResourceIdentityFamily.TrackId(
@@ -838,46 +848,127 @@ class VexFamilyHighConfidenceTest {
                         "other",
                 )
 
-            val narrowedFirst =
-                resourceFamily.relationshipId(
+            assertTrue(
+                resourceFamily.activate(
                     ResourceIdentityFamily.Control.Play(
                         resourceId =
                             trackA,
                         position =
                             10,
                     ),
-                )
-            val narrowedSame =
-                resourceFamily.relationshipId(
+                ),
+            )
+            assertEquals(
+                1,
+                root.executions.value.size,
+            )
+
+            // Payload that is not the ResourceId must not create another relationship.
+            assertTrue(
+                resourceFamily.activate(
                     ResourceIdentityFamily.Control.Play(
                         resourceId =
                             trackACopy,
                         position =
                             99,
                     ),
-                )
-            val narrowedOther =
-                resourceFamily.relationshipId(
+                ),
+            )
+            assertEquals(
+                1,
+                root.executions.value.size,
+            )
+
+            assertTrue(
+                resourceFamily.activate(
                     ResourceIdentityFamily.Control.Play(
                         resourceId =
                             trackB,
                         position =
                             10,
                     ),
-                )
+                ),
+            )
+            assertEquals(
+                2,
+                root.executions.value.size,
+            )
 
+            // Non-resource Control identity is Control kind, not arbitrary payload.
+            assertTrue(
+                resourceFamily.activate(
+                    ResourceIdentityFamily.Control.Search(
+                        query =
+                            "first",
+                    ),
+                ),
+            )
             assertEquals(
-                narrowedFirst,
-                narrowedSame,
+                3,
+                root.executions.value.size,
             )
-            assertFalse(
-                narrowedFirst ==
-                    narrowedOther,
+            assertTrue(
+                resourceFamily.activate(
+                    ResourceIdentityFamily.Control.Search(
+                        query =
+                            "second",
+                    ),
+                ),
             )
             assertEquals(
-                trackA,
-                narrowedFirst.resourceId,
+                3,
+                root.executions.value.size,
             )
+
+            // The same Control + ResourceId on another live Family is a different relationship.
+            val secondFamily =
+                ResourceIdentityFamily(
+                    initialState =
+                        ResourceIdentityFamily.State.Idle,
+                    executionRoot =
+                        root,
+                    store =
+                        ImmediateResourceIdentityStore(),
+                )
+            assertTrue(
+                secondFamily.activate(
+                    ResourceIdentityFamily.Control.Play(
+                        resourceId =
+                            trackA,
+                        position =
+                            10,
+                    ),
+                ),
+            )
+            assertEquals(
+                4,
+                root.executions.value.size,
+            )
+
+            val enumFamily =
+                EnumControlFamily(
+                    initialState =
+                        EnumControlFamily.State.Idle,
+                    executionRoot =
+                        root,
+                    store =
+                        ImmediateEnumControlStore(),
+                )
+            assertTrue(
+                enumFamily.activate(
+                    EnumControlFamily.Control.Play,
+                ),
+            )
+            assertTrue(
+                enumFamily.activate(
+                    EnumControlFamily.Control.Pause,
+                ),
+            )
+            assertEquals(
+                6,
+                root.executions.value.size,
+            )
+
             assertEquals(
                 trackA,
                 requireTrackId(
@@ -888,35 +979,6 @@ class VexFamilyHighConfidenceTest {
                             0,
                     ),
                 ),
-            )
-
-            val enumFamily =
-                EnumControlFamily(
-                    initialState =
-                        EnumControlFamily.State.Idle,
-                    executionRoot =
-                        root,
-                )
-            val play =
-                enumFamily.relationshipId(
-                    EnumControlFamily.Control.Play,
-                )
-            val pause =
-                enumFamily.relationshipId(
-                    EnumControlFamily.Control.Pause,
-                )
-
-            assertFalse(
-                play ==
-                    pause,
-            )
-            assertEquals(
-                "Play",
-                play.controlName,
-            )
-            assertEquals(
-                "Pause",
-                pause.controlName,
             )
         } finally {
             root.forceStopAll()
@@ -1445,10 +1507,12 @@ class VexFamilyHighConfidenceTest {
                     5_000,
                 ) {
                     root.executions.first { executions ->
-                        executions.values.any { state ->
-                            state.status ==
-                                VexExecution.Status.COMPLETED
-                        }
+                        executions.values
+                            .flatten()
+                            .any { state ->
+                                state.status ==
+                                    VexExecution.Status.COMPLETED
+                            }
                     }
                 }
             }
