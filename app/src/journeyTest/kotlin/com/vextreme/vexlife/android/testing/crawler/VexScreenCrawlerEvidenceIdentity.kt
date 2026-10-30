@@ -1,5 +1,7 @@
 package com.vextreme.vexlife.android.testing.crawler
 
+import com.vextreme.vexlife.android.testing.journey.VexJourneyStepObservation
+
 /**
  * Stable semantic identity for one screenshot condition.
  *
@@ -16,37 +18,34 @@ data class VexCrawlerEvidenceIdentity(
 )
 
 fun VexScreenCrawlerCase.evidenceIdentity(
-    screenId: String,
-    stepIndex: Int,
-    stepKind: String,
-    semanticRef: String?,
+    observation: VexJourneyStepObservation,
 ): VexCrawlerEvidenceIdentity {
     val scenarioRef =
         this.scenarioRef
 
     val stepRef =
-        if (stepIndex == Int.MAX_VALUE) {
+        if (observation.stepIndex == Int.MAX_VALUE) {
             "final"
         } else {
-            "step-" + stepIndex.toString().padStart(3, '0')
+            "step-" + observation.stepIndex.toString().padStart(3, '0')
         }
 
     val semanticPart =
-        semanticRef ?: "no-semantic-ref"
+        observation.semanticRef ?: "no-semantic-ref"
 
     return VexCrawlerEvidenceIdentity(
         scenarioRef = scenarioRef,
         evidenceRef =
             listOf(
                 scenarioRef,
-                screenId,
+                observation.screenId,
                 stepRef,
-                stepKind,
+                observation.stepKind,
                 semanticPart,
             ).joinToString("::"),
-        screenId = screenId,
-        stepIndex = stepIndex,
-        stepKind = stepKind,
-        semanticRef = semanticRef,
+        screenId = observation.screenId,
+        stepIndex = observation.stepIndex,
+        stepKind = observation.stepKind,
+        semanticRef = observation.semanticRef,
     )
 }
