@@ -75,7 +75,10 @@ internal class ThemeModeFamily(
     }
 
     sealed interface DisplayState :
-        VexFamily.DisplayState<ThemeMode> {
+        VexFamily.DisplayState<
+            ThemeModeFamily,
+            ThemeMode
+        > {
         val presentation:
             VexThemePresentation
 
@@ -98,8 +101,9 @@ internal class ThemeModeFamily(
         }
     }
 
-    internal fun displayStateFor(
-        state: ThemeMode,
+    override fun displayStateFor(
+        state:
+            ThemeMode,
     ):
         DisplayState =
         when (state) {
@@ -113,12 +117,40 @@ internal class ThemeModeFamily(
                 DisplayState.Dark
         }
 
+    override fun projectionFor(
+        state:
+            ThemeMode,
+    ):
+        VexFamily.Projection<
+            ThemeModeFamily,
+            ThemeMode,
+            DisplayState
+        > =
+        VexFamily.Projection(
+            state =
+                state,
+            displayState =
+                displayStateFor(
+                    state,
+                ),
+        )
+
+    override val currentProjection:
+        VexFamily.Projection<
+            ThemeModeFamily,
+            ThemeMode,
+            DisplayState
+        >
+        get() =
+            projectionFor(
+                currentState,
+            )
+
     override val displayState:
         DisplayState
         get() =
-            displayStateFor(
-                currentState,
-            )
+            currentProjection
+                .displayState
 
     override fun act(
         currentState:
