@@ -58,6 +58,19 @@ Effect
     runtime transformation request; never resulting truth
 ~~~
 
+Reusable outward meaning preserves the same owner coordinates:
+
+~~~text
+DisplayState<Family, State>
+
+Projection<Family, State, Display>
+    State belongs to Family
+    Display is DisplayState<Family, State>
+~~~
+
+Family owns displayStateFor(State) and projectionFor(State), so outward snapshots are not assembled
+by unrelated presentation code.
+
 `activate(Control)` applies immediate admitted State and returns the Act. A concrete Connection
 realizes the Effect.
 
@@ -309,34 +322,74 @@ instrumentation tests executed = 10
 Further migration is consumer-driven. Raw Compose findings remain advisory while real product
 surfaces teach which additional Vex forms are actually worth preserving.
 
-## Execution bridge candidate
+## VexExecution mastered runtime boundary
 
 Entry:
-[`architecture/execution/README.md`](../../architecture/execution/README.md)
+[architecture/execution/README.md](../../architecture/execution/README.md)
 
 ### Intention
 
-A developer should not decide coroutine ownership ad hoc from whichever Screen, repository, Service,
-or callback happens to need asynchronous work. The execution foundation makes that role explicit:
+VexExecution owns runtime execution mechanics without becoming semantic architecture.
 
-```text
-FeatureExecution : VexExecution
--> launchOnce(callable)
--> launchForCollect(flowProvider)
--> private ordered Job custody
--> forceStop / joinStop
-```
+~~~text
+VexExecutionRoot
+    one execution-tree lifetime
+    dispatcher
+    terminal root shutdown
+    active custody projection
 
-The actual `VexCoroutineLauncher` remains internal foundation machinery. Source callables supply both
-the executed function and the source-derived runtime ref, avoiding a parallel hand-maintained ID
-catalog. `launchOnce` never silently retries finite operations; sustained Flow collection owns a
-bounded recovery path where requested. Cancellation is terminal and exact root shutdown closes work
-admission before cancelling the supervised tree.
+VexExecution
+    one exact live runtime owner
+    launch / launchOnce
+    owner-local coordination
+    long-lived observation
+    source/owner cancellation
 
-This candidate is intentionally not yet wired through Relay/Maps/VexStream. PR #77 independently
-identified continuous dependency collector death/restart as execution-lifetime work, while current
-main still contains repeated raw `CoroutineScope`/Job ownership in app/runtime surfaces. Those are
-real consumers, but migration follows only after this kernel passes repository-native Gradle proof.
+Handle
+    one exact occurrence
+    terminal Snapshot
+~~~
+
+Identity remains deliberately separated:
+
+~~~text
+SourceRef
+    diagnostics only
+
+private callable identity
+    exact owner-scoped source uniqueness/cancellation
+
+CoordinationKey
+    owner-local overlap grouping
+
+InstanceId
+    exact runtime occurrence
+~~~
+
+The current mastered boundary removes static begin* authoring, public Approach, and Family-specific
+relationship identity from Execution.
+
+Observation recovery belongs at the observation callsite rather than VexExecutionRoot.
+
+~~~text
+observe(
+    source,
+    ObservationRecovery(...)
+)
+~~~
+
+Only source/upstream collection failure may restart. Downstream consumer failure is an execution
+failure, not source instability.
+
+VexExecutionRoot.activeExecutions is active custody only. Terminal history remains available on the
+individual Handle Snapshot; the root StateFlow is not an unbounded event ledger.
+
+SourceRef equality never grants ownership or cancellation authority. Two same-class live owners may
+run/observe the same callable independently.
+
+Concrete Connections may use VexExecution to realize Effects, but runtime coordination never becomes
+Family/Control/Effect semantic identity.
+
 
 ## Behavior Blueprint experiment
 
