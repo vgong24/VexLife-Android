@@ -1,5 +1,3 @@
-@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
-
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.execution.VexExecution
@@ -9,13 +7,13 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
  * Runtime/reality boundary for ThemeMode.
  *
  * ThemeModeFamily owns semantic State / Control / Act / Effect meaning.
- * This Connection owns only Effect realization and the runtime dependencies needed for it.
+ * This Connection owns Effect realization and the runtime dependencies needed for it.
  */
 internal class ThemeModeConnection(
     private val store:
         ThemeModeStore? =
         null,
-    private val executionRoot:
+    executionRoot:
         VexExecutionRoot? =
         null,
     initialState:
@@ -41,16 +39,22 @@ internal class ThemeModeConnection(
                 initialState,
         )
 
-    /*
-     * One private persistence queue for this live ThemeMode Connection.
-     *
-     * PersistSelection effects carry whole durable ThemeMode truth, so accepted persistence requests
-     * must be realized in semantic acceptance order.
-     */
-    private val persistenceRelationshipId:
-        VexExecution.RelationshipId =
-        object :
-            VexExecution.RelationshipId {}
+    private val persistenceExecution =
+        if (
+            store !=
+            null
+        ) {
+            PersistenceExecution(
+                executionRoot =
+                    requireNotNull(
+                        executionRoot,
+                    ),
+                store =
+                    store,
+            )
+        } else {
+            null
+        }
 
     fun activate(
         control:
@@ -76,27 +80,44 @@ internal class ThemeModeConnection(
             ThemeModeFamily.Effect,
     ) {
         when (effect) {
-            is ThemeModeFamily.Effect.PersistSelection -> {
-                val targetStore =
-                    store
-                        ?: return
-
-                VexExecution.beginQueued(
-                    executionRoot =
-                        requireNotNull(
-                            executionRoot,
-                        ),
-                    owner =
-                        this::class,
-                    relationshipId =
-                        persistenceRelationshipId,
-                    operation =
-                        targetStore::save,
-                    argument =
+            is ThemeModeFamily.Effect.PersistSelection ->
+                persistenceExecution
+                    ?.persist(
                         effect.mode,
-                )
-            }
+                    )
         }
+    }
+
+    /**
+     * ThemeMode-specific execution mechanics.
+     *
+     * The CoordinationKey is private runtime identity. It is not Family/Control/Effect identity.
+     */
+    private class PersistenceExecution(
+        executionRoot:
+            VexExecutionRoot,
+        private val store:
+            ThemeModeStore,
+    ) :
+        VexExecution(
+            executionRoot,
+        ) {
+        private data object Persistence :
+            CoordinationKey
+
+        fun persist(
+            mode:
+                ThemeMode,
+        ):
+            Handle =
+            launchQueued(
+                key =
+                    Persistence,
+                action =
+                    store::save,
+                argument =
+                    mode,
+            )
     }
 }
 
