@@ -4,7 +4,7 @@ import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistri
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionStop
-import com.vextreme.vexlife.android.execution.VexCoroutineStatus
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
@@ -1123,11 +1123,11 @@ class VexMapsDistributionSessionTest {
                         .values
                         .none {
                             it.status ==
-                                VexCoroutineStatus.STARTING ||
+                                VexExecution.Status.STARTING ||
                                 it.status ==
-                                VexCoroutineStatus.RUNNING ||
+                                VexExecution.Status.RUNNING ||
                                 it.status ==
-                                VexCoroutineStatus.RESTARTING
+                                VexExecution.Status.RESTARTING
                         },
                 )
             } finally {
@@ -1273,7 +1273,7 @@ class VexMapsDistributionSessionTest {
                         .values
                         .none {
                             it.status ==
-                                VexCoroutineStatus.FAILED
+                                VexExecution.Status.FAILED
                         },
                 )
             } finally {
