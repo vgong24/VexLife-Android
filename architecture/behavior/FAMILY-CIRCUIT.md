@@ -110,18 +110,47 @@ observe(State)
 
 `observe` accepts no current-State lambda and performs no stale-result inference.
 
-## DisplayState responsibility
+## DisplayState / Projection responsibility
+
+Reusable outward meaning preserves exact owner coordinates:
 
 ~~~text
-VexFamily
--> DisplayState
-   -> StateOnly(currentState)
+VexFamily.DisplayState<Family, State>
 
-ConcreteFamily
--> DisplayState        # only when richer repeated classification is earned
+VexFamily.Projection<
+    Family,
+    State,
+    DisplayState<Family, State>
+>
 ~~~
 
-DisplayState is derived outward interpretation, not another semantic truth owner.
+The Family owns the derivation path:
+
+~~~text
+State
+-> displayStateFor(State)
+-> Projection(
+       state = that exact State,
+       displayState = display derived from that exact State
+   )
+~~~
+
+StateOnly is the complete default when no richer display distinction is earned.
+
+A concrete Family that owns richer display meaning overrides displayStateFor(...). It may also
+narrow projectionFor(...) / currentProjection to its concrete DisplayState type.
+
+This makes the reusable arrow compiler-visible instead of relying on a human/AI remembering that
+adjacent projection objects "probably belong together."
+
+~~~text
+FAMILY COORDINATE
+    carried through State
+    carried through DisplayState
+    carried through Projection
+~~~
+
+Projection remains derived outward meaning, never another current-State owner.
 
 ## Act / Effect outcome
 
