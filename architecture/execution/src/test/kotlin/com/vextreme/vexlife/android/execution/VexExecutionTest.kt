@@ -541,6 +541,226 @@ class VexExecutionTest {
         }
 
     @Test
+    fun sameCoordinationKeyAcrossTwoLiveOwnersDoesNotCoordinate() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val firstRepository =
+                TestRepository()
+            val secondRepository =
+                TestRepository()
+            val first =
+                TestExecution(
+                    root,
+                    firstRepository,
+                )
+            val second =
+                TestExecution(
+                    root,
+                    secondRepository,
+                )
+
+            try {
+                val firstHandle =
+                    first.runQueued(
+                        "A",
+                    )
+                val secondHandle =
+                    second.runQueued(
+                        "A",
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        firstRepository
+                            .queuedStarted
+                            .isEmpty() ||
+                        secondRepository
+                            .queuedStarted
+                            .isEmpty()
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertEquals(
+                    listOf(
+                        "A",
+                    ),
+                    firstRepository
+                        .queuedStarted
+                        .toList(),
+                )
+                assertEquals(
+                    listOf(
+                        "A",
+                    ),
+                    secondRepository
+                        .queuedStarted
+                        .toList(),
+                )
+
+                firstRepository
+                    .queuedReleaseA
+                    .complete(
+                        Unit,
+                    )
+                secondRepository
+                    .queuedReleaseA
+                    .complete(
+                        Unit,
+                    )
+                firstHandle.awaitCompletion()
+                secondHandle.awaitCompletion()
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun instanceIdIsUniqueAcrossExecutionRoots() =
+        runBlocking {
+            val firstRoot =
+                VexExecutionRoot()
+            val secondRoot =
+                VexExecutionRoot()
+            val firstRepository =
+                TestRepository()
+            val secondRepository =
+                TestRepository()
+            val first =
+                TestExecution(
+                    firstRoot,
+                    firstRepository,
+                )
+            val second =
+                TestExecution(
+                    secondRoot,
+                    secondRepository,
+                )
+
+            try {
+                val firstHandle =
+                    first.runIndependent(
+                        "first",
+                    )
+                val secondHandle =
+                    second.runIndependent(
+                        "second",
+                    )
+
+                assertFalse(
+                    firstHandle.instanceId ==
+                        secondHandle.instanceId,
+                )
+
+                firstRepository
+                    .independentRelease
+                    .complete(
+                        Unit,
+                    )
+                secondRepository
+                    .independentRelease
+                    .complete(
+                        Unit,
+                    )
+                firstHandle.awaitCompletion()
+                secondHandle.awaitCompletion()
+            } finally {
+                firstRoot.joinStopAll(
+                    "test complete",
+                )
+                secondRoot.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
+    fun rootActiveCustodyDropsTerminalOccurrenceWhileHandleRetainsSnapshot() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+
+            try {
+                val handle =
+                    execution.runIndependent(
+                        "complete",
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        repository
+                            .independentStarted
+                            .isEmpty()
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertTrue(
+                    root.activeExecutions
+                        .value
+                        .containsKey(
+                            handle.instanceId,
+                        ),
+                )
+
+                repository
+                    .independentRelease
+                    .complete(
+                        Unit,
+                    )
+                handle.awaitCompletion()
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    while (
+                        root.activeExecutions
+                            .value
+                            .containsKey(
+                                handle.instanceId,
+                            )
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                assertEquals(
+                    VexExecution.Status.COMPLETED,
+                    handle.snapshot
+                        .value
+                        .status,
+                )
+                assertFalse(
+                    root.activeExecutions
+                        .value
+                        .containsKey(
+                            handle.instanceId,
+                        ),
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
+            }
+        }
+
+    @Test
     fun earliestReturnsExistingOwnerLocalCoordinationInstance() =
         runBlocking {
             val root =
