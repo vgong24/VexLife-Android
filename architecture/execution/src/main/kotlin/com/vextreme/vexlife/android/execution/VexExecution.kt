@@ -14,6 +14,7 @@ import kotlin.reflect.KSuspendFunction2
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 
 /**
@@ -349,6 +350,41 @@ abstract class VexExecution protected constructor(
         )
 
     companion object {
+        /**
+         * Long-lived observation bridge for another rightful semantic owner.
+         *
+         * Execution owns coroutine lifetime only. SourceRef remains diagnostic source identity, so
+         * multiple live owners may observe the same source-shaped property under one execution root;
+         * InstanceId keeps those runtime occurrences distinct. The caller owns what an observed
+         * value means and where that value is admitted.
+         */
+        @RelationshipFoundationApi
+        fun <Value, Source : Flow<Value>> observe(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                KClass<*>,
+            source:
+                KProperty0<Source>,
+            onEach:
+                suspend (Value) -> Unit,
+        ):
+            Handle =
+            executionRoot.coroutineLauncher.launch(
+                sourceRef =
+                    sourceRef(
+                        owner,
+                        source,
+                    ),
+            ) {
+                source.get()
+                    .collect { value ->
+                        onEach(
+                            value,
+                        )
+                    }
+            }
+
         fun <Argument, Result> begin(
             executionRoot: VexExecutionRoot,
             owner: KClass<*>,
@@ -582,26 +618,31 @@ abstract class VexExecution protected constructor(
             onResult: (Result) -> Unit,
             onFailure: (Throwable) -> Unit,
         ) {
-            try {
-                beforeOperation()
-                onResult(
+            beforeOperation()
+
+            val result =
+                try {
                     operation(
                         argument,
-                    ),
-                )
-            } catch (
-                cancelled:
-                    CancellationException,
-            ) {
-                throw cancelled
-            } catch (
-                failure:
-                    Throwable,
-            ) {
-                onFailure(
-                    failure,
-                )
-            }
+                    )
+                } catch (
+                    cancelled:
+                        CancellationException,
+                ) {
+                    throw cancelled
+                } catch (
+                    failure:
+                        Throwable,
+                ) {
+                    onFailure(
+                        failure,
+                    )
+                    return
+                }
+
+            onResult(
+                result,
+            )
         }
 
         private fun sourceRef(

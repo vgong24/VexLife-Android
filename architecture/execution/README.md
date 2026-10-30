@@ -602,3 +602,32 @@ evidence was not produced for that head, so this remains a local/repository-owne
 than a hosted-CI claim. Device/Journey/ScreenCrawler and lived-product acceptance are separate.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
+
+
+## Operation/result callback ownership
+
+For `VexExecution.begin(...)`, the suspend operation is the operation boundary:
+
+~~~text
+beforeOperation callback
+-> operation(argument)
+   throws -> onFailure(operation failure)
+
+operation returns Result
+-> onResult(Result)
+
+onResult throws
+-> execution FAILED
+-> does NOT call onFailure
+~~~
+
+This distinction matters for Family result admission. A Store/provider operation that returned
+successfully must not be rewritten as provider failure merely because later semantic result handling
+failed.
+
+```text
+OPERATION FAILURE
+!= RESULT-ADMISSION FAILURE
+```
+
+<!-- [VXG RealForever][VEXEXECUTION][OPERATION-RESULT-OWNERSHIP] -->

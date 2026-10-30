@@ -53,6 +53,12 @@ class VexExecutionTest {
             argumentTotal += value
         }
 
+        suspend fun successfulResult(
+            value: String,
+        ):
+            String =
+            value
+
         suspend fun independentWork(value: String) {
             independentStarted += value
             independentRelease.await()
@@ -276,6 +282,31 @@ class VexExecutionTest {
                     repository::queuedWork,
                 argument =
                     value,
+            )
+
+        fun runResultAdmissionFailure(
+            operationFailureCount:
+                AtomicInteger,
+        ):
+            VexExecution.Handle =
+            VexExecution.begin(
+                executionRoot =
+                    root,
+                owner =
+                    TestExecution::class,
+                operation =
+                    repository::successfulResult,
+                argument =
+                    "success",
+                onResult = {
+                    error(
+                        "result admission failed",
+                    )
+                },
+                onFailure = {
+                    operationFailureCount
+                        .incrementAndGet()
+                },
             )
 
         fun runStructured(): VexCoroutineHandle =
@@ -515,6 +546,58 @@ class VexExecutionTest {
                 providerDispatcher.close()
                 workerExecutor.shutdownNow()
                 providerExecutor.shutdownNow()
+            }
+        }
+
+    @Test
+    fun resultCallbackFailureDoesNotBecomeOperationFailure(): Unit =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val execution =
+                TestExecution(
+                    root,
+                    repository,
+                )
+            val operationFailureCount =
+                AtomicInteger(
+                    0,
+                )
+
+            try {
+                val handle =
+                    execution.runResultAdmissionFailure(
+                        operationFailureCount,
+                    )
+
+                withTimeout(
+                    2_000L,
+                ) {
+                    handle.awaitCompletion()
+                }
+
+                assertEquals(
+                    0,
+                    operationFailureCount.get(),
+                )
+                assertEquals(
+                    VexExecution.Status.FAILED,
+                    handle.state.value.status,
+                )
+                assertEquals(
+                    "IllegalStateException",
+                    handle.state.value.failureClass,
+                )
+                assertEquals(
+                    "result admission failed",
+                    handle.state.value.failureMessage,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
             }
         }
 

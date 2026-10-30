@@ -5,6 +5,7 @@ package com.vextreme.vexlife.android.behavior
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -236,6 +237,27 @@ abstract class VexFamily<
     }
 
     /**
+     * Earned specialization when durable Store truth is exactly Family State.
+     *
+     * This restores the ThemeMode pressure already proved by the Origin Walk without claiming every
+     * Family Store is State-shaped. Observable durable State is a StateRelay dependency; it is not
+     * another live semantic-State holder.
+     */
+    interface StateStore<
+        State : VexFamily.State<*>,
+    > :
+        Store<State> {
+        val observableState:
+            Flow<State>
+
+        suspend fun get():
+            State
+
+        suspend fun forget():
+            Store.WriteResult
+    }
+
+    /**
      * One lawful outcome authored by [act] for an exact current State + incoming Control pair.
      *
      * Act belongs to Family. It is intentionally not another Vex root.
@@ -264,11 +286,15 @@ abstract class VexFamily<
                 Save<State>,
         ) {
 
-            internal data class Result<
+            internal class Result<
                 State,
-            >(
-                val admittedState:
-                    State?,
+            > internal constructor(
+                internal val admission:
+                    (
+                        (
+                            State,
+                        ) -> State
+                    )?,
             )
 
             internal data class Results<
@@ -439,38 +465,57 @@ abstract class VexFamily<
                 class ResultScope<
                     State : VexFamily.State<*>,
                 > internal constructor() {
-                    private var admittedState:
-                        State? =
+                    private var admission:
+                        (
+                            (
+                                State,
+                            ) -> State
+                        )? =
                         null
 
                     /**
-                     * Authored later State after this execution result.
+                     * Authored unconditional later State after this execution result.
                      *
-                     * This does not solve semantic currentness. A later result may only admit State
-                     * when the concrete Family's relationship guarantees that the result is still
-                     * current. Do not add a generic Family revision/sequence check here: unrelated
-                     * State changes are not automatically proof that the result is stale, and equal
-                     * State is not automatically proof that it is current.
+                     * The State is still admitted through the Family StateRelay boundary when the
+                     * result actually arrives.
                      */
                     fun admit(
                         state: State,
                     ) {
+                        admit {
+                            state
+                        }
+                    }
+
+                    /**
+                     * Authored later-State decision against exact CURRENT Family State.
+                     *
+                     * Use this when a delayed result is only lawful while some feature-owned
+                     * currentness condition still holds. Family supplies CURRENT State and
+                     * serialization; the feature supplies the meaning of "still current".
+                     */
+                    fun admit(
+                        decide:
+                            (
+                                currentState: State,
+                            ) -> State,
+                    ) {
                         require(
-                            admittedState ==
+                            admission ==
                                 null,
                         ) {
                             "one result may admit at most one later State"
                         }
 
-                        admittedState =
-                            state
+                        admission =
+                            decide
                     }
 
                     internal fun build():
                         Result<State> =
                         Result(
-                            admittedState =
-                                admittedState,
+                            admission =
+                                admission,
                         )
                 }
             }
@@ -483,6 +528,9 @@ abstract class VexFamily<
      * Family.currentState and Family.states expose this same StateRelay truth. Family does not retain
      * a second semantic-State copy.
      */
+    private val stateLock =
+        Any()
+
     private val stateRelay =
         MutableStateFlow(
             initialState,
@@ -646,6 +694,39 @@ abstract class VexFamily<
         null
 
     /**
+     * Observe one durable Family-State Store through the same StateRelay currentness boundary.
+     *
+     * Execution owns only maintained Flow custody. Store owns durable State. The concrete Family
+     * owns how stored State combines with exact CURRENT State. The decision re-enters through
+     * [admitCurrent], so no session/presentation observer or second current-State holder is created.
+     */
+    protected fun observeStore(
+        stateStore:
+            StateStore<FamilyState>,
+        decide:
+            (
+                currentState: FamilyState,
+                storedState: FamilyState,
+            ) -> FamilyState,
+    ):
+        VexExecution.Handle =
+        VexExecution.observe(
+            executionRoot =
+                executionRoot,
+            owner =
+                this::class,
+            source =
+                stateStore::observableState,
+        ) { storedState ->
+            admitCurrent { currentState ->
+                decide(
+                    currentState,
+                    storedState,
+                )
+            }
+        }
+
+    /**
      * Current display classification for this Family.
      *
      * The default is complete and intentionally boring: no richer display classification has been
@@ -671,13 +752,17 @@ abstract class VexFamily<
         control: FamilyControl,
     ):
         Boolean =
-        act(
-            currentState =
-                currentState,
-            control =
-                control,
-        ) !=
-            null
+        synchronized(
+            stateLock,
+        ) {
+            act(
+                currentState =
+                    stateRelay.value,
+                control =
+                    control,
+            ) !=
+                null
+        }
 
     /**
      * Runtime entrance.
@@ -690,65 +775,114 @@ abstract class VexFamily<
     fun activate(
         control: FamilyControl,
     ):
-        Boolean {
-        val before =
-            currentState
+        Boolean =
+        synchronized(
+            stateLock,
+        ) {
+            val before =
+                stateRelay.value
 
-        val act =
-            act(
-                currentState =
-                    before,
-                control =
-                    control,
-            )
-                ?: return false
-
-        recordAcceptedFact(
-            VexLogger.Event.Family.ControlAccepted(
-                family =
-                    this::class,
-                control =
-                    control::class,
-                currentState =
-                    before::class,
-            ),
-        )
-
-        act.admittedState
-            ?.let(
-                ::setCurrentState,
-            )
-
-        act.begin
-            ?.let { begin ->
-                execute(
-                    begin =
-                        begin,
+            val act =
+                act(
+                    currentState =
+                        before,
                     control =
                         control,
                 )
-            }
+                    ?: return false
 
-        return true
+            recordAcceptedFact(
+                VexLogger.Event.Family.ControlAccepted(
+                    family =
+                        this::class,
+                    control =
+                        control::class,
+                    currentState =
+                        before::class,
+                ),
+            )
+
+            act.admittedState
+                ?.let(
+                    ::setCurrentStateLocked,
+                )
+
+            act.begin
+                ?.let { begin ->
+                    execute(
+                        begin =
+                            begin,
+                        control =
+                            control,
+                    )
+                }
+
+            true
+        }
+
+    /**
+     * Concrete-Family semantic admission for already-reconciled outside truth.
+     *
+     * Keep the public/source-specific name on the concrete Family (for example providerReconciled).
+     * This protected seam only supplies exact CURRENT State + serialization; it does not decide what
+     * an observation means and it must not be used from act(...), which remains relationship-pure.
+     */
+    protected fun admitCurrent(
+        decide:
+            (
+                currentState: FamilyState,
+            ) -> FamilyState,
+    ):
+        FamilyState =
+        synchronized(
+            stateLock,
+        ) {
+            setCurrentStateLocked(
+                decide(
+                    stateRelay.value,
+                ),
+            )
+            stateRelay.value
+        }
+
+    /**
+     * One serialized Family StateRelay decision.
+     *
+     * The caller supplies meaning; this boundary supplies exact CURRENT State and one-at-a-time
+     * admission. StateRelay remains the single live holder.
+     */
+    private fun updateCurrentState(
+        decide:
+            (
+                currentState: FamilyState,
+            ) -> FamilyState,
+    ) {
+        synchronized(
+            stateLock,
+        ) {
+            setCurrentStateLocked(
+                decide(
+                    stateRelay.value,
+                ),
+            )
+        }
     }
 
     /**
-     * The write side of Family current State.
-     *
-     * StateRelay remains the single live holder.
+     * Commit one already-resolved next State while [stateLock] is held.
      */
-    private fun setCurrentState(
+    private fun setCurrentStateLocked(
         state: FamilyState,
     ) {
         val before =
-            currentState
+            stateRelay.value
 
         stateRelay.value =
             state
 
         if (
             before !=
-            currentState
+            stateRelay.value
         ) {
             recordAcceptedFact(
                 VexLogger.Event.Family.StateAdmitted(
@@ -757,7 +891,7 @@ abstract class VexFamily<
                     fromState =
                         before::class,
                     toState =
-                        currentState::class,
+                        stateRelay.value::class,
                 ),
             )
         }
@@ -1035,9 +1169,9 @@ abstract class VexFamily<
         result:
             Act.Begin.Result<FamilyState>,
     ) {
-        result.admittedState
+        result.admission
             ?.let(
-                ::setCurrentState,
+                ::updateCurrentState,
             )
     }
 }
