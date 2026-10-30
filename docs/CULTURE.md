@@ -62,6 +62,45 @@ What else becomes wrong if this changes?
 
 Do not let a convenient framework pattern become architecture merely because it compiled.
 
+## Subtractive completion
+
+Architecture work defaults to subtraction before invention.
+
+Before adding or preserving a reusable type, helper, seam, state holder, identity, adapter, callback
+grammar, or lifecycle concept, answer:
+
+```text
+What observed product/contract failure requires this?
+Why can the existing rightful owner not express it directly?
+What required correctness is lost if this addition is removed?
+Who consumes it?
+What recurring reading/execution/maintenance burden does it create?
+```
+
+If removing the proposed addition loses no required correctness, continuity, authority, or proof,
+do not add it. A locally useful capability is not automatically architecture.
+
+When a problem is claimed to be solved, replay the original failure against the candidate. A new
+mechanism's adjacent benefit does not establish that the original failure closed.
+
+Prefer:
+
+```text
+one semantic doorway
++ feature-owned meaning
++ private mechanics
+```
+
+over multiple peer semantic APIs that can author the same outcome.
+
+Tests prove behavior and implementation consistency; they do not earn architecture by themselves.
+Historical machinery remains evidence, not an obligation to preserve a generic abstraction after its
+real consumers disappear.
+
+When human-vetted architecture changes, reopen only the exact changed semantic declarations and
+connections. Do not backdate, broaden, or preserve approval across changed meaning. Unchanged
+semantic laws keep their provenance; changed laws require fresh human review of the exact source.
+
 ## Foundation before features
 
 Build outward only when the layer underneath is stable enough to explain, test, and recover.
