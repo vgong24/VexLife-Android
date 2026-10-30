@@ -58,35 +58,35 @@ internal data class VexConversationHybridInputState(
         VexConversationLabState? = null,
 ) : VexInputState<VexConversationHybridInputState> {
     override fun latest(
-        incoming:
+        incomingInputState:
             VexConversationHybridInputState,
     ):
         VexConversationHybridInputState =
         VexConversationHybridInputState(
             conversation =
                 (
-                    incoming.conversation
+                    incomingInputState.conversation
                         ?: conversation
                 )?.deepCopyForConversationHybrid(),
             selectedThreadRef =
-                incoming.selectedThreadRef
+                incomingInputState.selectedThreadRef
                     ?: selectedThreadRef,
             authenticatedParticipant =
                 (
-                    incoming.authenticatedParticipant
+                    incomingInputState.authenticatedParticipant
                         ?: authenticatedParticipant
                 )?.deepCopy(),
             homeAvailability =
-                incoming.homeAvailability
+                incomingInputState.homeAvailability
                     ?: homeAvailability,
             companionAvailabilityByParticipantRef =
                 (
-                    incoming.companionAvailabilityByParticipantRef
+                    incomingInputState.companionAvailabilityByParticipantRef
                         ?: companionAvailabilityByParticipantRef
                 )?.toMap(),
             lab =
                 (
-                    incoming.lab
+                    incomingInputState.lab
                         ?: lab
                 )?.deepCopyForConversationHybrid(),
         )
