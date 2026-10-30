@@ -55,20 +55,7 @@ internal class ThemeModeFamily(
     interface Store :
         VexFamily.StateStore<ThemeMode>
 
-    init {
-        store
-            ?.let { stateStore ->
-                observeStore(
-                    stateStore =
-                        stateStore,
-                ) { storedState ->
-                    Control.Stored(
-                        mode =
-                            storedState,
-                    )
-                }
-            }
-    }
+
 
     sealed interface Control :
         VexFamily.Control<ThemeModeFamily> {
@@ -85,17 +72,6 @@ internal class ThemeModeFamily(
                 }
             }
         }
-
-        /**
-         * Durable ThemeMode truth observed from Store.
-         *
-         * Store observation is input, not State authority: it must re-enter the same
-         * act(CURRENT State, Control) relationship as every other semantic cause.
-         */
-        data class Stored(
-            val mode: ThemeMode,
-        ) :
-            Control
     }
 
     sealed interface DisplayState :
@@ -149,46 +125,28 @@ internal class ThemeModeFamily(
         control: Control,
     ):
         VexFamily.Act<ThemeMode>? =
-        when (currentState) {
-            ThemeMode.NotSet ->
-                when (control) {
-                    is Control.Select ->
+        when (control) {
+            is Control.Select -> {
+                val saveState =
+                    if (
+                        store !=
+                        null
+                    ) {
+                        control.mode
+                    } else {
+                        null
+                    }
+
+                when (currentState) {
+                    ThemeMode.NotSet ->
                         admit(
                             control.mode,
-                            save =
-                                store
-                                    ?.let {
-                                        saveLatest(
-                                            control.mode,
-                                        )
-                                    },
+                            saveState =
+                                saveState,
                         )
 
-                    is Control.Stored ->
-                        when (control.mode) {
-                            ThemeMode.NotSet ->
-                                stay()
-
-                            ThemeMode.Light,
-                            ThemeMode.Dark ->
-                                admit(
-                                    control.mode,
-                                )
-                        }
-                }
-
-            ThemeMode.Light,
-            ThemeMode.Dark ->
-                when (control) {
-                    is Control.Select -> {
-                        val save =
-                            store
-                                ?.let {
-                                    saveLatest(
-                                        control.mode,
-                                    )
-                                }
-
+                    ThemeMode.Light,
+                    ThemeMode.Dark ->
                         if (
                             currentState ==
                             control.mode
@@ -198,37 +156,18 @@ internal class ThemeModeFamily(
                              * this choice durably"; same semantic State is not a reason to skip Save.
                              */
                             stay(
-                                save =
-                                    save,
+                                saveState =
+                                    saveState,
                             )
                         } else {
                             admit(
                                 control.mode,
-                                save =
-                                    save,
+                                saveState =
+                                    saveState,
                             )
                         }
-                    }
-
-                    is Control.Stored ->
-                        when (control.mode) {
-                            ThemeMode.NotSet ->
-                                stay()
-
-                            ThemeMode.Light,
-                            ThemeMode.Dark ->
-                                if (
-                                    currentState ==
-                                    control.mode
-                                ) {
-                                    stay()
-                                } else {
-                                    admit(
-                                        control.mode,
-                                    )
-                                }
-                        }
                 }
+            }
         }
 
 }
