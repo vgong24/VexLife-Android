@@ -25,61 +25,66 @@ architecture/behavior/src/main/.../VexFamily.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-Current live semantic call graph:
+Mastered semantic grammar:
 
 ~~~text
-Family Control
--> Family.activate(control)
--> Family.act(CURRENT State, control)
--> null / stay / admit
+CURRENT State + Control
+-> Act?
+-> admitted State? + Effect?
+
+Effect
+-> concrete Connection/runtime
+-> attempted transformation
+-> observed semantic State
+-> Family.observe(State)
 -> same StateRelay
 ~~~
 
-An Act may also carry `saveState`. activate(...) applies immediate State first, then starts the
-durable Save. Save completion has no State-writing callback.
+Direct Family owns no Store, VexExecution, logger, provider, or lifecycle mechanism.
 
 ~~~text
+VexFamily<Family, State, Control, Effect>
+
+State
+    current semantic truth
+
+Control
+    semantic request / affordance input
+
 Act
--> admittedState?
--> saveState?
+    lawful outcome of exact CURRENT State + Control
 
-Store<State>
--> save(State)
--> successful return OR thrown failure
+Effect
+    runtime transformation request; never resulting truth
 ~~~
 
-Feature authoring does not choose an execution Approach. The current runtime persists accepted Save
-consequences in Control-acceptance order beneath the Family semantic surface.
+`activate(Control)` applies immediate admitted State and returns the Act. A concrete Connection
+realizes the Effect.
 
-Durable Save ordering is private Family execution mechanics:
+`observe(State)` accepts only already-reconciled semantic reality. Provider interpretation,
+stale-result gates, request identity and concurrency belong to the Connection/runtime that owns that
+external relationship.
+
+ThemeMode is the Direct-Family patient zero:
 
 ~~~text
-live Family
--> one Save queue
--> accepted saveState values persist in Control-acceptance order
+ThemeModeFamily
+-> Select(mode)
+-> stay/admit + PersistSelection(mode)
+
+ThemeModeConnection
+-> realizes PersistSelection through ThemeModeStore / VexExecution
+-> restores fresh-process initial State from ThemeModeStore.current()
 ~~~
 
-Control remains an affordance/request vocabulary and does not author execution identity in the
-current Direct Family surface. Direct Family also does not currently claim a generic live
-provider/repository observation -> Family State reconciliation API.
+Persistence therefore remains a ThemeMode runtime realization rather than becoming Family
+architecture.
 
-ThemeMode's demonstrated durability requirement is narrower:
+Repository-wide review follows both **Subtractive Completion** and **Mastered Architecture** in
+`docs/CULTURE.md`: prior human vetting is provenance, not a prohibition on replacing a weaker law
+with a better end-state and freshly re-vetting the changed boundary.
 
-~~~text
-fresh process/session
--> read durable ThemeMode once
--> construct ThemeModeFamily(initialState = durable value)
-
-live Select(mode)
--> stay/admit + optional saveState
--> Store.save(mode)
-~~~
-
-Repository-wide architecture review follows docs/CULTURE.md Subtractive Completion: additions start
-rejected, the original failure must be replayed against a proposed fix, and mechanics are not
-promoted to architecture when removing them loses no demonstrated requirement.
-
-<!-- [VXG RealForever][FOUNDATION][FAMILY][SUBTRACTIVE-COMPLETION] -->
+<!-- [VXG RealForever][FOUNDATION][FAMILY][MASTERED-SEMANTIC-GRAMMAR] -->
 
 ## Foundation establishment criteria
 
