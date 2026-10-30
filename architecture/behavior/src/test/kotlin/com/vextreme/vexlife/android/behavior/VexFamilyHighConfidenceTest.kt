@@ -8,8 +8,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -116,10 +114,8 @@ class VexFamilyHighConfidenceTest {
 
                             admit(
                                 nextState,
-                                save =
-                                    saveLatest(
-                                        nextState,
-                                    ),
+                                saveState =
+                                    nextState,
                             )
                         }
                     }
@@ -258,198 +254,6 @@ class VexFamilyHighConfidenceTest {
                         ),
                     )
             }
-    }
-
-    private class ObservedFamily(
-        executionRoot:
-            VexExecutionRoot,
-    ) :
-        VexFamily<
-            ObservedFamily,
-            ObservedFamily.State,
-            ObservedFamily.Control
-        >(
-            initialState =
-                State.Empty,
-            executionRoot =
-                executionRoot,
-            logger =
-                VexLogger.Sink.None,
-        ) {
-        sealed interface State :
-            VexFamily.State<ObservedFamily> {
-            data object Empty :
-                State
-
-            data class Current(
-                val value:
-                    String,
-            ) :
-                State
-        }
-
-        sealed interface Control :
-            VexFamily.Control<ObservedFamily> {
-            data object Keep :
-                Control
-
-            data class ProviderReconciled(
-                val value:
-                    String,
-            ) :
-                Control
-        }
-
-        override fun act(
-            currentState:
-                State,
-            control:
-                Control,
-        ):
-            VexFamily.Act<State> =
-            when (control) {
-                Control.Keep ->
-                    stay()
-
-                is Control.ProviderReconciled ->
-                    admit(
-                        State.Current(
-                            value =
-                                control.value,
-                        ),
-                    )
-            }
-
-        /**
-         * Concrete source vocabulary. Provider truth returns as typed Family input and is resolved
-         * against exact CURRENT State by the same act(...) relationship as every other cause.
-         */
-        fun providerReconciled(
-            value:
-                String,
-        ) {
-            activate(
-                Control.ProviderReconciled(
-                    value =
-                        value,
-                ),
-            )
-        }
-    }
-
-    private class StoreObservedFamily(
-        executionRoot:
-            VexExecutionRoot,
-        override val store:
-            Store,
-    ) :
-        VexFamily<
-            StoreObservedFamily,
-            StoreObservedFamily.State,
-            StoreObservedFamily.Control
-        >(
-            initialState =
-                State.Empty,
-            executionRoot =
-                executionRoot,
-            logger =
-                VexLogger.Sink.None,
-        ) {
-        sealed interface State :
-            VexFamily.State<StoreObservedFamily> {
-            data object Empty :
-                State
-
-            data class Current(
-                val value:
-                    String,
-            ) :
-                State
-        }
-
-        sealed interface Control :
-            VexFamily.Control<StoreObservedFamily> {
-            data object Keep :
-                Control
-
-            data class Stored(
-                val state:
-                    State,
-            ) :
-                Control
-        }
-
-        interface Store :
-            VexFamily.StateStore<State>
-
-        init {
-            observeStore(
-                stateStore =
-                    store,
-            ) { storedState ->
-                Control.Stored(
-                    state =
-                        storedState,
-                )
-            }
-        }
-
-        override fun act(
-            currentState:
-                State,
-            control:
-                Control,
-        ):
-            VexFamily.Act<State> =
-            when (control) {
-                Control.Keep ->
-                    stay()
-
-                is Control.Stored ->
-                    if (
-                        currentState ==
-                        control.state
-                    ) {
-                        stay()
-                    } else {
-                        admit(
-                            control.state,
-                        )
-                    }
-            }
-    }
-
-    private class ObservableStore(
-        initialState:
-            StoreObservedFamily.State,
-    ) :
-        StoreObservedFamily.Store {
-        private val mutableState =
-            MutableStateFlow(
-                initialState,
-            )
-
-        override val observableState:
-            Flow<StoreObservedFamily.State> =
-            mutableState
-
-        override suspend fun save(
-            state:
-                StoreObservedFamily.State,
-        ):
-            VexFamily.Store.WriteResult {
-            mutableState.value =
-                state
-            return VexFamily.Store.WriteResult.Success
-        }
-
-        fun emit(
-            state:
-                StoreObservedFamily.State,
-        ) {
-            mutableState.value =
-                state
-        }
     }
 
     private class ResourceIdentityFamily(
@@ -603,11 +407,9 @@ class VexFamilyHighConfidenceTest {
         override suspend fun save(
             state:
                 ValueFamily.State,
-        ):
-            VexFamily.Store.WriteResult {
+        ) {
             started.countDown()
             gate.await()
-            return VexFamily.Store.WriteResult.Success
         }
     }
 
@@ -1109,204 +911,6 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun familyStateStoreDependencyIsObservedThroughTheSameStateRelay() {
-        val root =
-            VexExecutionRoot()
-        val store =
-            ObservableStore(
-                initialState =
-                    StoreObservedFamily.State.Current(
-                        value =
-                            "restored",
-                    ),
-            )
-
-        try {
-            val family =
-                StoreObservedFamily(
-                    executionRoot =
-                        root,
-                    store =
-                        store,
-                )
-
-            runBlocking {
-                withTimeout(
-                    5_000,
-                ) {
-                    family.states.first { state ->
-                        state ==
-                            StoreObservedFamily.State.Current(
-                                value =
-                                    "restored",
-                            )
-                    }
-                }
-            }
-
-            assertEquals(
-                StoreObservedFamily.State.Current(
-                    value =
-                        "restored",
-                ),
-                family.currentState,
-            )
-            assertEquals(
-                family.currentState,
-                family.states.value,
-            )
-
-            store.emit(
-                StoreObservedFamily.State.Current(
-                    value =
-                        "external-update",
-                ),
-            )
-
-            runBlocking {
-                withTimeout(
-                    5_000,
-                ) {
-                    family.states.first { state ->
-                        state ==
-                            StoreObservedFamily.State.Current(
-                                value =
-                                    "external-update",
-                            )
-                    }
-                }
-            }
-
-            assertEquals(
-                StoreObservedFamily.State.Current(
-                    value =
-                        "external-update",
-                ),
-                family.currentState,
-            )
-            assertEquals(
-                family.currentState,
-                family.states.value,
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun sameClassFamiliesObserveDistinctStateStoresUnderOneExecutionRoot() {
-        val root =
-            VexExecutionRoot()
-        val firstStore =
-            ObservableStore(
-                initialState =
-                    StoreObservedFamily.State.Current(
-                        value =
-                            "first",
-                    ),
-            )
-        val secondStore =
-            ObservableStore(
-                initialState =
-                    StoreObservedFamily.State.Current(
-                        value =
-                            "second",
-                    ),
-            )
-
-        try {
-            val firstFamily =
-                StoreObservedFamily(
-                    executionRoot =
-                        root,
-                    store =
-                        firstStore,
-                )
-            val secondFamily =
-                StoreObservedFamily(
-                    executionRoot =
-                        root,
-                    store =
-                        secondStore,
-                )
-
-            runBlocking {
-                withTimeout(
-                    5_000,
-                ) {
-                    firstFamily.states.first { state ->
-                        state ==
-                            StoreObservedFamily.State.Current(
-                                value =
-                                    "first",
-                            )
-                    }
-                }
-                withTimeout(
-                    5_000,
-                ) {
-                    secondFamily.states.first { state ->
-                        state ==
-                            StoreObservedFamily.State.Current(
-                                value =
-                                    "second",
-                            )
-                    }
-                }
-            }
-
-            assertEquals(
-                StoreObservedFamily.State.Current(
-                    value =
-                        "first",
-                ),
-                firstFamily.currentState,
-            )
-            assertEquals(
-                StoreObservedFamily.State.Current(
-                    value =
-                        "second",
-                ),
-                secondFamily.currentState,
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun providerReconciledTruthEntersTheSameStateRelay() {
-        val root =
-            VexExecutionRoot()
-
-        try {
-            val family =
-                ObservedFamily(
-                    executionRoot =
-                        root,
-                )
-
-            family.providerReconciled(
-                "provider-current",
-            )
-
-            assertEquals(
-                ObservedFamily.State.Current(
-                    value =
-                        "provider-current",
-                ),
-                family.currentState,
-            )
-            assertEquals(
-                family.currentState,
-                family.states.value,
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
     fun concurrentActivationsResolveAgainstOneSerializedCurrentState() {
         val root =
             VexExecutionRoot()
@@ -1379,7 +983,7 @@ class VexFamilyHighConfidenceTest {
     }
 
     @Test
-    fun saveCompletionCannotOverwriteNewerFamilyState() {
+    fun olderSaveCompletionCannotOverwriteNewerFamilyState() {
         val root =
             VexExecutionRoot()
         val store =
