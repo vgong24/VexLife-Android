@@ -85,8 +85,9 @@ abstract class VexFamily<
     /**
      * Compile-time kinship marker for incoming Control belonging to one exact Family coordinate.
      *
-     * Control kind is always part of the Family-owned relationship identity. A Control that needs
-     * narrower identity explicitly implements [Resource] with its exact ResourceId type.
+     * Exact Control identity is always part of the Family-owned relationship identity. A Control
+     * that needs narrower repeated-resource identity exposes [resourceId] with its exact ResourceId
+     * type.
      */
     interface Control<
         Family,
