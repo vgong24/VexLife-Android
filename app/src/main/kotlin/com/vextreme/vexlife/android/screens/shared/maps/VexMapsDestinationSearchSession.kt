@@ -55,9 +55,9 @@ internal data class VexMapsDestinationSearchWork(
  * This does not own local place-pack import, route planning, selected-destination truth, or provider
  * implementation. It answers only which submitted destination search attempt/result is current.
  *
- * Provider executions are independent runtime instances. Cancellation is best-effort resource cleanup;
- * [VexMapsLatestRequestGate] remains the semantic currentness owner when an older provider ignores
- * cancellation long enough to return late.
+ * Provider attempts are separately admitted by the Session-owned relationship. Cancellation is best-effort
+ * resource cleanup; [VexMapsLatestRequestGate] remains the semantic currentness owner when an older
+ * provider ignores cancellation long enough to return late.
  */
 internal class VexMapsDestinationSearchSession(
     private val source:
@@ -223,17 +223,41 @@ private class VexMapsDestinationSearchExecution(
     >(
         root,
     ) {
-    private object SearchRelationship :
+    private class SearchRelationship(
+        private val session:
+            VexMapsDestinationSearchSession,
+    ) :
         VexExecution.RelationshipId<
             VexMapsDestinationSearchSession
-        >
+        > {
+        override fun equals(
+            other:
+                Any?,
+        ):
+            Boolean =
+            other is
+                SearchRelationship &&
+                session ===
+                other.session
+
+        override fun hashCode():
+            Int =
+            System.identityHashCode(
+                session,
+            )
+    }
+
+    private val searchRelationship =
+        SearchRelationship(
+            session,
+        )
 
     fun search(
         work: VexMapsDestinationSearchWork,
     ) {
         launch(
             relationshipId =
-                SearchRelationship,
+                searchRelationship,
             approach =
                 VexExecution.Approach.Latest,
             action =
@@ -246,7 +270,7 @@ private class VexMapsDestinationSearchExecution(
     fun cancelSearch() {
         forceStop(
             relationshipId =
-                SearchRelationship,
+                searchRelationship,
             reason =
                 "VexMaps destination search invalidated",
         )
