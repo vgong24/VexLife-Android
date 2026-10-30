@@ -19,12 +19,23 @@ package com.vextreme.vexlife.android.humanvetting
  * - The annotation covers only the semantic contract documented directly on the annotated
  *   declaration. Nested or neighboring declarations are NOT vetted unless they carry their own
  *   [VettedWithHuman] marker.
+ * - Architecture is not only nouns. Functions, properties, mappings, handoff seams, arrival seams,
+ *   and concrete examples can be load-bearing architecture. When Victor vets a relationship, mark
+ *   the declarations that actually carry that relationship rather than blessing only its endpoint
+ *   class names.
+ * - A class-level marker MUST NOT be used to hide a changed unmarked connection inside that class.
+ *   If an annotated relationship is rewired through a new semantic owner, adapter, state holder,
+ *   identity, or arrival path, that architectural change must be surfaced to Victor first.
  *
  * This is intentionally source-retained metadata. It is a warning and provenance boundary for
  * humans and AI source authors, not runtime behavior and not a test oracle.
  */
 @MustBeDocumented
-@Target(AnnotationTarget.CLASS)
+@Target(
+    AnnotationTarget.CLASS,
+    AnnotationTarget.FUNCTION,
+    AnnotationTarget.PROPERTY,
+)
 @Retention(AnnotationRetention.SOURCE)
 annotation class VettedWithHuman(
     val declarationName: String,
