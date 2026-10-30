@@ -63,6 +63,28 @@ class VexRelayContractTest {
         val context: String? = null,
         val notes: MutableList<String>? = null,
     ) : VexInputState<ProbeInput> {
+        override fun latest(
+            incoming:
+                ProbeInput,
+        ):
+            ProbeInput =
+            ProbeInput(
+                left =
+                    incoming.left
+                        ?: left,
+                right =
+                    incoming.right
+                        ?: right,
+                context =
+                    incoming.context
+                        ?: context,
+                notes =
+                    (
+                        incoming.notes
+                            ?: notes
+                    )?.toMutableList(),
+            )
+
         override fun deepCopy(): ProbeInput =
             copy(
                 notes = notes?.toMutableList(),
@@ -117,45 +139,26 @@ class VexRelayContractTest {
             )
         }
 
-        override fun processStates(
-            inputState: ProbeInput,
-            currentState: VexCompoundState<ProbeInput, ProbeOutput>,
-        ): VexCompoundState<ProbeInput, ProbeOutput> {
-            val previous =
-                currentState.inputState
-
-            val coherent =
-                ProbeInput(
-                    left =
-                        inputState.left
-                            ?: previous.left,
-                    right =
-                        inputState.right
-                            ?: previous.right,
-                    context =
-                        inputState.context
-                            ?: previous.context,
-                    notes =
-                        (
-                            inputState.notes
-                                ?: previous.notes
-                        )?.toMutableList(),
-                )
-
-            return currentState.copy(
-                inputState = coherent,
-                outputState =
-                    ProbeOutput(
-                        sum =
-                            (coherent.left ?: 0) +
-                                (coherent.right ?: 0),
-                        notes =
-                            coherent.notes
-                                ?.toMutableList()
-                                ?: mutableListOf(),
-                    ),
+        override fun process(
+            latestStateInput:
+                ProbeInput,
+            retainedState:
+                VexCompoundState<
+                    ProbeInput,
+                    ProbeOutput
+                >,
+        ):
+            ProbeOutput =
+            ProbeOutput(
+                sum =
+                    (latestStateInput.left ?: 0) +
+                        (latestStateInput.right ?: 0),
+                notes =
+                    latestStateInput.notes
+                        ?.toMutableList()
+                        ?: mutableListOf(),
             )
-        }
+
     }
 
     private data class RecoverableState(
@@ -202,6 +205,20 @@ class VexRelayContractTest {
         val value: Int? = null,
         val fail: Boolean? = null,
     ) : VexInputState<RecoverableCompoundInput> {
+        override fun latest(
+            incoming:
+                RecoverableCompoundInput,
+        ):
+            RecoverableCompoundInput =
+            RecoverableCompoundInput(
+                value =
+                    incoming.value
+                        ?: value,
+                fail =
+                    incoming.fail
+                        ?: fail,
+            )
+
         override fun deepCopy(): RecoverableCompoundInput =
             copy()
     }
@@ -239,36 +256,30 @@ class VexRelayContractTest {
             )
         }
 
-        override fun processStates(
-            inputState: RecoverableCompoundInput,
-            currentState: VexCompoundState<
+        override fun process(
+            latestStateInput:
                 RecoverableCompoundInput,
-                RecoverableCompoundOutput
-            >,
-        ): VexCompoundState<
-            RecoverableCompoundInput,
-            RecoverableCompoundOutput
-        > {
-            check(inputState.fail != true) {
+            retainedState:
+                VexCompoundState<
+                    RecoverableCompoundInput,
+                    RecoverableCompoundOutput
+                >,
+        ):
+            RecoverableCompoundOutput {
+            check(
+                latestStateInput.fail !=
+                    true,
+            ) {
                 "fixture Compound processing failure"
             }
 
-            val coherent =
-                RecoverableCompoundInput(
-                    value =
-                        inputState.value
-                            ?: currentState.inputState.value,
-                    fail = false,
-                )
-
-            return currentState.copy(
-                inputState = coherent,
-                outputState =
-                    RecoverableCompoundOutput(
-                        value = coherent.value ?: 0,
-                    ),
+            return RecoverableCompoundOutput(
+                value =
+                    latestStateInput.value
+                        ?: 0,
             )
         }
+
     }
 
     @Test
