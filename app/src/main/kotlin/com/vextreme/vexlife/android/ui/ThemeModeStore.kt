@@ -2,20 +2,32 @@ package com.vextreme.vexlife.android.ui
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.vextreme.vexlife.android.behavior.VexFamily
 
 /**
  * Android-local durable realization of ThemeMode explicit selection.
  *
- * SharedPreferences is platform storage mechanics, not portable ThemeMode meaning. The Store exposes
- * the Family-owned Store contract required by production: save(State).
- * current()/forget() remain concrete ThemeMode storage mechanics for process-start restoration and
- * local reset/proof use; they are not promoted into generic Family Store architecture.
+ * SharedPreferences is platform storage mechanics, not portable ThemeMode meaning.
+ *
+ * ThemeModeStore is feature-runtime infrastructure consumed by ThemeModeConnection. It is not part of
+ * the semantic Family contract. current() seeds fresh-process truth; save() realizes the
+ * PersistSelection Effect; forget() is concrete reset/proof mechanics.
  */
+internal interface ThemeModeStore {
+    override fun current():
+        ThemeMode
+
+    suspend fun save(
+        state:
+            ThemeMode,
+    )
+
+    fun forget()
+}
+
 internal class SharedPreferencesThemeModeStore(
     context: Context,
 ) :
-    ThemeModeFamily.Store {
+    ThemeModeStore {
     private val preferences:
         SharedPreferences =
         context
@@ -56,7 +68,7 @@ internal class SharedPreferencesThemeModeStore(
         }
     }
 
-    fun forget() {
+    override fun forget() {
         write(
             preferences
                 .edit()
