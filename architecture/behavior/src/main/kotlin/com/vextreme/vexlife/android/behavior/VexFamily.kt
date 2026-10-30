@@ -4,6 +4,7 @@ package com.vextreme.vexlife.android.behavior
 
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.humanvetting.VettedWithHuman
 import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ import kotlin.reflect.KClass
  * expressions; there is no custom state/on branching language between activate(...) and feature
  * meaning.
  */
+@VettedWithHuman("VexFamily", "2026-10-29T22:46:00-07:00", "Victor Approved")
 abstract class VexFamily<
     Family,
     FamilyState,
@@ -193,6 +195,7 @@ abstract class VexFamily<
      * display meaning this Family has earned. It is not a placeholder and it is not an instruction
      * to invent another ViewState / UiState / PresentationState owner.
      */
+    @VettedWithHuman("VexFamily.DisplayState", "2026-10-29T22:46:00-07:00", "Victor Approved")
     interface DisplayState<
         out State : VexFamily.State<*>,
     > {
