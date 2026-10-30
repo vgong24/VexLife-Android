@@ -274,8 +274,10 @@ ExternalFeedRelay.states
 AttentionPreferenceRelay.states
         \      |      /
          \     |     /
-          -> Compound InputState
-             -> processStates(...)
+          -> partial Compound InputState
+             -> InputState.latest(...)
+             -> complete current InputState
+             -> process(...)
              -> Compound State
                 inputState + outputState
 ~~~
