@@ -51,18 +51,17 @@ Store<State>
 Feature authoring does not choose an execution Approach. The current runtime persists accepted Save
 consequences in Control-acceptance order beneath the Family semantic surface.
 
-Maintained Save relationship identity remains:
+Durable Save ordering is private Family execution mechanics:
 
 ~~~text
 live Family
-+ exact Control identity
-+ optional stable Control.resourceId
--> Family-owned RelationshipId
--> VexExecution custody
+-> one Save queue
+-> accepted saveState values persist in Control-acceptance order
 ~~~
 
-Control remains an affordance/request vocabulary. Direct Family does not currently claim a generic
-live provider/repository observation -> Family State reconciliation API.
+Control remains an affordance/request vocabulary and does not author execution identity in the
+current Direct Family surface. Direct Family also does not currently claim a generic live
+provider/repository observation -> Family State reconciliation API.
 
 ThemeMode's demonstrated durability requirement is narrower:
 
