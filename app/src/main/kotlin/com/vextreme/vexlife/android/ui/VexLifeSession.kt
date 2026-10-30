@@ -31,24 +31,34 @@ import kotlinx.coroutines.Dispatchers
  * - current ThemeMode Family;
  * - immutable app-action wiring.
  *
- * The session itself remains process-local. Feature-owned durable truth may seed a fresh session
- * before its Family is constructed; ThemeMode does exactly that from SharedPreferences. Production
- * keeps this session inside [VexLifeViewModel]; Preview/tests may construct one without durable
- * feature Stores.
+ * The session itself remains process-local. ThemeModeConnection seeds a fresh semantic Family from
+ * durable truth and realizes ThemeMode Effects without making persistence part of Family semantics.
+ * Production keeps this session inside [VexLifeViewModel]; Preview/tests may construct one without a
+ * durable ThemeMode runtime.
  */
 internal class VexLifeSession(
     val repositories: AppRepositories,
     val scope: CoroutineScope,
     executionRoot: VexExecutionRoot,
-    themeModeStore: ThemeModeFamily.Store? = null,
-    initialThemeMode: ThemeMode = ThemeMode.Dark,
+    themeModeStore: ThemeModeStore? = null,
+    initialThemeMode:
+        ThemeMode =
+        themeModeStore
+            ?.current()
+            ?: ThemeMode.Dark,
 ) {
-    val themeModeFamily =
-        ThemeModeFamily(
-            initialState = initialThemeMode,
-            executionRoot = executionRoot,
-            store = themeModeStore,
+    private val themeModeConnection =
+        ThemeModeConnection(
+            store =
+                themeModeStore,
+            executionRoot =
+                executionRoot,
+            initialState =
+                initialThemeMode,
         )
+
+    val themeModeFamily =
+        themeModeConnection.family
 
     val logPersistence = LogHistoryPersistenceQueue(
         repository = repositories.logHistory,
@@ -102,7 +112,7 @@ internal class VexLifeSession(
                     ThemeMode.Light
             }
 
-        themeModeFamily.activate(
+        themeModeConnection.activate(
             ThemeModeFamily.Control.Select(
                 selectedMode,
             ),
@@ -152,9 +162,8 @@ internal class VexLifeViewModel(
             repositories = repositories,
             scope = viewModelScope,
             executionRoot = executionRoot,
-            themeModeStore = themeModeStore,
-            initialThemeMode =
-                themeModeStore.current(),
+            themeModeStore =
+                themeModeStore,
         )
 
     override fun onCleared() {
