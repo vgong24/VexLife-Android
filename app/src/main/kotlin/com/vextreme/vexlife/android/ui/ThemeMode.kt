@@ -1,8 +1,6 @@
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.behavior.VexFamily
-import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.logging.VexLogger
 
 /**
  * Android realization of the ThemeMode semantic State domain.
@@ -31,31 +29,18 @@ internal enum class ThemeMode :
  * execution identity; ThemeMode persistence is ordered privately per live Family.
  */
 internal class ThemeModeFamily(
-    initialState: ThemeMode,
-    executionRoot: VexExecutionRoot,
-    logger: VexLogger.Sink = VexLogger.Sink.None,
-    private val store: Store? = null,
+    initialState:
+        ThemeMode,
 ) :
     VexFamily<
         ThemeModeFamily,
         ThemeMode,
-        ThemeModeFamily.Control
+        ThemeModeFamily.Control,
+        ThemeModeFamily.Effect
     >(
-        initialState = initialState,
-        executionRoot = executionRoot,
-        logger = logger,
-        store = store,
+        initialState =
+            initialState,
     ) {
-    /**
-     * Android ThemeMode durable Store.
-     *
-     * A fresh process reads the durable selection before constructing this Family. During the live
-     * Family lifetime, explicit Select Controls may author Save consequences; Store does not become
-     * another live State owner or another semantic input stream.
-     */
-    interface Store :
-        VexFamily.Store<ThemeMode>
-
 
 
     sealed interface Control :
@@ -73,6 +58,20 @@ internal class ThemeModeFamily(
                 }
             }
         }
+    }
+
+    sealed interface Effect :
+        VexFamily.Effect<ThemeModeFamily> {
+        /**
+         * Remember the explicit semantic selection durably.
+         *
+         * This requests persistence; it does not claim persistence success or another ThemeMode State.
+         */
+        data class PersistSelection(
+            val mode:
+                ThemeMode,
+        ) :
+            Effect
     }
 
     sealed interface DisplayState :
@@ -122,28 +121,29 @@ internal class ThemeModeFamily(
             )
 
     override fun act(
-        currentState: ThemeMode,
-        control: Control,
+        currentState:
+            ThemeMode,
+        control:
+            Control,
     ):
-        VexFamily.Act<ThemeMode>? =
+        VexFamily.Act<
+            ThemeMode,
+            Effect
+        >? =
         when (control) {
             is Control.Select -> {
-                val saveState =
-                    if (
-                        store !=
-                        null
-                    ) {
-                        control.mode
-                    } else {
-                        null
-                    }
+                val effect =
+                    Effect.PersistSelection(
+                        mode =
+                            control.mode,
+                    )
 
                 when (currentState) {
                     ThemeMode.NotSet ->
                         admit(
                             control.mode,
-                            saveState =
-                                saveState,
+                            effect =
+                                effect,
                         )
 
                     ThemeMode.Light,
@@ -153,18 +153,18 @@ internal class ThemeModeFamily(
                             control.mode
                         ) {
                             /*
-                             * Explicitly selecting the already-current peer still means "remember
-                             * this choice durably"; same semantic State is not a reason to skip Save.
+                             * Selecting the already-current peer still means "remember this explicit
+                             * choice durably"; same State does not erase the Effect.
                              */
                             stay(
-                                saveState =
-                                    saveState,
+                                effect =
+                                    effect,
                             )
                         } else {
                             admit(
                                 control.mode,
-                                saveState =
-                                    saveState,
+                                effect =
+                                    effect,
                             )
                         }
                 }
