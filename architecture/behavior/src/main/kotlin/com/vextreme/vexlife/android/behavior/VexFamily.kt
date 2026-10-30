@@ -858,7 +858,6 @@ abstract class VexFamily<
     /**
      * Commit one already-resolved next State while [stateLock] is held.
      */
-    @VettedWithHuman("VexFamily.setCurrentStateLocked", "2026-10-29T22:46:00-07:00", "Victor Approved")
     private fun setCurrentStateLocked(
         state: FamilyState,
     ) {
