@@ -34,15 +34,15 @@ internal data class VexMapsDistributionModeDeliveryRouteInputState(
 ) :
     VexInputState<VexMapsDistributionModeDeliveryRouteInputState> {
     override fun latest(
-        incoming:
+        incomingInputState:
             VexMapsDistributionModeDeliveryRouteInputState,
     ):
         VexMapsDistributionModeDeliveryRouteInputState {
         val latestMode =
-            incoming.mode
+            incomingInputState.mode
                 ?: mode
         val latestDeliveryRoute =
-            incoming.deliveryRoute
+            incomingInputState.deliveryRoute
                 ?: deliveryRoute
 
         return VexMapsDistributionModeDeliveryRouteInputState(
