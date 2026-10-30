@@ -110,7 +110,7 @@ internal class VexCoroutineLauncher(
             Job,
         val mutableState:
             MutableStateFlow<
-                VexExecution.State
+                VexExecution.Snapshot
             >,
         val maintainedObservation:
             Boolean,
@@ -140,7 +140,7 @@ internal class VexCoroutineLauncher(
         MutableStateFlow<
             Map<
                 VexExecution.InstanceId,
-                VexExecution.State
+                VexExecution.Snapshot
             >
         >(
             emptyMap(),
@@ -150,7 +150,7 @@ internal class VexCoroutineLauncher(
         StateFlow<
             Map<
                 VexExecution.InstanceId,
-                VexExecution.State
+                VexExecution.Snapshot
             >
         > =
         mutableActiveExecutions.asStateFlow()
@@ -849,7 +849,7 @@ internal class VexCoroutineLauncher(
 
         val mutableState =
             MutableStateFlow(
-                VexExecution.State(
+                VexExecution.Snapshot(
                     instanceId =
                         instanceId,
                     sourceRef =
@@ -950,7 +950,7 @@ internal class VexCoroutineLauncher(
                     mutableState =
                         mutableState,
                     state =
-                        VexExecution.State(
+                        VexExecution.Snapshot(
                             instanceId =
                                 instanceId,
                             sourceRef =
@@ -1023,9 +1023,9 @@ internal class VexCoroutineLauncher(
                 VexExecution.SourceRef =
                 managed.sourceRef
 
-            override val state:
+            override val snapshot:
                 StateFlow<
-                    VexExecution.State
+                    VexExecution.Snapshot
                 > =
                 managed.mutableState
                     .asStateFlow()
@@ -1090,7 +1090,7 @@ internal class VexCoroutineLauncher(
             VexExecution.ObservationRecovery?,
         mutableState:
             MutableStateFlow<
-                VexExecution.State
+                VexExecution.Snapshot
             >,
         action:
             suspend () -> Unit,
@@ -1112,7 +1112,7 @@ internal class VexCoroutineLauncher(
                     mutableState =
                         mutableState,
                     state =
-                        VexExecution.State(
+                        VexExecution.Snapshot(
                             instanceId =
                                 instanceId,
                             sourceRef =
@@ -1135,7 +1135,7 @@ internal class VexCoroutineLauncher(
                         mutableState =
                             mutableState,
                         state =
-                            VexExecution.State(
+                            VexExecution.Snapshot(
                                 instanceId =
                                     instanceId,
                                 sourceRef =
@@ -1182,7 +1182,7 @@ internal class VexCoroutineLauncher(
                             mutableState =
                                 mutableState,
                             state =
-                                VexExecution.State(
+                                VexExecution.Snapshot(
                                     instanceId =
                                         instanceId,
                                     sourceRef =
@@ -1209,7 +1209,7 @@ internal class VexCoroutineLauncher(
                         mutableState =
                             mutableState,
                         state =
-                            VexExecution.State(
+                            VexExecution.Snapshot(
                                 instanceId =
                                     instanceId,
                                 sourceRef =
@@ -1250,7 +1250,7 @@ internal class VexCoroutineLauncher(
                 mutableState =
                     mutableState,
                 state =
-                    VexExecution.State(
+                    VexExecution.Snapshot(
                         instanceId =
                             instanceId,
                         sourceRef =
@@ -1275,10 +1275,10 @@ internal class VexCoroutineLauncher(
     private fun publish(
         mutableState:
             MutableStateFlow<
-                VexExecution.State
+                VexExecution.Snapshot
             >,
         state:
-            VexExecution.State,
+            VexExecution.Snapshot,
     ) {
         mutableState.value =
             state
@@ -1294,7 +1294,7 @@ internal class VexCoroutineLauncher(
 
     private fun updateActiveRegistryLocked(
         state:
-            VexExecution.State,
+            VexExecution.Snapshot,
     ) {
         mutableActiveExecutions.value =
             java.util.Collections
