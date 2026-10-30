@@ -1120,15 +1120,7 @@ class VexMapsDistributionSessionTest {
                     executionRoot
                         .activeExecutions
                         .value
-                        .values
-                        .none {
-                            it.status ==
-                                VexExecution.Status.STARTING ||
-                                it.status ==
-                                VexExecution.Status.RUNNING ||
-                                it.status ==
-                                VexExecution.Status.RESTARTING
-                        },
+                        .isEmpty(),
                 )
             } finally {
                 session.shutdown()
@@ -1271,9 +1263,9 @@ class VexMapsDistributionSessionTest {
                         .activeExecutions
                         .value
                         .values
-                        .none {
-                            it.status ==
-                                VexExecution.Status.FAILED
+                        .any { snapshot ->
+                            snapshot.status ==
+                                VexExecution.Status.RUNNING
                         },
                 )
             } finally {
