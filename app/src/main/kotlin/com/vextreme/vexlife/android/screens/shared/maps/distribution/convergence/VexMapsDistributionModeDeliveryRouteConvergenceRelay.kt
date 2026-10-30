@@ -37,31 +37,27 @@ internal data class VexMapsDistributionModeDeliveryRouteInputState(
         incoming:
             VexMapsDistributionModeDeliveryRouteInputState,
     ):
-        VexMapsDistributionModeDeliveryRouteInputState =
-        VexMapsDistributionModeDeliveryRouteInputState(
+        VexMapsDistributionModeDeliveryRouteInputState {
+        val latestMode =
+            incoming.mode
+                ?: mode
+        val latestDeliveryRoute =
+            incoming.deliveryRoute
+                ?: deliveryRoute
+
+        return VexMapsDistributionModeDeliveryRouteInputState(
             mode =
-                (
-                    incoming.mode
-                        ?: mode
-                )?.copy(
+                latestMode?.copy(
                     controls =
-                        (
-                            incoming.mode
-                                ?: mode
-                        )!!.controls.toMap(),
+                        latestMode.controls.toMap(),
                 ),
             deliveryRoute =
-                (
-                    incoming.deliveryRoute
-                        ?: deliveryRoute
-                )?.copy(
+                latestDeliveryRoute?.copy(
                     controls =
-                        (
-                            incoming.deliveryRoute
-                                ?: deliveryRoute
-                        )!!.controls.toMap(),
+                        latestDeliveryRoute.controls.toMap(),
                 ),
         )
+    }
 
     override fun deepCopy():
         VexMapsDistributionModeDeliveryRouteInputState =
