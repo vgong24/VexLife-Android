@@ -107,7 +107,7 @@ class VexExecutionVirtualTimeUsageTest {
         fun observePrimary(
             values: MutableList<Int>,
         ): VexCoroutineHandle =
-            launchForCollect(
+            observe(
                 repository::primaryStates,
             ) { value ->
                 values += value
@@ -116,7 +116,7 @@ class VexExecutionVirtualTimeUsageTest {
         fun observeSecondary(
             values: MutableList<Int>,
         ): VexCoroutineHandle =
-            launchForCollect(
+            observe(
                 repository::secondaryStates,
             ) { value ->
                 values += value
@@ -124,7 +124,7 @@ class VexExecutionVirtualTimeUsageTest {
 
         fun observeRestartable():
             VexCoroutineHandle =
-            launchForCollect(
+            observe(
                 repository::restartableStates,
             ) {}
 
