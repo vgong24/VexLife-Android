@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.execution
 
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.KCallable
 import kotlin.reflect.KFunction0
 import kotlin.reflect.KFunction1
@@ -54,7 +55,7 @@ abstract class VexExecution protected constructor(
             value
     }
 
-    /** Exact runtime identity of one admitted execution occurrence. */
+    /** Exact process-runtime identity of one admitted execution occurrence. */
     @JvmInline
     value class InstanceId internal constructor(
         val value:
@@ -175,6 +176,13 @@ abstract class VexExecution protected constructor(
         suspend fun awaitCompletion()
     }
 
+    /**
+     * Exact live execution-owner identity.
+     *
+     * Internal because this is runtime custody mechanics, not semantic architecture.
+     */
+    internal class OwnerToken internal constructor()
+
     /*
      * Runtime ownership is intentionally distinct from SourceRef.
      *
@@ -182,7 +190,7 @@ abstract class VexExecution protected constructor(
      * scopes uniqueness, cancellation and coordination to this exact live owner.
      */
     private val ownerToken =
-        Any()
+        OwnerToken()
 
     private val executionName:
         String
@@ -659,6 +667,20 @@ abstract class VexExecution protected constructor(
                 "." +
                 reference.name,
         )
+
+    internal companion object {
+        private val nextInstanceValue =
+            AtomicLong(
+                1L,
+            )
+
+        fun nextInstanceId():
+            InstanceId =
+            InstanceId(
+                nextInstanceValue
+                    .getAndIncrement(),
+            )
+    }
 }
 
 // [VXG RealForever]
