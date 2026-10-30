@@ -135,6 +135,7 @@ internal sealed interface VexThemePresentation {
     }
 }
 
+@VettedWithHuman("LocalVexThemePresentation", "2026-10-29T22:46:00-07:00", "Victor Approved")
 private val LocalVexThemePresentation =
     staticCompositionLocalOf<VexThemePresentation> {
         error(
@@ -143,6 +144,7 @@ private val LocalVexThemePresentation =
     }
 
 @Composable
+@VettedWithHuman("currentVexThemePresentation", "2026-10-29T22:46:00-07:00", "Victor Approved")
 internal fun currentVexThemePresentation():
     VexThemePresentation =
     LocalVexThemePresentation.current
@@ -176,6 +178,7 @@ private val VexTypography = Typography(
  * safeDrawing to the actual app shell inside that background.
  */
 @Composable
+@VettedWithHuman("VexLifeTheme(ThemeModeFamily)", "2026-10-29T22:46:00-07:00", "Victor Approved")
 internal fun VexLifeTheme(
     themeModeFamily: ThemeModeFamily,
     content: @Composable () -> Unit,
@@ -197,6 +200,7 @@ internal fun VexLifeTheme(
 }
 
 @Composable
+@VettedWithHuman("VexLifeTheme(VexThemePresentation)", "2026-10-29T22:46:00-07:00", "Victor Approved")
 internal fun VexLifeTheme(
     presentation: VexThemePresentation,
     content: @Composable () -> Unit,
