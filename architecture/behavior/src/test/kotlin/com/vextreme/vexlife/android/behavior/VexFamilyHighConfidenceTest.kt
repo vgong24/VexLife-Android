@@ -1,49 +1,33 @@
 package com.vextreme.vexlife.android.behavior
 
-import com.vextreme.vexlife.android.execution.VexExecution
-import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.logging.VexLogger
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Focused proof of the human-readable Family surface.
+ * Focused implementation proof of the Direct Family semantic core.
+ *
+ * These tests prove behavior of the current implementation; they do not create architecture
+ * authority.
  */
 class VexFamilyHighConfidenceTest {
     private class ValueFamily(
         initialState:
             State,
-        executionRoot:
-            VexExecutionRoot,
-        private val store:
-            Store? =
-            null,
-        logger:
-            VexLogger.Sink =
-            VexLogger.Sink.None,
     ) :
         VexFamily<
             ValueFamily,
             ValueFamily.State,
-            ValueFamily.Control
+            ValueFamily.Control,
+            ValueFamily.Effect
         >(
             initialState =
                 initialState,
-            executionRoot =
-                executionRoot,
-            logger =
-                logger,
-            store =
-                store,
         ) {
         sealed interface State :
             VexFamily.State<ValueFamily> {
@@ -65,164 +49,95 @@ class VexFamilyHighConfidenceTest {
             ) :
                 Control
 
-            data class Commit(
+            data object Unavailable :
+                Control
+        }
+
+        sealed interface Effect :
+            VexFamily.Effect<ValueFamily> {
+            data class Persist(
                 val value:
                     String,
             ) :
-                Control
+                Effect
         }
 
-        interface Store :
-            VexFamily.Store<State>
-
-        data class DisplayState(
-            val value:
-                String?,
-        ) :
-            VexFamily.DisplayState<State>
-
-        /**
-         * This is the function Family.activate(...) calls.
-         *
-         * State and Control traversal are ordinary Kotlin sealed-type when expressions.
-         */
         override fun act(
-            currentState: State,
-            control: Control,
+            currentState:
+                State,
+            control:
+                Control,
         ):
-            VexFamily.Act<State>? =
-            when (
-                currentState
-            ) {
+            VexFamily.Act<
+                State,
+                Effect
+            >? =
+            when (currentState) {
                 State.Empty ->
-                    when (
-                        control
-                    ) {
+                    when (control) {
                         is Control.Set ->
                             admit(
                                 State.Ready(
                                     value =
                                         control.value,
                                 ),
+                                effect =
+                                    Effect.Persist(
+                                        value =
+                                            control.value,
+                                    ),
                             )
 
-                        is Control.Commit -> {
-                            val nextState =
-                                State.Ready(
-                                    value =
-                                        control.value,
-                                )
-
-                            admit(
-                                nextState,
-                                saveState =
-                                    nextState,
-                            )
-                        }
+                        Control.Unavailable ->
+                            null
                     }
 
                 is State.Ready ->
-                    when (
-                        control
-                    ) {
+                    when (control) {
                         is Control.Set ->
-                            admit(
-                                currentState.copy(
-                                    value =
-                                        control.value,
-                                ),
-                            )
+                            if (
+                                currentState.value ==
+                                control.value
+                            ) {
+                                stay(
+                                    effect =
+                                        Effect.Persist(
+                                            value =
+                                                control.value,
+                                        ),
+                                )
+                            } else {
+                                admit(
+                                    currentState.copy(
+                                        value =
+                                            control.value,
+                                    ),
+                                    effect =
+                                        Effect.Persist(
+                                            value =
+                                                control.value,
+                                        ),
+                                )
+                            }
 
-                        is Control.Commit ->
+                        Control.Unavailable ->
                             null
                     }
             }
-
-        override val displayState:
-            DisplayState
-            get() =
-                DisplayState(
-                    value =
-                        when (
-                            val state =
-                                currentState
-                        ) {
-                            State.Empty ->
-                                null
-
-                            is State.Ready ->
-                                state.value
-                        },
-                )
     }
 
-    private class MinimalFamily(
-        initialState:
-            State,
-        executionRoot:
-            VexExecutionRoot,
-    ) :
-        VexFamily<
-            MinimalFamily,
-            MinimalFamily.State,
-            MinimalFamily.Control
-        >(
-            initialState =
-                initialState,
-            executionRoot =
-                executionRoot,
-            logger =
-                VexLogger.Sink.None,
-        ) {
-        sealed interface State :
-            VexFamily.State<MinimalFamily> {
-            data object Idle :
-                State
-        }
-
-        sealed interface Control :
-            VexFamily.Control<MinimalFamily> {
-            data object Keep :
-                Control
-        }
-
-        override fun act(
-            currentState: State,
-            control: Control,
-        ):
-            VexFamily.Act<State>? =
-            when (
-                currentState
-            ) {
-                State.Idle ->
-                    when (
-                        control
-                    ) {
-                        Control.Keep ->
-                            stay()
-                    }
-            }
-
-    }
-
-    private class CounterFamily(
-        executionRoot:
-            VexExecutionRoot,
-    ) :
+    private class CounterFamily :
         VexFamily<
             CounterFamily,
             CounterFamily.State,
-            CounterFamily.Control
+            CounterFamily.Control,
+            CounterFamily.Effect
         >(
             initialState =
                 State(
                     count =
                         0,
                 ),
-            executionRoot =
-                executionRoot,
-            logger =
-                VexLogger.Sink.None,
         ) {
         data class State(
             val count:
@@ -236,16 +151,20 @@ class VexFamilyHighConfidenceTest {
                 Control
         }
 
+        sealed interface Effect :
+            VexFamily.Effect<CounterFamily>
+
         override fun act(
             currentState:
                 State,
             control:
                 Control,
         ):
-            VexFamily.Act<State> =
-            when (
-                control
-            ) {
+            VexFamily.Act<
+                State,
+                Effect
+            > =
+            when (control) {
                 Control.Increment ->
                     admit(
                         currentState.copy(
@@ -257,363 +176,185 @@ class VexFamilyHighConfidenceTest {
             }
     }
 
-    private class GatedStore :
-        ValueFamily.Store {
-        val started =
-            CountDownLatch(
-                1,
-            )
-
-        val gate =
-            CompletableDeferred<Unit>()
-
-        override suspend fun save(
-            state:
-                ValueFamily.State,
-        ) {
-            started.countDown()
-            gate.await()
-        }
-    }
-
-    private class RecordingLogger(
-        private val onRecord:
-            (
-                VexLogger.Event,
-            ) -> Unit,
-    ) :
-        VexLogger.Sink {
-        override fun record(
-            event:
-                VexLogger.Event,
-        ) {
-            onRecord(
-                event,
-            )
-        }
-    }
-
     @Test
-    fun activateCallsTheConcreteFamilyActFunctionThenAdmitsIntoTheSameStateRelay() {
-        val root =
-            VexExecutionRoot()
-
-        try {
-            val family =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Empty,
-                    executionRoot =
-                        root,
-                )
-
-            assertTrue(
-                family.activate(
-                    ValueFamily.Control.Set(
-                        value =
-                            "one",
-                    ),
-                ),
-            )
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "one",
-                ),
-                family.currentState,
-            )
-            assertEquals(
-                family.currentState,
-                family.states.value,
-            )
-
-            assertTrue(
-                family.activate(
-                    ValueFamily.Control.Set(
-                        value =
-                            "two",
-                    ),
-                ),
-            )
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "two",
-                ),
-                family.currentState,
-            )
-            assertEquals(
-                family.currentState,
-                family.states.value,
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun availabilityAndActivationCallTheSameActFunctionWithoutASeparateActsTable() {
-        val root =
-            VexExecutionRoot()
-
-        try {
-            val family =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Ready(
-                            value =
-                                "one",
-                        ),
-                    executionRoot =
-                        root,
-                )
-
-            val sameValue =
-                ValueFamily.Control.Set(
-                    value =
-                        "one",
-                )
-            val change =
-                ValueFamily.Control.Set(
-                    value =
-                        "two",
-                )
-
-            assertTrue(
-                family.isAvailable(
-                    sameValue,
-                ),
-            )
-            assertTrue(
-                family.activate(
-                    sameValue,
-                ),
-            )
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "one",
-                ),
-                family.currentState,
-            )
-
-            assertTrue(
-                family.isAvailable(
-                    change,
-                ),
-            )
-            assertTrue(
-                family.activate(
-                    change,
-                ),
-            )
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "two",
-                ),
-                family.currentState,
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun availabilityMayInspectAnActWithSaveWithoutStartingItsExecution() {
-        val root =
-            VexExecutionRoot()
-        val store =
-            GatedStore()
-
-        try {
-            val family =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Empty,
-                    executionRoot =
-                        root,
-                    store =
-                        store,
-                )
-
-            assertTrue(
-                family.isAvailable(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "pending",
-                    ),
-                ),
-            )
-            assertEquals(
-                1L,
-                store.started.count,
-            )
-            assertEquals(
-                ValueFamily.State.Empty,
-                family.currentState,
-            )
-
-            assertTrue(
-                family.activate(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "pending",
-                    ),
-                ),
-            )
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "pending",
-                ),
-                family.currentState,
-            )
-
-            assertTrue(
-                "activated Save did not reach Store.save",
-                store.started.await(
-                    5,
-                    TimeUnit.SECONDS,
-                ),
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun displayStateDefaultsToStateOnlyWhenNoRicherClassificationIsEarned() {
-        val root =
-            VexExecutionRoot()
-
-        try {
-            val family =
-                MinimalFamily(
-                    initialState =
-                        MinimalFamily.State.Idle,
-                    executionRoot =
-                        root,
-                )
-
-            assertEquals(
-                VexFamily.DisplayState.StateOnly(
-                    MinimalFamily.State.Idle,
-                ),
-                family.displayState,
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun throwingLoggerCannotChangeFamilyControlStateOrStoreSemantics() {
-        val root =
-            VexExecutionRoot()
-        val logger =
-            VexLogger.Sink {
-                throw IllegalStateException(
-                    "synthetic logger failure",
-                )
-            }
-
-        try {
-            val immediate =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Empty,
-                    executionRoot =
-                        root,
-                    logger =
-                        logger,
-                )
-
-            assertTrue(
-                immediate.activate(
-                    ValueFamily.Control.Set(
-                        value =
-                            "direct",
-                    ),
-                ),
-            )
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "direct",
-                ),
-                immediate.currentState,
-            )
-
-            val store =
-                GatedStore()
-            val saved =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Empty,
-                    executionRoot =
-                        root,
-                    store =
-                        store,
-                    logger =
-                        logger,
-                )
-
-            assertTrue(
-                saved.activate(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "persisted",
-                    ),
-                ),
-            )
-            assertTrue(
-                "throwing logger prevented Store.save",
-                store.started.await(
-                    5,
-                    TimeUnit.SECONDS,
-                ),
-            )
-
-            store.gate.complete(
-                Unit,
-            )
-
-            runBlocking {
-                withTimeout(
-                    5_000,
-                ) {
-                    saved.states.first { state ->
-                        state ==
-                            ValueFamily.State.Ready(
-                                value =
-                                    "persisted",
-                            )
-                    }
-                }
-            }
-
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "persisted",
-                ),
-                saved.currentState,
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun concurrentActivationsResolveAgainstOneSerializedCurrentState() {
-        val root =
-            VexExecutionRoot()
+    fun activateAppliesImmediateStateAndReturnsEffect() {
         val family =
-            CounterFamily(
-                executionRoot =
-                    root,
+            ValueFamily(
+                initialState =
+                    ValueFamily.State.Empty,
             )
+
+        val act =
+            family.activate(
+                ValueFamily.Control.Set(
+                    value =
+                        "one",
+                ),
+            )
+
+        assertEquals(
+            ValueFamily.State.Ready(
+                value =
+                    "one",
+            ),
+            family.currentState,
+        )
+        assertEquals(
+            family.currentState,
+            family.states.value,
+        )
+        assertEquals(
+            ValueFamily.Effect.Persist(
+                value =
+                    "one",
+            ),
+            act?.effect,
+        )
+    }
+
+    @Test
+    fun stayMayReturnEffectWithoutChangingCurrentState() {
+        val initial =
+            ValueFamily.State.Ready(
+                value =
+                    "same",
+            )
+        val family =
+            ValueFamily(
+                initialState =
+                    initial,
+            )
+
+        val act =
+            family.activate(
+                ValueFamily.Control.Set(
+                    value =
+                        "same",
+                ),
+            )
+
+        assertEquals(
+            initial,
+            family.currentState,
+        )
+        assertEquals(
+            ValueFamily.Effect.Persist(
+                value =
+                    "same",
+            ),
+            act?.effect,
+        )
+    }
+
+    @Test
+    fun unavailableControlReturnsNullAndDoesNotChangeState() {
+        val family =
+            ValueFamily(
+                initialState =
+                    ValueFamily.State.Empty,
+            )
+
+        assertNull(
+            family.activate(
+                ValueFamily.Control.Unavailable,
+            ),
+        )
+        assertEquals(
+            ValueFamily.State.Empty,
+            family.currentState,
+        )
+    }
+
+    @Test
+    fun availabilityUsesTheSamePureRelationshipWithoutApplyingIt() {
+        val family =
+            ValueFamily(
+                initialState =
+                    ValueFamily.State.Empty,
+            )
+        val control =
+            ValueFamily.Control.Set(
+                value =
+                    "candidate",
+            )
+
+        assertTrue(
+            family.isAvailable(
+                control,
+            ),
+        )
+        assertEquals(
+            ValueFamily.State.Empty,
+            family.currentState,
+        )
+
+        val act =
+            family.activate(
+                control,
+            )
+        assertEquals(
+            ValueFamily.State.Ready(
+                value =
+                    "candidate",
+            ),
+            family.currentState,
+        )
+        assertEquals(
+            ValueFamily.Effect.Persist(
+                value =
+                    "candidate",
+            ),
+            act?.effect,
+        )
+    }
+
+    @Test
+    fun observedSemanticRealityUsesTheSameStateRelay() {
+        val family =
+            ValueFamily(
+                initialState =
+                    ValueFamily.State.Empty,
+            )
+        val observed =
+            ValueFamily.State.Ready(
+                value =
+                    "provider-current",
+            )
+
+        family.observe(
+            observed,
+        )
+
+        assertEquals(
+            observed,
+            family.currentState,
+        )
+        assertEquals(
+            family.currentState,
+            family.states.value,
+        )
+    }
+
+    @Test
+    fun displayStateDefaultsToCurrentStateOnly() {
+        val family =
+            ValueFamily(
+                initialState =
+                    ValueFamily.State.Empty,
+            )
+
+        assertEquals(
+            VexFamily.DisplayState.StateOnly(
+                ValueFamily.State.Empty,
+            ),
+            family.displayState,
+        )
+    }
+
+    @Test
+    fun concurrentControlsResolveAgainstOneSerializedCurrentState() {
+        val family =
+            CounterFamily()
         val count =
             48
         val ready =
@@ -638,7 +379,8 @@ class VexFamilyHighConfidenceTest {
                             go.await()
                             family.activate(
                                 CounterFamily.Control.Increment,
-                            )
+                            ) !=
+                                null
                         },
                     )
                 }
@@ -667,182 +409,8 @@ class VexFamilyHighConfidenceTest {
                 ),
                 family.currentState,
             )
-            assertEquals(
-                family.currentState,
-                family.states.value,
-            )
         } finally {
             executor.shutdownNow()
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun olderSaveCompletionCannotOverwriteNewerFamilyState() {
-        val root =
-            VexExecutionRoot()
-        val store =
-            GatedStore()
-        val operationSuccess =
-            CountDownLatch(
-                1,
-            )
-        val logger =
-            RecordingLogger { event ->
-                if (
-                    event is
-                        VexLogger.Event.Family.OperationSuccess
-                ) {
-                    operationSuccess.countDown()
-                }
-            }
-
-        try {
-            val family =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Empty,
-                    executionRoot =
-                        root,
-                    store =
-                        store,
-                    logger =
-                        logger,
-                )
-
-            assertTrue(
-                family.activate(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "old-result",
-                    ),
-                ),
-            )
-            assertTrue(
-                store.started.await(
-                    5,
-                    TimeUnit.SECONDS,
-                ),
-            )
-
-            assertTrue(
-                family.activate(
-                    ValueFamily.Control.Set(
-                        value =
-                            "newer-current",
-                    ),
-                ),
-            )
-
-            store.gate.complete(
-                Unit,
-            )
-
-            assertTrue(
-                operationSuccess.await(
-                    5,
-                    TimeUnit.SECONDS,
-                ),
-            )
-
-            runBlocking {
-                withTimeout(
-                    5_000,
-                ) {
-                    root.executions.first { executions ->
-                        executions.values.any { state ->
-                            state.status ==
-                                VexExecution.Status.COMPLETED
-                        }
-                    }
-                }
-            }
-
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "newer-current",
-                ),
-                family.currentState,
-            )
-        } finally {
-            root.forceStopAll()
-        }
-    }
-
-    @Test
-    fun saveRunsAfterImmediateAdmissionAndOwnsNoLaterStateDoor() {
-        val root =
-            VexExecutionRoot()
-        val store =
-            GatedStore()
-        val operationSuccess =
-            CountDownLatch(
-                1,
-            )
-        val logger =
-            RecordingLogger { event ->
-                if (
-                    event is
-                        VexLogger.Event.Family.OperationSuccess
-                ) {
-                    operationSuccess.countDown()
-                }
-            }
-
-        try {
-            val family =
-                ValueFamily(
-                    initialState =
-                        ValueFamily.State.Empty,
-                    executionRoot =
-                        root,
-                    store =
-                        store,
-                    logger =
-                        logger,
-                )
-
-            assertTrue(
-                family.activate(
-                    ValueFamily.Control.Commit(
-                        value =
-                            "loaded",
-                    ),
-                ),
-            )
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "loaded",
-                ),
-                family.currentState,
-            )
-            assertTrue(
-                store.started.await(
-                    5,
-                    TimeUnit.SECONDS,
-                ),
-            )
-
-            store.gate.complete(
-                Unit,
-            )
-            assertTrue(
-                operationSuccess.await(
-                    5,
-                    TimeUnit.SECONDS,
-                ),
-            )
-            assertEquals(
-                ValueFamily.State.Ready(
-                    value =
-                        "loaded",
-                ),
-                family.currentState,
-            )
-        } finally {
-            root.forceStopAll()
         }
     }
 }
