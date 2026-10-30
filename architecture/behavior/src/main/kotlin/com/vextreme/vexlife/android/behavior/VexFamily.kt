@@ -199,6 +199,7 @@ abstract class VexFamily<
     interface DisplayState<
         out State : VexFamily.State<*>,
     > {
+        @VettedWithHuman("VexFamily.DisplayState.StateOnly", "2026-10-29T22:46:00-07:00", "Victor Approved")
         data class StateOnly<
             State : VexFamily.State<*>,
         >(
@@ -534,15 +535,18 @@ abstract class VexFamily<
     private val stateLock =
         Any()
 
+    @VettedWithHuman("VexFamily.stateRelay", "2026-10-29T22:46:00-07:00", "Victor Approved")
     private val stateRelay =
         MutableStateFlow(
             initialState,
         )
 
+    @VettedWithHuman("VexFamily.states", "2026-10-29T22:46:00-07:00", "Victor Approved")
     val states:
         StateFlow<FamilyState> =
         stateRelay.asStateFlow()
 
+    @VettedWithHuman("VexFamily.currentState", "2026-10-29T22:46:00-07:00", "Victor Approved")
     val currentState:
         FamilyState
         get() =
@@ -736,6 +740,7 @@ abstract class VexFamily<
      * earned beyond current semantic State. Override only when real consumers would otherwise repeat
      * the same derived interpretation of State.
      */
+    @VettedWithHuman("VexFamily.displayState", "2026-10-29T22:46:00-07:00", "Victor Approved")
     open val displayState:
         DisplayState<FamilyState>
         get() =
@@ -874,6 +879,7 @@ abstract class VexFamily<
     /**
      * Commit one already-resolved next State while [stateLock] is held.
      */
+    @VettedWithHuman("VexFamily.setCurrentStateLocked", "2026-10-29T22:46:00-07:00", "Victor Approved")
     private fun setCurrentStateLocked(
         state: FamilyState,
     ) {
