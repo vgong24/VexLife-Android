@@ -139,24 +139,22 @@ internal data class VexMapsDeliveryRouteNavigationInputState(
         incoming:
             VexMapsDeliveryRouteNavigationInputState,
     ):
-        VexMapsDeliveryRouteNavigationInputState =
-        VexMapsDeliveryRouteNavigationInputState(
+        VexMapsDeliveryRouteNavigationInputState {
+        val latestDeliveryRoute =
+            incoming.deliveryRoute
+                ?: deliveryRoute
+        val latestNavigation =
+            incoming.navigation
+                ?: navigation
+
+        return VexMapsDeliveryRouteNavigationInputState(
             deliveryRoute =
-                (
-                    incoming.deliveryRoute
-                        ?: deliveryRoute
-                )?.copy(
+                latestDeliveryRoute?.copy(
                     controls =
-                        (
-                            incoming.deliveryRoute
-                                ?: deliveryRoute
-                        )!!.controls.toMap(),
+                        latestDeliveryRoute.controls.toMap(),
                 ),
             navigation =
-                (
-                    incoming.navigation
-                        ?: navigation
-                )?.copy(),
+                latestNavigation?.copy(),
             expectedLeg =
                 incoming.expectedLeg
                     ?: expectedLeg,
@@ -164,6 +162,7 @@ internal data class VexMapsDeliveryRouteNavigationInputState(
                 incoming.legAttempt
                     ?: legAttempt,
         )
+    }
 
     override fun deepCopy():
         VexMapsDeliveryRouteNavigationInputState =
