@@ -27,6 +27,8 @@ import org.junit.rules.ExternalResource
  * - one VexExecutionRoot;
  * - guaranteed force-stop/join cleanup after the test, even when setup/assertions fail.
  *
+ * Observation recovery belongs to the observation call itself, not this root/test host.
+ *
  * Feature construction stays visible in the feature test's @Before method. That is intentional:
  * repository/provider/Execution assembly teaches what the feature actually depends on and should not
  * disappear into a generic scenario builder merely to save lines.
@@ -54,10 +56,8 @@ import org.junit.rules.ExternalResource
  * cleanup can finish before join verification returns.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class VexExecutionTestRule(
-    private val maxCollectRestarts: Int = 3,
-    private val collectRestartDelayMillis: Long = 250L,
-) : ExternalResource() {
+class VexExecutionTestRule :
+    ExternalResource() {
     lateinit var scheduler: TestCoroutineScheduler
         private set
 
@@ -80,11 +80,8 @@ class VexExecutionTestRule(
 
         root =
             VexExecutionRoot(
-                dispatcher = dispatcher,
-                maxCollectRestarts =
-                    maxCollectRestarts,
-                collectRestartDelayMillis =
-                    collectRestartDelayMillis,
+                dispatcher =
+                    dispatcher,
             )
 
         initialized = true

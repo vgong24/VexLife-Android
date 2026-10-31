@@ -1,7 +1,5 @@
 package com.vextreme.vexlife.android.execution.usage
 
-import com.vextreme.vexlife.android.execution.VexCoroutineHandle
-import com.vextreme.vexlife.android.execution.VexCoroutineStatus
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.execution.testing.VexExecutionTestRule
@@ -30,11 +28,7 @@ import org.junit.Test
 class VexExecutionVirtualTimeUsageTest {
     @get:Rule
     val vexExecution =
-        VexExecutionTestRule(
-            maxCollectRestarts = 1,
-            collectRestartDelayMillis =
-                1_000L,
-        )
+        VexExecutionTestRule()
 
     private lateinit var repository:
         ExampleRepository
@@ -106,8 +100,8 @@ class VexExecutionVirtualTimeUsageTest {
     ) : VexExecution(root) {
         fun observePrimary(
             values: MutableList<Int>,
-        ): VexCoroutineHandle =
-            launchForCollect(
+        ): VexExecution.Handle =
+            observe(
                 repository::primaryStates,
             ) { value ->
                 values += value
@@ -115,21 +109,29 @@ class VexExecutionVirtualTimeUsageTest {
 
         fun observeSecondary(
             values: MutableList<Int>,
-        ): VexCoroutineHandle =
-            launchForCollect(
+        ): VexExecution.Handle =
+            observe(
                 repository::secondaryStates,
             ) { value ->
                 values += value
             }
 
         fun observeRestartable():
-            VexCoroutineHandle =
-            launchForCollect(
-                repository::restartableStates,
+            VexExecution.Handle =
+            observe(
+                source =
+                    repository::restartableStates,
+                recovery =
+                    VexExecution.ObservationRecovery(
+                        maxRestarts =
+                            1,
+                        restartDelayMillis =
+                            1_000L,
+                    ),
             ) {}
 
         fun runCleanupOperation():
-            VexCoroutineHandle =
+            VexExecution.Handle =
             launchOnce(
                 repository::
                     operationWithCleanup,
@@ -169,12 +171,12 @@ class VexExecutionVirtualTimeUsageTest {
                 secondary,
             )
             assertEquals(
-                VexCoroutineStatus.RUNNING,
-                first.state.value.status,
+                VexExecution.Status.RUNNING,
+                first.snapshot.value.status,
             )
             assertEquals(
-                VexCoroutineStatus.RUNNING,
-                second.state.value.status,
+                VexExecution.Status.RUNNING,
+                second.snapshot.value.status,
             )
         }
 
@@ -196,7 +198,7 @@ class VexExecutionVirtualTimeUsageTest {
             assertEquals(
                 VexCoroutineStatus
                     .RESTARTING,
-                handle.state.value.status,
+                handle.snapshot.value.status,
             )
 
             advanceTimeBy(
@@ -223,8 +225,8 @@ class VexExecutionVirtualTimeUsageTest {
                     .get(),
             )
             assertEquals(
-                VexCoroutineStatus.FAILED,
-                handle.state.value.status,
+                VexExecution.Status.FAILED,
+                handle.snapshot.value.status,
             )
         }
 
@@ -275,8 +277,8 @@ class VexExecutionVirtualTimeUsageTest {
                 stopCompleted,
             )
             assertEquals(
-                VexCoroutineStatus.CANCELLED,
-                handle.state.value.status,
+                VexExecution.Status.CANCELLED,
+                handle.snapshot.value.status,
             )
         }
 }

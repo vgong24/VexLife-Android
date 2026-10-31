@@ -2,11 +2,8 @@ package com.vextreme.vexlife.android.ui
 
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
-import com.vextreme.vexlife.android.behavior.VexFamily
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -36,29 +33,27 @@ class ThemeModeStoreInstrumentedTest {
             )
 
         runBlocking {
-            assertEquals(
-                VexFamily.Store.WriteResult.Success,
-                firstStore.save(
-                    ThemeMode.Light,
-                ),
-            )
-            assertEquals(
+            firstStore.save(
                 ThemeMode.Light,
-                firstStore.get(),
-            )
-            assertEquals(
-                "LIGHT",
-                context
-                    .getSharedPreferences(
-                        "vexlife-theme-mode",
-                        Context.MODE_PRIVATE,
-                    )
-                    .getString(
-                        "explicit-selection",
-                        null,
-                    ),
             )
         }
+
+        assertEquals(
+            ThemeMode.Light,
+            firstStore.current(),
+        )
+        assertEquals(
+            "LIGHT",
+            context
+                .getSharedPreferences(
+                    "vexlife-theme-mode",
+                    Context.MODE_PRIVATE,
+                )
+                .getString(
+                    "explicit-selection",
+                    null,
+                ),
+        )
 
         val root =
             VexExecutionRoot()
@@ -68,34 +63,17 @@ class ThemeModeStoreInstrumentedTest {
                 SharedPreferencesThemeModeStore(
                     context,
                 )
-            val recreatedFamily =
-                ThemeModeFamily(
-                    initialState =
-                        ThemeMode.Dark,
-                    executionRoot =
-                        root,
+            val recreatedConnection =
+                ThemeModeConnection(
                     store =
                         recreatedStore,
+                    executionRoot =
+                        root,
                 )
-
-            runBlocking {
-                assertEquals(
-                    ThemeMode.Light,
-                    recreatedStore.get(),
-                )
-                withTimeout(
-                    5_000,
-                ) {
-                    recreatedFamily.states.first { state ->
-                        state ==
-                            ThemeMode.Light
-                    }
-                }
-            }
 
             assertEquals(
                 ThemeMode.Light,
-                recreatedFamily.currentState,
+                recreatedConnection.family.currentState,
             )
         } finally {
             root.forceStopAll()
@@ -109,45 +87,41 @@ class ThemeModeStoreInstrumentedTest {
                 context,
             )
 
+        val invalidSave =
+            runCatching {
+                runBlocking {
+                    store.save(
+                        ThemeMode.NotSet,
+                    )
+                }
+            }.exceptionOrNull()
+
+        assertTrue(
+            invalidSave is
+                IllegalArgumentException,
+        )
+
         runBlocking {
-            val invalidSave =
-                store.save(
-                    ThemeMode.NotSet,
-                )
-
-            assertTrue(
-                invalidSave is
-                    VexFamily.Store.WriteResult.Failure,
-            )
-
-            assertEquals(
-                VexFamily.Store.WriteResult.Success,
-                store.save(
-                    ThemeMode.Dark,
-                ),
-            )
-            assertEquals(
+            store.save(
                 ThemeMode.Dark,
-                store.get(),
-            )
-
-            assertEquals(
-                VexFamily.Store.WriteResult.Success,
-                store.forget(),
-            )
-            assertEquals(
-                ThemeMode.NotSet,
-                store.get(),
             )
         }
+        assertEquals(
+            ThemeMode.Dark,
+            store.current(),
+        )
+
+        store.forget()
+        assertEquals(
+            ThemeMode.NotSet,
+            store.current(),
+        )
     }
 
     private fun clearStore() {
-        runBlocking {
-            SharedPreferencesThemeModeStore(
-                context,
-            ).forget()
-        }
+        SharedPreferencesThemeModeStore(
+            context,
+        ).forget()
     }
 }
 

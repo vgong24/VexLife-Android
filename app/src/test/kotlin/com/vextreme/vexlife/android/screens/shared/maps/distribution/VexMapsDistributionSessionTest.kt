@@ -4,7 +4,7 @@ import com.vextreme.vexlife.android.data.maps.distribution.InMemoryVexMapsDistri
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionDraft
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionRepository
 import com.vextreme.vexlife.android.data.maps.distribution.VexMapsDistributionStop
-import com.vextreme.vexlife.android.execution.VexCoroutineStatus
+import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapCoordinate
 import com.vextreme.vexlife.android.screens.shared.maps.VexMapsRegionPack
@@ -1118,17 +1118,9 @@ class VexMapsDistributionSessionTest {
                 )
                 assertTrue(
                     executionRoot
-                        .executions
+                        .activeExecutions
                         .value
-                        .values
-                        .none {
-                            it.status ==
-                                VexCoroutineStatus.STARTING ||
-                                it.status ==
-                                VexCoroutineStatus.RUNNING ||
-                                it.status ==
-                                VexCoroutineStatus.RESTARTING
-                        },
+                        .isEmpty(),
                 )
             } finally {
                 session.shutdown()
@@ -1268,12 +1260,12 @@ class VexMapsDistributionSessionTest {
                 )
                 assertTrue(
                     executionRoot
-                        .executions
+                        .activeExecutions
                         .value
                         .values
-                        .none {
-                            it.status ==
-                                VexCoroutineStatus.FAILED
+                        .any { snapshot ->
+                            snapshot.status ==
+                                VexExecution.Status.RUNNING
                         },
                 )
             } finally {

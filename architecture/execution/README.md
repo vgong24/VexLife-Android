@@ -1,633 +1,345 @@
-# VexExecution — owned coroutine execution bridge
+# VexExecution — relationship-led runtime boundary
 
 [VXG RealForever]
 
-## Question
+> **PR #206 review candidate — identity design reopened**
+>
+> The current implementation at the parent source head introduced several useful corrections, but
+> its identity decomposition is **not** treated as mastered merely because each individual concept is
+> internally coherent. This PR now re-derives the minimum runtime contract from the actual code
+> relationships and the demonstrated consumers before any fresh human vetting is written.
 
-> I need asynchronous work. Where is it allowed to start, how is it named, how can it be stopped,
-> and what prevents it from becoming uncontained coroutine machinery in ordinary feature code?
+VexExecution owns **present runtime custody**. It does not own semantic product truth, historical
+sequence, human activity history, provider meaning, or a second identity vocabulary for facts that
+already have a rightful parent.
 
-Put the work in a `VexExecution`.
-
-`VexExecution` is the architectural meta-pattern. Ordinary feature/UI/domain classes do not receive
-`VexCoroutineLauncher`; the launcher is internal foundation machinery. A class that needs managed
-coroutine execution must make that role explicit by extending `VexExecution`.
-
-```text
-VexExecutionRoot
-    -> internal VexCoroutineLauncher
-    -> active[InstanceId]
-    -> relationships[RelationshipId] only for maintained semantic work
-
-FeatureExecution : VexExecution
-    -> launchOnce(callable)      # fail closed on an unfinished same-source invocation
-    -> launch(callable)          # every invocation intentionally independent
-    -> launchForCollect(flowProvider) { value -> ... }
-    -> forceStop(callable)
-    -> joinStop(callable)
-
-semantic foundation owner
-    -> supplies RelationshipId
-    -> selects Approach
-    -> Execution coordinates Earliest / Latest / Queued
-```
-
-## Why this evolved from ordinary coroutine usage
-
-This foundation is not a rejection of Kotlin coroutines. It is a response to repeated application-level
-failure modes that appear when every feature is free to reconstruct coroutine ownership itself.
-
-```text
-TRADITIONAL / LOCAL CHOICE
-    scope.launch { ... }
-
-PRESSURE OBSERVED
-    Which scope owns this?
-    Who can stop it?
-    Does cancellation suppress restart?
-    Is the Job retained anywhere?
-    Can a sibling failure kill unrelated work?
-    Can this work outlive the Screen/Service/session that created it?
-
-VEX RESPONSE
-    VexExecution
-    -> one sanctioned execution boundary
-    -> named/keyed Job custody
-    -> forceStop / joinStop
-    -> supervised sibling ownership
-```
-
-The same evolution applies to Flow collection:
-
-```text
-TRADITIONAL
-    launch {
-        flowA.collect { ... }
-        flowB.collect { ... }
-    }
-
-FAILURE
-    flowA may never complete
-    -> flowB never begins
-
-VEX
-    launchForCollect(flowA) { ... }
-    launchForCollect(flowB) { ... }
-
-RESULT
-    one managed Job per Flow source
-    -> concurrent sibling collectors
-    -> independently addressable lifetime
-```
-
-And to finite work:
-
-```text
-TRADITIONAL
-    scope.launch {
-        callA()
-        callB()
-        callC()
-    }
-
-QUESTION
-    Are A/B/C three independent executions,
-    or one semantic operation implemented by three suspend calls?
-
-VEX
-    define one suspend operation when they are one intention
-    -> launch(operationReference)
-
-RESULT
-    execution topology follows meaning rather than incidental call count
-```
-
-The architecture therefore removes repeated coroutine-lifetime decisions while leaving domain meaning
-visible. Behavior, Relay, Connection/provider, repository, Compose, and WorkManager keep their own
-rightful responsibilities.
-
-## Public authoring language
-
-Finite direct execution keeps two explicit contracts:
+## Whole-architecture position
 
 ~~~text
-launchOnce(...)
-    one unfinished invocation per SourceRef
-    second unfinished same-source invocation fails closed
+human / provider input
+-> Family Control or already-observed reality
+-> VexFamily
+   -> CURRENT State + Control
+   -> Act?
+   -> admitted State? + Effect?
 
-launch(...)
-    every invocation is intentionally independent
-    each admitted invocation receives a fresh InstanceId
-~~~
+Effect
+-> concrete Connection/runtime
+   -> owns realization / provider interpretation / currentness
+   -> forms the rightful runtime RelationshipId when execution is required
 
-Maintained overlap semantics are not authored from arbitrary direct `trigger` values. A semantic
-foundation such as Family supplies a `VexExecution.RelationshipId`, then chooses an Approach:
-
-~~~text
 RelationshipId
-    WHICH semantic work intentionally coordinates?
-    supplied by the rightful semantic owner
+-> VexExecution
+   -> current active coroutine custody
+   -> overlap behavior
+   -> cancellation / joining
+   -> Handle for one exact occurrence
 
-Approach.Earliest
-    earliest unfinished instance is sufficient
+accepted / observed facts
+-> VexLogger
+   -> chronology
+   -> readable/debug/history projections
 
-Approach.Latest
-    newest supersedes predecessors
-    predecessor teardown completes before newest begins
-
-Approach.Queued
-    every admitted instance remains meaningful
-    execute in arrival order
+VexBoard / debug surfaces
+-> project the semantic and chronological truth humans actually need
+-> do not reverse-engineer meaning from execution implementation metadata
 ~~~
 
-Execution does not construct semantic identity from `Any`, string triggers, or ordered argument bags.
+The arrows matter. A lower layer should not re-record enough metadata to reconstruct an upstream
+relationship that was already known when the work was admitted.
 
-For Family-originated work:
+## Target runtime responsibility
+
+The smallest currently justified execution grammar is:
 
 ~~~text
-live Family
-+ Control name/type
-+ optional typed Control ResourceId
-=
-Family RelationshipId
--> VexExecution.RelationshipId
+VexExecutionRoot
+    one execution-tree lifetime
+    dispatcher / parent Job
+    terminal root shutdown
+
+RelationshipId
+    one typed, rooted coordinate saying which runtime work belongs together
+
+Approach
+    Independent
+    Earliest
+    Latest
+    Queued
+
+Handle
+    exact capability over one admitted coroutine occurrence
+
+private ManagedOccurrence
+    Job
+    only the current runtime metadata execution actually needs
 ~~~
 
-Begin chooses only Approach. Family owns the relationship composition.
+This is a candidate boundary under review. The exact public/private Kotlin representation still has
+to be reconciled with the current implementation and proven before vetting.
 
-A maintained Flow observation remains a separate contract:
+## Relationship identity — root downward, not reverse reconstruction
 
-```kotlin
-launchForCollect(repository::states) { state ->
-    accept(state)
-}
-```
-
-A second unfinished observation of the same source fails closed. That one-per-source observation law
-does not leak into ordinary finite `launch`.
-
-The callable remains the operation Vex actually invokes, not a decorative source label for unrelated
-lambda work.
-
-`launch` never automatically retries. `launchForCollect` may use bounded recovery only for
-source/subscription failure. A failure thrown while consuming a valid emitted value becomes
-`FAILED` with no automatic resubscription. Intentional cancellation never restarts.
-
-`launchOnce` preserves its fail-closed same-source contract. `launch` is the separate explicit
-surface for intentionally independent finite invocations.
-
-## Worker preparation and provider-affine commit
-
-Some finite operations have two materially different execution contexts:
-
-```text
-human interaction
--> expensive / blocking preparation
--> thread-affine provider commit
-```
-
-Do not solve that by moving the provider itself onto a worker thread. Keep one semantic operation in
-one managed Vex execution and make the thread boundary explicit:
-
-```kotlin
-internal suspend fun playForExecution(
-    request: PlayRequest,
-) {
-    val prepared =
-        preparePlayback(
-            request,
-        )
-
-    handoff(
-        mediaControllerDispatcher,
-    ) {
-        commitPlayback(
-            prepared,
-        )
-    }
-}
-```
-
-`launch(::playForExecution, request)` owns the whole operation. The root dispatcher owns the
-ordinary worker phase. `handoff(dispatcher) { ... }` is only a structured context switch inside that
-same managed Job; it does not create another execution ref, retry boundary, detached coroutine or
-lifetime owner.
-
-The target dispatcher belongs to the provider/thread-affinity owner. Do not globally equate
-"foreground" with `Dispatchers.Main`: Android Media3, a native provider, a serial device API or a
-test double may each have a more exact required dispatcher/looper.
-
-Use this shape only when a real boundary exists. StateFlow/Compose consumers do not need a main-thread
-handoff merely to observe immutable state; publisher/consumer machinery already owns that delivery.
-The handoff exists for an actual thread-affine commit.
-
-```text
-BACKGROUND_PREPARATION != PROVIDER_COMMIT
-HANDOFF != NEW_JOB
-HANDOFF != NEW_OPERATION
-HANDOFF != RETRY_POLICY
-PROVIDER_AFFINITY != ALWAYS_MAIN
-```
-
-## Execution identity and runtime instance
-
-Execution keeps separate truths:
+The earlier Family pressure demonstrated a useful law:
 
 ~~~text
-VexExecution.SourceRef
-    automatic
-    source class + callable name
-    diagnostic / source-addressing information
+live owner
++ semantic relationship
++ optional typed child/resource identity
+= one relationship coordinate
+~~~
 
-VexExecution.InstanceId
-    automatic
-    generated for every admitted execution
-    exact runtime occurrence
+The important part is not that every RelationshipId must be Family-shaped. It is that the owner
+forms identity **at the point where the meaning is already known**.
 
-VexExecution.RelationshipId
-    semantic maintained-work identity
-    supplied by the rightful semantic owner
-    raw use is an error-level foundation opt-in
+Examples:
 
-VexExecution.Approach
-    Independent / Earliest / Latest / Queued
-    overlap handling
+~~~text
+ThemeModeConnection
+└── Persistence
+
+DistributionSession
+├── Preparation
+└── LegPreparation
+    └── optional typed leg/resource child
+
+Family instance
+└── Control.Play
+    └── TrackId("abc")
+~~~
+
+A relationship may therefore be composable/hierarchical while preserving explicit equality laws for
+its segments:
+
+~~~text
+live owner segment
+    referential equality
+
+type segment
+    exact type equality
+
+typed value/resource segment
+    stable value equality
+
+callable segment
+    only when callable identity is itself the relationship meaning
+~~~
+
+Do not flatten typed identity into strings merely to make a map key.
+
+### Why this matters
+
+The runtime should be able to address the relationship it was given:
+
+~~~text
+is relationship X active?
+which active children exist below X?
+stop exact X
+stop descendants of X when that operation is actually earned
+~~~
+
+It should not need to scan a bag of executions and reconstruct ancestry from:
+
+~~~text
+OwnerToken
++ callable
++ SourceRef
++ CoordinationKey
++ InstanceId
+~~~
+
+when the parent relationship was already known before launch.
+
+## Relationship is not occurrence
+
+One relationship may legitimately contain more than one accepted coroutine occurrence.
+
+Queued work is the clearest pressure:
+
+~~~text
+Relationship: Upload(account-A)
+
+occurrence
+occurrence
+occurrence
 ~~~
 
 Therefore:
 
 ~~~text
-SOURCE REF
-!= INSTANCE ID
-!= RELATIONSHIP ID
-!= APPROACH
+RelationshipId
+    which work belongs together
+
+Approach
+    how overlapping occurrences of that relationship behave
+
+occurrence / Handle
+    one actual coroutine execution
 ~~~
 
-The active execution registry is keyed by `InstanceId`. Maintained overlap coordination is keyed by
-`RelationshipId`:
+The occurrence must be distinguishable internally so Jobs can be controlled correctly. That does
+**not** automatically earn a public/global InstanceId vocabulary.
+
+If an external consumer later proves a need for exact concurrent-occurrence correlation, that
+coordinate must be earned by that consumer. Logging/debug correlation is not by itself permission to
+promote a process-global counter into semantic runtime identity.
+
+## Overlap policy belongs to the relationship
 
 ~~~text
-active[InstanceId]
-relationships[RelationshipId]
+Independent
+    each accepted occurrence is independent
+
+Earliest
+    an existing unfinished occurrence is sufficient
+
+Latest
+    newest accepted occurrence supersedes unfinished predecessors
+
+Queued
+    every accepted occurrence remains meaningful and runs in admission order
 ~~~
 
-Execution does not add another owner/trigger/argument identity layer around the RelationshipId it receives.
-Raw RelationshipId implementation/bridging is guarded by `RelationshipFoundationApi`; product code
-should enter through its semantic owner's typed boundary instead.
+These are policies over one RelationshipId.
 
-Family currently forms its RelationshipId from:
+A separate CoordinationKey is not currently accepted as necessary merely because Earliest / Latest /
+Queued need a map key. If the same object answers "which work coordinates?", it is already expressing
+a relationship.
+
+## Source/callable is implementation unless meaning says otherwise
+
+A callable such as:
 
 ~~~text
-live Family identity
-+
-Control name/type
-+
-optional typed ResourceId<Family>
+store::save
+session::prepareForExecution
+repository::restorePersistedState
 ~~~
 
-That composition belongs to Family because Family owns the Control vocabulary. Execution only owns
-coroutine custody and overlap behavior.
+is ordinarily **how** a relationship is realized today.
 
-`SourceRef` may change when source is renamed or obfuscated and is therefore not durable semantic
-identity. A RelationshipId is likewise a live runtime coordination identity unless its rightful semantic
-owner separately establishes a durable serialization contract.
+It is not automatically **what the relationship means**.
 
-## Collection recovery boundary
-
-Collection recovery is deliberately narrower than "anything inside the collector failed":
-
-```text
-source() throws
-OR
-Flow upstream throws
--> eligible for bounded source recovery
-
-onEach(value) throws
--> FAILED
--> restartCount unchanged
--> no automatic resubscription
-```
-
-This prevents VexExecution from silently becoming a business/provider retry engine. A consumer may
-perform an effect after receiving a valid value; if that effect fails, the feature/Connection/Session
-owns what that failure means and whether Retry is lawful.
-
-Resubscription may replay source values. A StateFlow, for example, immediately emits its current
-value to a new collector. Consumers that perform non-idempotent effects therefore need explicit
-admission/currentness and should opt out of source recovery when replay would be unsafe.
-
-## Root lifetime custody
-
-```text
-own VexExecutionRoot
--> own its shutdown
-```
-
-`VexExecutionRoot` currently owns an independent `SupervisorJob`. Merely retaining the root inside a
-ViewModel, Service, or session does not parent its cancellation to that Android lifetime. The owner
-must call `forceStopAll` / `joinStopAll` at its real terminal boundary.
-
-A real production consumer should prove that custody before the foundation considers parent-Job
-convenience or any lifecycle adapter.
-## Control
-
-```text
-handle.forceStop()
-    cancel this exact InstanceId
-
-handle.joinStop()
-    cancel + join this exact InstanceId
-
-forceStop(callable)
-    cancel every currently unfinished instance from this SourceRef
-
-joinStop(callable)
-    cancel + join every currently unfinished instance from this SourceRef
-```
-
-Source-addressed control is deliberately plural because one source may now have several independent
-finite instances. Exact per-instance control belongs to the Handle.
-
-Cancellation remains Kotlin cooperative cancellation. Vex does not claim unsafe arbitrary JVM/native
-thread termination.
-
-## Custody and sequence context
-
-Active custody and maintained overlap handling are separate:
+For example:
 
 ~~~text
-active
-    LinkedHashMap<InstanceId, ManagedExecution>
-
-relationships
-    LinkedHashMap<RelationshipId, MaintainedRelationship>
+ThemeMode / Persistence
+-> today: ThemeModeStore::save
+-> tomorrow: repository::persistThemeMode
 ~~~
 
-Every admitted launch receives a unique InstanceId. Earliest / Latest / Queued use an exact
-RelationshipId key. Ordinary independent launch has no maintained Relationship.
+The relationship should survive that implementation change.
 
-A cancelling predecessor continues to occupy its RelationshipId until its Job is actually completed.
-Kotlin may report `isActive == false` while structured/non-cancellable teardown is still running; a
-later Latest or Queued launch may not skip that unfinished predecessor.
+Callable identity may remain private execution metadata where required to invoke/cancel a specific
+implementation path. It should enter RelationshipId only when the caller deliberately says that
+callable identity is itself the relationship boundary.
 
-The map value stores the active Approach and ordered instance membership. Attempting to use the same
-unfinished RelationshipId simultaneously with a different Approach fails closed rather than silently
-creating two lanes.
+## Historical sequence does not belong in VexExecution
 
-## Ownership laws
+Execution owns the current active set it needs to behave correctly.
 
-- one root `SupervisorJob` isolates sibling executions;
-- one named managed Job remains stable across source-recovery attempts;
-- nested structured work remains a descendant of that managed Job;
-- `forceStop` / `joinStop` suppress restart because cancellation is terminal;
-- root shutdown closes admission before cancelling the complete tree;
-- work arriving after shutdown fails closed;
-- external registry readers cannot mutate retained execution state.
-
-## Boundaries
-
-`VexExecution` owns coroutine execution mechanics. It does **not** replace:
-
-- Behavior meaning;
-- Relay convergence;
-- Connection/provider ownership;
-- repository dispatcher confinement (`withContext`, provider serialization, etc.);
-- Compose presentation-local `LaunchedEffect` / lifecycle observation;
-- WorkManager or other process-death durability;
-- business retry/idempotency.
-
-Use Relay when several changing truths must converge. Direct finite execution chooses between
-fail-closed `launchOnce` and intentionally independent `launch`. Maintained Earliest / Latest /
-Queued coordination is admitted through a semantic foundation that supplies a RelationshipId; ordinary
-feature code does not author raw maintained triggers. Use `launchForCollect` only in an
-execution/runtime bridge that truly owns a sustained Flow observation.
-
-These finite-launch relationships govern coroutine custody only. They do not decide whether a
-Control is lawful, what semantic State should be admitted, whether an asynchronous result is still
-semantically current, or whether provider truth is fresh.
-
-## Why the test fixture exists
-
-The test fixture follows the same rule as the Journey infrastructure: feature tests should declare the
-meaningful scenario, while shared infrastructure owns mechanics that would otherwise be copied and
-forgotten.
-
-```text
-TRADITIONAL TEST SETUP
-    runTest
-    + TestCoroutineScheduler
-    + StandardTestDispatcher
-    + VexExecutionRoot
-    + try/finally
-    + cancel/join cleanup
-
-REPEATED RISK
-    one test forgets cleanup
-    -> collector/restart Job survives
-    -> later test fails for the wrong reason
-
-VEX TEST FIXTURE
-    VexExecutionTestRule
-    -> fresh scheduler/root before every test
-    -> cancellation-first teardown after every test
-    -> complete join before the next test begins
-```
-
-Feature construction intentionally remains in the concrete test's `@Before`. Hiding repository,
-provider/fake, and real `VexExecution` construction behind a generic feature builder would shorten
-the file while making the architecture harder for a new human or AI to perceive.
-
-### Virtual-time decision map
-
-Use the smallest scheduler action that matches the claim:
-
-```text
-runCurrent()
-    run everything ready at the CURRENT virtual timestamp
-    do not move time
-    use this to inspect an intermediate concurrency boundary
-
-advanceTimeBy(n)
-    move virtual time by n
-    use this only when passage of time is itself part of the contract
-    (restart backoff, timeout, delayed cleanup, etc.)
-
-advanceUntilIdle()
-    keep advancing/running until no work is scheduled
-    useful for "finish whatever can finish"
-    avoid it when the test needs to inspect an in-between race state
-```
-
-This avoids the traditional flaky pattern of advancing arbitrary real/fake milliseconds merely to
-"give the coroutine time to run." A race test instead follows:
-
-```text
-CAUSE
--> runCurrent()
--> OBSERVE
-
-RELEASE EXTERNAL GATE / CHANGE INPUT
--> runCurrent()
--> OBSERVE
-
-ADVANCE TIME
-only when time itself is the behavior under test
-```
-
-Teardown is deliberately different from scenario progression:
-
-```text
-WRONG TEARDOWN
-    advanceUntilIdle() on a still-active tree
-    -> may let leaked/restarting work continue until it happens to settle
-
-VEX TEARDOWN
-    close/cancel first
-    -> advance only cancelled cleanup
-    -> join complete tree
-```
-
-## Deterministic feature-test pattern
-
-The execution module exposes reusable **test fixtures** for downstream feature tests. The fixture
-owns only the universal mechanics that would otherwise be repeated in every class:
-
-```text
-fresh TestCoroutineScheduler per test
--> StandardTestDispatcher
--> VexExecutionRoot
--> scenario executes
--> cancel execution tree
--> advance cancelled cleanup
--> join tree before the next test
-```
-
-Typical feature-test shape:
-
-```kotlin
-@get:Rule
-val vexExecution =
-    VexExecutionTestRule()
-
-private lateinit var repository:
-    InMemoryThingRepository
-
-private lateinit var execution:
-    ThingExecution
-
-@Before
-fun setUp() {
-    repository =
-        InMemoryThingRepository()
-
-    execution =
-        ThingExecution(
-            root = vexExecution.root,
-            repository = repository,
-        )
-}
-
-@Test
-fun example() =
-    vexExecution.runTest {
-        execution.doThing()
-        runCurrent()
-
-        // scenario-specific assertions
-    }
-```
-
-The split is intentional:
-
-- the reusable rule owns scheduler/root creation and guaranteed teardown;
-- the feature's `@Before` visibly owns how the real class-under-test is assembled;
-- individual tests own only scenario arrangement, causes, scheduling boundaries, and assertions;
-- feature-specific `@After` is needed only for resources that intentionally live outside the
-  VexExecution tree.
-
-Teardown never advances an active tree "until idle." It first closes/cancels the Vex execution root,
-then advances the already-cancelled virtual scheduler so structured cleanup can finish, and finally
-joins the tree. This prevents one test's collector/restart job from leaking into the next test while
-also avoiding a cleanup strategy that could hide the leak by simply letting it keep running.
-
-Canonical consumer-style example:
-
-```text
-src/test/.../execution/usage/VexExecutionVirtualTimeUsageTest.kt
-```
-
-It deliberately builds its repository and real `VexExecution` in `@Before`, then proves:
-- two independent `launchForCollect` calls begin as concurrent sibling Jobs;
-- bounded restart delay can be advanced without real sleeping;
-- `joinStop` remains incomplete until structured cleanup really finishes.
-
-Do not extract feature-specific scenario builders merely to shorten tests. Promote a feature-owned
-fixture/fake only when repeated data/provider setup becomes a real burden and the extracted helper
-still makes the underlying architecture obvious.
-
-## Proof
-
-The focused `VexExecutionTest` source now protects both inherited behavior and the new identity
-relationships.
-
-Current execution proofs present in source:
+VexLogger owns accepted/observed chronology.
 
 ~~~text
-launchOnce
-    second unfinished invocation from the same SourceRef -> rejected
+VexExecution
+    "what work is active now, and how do I control it?"
 
-launch
-    same callable -> distinct concurrent InstanceIds
-    same SourceRef is preserved
-
-maintained RelationshipId
-    Earliest -> later overlap receives the existing unfinished InstanceId
-    Latest -> newest waits through predecessor teardown
-    Queued -> every admitted instance executes in arrival order
-
-launchForCollect
-    duplicate unfinished observation of the same source still fails closed
+VexLogger
+    "what accepted/observed facts happened, and in what order?"
 ~~~
 
-Family's focused proof separately establishes that Control name is always included, arbitrary Control
-payload is not identity, typed ResourceId narrows identity when provided, and two live Family instances
-remain distinct.
+Do not turn VexExecutionRoot into a second event ledger.
 
-The source also keeps sibling isolation, bounded source recovery, structured cancellation/teardown,
-registry defensiveness, typed callable invocation, and post-shutdown admission rejection.
+Likewise, do not add a global execution number merely so history can later be sorted when the logger
+already owns chronology. An internal storage/correlation mechanism may exist when implementation
+requires it; that does not make it architectural identity.
 
-Exact-head repository-owned `vexVerifyJvm` proof passed for the typed Control/RelationshipId
-candidate in PR #193, and that exact candidate tree is now merged on main. GitHub-hosted workflow/status
-evidence was not produced for that head, so this remains a local/repository-owned proof claim rather
-than a hosted-CI claim. Device/Journey/ScreenCrawler and lived-product acceptance are separate.
+## Handle
 
-<!-- [VXG RealForever][VEXLIFE-ANDROID][ARCHITECTURE][EXECUTION] -->
-
-
-## Operation/result callback ownership
-
-For `VexExecution.begin(...)`, the suspend operation is the operation boundary:
+A Handle is the natural exact control capability for one admitted occurrence:
 
 ~~~text
-beforeOperation callback
--> operation(argument)
-   throws -> onFailure(operation failure)
-
-operation returns Result
--> onResult(Result)
-
-onResult throws
--> execution FAILED
--> does NOT call onFailure
+forceStop()
+joinStop()
+awaitCompletion()
+current runtime status if a real consumer needs it
 ~~~
 
-This distinction matters for Family result admission. A Store/provider operation that returned
-successfully must not be rewritten as provider failure merely because later semantic result handling
-failed.
+The Handle does not need a human-readable SourceRef in order to control its Job.
 
-```text
-OPERATION FAILURE
-!= RESULT-ADMISSION FAILURE
-```
+Readable meaning should come from the RelationshipId / owning semantic labels. Source-code navigation
+metadata can be attached privately or projected by debug tooling without becoming another identity
+system.
 
-<!-- [VXG RealForever][VEXEXECUTION][OPERATION-RESULT-OWNERSHIP] -->
+## Current implementation findings — not yet accepted as the target
+
+At the source head that triggered this re-review, VexExecution currently contains:
+
+~~~text
+OwnerToken
+KCallable sourceIdentity
+SourceRef
+CoordinationKey
+CoordinationIdentity
+process-global InstanceId
+Snapshot
+activeExecutions keyed by InstanceId
+~~~
+
+Those changes solved real observed edge cases:
+
+~~~text
+same class/callable under two live owners must not collide
+callable name text must not be treated as exact callable identity
+one feature owner must not shut down the shared root
+SourceRef text must not authorize cancellation
+terminal history must not accumulate forever in root StateFlow
+source failure must not be confused with downstream consumer failure
+~~~
+
+The findings survive.
+
+The **identity fragmentation does not automatically survive**.
+
+Before the execution boundary is called mastered again, the implementation must be challenged against
+whether one rooted RelationshipId plus private occurrence mechanics preserves the same correctness
+with less vocabulary and less reverse mapping.
+
+## VexLogger boundary
+
+VexExecution does not create history for VexBoard.
+
+When a runtime fact is meaningful enough to observe:
+
+~~~text
+the rightful owner accepts/observes the fact
+-> VexLogger records it in chronology
+-> VexBoard / LogHistory / debug projections may display it
+~~~
+
+Execution should not duplicate logger sequence, user-readable labels, or causal history merely so a
+future projection can reconstruct what the relationship already meant.
+
+See:
+
+~~~text
+architecture/logging/README.md
+~~~
+
+for the whole-architecture logging boundary now included in this PR.
+
+## Still held
+
+~~~text
+exact final Kotlin shape of hierarchical RelationshipId
+whether any public occurrence identifier is actually earned
+generic descendant-query API beyond demonstrated consumers
+durable/cross-process runtime restoration
+generic timeout/retry policy
+generic provider retry policy
+logger debug-span correlation for truly concurrent identical relationships
+~~~
+
+Held questions remain held. They are not reasons to preserve speculative identity machinery.
+
+<!-- [VXG RealForever][VEXEXECUTION][RELATIONSHIP-LED][PR206-REVIEW-CANDIDATE] -->

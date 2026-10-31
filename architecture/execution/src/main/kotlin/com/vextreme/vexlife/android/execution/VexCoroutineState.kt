@@ -13,10 +13,10 @@ typealias VexCoroutineStatus =
     VexExecution.Status
 
 @Deprecated(
-    "Use VexExecution.State",
+    "Use VexExecution.Snapshot",
 )
 typealias VexCoroutineState =
-    VexExecution.State
+    VexExecution.Snapshot
 
 @Deprecated(
     "Use VexExecution.Handle",

@@ -25,46 +25,177 @@ architecture/behavior/src/main/.../VexFamily.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-Current call graph:
+Mastered semantic grammar:
 
 ~~~text
-Family.activate(control)
--> concrete Family.act(currentState, control)
--> native when(currentState)
--> native when(control)
--> stay / admit / optional begin
--> StateRelay / execution
+CURRENT State + Control
+-> Act?
+-> admitted State? + Effect?
+
+Effect
+-> concrete Connection/runtime
+-> attempted transformation
+-> observed semantic State
+-> Family.observe(State)
+-> same StateRelay
 ~~~
 
-The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
-or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
-
-Current PR #193 refinement also keeps execution identity inside the typed Family boundary:
+Direct Family owns no Store, VexExecution, logger, provider, or lifecycle mechanism.
 
 ~~~text
-Control<Family>
--> Control kind/name included automatically
--> optional Control.Resource<Family, ExactId>
--> exact ResourceId object retained
--> Family-owned RelationshipId
--> Begin chooses Approach only
--> VexExecution coordinates that RelationshipId
+VexFamily<Family, State, Control, Effect>
+
+State
+    current semantic truth
+
+Control
+    semantic request / affordance input
+
+Act
+    lawful outcome of exact CURRENT State + Control
+
+Effect
+    runtime transformation request; never resulting truth
 ~~~
 
-There is no arbitrary Begin trigger/argument identity surface. This refinement is accepted on main
-through [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) after exact-head
-repository-owned `vexVerifyJvm` proof and Independent Assurance. That acceptance does not claim
-device/Journey/ScreenCrawler or lived-product proof for the Direct Family foundation.
-
-Compound/process integration remains separate and open:
+Reusable outward meaning preserves the same owner coordinates:
 
 ~~~text
-InputState -> process(InputState) -> OutputState
-OutputState -> ??? -> Family.currentState
+DisplayState<Family, State>
+
+Projection<Family, State, Display>
+    State belongs to Family
+    Display is DisplayState<Family, State>
 ~~~
 
-<!-- [VXG RealForever][FOUNDATION][FAMILY][NATIVE-TRAVERSAL] -->
+Family owns displayStateFor(State) and projectionFor(State), so outward snapshots are not assembled
+by unrelated presentation code.
 
+`activate(Control)` applies immediate admitted State and returns the Act. A concrete Connection
+realizes the Effect.
+
+`observe(State)` accepts only already-reconciled semantic reality. Provider interpretation,
+stale-result gates, request identity and concurrency belong to the Connection/runtime that owns that
+external relationship.
+
+ThemeMode is the Direct-Family patient zero:
+
+~~~text
+ThemeModeFamily
+-> Select(mode)
+-> stay/admit + PersistSelection(mode)
+
+ThemeModeConnection
+-> realizes PersistSelection through ThemeModeStore / VexExecution
+-> restores fresh-process initial State from ThemeModeStore.current()
+~~~
+
+Persistence therefore remains a ThemeMode runtime realization rather than becoming Family
+architecture.
+
+Repository-wide review follows both **Subtractive Completion** and **Mastered Architecture** in
+`docs/CULTURE.md`: prior human vetting is provenance, not a prohibition on replacing a weaker law
+with a better end-state and freshly re-vetting the changed boundary.
+
+<!-- [VXG RealForever][FOUNDATION][FAMILY][MASTERED-SEMANTIC-GRAMMAR] -->
+
+
+### PR #206 whole-architecture candidate — Family / Connection / Execution / Logger
+
+PR #206 now reviews the related architecture as one responsibility graph rather than treating
+VexExecution or VexLogger as already-solved utilities that can be reused without re-deriving their
+place.
+
+~~~text
+VexFamily
+    semantic State / Control / Act / Effect
+    one current State owner
+    no coroutine / logger / provider mechanics
+
+Connection / concrete runtime owner
+    Effect realization
+    provider/runtime interpretation
+    stale/currentness decisions
+    forms rightful runtime RelationshipId
+
+RelationshipId
+    rooted typed coordinate for work that belongs together
+
+VexExecution
+    present runtime custody only
+    RelationshipId -> active occurrence(s)
+    overlap policy / cancellation / joining
+
+VexLogger
+    accepted / observed facts in chronology
+    actions / arrivals / disappearances / results / major milestones
+    derives no new semantic truth
+
+LogHistory / Logcat / VexBoard / Debug
+    projections of those truths
+    debug may add expectations/discrepancy checks
+    production does not duplicate expectation/revision bookkeeping
+~~~
+
+Current review status:
+
+~~~text
+Direct Family
+    strongest current mastered candidate
+
+VexExecution
+    REOPENED
+    current OwnerToken / SourceRef / CoordinationKey / global InstanceId decomposition is
+    implementation evidence, not accepted architecture
+
+VexLogger
+    INCLUDED IN PR #206 REVIEW
+    current before/after transition-shaped records and sequence/duration fields are implementation
+    evidence to reconcile against observed-fact chronology before vetting
+~~~
+
+Permanent pressure under review:
+
+~~~text
+semantic/relationship identity
+!= callable implementation
+!= execution occurrence
+!= logger chronology
+!= debug correlation
+!= human projection label
+~~~
+
+The candidate direction is to preserve each truth once at its rightful owner:
+
+~~~text
+RelationshipId
+    structural meaning
+
+VexExecution
+    current custody
+
+VexLogger
+    temporal meaning
+
+Debug
+    optional expectation + discrepancy
+
+VexBoard
+    human projection
+~~~
+
+See:
+
+~~~text
+architecture/behavior/FAMILY-CIRCUIT.md
+architecture/execution/README.md
+architecture/logging/README.md
+~~~
+
+No fresh VettedWithHuman marker is implied by this map. Execution and Logger remain under explicit
+human architectural review.
+
+<!-- [VXG RealForever][FOUNDATION][PR206][WHOLE-ARCHITECTURE-CANDIDATE] -->
 
 ## Foundation establishment criteria
 
@@ -289,34 +420,74 @@ instrumentation tests executed = 10
 Further migration is consumer-driven. Raw Compose findings remain advisory while real product
 surfaces teach which additional Vex forms are actually worth preserving.
 
-## Execution bridge candidate
+## VexExecution mastered runtime boundary
 
 Entry:
-[`architecture/execution/README.md`](../../architecture/execution/README.md)
+[architecture/execution/README.md](../../architecture/execution/README.md)
 
 ### Intention
 
-A developer should not decide coroutine ownership ad hoc from whichever Screen, repository, Service,
-or callback happens to need asynchronous work. The execution foundation makes that role explicit:
+VexExecution owns runtime execution mechanics without becoming semantic architecture.
 
-```text
-FeatureExecution : VexExecution
--> launchOnce(callable)
--> launchForCollect(flowProvider)
--> private ordered Job custody
--> forceStop / joinStop
-```
+~~~text
+VexExecutionRoot
+    one execution-tree lifetime
+    dispatcher
+    terminal root shutdown
+    active custody projection
 
-The actual `VexCoroutineLauncher` remains internal foundation machinery. Source callables supply both
-the executed function and the source-derived runtime ref, avoiding a parallel hand-maintained ID
-catalog. `launchOnce` never silently retries finite operations; sustained Flow collection owns a
-bounded recovery path where requested. Cancellation is terminal and exact root shutdown closes work
-admission before cancelling the supervised tree.
+VexExecution
+    one exact live runtime owner
+    launch / launchOnce
+    owner-local coordination
+    long-lived observation
+    source/owner cancellation
 
-This candidate is intentionally not yet wired through Relay/Maps/VexStream. PR #77 independently
-identified continuous dependency collector death/restart as execution-lifetime work, while current
-main still contains repeated raw `CoroutineScope`/Job ownership in app/runtime surfaces. Those are
-real consumers, but migration follows only after this kernel passes repository-native Gradle proof.
+Handle
+    one exact occurrence
+    terminal Snapshot
+~~~
+
+Identity remains deliberately separated:
+
+~~~text
+SourceRef
+    diagnostics only
+
+private callable identity
+    exact owner-scoped source uniqueness/cancellation
+
+CoordinationKey
+    owner-local overlap grouping
+
+InstanceId
+    exact runtime occurrence
+~~~
+
+The current mastered boundary removes static begin* authoring, public Approach, and Family-specific
+relationship identity from Execution.
+
+Observation recovery belongs at the observation callsite rather than VexExecutionRoot.
+
+~~~text
+observe(
+    source,
+    ObservationRecovery(...)
+)
+~~~
+
+Only source/upstream collection failure may restart. Downstream consumer failure is an execution
+failure, not source instability.
+
+VexExecutionRoot.activeExecutions is active custody only. Terminal history remains available on the
+individual Handle Snapshot; the root StateFlow is not an unbounded event ledger.
+
+SourceRef equality never grants ownership or cancellation authority. Two same-class live owners may
+run/observe the same callable independently.
+
+Concrete Connections may use VexExecution to realize Effects, but runtime coordination never becomes
+Family/Control/Effect semantic identity.
+
 
 ## Behavior Blueprint experiment
 

@@ -62,6 +62,145 @@ What else becomes wrong if this changes?
 
 Do not let a convenient framework pattern become architecture merely because it compiled.
 
+## Subtractive completion
+
+Architecture work defaults to subtraction before invention.
+
+Before adding or preserving a reusable type, helper, seam, state holder, identity, adapter, callback
+grammar, or lifecycle concept, answer:
+
+```text
+What observed product/contract failure requires this?
+Why can the existing rightful owner not express it directly?
+What required correctness is lost if this addition is removed?
+Who consumes it?
+What recurring reading/execution/maintenance burden does it create?
+```
+
+If removing the proposed addition loses no required correctness, continuity, authority, or proof,
+do not add it. A locally useful capability is not automatically architecture.
+
+When a problem is claimed to be solved, replay the original failure against the candidate. A new
+mechanism's adjacent benefit does not establish that the original failure closed.
+
+Prefer:
+
+```text
+one semantic doorway
++ feature-owned meaning
++ private mechanics
+```
+
+over multiple peer semantic APIs that can author the same outcome.
+
+Tests prove behavior and implementation consistency; they do not earn architecture by themselves.
+Historical machinery remains evidence, not an obligation to preserve a generic abstraction after its
+real consumers disappear.
+
+When human-vetted architecture changes, reopen only the exact changed semantic declarations and
+connections. Do not backdate, broaden, or preserve approval across changed meaning. Unchanged
+semantic laws keep their provenance; changed laws require fresh human review of the exact source.
+
+## Mastered architecture
+
+Human vetting is provenance, not a claim that architecture has reached its best possible form.
+
+~~~text
+VETTED
+    Victor explicitly reviewed this exact semantic law.
+
+MASTERED
+    the current architecture has also been deliberately challenged against the full set of known
+    demonstrated pressures, stripped of accidental implementation coupling, and shaped as the
+    smallest complete long-term semantic grammar we currently know how to build.
+~~~
+
+Do not preserve a weaker design merely because it was previously vetted. If a better end-state is
+recovered, make the semantic change visible, preserve the old approval as history, and seek fresh
+human vetting for the changed law.
+
+Mastery is also not permission to speculate without pressure. The target is neither:
+
+~~~text
+first consumer only
+-> underfit architecture
+~~~
+
+nor:
+
+~~~text
+imagined every possible future
+-> framework maximalism
+~~~
+
+Use all **demonstrated** pressures available across current consumers, lived product requirements,
+Origin Walk history, provider/runtime boundaries, and adjacent accepted architecture. Then choose
+the smallest grammar that can express those pressures without changing its semantic nouns for each
+new realization.
+
+A mastered semantic root should not depend on one realization merely because that realization was
+the first patient zero. For example:
+
+~~~text
+semantic Effect
+!= SharedPreferences
+!= network request
+!= coroutine
+!= provider callback
+
+Connection/reality boundary
+owns those realization mechanics.
+~~~
+
+Before calling an architecture slice mastered, ask:
+
+~~~text
+Would another already-demonstrated consumer force us to rename the semantic nouns?
+Does a semantic root depend on Android/provider/storage/execution mechanics it does not own?
+Are two different causes being hidden behind one convenient API?
+Are two APIs authoring the same semantic truth?
+Can a feature-specific mechanism be replaced by an already-earned semantic role?
+Have we replayed known failure modes against the end-state rather than only the current example?
+~~~
+
+Mastered architecture may still have explicitly open boundaries. The requirement is that the
+settled grammar remains truthful about those unknowns instead of filling them with guessed machinery.
+
+### Preserve known owner coordinates in reusable types
+
+When reusable infrastructure already knows the rightful semantic owner coordinates, carry those
+coordinates in the type rather than relying on naming/proximity/documentation.
+
+~~~text
+WEAKER
+
+DisplayState<State>
+Projection<State>
+
+STRONGER WHEN FAMILY OWNERSHIP IS KNOWN
+
+DisplayState<Family, State>
+Projection<Family, State, Display>
+~~~
+
+The goal is not generic maximalism. Preserve the **strongest already-known ownership coordinates**
+that prevent invalid composition.
+
+If a child is derived by its parent, make the derivation seam compiler-visible through an override or
+parent-owned factory rather than inviting adjacent code to reconstruct the relationship.
+
+~~~text
+State
+-> Family.displayStateFor(State)
+-> Family.projectionFor(State)
+~~~
+
+Prefer compiler-visible ownership to comments such as "these two values must belong together."
+
+This is especially important for AI-authored work: if the type system can reject a wrong owner,
+wrong State, wrong DisplayState, or wrong projection composition, do not leave that correctness as a
+prompt-memory requirement.
+
 ## Foundation before features
 
 Build outward only when the layer underneath is stable enough to explain, test, and recover.

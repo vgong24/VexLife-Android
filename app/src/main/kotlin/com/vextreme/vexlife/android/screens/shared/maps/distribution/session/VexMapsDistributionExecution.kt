@@ -20,18 +20,22 @@ internal class VexMapsDistributionExecution(
         root,
     ) {
     fun start() {
-        launchForCollect(
+        observe(
             source =
                 session::modeDeliveryRouteOutputsForExecution,
+            recovery =
+                VexExecution.ObservationRecovery(),
         ) { output ->
             session.acceptModeDeliveryRouteOutput(
                 output,
             )
         }
 
-        launchForCollect(
+        observe(
             source =
                 session::navigationOutputsForExecution,
+            recovery =
+                VexExecution.ObservationRecovery(),
         ) { output ->
             session.acceptNavigationOutput(
                 output,
@@ -117,8 +121,8 @@ internal class VexMapsDistributionExecution(
     }
 
     suspend fun shutdown() {
-        root.joinStopAll(
-            "VexMaps Distribution session shut down",
+        joinStopAll(
+            "VexMaps Distribution execution shut down",
         )
     }
 }

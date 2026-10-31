@@ -7,234 +7,226 @@ The current candidate keeps the runtime call graph visible in ordinary Kotlin.
 ## Runtime
 
 ~~~text
-caller / UI
+Connection / caller
 -> Family.activate(control)
--> concrete Family.act(currentState, control)
--> when (currentState)
--> when (control)
--> stay() or admit(State)
--> optional begin(...)
--> StateRelay / execution
+-> Family.act(CURRENT State, Control)
+-> null / stay(effect?) / admit(State, effect?)
+-> immediate admitted State applied
+-> Act returned
+-> concrete Connection realizes optional Effect
 ~~~
 
-There is no separately constructed Acts table, builder, rule registry, hidden invoke operator, or
-custom State/Control branching DSL between activate(...) and the concrete Family logic.
+Provider/runtime reality returns separately:
+
+~~~text
+provider/runtime facts
+-> concrete Connection reconciliation/currentness gate
+-> semantic Family State
+-> Family.observe(State)
+-> same StateRelay
+~~~
+
+There is no Acts table, builder, rule registry, hidden invoke operator, Store DSL, result-admission
+callback grammar, or custom State/Control branching language in this path.
 
 ## Concrete Family
 
-A feature owns State, Control, one direct function, and only a richer DisplayState when real consumers earn one:
+A concrete Family owns State, Control, Effect, one direct relationship function, and only a richer
+DisplayState when repeated consumer interpretation earns one:
 
 ~~~kotlin
 override fun act(
     currentState: State,
     control: Control,
-): VexFamily.Act<State>? =
+): VexFamily.Act<State, Effect>? =
     when (currentState) {
         State.Light ->
             when (control) {
                 Control.Toggle ->
-                    admit(State.Dark)
+                    admit(
+                        State.Dark,
+                        effect = Effect.PersistSelection(State.Dark),
+                    )
             }
 
         State.Dark ->
             when (control) {
                 Control.Toggle ->
-                    admit(State.Light)
+                    admit(
+                        State.Light,
+                        effect = Effect.PersistSelection(State.Light),
+                    )
             }
     }
 ~~~
 
-Both traversals are Kotlin-native exhaustive when expressions over feature-owned sealed types.
-State remains first because current State is the truth against which incoming Control receives
-meaning.
-
-Do not use `else` at this semantic boundary. New State or Control vocabulary should create
-compiler-visible relationship work. Controls may be grouped in one branch only when they have the
-same exact reviewed outcome.
-
-A reader does not need to learn what state<State> or on<Control> means because those custom helpers
-are no longer part of the current Family path.
+State is the current semantic truth coordinate. Control is the semantic request/affordance input.
+Effect is the runtime transformation request; it never claims the resulting State.
 
 ## Family kinship
 
-State and Control are not merely arbitrary non-null types. One concrete Family coordinate binds the
-two vocabularies:
-
 ~~~text
-VexFamily<Family, State, Control>
-    Family  : VexFamily<Family, State, Control>
+VexFamily<Family, State, Control, Effect>
     State   : VexFamily.State<Family>
     Control : VexFamily.Control<Family>
+    Effect  : VexFamily.Effect<Family>
 ~~~
 
-Family-owned children that carry semantic State require that Family-bound State type, so
-DisplayState / Store / Act cannot be formed around an arbitrary unrelated value type.
-
-The recursive constraint exists only at the root to prove the coordinate is the actual owning
-Family. Descendants then carry the already-bound State relationship instead of repeating the whole
-root equation.
+The Family coordinate prevents semantic roles from unrelated Families being substituted into the
+same relationship.
 
 ## State ownership
 
 ~~~text
 private stateRelay
-  MutableStateFlow<State>
 
 Family.currentState
-  -> stateRelay value
+  -> stateRelay.value
 
 Family.states
   -> stateRelay.asStateFlow()
 
-activate(...)
-  -> Act admitting State
-  -> setCurrentState(State)
-  -> stateRelay.value = State
+activate(Control)
+  -> lawful Act
+  -> immediate admittedState?
+  -> stateRelay
+
+observe(State)
+  -> already-reconciled semantic reality
+  -> stateRelay
 ~~~
 
-StateRelay remains the one live State holder.
+StateRelay remains the one live Family State holder.
 
-## DisplayState responsibility
-
-Display interpretation has an explicit place in the Family tree without requiring every Family to
-invent another state vocabulary:
+`activate` and `observe` are not interchangeable:
 
 ~~~text
-VexFamily
--> DisplayState
-   -> StateOnly(currentState)
+activate(Control)
+    request meaning -> Act
 
-ConcreteFamily
--> DisplayState        # only when a richer repeated classification is earned
+observe(State)
+    reality already interpreted -> State
 ~~~
 
-`VexFamily.DisplayState.StateOnly` is a complete default, not an unfinished placeholder. It tells a
-fresh reader that DisplayState already has a rightful owner and that no parallel ViewState / UiState /
-PresentationState should be created merely to fill a perceived gap.
+`observe` accepts no current-State lambda and performs no stale-result inference.
 
-## Execution relationship identity
+## DisplayState / Projection responsibility
 
-Family owns the relationship composition once:
+Reusable outward meaning preserves exact owner coordinates:
 
 ~~~text
-activate(control)
--> exact live Family
--> exact Control belonging to that Family
--> Control name/type included automatically
--> optional typed Control.resourceId
--> VexFamily.RelationshipId<Family>
--> VexExecution.RelationshipId
--> maintained execution coordination
+VexFamily.DisplayState<Family, State>
+
+VexFamily.Projection<
+    Family,
+    State,
+    DisplayState<Family, State>
+>
 ~~~
 
-Concrete authoring stays intentionally small:
-
-~~~kotlin
-beginEarliest {
-    ...
-}
-
-beginLatest {
-    ...
-}
-
-beginQueued {
-    ...
-}
-~~~
-
-Begin chooses **Approach only**. It accepts no trigger, arbitrary argument tuple, or hand-authored
-relationship string.
+The Family owns the derivation path:
 
 ~~~text
-Control name
-    always included by Family foundation
-
-Control.Resource<Family, ExactId>
-    exact typed narrowing when this Control needs a ResourceId
-
-RelationshipId
-    live Family + Control kind/name + optional exact ResourceId object
-
-Approach
-    Independent / Earliest / Latest / Queued
+State
+-> displayStateFor(State)
+-> Projection(
+       state = that exact State,
+       displayState = display derived from that exact State
+   )
 ~~~
 
-The full Control payload is not automatically identity. If `Control.Play(trackId, position)` needs
-coordination per track, `Play` declares `Control.Resource<Family, TrackId>`; the actual TrackId object
-is preserved in the relationship while `position` remains request payload. Enum Control entries are
-also distinct default Control identities rather than collapsing to their shared enum class.
-A future author cannot pass unrelated execution metadata into Begin because no such parameter exists.
+StateOnly is the complete default when no richer display distinction is earned.
 
-## Logger boundary
+A concrete Family that owns richer display meaning overrides displayStateFor(...). It may also
+narrow projectionFor(...) / currentProjection to its concrete DisplayState type.
 
-Family consumes logging through the independent logger root:
+This makes the reusable arrow compiler-visible instead of relying on a human/AI remembering that
+adjacent projection objects "probably belong together."
 
 ~~~text
-VexFamily
--> VexLogger.Sink
-   -> VexLogger.Event.Family.*
+FAMILY COORDINATE
+    carried through State
+    carried through DisplayState
+    carried through Projection
 ~~~
 
-The Sink is private to the Family runtime. Concrete `act(...)` authoring does not receive logger
-access, so inspecting relationship meaning cannot accidentally emit accepted runtime facts.
+Projection remains derived outward meaning, never another current-State owner.
 
-## Store / Save relationship
-
-The current earned storage path remains tree-shaped. A plain Store supports authored Save; a StateStore
-specialization is earned only when durable truth is exactly Family State:
+## Act / Effect outcome
 
 ~~~text
-VexFamily
--> Store<State>
-   -> save(State)
-   -> WriteResult
-      -> Success
-      -> Failure
+CURRENT State + Control
+-> Act?
 
-VexFamily
--> StateStore<State>
-   -> Store<State>
-   -> observableState
-   -> get()
-   -> forget()
+Act
+-> admittedState?
+-> effect?
+~~~
 
-VexFamily
+Use:
+
+~~~text
+null
+    no lawful Act
+
+stay(effect?)
+    lawful Act; immediate State remains CURRENT
+
+admit(State, effect?)
+    lawful Act; State becomes current immediately
+~~~
+
+The exact activation ordering is:
+
+~~~text
+resolve Act
+-> apply admittedState
+-> return Act
+-> Connection may realize effect
+~~~
+
+Family never realizes the Effect itself.
+
+## Connection / reality boundary
+
+Concrete Connections own runtime reality:
+
+~~~text
+Family
+    semantic State / Control / Act / Effect
+
+Connection
+    Effect realization
+    provider/runtime dependency
+    provider facts -> semantic State mapping
+    stale async/currentness gates
+    lifetime/concurrency mechanics
+~~~
+
+This is the same responsibility shape already demonstrated by the existing VexStream Playback
+Connection. Direct Family does not create a second generic Connection framework until repeated
+Direct-Family implementations prove an exact shared contract.
+
+### ThemeMode
+
+~~~text
+ThemeModeFamily
+-> Control.Select(mode)
 -> Act
-   -> Begin
-      -> Save
-         -> Results
-            -> Success
-            -> Failure
+   -> stay/admit
+   -> Effect.PersistSelection(mode)
+
+ThemeModeConnection
+-> realizes PersistSelection
+-> ThemeModeStore.save(mode)
+-> owns ordered persistence runtime mechanics
+
+fresh process
+-> ThemeModeStore.current()
+-> ThemeModeFamily(initialState)
 ~~~
 
-Family does not expose a broad untyped Store and rediscover State semantics through runtime casts.
-The StateStore specialization is explicit in the type system and exists only where durable truth is
-actually Family State. Durable Store truth still does not become a second live semantic State holder.
-
-There is also no generic Operation hierarchy around the one current Save operation. A common
-operation parent must be earned by another real operation, not anticipated.
-
-## Act outcome
-
-act(currentState, control) returns the authored outcome that activate(...) applies:
-
-~~~text
-noAct()
-  reviewed absence: no lawful Act exists for this exact State + Control pair
-
-stay()
-  current State stays current
-
-admit(State)
-  activate(...) writes State into StateRelay
-
-optional begin(...)
-  activate(...) starts the authored execution consequence
-~~~
-
-The return carrier is `VexFamily.Act<State>`. Act is a Family child rather than another Vex root.
-Its optional Begin child is opened only through Family's protected Act-authoring surface.
+Persistence is one Effect realization, not a Family concept.
 
 ## Human-visible language
 
@@ -242,75 +234,21 @@ Its optional Begin child is opened only through Family's protected Act-authoring
 Family
 State
 Control
+Act
+Effect
 DisplayState
 currentState
 states
 
-activate(control)
-act(currentState, control)
-when (currentState)
-when (control)
-noAct()
-stay()
-admit(State)
-begin(...)
-process(...)
+activate(Control)
+observe(State)
+act(CURRENT State, Control)
+stay(effect?)
+admit(State, effect?)
 ~~~
 
-Except for the Vex domain functions themselves, State/Control traversal is ordinary Kotlin.
-
-## StateRelay currentness
-
-StateRelay is still the one live Family State holder. The missing reusable law is the admission
-boundary around that holder:
-
-~~~text
-incoming Family-owned cause
-+ exact CURRENT State
--> one serialized non-suspending decision
--> next CURRENT State
-~~~
-
-Control activation resolves `act(CURRENT State, Control)` and commits its immediate State inside that
-same boundary. Delayed Begin results also re-enter StateRelay and may author their result against
-exact CURRENT State:
-
-~~~kotlin
-success {
-    admit { current ->
-        if (/* still lawful */) nextState else current
-    }
-}
-~~~
-
-No revision/generation number is invented by Family. Currentness meaning remains feature-owned.
-
-Already-reconciled external truth uses the same StateRelay boundary without becoming a fake Control:
-
-~~~text
-provider / repository observation
--> rightful Connection/source reconciliation
--> concrete Family source method
--> admitCurrent { CURRENT -> next semantic State }
--> StateRelay
-~~~
-
-`admitCurrent` is protected; there is still no public generic State setter.
-
-A State-shaped Family Store is itself a StateRelay dependency; it does not require another observer owner:
-
-~~~text
-StateStore.observableState
--> execution-owned observation lifetime
--> observeStore(CURRENT, stored)
--> concrete Family decision
--> admitCurrent
--> same StateRelay
-~~~
-
-`StateStore` carries the already-earned `observableState / get / save / forget` capability. Plain
-`Store` remains the smaller save-only capability for Families that have not earned durable State
-observation.
+Provider/storage/execution nouns remain outside the semantic Family unless they are themselves the
+feature's semantic vocabulary.
 
 
 ## Process / Compound current State

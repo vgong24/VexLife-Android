@@ -7,10 +7,13 @@ The Direct `VexFamily` foundation accepted on main through
 
 ~~~text
 CURRENT State + incoming Control
--> Act outcome
--> stay / admit
--> optional begin
--> current State / execution
+-> Act?
+-> admitted State? + Effect?
+
+Effect
+-> concrete Connection/runtime attempts transformation
+-> observed semantic State
+-> Family.observe(State)
 ~~~
 
 ## Current foundation state
@@ -34,6 +37,11 @@ Behavior source merely because the Direct Family foundation exists.
 PR #193 is the acceptance/origin reference for the Direct Family identity/custody refinement:
 https://github.com/vgong24/VexLife-Android/pull/193
 
+Architecture evolution in this repository now applies the repo-owned **Subtractive Completion**
+posture from docs/CULTURE.md: additions start rejected, original failures must be replayed against
+proposed fixes, and mechanics stay private unless removing them would lose a demonstrated semantic
+requirement.
+
 ## Start here
 
 Read FAMILY-CIRCUIT.md, then VexFamilyHighConfidenceTest.
@@ -41,12 +49,13 @@ Read FAMILY-CIRCUIT.md, then VexFamilyHighConfidenceTest.
 Current runtime:
 
 ~~~text
-Family.activate(control)
--> concrete Family.act(currentState, control)
--> when (currentState)
--> when (control)
--> stay / admit / optional begin
--> StateRelay / execution
+Connection.activate(control)
+-> Family.activate(control)
+-> Family.act(CURRENT State, control)
+-> null / stay / admit
+-> immediate State admission
+-> return optional Effect
+-> Connection realizes Effect
 ~~~
 
 State and Control traversal are native Kotlin sealed-type when expressions. The current candidate
@@ -84,382 +93,303 @@ states
 
 There is one live semantic State holder.
 
-## DisplayState responsibility
+## DisplayState / Projection responsibility
 
-`DisplayState` is part of the `VexFamily` contract rather than another Vex root:
+Display interpretation stays under the exact Family coordinate:
 
 ~~~text
-VexFamily
--> DisplayState
-   -> StateOnly
+VexFamily.DisplayState<Family, State>
 ~~~
 
-`VexFamily.DisplayState.StateOnly(currentState)` is the complete default. It means current semantic
-State already carries all display meaning this Family has earned. It is not a placeholder and does
-not ask a feature to invent another ViewState / UiState / PresentationState.
+not merely:
 
-A concrete Family should override `displayState` only when real consumers would otherwise repeat the
-same derived interpretation of State. A richer feature-owned classification belongs under that
-concrete Family, for example `ThemeModeFamily.DisplayState`, and implements
-`VexFamily.DisplayState<ThemeModeFamily.State>`.
+~~~text
+DisplayState<State>
+~~~
+
+The extra Family coordinate is intentional compiler-visible ownership. A DisplayState for one Family
+cannot be assembled as though it belonged to another Family that happens to use a similar State type.
+
+The complete default remains:
+
+~~~text
+DisplayState.StateOnly<Family, State>(state)
+~~~
+
+which means semantic State already carries all display meaning this Family has earned.
+
+When richer repeated interpretation is earned, the concrete Family overrides the derivation seam:
+
+~~~kotlin
+override fun displayStateFor(
+    state: FamilyState,
+): ConcreteDisplayState
+~~~
+
+The Family also manufactures outward snapshots:
+
+~~~text
+State
+-> displayStateFor(State)
+-> Projection<Family, State, DisplayState>
+~~~
+
+Projection is immutable and contains:
+
+~~~text
+exact State snapshot
++
+DisplayState derived from that same State value
+~~~
+
+It is not another truth owner.
+
+The reusable type preserves all known coordinates:
+
+~~~text
+Projection<Family, State, Display>
+where
+    State   belongs to Family
+    Display is DisplayState<Family, State>
+~~~
+
+This prevents AI/humans from reconstructing a projection by pairing unrelated "state-looking" and
+"display-looking" objects.
+
+Concrete Families may covariantly narrow both displayStateFor(...) and projectionFor(...), making
+their exact outward type discoverable through ordinary overrides.
+
+ThemeMode demonstrates:
+
+~~~text
+ThemeModeFamily
+-> ThemeMode State
+-> ThemeModeFamily.DisplayState
+-> Projection<ThemeModeFamily, ThemeMode, ThemeModeFamily.DisplayState>
+-> VexThemePresentation
+-> inherited UI
+~~~
+
+The Family root does not add DisplayState as a fifth root generic merely to force every Family to
+name a richer display subtype. Family + State binding plus explicit derivation/projection overrides
+give the compiler the ownership coordinates without imposing that permanent generic tax.
 
 ## Family kinship
 
-The direct Family closes compile-time kinship with one recursive bound at the root, without
-propagating recursive self-generics through every child:
+The direct Family closes compile-time kinship across the semantic vocabulary:
 
 ~~~text
-VexFamily<Family, State, Control>
+VexFamily<Family, State, Control, Effect>
 
 Family
-    -> must itself be VexFamily<Family, State, Control>
+  -> exact owning Family coordinate
 
 State
-    -> VexFamily.State<Family>
+  -> VexFamily.State<Family>
 
 Control
-    -> VexFamily.Control<Family>
+  -> VexFamily.Control<Family>
+
+Effect
+  -> VexFamily.Effect<Family>
 ~~~
 
-A concrete Family therefore binds its vocabulary to one exact Family coordinate:
-
-~~~kotlin
-class ThemeModeFamily(...) :
-    VexFamily<
-        ThemeModeFamily,
-        ThemeModeFamily.State,
-        ThemeModeFamily.Control
-    >(...) {
-
-    sealed interface State :
-        VexFamily.State<ThemeModeFamily>
-
-    sealed interface Control :
-        VexFamily.Control<ThemeModeFamily>
-}
-~~~
-
-This prevents another Family's Control from being combined with this Family's State and also
-prevents an arbitrary marker type from pretending to be the Family coordinate. The concrete root
-must actually be the VexFamily that owns the vocabulary.
-
-Family-owned children such as `DisplayState`, `Store`, and `Act` require a Family-bound State
-type, so kinship continues down the tree without repeating the recursive root equation at every call
-site.
-
-~~~text
-ROOT SAFETY
-    Family coordinate must itself be the owning VexFamily
-
-FAMILY SAFETY
-    ThemeModeFamily.State + MapsFamily.Control
-    -> does not satisfy VexFamily<ThemeModeFamily, ...>
-
-ROLE SAFETY
-    State and Control occupy different Family marker roles
-~~~
+State / Control / Effect from unrelated Families cannot be substituted into the same semantic root.
+Act carries only the already-bound State + Effect pair.
 
 ## State / Control relationship visibility
 
-The Family relationship surface is intentionally exhaustive rather than sparse-by-default:
+The Family relationship remains directly readable Kotlin:
 
 ~~~text
-declare all State possibilities
-declare all Control possibilities
-
-act(currentState, control)
--> exhaustive when(currentState)
-   -> exhaustive when(control)
+act(CURRENT State, Control)
+-> Act?
 ~~~
-
-State remains the first traversal because current State is the truth against which an incoming
-Control receives meaning.
-
-At this semantic boundary, do not use `else` to hide future State or Control additions. A newly
-added State or Control should create compiler-visible relationship work so its placement cannot be
-silently forgotten. Controls may share one branch only when their reviewed authored outcome is
-exactly the same.
 
 Use:
 
 ~~~text
-noAct()
-    reviewed State + Control pair has no lawful Act
+null
+    no lawful Act exists for this exact CURRENT State + Control
 
-stay()
-    lawful Act; current State remains current
+stay(effect?)
+    lawful Act; immediate semantic State remains CURRENT
 
-admit(State)
-    lawful Act; admit State
+admit(State, effect?)
+    lawful Act; State is admitted immediately
 ~~~
 
-`noAct()` is explicit authoring language for absence; concrete Family source should not use a naked
-`null` to communicate that semantic decision.
+State remains the first semantic coordinate because current truth is what gives an incoming Control
+meaning.
 
-## Act / Begin ownership
+Concrete Families should prefer exhaustive State/Control traversal when the vocabularies are finite.
+Do not use a catch-all merely to hide a newly-added semantic possibility.
 
-The authored outcome tree is rooted under Family:
+## Act / Effect ownership
+
+Act is the lawful resolved outcome of exact CURRENT State + Control:
 
 ~~~text
-VexFamily
--> Act<State>
-   -> optional Begin<State>
-      -> Save
-         -> Results
-            -> Success
-            -> Failure
+Act
+-> admittedState?
+-> effect?
 ~~~
 
-`Act` is the lawful outcome of one exact current State + incoming Control relationship. `Begin`
-does not exist as a peer package capability. Its construction is closed and a concrete Family only
-receives the protected `begin(...)` opening while authoring an Act.
-
-Begin carries only `VexExecution.Approach`. It does not accept relationship arguments or manufacture
-identity.
-
-## Execution relationship identity
-
-Family owns the maintained relationship boundary:
+The ordering is exact:
 
 ~~~text
-VexFamily.Control<Family>
-    -> Control name is always included
-
-optional VexFamily.ResourceId<Family>
-    -> narrows repeated instances of that same Control
-
-live Family
-+ Control name/type
-+ optional typed ResourceId
-=
-VexFamily.RelationshipId<Family>
-    -> VexExecution.RelationshipId
+Family.activate(control)
+-> act(CURRENT State, control)
+-> apply admittedState when present
+-> return Act
 ~~~
 
-`activate(control)` already owns the exact Control that earned the Act. The Family runtime therefore
-forms the relationship identity automatically. Concrete `beginEarliest { ... }`,
-`beginLatest { ... }`, and `beginQueued { ... }` choose only overlap behavior.
+Family does **not** realize Effect.
+
+Effect is a runtime transformation request:
+
+~~~text
+Effect
+!= resulting State
+!= provider success
+!= coroutine
+!= Store
+!= network callback
+~~~
+
+A concrete Connection/runtime decides how that Effect is attempted.
+
+This preserves the causal loop recovered by the Origin Walk:
+
+~~~text
+CURRENT State
+-> Control
+-> Act
+-> Effect
+-> runtime/provider attempt
+-> observed reality
+-> semantic State
+-> observe(State)
+-> repeat
+~~~
+
+## Observation boundary
+
+Provider/repository/runtime truth does not become a fake Control.
+
+When a concrete Connection has already:
+
+- interpreted provider/runtime facts into one truthful Family State;
+- applied any required stale-result/request-identity gate;
+- preserved its own concurrency/currentness guarantees;
+
+it may publish that already-semantic reality through:
 
 ~~~kotlin
-beginLatest {
-    save(nextState).results {
-        success()
-        failure()
-    }
-}
+family.observe(state)
 ~~~
 
-There is no `trigger: Any`, no `vararg Any?`, and no second Family `ExecutionId` authoring surface.
+`observe(State)` is deliberately boring. It does not receive CURRENT State, does not run a decision
+lambda, and does not infer whether an observation is still current. Those meanings belong to the
+Connection that owns the provider/runtime relationship.
 
-A concrete Control may bind an exact ResourceId type when Control kind alone is too broad:
-
-~~~kotlin
-data class TrackId(
-    val value: String,
-) : VexFamily.ResourceId<PlayerFamily>
-
-data class Play(
-    override val resourceId: TrackId,
-    val position: Int,
-) :
-    Control,
-    VexFamily.Control.Resource<
-        PlayerFamily,
-        TrackId
-    >
-~~~
-
-The foundation still supplies `Play` as part of the relationship identity. The concrete Control declares
-the exact ID type; an `AccountId` cannot be substituted into this `Play` merely because both IDs belong
-to the same Family. ResourceId itself is not flattened to a shared String inside the relationship key.
-Other Control payload such as `position` remains request evidence.
+So the two Family entrances have different jobs:
 
 ~~~text
-Control payload
-!= automatic relationship identity
+activate(Control)
+    semantic request -> lawful Act -> immediate admitted State + Effect
 
-Control kind/name
-= always relationship identity
-
-typed ResourceId
-= optional narrowing identity
-
-Approach
-= Independent / Earliest / Latest / Queued
+observe(State)
+    already-reconciled reality -> current State
 ~~~
 
-The live Family instance scopes the resulting RelationshipId, so equal Control/ResourceId values on two
-live Family instances remain separate.
+Both publish into the same StateRelay.
 
-`SourceRef` remains automatic diagnostic/source information. `InstanceId` remains the exact
-per-launch occurrence. Neither substitutes for the semantic RelationshipId.
+## Concrete Connection boundary
 
-## Logger boundary
-
-Logging is an explicit dependency on the independent `VexLogger` root:
+A feature crosses provider/storage/execution/lifecycle reality through a concrete Connection when
+that boundary is actually needed.
 
 ~~~text
-VexFamily
--> VexLogger.Sink
+Family
+    owns State / Control / Act / Effect meaning
 
+Connection
+    owns provider/runtime dependencies
+    owns Effect realization
+    owns provider observation -> semantic State mapping
+    owns stale async/currentness gates required by that provider
+    owns its rightful lifetime/concurrency mechanics
+~~~
+
+Do not move Connection mechanics into Family merely because one patient-zero implementation needs
+SharedPreferences, Media3, HTTP, a model, or coroutines.
+
+No generic Direct-Family Connection framework is introduced by this candidate. ThemeMode and the
+existing VexStream playback architecture already demonstrate the **role**; another shared interface
+should be earned only if the concrete connections repeat an actual contract rather than merely share
+a name.
+
+## ThemeMode patient zero
+
+ThemeMode now maps cleanly without teaching persistence to Family:
+
+~~~text
+ThemeModeFamily
+    State
+        NotSet / Light / Dark
+
+    Control
+        Select(mode)
+
+    Effect
+        PersistSelection(mode)
+
+Select(mode)
+-> act(CURRENT State, Select)
+-> stay/admit
+-> PersistSelection(mode)
+~~~
+
+`ThemeModeConnection` owns the runtime side:
+
+~~~text
+fresh process
+-> ThemeModeStore.current()
+-> ThemeModeFamily(initialState)
+
+accepted PersistSelection(mode)
+-> ThemeModeConnection
+-> ordered VexExecution persistence
+-> ThemeModeStore.save(mode)
+~~~
+
+Selecting the already-current mode remains meaningful:
+
+~~~text
+stay(
+    effect = PersistSelection(mode)
+)
+~~~
+
+State stays current while the explicit choice is still remembered durably.
+
+## Runtime/mechanics non-ownership
+
+Direct VexFamily no longer depends on:
+
+~~~text
+VexExecution
+VexExecutionRoot
 VexLogger
--> Event
-   -> Family
-      -> accepted Family facts
+Store
+SharedPreferences
+coroutine lifetime
+execution Approach
+relationship identity
 ~~~
 
-There is no `VexFamilyLogger` root. Family keeps the Sink private and concrete Family decision code
-does not receive logging capability. This keeps `act(currentState, control)` focused on relationship
-meaning while the Family runtime records only facts it actually applies.
-
-## Store responsibility
-
-The current Family runtime consumes one exact storage capability:
-
-~~~text
-VexFamily
--> Store<State>
-   -> save(State)
-   -> WriteResult
-      -> Success
-      -> Failure
-~~~
-
-There is no standalone `VexStore` root in this candidate and no marker-only Store hierarchy.
-A concrete Family may extend `VexFamily.Store<State>` locally if a real consumer earns more
-operations, but `get`, `forget`, or Store observation are not implied by Save.
-
-Store durability is also not another Family State owner:
-
-~~~text
-Store truth != Family.currentState
-~~~
-
-The Begin Save relationship owns its explicit success/failure consequences. There is no generic
-`Operation -> StoreOperation -> Save` taxonomy until a second real operation proves a common
-contract.
-
-## Current feature-facing shape
-
-~~~kotlin
-class ThemeModeFamily(...) :
-    VexFamily<
-        ThemeModeFamily,
-        ThemeModeFamily.State,
-        ThemeModeFamily.Control
-    >(...) {
-
-    sealed interface State :
-        VexFamily.State<ThemeModeFamily> {
-        data object Light : State
-        data object Dark : State
-    }
-
-    sealed interface Control :
-        VexFamily.Control<ThemeModeFamily> {
-        data object Toggle : Control
-    }
-
-    override fun act(
-        currentState: State,
-        control: Control,
-    ): VexFamily.Act<State>? =
-        when (currentState) {
-            State.Light ->
-                when (control) {
-                    Control.Toggle -> admit(State.Dark)
-                }
-
-            State.Dark ->
-                when (control) {
-                    Control.Toggle -> admit(State.Light)
-                }
-        }
-}
-~~~
-
-## StateRelay currentness boundary
-
-StateRelay remains the one live Family State holder. Direct Family now also owns one serialized
-decision boundary around that holder:
-
-~~~text
-incoming Family-owned cause
-+ exact CURRENT State
--> one non-suspending decision
--> publish only changed semantic meaning
-~~~
-
-For Control activation, `act(CURRENT State, Control)` and its immediate admission happen inside that
-same boundary. Concurrent Controls therefore cannot each resolve against the same stale snapshot and
-overwrite one another.
-
-A delayed Begin result may keep the simple form:
-
-~~~kotlin
-success {
-    admit(State.Ready)
-}
-~~~
-
-or re-evaluate exact CURRENT State when feature meaning requires it:
-
-~~~kotlin
-success {
-    admit { current ->
-        if (/* result is still lawful for current */) {
-            nextState
-        } else {
-            current
-        }
-    }
-}
-~~~
-
-Family supplies CURRENT State and serialization. The feature supplies what "still current" means.
-There is no generic Family revision/generation oracle.
-
-Already-reconciled external truth enters the same StateRelay through concrete Family vocabulary rather
-than a fake Control or public setter:
-
-~~~kotlin
-fun providerReconciled(observed: ProviderState) {
-    admitCurrent { current ->
-        reconcileSemanticState(
-            current = current,
-            observed = observed,
-        )
-    }
-}
-~~~
-
-`admitCurrent` is protected. The concrete Family/source relationship owns the visible method name
-and reconciliation meaning.
-
-Durable Family-State storage follows the same dependency law. When persistence is actually Family State,
-the earned specialization is:
-
-~~~text
-VexFamily.StateStore<State>
-  observableState
-  get()
-  save(State)
-  forget()
-~~~
-
-Its observation path is direct:
-
-~~~text
-StateStore.observableState
--> VexExecution observation lifetime custody
--> Family.observeStore(CURRENT, stored)
--> concrete Family decision
--> admitCurrent(...)
--> same StateRelay
-~~~
-
-Execution does not interpret stored State. Store does not own CURRENT State. No session/presentation
-owner observes the Store on Family's behalf.
+Those may exist in concrete runtime boundaries without becoming Family semantic nouns.
 
 
 ## Compound current State
@@ -493,6 +423,7 @@ processed Compound State.
 ## Deliberately still open
 
 ~~~text
+generic Direct-Family Connection interface beyond current concrete Connections
 automatic UI observation/lifetime integration
 cross-cycle relationship memory
 provider / intent identity mapping

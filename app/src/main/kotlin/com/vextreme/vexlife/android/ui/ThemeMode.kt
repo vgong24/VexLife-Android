@@ -1,8 +1,6 @@
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.behavior.VexFamily
-import com.vextreme.vexlife.android.execution.VexExecutionRoot
-import com.vextreme.vexlife.android.logging.VexLogger
 
 /**
  * Android realization of the ThemeMode semantic State domain.
@@ -27,52 +25,23 @@ internal enum class ThemeMode :
  * than making today's two-state Switch the semantic contract. A target may realize Light/Dark with
  * a toggle, segmented control, menu, or another presentation without changing this relationship.
  *
- * Control kind alone is sufficient relationship identity: ThemeMode has no repeated resource whose
- * identity would earn a ResourceId. The selected mode is Control payload, not a ResourceId.
+ * The selected mode is Control payload. Runtime persistence identity/order belong to
+ * ThemeModeConnection, not to this semantic Family.
  */
 internal class ThemeModeFamily(
-    initialState: ThemeMode,
-    executionRoot: VexExecutionRoot,
-    logger: VexLogger.Sink = VexLogger.Sink.None,
-    override val store: Store? = null,
+    initialState:
+        ThemeMode,
 ) :
     VexFamily<
         ThemeModeFamily,
         ThemeMode,
-        ThemeModeFamily.Control
+        ThemeModeFamily.Control,
+        ThemeModeFamily.Effect
     >(
-        initialState = initialState,
-        executionRoot = executionRoot,
-        logger = logger,
+        initialState =
+            initialState,
     ) {
-    /**
-     * Android ThemeMode durable StateStore.
-     *
-     * Durable selection truth remains distinct from CURRENT semantic ThemeMode. The Family observes
-     * this dependency through the shared StateRelay boundary; UI/session code never observes Store
-     * directly.
-     */
-    interface Store :
-        VexFamily.StateStore<ThemeMode>
 
-    init {
-        store
-            ?.let { stateStore ->
-                observeStore(
-                    stateStore =
-                        stateStore,
-                ) { currentState, storedState ->
-                    when (storedState) {
-                        ThemeMode.NotSet ->
-                            currentState
-
-                        ThemeMode.Light,
-                        ThemeMode.Dark ->
-                            storedState
-                    }
-                }
-            }
-    }
 
     sealed interface Control :
         VexFamily.Control<ThemeModeFamily> {
@@ -91,8 +60,25 @@ internal class ThemeModeFamily(
         }
     }
 
+    sealed interface Effect :
+        VexFamily.Effect<ThemeModeFamily> {
+        /**
+         * Remember the explicit semantic selection durably.
+         *
+         * This requests persistence; it does not claim persistence success or another ThemeMode State.
+         */
+        data class PersistSelection(
+            val mode:
+                ThemeMode,
+        ) :
+            Effect
+    }
+
     sealed interface DisplayState :
-        VexFamily.DisplayState<ThemeMode> {
+        VexFamily.DisplayState<
+            ThemeModeFamily,
+            ThemeMode
+        > {
         val presentation:
             VexThemePresentation
 
@@ -115,8 +101,9 @@ internal class ThemeModeFamily(
         }
     }
 
-    internal fun displayStateFor(
-        state: ThemeMode,
+    override fun displayStateFor(
+        state:
+            ThemeMode,
     ):
         DisplayState =
         when (state) {
@@ -130,39 +117,65 @@ internal class ThemeModeFamily(
                 DisplayState.Dark
         }
 
-    override val displayState:
-        DisplayState
+    override fun projectionFor(
+        state:
+            ThemeMode,
+    ):
+        VexFamily.Projection<
+            ThemeModeFamily,
+            ThemeMode,
+            DisplayState
+        > =
+        VexFamily.Projection(
+            state =
+                state,
+            displayState =
+                displayStateFor(
+                    state,
+                ),
+        )
+
+    override val currentProjection:
+        VexFamily.Projection<
+            ThemeModeFamily,
+            ThemeMode,
+            DisplayState
+        >
         get() =
-            displayStateFor(
+            projectionFor(
                 currentState,
             )
 
+    override val displayState:
+        DisplayState
+        get() =
+            currentProjection
+                .displayState
+
     override fun act(
-        currentState: ThemeMode,
-        control: Control,
+        currentState:
+            ThemeMode,
+        control:
+            Control,
     ):
-        VexFamily.Act<ThemeMode>? =
+        VexFamily.Act<
+            ThemeMode,
+            Effect
+        >? =
         when (control) {
             is Control.Select -> {
-                val persistence =
-                    store
-                        ?.let {
-                            beginLatest {
-                                save(
-                                    control.mode,
-                                ).results {
-                                    success()
-                                    failure()
-                                }
-                            }
-                        }
+                val effect =
+                    Effect.PersistSelection(
+                        mode =
+                            control.mode,
+                    )
 
                 when (currentState) {
                     ThemeMode.NotSet ->
                         admit(
                             control.mode,
-                            begin =
-                                persistence,
+                            effect =
+                                effect,
                         )
 
                     ThemeMode.Light,
@@ -172,21 +185,22 @@ internal class ThemeModeFamily(
                             control.mode
                         ) {
                             /*
-                             * Explicitly selecting the already-current peer still means "remember
-                             * this choice durably"; same semantic State is not a reason to skip Save.
+                             * Selecting the already-current peer still means "remember this explicit
+                             * choice durably"; same State does not erase the Effect.
                              */
                             stay(
-                                begin =
-                                    persistence,
+                                effect =
+                                    effect,
                             )
                         } else {
                             admit(
                                 control.mode,
-                                begin =
-                                    persistence,
+                                effect =
+                                    effect,
                             )
                         }
                 }
             }
         }
+
 }
