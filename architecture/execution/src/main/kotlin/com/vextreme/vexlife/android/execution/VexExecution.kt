@@ -393,9 +393,9 @@ abstract class VexExecution protected constructor(
                 ),
             )
         }
-        jobs.forEach(
-            Job::join,
-        )
+        jobs.forEach { job ->
+            job.join()
+        }
         return true
     }
 
@@ -697,9 +697,9 @@ abstract class VexExecution protected constructor(
                     action,
             )
         }
-            .also(
-                Job::start,
-            )
+            .also { job ->
+                job.start()
+            }
 
     private fun launchSource(
         source:
@@ -874,9 +874,9 @@ abstract class VexExecution protected constructor(
 
                 existingLane
                     ?.jobs
-                    ?.removeAll(
-                        Job::isCompleted,
-                    )
+                    ?.removeAll { job ->
+                        job.isCompleted
+                    }
 
                 val activeJobs =
                     existingLane
@@ -955,9 +955,9 @@ abstract class VexExecution protected constructor(
                                 operation.name,
                     ) {
                         predecessors
-                            .forEach(
-                                Job::join,
-                            )
+                            .forEach { predecessor ->
+                                predecessor.join()
+                            }
 
                         executeOperation(
                             operation =
