@@ -34,10 +34,16 @@ VexBoard truth
 
 Those rightful owners decide or observe their facts.
 
+For VexFamily specifically, this does **not** mean adding a Logger dependency back into `VexFamily`
+or logging from `act(...)`. The semantic decision remains pure. A Connection/runtime boundary that
+already received the returned `Act` may report the accepted semantic fact afterward without making
+Logger part of Family meaning.
+
 Then:
 
 ~~~text
 rightful owner accepts / observes fact
+-> observing boundary reports the accepted/observed fact
 -> VexLogger records that fact in chronology
 -> downstream projections may persist / format / display it
 ~~~
@@ -137,6 +143,9 @@ Projection is not permission to create a new truth owner.
 ## 3. Fact law
 
 Production Logger records facts at the point they become accepted or observed.
+
+Do not log every internal function call merely because it happened. Implementation steps that have
+no independent semantic, runtime, user-visible, or diagnostic meaning are exhaust, not traceability.
 
 Examples:
 
@@ -441,6 +450,22 @@ If no required correctness is lost, do not add it.
 
 "Traceability", "observability", "debuggability", "auditability", "future proofing", or "VexBoard
 needs it" are not by themselves sufficient reasons to mint new architecture.
+
+### Review gate
+
+Any proposed architecture change whose rationale includes traceability/history/correlation MUST:
+
+~~~text
+1. reference this VEXLOGGER.md contract;
+2. name the exact question the new mechanism answers;
+3. show why rightful semantic identity + RelationshipId/current Job custody + VexLogger chronology
+   cannot answer it;
+4. identify the rightful owner of the missing information;
+5. explain the concrete correctness lost if the new mechanism is omitted.
+~~~
+
+If those predicates are not demonstrated, the traceability rationale is insufficient and the added
+ID/ledger/registry/logger/history surface should not be accepted into the architecture.
 
 ## 12. Current-source deltas to correct in a future implementation PR
 

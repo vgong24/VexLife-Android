@@ -152,7 +152,7 @@ A successor implementing this architecture should:
 2. read this snapshot
 3. port the preserved source shape intentionally
 4. implement the settled RelationshipId -> Job(s) custody/cancellation law without adding another identity layer
-5. re-derive only the still-held observation/logging/debug pieces from demonstrated consumers
+5. refine only the still-held observation/recovery and Logger record-schema details without changing VEXLOGGER.md ownership laws
 6. prove each preserved requirement against the smaller implementation
 7. open a fresh clean PR whose commits explain the accepted reasons
 ~~~
