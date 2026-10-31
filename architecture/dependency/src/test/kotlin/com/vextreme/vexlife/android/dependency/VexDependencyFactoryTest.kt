@@ -258,6 +258,74 @@ class VexDependencyFactoryTest {
     }
 
     @Test
+    fun factorySnapshotsDeclaredPrerequisitesAtLifetimeFormation() {
+        val leaf =
+            LeafProvider()
+        val mutablePrerequisites =
+            mutableListOf<
+                VexDependencyProvider<*>
+            >(
+                leaf,
+            )
+
+        class SnapshotProvider :
+            VexDependencyProvider<Root>(
+                dependencies =
+                    mutablePrerequisites,
+            ) {
+            override fun create(
+                dependencies:
+                    VexDependencyBuildScope,
+            ):
+                Root =
+                Root(
+                    leaf =
+                        dependencies.require(
+                            leaf,
+                        ),
+                )
+        }
+
+        val root =
+            SnapshotProvider()
+        val factory =
+            VexDependencyFactory(
+                modules =
+                    listOf(
+                        VexDependencyModule.of(
+                            leaf,
+                            root,
+                        ),
+                    ),
+            )
+
+        mutablePrerequisites.clear()
+
+        val resolved =
+            factory.resolve(
+                root,
+            )
+
+        assertSame(
+            factory.resolve(
+                leaf,
+            ),
+            resolved.leaf,
+        )
+        assertEquals(
+            listOf(
+                leaf.readableName,
+            ),
+            factory.relationships()
+                .first {
+                    it.provider ==
+                        root.readableName
+                }
+                .prerequisites,
+        )
+    }
+
+    @Test
     fun cycleFailsClosedBeforeConstruction() {
         val cycle =
             mutableListOf<

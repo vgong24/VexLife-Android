@@ -201,6 +201,27 @@ class VexDependencyFactory(
                     }
             }
 
+    /*
+     * Freeze the readable graph at lifetime construction. Provider declarations may have been formed
+     * from caller-owned list objects; later mutation of those lists must not silently rewrite an
+     * already-established dependency lifetime.
+     */
+    private val prerequisitesByProvider =
+        IdentityHashMap<
+            VexDependencyProvider<*>,
+            List<
+                VexDependencyProvider<*>
+            >
+        >().apply {
+            providers.forEach { provider ->
+                put(
+                    provider,
+                    provider.dependencies
+                        .toList(),
+                )
+            }
+        }
+
     private val instances =
         IdentityHashMap<
             VexDependencyProvider<*>,
@@ -253,7 +274,11 @@ class VexDependencyFactory(
                     provider =
                         provider.readableName,
                     prerequisites =
-                        provider.dependencies
+                        requireNotNull(
+                            prerequisitesByProvider[
+                                provider
+                            ],
+                        )
                             .map {
                                 it.readableName
                             },
@@ -366,7 +391,11 @@ class VexDependencyFactory(
                     Any
                 >()
 
-            provider.dependencies
+            requireNotNull(
+                prerequisitesByProvider[
+                    provider
+                ],
+            )
                 .forEach { dependency ->
                     prerequisites[
                         dependency
