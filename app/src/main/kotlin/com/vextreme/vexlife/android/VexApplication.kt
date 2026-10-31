@@ -1,19 +1,21 @@
 package com.vextreme.vexlife.android
 
 import android.app.Application
+import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.data.AppRepositoryFactory
+import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
 import com.vextreme.vexlife.android.dependency.VexDependencyFactory
 import com.vextreme.vexlife.android.dependency.VexDependencyModule
 import com.vextreme.vexlife.android.dependency.VexDependencyProvider
-import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
-import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.data.AppRepositoryFactory
+import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
+import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.ui.SharedPreferencesThemeModeStore
 import com.vextreme.vexlife.android.ui.ThemeModeStore
 
 /**
  * Android process-lifetime composition root.
  *
- * The Application owns only application-lifetime construction. Feature/UI consumers never resolve
+ * The Application owns application-lifetime construction. Feature/UI consumers never resolve
  * dependencies from this object directly; narrower composition roots receive concrete dependencies.
  */
 class VexApplication :
@@ -47,57 +49,105 @@ class VexApplication :
 /**
  * Readable application-lifetime provider declarations.
  *
- * Provider object identity is the construction coordinate. Their class names are only readable
- * labels in the dependency topology.
+ * The Android Application is an already-existing host object, so its provider publishes that exact
+ * instance into the graph rather than pretending the dependency factory constructed Android itself.
  */
 internal class VexApplicationDependencyModule(
     application:
         Application,
 ) {
+    val androidApplication =
+        AndroidApplicationProvider(
+            application,
+        )
+
+    val blueprintRegistry =
+        BlueprintRegistryProvider()
+
     val repositories =
         RepositoriesProvider(
-            application,
+            androidApplication,
         )
 
     val themeModeStore =
         ThemeModeStoreProvider(
-            application,
+            androidApplication,
         )
 
     val module:
         VexDependencyModule =
         VexDependencyModule.of(
+            androidApplication,
+            blueprintRegistry,
             repositories,
             themeModeStore,
         )
 
-    internal class RepositoriesProvider(
+    internal class AndroidApplicationProvider(
         private val application:
             Application,
     ) :
-        VexDependencyProvider<AppRepositories>() {
+        VexDependencyProvider<Application>() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            Application =
+            application
+    }
+
+    internal class BlueprintRegistryProvider :
+        VexDependencyProvider<UIBlueprintRegistry>() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            UIBlueprintRegistry =
+            AppScreens.registry
+    }
+
+    internal class RepositoriesProvider(
+        private val application:
+            VexDependencyProvider<Application>,
+    ) :
+        VexDependencyProvider<AppRepositories>(
+            dependencies =
+                listOf(
+                    application,
+                ),
+        ) {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
         ):
             AppRepositories =
             AppRepositoryFactory.production(
-                application,
+                dependencies.require(
+                    application,
+                ),
             )
     }
 
     internal class ThemeModeStoreProvider(
         private val application:
-            Application,
+            VexDependencyProvider<Application>,
     ) :
-        VexDependencyProvider<ThemeModeStore>() {
+        VexDependencyProvider<ThemeModeStore>(
+            dependencies =
+                listOf(
+                    application,
+                ),
+        ) {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
         ):
             ThemeModeStore =
             SharedPreferencesThemeModeStore(
-                application.applicationContext,
+                dependencies.require(
+                    application,
+                )
+                    .applicationContext,
             )
     }
 }

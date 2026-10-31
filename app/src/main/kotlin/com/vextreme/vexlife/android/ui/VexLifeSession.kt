@@ -6,14 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.VexApplicationDependencyModule
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
-import com.vextreme.vexlife.android.dependency.VexDependencyFactory
-import com.vextreme.vexlife.android.dependency.VexDependencyModule
-import com.vextreme.vexlife.android.dependency.VexDependencyProvider
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamMusicRepository
+import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
+import com.vextreme.vexlife.android.dependency.VexDependencyFactory
+import com.vextreme.vexlife.android.dependency.VexDependencyModule
+import com.vextreme.vexlife.android.dependency.VexDependencyProvider
+import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
@@ -27,129 +28,389 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 /**
- * One in-process VexLife app session.
+ * One in-process VexLife app session composed from explicit live relationships.
  *
- * This object owns state that should survive Android configuration recreation together:
- * - current Screen/navigation/presentation;
- * - current logger session;
- * - diagnostic persistence queue;
- * - current ThemeMode Family;
- * - immutable app-action wiring.
- *
- * The session itself remains process-local. Feature-owned durable truth may restore into a fresh
- * session through its rightful Store; ThemeMode now does exactly that. Production keeps this session
- * inside [VexLifeViewModel]; Preview/tests may construct one without durable feature Stores.
+ * Production receives every session-owned object from [VexLifeSessionDependencyModule]. The
+ * repository/test convenience constructor remains below for previews/tests that intentionally
+ * construct an isolated session without impersonating Android Application/ViewModel lifetime.
  */
-internal class VexLifeSession(
-    val repositories: AppRepositories,
-    val scope: CoroutineScope,
-    executionRoot: VexExecutionRoot,
-    themeModeStore: ThemeModeStore? = null,
-    initialThemeMode: ThemeMode = ThemeMode.Dark,
+internal class VexLifeSession internal constructor(
+    val repositories:
+        AppRepositories,
+    val scope:
+        CoroutineScope,
+    val logPersistence:
+        LogHistoryPersistenceQueue,
+    val logger:
+        VexLogger,
+    val themeModeFamily:
+        ThemeModeFamily,
+    private val themeModeConnection:
+        ThemeModeConnection,
+    val relays:
+        VexLifeRelays,
+    val appActions:
+        AppActionRegistrations,
+    val runtime:
+        VexRuntime,
 ) {
-    val logPersistence = LogHistoryPersistenceQueue(
-        repository = repositories.logHistory,
-        scope = scope,
-    )
+    /**
+     * Narrow direct-construction path for previews/tests/alternate repository environments.
+     *
+     * Production does not use this constructor; production dependency relationships are declared as
+     * providers below. Keeping this path explicit avoids forcing fixture code through Android
+     * Application lifetime merely to construct a deterministic in-memory session.
+     */
+    internal constructor(
+        repositories:
+            AppRepositories,
+        scope:
+            CoroutineScope,
+        executionRoot:
+            VexExecutionRoot,
+        themeModeStore:
+            ThemeModeStore? =
+            null,
+        initialThemeMode:
+            ThemeMode =
+            ThemeMode.Dark,
+    ) :
+        this(
+            directSessionComponents(
+                repositories =
+                    repositories,
+                scope =
+                    scope,
+                executionRoot =
+                    executionRoot,
+                themeModeStore =
+                    themeModeStore,
+                initialThemeMode =
+                    initialThemeMode,
+            ),
+        )
 
-    val logger = VexLogger(
-        onRecord = logPersistence::record,
-        blueprintRegistry = AppScreens.registry,
-    )
+    private constructor(
+        components:
+            VexLifeSessionComponents,
+    ) :
+        this(
+            repositories =
+                components.repositories,
+            scope =
+                components.scope,
+            logPersistence =
+                components.logPersistence,
+            logger =
+                components.logger,
+            themeModeFamily =
+                components.themeModeFamily,
+            themeModeConnection =
+                components.themeModeConnection,
+            relays =
+                components.relays,
+            appActions =
+                components.appActions,
+            runtime =
+                components.runtime,
+        )
+}
 
+private data class VexLifeSessionComponents(
+    val repositories:
+        AppRepositories,
+    val scope:
+        CoroutineScope,
+    val logPersistence:
+        LogHistoryPersistenceQueue,
+    val logger:
+        VexLogger,
+    val themeModeFamily:
+        ThemeModeFamily,
+    val themeModeConnection:
+        ThemeModeConnection,
+    val relays:
+        VexLifeRelays,
+    val appActions:
+        AppActionRegistrations,
+    val runtime:
+        VexRuntime,
+)
+
+private fun directSessionComponents(
+    repositories:
+        AppRepositories,
+    scope:
+        CoroutineScope,
+    executionRoot:
+        VexExecutionRoot,
+    themeModeStore:
+        ThemeModeStore?,
+    initialThemeMode:
+        ThemeMode,
+):
+    VexLifeSessionComponents {
+    val logPersistence =
+        LogHistoryPersistenceQueue(
+            repository =
+                repositories.logHistory,
+            scope =
+                scope,
+        )
+    val logger =
+        VexLogger(
+            onRecord =
+                logPersistence::record,
+            blueprintRegistry =
+                AppScreens.registry,
+        )
     val themeModeFamily =
         ThemeModeFamily(
-            initialState = initialThemeMode,
+            initialState =
+                initialThemeMode,
         )
-
-    private val themeModeConnection =
+    val themeModeConnection =
         ThemeModeConnection(
-            family = themeModeFamily,
-            executionRoot = executionRoot,
-            store = themeModeStore,
-            logger = logger.sink,
+            family =
+                themeModeFamily,
+            executionRoot =
+                executionRoot,
+            store =
+                themeModeStore,
+            logger =
+                logger.sink,
         )
-
-    /**
-     * Reusable semantic Relays live with the app session rather than any one Compose destination.
-     * Their dependency collectors are children of the same supplied session scope.
-     */
     val relays =
         VexLifeRelays.create(
-            repositories = repositories,
-            scope = scope,
+            repositories =
+                repositories,
+            scope =
+                scope,
+        )
+    val appActions =
+        createAppActions(
+            repositories =
+                repositories,
+            scope =
+                scope,
+            logger =
+                logger,
+            logPersistence =
+                logPersistence,
+            themeModeFamily =
+                themeModeFamily,
+            themeModeConnection =
+                themeModeConnection,
+        )
+    val runtime =
+        VexRuntime(
+            registry =
+                AppScreens.registry,
+            logger =
+                logger,
+            initialScreen =
+                HomeScreen,
+            primaryScreens =
+                AppScreens.primary,
+            currentAppActions = {
+                appActions
+            },
         )
 
-    val appActions: AppActionRegistrations =
-        AppScreens.appActionRegistrations(
-            ScreenActionContext(
-                repositories = repositories,
-                scope = scope,
-                logger = logger,
-                logPersistence = logPersistence,
-                toggleDarkMode = ::toggleDarkMode,
-            ),
-        )
+    return VexLifeSessionComponents(
+        repositories =
+            repositories,
+        scope =
+            scope,
+        logPersistence =
+            logPersistence,
+        logger =
+            logger,
+        themeModeFamily =
+            themeModeFamily,
+        themeModeConnection =
+            themeModeConnection,
+        relays =
+            relays,
+        appActions =
+            appActions,
+        runtime =
+            runtime,
+    )
+}
 
-    val runtime = VexRuntime(
-        registry = AppScreens.registry,
-        logger = logger,
-        initialScreen = HomeScreen,
-        primaryScreens = AppScreens.primary,
-        currentAppActions = { appActions },
+private fun createAppActions(
+    repositories:
+        AppRepositories,
+    scope:
+        CoroutineScope,
+    logger:
+        VexLogger,
+    logPersistence:
+        LogHistoryPersistenceQueue,
+    themeModeFamily:
+        ThemeModeFamily,
+    themeModeConnection:
+        ThemeModeConnection,
+):
+    AppActionRegistrations =
+    AppScreens.appActionRegistrations(
+        ScreenActionContext(
+            repositories =
+                repositories,
+            scope =
+                scope,
+            logger =
+                logger,
+            logPersistence =
+                logPersistence,
+            toggleDarkMode = {
+                toggleThemeMode(
+                    family =
+                        themeModeFamily,
+                    connection =
+                        themeModeConnection,
+                )
+            },
+        ),
     )
 
-    private fun toggleDarkMode() {
-        val selectedMode =
-            when (
-                themeModeFamily
-                    .currentState
-            ) {
-                ThemeMode.NotSet,
-                ThemeMode.Light ->
-                    ThemeMode.Dark
+private fun toggleThemeMode(
+    family:
+        ThemeModeFamily,
+    connection:
+        ThemeModeConnection,
+) {
+    val selectedMode =
+        when (
+            family.currentState
+        ) {
+            ThemeMode.NotSet,
+            ThemeMode.Light,
+            ->
+                ThemeMode.Dark
 
-                ThemeMode.Dark ->
-                    ThemeMode.Light
-            }
+            ThemeMode.Dark ->
+                ThemeMode.Light
+        }
 
-        themeModeConnection.activate(
-            ThemeModeFamily.Control.Select(
-                selectedMode,
-            ),
-        )
-    }
+    connection.activate(
+        ThemeModeFamily.Control.Select(
+            selectedMode,
+        ),
+    )
 }
 
 /**
  * ViewModel/session-lifetime dependency declarations.
  *
- * This child graph may consume application providers but owns its own memoized runtime/session
- * instances. The session provider is intentionally the current migration boundary: Logger/Family
- * internals will move into explicit providers as their reusable construction relationships are
- * refined rather than being abstracted speculatively.
+ * This graph exposes the actual production composition rather than hiding Logger/Family/Connection
+ * construction inside one session constructor.
  */
 internal class VexLifeSessionDependencyModule(
     applicationDependencies:
         VexApplicationDependencyModule,
-    private val scope:
+    scope:
         CoroutineScope,
-    private val applicationContext:
-        android.content.Context,
+    initialThemeMode:
+        ThemeMode =
+        ThemeMode.Dark,
 ) {
+    val sessionScope =
+        SessionScopeProvider(
+            scope,
+        )
+
     val executionRoot =
         ExecutionRootProvider()
+
+    val logPersistence =
+        LogPersistenceProvider(
+            repositories =
+                applicationDependencies.repositories,
+            scope =
+                sessionScope,
+        )
+
+    val logger =
+        LoggerProvider(
+            logPersistence =
+                logPersistence,
+            blueprintRegistry =
+                applicationDependencies.blueprintRegistry,
+        )
+
+    val themeModeFamily =
+        ThemeModeFamilyProvider(
+            initialThemeMode,
+        )
+
+    val themeModeConnection =
+        ThemeModeConnectionProvider(
+            family =
+                themeModeFamily,
+            executionRoot =
+                executionRoot,
+            store =
+                applicationDependencies.themeModeStore,
+            logger =
+                logger,
+        )
+
+    val relays =
+        RelaysProvider(
+            repositories =
+                applicationDependencies.repositories,
+            scope =
+                sessionScope,
+        )
+
+    val appActions =
+        AppActionsProvider(
+            repositories =
+                applicationDependencies.repositories,
+            scope =
+                sessionScope,
+            logger =
+                logger,
+            logPersistence =
+                logPersistence,
+            themeModeFamily =
+                themeModeFamily,
+            themeModeConnection =
+                themeModeConnection,
+        )
+
+    val runtime =
+        RuntimeProvider(
+            blueprintRegistry =
+                applicationDependencies.blueprintRegistry,
+            logger =
+                logger,
+            appActions =
+                appActions,
+        )
 
     val session =
         SessionProvider(
             repositories =
                 applicationDependencies.repositories,
-            themeModeStore =
-                applicationDependencies.themeModeStore,
-            executionRoot =
-                executionRoot,
             scope =
-                scope,
+                sessionScope,
+            logPersistence =
+                logPersistence,
+            logger =
+                logger,
+            themeModeFamily =
+                themeModeFamily,
+            themeModeConnection =
+                themeModeConnection,
+            relays =
+                relays,
+            appActions =
+                appActions,
+            runtime =
+                runtime,
         )
 
     val vexStreamStartup =
@@ -166,18 +427,39 @@ internal class VexLifeSessionDependencyModule(
                 applicationDependencies.repositories,
             executionRoot =
                 executionRoot,
-            applicationContext =
-                applicationContext,
+            application =
+                applicationDependencies.androidApplication,
         )
 
     val module:
         VexDependencyModule =
         VexDependencyModule.of(
+            sessionScope,
             executionRoot,
+            logPersistence,
+            logger,
+            themeModeFamily,
+            themeModeConnection,
+            relays,
+            appActions,
+            runtime,
             session,
             vexStreamStartup,
             vexStreamArtwork,
         )
+
+    internal class SessionScopeProvider(
+        private val scope:
+            CoroutineScope,
+    ) :
+        VexDependencyProvider<CoroutineScope>() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            CoroutineScope =
+            scope
+    }
 
     internal class ExecutionRootProvider :
         VexDependencyProvider<VexExecutionRoot>() {
@@ -192,22 +474,294 @@ internal class VexLifeSessionDependencyModule(
             )
     }
 
+    internal class LogPersistenceProvider(
+        private val repositories:
+            VexDependencyProvider<AppRepositories>,
+        private val scope:
+            VexDependencyProvider<CoroutineScope>,
+    ) :
+        VexDependencyProvider<LogHistoryPersistenceQueue>(
+            dependencies =
+                listOf(
+                    repositories,
+                    scope,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            LogHistoryPersistenceQueue =
+            LogHistoryPersistenceQueue(
+                repository =
+                    dependencies.require(
+                        repositories,
+                    )
+                        .logHistory,
+                scope =
+                    dependencies.require(
+                        scope,
+                    ),
+            )
+    }
+
+    internal class LoggerProvider(
+        private val logPersistence:
+            VexDependencyProvider<LogHistoryPersistenceQueue>,
+        private val blueprintRegistry:
+            VexDependencyProvider<UIBlueprintRegistry>,
+    ) :
+        VexDependencyProvider<VexLogger>(
+            dependencies =
+                listOf(
+                    logPersistence,
+                    blueprintRegistry,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexLogger =
+            VexLogger(
+                onRecord =
+                    dependencies.require(
+                        logPersistence,
+                    )::record,
+                blueprintRegistry =
+                    dependencies.require(
+                        blueprintRegistry,
+                    ),
+            )
+    }
+
+    internal class ThemeModeFamilyProvider(
+        private val initialThemeMode:
+            ThemeMode,
+    ) :
+        VexDependencyProvider<ThemeModeFamily>() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            ThemeModeFamily =
+            ThemeModeFamily(
+                initialState =
+                    initialThemeMode,
+            )
+    }
+
+    internal class ThemeModeConnectionProvider(
+        private val family:
+            VexDependencyProvider<ThemeModeFamily>,
+        private val executionRoot:
+            VexDependencyProvider<VexExecutionRoot>,
+        private val store:
+            VexDependencyProvider<ThemeModeStore>,
+        private val logger:
+            VexDependencyProvider<VexLogger>,
+    ) :
+        VexDependencyProvider<ThemeModeConnection>(
+            dependencies =
+                listOf(
+                    family,
+                    executionRoot,
+                    store,
+                    logger,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            ThemeModeConnection =
+            ThemeModeConnection(
+                family =
+                    dependencies.require(
+                        family,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                store =
+                    dependencies.require(
+                        store,
+                    ),
+                logger =
+                    dependencies.require(
+                        logger,
+                    )
+                        .sink,
+            )
+    }
+
+    internal class RelaysProvider(
+        private val repositories:
+            VexDependencyProvider<AppRepositories>,
+        private val scope:
+            VexDependencyProvider<CoroutineScope>,
+    ) :
+        VexDependencyProvider<VexLifeRelays>(
+            dependencies =
+                listOf(
+                    repositories,
+                    scope,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexLifeRelays =
+            VexLifeRelays.create(
+                repositories =
+                    dependencies.require(
+                        repositories,
+                    ),
+                scope =
+                    dependencies.require(
+                        scope,
+                    ),
+            )
+    }
+
+    internal class AppActionsProvider(
+        private val repositories:
+            VexDependencyProvider<AppRepositories>,
+        private val scope:
+            VexDependencyProvider<CoroutineScope>,
+        private val logger:
+            VexDependencyProvider<VexLogger>,
+        private val logPersistence:
+            VexDependencyProvider<LogHistoryPersistenceQueue>,
+        private val themeModeFamily:
+            VexDependencyProvider<ThemeModeFamily>,
+        private val themeModeConnection:
+            VexDependencyProvider<ThemeModeConnection>,
+    ) :
+        VexDependencyProvider<AppActionRegistrations>(
+            dependencies =
+                listOf(
+                    repositories,
+                    scope,
+                    logger,
+                    logPersistence,
+                    themeModeFamily,
+                    themeModeConnection,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            AppActionRegistrations =
+            createAppActions(
+                repositories =
+                    dependencies.require(
+                        repositories,
+                    ),
+                scope =
+                    dependencies.require(
+                        scope,
+                    ),
+                logger =
+                    dependencies.require(
+                        logger,
+                    ),
+                logPersistence =
+                    dependencies.require(
+                        logPersistence,
+                    ),
+                themeModeFamily =
+                    dependencies.require(
+                        themeModeFamily,
+                    ),
+                themeModeConnection =
+                    dependencies.require(
+                        themeModeConnection,
+                    ),
+            )
+    }
+
+    internal class RuntimeProvider(
+        private val blueprintRegistry:
+            VexDependencyProvider<UIBlueprintRegistry>,
+        private val logger:
+            VexDependencyProvider<VexLogger>,
+        private val appActions:
+            VexDependencyProvider<AppActionRegistrations>,
+    ) :
+        VexDependencyProvider<VexRuntime>(
+            dependencies =
+                listOf(
+                    blueprintRegistry,
+                    logger,
+                    appActions,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexRuntime {
+            val actions =
+                dependencies.require(
+                    appActions,
+                )
+
+            return VexRuntime(
+                registry =
+                    dependencies.require(
+                        blueprintRegistry,
+                    ),
+                logger =
+                    dependencies.require(
+                        logger,
+                    ),
+                initialScreen =
+                    HomeScreen,
+                primaryScreens =
+                    AppScreens.primary,
+                currentAppActions = {
+                    actions
+                },
+            )
+        }
+    }
+
     internal class SessionProvider(
         private val repositories:
             VexDependencyProvider<AppRepositories>,
-        private val themeModeStore:
-            VexDependencyProvider<ThemeModeStore>,
-        private val executionRoot:
-            VexDependencyProvider<VexExecutionRoot>,
         private val scope:
-            CoroutineScope,
+            VexDependencyProvider<CoroutineScope>,
+        private val logPersistence:
+            VexDependencyProvider<LogHistoryPersistenceQueue>,
+        private val logger:
+            VexDependencyProvider<VexLogger>,
+        private val themeModeFamily:
+            VexDependencyProvider<ThemeModeFamily>,
+        private val themeModeConnection:
+            VexDependencyProvider<ThemeModeConnection>,
+        private val relays:
+            VexDependencyProvider<VexLifeRelays>,
+        private val appActions:
+            VexDependencyProvider<AppActionRegistrations>,
+        private val runtime:
+            VexDependencyProvider<VexRuntime>,
     ) :
         VexDependencyProvider<VexLifeSession>(
             dependencies =
                 listOf(
                     repositories,
-                    themeModeStore,
-                    executionRoot,
+                    scope,
+                    logPersistence,
+                    logger,
+                    themeModeFamily,
+                    themeModeConnection,
+                    relays,
+                    appActions,
+                    runtime,
                 ),
         ) {
         override fun create(
@@ -221,14 +775,36 @@ internal class VexLifeSessionDependencyModule(
                         repositories,
                     ),
                 scope =
-                    scope,
-                executionRoot =
                     dependencies.require(
-                        executionRoot,
+                        scope,
                     ),
-                themeModeStore =
+                logPersistence =
                     dependencies.require(
-                        themeModeStore,
+                        logPersistence,
+                    ),
+                logger =
+                    dependencies.require(
+                        logger,
+                    ),
+                themeModeFamily =
+                    dependencies.require(
+                        themeModeFamily,
+                    ),
+                themeModeConnection =
+                    dependencies.require(
+                        themeModeConnection,
+                    ),
+                relays =
+                    dependencies.require(
+                        relays,
+                    ),
+                appActions =
+                    dependencies.require(
+                        appActions,
+                    ),
+                runtime =
+                    dependencies.require(
+                        runtime,
                     ),
             )
     }
@@ -272,14 +848,15 @@ internal class VexLifeSessionDependencyModule(
             VexDependencyProvider<AppRepositories>,
         private val executionRoot:
             VexDependencyProvider<VexExecutionRoot>,
-        private val applicationContext:
-            android.content.Context,
+        private val application:
+            VexDependencyProvider<Application>,
     ) :
         VexDependencyProvider<VexStreamArtworkExecution>(
             dependencies =
                 listOf(
                     repositories,
                     executionRoot,
+                    application,
                 ),
         ) {
         override fun create(
@@ -298,7 +875,10 @@ internal class VexLifeSessionDependencyModule(
                     )
                         .vexStream,
                 context =
-                    applicationContext,
+                    dependencies.require(
+                        application,
+                    )
+                        .applicationContext,
             )
                 .also {
                     it.start()
@@ -313,8 +893,12 @@ internal class VexLifeSessionDependencyModule(
  * modal, Gallery selection and logger session do not restart merely because Android rebuilt the UI.
  */
 internal class VexLifeViewModel(
-    application: Application,
-) : AndroidViewModel(application) {
+    application:
+        Application,
+) :
+    AndroidViewModel(
+        application,
+    ) {
     private val vexApplication =
         application as?
             VexApplication
@@ -328,8 +912,6 @@ internal class VexLifeViewModel(
                 vexApplication.dependencyModule,
             scope =
                 viewModelScope,
-            applicationContext =
-                application.applicationContext,
         )
 
     private val dependencies:
@@ -345,8 +927,8 @@ internal class VexLifeViewModel(
         )
 
     /*
-     * Preserve the current startup behavior explicitly. The dependency factory is lazy; resolving
-     * these roots is the readable statement that this session currently chooses to start them.
+     * These resolutions are the readable startup policy. Everything else in the graph remains lazy
+     * until one of these roots requires it.
      */
     private val vexStreamStartupExecution =
         dependencies.resolve(
@@ -372,9 +954,12 @@ internal class VexLifeViewModel(
 }
 
 internal class VexStreamStartupExecution(
-    executionRoot: VexExecutionRoot,
-    private val repository: VexStreamMusicRepository,
-) : VexExecution(
+    executionRoot:
+        VexExecutionRoot,
+    private val repository:
+        VexStreamMusicRepository,
+) :
+    VexExecution(
         executionRoot,
     ) {
     fun start() {
@@ -392,10 +977,14 @@ internal class VexStreamStartupExecution(
  * current Hub/catalog truth becomes available.
  */
 internal class VexStreamArtworkExecution(
-    executionRoot: VexExecutionRoot,
-    private val repository: VexStreamMusicRepository,
-    private val context: android.content.Context,
-) : VexExecution(
+    executionRoot:
+        VexExecutionRoot,
+    private val repository:
+        VexStreamMusicRepository,
+    private val context:
+        android.content.Context,
+) :
+    VexExecution(
         executionRoot,
     ) {
     fun start() {
@@ -404,7 +993,7 @@ internal class VexStreamArtworkExecution(
         ) { state ->
             if (
                 state.hubState is
-                VexStreamHubState.Ready &&
+                    VexStreamHubState.Ready &&
                 state.tracks.any {
                     it.localCopy is
                         VexStreamLocalCopyState.Downloaded
@@ -419,3 +1008,5 @@ internal class VexStreamArtworkExecution(
         }
     }
 }
+
+// [VXG RealForever]
