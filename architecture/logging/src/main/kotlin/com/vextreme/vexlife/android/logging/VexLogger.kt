@@ -18,9 +18,11 @@ import kotlin.reflect.KClass
 enum class VexLogKind {
     AppOpened,
     Interaction,
+    DynamicInteraction,
     Gesture,
     Semantic,
     Runtime,
+    Diagnostic,
 }
 
 /**
@@ -77,6 +79,7 @@ data class VexLogSubjectFields(
 ) {
     enum class Resolution {
         RESOLVED,
+        RUNTIME_ELEMENT,
         NOT_A_BLUEPRINT_ELEMENT,
         BLUEPRINT_MAPPING_MISSING,
     }
@@ -364,6 +367,51 @@ class VexLogger(
             screenAfterId = screenAfter?.screenId,
             detailsJson = detailsJson,
         )
+
+        if (
+            subjectRef.startsWith(
+                "element.",
+            ) &&
+            blueprintRegistry !=
+                null &&
+            blueprintRegistry.element(
+                subjectRef,
+            ) ==
+                null
+        ) {
+            append(
+                kind = VexLogKind.Diagnostic,
+                subjectRef = subjectRef,
+                action = "BlueprintMappingMissing",
+                screenBeforeId = screenBefore.screenId,
+                screenAfterId = null,
+            )
+        }
+    }
+
+    /**
+     * Record one intentional runtime-instance interaction.
+     *
+     * The subject may use element.* shape because it is still a UI coordinate, but it is not
+     * required to be a permanent static Blueprint member. This distinction prevents lawful dynamic
+     * rows/actions from being reported as missing architecture.
+     */
+    fun recordRuntimeInteractionRef(
+        subjectRef: String,
+        screenBefore: ScreenElement,
+        action: String = "Clicked",
+    ) {
+        require(subjectRef.isNotBlank()) {
+            "runtime interaction subjectRef must not be blank"
+        }
+
+        append(
+            kind = VexLogKind.DynamicInteraction,
+            subjectRef = subjectRef,
+            action = action,
+            screenBeforeId = screenBefore.screenId,
+            screenAfterId = null,
+        )
     }
 
     fun recordBack(
@@ -486,6 +534,7 @@ class VexLogger(
         fun subjectFields(
             subjectRef: String,
             registry: UIBlueprintRegistry?,
+            runtimeCoordinate: Boolean = false,
         ): VexLogSubjectFields {
             if (
                 !subjectRef.startsWith(
@@ -513,7 +562,14 @@ class VexLogger(
                         placementPath = emptyList(),
                         elementKind = null,
                         declaredIntent = null,
-                        resolution = VexLogSubjectFields.Resolution.BLUEPRINT_MAPPING_MISSING,
+                        resolution =
+                            if (
+                                runtimeCoordinate
+                            ) {
+                                VexLogSubjectFields.Resolution.RUNTIME_ELEMENT
+                            } else {
+                                VexLogSubjectFields.Resolution.BLUEPRINT_MAPPING_MISSING
+                            },
                     )
 
             val ancestors =
@@ -599,6 +655,9 @@ class VexLogger(
                                 record.subjectRef,
                             registry =
                                 registry,
+                            runtimeCoordinate =
+                                record.kind ==
+                                    VexLogKind.DynamicInteraction,
                         )
 
                     buildString {

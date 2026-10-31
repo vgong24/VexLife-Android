@@ -410,7 +410,7 @@ class VexRuntime(
             subjectRef,
         )
 
-        logger.recordInteractionRef(
+        logger.recordRuntimeInteractionRef(
             subjectRef = subjectRef,
             screenBefore = currentScreen,
             action = action,
@@ -450,10 +450,9 @@ class VexRuntime(
                     before.screenId
             }
 
-        logger.recordInteractionRef(
+        logger.recordRuntimeInteractionRef(
             subjectRef = subjectRef,
             screenBefore = before,
-            screenAfter = target,
             action = "Clicked",
         )
 

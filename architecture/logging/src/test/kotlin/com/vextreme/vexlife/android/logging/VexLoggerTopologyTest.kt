@@ -154,6 +154,57 @@ class VexLoggerTopologyTest {
     }
 
     @Test
+    fun intentionalRuntimeElementIsNotMisclassifiedAsMissingBlueprintArchitecture() {
+        val fields =
+            VexLogger.subjectFields(
+                subjectRef =
+                    "element.settings.dynamic.resource-123",
+                registry =
+                    registry,
+                runtimeCoordinate =
+                    true,
+            )
+
+        assertEquals(
+            VexLogSubjectFields.Resolution.RUNTIME_ELEMENT,
+            fields.resolution,
+        )
+    }
+
+    @Test
+    fun unresolvedStaticElementProducesAnExplicitDiagnosticFact() {
+        val logger =
+            VexLogger(
+                blueprintRegistry =
+                    registry,
+            )
+
+        logger.recordInteractionRef(
+            subjectRef =
+                "element.settings.body.unknown",
+            screenBefore =
+                screen,
+        )
+
+        assertEquals(
+            2,
+            logger.history.value.size,
+        )
+        assertEquals(
+            VexLogKind.Interaction,
+            logger.history.value[0].kind,
+        )
+        assertEquals(
+            VexLogKind.Diagnostic,
+            logger.history.value[1].kind,
+        )
+        assertEquals(
+            "BlueprintMappingMissing",
+            logger.history.value[1].action,
+        )
+    }
+
+    @Test
     fun missingBlueprintMappingIsVisibleInsteadOfInventedFromIdText() {
         val fields =
             VexLogger.subjectFields(
