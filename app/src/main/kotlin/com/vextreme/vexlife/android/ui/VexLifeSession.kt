@@ -3,8 +3,8 @@ package com.vextreme.vexlife.android.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.data.AppRepositories
-import com.vextreme.vexlife.android.data.AppRepositoryFactory
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
@@ -128,14 +128,26 @@ internal class VexLifeViewModel(
         VexExecutionRoot(
             dispatcher = Dispatchers.IO,
         )
+    private val vexApplication =
+        application as?
+            VexApplication
+            ?: error(
+                "VexLifeViewModel requires VexApplication as the Android process composition root",
+            )
     private val repositories =
-        AppRepositoryFactory.production(
-            application,
-        )
+        vexApplication.dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .repositories,
+            )
     private val themeModeStore =
-        SharedPreferencesThemeModeStore(
-            application.applicationContext,
-        )
+        vexApplication.dependencies
+            .resolve(
+                vexApplication
+                    .dependencyModule
+                    .themeModeStore,
+            )
     private val vexStreamStartupExecution =
         VexStreamStartupExecution(
             executionRoot = executionRoot,

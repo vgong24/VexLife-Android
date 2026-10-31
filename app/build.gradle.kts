@@ -65,7 +65,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":architecture:behavior"))
+    implementation(project(":architecture:behavior"))\n    implementation(project(":architecture:dependency"))
     implementation(project(":architecture:elements"))
     implementation(project(":architecture:execution"))
     implementation(project(":architecture:logging"))
