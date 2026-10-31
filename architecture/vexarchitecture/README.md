@@ -67,11 +67,33 @@ Connection/runtime outside Family
 Effect as requested runtime transformation, not resulting truth
 Save language for ThemeMode durability
 
+SETTLED ARCHITECTURAL LAW — IMPLEMENTATION SPELLING MAY STILL BE REFINED
+
+RelationshipId
+    active-work identity derived from the already-authored Control kind
+    plus only the typed child/sub-IDs that actually distinguish that relationship
+
+VexExecution active custody
+    one live VexExecution owner keeps:
+    RelationshipId -> actual Job(s)
+
+    Job completion removes that Job
+    no Jobs remaining removes the RelationshipId
+    no second activeExecutions truth
+
+overlap behavior
+    Earliest / Latest / Queued operate on the Job(s) already stored under the same RelationshipId
+    no second CoordinationKey identity vocabulary
+
+cancellation
+    cancelActiveRelationship(RelationshipId)
+    cancels the current Job(s) under that exact relationship
+    absent relationship is naturally a no-op
+    no callable / SourceRef / InstanceId / retained Handle required
+
 RE-DERIVE BEFORE IMPLEMENTING
 
-RelationshipId exact Kotlin representation
-VexExecution active custody kernel
-relationship-addressed cancellation API
+exact minimal Kotlin syntax/visibility for the already-settled RelationshipId law
 observation/recovery realization
 VexLogger production record schema
 debug expectation/discrepancy projection
@@ -120,9 +142,10 @@ A successor implementing this architecture should:
 1. start from current main
 2. read this snapshot
 3. port the preserved source shape intentionally
-4. re-derive held runtime/logging pieces from demonstrated consumers
-5. prove each preserved requirement against the smaller implementation
-6. open a fresh clean PR whose commits explain the accepted reasons
+4. implement the settled RelationshipId -> Job(s) custody/cancellation law without adding another identity layer
+5. re-derive only the still-held observation/logging/debug pieces from demonstrated consumers
+6. prove each preserved requirement against the smaller implementation
+7. open a fresh clean PR whose commits explain the accepted reasons
 ~~~
 
 Do not preserve a type, key, helper, registry, alias, or diagnostic field merely because deleting it

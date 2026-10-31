@@ -94,186 +94,210 @@ Save
 Only the movement of runtime mechanics out of Family is retained as an architectural improvement.
 The vocabulary churn itself is not.
 
-## 3. Relationship identity — preserve the requirement, not the old ceremony
+## 3. Relationship identity — settled law
 
-The earlier implementation demonstrated a useful identity law:
+The relationship layer itself is no longer held.
+
+The refined architecture uses `RelationshipId` as the active-work identity.
+
+Its meaning comes from structure that already exists:
 
 ~~~text
-live owner scope
+owning live semantic/runtime scope
 + Control kind
-+ optional typed ResourceId
-= active relationship identity
++ only the typed child/sub-IDs that actually distinguish that Control relationship
+= RelationshipId
 ~~~
 
-It also demonstrated an important payload distinction:
+The earlier implementation demonstrated the payload distinction clearly:
 
 ~~~text
 Play(track=A, position=10)
 Play(track=A, position=99)
--> same relationship when TrackId is the identity-bearing child
+-> same RelationshipId when TrackId is the identity-bearing child
 
 Play(track=A)
 Play(track=B)
--> different relationships
+-> different RelationshipIds
 ~~~
 
-The refined architecture preserves **that requirement**.
+Ordinary payload does not become identity merely because it is present on the Control.
 
-It does **not** yet freeze the old exact Kotlin representation.
-
-Held:
-
-~~~text
-exact RelationshipId class/interface shape
-exact Control.Resource / ResourceId surface
-whether RelationshipId must ever be public
-exact cancellation signature
-~~~
-
-Rejected as premature replacement ceremony:
+The relationship must remain an **invisible consequence of the already-authored semantic structure**.
+Do not add a second authoring ceremony such as:
 
 ~~~text
 family.relationship(control)
 ThemeModeRelationships
-automatic append(effect)
 manual relationship registries
-string-flattened identity
+automatic append(effect)
+string-flattened relationship descriptions
 ~~~
 
-The target behavior is that identity-bearing information already present in the semantic objects
-remains available to runtime custody without a second manually-authored description.
+The exact Kotlin spelling may still be made smaller during implementation. That is an implementation
+choice, not an unresolved architecture question.
 
-## 4. Execution — current #206 machinery is not the baseline
+## 4. Execution — settled active-custody law
 
-The current #206 implementation contains:
+The current #206 machinery is not the baseline.
+
+The refined execution law is:
+
+~~~text
+one live VexExecution owner
+
+active:
+    RelationshipId
+    -> actual Job(s)
+~~~
+
+The Job is the runtime occurrence.
+
+Admission places the Job under the already-known RelationshipId.
+
+Completion removes the Job.
+
+~~~text
+Job completes
+-> remove Job from RelationshipId
+
+no Jobs remain
+-> remove RelationshipId
+~~~
+
+Therefore:
+
+~~~text
+map contains RelationshipId
+= active work exists for that relationship
+
+map does not contain RelationshipId
+= no active work exists for that relationship
+~~~
+
+No second `activeExecutions` projection is required to restate what the Job map already knows.
+
+The object boundary of one live VexExecution owner already supplies owner isolation. A separate
+`OwnerToken` is not architectural identity.
+
+The following #206 concepts are not carried forward as required architecture:
 
 ~~~text
 OwnerToken
-KCallable sourceIdentity
+KCallable sourceIdentity as relationship identity
 SourceRef
 CoordinationKey
 CoordinationIdentity
-InstanceId
-Handle
-Snapshot
+process-global InstanceId
+public Handle
+Snapshot history
 activeExecutions
-active map
-coordinations map
+callable-based cancellation identity
 ~~~
 
-Those names are **review evidence**, not reconstruction requirements.
-
-The useful requirements discovered while building them survive:
+Useful requirements discovered while building #206 still survive:
 
 ~~~text
 two live runtime owners must not interfere
 
-same callable name must not imply same active relationship
+same callable name must not imply same relationship
 
-one runtime owner must not terminate a sibling merely because both share a root
+completed work must leave active custody automatically
 
-completed work must leave active custody
-
-Earliest / Latest / Queued overlap behavior must remain correct where actually required
+root shutdown must terminate the shared execution lifetime
 
 source/upstream collection failure must remain distinguishable from downstream consumer failure
-
-root shutdown must terminate the whole execution lifetime and reject later admission
 ~~~
 
-The replacement implementation should prove those properties with the smallest structure possible.
+Those requirements are proved against the smaller relationship-led structure rather than preserving
+the machinery that happened to discover them.
 
-### Present-custody law
+### Overlap behavior
 
-Current direction:
-
-~~~text
-meaningful active relationship
--> actual Job(s)
-
-Job completes
--> remove Job
-
-no Jobs remain
--> relationship no longer active
-~~~
-
-Do not add a second `activeExecutions` truth merely to restate the Job registry.
-
-### Occurrence law
-
-A Job is already an exact runtime occurrence.
-
-Do not promote an occurrence number into reusable architecture merely because tests or logs want an
-ordering/correlation aid.
-
-If an exact occurrence needs private internal distinction, that may remain implementation detail.
-
-### Handle law
-
-No current production consumer reviewed in this trajectory demonstrated a need to retain a public
-Handle:
-
-~~~text
-ThemeMode PersistenceExecution.persist()
-    returned Handle
-    caller ignored it
-
-VexMapsDistributionExecution
-    ignored launch returns
-    cancelled by re-supplying the callable
-~~~
-
-Therefore a public Handle is held, not presumed.
-
-Preserve its underlying requirements only if a real consumer demonstrates them.
-
-### Cancellation law
-
-Current code such as:
-
-~~~text
-forceStop(session::prepareForExecution)
-~~~
-
-addresses meaningful work through its implementation callable.
-
-That boundary is under refinement.
-
-Target principle:
-
-~~~text
-cancel meaningful active relationship
-not callable
-not SourceRef
-not InstanceId
-not retained Handle
-~~~
-
-Exact API remains held until the relationship identity representation is settled.
-
-## 5. Overlap behavior
-
-The behavioral meanings remain useful:
+The overlap meanings remain:
 
 ~~~text
 Independent
     accepted work does not coordinate with prior work
 
 Earliest
-    existing unfinished related work is sufficient
+    an existing unfinished Job under this RelationshipId is sufficient
 
 Latest
-    newest related work supersedes unfinished predecessors
+    cancel unfinished Job(s) under this RelationshipId
+    then admit the newest Job
 
 Queued
-    all accepted related work remains meaningful and executes in admission order
+    preserve accepted Job(s) under this RelationshipId
+    execute them in admission order
 ~~~
 
-These behaviors do not by themselves justify a second `CoordinationKey` identity vocabulary.
+All operate on the same RelationshipId.
 
-If the runtime already knows which active relationship the work belongs to, overlap policy operates
-on that relationship.
+There is no second CoordinationKey identity.
+
+### Cancellation
+
+Cancellation is settled at the same address:
+
+~~~text
+cancelActiveRelationship(RelationshipId)
+~~~
+
+Meaning:
+
+~~~text
+find the Job(s) currently stored under that RelationshipId
+-> cancel them
+
+relationship absent
+-> no-op
+~~~
+
+Cancellation does not need:
+
+~~~text
+Handle.forceStop()
+callable re-supply
+SourceRef
+InstanceId
+Control capability boilerplate
+~~~
+
+A feature may still have its own semantic user-facing Cancel Control when the product meaning requires
+one. That feature meaning is separate from the foundational runtime operation above.
+
+### Root lifetime
+
+`VexExecutionRoot` remains the shared lifetime boundary for terminal shutdown / dispatcher custody.
+
+It does not need to become the identity owner for every active relationship.
+
+One VexExecution owner should not terminate a sibling merely because both share the same root.
+
+## 5. What remains implementation detail versus held architecture
+
+The following are **not unresolved architectural questions**:
+
+~~~text
+RelationshipId is the active-work identity
+active custody is RelationshipId -> actual Job(s)
+Jobs auto-remove on completion
+empty relationships auto-remove
+Earliest / Latest / Queued operate on the same RelationshipId
+cancelActiveRelationship(RelationshipId) addresses the same map
+~~~
+
+Still open only at implementation-detail level:
+
+~~~text
+smallest Kotlin type declaration for RelationshipId
+smallest typed way to expose Control identity-bearing sub-IDs
+exact private collection type used for Job(s)
+whether any convenience return value is useful for launch/cancel
+~~~
+
+Those choices must not reintroduce a second identity or history layer.
 
 ## 6. Observation and recovery
 
@@ -431,8 +455,7 @@ implemented around it.
 This snapshot does **not** claim:
 
 ~~~text
-RelationshipId final API
-VexExecution final implementation
+RelationshipId / VexExecution exact Kotlin spelling
 VexLogger final record schema
 Gradle/JVM PASS
 device PASS
