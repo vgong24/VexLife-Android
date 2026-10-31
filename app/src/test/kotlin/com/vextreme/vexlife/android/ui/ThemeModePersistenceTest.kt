@@ -1,6 +1,5 @@
 package com.vextreme.vexlife.android.ui
 
-import com.vextreme.vexlife.android.behavior.VexFamily
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,20 +19,21 @@ class ThemeModePersistenceTest {
             RecordingThemeModeStore(
                 ThemeMode.NotSet,
             )
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Dark,
+            )
+        val connection =
+            ThemeModeConnection(
+                family = family,
+                executionRoot = root,
+                store = store,
+            )
 
         try {
-            val family =
-                ThemeModeFamily(
-                    initialState =
-                        ThemeMode.Dark,
-                    executionRoot =
-                        root,
-                    store =
-                        store,
-                )
-
             assertTrue(
-                family.activate(
+                connection.activate(
                     ThemeModeFamily.Control.Select(
                         ThemeMode.Dark,
                     ),
@@ -67,24 +67,25 @@ class ThemeModePersistenceTest {
     }
 
     @Test
-    fun durableSelectionObservationRestoresCurrentThroughTheFamilyStateRelay() {
+    fun durableSelectionObservationRestoresCurrentThroughTheConnection() {
         val root =
             VexExecutionRoot()
         val store =
             RecordingThemeModeStore(
                 ThemeMode.Light,
             )
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Dark,
+            )
 
         try {
-            val family =
-                ThemeModeFamily(
-                    initialState =
-                        ThemeMode.Dark,
-                    executionRoot =
-                        root,
-                    store =
-                        store,
-                )
+            ThemeModeConnection(
+                family = family,
+                executionRoot = root,
+                store = store,
+            )
 
             runBlocking {
                 withTimeout(
@@ -100,10 +101,6 @@ class ThemeModePersistenceTest {
             assertEquals(
                 ThemeMode.Light,
                 family.currentState,
-            )
-            assertEquals(
-                family.currentState,
-                family.states.value,
             )
             assertTrue(
                 store.savedStates.isEmpty(),
@@ -121,17 +118,18 @@ class ThemeModePersistenceTest {
             RecordingThemeModeStore(
                 ThemeMode.NotSet,
             )
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Dark,
+            )
 
         try {
-            val family =
-                ThemeModeFamily(
-                    initialState =
-                        ThemeMode.Dark,
-                    executionRoot =
-                        root,
-                    store =
-                        store,
-                )
+            ThemeModeConnection(
+                family = family,
+                executionRoot = root,
+                store = store,
+            )
 
             store.emit(
                 ThemeMode.Light,
@@ -164,7 +162,7 @@ class ThemeModePersistenceTest {
         initialState:
             ThemeMode,
     ) :
-        ThemeModeFamily.Store {
+        ThemeModeStore {
         private val mutableState =
             MutableStateFlow(
                 initialState,
@@ -185,19 +183,19 @@ class ThemeModePersistenceTest {
             state:
                 ThemeMode,
         ):
-            VexFamily.Store.WriteResult {
+            ThemeModeStore.WriteResult {
             savedStates +=
                 state
             mutableState.value =
                 state
-            return VexFamily.Store.WriteResult.Success
+            return ThemeModeStore.WriteResult.Success
         }
 
         override suspend fun forget():
-            VexFamily.Store.WriteResult {
+            ThemeModeStore.WriteResult {
             mutableState.value =
                 ThemeMode.NotSet
-            return VexFamily.Store.WriteResult.Success
+            return ThemeModeStore.WriteResult.Success
         }
 
         fun emit(

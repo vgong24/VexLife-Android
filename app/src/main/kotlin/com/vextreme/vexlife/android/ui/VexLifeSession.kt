@@ -39,12 +39,17 @@ internal class VexLifeSession(
     val repositories: AppRepositories,
     val scope: CoroutineScope,
     executionRoot: VexExecutionRoot,
-    themeModeStore: ThemeModeFamily.Store? = null,
+    themeModeStore: ThemeModeStore? = null,
     initialThemeMode: ThemeMode = ThemeMode.Dark,
 ) {
     val themeModeFamily =
         ThemeModeFamily(
             initialState = initialThemeMode,
+        )
+
+    private val themeModeConnection =
+        ThemeModeConnection(
+            family = themeModeFamily,
             executionRoot = executionRoot,
             store = themeModeStore,
         )
@@ -101,7 +106,7 @@ internal class VexLifeSession(
                     ThemeMode.Light
             }
 
-        themeModeFamily.activate(
+        themeModeConnection.activate(
             ThemeModeFamily.Control.Select(
                 selectedMode,
             ),

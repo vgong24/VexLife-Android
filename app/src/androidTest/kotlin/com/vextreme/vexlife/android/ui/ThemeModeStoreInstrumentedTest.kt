@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.ui
 
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
-import com.vextreme.vexlife.android.behavior.VexFamily
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -29,7 +28,7 @@ class ThemeModeStoreInstrumentedTest {
         clearStore()
 
     @Test
-    fun sharedPreferencesSelectionSurvivesFreshStoreAndFamilyConstruction() {
+    fun sharedPreferencesSelectionSurvivesFreshStoreFamilyAndConnectionConstruction() {
         val firstStore =
             SharedPreferencesThemeModeStore(
                 context,
@@ -37,7 +36,7 @@ class ThemeModeStoreInstrumentedTest {
 
         runBlocking {
             assertEquals(
-                VexFamily.Store.WriteResult.Success,
+                ThemeModeStore.WriteResult.Success,
                 firstStore.save(
                     ThemeMode.Light,
                 ),
@@ -72,11 +71,13 @@ class ThemeModeStoreInstrumentedTest {
                 ThemeModeFamily(
                     initialState =
                         ThemeMode.Dark,
-                    executionRoot =
-                        root,
-                    store =
-                        recreatedStore,
                 )
+
+            ThemeModeConnection(
+                family = recreatedFamily,
+                executionRoot = root,
+                store = recreatedStore,
+            )
 
             runBlocking {
                 assertEquals(
@@ -117,11 +118,11 @@ class ThemeModeStoreInstrumentedTest {
 
             assertTrue(
                 invalidSave is
-                    VexFamily.Store.WriteResult.Failure,
+                    ThemeModeStore.WriteResult.Failure,
             )
 
             assertEquals(
-                VexFamily.Store.WriteResult.Success,
+                ThemeModeStore.WriteResult.Success,
                 store.save(
                     ThemeMode.Dark,
                 ),
@@ -132,7 +133,7 @@ class ThemeModeStoreInstrumentedTest {
             )
 
             assertEquals(
-                VexFamily.Store.WriteResult.Success,
+                ThemeModeStore.WriteResult.Success,
                 store.forget(),
             )
             assertEquals(
