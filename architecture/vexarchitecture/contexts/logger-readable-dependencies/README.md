@@ -109,6 +109,44 @@ Logger chronology
 A readable architecture may connect these coordinates, but one coordinate is not permission to replace
 the others.
 
+## Two sides of connectability
+
+The current design should be read from both directions:
+
+~~~text
+CONSTRUCTION SIDE
+
+readable module/provider relationship
+-> prerequisite construction
+-> memoized live instance
+-> lifetime owner
+-> explicit consumer
+
+
+SEMANTIC / OBSERVATION SIDE
+
+explicit Family / Connection / runtime
+-> Control
+-> Act
+-> State and/or Effect
+-> runtime/provider/presentation result
+-> VexLogger chronology
+~~~
+
+They meet at explicit live objects, **not** at a universal dependency/execution/trace ID.
+
+In particular:
+
+~~~text
+Family does not need to know VexDependencyFactory exists
+Family does not need to know VexLogger exists
+
+construction owner knows how to build/connect objects
+observing Connection/runtime boundaries know how to report facts
+~~~
+
+See `RELATIONAL-BRIDGE.md` for the detailed bridge recommendations.
+
 ## Current work sequence
 
 The intended human work sequence is:
@@ -123,5 +161,19 @@ solidify VexLogger traceability foundation
 ~~~
 
 Do not rush directly into a DI implementation from these sketches.
+
+Bridge recommendations currently preserved in `RELATIONAL-BRIDGE.md`:
+
+~~~text
+factory/construction owner owns graph traversal + memoization
+constructed objects declare/receive dependencies without becoming graph managers
+Family should not implement DI mechanics by default
+class name is a readable label, not automatically the complete dependency identity
+UI consumption remains explicit through parameters
+Logger observes after semantic/runtime boundaries rather than living inside Family
+completionState remains decomposed into independently true facts
+VexMetaData must prove a real cross-cutting need
+server delivery remains downstream of Logger fact formation
+~~~
 
 <!-- [VXG RealForever][VEXARCHITECTURE][LOGGER][READABLE-DEPENDENCIES][CONTEXT] -->
