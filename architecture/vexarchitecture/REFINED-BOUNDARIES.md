@@ -320,85 +320,150 @@ are not accepted merely because they exist.
 
 Recovery policy must remain with the runtime owner that can lawfully decide whether retry is valid.
 
-## 7. Logger — chronology, not duplicate narration
+## 7. Logger — settled traceability owner
 
-VexLogger belongs in the architecture review because it owns temporal observation.
-
-Target responsibility:
+Detailed stable contract:
 
 ~~~text
-rightful owner accepts / observes fact
--> Logger records fact in chronology
--> downstream projections may retain / display it
+VEXLOGGER.md
 ~~~
 
-Examples of independently meaningful facts:
+VexLogger owns chronological observation of accepted or observed facts.
+
+It is independent of VexExecution ownership:
+
+~~~text
+Family / semantic owner --------+
+Connection / provider ----------+
+VexExecution -------------------+--> VexLogger chronology
+Navigation / presentation ------+
+application/runtime ------------+
+~~~
+
+Execution owns **what is active now**.
+
+Logger owns **what happened and in what order**.
+
+RelationshipId owns **which active semantic relationship**.
+
+Do not add an execution `InstanceId`, completed Snapshot registry, SourceRef, TraceId, CorrelationId,
+or parallel history surface merely to answer historical/diagnostic questions.
+
+### Production facts
+
+Examples:
 
 ~~~text
 App opened
-Screen arrived
-Screen disappeared
+Control accepted
 Button clicked
 Save requested
 Save succeeded
 Save failed
+Screen disappeared
+Screen arrived
+Dialog appeared
 Song ended
 AutoAdvance selected next song
 Song started
 ~~~
 
-Do not persist a second narration when adjacent facts already prove the relationship.
+Actual user-visible result is part of the causal trail. Backend success does not prove that the
+intended presentation arrived.
+
+### Expectation versus observation
+
+Production:
+
+~~~text
+accepted / observed facts
+~~~
+
+Debug:
+
+~~~text
+optional expectation
+optional actual observation
+optional discrepancy
+~~~
+
+The reviewed current `VexRuntime` sometimes calculates `screenAfter` and logs it before
+`applyIntent(...)` performs navigation. That is expectation mixed with history and must not define
+the stable Logger contract.
+
+### Chronology before correlation IDs
+
+Prefer:
+
+~~~text
+rightful semantic identity
++ RelationshipId where active-execution relationship matters
++ timestamps / ordered Logger facts
+~~~
+
+before inventing occurrence IDs.
+
+If exact simultaneous occurrences under one RelationshipId truly require distinction, first test
+whether the missing distinction is actually a semantic typed child/sub-ID or whether the active Job
+object is sufficient as private runtime identity. Any remaining occurrence token must stay as narrow
+as the demonstrated need permits.
+
+### Derive rather than duplicate
+
+Do not persist another narration when ordered facts already prove it.
 
 ~~~text
 A disappeared
 B arrived
-
-already proves temporal A -> B
 ~~~
 
-### Current logger fields under challenge
+already proves temporal adjacency.
 
-Current implementation includes:
+Timestamp chronology normally derives durations. A monotonic sequence may remain a persistence/order
+mechanic but is not semantic or execution identity.
+
+### One root
+
+Do not create peer logger roots such as:
 
 ~~~text
-sequence
-durationSincePreviousSeconds
-screenBeforeId
-screenAfterId
-section
+VexExecutionLogger
+VexFamilyLogger
+NavigationTraceLogger
+RelationshipHistory
 ~~~
 
-Questions:
+Different rightful owners emit facts into VexLogger; downstream LogHistory, Logcat and VexBoard/debug
+surfaces project those facts.
+
+### Failure isolation
+
+Logger/persistence/projection failure cannot change the fact being observed.
 
 ~~~text
-sequence
-    storage/order mechanic or semantic fact?
+product fact
+-> Logger
+-> LogHistory / Logcat / VexBoard
 
-durationSincePreviousSeconds
-    derivable from timestamps?
+downstream failure
+!= product failure
+~~~
 
+### Current source under refinement
+
+Current fields and structures remain evidence, not stable requirements:
+
+~~~text
 screenBeforeId / screenAfterId
-    observed facts or predicted transition narration?
-
+durationSincePreviousSeconds
 section
-    independent truth or formatting/session bookkeeping?
+sequence as anything beyond ordering
+internal Compose history State
+Event.Family KCallable operation events
+screenScopes() reconstructed from predicted transition pairs
 ~~~
 
-Current `VexRuntime` often calculates a navigation target and logs it before `applyIntent(...)`
-actually performs the navigation. That is expectation mixed with production history.
-
-Refinement target:
-
-~~~text
-production
-    observed / accepted facts
-
-debug
-    optional expectation
-    optional discrepancy detection
-~~~
-
-Expectation must never be silently promoted into production truth.
+Consult `VEXLOGGER.md` before changing or preserving any of them.
 
 ## 8. VexBoard / human projection
 
@@ -447,8 +512,9 @@ root shutdown
 source-vs-downstream failure distinction
 ~~~
 
-Only after the runtime shape survives those pressures should Logger and VexBoard projection be
-implemented around it.
+Execution refinement does not gate Logger ownership. VexLogger's chronology contract is already
+settled in `VEXLOGGER.md`; implementation work may refine Execution and Logger independently while
+preserving their separate ownership. VexBoard remains a downstream projection across those truths.
 
 ## 10. Snapshot non-claims
 

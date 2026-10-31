@@ -95,9 +95,8 @@ RE-DERIVE BEFORE IMPLEMENTING
 
 exact minimal Kotlin syntax/visibility for the already-settled RelationshipId law
 observation/recovery realization
-VexLogger production record schema
-debug expectation/discrepancy projection
-VexBoard projection
+VexLogger exact record/event schema
+VexBoard exact projection
 
 DO NOT CARRY FORWARD MERELY BECAUSE #206 HAS THEM
 
@@ -117,6 +116,16 @@ PersistSelection / PersistenceExecution.persist naming
 ~~~
 
 The full reasoning boundary is recorded in `REFINED-BOUNDARIES.md`.
+
+Traceability has a dedicated stable owner contract:
+
+~~~text
+VEXLOGGER.md
+~~~
+
+Any future change proposed for "traceability", "history", "correlation", "causal trail", or
+"debuggability" must consult that contract before creating another ID, ledger, registry, logger root,
+or completed-execution history surface.
 
 ## Provenance, not authority
 
