@@ -6,6 +6,7 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import kotlin.reflect.KClass
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Runtime/persistence boundary around the pure [ThemeModeFamily].
@@ -20,24 +21,15 @@ internal class ThemeModeConnection(
     private val store: ThemeModeStore? = null,
     private val logger: VexLogger.Sink = VexLogger.Sink.None,
 ) {
-    /**
-     * ThemeMode currently has one runtime relationship kind: Select.
-     *
-     * The identity is derived from the already-authored Control kind and this live Connection owner.
-     * No payload value, SourceRef, InstanceId, TraceId or handwritten String key participates.
-     */
-    private data class RelationshipId(
-        val owner: ThemeModeConnection,
-        val controlType: KClass<out ThemeModeFamily.Control>,
-    ) :
-        VexExecution.RelationshipId
+    private val execution =
+        ThemeModeExecution(
+            executionRoot,
+        )
 
     init {
         store
             ?.let { stateStore ->
-                VexExecution.observe(
-                    executionRoot = executionRoot,
-                    owner = this::class,
+                execution.observeStore(
                     source = stateStore::observableState,
                 ) { storedState ->
                     when (storedState) {
@@ -143,14 +135,8 @@ internal class ThemeModeConnection(
         val operation =
             stateStore::save
 
-        VexExecution.beginLatest(
-            executionRoot = executionRoot,
-            owner = this::class,
-            relationshipId =
-                RelationshipId(
-                    owner = this,
-                    controlType = control::class,
-                ),
+        execution.saveLatest(
+            control = control,
             operation = operation,
             argument = effect.mode,
             beforeOperation = {
@@ -210,6 +196,82 @@ internal class ThemeModeConnection(
             )
         } catch (_: Throwable) {
             // Observation failure is not ThemeMode semantic/runtime authority.
+        }
+    }
+
+
+    /**
+     * Runtime custody for this one Connection.
+     *
+     * Relationship identity is scoped by this live VexExecution owner, so ThemeMode only contributes
+     * the semantic Control kind. Select(Dark) and Select(Light) are the same active Save relationship;
+     * the selected mode remains operation payload.
+     */
+    private class ThemeModeExecution(
+        root:
+            VexExecutionRoot,
+    ) :
+        VexExecution(
+            root,
+        ) {
+        private data class RelationshipId(
+            val controlType:
+                KClass<
+                    out ThemeModeFamily.Control
+                >,
+        ) :
+            VexExecution.RelationshipId
+
+        fun observeStore(
+            source:
+                kotlin.reflect.KProperty0<
+                    Flow<ThemeMode>
+                >,
+            onEach:
+                suspend (ThemeMode) -> Unit,
+        ) {
+            launchForCollect(
+                source =
+                    source,
+                onEach =
+                    onEach,
+            )
+        }
+
+        fun saveLatest(
+            control:
+                ThemeModeFamily.Control,
+            operation:
+                kotlin.reflect.KSuspendFunction1<
+                    ThemeMode,
+                    ThemeModeStore.WriteResult
+                >,
+            argument:
+                ThemeMode,
+            beforeOperation:
+                () -> Unit,
+            onResult:
+                (ThemeModeStore.WriteResult) -> Unit,
+            onFailure:
+                (Throwable) -> Unit,
+        ) {
+            beginLatest(
+                relationshipId =
+                    RelationshipId(
+                        controlType =
+                            control::class,
+                    ),
+                operation =
+                    operation,
+                argument =
+                    argument,
+                beforeOperation =
+                    beforeOperation,
+                onResult =
+                    onResult,
+                onFailure =
+                    onFailure,
+            )
         }
     }
 }

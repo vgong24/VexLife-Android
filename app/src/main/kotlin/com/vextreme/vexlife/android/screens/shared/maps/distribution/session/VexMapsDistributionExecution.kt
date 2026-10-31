@@ -117,8 +117,8 @@ internal class VexMapsDistributionExecution(
     }
 
     suspend fun shutdown() {
-        root.joinStopAll(
-            "VexMaps Distribution session shut down",
+        joinStopOwned(
+            "VexMaps Distribution execution shut down",
         )
     }
 }
