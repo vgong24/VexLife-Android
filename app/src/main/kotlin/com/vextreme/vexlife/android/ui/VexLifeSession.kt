@@ -4,7 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vextreme.vexlife.android.VexApplication
+import com.vextreme.vexlife.android.VexApplicationDependencyModule
 import com.vextreme.vexlife.android.data.AppRepositories
+import com.vextreme.vexlife.android.dependency.VexDependencyBuildScope
+import com.vextreme.vexlife.android.dependency.VexDependencyFactory
+import com.vextreme.vexlife.android.dependency.VexDependencyModule
+import com.vextreme.vexlife.android.dependency.VexDependencyProvider
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
 import com.vextreme.vexlife.android.data.vexstream.VexStreamLocalCopyState
@@ -116,6 +121,191 @@ internal class VexLifeSession(
 }
 
 /**
+ * ViewModel/session-lifetime dependency declarations.
+ *
+ * This child graph may consume application providers but owns its own memoized runtime/session
+ * instances. The session provider is intentionally the current migration boundary: Logger/Family
+ * internals will move into explicit providers as their reusable construction relationships are
+ * refined rather than being abstracted speculatively.
+ */
+internal class VexLifeSessionDependencyModule(
+    applicationDependencies:
+        VexApplicationDependencyModule,
+    private val scope:
+        CoroutineScope,
+    private val applicationContext:
+        android.content.Context,
+) {
+    val executionRoot =
+        ExecutionRootProvider()
+
+    val session =
+        SessionProvider(
+            repositories =
+                applicationDependencies.repositories,
+            themeModeStore =
+                applicationDependencies.themeModeStore,
+            executionRoot =
+                executionRoot,
+            scope =
+                scope,
+        )
+
+    val vexStreamStartup =
+        VexStreamStartupProvider(
+            repositories =
+                applicationDependencies.repositories,
+            executionRoot =
+                executionRoot,
+        )
+
+    val vexStreamArtwork =
+        VexStreamArtworkProvider(
+            repositories =
+                applicationDependencies.repositories,
+            executionRoot =
+                executionRoot,
+            applicationContext =
+                applicationContext,
+        )
+
+    val module:
+        VexDependencyModule =
+        VexDependencyModule.of(
+            executionRoot,
+            session,
+            vexStreamStartup,
+            vexStreamArtwork,
+        )
+
+    internal class ExecutionRootProvider :
+        VexDependencyProvider<VexExecutionRoot>() {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexExecutionRoot =
+            VexExecutionRoot(
+                dispatcher =
+                    Dispatchers.IO,
+            )
+    }
+
+    internal class SessionProvider(
+        private val repositories:
+            VexDependencyProvider<AppRepositories>,
+        private val themeModeStore:
+            VexDependencyProvider<ThemeModeStore>,
+        private val executionRoot:
+            VexDependencyProvider<VexExecutionRoot>,
+        private val scope:
+            CoroutineScope,
+    ) :
+        VexDependencyProvider<VexLifeSession>(
+            dependencies =
+                listOf(
+                    repositories,
+                    themeModeStore,
+                    executionRoot,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexLifeSession =
+            VexLifeSession(
+                repositories =
+                    dependencies.require(
+                        repositories,
+                    ),
+                scope =
+                    scope,
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                themeModeStore =
+                    dependencies.require(
+                        themeModeStore,
+                    ),
+            )
+    }
+
+    internal class VexStreamStartupProvider(
+        private val repositories:
+            VexDependencyProvider<AppRepositories>,
+        private val executionRoot:
+            VexDependencyProvider<VexExecutionRoot>,
+    ) :
+        VexDependencyProvider<VexStreamStartupExecution>(
+            dependencies =
+                listOf(
+                    repositories,
+                    executionRoot,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamStartupExecution =
+            VexStreamStartupExecution(
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                repository =
+                    dependencies.require(
+                        repositories,
+                    )
+                        .vexStream,
+            )
+                .also {
+                    it.start()
+                }
+    }
+
+    internal class VexStreamArtworkProvider(
+        private val repositories:
+            VexDependencyProvider<AppRepositories>,
+        private val executionRoot:
+            VexDependencyProvider<VexExecutionRoot>,
+        private val applicationContext:
+            android.content.Context,
+    ) :
+        VexDependencyProvider<VexStreamArtworkExecution>(
+            dependencies =
+                listOf(
+                    repositories,
+                    executionRoot,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexStreamArtworkExecution =
+            VexStreamArtworkExecution(
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                repository =
+                    dependencies.require(
+                        repositories,
+                    )
+                        .vexStream,
+                context =
+                    applicationContext,
+            )
+                .also {
+                    it.start()
+                }
+    }
+}
+
+/**
  * Android configuration-lifetime owner for [VexLifeSession].
  *
  * Activity rotation/recreation receives the same ViewModel instance, so the active Screen, open
@@ -124,52 +314,52 @@ internal class VexLifeSession(
 internal class VexLifeViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
-    private val executionRoot =
-        VexExecutionRoot(
-            dispatcher = Dispatchers.IO,
-        )
     private val vexApplication =
         application as?
             VexApplication
             ?: error(
                 "VexLifeViewModel requires VexApplication as the Android process composition root",
             )
-    private val repositories =
+
+    private val dependencyModule =
+        VexLifeSessionDependencyModule(
+            applicationDependencies =
+                vexApplication.dependencyModule,
+            scope =
+                viewModelScope,
+            applicationContext =
+                application.applicationContext,
+        )
+
+    private val dependencies:
+        VexDependencyFactory =
         vexApplication.dependencies
-            .resolve(
-                vexApplication
-                    .dependencyModule
-                    .repositories,
+            .child(
+                dependencyModule.module,
             )
-    private val themeModeStore =
-        vexApplication.dependencies
-            .resolve(
-                vexApplication
-                    .dependencyModule
-                    .themeModeStore,
-            )
+
+    private val executionRoot =
+        dependencies.resolve(
+            dependencyModule.executionRoot,
+        )
+
+    /*
+     * Preserve the current startup behavior explicitly. The dependency factory is lazy; resolving
+     * these roots is the readable statement that this session currently chooses to start them.
+     */
     private val vexStreamStartupExecution =
-        VexStreamStartupExecution(
-            executionRoot = executionRoot,
-            repository = repositories.vexStream,
-        ).also {
-            it.start()
-        }
+        dependencies.resolve(
+            dependencyModule.vexStreamStartup,
+        )
+
     private val vexStreamArtworkExecution =
-        VexStreamArtworkExecution(
-            executionRoot = executionRoot,
-            repository = repositories.vexStream,
-            context = application.applicationContext,
-        ).also {
-            it.start()
-        }
+        dependencies.resolve(
+            dependencyModule.vexStreamArtwork,
+        )
 
     val session =
-        VexLifeSession(
-            repositories = repositories,
-            scope = viewModelScope,
-            executionRoot = executionRoot,
-            themeModeStore = themeModeStore,
+        dependencies.resolve(
+            dependencyModule.session,
         )
 
     override fun onCleared() {
@@ -180,7 +370,7 @@ internal class VexLifeViewModel(
     }
 }
 
-private class VexStreamStartupExecution(
+internal class VexStreamStartupExecution(
     executionRoot: VexExecutionRoot,
     private val repository: VexStreamMusicRepository,
 ) : VexExecution(
@@ -200,7 +390,7 @@ private class VexStreamStartupExecution(
  * This Execution only gives that finite network/filesystem work an explicit non-UI lifetime whenever
  * current Hub/catalog truth becomes available.
  */
-private class VexStreamArtworkExecution(
+internal class VexStreamArtworkExecution(
     executionRoot: VexExecutionRoot,
     private val repository: VexStreamMusicRepository,
     private val context: android.content.Context,
