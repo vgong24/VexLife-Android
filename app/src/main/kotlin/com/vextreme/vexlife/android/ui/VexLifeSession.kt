@@ -61,6 +61,7 @@ internal class VexLifeSession(
 
     val logger = VexLogger(
         onRecord = logPersistence::record,
+        blueprintRegistry = AppScreens.registry,
     )
 
     /**

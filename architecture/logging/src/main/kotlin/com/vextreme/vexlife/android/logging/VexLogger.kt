@@ -2,7 +2,10 @@ package com.vextreme.vexlife.android.logging
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import com.vextreme.vexlife.android.elements.ActionElement
+import com.vextreme.vexlife.android.elements.ElementIntent
 import com.vextreme.vexlife.android.elements.ScreenElement
+import com.vextreme.vexlife.android.elements.UIBlueprintRegistry
 import com.vextreme.vexlife.android.elements.UIElement
 import java.time.Duration
 import java.time.Instant
@@ -54,11 +57,35 @@ data class VexLogScreenScope(
         }
 }
 
+
+/**
+ * Read-only structural interpretation of one stable Logger subject coordinate.
+ *
+ * These fields are derived from the current matching Blueprint registry; they are not duplicated
+ * canonical metadata stored in each log record. A different/missing registry can therefore be
+ * reported honestly without rewriting the original fact.
+ */
+data class VexLogSubjectFields(
+    val subjectRef: String,
+    val ownerScreenId: String?,
+    val placementPath: List<String>,
+    val elementKind: String?,
+    val declaredIntent: String?,
+    val resolution: Resolution,
+) {
+    enum class Resolution {
+        RESOLVED,
+        NOT_A_BLUEPRINT_ELEMENT,
+        BLUEPRINT_MAPPING_MISSING,
+    }
+}
+
 class VexLogger(
     private val clock: () -> Instant = { Instant.now() },
     private val zoneId: () -> ZoneId = { ZoneId.systemDefault() },
     private val maxRecords: Int = 256,
     private val onRecord: (VexLogRecord) -> Unit = {},
+    private val blueprintRegistry: UIBlueprintRegistry? = null,
 ) {
     /**
      * Root-owned structured logging boundary for foundations that need to report accepted facts
@@ -268,6 +295,19 @@ class VexLogger(
         zoneId = zoneId(),
     )
 
+    /**
+     * Explicit structural projection for developer/debug use.
+     *
+     * Stable IDs remain the stored facts. The Blueprint registry resolves those IDs into owner,
+     * placement, kind and declared UI intent at read time so Logger does not maintain a second map.
+     */
+    fun renderStructuredHistory(): String =
+        formatStructuredHistory(
+            records = history.value,
+            zoneId = zoneId(),
+            registry = blueprintRegistry,
+        )
+
     private fun append(
         kind: VexLogKind,
         subjectRef: String,
@@ -312,6 +352,235 @@ class VexLogger(
     }
 
     companion object {
+        /**
+         * Resolve one stable subject coordinate through the rightful UI topology owner.
+         *
+         * element.* coordinates are expected to exist in the supplied Blueprint map unless they are
+         * intentionally runtime/dynamic identities. Callers decide whether a missing mapping is a
+         * conformance failure; this projection makes the gap visible instead of silently inventing
+         * fields from string parsing.
+         */
+        fun subjectFields(
+            subjectRef: String,
+            registry: UIBlueprintRegistry?,
+        ): VexLogSubjectFields {
+            if (
+                !subjectRef.startsWith(
+                    "element.",
+                )
+            ) {
+                return VexLogSubjectFields(
+                    subjectRef = subjectRef,
+                    ownerScreenId = null,
+                    placementPath = emptyList(),
+                    elementKind = null,
+                    declaredIntent = null,
+                    resolution = VexLogSubjectFields.Resolution.NOT_A_BLUEPRINT_ELEMENT,
+                )
+            }
+
+            val element =
+                registry
+                    ?.element(
+                        subjectRef,
+                    )
+                    ?: return VexLogSubjectFields(
+                        subjectRef = subjectRef,
+                        ownerScreenId = null,
+                        placementPath = emptyList(),
+                        elementKind = null,
+                        declaredIntent = null,
+                        resolution = VexLogSubjectFields.Resolution.BLUEPRINT_MAPPING_MISSING,
+                    )
+
+            val ancestors =
+                buildList {
+                    var current =
+                        registry.parentOf(
+                            element,
+                        )
+
+                    while (
+                        current !=
+                        null
+                    ) {
+                        add(
+                            current.elementId,
+                        )
+                        current =
+                            registry.parentOf(
+                                current,
+                            )
+                    }
+                }
+                    .asReversed()
+
+            return VexLogSubjectFields(
+                subjectRef = subjectRef,
+                ownerScreenId =
+                    registry
+                        .ownerScreenOf(
+                            element,
+                        )
+                        ?.screenId,
+                placementPath =
+                    ancestors +
+                        element.elementId,
+                elementKind =
+                    element.kind,
+                declaredIntent =
+                    (
+                        element as?
+                            ActionElement
+                    )
+                        ?.intent
+                        ?.let(
+                            ::intentField,
+                        ),
+                resolution = VexLogSubjectFields.Resolution.RESOLVED,
+            )
+        }
+
+        /**
+         * New explicit Debug/inspection representation.
+         *
+         * This intentionally keeps the old compact human history formatter available while the
+         * structured representation is pressure-tested by real consumers.
+         */
+        fun formatStructuredHistory(
+            records: List<VexLogRecord>,
+            zoneId: ZoneId,
+            registry: UIBlueprintRegistry?,
+        ): String {
+            if (records.isEmpty()) {
+                return "No actions recorded yet."
+            }
+
+            val formatter =
+                DateTimeFormatter
+                    .ofPattern(
+                        "h:mm:ssa MMM d, yyyy",
+                        Locale.US,
+                    )
+                    .withZone(
+                        zoneId,
+                    )
+
+            return records
+                .joinToString(
+                    separator = "\n\n",
+                ) { record ->
+                    val fields =
+                        subjectFields(
+                            subjectRef =
+                                record.subjectRef,
+                            registry =
+                                registry,
+                        )
+
+                    buildString {
+                        appendLine(
+                            "[${formatter.format(record.timestamp)}]",
+                        )
+                        appendLine(
+                            "fact.kind = ${record.kind}",
+                        )
+                        appendLine(
+                            "fact.action = ${record.action}",
+                        )
+                        appendLine(
+                            "source.ref = ${fields.subjectRef}",
+                        )
+                        appendLine(
+                            "source.resolution = ${fields.resolution}",
+                        )
+
+                        fields.ownerScreenId
+                            ?.let { screenId ->
+                                appendLine(
+                                    "source.screen = $screenId",
+                                )
+                            }
+
+                        fields.elementKind
+                            ?.let { kind ->
+                                appendLine(
+                                    "source.kind = $kind",
+                                )
+                            }
+
+                        if (
+                            fields.placementPath
+                                .isNotEmpty()
+                        ) {
+                            appendLine(
+                                "source.path = " +
+                                    fields.placementPath
+                                        .joinToString(
+                                            " -> ",
+                                        ),
+                            )
+                        }
+
+                        fields.declaredIntent
+                            ?.let { intent ->
+                                appendLine(
+                                    "source.intent = $intent",
+                                )
+                            }
+
+                        record.detailsJson
+                            ?.takeIf {
+                                it.isNotBlank()
+                            }
+                            ?.let { details ->
+                                appendLine(
+                                    "fact.details = $details",
+                                )
+                            }
+                    }
+                        .trimEnd()
+                }
+        }
+
+        private fun intentField(
+            intent: ElementIntent,
+        ): String =
+            when (intent) {
+                is ElementIntent.NavigateTo ->
+                    "NavigateTo(${intent.screen.screenId})"
+
+                ElementIntent.NavigateBack ->
+                    "NavigateBack"
+
+                is ElementIntent.Open ->
+                    "Open(${intent.element.elementId})"
+
+                is ElementIntent.Close ->
+                    "Close(${intent.element.elementId})"
+
+                is ElementIntent.Toggle ->
+                    "Toggle(${intent.element.elementId})"
+
+                is ElementIntent.SwapTo ->
+                    "SwapTo(${intent.container.elementId},${intent.child.elementId})"
+
+                ElementIntent.LocalEffect ->
+                    "LocalEffect"
+
+                is ElementIntent.Invoke ->
+                    "Invoke(${intent.action.actionId})"
+
+                is ElementIntent.Sequence ->
+                    intent.intents
+                        .joinToString(
+                            prefix = "Sequence(",
+                            postfix = ")",
+                            separator = " -> ",
+                            transform = ::intentField,
+                        )
+            }
+
         /**
          * Groups canonical records into semantic Screen visits.
          *
