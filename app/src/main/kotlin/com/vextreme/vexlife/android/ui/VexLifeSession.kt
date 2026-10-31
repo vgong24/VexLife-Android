@@ -47,6 +47,16 @@ internal class VexLifeSession(
     themeModeStore: ThemeModeStore? = null,
     initialThemeMode: ThemeMode = ThemeMode.Dark,
 ) {
+    val logPersistence = LogHistoryPersistenceQueue(
+        repository = repositories.logHistory,
+        scope = scope,
+    )
+
+    val logger = VexLogger(
+        onRecord = logPersistence::record,
+        blueprintRegistry = AppScreens.registry,
+    )
+
     val themeModeFamily =
         ThemeModeFamily(
             initialState = initialThemeMode,
@@ -57,17 +67,8 @@ internal class VexLifeSession(
             family = themeModeFamily,
             executionRoot = executionRoot,
             store = themeModeStore,
+            logger = logger.sink,
         )
-
-    val logPersistence = LogHistoryPersistenceQueue(
-        repository = repositories.logHistory,
-        scope = scope,
-    )
-
-    val logger = VexLogger(
-        onRecord = logPersistence::record,
-        blueprintRegistry = AppScreens.registry,
-    )
 
     /**
      * Reusable semantic Relays live with the app session rather than any one Compose destination.
