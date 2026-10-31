@@ -11,8 +11,9 @@
 > Sibling foundation snapshot:
 > https://github.com/vgong24/VexLife-Android/pull/207
 >
-> This PR is deliberately a sibling of #207 from clean `main`. It does not branch from #207 and does
-> not imply either PR should merge. Read them together.
+> This PR deliberately **continues from #207's current snapshot head**. #207's history remains
+> untouched; this branch contains only the additional Logger/readable-dependency context on top.
+> It still does not imply either PR should merge.
 
 ## Entry order
 
