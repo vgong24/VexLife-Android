@@ -434,3 +434,32 @@ The strength of the map is that each coordinate remains owned by its rightful la
 relationships between them are inspectable.
 
 <!-- [VXG RealForever][DERIVED-IDENTITY-MAP][VEXUI][VEXLOGGER][CRAWLER] -->
+
+
+## 13. Scalability and platform recycling
+
+See:
+
+~~~text
+USE-CASES-SCALABILITY-PLATFORM-RECYCLING.md
+~~~
+
+Key scale law:
+
+~~~text
+more instances of the same relationship law
+!= more implementations of the law
+~~~
+
+Key platform-recycling law:
+
+~~~text
+preserve:
+    host -> canonical source -> realization
+
+adapt:
+    native platform source/host mechanism
+~~~
+
+The same topology can therefore support many features, apps, and platforms without forcing them to
+share Android-specific syntax or maintain parallel mapping systems.

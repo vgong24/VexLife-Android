@@ -26,7 +26,8 @@ Read in this order:
 4. RELATIONAL-BRIDGE.md
 5. TOPOLOGY-AND-ID-PROTOCOL.md
 6. DERIVED-IDENTITY-MAP.md
-7. WHAT-NEXT.md
+7. USE-CASES-SCALABILITY-PLATFORM-RECYCLING.md
+8. WHAT-NEXT.md
 ~~~
 
 The Logger contract comes first because traceability already has an owner. The dependency work must
@@ -201,6 +202,35 @@ relationship map
 
 Missing mappings remain visible diagnostic facts; the filters themselves do not become new truth
 owners.
+
+## Why this scales / platform recycling
+
+Read:
+
+~~~text
+USE-CASES-SCALABILITY-PLATFORM-RECYCLING.md
+~~~
+
+The scale model is:
+
+~~~text
+more features / Screens / Families / apps / platforms
+-> more instances of reusable relationship laws
+-> not more identity systems or management frameworks
+~~~
+
+The platform-recycling model is:
+
+~~~text
+preserve:
+    host -> canonical source -> realization
+
+adapt:
+    platform-native host/source mechanics
+~~~
+
+Logger, crawler, lint, VexSync, VexBoard, tests and localization verification consume filters or
+projections over the same relationship map.
 
 ## Current work sequence
 

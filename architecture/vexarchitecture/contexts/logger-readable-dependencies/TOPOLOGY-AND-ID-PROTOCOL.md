@@ -416,3 +416,17 @@ Styled text, plurals and formatting remain realizations of the same content-sour
 The resulting relationship map may then be filtered for crawler coverage, missing mappings,
 localization/content-source conformance, raw-native-component escapes, remote/VexSync interpretation,
 and similar questions without creating additional identity systems.
+
+
+## 11. Scalability and platform recycling rationale
+
+See:
+
+~~~text
+USE-CASES-SCALABILITY-PLATFORM-RECYCLING.md
+~~~
+
+The topology scales by reusing the same relationship laws across many features, Screens, apps and
+platforms. Platform recycling preserves relationship shape while allowing each platform to retain its
+native source/resource system. Logger, crawler, VexSync and VexBoard consume filters/projections over
+the same map instead of maintaining independent mappings.
