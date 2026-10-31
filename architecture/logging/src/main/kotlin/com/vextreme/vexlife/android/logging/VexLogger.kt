@@ -19,6 +19,8 @@ enum class VexLogKind {
     AppOpened,
     Interaction,
     Gesture,
+    Semantic,
+    Runtime,
 }
 
 /**
@@ -112,6 +114,17 @@ class VexLogger(
     }
 
     /**
+     * Structured fact ingress for runtime/semantic owners.
+     *
+     * The sink is a projection into this same Logger root; it is not a peer logger or event bus.
+     */
+    val sink:
+        Sink =
+        Sink(
+            ::record,
+        )
+
+    /**
      * Structured events owned by the VexLogger root.
      */
     sealed interface Event {
@@ -189,6 +202,116 @@ class VexLogger(
 
     init {
         require(maxRecords > 0) { "maxRecords must be positive" }
+    }
+
+    /**
+     * Record one already-accepted/observed structured fact.
+     *
+     * Event fields remain owned by their source boundary. Logger only places them in chronology.
+     */
+    fun record(
+        event: Event,
+    ) {
+        when (event) {
+            is Event.Family.ControlAccepted ->
+                append(
+                    kind = VexLogKind.Semantic,
+                    subjectRef =
+                        familyRef(
+                            event.family,
+                        ),
+                    action = "ControlAccepted",
+                    screenBeforeId = null,
+                    screenAfterId = null,
+                    detailsJson =
+                        "{\"control\":\"" +
+                            event.control
+                                .readableClassName() +
+                            "\",\"currentState\":\"" +
+                            event.currentState
+                                .readableClassName() +
+                            "\"}",
+                )
+
+            is Event.Family.StateAdmitted ->
+                append(
+                    kind = VexLogKind.Semantic,
+                    subjectRef =
+                        familyRef(
+                            event.family,
+                        ),
+                    action = "StateAdmitted",
+                    screenBeforeId = null,
+                    screenAfterId = null,
+                    detailsJson =
+                        "{\"fromState\":\"" +
+                            event.fromState
+                                .readableClassName() +
+                            "\",\"toState\":\"" +
+                            event.toState
+                                .readableClassName() +
+                            "\"}",
+                )
+
+            is Event.Family.OperationBegan ->
+                append(
+                    kind = VexLogKind.Runtime,
+                    subjectRef =
+                        familyRef(
+                            event.family,
+                        ),
+                    action = "OperationRequested",
+                    screenBeforeId = null,
+                    screenAfterId = null,
+                    detailsJson =
+                        operationDetails(
+                            operation =
+                                event.operation,
+                            state =
+                                event.state,
+                        ),
+                )
+
+            is Event.Family.OperationSuccess ->
+                append(
+                    kind = VexLogKind.Runtime,
+                    subjectRef =
+                        familyRef(
+                            event.family,
+                        ),
+                    action = "OperationSucceeded",
+                    screenBeforeId = null,
+                    screenAfterId = null,
+                    detailsJson =
+                        operationDetails(
+                            operation =
+                                event.operation,
+                            state =
+                                event.state,
+                        ),
+                )
+
+            is Event.Family.OperationFailure ->
+                append(
+                    kind = VexLogKind.Runtime,
+                    subjectRef =
+                        familyRef(
+                            event.family,
+                        ),
+                    action = "OperationFailed",
+                    screenBeforeId = null,
+                    screenAfterId = null,
+                    detailsJson =
+                        operationDetails(
+                            operation =
+                                event.operation,
+                            state =
+                                event.state,
+                            failure =
+                                event.failure,
+                        ),
+                )
+        }
     }
 
     fun appOpened(screen: ScreenElement) {
@@ -748,5 +871,72 @@ class VexLogger(
                         if (ch.isLowerCase()) ch.titlecase(Locale.US) else ch.toString()
                     }
                 }
+
+
+        private fun familyRef(
+            family:
+                KClass<*>,
+        ):
+            String =
+            "family." +
+                family.readableClassName()
+
+        private fun operationDetails(
+            operation:
+                KCallable<*>,
+            state:
+                KClass<*>?,
+            failure:
+                KClass<out Throwable>? =
+                null,
+        ):
+            String =
+            buildString {
+                append(
+                    "{\"operation\":\"",
+                )
+                append(
+                    operation.name,
+                )
+                append(
+                    "\"",
+                )
+
+                state
+                    ?.let {
+                        append(
+                            ",\"state\":\"",
+                        )
+                        append(
+                            it.readableClassName(),
+                        )
+                        append(
+                            "\"",
+                        )
+                    }
+
+                failure
+                    ?.let {
+                        append(
+                            ",\"failure\":\"",
+                        )
+                        append(
+                            it.readableClassName(),
+                        )
+                        append(
+                            "\"",
+                        )
+                    }
+
+                append(
+                    "}",
+                )
+            }
+
+        private fun KClass<*>.readableClassName():
+            String =
+            qualifiedName
+                ?: simpleName
+                ?: "anonymous"
     }
 }
