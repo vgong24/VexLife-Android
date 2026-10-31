@@ -25,6 +25,7 @@ Read in this order:
 3. SOURCE-SKETCHES.md
 4. RELATIONAL-BRIDGE.md
 5. TOPOLOGY-AND-ID-PROTOCOL.md
+6. WHAT-NEXT.md
 ~~~
 
 The Logger contract comes first because traceability already has an owner. The dependency work must
@@ -210,3 +211,10 @@ server delivery remains downstream of Logger fact formation
 ~~~
 
 <!-- [VXG RealForever][VEXARCHITECTURE][LOGGER][READABLE-DEPENDENCIES][CONTEXT] -->
+
+
+## Current continuation coordinate
+
+Read `WHAT-NEXT.md` verbatim before creating implementation work. It preserves the current
+"plugging them in" checkpoint so a successor continues the existing architecture relationships
+instead of creating a parallel solution outside them.
