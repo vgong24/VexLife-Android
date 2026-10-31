@@ -99,6 +99,104 @@ with a better end-state and freshly re-vetting the changed boundary.
 
 <!-- [VXG RealForever][FOUNDATION][FAMILY][MASTERED-SEMANTIC-GRAMMAR] -->
 
+
+### PR #206 whole-architecture candidate — Family / Connection / Execution / Logger
+
+PR #206 now reviews the related architecture as one responsibility graph rather than treating
+VexExecution or VexLogger as already-solved utilities that can be reused without re-deriving their
+place.
+
+~~~text
+VexFamily
+    semantic State / Control / Act / Effect
+    one current State owner
+    no coroutine / logger / provider mechanics
+
+Connection / concrete runtime owner
+    Effect realization
+    provider/runtime interpretation
+    stale/currentness decisions
+    forms rightful runtime RelationshipId
+
+RelationshipId
+    rooted typed coordinate for work that belongs together
+
+VexExecution
+    present runtime custody only
+    RelationshipId -> active occurrence(s)
+    overlap policy / cancellation / joining
+
+VexLogger
+    accepted / observed facts in chronology
+    actions / arrivals / disappearances / results / major milestones
+    derives no new semantic truth
+
+LogHistory / Logcat / VexBoard / Debug
+    projections of those truths
+    debug may add expectations/discrepancy checks
+    production does not duplicate expectation/revision bookkeeping
+~~~
+
+Current review status:
+
+~~~text
+Direct Family
+    strongest current mastered candidate
+
+VexExecution
+    REOPENED
+    current OwnerToken / SourceRef / CoordinationKey / global InstanceId decomposition is
+    implementation evidence, not accepted architecture
+
+VexLogger
+    INCLUDED IN PR #206 REVIEW
+    current before/after transition-shaped records and sequence/duration fields are implementation
+    evidence to reconcile against observed-fact chronology before vetting
+~~~
+
+Permanent pressure under review:
+
+~~~text
+semantic/relationship identity
+!= callable implementation
+!= execution occurrence
+!= logger chronology
+!= debug correlation
+!= human projection label
+~~~
+
+The candidate direction is to preserve each truth once at its rightful owner:
+
+~~~text
+RelationshipId
+    structural meaning
+
+VexExecution
+    current custody
+
+VexLogger
+    temporal meaning
+
+Debug
+    optional expectation + discrepancy
+
+VexBoard
+    human projection
+~~~
+
+See:
+
+~~~text
+architecture/behavior/FAMILY-CIRCUIT.md
+architecture/execution/README.md
+architecture/logging/README.md
+~~~
+
+No fresh VettedWithHuman marker is implied by this map. Execution and Logger remain under explicit
+human architectural review.
+
+<!-- [VXG RealForever][FOUNDATION][PR206][WHOLE-ARCHITECTURE-CANDIDATE] -->
+
 ## Foundation establishment criteria
 
 The temporary incomplete notice can be removed when a fresh worker with repository access can:

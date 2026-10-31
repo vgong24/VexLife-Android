@@ -1,434 +1,345 @@
-# VexExecution — mastered runtime execution boundary
+# VexExecution — relationship-led runtime boundary
 
 [VXG RealForever]
 
-VexExecution is runtime mechanics. It is not semantic State, Control, Act, Effect, provider truth,
-or an event ledger.
+> **PR #206 review candidate — identity design reopened**
+>
+> The current implementation at the parent source head introduced several useful corrections, but
+> its identity decomposition is **not** treated as mastered merely because each individual concept is
+> internally coherent. This PR now re-derives the minimum runtime contract from the actual code
+> relationships and the demonstrated consumers before any fresh human vetting is written.
 
-## Ownership tree
+VexExecution owns **present runtime custody**. It does not own semantic product truth, historical
+sequence, human activity history, provider meaning, or a second identity vocabulary for facts that
+already have a rightful parent.
+
+## Whole-architecture position
+
+~~~text
+human / provider input
+-> Family Control or already-observed reality
+-> VexFamily
+   -> CURRENT State + Control
+   -> Act?
+   -> admitted State? + Effect?
+
+Effect
+-> concrete Connection/runtime
+   -> owns realization / provider interpretation / currentness
+   -> forms the rightful runtime RelationshipId when execution is required
+
+RelationshipId
+-> VexExecution
+   -> current active coroutine custody
+   -> overlap behavior
+   -> cancellation / joining
+   -> Handle for one exact occurrence
+
+accepted / observed facts
+-> VexLogger
+   -> chronology
+   -> readable/debug/history projections
+
+VexBoard / debug surfaces
+-> project the semantic and chronological truth humans actually need
+-> do not reverse-engineer meaning from execution implementation metadata
+~~~
+
+The arrows matter. A lower layer should not re-record enough metadata to reconstruct an upstream
+relationship that was already known when the work was admitted.
+
+## Target runtime responsibility
+
+The smallest currently justified execution grammar is:
 
 ~~~text
 VexExecutionRoot
-    owns one execution-tree lifetime
-    owns the dispatcher
-    owns terminal root shutdown
-    exposes active execution custody
+    one execution-tree lifetime
+    dispatcher / parent Job
+    terminal root shutdown
 
-VexExecution
-    one exact live runtime owner under that root
-    owns source-scoped launch / observation / cancellation
-    owns owner-local coordination keys
+RelationshipId
+    one typed, rooted coordinate saying which runtime work belongs together
+
+Approach
+    Independent
+    Earliest
+    Latest
+    Queued
 
 Handle
-    one exact admitted execution occurrence
-    retains that occurrence's Snapshot through completion
+    exact capability over one admitted coroutine occurrence
+
+private ManagedOccurrence
+    Job
+    only the current runtime metadata execution actually needs
 ~~~
 
-The root and an execution owner are intentionally different boundaries.
+This is a candidate boundary under review. The exact public/private Kotlin representation still has
+to be reconciled with the current implementation and proven before vetting.
+
+## Relationship identity — root downward, not reverse reconstruction
+
+The earlier Family pressure demonstrated a useful law:
 
 ~~~text
-ROOT
-    "all runtime work under this lifetime"
-
-OWNER
-    "the work belonging to this exact live runtime component"
+live owner
++ semantic relationship
++ optional typed child/resource identity
+= one relationship coordinate
 ~~~
 
-Stopping one owner must not stop a sibling merely because the two owners use the same callable names.
+The important part is not that every RelationshipId must be Family-shaped. It is that the owner
+forms identity **at the point where the meaning is already known**.
 
-## Identity layers
-
-Execution keeps three different identities separate.
-
-### SourceRef — diagnostics only
+Examples:
 
 ~~~text
-owner class + callable name
--> SourceRef
+ThemeModeConnection
+└── Persistence
+
+DistributionSession
+├── Preparation
+└── LegPreparation
+    └── optional typed leg/resource child
+
+Family instance
+└── Control.Play
+    └── TrackId("abc")
 ~~~
 
-SourceRef exists for readable diagnostics/navigation.
-
-It is not runtime ownership and is not the uniqueness key.
-
-Two live instances of the same execution class may legitimately expose the same SourceRef.
-
-### Private callable identity — source ownership
-
-The exact callable reference is retained privately by the execution engine.
+A relationship may therefore be composable/hierarchical while preserving explicit equality laws for
+its segments:
 
 ~~~text
-exact live VexExecution owner
-+ exact callable identity
-=
-source ownership
+live owner segment
+    referential equality
+
+type segment
+    exact type equality
+
+typed value/resource segment
+    stable value equality
+
+callable segment
+    only when callable identity is itself the relationship meaning
 ~~~
 
-This identity governs:
+Do not flatten typed identity into strings merely to make a map key.
 
-- launchOnce duplicate admission;
-- long-lived observation duplicate admission;
-- source-specific forceStop / joinStop.
+### Why this matters
 
-It is deliberately not a public architecture noun.
-
-This avoids false collisions between:
+The runtime should be able to address the relationship it was given:
 
 ~~~text
-Owner A -> Repository.states
-Owner B -> Repository.states
+is relationship X active?
+which active children exist below X?
+stop exact X
+stop descendants of X when that operation is actually earned
 ~~~
 
-even though both diagnostic SourceRefs may be identical.
-
-It also avoids treating overloaded functions that happen to share a name as the same runtime source.
-
-### CoordinationKey — owner-local overlap grouping
-
-Some runtime work intentionally coordinates even when its callable/argument differs.
+It should not need to scan a bag of executions and reconstruct ancestry from:
 
 ~~~text
-exact live VexExecution owner
+OwnerToken
++ callable
++ SourceRef
 + CoordinationKey
-=
-one maintained coordination relationship
++ InstanceId
 ~~~
 
-CoordinationKey has no product meaning supplied by VexExecution. The concrete runtime owner decides
-what work belongs together.
+when the parent relationship was already known before launch.
 
-The same key value under two different live VexExecution owners does not coordinate across them.
+## Relationship is not occurrence
 
-## Finite work
+One relationship may legitimately contain more than one accepted coroutine occurrence.
 
-### launch(...)
-
-Every invocation is intentionally independent.
+Queued work is the clearest pressure:
 
 ~~~text
-same owner
-same callable
-multiple launch(...)
--> multiple independent InstanceIds
+Relationship: Upload(account-A)
+
+occurrence
+occurrence
+occurrence
 ~~~
-
-### launchOnce(...)
-
-At most one unfinished invocation of that exact owner + callable is admitted.
-
-~~~text
-same owner + same callable + unfinished
--> second launchOnce fails closed
-
-different live owner + same callable
--> independent and valid
-~~~
-
-This is source ownership, not semantic request identity.
-
-## Coordinated finite work
-
-VexExecution exposes three explicit owner-bound operations:
-
-~~~text
-launchEarliest(key, ...)
-    existing unfinished member is sufficient
-    later request receives the existing Handle
-
-launchLatest(key, ...)
-    newest request supersedes unfinished predecessors
-    predecessor cleanup completes before newest work starts
-
-launchQueued(key, ...)
-    every accepted request remains meaningful
-    work executes in acceptance order
-~~~
-
-There is no public Approach enum and no second static begin* API.
-
-Feature/runtime code chooses one explicit operation at the callsite.
-
-A CoordinationKey cannot silently change overlap behavior while unfinished members still exist.
-
-## Long-lived observation
-
-~~~text
-observe(source, recovery, onEach)
-~~~
-
-Observation is owner-scoped.
-
-A second active observation of the same exact owner + callable fails closed.
-
-Another live execution owner may observe the same source independently.
-
-### ObservationRecovery
-
-Recovery belongs to the individual observation, not VexExecutionRoot.
-
-~~~text
-ObservationRecovery(
-    maxRestarts,
-    restartDelayMillis,
-)
-~~~
-
-Only source creation or upstream Flow collection failure is recoverable.
-
-~~~text
-source fails
--> optional bounded restart
-
-downstream onEach fails
--> execution FAILED
--> no source restart
-~~~
-
-This prevents a consumer bug from being misclassified as provider/source instability.
-
-The default is:
-
-~~~text
-ObservationRecovery.None
-~~~
-
-so generic observation never silently assumes retry is lawful.
-
-A sustained owner that has actually earned source recovery states it explicitly at the callsite:
-
-~~~text
-observe(
-    source = ...,
-    recovery = ObservationRecovery(...),
-)
-~~~
-
-## Runtime occurrence observation
-
-Every admitted execution gets:
-
-~~~text
-InstanceId
-SourceRef
-Snapshot
-Handle
-~~~
-
-### Snapshot
-
-VexExecution.Snapshot is runtime diagnostics, not semantic product State.
-
-~~~text
-STARTING
-RUNNING
-RESTARTING
-COMPLETED
-CANCELLED
-FAILED
-~~~
-
-A Snapshot may also carry:
-
-- attempt;
-- restartCount;
-- failure class/message.
-
-The name Snapshot is deliberate so AI/humans do not confuse this runtime record with
-VexFamily.State.
-
-### Handle
-
-One Handle owns control/observation of one occurrence:
-
-~~~text
-instanceId
-sourceRef
-snapshot
-
-forceStop()
-joinStop()
-awaitCompletion()
-~~~
-
-The Handle retains its terminal Snapshot even after root active custody no longer lists that
-occurrence.
-
-## Active root projection is not history
-
-VexExecutionRoot.activeExecutions is:
-
-~~~text
-StateFlow<Map<InstanceId, Snapshot>>
-~~~
-
-and contains current active custody only.
-
-Completed/cancelled/failed occurrences are removed from that map when their Jobs finish.
-
-This prevents a long-lived app/session root from becoming an unbounded execution-history ledger.
-
-If durable diagnostic history is required, it belongs to a separately-earned logging/diagnostic
-surface rather than being smuggled into root StateFlow retention.
-
-~~~text
-STATEFLOW != EVENT_LEDGER
-~~~
-
-## Cancellation levels
-
-Cancellation follows the ownership tree.
-
-~~~text
-Handle
--> one exact occurrence
-
-VexExecution source stop
--> exact live owner + exact callable
-
-VexExecution owner stop
--> all work owned by that exact live VexExecution
-
-VexExecutionRoot stop
--> terminal shutdown of the whole execution tree
--> no further admission
-~~~
-
-Owner shutdown does not close the shared root.
-
-Root shutdown does.
-
-## SourceRef does not authorize cancellation
-
-SourceRef may be equal across live owners.
 
 Therefore:
 
 ~~~text
-SourceRef equality
-!= same owner
-!= same source ownership
-!= permission to cancel sibling work
+RelationshipId
+    which work belongs together
+
+Approach
+    how overlapping occurrences of that relationship behave
+
+occurrence / Handle
+    one actual coroutine execution
 ~~~
 
-The engine uses private owner + callable identity for cancellation.
+The occurrence must be distinguishable internally so Jobs can be controlled correctly. That does
+**not** automatically earn a public/global InstanceId vocabulary.
 
-## Semantic non-ownership
+If an external consumer later proves a need for exact concurrent-occurrence correlation, that
+coordinate must be earned by that consumer. Logging/debug correlation is not by itself permission to
+promote a process-global counter into semantic runtime identity.
 
-VexExecution deliberately does not own:
+## Overlap policy belongs to the relationship
 
 ~~~text
-Family State meaning
-Control availability
-Act meaning
-Effect meaning
-provider response interpretation
-stale semantic result identity
-request generation/revision
-Store semantics
-logging semantics
-UI lifetime meaning
+Independent
+    each accepted occurrence is independent
+
+Earliest
+    an existing unfinished occurrence is sufficient
+
+Latest
+    newest accepted occurrence supersedes unfinished predecessors
+
+Queued
+    every accepted occurrence remains meaningful and runs in admission order
 ~~~
 
-A concrete Connection/runtime may consume VexExecution to realize an Effect or maintain an
-observation, but that does not move semantic meaning into Execution.
+These are policies over one RelationshipId.
 
-Example:
+A separate CoordinationKey is not currently accepted as necessary merely because Earliest / Latest /
+Queued need a map key. If the same object answers "which work coordinates?", it is already expressing
+a relationship.
+
+## Source/callable is implementation unless meaning says otherwise
+
+A callable such as:
 
 ~~~text
-ThemeModeFamily.Effect.PersistSelection
--> ThemeModeConnection
--> private PersistenceExecution
--> launchQueued(private CoordinationKey, ThemeModeStore.save)
+store::save
+session::prepareForExecution
+repository::restorePersistedState
 ~~~
 
-The private key means only "these persistence attempts coordinate in this runtime owner."
+is ordinarily **how** a relationship is realized today.
 
-It does not become ThemeMode semantic identity.
+It is not automatically **what the relationship means**.
 
-## One authoring surface
-
-The mastered API intentionally removes the earlier split between:
+For example:
 
 ~~~text
-subclass launch* methods
-AND
-static/companion begin* methods
+ThemeMode / Persistence
+-> today: ThemeModeStore::save
+-> tomorrow: repository::persistThemeMode
 ~~~
 
-Current authoring is owner-bound through one VexExecution instance.
+The relationship should survive that implementation change.
 
-There is no current:
+Callable identity may remain private execution metadata where required to invoke/cancel a specific
+implementation path. It should enter RelationshipId only when the caller deliberately says that
+callable identity is itself the relationship boundary.
+
+## Historical sequence does not belong in VexExecution
+
+Execution owns the current active set it needs to behave correctly.
+
+VexLogger owns accepted/observed chronology.
 
 ~~~text
-begin(...)
-beginEarliest(...)
-beginLatest(...)
-beginQueued(...)
-beginReplaceable(...)
-beginSequenced(...)
-RelationshipFoundationApi
-public Approach enum
-generic onResult/onFailure operation wrapper
-VexExecution handoff helper
+VexExecution
+    "what work is active now, and how do I control it?"
+
+VexLogger
+    "what accepted/observed facts happened, and in what order?"
 ~~~
 
-Provider result interpretation and dispatcher handoff belong to the concrete runtime owner that
-actually needs them.
+Do not turn VexExecutionRoot into a second event ledger.
 
-## Testing
+Likewise, do not add a global execution number merely so history can later be sorted when the logger
+already owns chronology. An internal storage/correlation mechanism may exist when implementation
+requires it; that does not make it architectural identity.
 
-Execution tests should prove mechanics, not semantic architecture.
+## Handle
 
-Important current properties include:
+A Handle is the natural exact control capability for one admitted occurrence:
 
 ~~~text
-same diagnostic SourceRef across two live owners
--> both may run
-
-same owner + same callable + launchOnce
--> duplicate unfinished launch rejected
-
-same owner + same observed callable
--> duplicate active observation rejected
-
-different owner + same observed callable
--> independent observations allowed
-
-source stop
--> affects only exact owner + callable
-
-owner stop
--> affects only that owner
-
-root stop
--> closes the whole tree and future admission
-
-Earliest / Latest / Queued
--> owner-local CoordinationKey behavior
-
-source failure
--> bounded ObservationRecovery
-
-downstream consumer failure
--> FAILED, no automatic source restart
+forceStop()
+joinStop()
+awaitCompletion()
+current runtime status if a real consumer needs it
 ~~~
 
-Virtual-time fixtures own scheduler/root setup only. Observation recovery remains visible at the
-observation callsite.
+The Handle does not need a human-readable SourceRef in order to control its Job.
 
-## Current open edges
+Readable meaning should come from the RelationshipId / owning semantic labels. Source-code navigation
+metadata can be attached privately or projected by debug tooling without becoming another identity
+system.
 
-The following are not automatically promoted by this mastered runtime boundary:
+## Current implementation findings — not yet accepted as the target
+
+At the source head that triggered this re-review, VexExecution currently contains:
 
 ~~~text
-durable execution-history ledger
-cross-process execution restoration
-global semantic request IDs
+OwnerToken
+KCallable sourceIdentity
+SourceRef
+CoordinationKey
+CoordinationIdentity
+process-global InstanceId
+Snapshot
+activeExecutions keyed by InstanceId
+~~~
+
+Those changes solved real observed edge cases:
+
+~~~text
+same class/callable under two live owners must not collide
+callable name text must not be treated as exact callable identity
+one feature owner must not shut down the shared root
+SourceRef text must not authorize cancellation
+terminal history must not accumulate forever in root StateFlow
+source failure must not be confused with downstream consumer failure
+~~~
+
+The findings survive.
+
+The **identity fragmentation does not automatically survive**.
+
+Before the execution boundary is called mastered again, the implementation must be challenged against
+whether one rooted RelationshipId plus private occurrence mechanics preserves the same correctness
+with less vocabulary and less reverse mapping.
+
+## VexLogger boundary
+
+VexExecution does not create history for VexBoard.
+
+When a runtime fact is meaningful enough to observe:
+
+~~~text
+the rightful owner accepts/observes the fact
+-> VexLogger records it in chronology
+-> VexBoard / LogHistory / debug projections may display it
+~~~
+
+Execution should not duplicate logger sequence, user-readable labels, or causal history merely so a
+future projection can reconstruct what the relationship already meant.
+
+See:
+
+~~~text
+architecture/logging/README.md
+~~~
+
+for the whole-architecture logging boundary now included in this PR.
+
+## Still held
+
+~~~text
+exact final Kotlin shape of hierarchical RelationshipId
+whether any public occurrence identifier is actually earned
+generic descendant-query API beyond demonstrated consumers
+durable/cross-process runtime restoration
+generic timeout/retry policy
 generic provider retry policy
-business-level timeout policy
-generic Connection framework
+logger debug-span correlation for truly concurrent identical relationships
 ~~~
 
-Those require demonstrated consumers and rightful owners.
+Held questions remain held. They are not reasons to preserve speculative identity machinery.
 
-<!-- [VXG RealForever][VEXEXECUTION][MASTERED][OWNER-SCOPED][DIAGNOSTIC-SOURCE][ACTIVE-CUSTODY] -->
+<!-- [VXG RealForever][VEXEXECUTION][RELATIONSHIP-LED][PR206-REVIEW-CANDIDATE] -->
