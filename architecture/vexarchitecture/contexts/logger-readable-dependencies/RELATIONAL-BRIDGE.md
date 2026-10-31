@@ -583,3 +583,50 @@ Which observing boundary reports them to Logger?
 Do not make Family a dependency container or Logger host merely to connect the pieces.
 
 <!-- [VXG RealForever][RELATIONAL-BRIDGE][LOGGER][DEPENDENCY-FACTORY][FAMILY] -->
+
+
+## 17. Topology, Koin comparison and UI-ID protocol
+
+Detailed bridge note:
+
+~~~text
+TOPOLOGY-AND-ID-PROTOCOL.md
+~~~
+
+The important additional insight is that this architecture is not trying merely to recreate Koin with
+different names.
+
+The construction engine may share ordinary DI behaviors:
+
+~~~text
+prerequisite resolution
+lifetime ownership
+memoized/scoped reuse
+constructor delivery
+~~~
+
+but Vex's intended extra property is:
+
+~~~text
+the relationship map remains readable architecture
+~~~
+
+Also, current Elements source already defines `elementId` as the stable semantic address used by
+registry relationships, logging and test tags, and nested Screen Blueprint declarations already
+inherit the Screen coordinate.
+
+Therefore a click does not need a new Logger ID merely to become remotely interpretable.
+
+Preserve the coordinates:
+
+~~~text
+elementId       -> UI source
+Control         -> semantic request
+RelationshipId  -> active runtime relationship
+Logger order    -> chronology
+Blueprint map   -> human-readable interpretation
+~~~
+
+A future VexSync/server projection may use the matching Blueprint identity map to resolve stable IDs
+back to Screen/path/kind/human names. Exact cross-version/currentness mechanics remain TO DISCUSS.
+

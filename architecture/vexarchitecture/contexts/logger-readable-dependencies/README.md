@@ -24,6 +24,7 @@ Read in this order:
 2. this README.md
 3. SOURCE-SKETCHES.md
 4. RELATIONAL-BRIDGE.md
+5. TOPOLOGY-AND-ID-PROTOCOL.md
 ~~~
 
 The Logger contract comes first because traceability already has an owner. The dependency work must
@@ -146,6 +147,38 @@ observing Connection/runtime boundaries know how to report facts
 ~~~
 
 See `RELATIONAL-BRIDGE.md` for the detailed bridge recommendations.
+
+## ID protocol / VexSync bridge
+
+The current Elements foundation already gives UI interactions a protocol-shaped stable coordinate:
+
+~~~text
+screen.home
+element.home.body.preview
+element.home.body.preview.title
+~~~
+
+`TOPOLOGY-AND-ID-PROTOCOL.md` records the current bridge insight:
+
+~~~text
+elementId
+    source UI coordinate
+
+Control
+    semantic request coordinate
+
+RelationshipId
+    active execution coordinate
+
+VexLogger
+    chronological fact owner
+
+Blueprint/VexSync map
+    downstream human-name / Screen / path interpretation
+~~~
+
+This lets remote/server/debug tooling potentially reconstruct human meaning from the same Blueprint
+identity map without forcing English labels or a second trace ID into the app's canonical facts.
 
 ## Current work sequence
 
