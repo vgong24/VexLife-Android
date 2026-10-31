@@ -383,3 +383,36 @@ Do not create one universal ID, metadata object, dependency container or Logger 
 own all six.
 
 <!-- [VXG RealForever][TOPOLOGY][ID-PROTOCOL][VEXLOGGER][VEXSYNC-BRIDGE] -->
+
+
+## 10. Derived host/content/action mapping
+
+Detailed refinement:
+
+~~~text
+DERIVED-IDENTITY-MAP.md
+~~~
+
+The UI/source protocol can reduce manual ID management further.
+
+Prefer deriving identity from existing meaning:
+
+~~~text
+action host
+    Blueprint placement + Control (+ typed ResourceId when needed)
+
+content host
+    Blueprint placement + canonical native content source
+
+dynamic host
+    Blueprint placement + feature-owned ResourceId
+~~~
+
+For Android content, a native resource reference such as `R.string.*` may be projected to a readable
+canonical resource coordinate rather than accompanied by a second manually maintained text ID.
+
+Styled text, plurals and formatting remain realizations of the same content-source identity.
+
+The resulting relationship map may then be filtered for crawler coverage, missing mappings,
+localization/content-source conformance, raw-native-component escapes, remote/VexSync interpretation,
+and similar questions without creating additional identity systems.

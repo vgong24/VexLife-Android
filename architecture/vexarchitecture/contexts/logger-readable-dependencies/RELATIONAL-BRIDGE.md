@@ -630,3 +630,48 @@ Blueprint map   -> human-readable interpretation
 A future VexSync/server projection may use the matching Blueprint identity map to resolve stable IDs
 back to Screen/path/kind/human names. Exact cross-version/currentness mechanics remain TO DISCUSS.
 
+
+
+## 18. Derived identity and one-map-many-filters
+
+See:
+
+~~~text
+DERIVED-IDENTITY-MAP.md
+~~~
+
+The refined direction is:
+
+~~~text
+do not require a manual ID
+when the architecture already owns enough meaningful coordinates to derive one
+~~~
+
+Examples:
+
+~~~text
+action
+    placement + Control (+ typed ResourceId when needed)
+
+content
+    placement + canonical content source
+
+dynamic presentation
+    placement + feature ResourceId
+~~~
+
+The same relationship map can support many checks through ordinary filters/projections:
+
+~~~text
+crawler coverage
+missing mapping diagnostics
+content-source verification
+VexUI-vs-native lint
+remote Blueprint interpretation
+VexBoard projection
+~~~
+
+Those filters do not become new truth owners.
+
+Missing interpretation remains a VexLogger-visible diagnostic fact; Logger exposes the gap without
+becoming the mapper itself.

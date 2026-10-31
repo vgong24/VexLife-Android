@@ -25,7 +25,8 @@ Read in this order:
 3. SOURCE-SKETCHES.md
 4. RELATIONAL-BRIDGE.md
 5. TOPOLOGY-AND-ID-PROTOCOL.md
-6. WHAT-NEXT.md
+6. DERIVED-IDENTITY-MAP.md
+7. WHAT-NEXT.md
 ~~~
 
 The Logger contract comes first because traceability already has an owner. The dependency work must
@@ -180,6 +181,26 @@ Blueprint/VexSync map
 
 This lets remote/server/debug tooling potentially reconstruct human meaning from the same Blueprint
 identity map without forcing English labels or a second trace ID into the app's canonical facts.
+
+## Derived identity map
+
+`DERIVED-IDENTITY-MAP.md` captures the current subtraction:
+
+~~~text
+do not ask humans to invent IDs
+when placement + Control / ResourceId / content source
+already provide the meaningful coordinates
+~~~
+
+It also records the one-map-many-filters model:
+
+~~~text
+relationship map
+-> crawler / Logger / lint / VexSync / VexBoard filters and projections
+~~~
+
+Missing mappings remain visible diagnostic facts; the filters themselves do not become new truth
+owners.
 
 ## Current work sequence
 
