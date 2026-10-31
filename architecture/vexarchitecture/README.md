@@ -2,6 +2,37 @@
 
 [VXG RealForever]
 
+## READ FIRST — VexLogger
+
+Before reading the rest of this package, read:
+
+~~~text
+VEXLOGGER.md
+~~~
+
+fully.
+
+VexLogger is the stable architecture owner for chronological traceability, causal history, accepted /
+observed facts, expectation-vs-observation separation, and the anti-accretion rule for trace IDs,
+correlation IDs, execution history, status ledgers, parallel logger roots, and other observability
+machinery.
+
+This ordering is deliberate. A newcomer must understand **where traceability already belongs** before
+reading RelationshipId / Execution, otherwise it is too easy to mistake runtime custody for history
+ownership and recreate the OwnerToken / SourceRef / InstanceId / completed-Snapshot style machinery
+this snapshot is designed to subtract.
+
+After `VEXLOGGER.md`, continue with:
+
+~~~text
+README.md                         <- you are here
+REFINED-BOUNDARIES.md
+reference/behavior/VexFamily.kt
+reference/ui/ThemeMode.kt
+~~~
+
+Do not use draft PR #206 as the entry point.
+
 > **REFERENCE SNAPSHOT — NOT A MERGE RECOMMENDATION**
 >
 > This directory is intentionally not registered as a Gradle module. It is a clean reconstruction
@@ -149,12 +180,13 @@ A successor implementing this architecture should:
 
 ~~~text
 1. start from current main
-2. read this snapshot
-3. port the preserved source shape intentionally
-4. implement the settled RelationshipId -> Job(s) custody/cancellation law without adding another identity layer
-5. refine only the still-held observation/recovery and Logger record-schema details without changing VEXLOGGER.md ownership laws
-6. prove each preserved requirement against the smaller implementation
-7. open a fresh clean PR whose commits explain the accepted reasons
+2. read VEXLOGGER.md fully
+3. read README.md and REFINED-BOUNDARIES.md
+4. port the preserved source shape intentionally
+5. implement the settled RelationshipId -> Job(s) custody/cancellation law without adding another identity layer
+6. refine only the still-held observation/recovery and Logger record-schema details without changing VEXLOGGER.md ownership laws
+7. prove each preserved requirement against the smaller implementation
+8. open a fresh clean PR whose commits explain the accepted reasons
 ~~~
 
 Do not preserve a type, key, helper, registry, alias, or diagnostic field merely because deleting it
