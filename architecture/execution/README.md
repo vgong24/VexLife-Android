@@ -74,7 +74,7 @@ VexExecution.begin(
     executionRoot = root,
     owner = family,
     approach = act.begin.approach,
-    relationshipId = family.relationshipId(control),
+    relationshipId = act.relationshipId,
     operation = store::save,
     argument = effect.mode,
 )
@@ -317,8 +317,8 @@ meaningful accepted/observed failure facts to VexLogger when that history is req
 
 PR #209 exercises the refined execution law through:
 
-- ThemeMode Save: Family-authored Control.Select RelationshipId + Act.Begin Approach -> direct VexExecution -> Job custody;
-- VexMaps Distribution Session directly inherits VexExecution for async work the Session itself owns; no paired mirror API;
+- ThemeMode Save: accepted Act carries Control.Select RelationshipId + authored Approach -> direct VexExecution -> Job custody;
+- VexMaps Distribution Session directly uses VexExecution for async work whose meaning and lifecycle the Session already owns;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;
 - owner-scoped shutdown while a root may host sibling owners.
