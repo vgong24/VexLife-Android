@@ -395,12 +395,12 @@ composition, action wiring, Runtime and Session instead of hiding their construc
 opaque Session provider. Preview/test direct construction remains an explicit alternate fixture
 route.
 
-Current refinement keeps construction reusable without generalizing feature runtime meaning from one
-patient zero. ThemeModeFamily, ThemeModeStore, VexExecutionRoot and VexLogger are explicit
-prerequisites of one concrete ThemeModeRuntime provider. ThemeModeRuntime owns Select=Latest,
-Light/Dark as payload, and NotSet observation admission once for both production and fixture
-construction. There is no generic feature Connection layer or universal Family runtime bridge in the
-candidate.
+Current refinement keeps construction reusable without creating a peer feature owner to bridge
+existing relationships. ThemeModeFamily authors Select -> beginLatest(Save), ThemeModeStore remains
+the outside-truth boundary, and the session composition supplies VexExecutionRoot/VexLogger to the
+existing realization callsite. Store observation uses direct VexExecution observation under the same
+live Family owner. Dependency construction owns lifetime/wiring only; it does not acquire feature
+runtime meaning.
 
 VexLifeRelayGraph is now a projection-only session graph. Events and Conversation Relays are
 independently provided/activated nodes with their own readable prerequisite closures; the graph only
