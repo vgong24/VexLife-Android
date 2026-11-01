@@ -973,6 +973,757 @@ Android-only lifecycle/provider/rendering/proof
 A future cross-repository semantic blueprint may reuse the learned primitives. That promotion should
 preserve product-specific ownership rather than copying Android implementation vocabulary outward.
 
+## Checkpoint — Functional State Hoisting
+
+> **Status: exploratory checkpoint, not accepted runtime law.**
+>
+> This section preserves a live architecture investigation so a later human or AI can continue the
+> reasoning without reconstructing it from chat or flattening it into conventional wrapper/service
+> patterns. It intentionally records alternatives and unresolved edges. Do not read an example below
+> as proof that its exact Kotlin syntax has been selected.
+
+### Why this pressure exists
+
+The current Family shape already preserves semantic depth:
+
+~~~text
+Family
+├─ State
+├─ Control
+├─ Effect
+└─ Act
+   └─ Begin
+      ├─ Effect
+      └─ Approach
+~~~
+
+An accepted Act may also carry the maintained RelationshipId authored from the live Family + Control
+relationship.
+
+The current ThemeMode realization eventually leaves that semantic tree and becomes ordinary Kotlin
+mechanics:
+
+~~~text
+Effect.Save(mode)
+-> choose store::save
+-> pass mode as an argument
+-> ask VexExecution to invoke that operation
+~~~
+
+That works, but it creates a recurring readability pressure: the source has already expressed
+meaning through Family / Act / Effect, then reconstructs the executable call at a flatter syntax
+level where a fresh author can again invent arbitrary functions, wrappers, coordinators, execution
+mirrors or duplicated arguments.
+
+The investigation is therefore not "how can every function become a framework object?"
+
+It is:
+
+> When a function is specifically the executable continuation of one Family Act, can the Family
+> preserve that relationship all the way down to the callable Method and its semantic Parameters,
+> instead of losing the relationship at the final Kotlin function call?
+
+### Fractal continuation under Act
+
+The candidate semantic depth is:
+
+~~~text
+Family
+├─ State
+├─ Control
+├─ Effect
+└─ Act
+   ├─ Begin / Approach
+   ├─ Parameter
+   └─ Method
+~~~
+
+The important naming distinction is:
+
+~~~text
+Parameter describes WHAT THE INPUT IS.
+Method describes WHAT THE OPERATION DOES.
+~~~
+
+For ThemeMode:
+
+~~~text
+ThemeModeFamily.Act.Parameter.Mode
+ThemeModeFamily.Act.Method.Save
+~~~
+
+not:
+
+~~~text
+ThemeModeFamily.Act.Parameter.Save
+ThemeModeFamily.Act.Method.Save
+~~~
+
+The latter repeats the Method name at the Parameter depth and loses the dimensional distinction.
+
+A provisional shape is therefore closer to:
+
+~~~kotlin
+sealed interface Parameter :
+    VexFamily.Act.Parameter<ThemeModeFamily> {
+
+    data class Mode(
+        val mode: ThemeMode,
+    ) : Parameter
+}
+
+sealed class Method :
+    VexFamily.Act.Method<
+        ThemeModeFamily,
+        Parameter,
+        Output
+    > {
+    // concrete Methods fill this Family-owned vocabulary
+}
+~~~
+
+The exact generic coordinates and Output form are not settled. The invariant being explored is the
+relationship path:
+
+~~~text
+ThemeModeFamily
+-> Act
+-> Parameter
+-> Mode
+-> mode: ThemeMode
+~~~
+
+A primitive field is no longer understood only as "the argument to whatever function happens to be
+nearby." Its owning semantic path remains recoverable from the type.
+
+### Parameter is semantic input state, not Method arguments renamed
+
+A Method with several inputs should not necessarily become:
+
+~~~kotlin
+Method.Route(
+    origin,
+    destination,
+    travelMode,
+    region,
+)
+~~~
+
+The state-hoisting candidate is:
+
+~~~kotlin
+Parameter.Route(
+    origin = origin,
+    destination = destination,
+    travelMode = travelMode,
+    region = region,
+)
+~~~
+
+and the Method consumes that one semantic input state.
+
+This makes the number of fields inside a Parameter irrelevant to the Method grammar. One field and
+five fields are still one semantic Parameter value.
+
+It also means the Parameter can remain intact while moving through the Act relationship instead of
+being decomposed into primitives and later reconstructed from positional arguments.
+
+Possible rule under investigation:
+
+> A Family Act Method consumes one Family-bound Parameter subtype rather than accepting loose
+> business/domain arguments directly.
+
+That rule is **not yet accepted**. In particular, a real zero-input Method must pressure whether the
+correct expression is no Parameter, Kotlin Unit, an explicit semantic absence, or another smaller
+shape. Do not manufacture `Parameter.None` merely for symmetry without a real consumer.
+
+### Do not erase the actual Method behind another binding stage
+
+A previous exploration incorrectly introduced shapes such as:
+
+~~~text
+method(...)
+-> through(store)
+-> customer(...)
+-> launch()
+~~~
+
+That is specifically **not** the simplification being investigated here.
+
+If `Act.Method.Save` is the actual executable Method, then the ThemeMode Store may belong inside the
+Method because the Store is part of how that Method is physically realized:
+
+~~~kotlin
+class Save(
+    private val store: ThemeModeStore,
+) : Method() {
+
+    override suspend operator fun invoke(
+        parameters: Parameter.Mode,
+    ): ThemeModeStore.Result =
+        store.save(
+            parameters.mode,
+        )
+}
+~~~
+
+There is no additional `.through(store)` layer in this shape.
+
+The Method owns the executable call. VexExecution still owns Job custody / overlap / cancellation.
+The Method does not become a second semantic owner merely because it contains the concrete dependency
+needed to perform its call.
+
+This distinction is central:
+
+~~~text
+Act.Method
+    semantically-addressed executable function
+
+VexExecution
+    occurrence / lifetime / overlap custody
+
+not:
+
+Act.Method
+    descriptor that another runtime/runner/binder must interpret
+~~~
+
+If a proposed design needs `MethodSpec -> MethodBinding -> Runtime -> Executor` just to invoke the
+function, re-check whether the design has flattened the simple relationship and rebuilt it as
+traditional ceremony.
+
+### Where should the Parameter value live?
+
+This checkpoint intentionally preserves three variants because they expose different ownership
+properties.
+
+#### Variant A — Method owns its bound Parameter
+
+~~~kotlin
+Method.Save(
+    store = store,
+    parameters =
+        Parameter.Mode(
+            mode = ThemeMode.Dark,
+        ),
+)
+~~~
+
+Meaning:
+
+~~~text
+Method value
+= fully bound executable operation
+= concrete dependency + semantic input state
+~~~
+
+Potential strengths:
+
+~~~text
+self-contained callable value
+invoke() needs no later argument
+easy to hand around as one complete Method occurrence
+~~~
+
+Pressure:
+
+If the accepted Act already owns the same Parameter, binding it again to the Method creates duplicate
+state and a mismatch seam.
+
+#### Variant B — Act hoists Parameter; Method consumes it
+
+~~~text
+accepted Act
+├─ Effect
+├─ Parameter.Mode(Dark)
+├─ Approach
+└─ RelationshipId
+
+Method.Save(store)
+    accepts Parameter.Mode
+~~~
+
+Possible callsite:
+
+~~~kotlin
+act
+    .launchWith()
+    .method(
+        ThemeModeFamily.Act.Method.Save(
+            store,
+        ),
+    )
+~~~
+
+The execution boundary supplies the Act's already-authored Parameter to the Method:
+
+~~~text
+Act.Parameter.Mode(Dark)
++
+Method.Save(store)
+-> Save.invoke(Parameter.Mode(Dark))
+~~~
+
+This is the strongest current **functional state-hoisting** candidate because the semantic input
+exists once. The caller cannot accidentally reconstruct `Mode(Light)` while launching an Act that
+was accepted for `Mode(Dark)`.
+
+Potential invariant:
+
+~~~text
+Act owns the invocation's semantic input state.
+Method owns the concrete executable function.
+VexExecution joins them without inventing either.
+~~~
+
+This is not yet proven against enough Families to call permanent architecture.
+
+#### Variant C — caller binds Parameter again during Method construction
+
+~~~kotlin
+act
+    .launchWith()
+    .method(
+        Method.Save(
+            store,
+            Parameter.Mode(Dark),
+        ),
+    )
+~~~
+
+This is explicit and may be useful if Act does not own Parameter.
+
+But if Act already owns Parameter, the caller can theoretically provide a different value from the
+one that caused the Act. That would reintroduce duplicated authorship.
+
+Therefore Variant C should not be chosen merely because constructor syntax is familiar.
+
+### `launchWith` should consume authored Approach, not ask the caller to choose again
+
+A tempting syntax is:
+
+~~~kotlin
+act
+    .launchWith(
+        Approach.Latest,
+    )
+    .method(...)
+~~~
+
+Current Family already authors Approach through:
+
+~~~text
+begin
+beginEarliest
+beginLatest
+beginQueued
+~~~
+
+and accepted Act already carries the resulting Begin / Approach plus RelationshipId where required.
+
+So a reduction-first form is more likely:
+
+~~~kotlin
+act
+    .launchWith()
+    .method(...)
+~~~
+
+where `launchWith()` exposes the execution continuation already authored by the Act.
+
+If a temporary return type such as `MethodFollowUp` is needed so Kotlin exposes only `.method(...)`
+next, that type is compile-time sequencing machinery, not a new semantic owner and not permission to
+invent a new runtime vocabulary.
+
+Before adding a new LaunchType / Runner / Executor category, test whether current `VexExecution`
+already owns that exact responsibility. Reuse or reshape the existing execution boundary rather than
+polluting the architecture with a synonym.
+
+### Effect, Parameter and Method are different coordinates
+
+The investigation must not collapse these simply because the names are nearby.
+
+Candidate reading:
+
+~~~text
+Effect
+    WHAT transformation has the Act requested?
+
+Parameter
+    WITH WHAT semantic input?
+
+Method
+    WHAT actual executable operation realizes it?
+
+Method Output
+    WHAT did that physical operation return?
+~~~
+
+ThemeMode pressure suggests one potentially clean decomposition:
+
+~~~text
+Effect.Save
+Parameter.Mode(Dark)
+Method.Save(store)
+Method Output = ThemeModeStore.Result
+~~~
+
+This is different from today's:
+
+~~~text
+Effect.Save(Dark)
+~~~
+
+because the Parameter may become the rightful home for `Dark` as executable input state.
+
+That possibility is attractive because duplicating the same `mode` in both:
+
+~~~text
+Effect.Save(mode)
+Parameter.Mode(mode)
+~~~
+
+would create two representations of one semantic input.
+
+However this is still an investigation, not permission to strip payload from every Effect. Some
+Effects may genuinely own data as part of their transformation meaning. Pressure each real Family
+before generalizing.
+
+A more aggressive reduction would eliminate separate Effect data and let Method + Parameter express
+everything:
+
+~~~text
+Act
+├─ Method.Save
+│  └─ Parameter.Mode(Dark)
+└─ Approach.Latest
+~~~
+
+But a bound Method containing `ThemeModeStore` cannot be created during pure `Family.act(...)`
+without making Family know provider/runtime construction. Splitting that into MethodSpec + bound
+Method would likely recreate the ceremony this investigation is trying to remove.
+
+That is why the current pressure still favors keeping pure Act-authored semantic consequence separate
+from the later bound executable Method.
+
+### Method Output should not be confused with Effect or resulting State
+
+If `Method.Save` actually calls:
+
+~~~kotlin
+store.save(
+    parameters.mode,
+)
+~~~
+
+then its truthful return type is whatever the Store operation actually returns, for example:
+
+~~~text
+ThemeModeStore.Result
+~~~
+
+not automatically:
+
+~~~text
+Effect.Save
+Family.State
+~~~
+
+Permanent distinction under this investigation:
+
+~~~text
+Effect
+    requested transformation
+
+Method
+    executable realization
+
+Method Output
+    physical/provider operation result
+
+observed/reconciled Family State
+    semantic truth after the rightful interpreter knows what happened
+~~~
+
+Do not use Functional State Hoisting to silently restore a universal:
+
+~~~text
+method result -> Family State
+~~~
+
+grammar.
+
+Outside truth still returns through the owner that can truthfully interpret it.
+
+### Parameter root should preserve meaning, not erase it into `Any?`
+
+A possible sketch used a common `any: Any?` field to express that every Parameter contains a value.
+
+That would weaken the desired relationship:
+
+~~~text
+Parameter -> Any?
+~~~
+
+instead of preserving:
+
+~~~text
+Parameter
+-> Mode
+-> mode: ThemeMode
+~~~
+
+Composite Parameters make the problem even clearer:
+
+~~~kotlin
+data class Route(
+    val origin: VexMapCoordinate,
+    val destination: VexMapCoordinate,
+    val travelMode: VexMapsTravelMode,
+)
+~~~
+
+There is no truthful single generic `Any?` value that improves this relationship.
+
+Current reduction preference:
+
+~~~text
+VexFamily.Act.Parameter<Family>
+    family-bound semantic role marker
+
+concrete Parameter subtype
+    exact named semantic fields
+~~~
+
+Add a generic Value coordinate only if a demonstrated executable invariant requires it.
+
+### Do not recursively wrap every State field just because Parameter exists
+
+Functional State Hoisting does **not** currently imply:
+
+~~~text
+Family.State
+-> State.Parameter
+-> wrapper for every State field
+~~~
+
+State and Act.Parameter answer different questions.
+
+~~~text
+Family.State
+    what is semantically true now?
+
+Family.Act.Parameter
+    what semantic input is carried into this Act's executable Method?
+~~~
+
+A Parameter may contain a State value or a value derived from State when that is genuinely the
+Method's input, but that does not make Parameters the universal representation of State internals.
+
+The fractal is useful when each depth preserves a distinct relationship. Recursing purely for visual
+symmetry is the same architecture pollution in a different costume.
+
+### Convergence / CompoundState pressure
+
+This checkpoint is intentionally **not** isolated to ThemeMode.
+
+Current convergence law remains:
+
+~~~text
+complete truth A
+complete truth B
+complete truth C
+        |
+        v
+explicit relationship
+        |
+        +-> relationship truth
+        |
+        +-> optional bounded request toward the rightful owner
+~~~
+
+A Compound Relay combines independently-owned current truths. It does not become the owner of each
+Family's executable inputs.
+
+Therefore a first distinction to preserve is:
+
+~~~text
+Family.State
+    current owner truth
+
+Family.Act.Parameter
+    semantic input to one Family Act Method
+
+Compound / convergence relationship truth
+    meaning that exists only across independently-owned truths
+~~~
+
+Do not feed foreign-family Parameters into CompoundState merely because Parameters are now more
+strongly typed. A Parameter is not automatically current truth.
+
+However Family-bound Parameters may make convergence **more precise** at the boundary where a
+relationship truth produces a bounded request toward one rightful owner.
+
+For example, a convergence output may determine:
+
+~~~text
+relationship truth
+-> bounded request to Family A
+-> Family A Control
+-> Family A Act
+-> Family A Act.Parameter
+-> Family A Act.Method
+~~~
+
+The Parameter then retains provenance:
+
+~~~text
+this executable input belongs to Family A's Act vocabulary
+~~~
+
+instead of becoming an unscoped primitive extracted from a compound relationship.
+
+That may strengthen Compound/Relay architecture because the relationship can return toward a Family
+without becoming the executor of that Family's Method.
+
+Open questions to pressure with real convergence consumers:
+
+1. Should CompoundState contain only complete State values / relationship truth, with Parameters
+   appearing only after a bounded request re-enters a rightful Family?
+2. Can a relationship owner itself have an Act.Parameter when the **relationship** genuinely owns an
+   executable Method, rather than borrowing Parameters from participating Families?
+3. If a Compound relationship needs several inputs to one relationship-owned Method, is one
+   relationship-scoped composite Parameter the correct state-hoisted input?
+4. Does any current Relay actually benefit from exposing a Parameter, or would doing so merely turn
+   internal reducer inputs into public architecture?
+5. Can the provenance path remain explicit enough that a future author can tell:
+   `FamilyA.State`, `FamilyB.State`, `Relationship.State`, and `FamilyA.Act.Parameter` apart
+   without comments reconstructing ownership?
+
+Do not answer these by manufacturing a universal CompoundParameter. Follow real relationship
+pressure.
+
+### What "fractal" means in this checkpoint
+
+Fractal does not mean every level has identical nouns.
+
+It means the same ownership discipline remains recognizable as depth increases:
+
+~~~text
+ThemeModeFamily
+    owns one semantic world
+
+ThemeModeFamily.Act
+    owns one lawful consequence in that world
+
+ThemeModeFamily.Act.Parameter.Mode
+    owns the semantic input shape for a Method
+
+ThemeModeFamily.Act.Method.Save
+    owns the executable Save call
+
+Mode.mode
+    remains a typed ThemeMode value inside that semantic path
+~~~
+
+Depth preserves provenance instead of forcing future readers to infer it from:
+
+~~~text
+function name
+argument position
+file location
+constructor convention
+historical chat
+~~~
+
+This is the quality target:
+
+> The source should let a human or AI talk its way through the relationship in language that scales,
+> then arrive at code whose type path preserves that same language. Renaming or rearranging syntax
+> must not be able to silently erase the relationship.
+
+### Current strongest candidate to pressure, not a settled API
+
+The smallest currently interesting composition is:
+
+~~~text
+Control.Select(Dark)
+        |
+        v
+Family.act(CURRENT State, Control)
+        |
+        v
+Act
+├─ admitted State?
+└─ Begin
+   ├─ Effect.Save
+   ├─ Parameter.Mode(Dark)
+   └─ Approach.Latest
+        |
+        v
+accepted RelationshipId
+        |
+        v
+act.launchWith()
+        |
+        v
+Method.Save(store)
+        |
+        v
+VexExecution invokes
+Method.Save(
+    Parameter.Mode(Dark)
+)
+        |
+        v
+ThemeModeStore.Result
+        |
+        v
+rightful result / observation interpretation
+        |
+        v
+Family State truth when actually known
+~~~
+
+Possible surface syntax:
+
+~~~kotlin
+family
+    .activate(
+        Control.Select(
+            ThemeMode.Dark,
+        ),
+    )
+    ?.launchWith()
+    ?.method(
+        ThemeModeFamily.Act.Method.Save(
+            store,
+        ),
+    )
+~~~
+
+The point of this example is not the exact method names.
+
+The important relationships are:
+
+~~~text
+Parameter describes input meaning, not Method name.
+Parameter may be hoisted once on the Act.
+Method contains the actual concrete callable dependency.
+Approach is authored once by the Act.
+RelationshipId is authored once by the Family/Control relationship.
+VexExecution supplies mechanics rather than another feature API.
+Method Output remains distinct from Effect and semantic State.
+Convergence remains relationship truth, not foreign Method execution.
+~~~
+
+Before source implementation, pressure this candidate against at least ThemeMode, one multi-field
+Method, one zero-input Method, one source-addressed execution case, and one Compound Relay /
+convergence case. The purpose of that pressure is subtraction: discover which coordinates are
+actually primal and remove anything that exists only because familiar 2D coding style expected it.
+
+<!-- [VXG RealForever][VEX-BODY][FUNCTIONAL-STATE-HOISTING][CHECKPOINT][PROVISIONAL] -->
+
 ## Deliberately held
 
 Current source does **not** establish:
