@@ -25,10 +25,14 @@ enum class VexLogKind {
 }
 
 /**
- * Canonical readable diagnostic fact.
+ * Canonical persisted/projected Logger fact.
  *
- * [detailsJson] is optional structured detail captured only at an explicit semantic boundary such
- * as form Submit. Draft field edits are never emitted as records.
+ * [detailsJson] is optional bounded detail already owned by the fact producer (for example one form
+ * Submit snapshot). It is not a generic metadata bag.
+ *
+ * Some fields remain for storage compatibility with the existing LogHistory schema. Their presence
+ * does not make before/after transition narration, duration, section, or sequence semantic identity
+ * or architectural truth. Current production APIs record only facts current at their own boundary.
  */
 data class VexLogRecord(
     val sequence: Long,
@@ -84,6 +88,30 @@ data class VexLogSubjectFields(
     }
 }
 
+/**
+ * One chronological observation root for accepted/current facts.
+ *
+ * WHAT THIS IS
+ * VexLogger orders facts that rightful semantic, runtime, navigation, UI, or diagnostic owners
+ * already accepted or observed. It projects those records to local history/Logcat/persistence and
+ * can resolve UI source coordinates through the supplied Blueprint registry at read time.
+ *
+ * WHAT IT RELATES TO
+ * Producers report facts through direct UI helpers or [Sink]. LogHistory, Logcat, Debug UI, future
+ * VexSync/VexBoard/server delivery, and tests are downstream projections/consumers of that chronology.
+ *
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * Chronology answers "what happened and in what order" without forcing Execution to retain completed
+ * history or inventing TraceId/CorrelationId systems. Structural UI interpretation is derived from
+ * Blueprint ownership instead of copied into every record.
+ *
+ * RESPONSIBILITY FENCE
+ * Logger does not decide Family meaning, provider success policy, navigation/presentation truth,
+ * RelationshipId meaning, active Job custody, dependency construction, or expected future outcomes.
+ * Do not turn [detailsJson] into a metadata warehouse, Logger into an event bus/network owner, or
+ * production history into expectation/reconciliation machinery. Tests/debug projections may compare
+ * expected vs actual; production Logger records only facts current at their rightful boundary.
+ */
 class VexLogger(
     private val clock: () -> Instant = { Instant.now() },
     private val zoneId: () -> ZoneId = { ZoneId.systemDefault() },
