@@ -15,7 +15,7 @@ import com.vextreme.vexlife.android.elements.VexModifier
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.ui.VexLifeRelays
+import com.vextreme.vexlife.android.ui.VexLifeRelayGraph
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -98,7 +98,7 @@ abstract class AppScreenBlueprint(
      * Broad app-composition bridge.
      *
      * Existing Screens keep their narrow three-argument renderer. A Screen that consumes a shared
-     * session Relay can override the Relay-aware overload and immediately narrow [relays] into its
+     * session Relay can override the Relay-aware overload and immediately narrow [relayGraph] into its
      * own content. The broadest overload also carries the already-owned in-process session scope.
      * Ordinary UI work stays composition scoped; consume [sessionScope] only when an admitted effect
      * must intentionally survive the initiating presentation while the current VexLife session
@@ -108,13 +108,13 @@ abstract class AppScreenBlueprint(
     internal open fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        relays: VexLifeRelays,
+        relayGraph: VexLifeRelayGraph,
         sessionScope: CoroutineScope,
     ) {
         renderContent(
             runtime = runtime,
             repositories = repositories,
-            relays = relays,
+            relayGraph = relayGraph,
         )
     }
 
@@ -122,7 +122,7 @@ abstract class AppScreenBlueprint(
     internal open fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        relays: VexLifeRelays,
+        relayGraph: VexLifeRelayGraph,
     ) {
         renderContent(
             runtime = runtime,

@@ -93,7 +93,7 @@ internal fun VexLifeApp(
 ) {
     val runtime = session.runtime
     val repositories = session.repositories
-    val relays = session.relays
+    val relayGraph = session.relayGraph
     val sessionScope = session.scope
     LaunchedEffect(runtime) {
         runtime.appOpened()
@@ -108,7 +108,7 @@ internal fun VexLifeApp(
     val transientBlocked = runtime.presentation.hasOpenPresentation
 
     SideEffect {
-        relays.events.surfaceChanged(
+        relayGraph.events.surfaceChanged(
             screenId = currentScreenId,
             transientBlocked = transientBlocked,
         )
@@ -121,7 +121,7 @@ internal fun VexLifeApp(
         VexLifeScaffold(
             runtime = runtime,
             repositories = repositories,
-            relays = relays,
+            relayGraph = relayGraph,
             sessionScope = sessionScope,
         )
     }
@@ -131,7 +131,7 @@ internal fun VexLifeApp(
 private fun VexLifeScaffold(
     runtime: VexRuntime,
     repositories: AppRepositories,
-    relays: VexLifeRelays,
+    relayGraph: VexLifeRelayGraph,
     sessionScope: CoroutineScope,
 ) {
     val primaryScreens = AppScreens.primary
@@ -199,7 +199,7 @@ private fun VexLifeScaffold(
                 primaryScreens[screenIndex].renderContent(
                     runtime = runtime,
                     repositories = repositories,
-                    relays = relays,
+                    relayGraph = relayGraph,
                     sessionScope = sessionScope,
                 )
             }
@@ -225,7 +225,7 @@ private fun VexLifeScaffold(
                 AppScreens.require(screenId).renderContent(
                     runtime = runtime,
                     repositories = repositories,
-                    relays = relays,
+                    relayGraph = relayGraph,
                     sessionScope = sessionScope,
                 )
             }

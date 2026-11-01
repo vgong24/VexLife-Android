@@ -33,7 +33,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
-import com.vextreme.vexlife.android.ui.VexLifeRelays
+import com.vextreme.vexlife.android.ui.VexLifeRelayGraph
 import com.vextreme.vexlife.android.vexstream.offline.rememberVexStreamOfflineCopyConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -770,7 +770,7 @@ object VexStreamMusicScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        relays: VexLifeRelays,
+        relayGraph: VexLifeRelayGraph,
         sessionScope: CoroutineScope,
     ) {
         VexStreamMusicScreenContent(

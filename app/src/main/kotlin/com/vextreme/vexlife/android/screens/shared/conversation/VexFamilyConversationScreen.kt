@@ -44,7 +44,7 @@ import com.vextreme.vexlife.android.runtime.VexRuntime
 import com.vextreme.vexlife.android.runtime.appAction
 import com.vextreme.vexlife.android.screens.AppScreenBlueprint
 import com.vextreme.vexlife.android.screens.ScreenActionContext
-import com.vextreme.vexlife.android.ui.VexLifeRelays
+import com.vextreme.vexlife.android.ui.VexLifeRelayGraph
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -125,14 +125,14 @@ object VexFamilyConversationScreen : AppScreenBlueprint(
     internal override fun renderContent(
         runtime: VexRuntime,
         repositories: AppRepositories,
-        relays: VexLifeRelays,
+        relayGraph: VexLifeRelayGraph,
     ) {
         VexFamilyConversationScreenContent(
             repository =
                 repositories.conversation as?
                     VexFamilyConversationConnectedServiceRepository,
             relay =
-                relays.conversation,
+                relayGraph.conversation,
             runtime =
                 runtime,
         )
