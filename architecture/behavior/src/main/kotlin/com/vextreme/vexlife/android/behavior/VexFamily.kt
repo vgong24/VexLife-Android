@@ -242,6 +242,30 @@ abstract class VexFamily<
 
         /**
          * Execution relationship authored by the Act, not an executor and not another Effect layer.
+         *
+         * Approach answers only the overlap meaning of this consequence:
+         *
+         * Independent
+         *     every accepted consequence remains independently meaningful
+         *
+         * Earliest
+         *     an unfinished consequence for this relationship is already sufficient
+         *
+         * Latest
+         *     the newest accepted consequence supersedes unfinished predecessors
+         *
+         * Queued
+         *     every accepted consequence remains meaningful and order must be preserved
+         *
+         * This choice is orthogonal to immediate State admission. stay(...) does not imply one
+         * Approach and admit(State) does not imply another. A same-State Act may be Latest; a
+         * State-changing Act may be Independent, Earliest, Latest, or Queued according to the
+         * relationship being authored.
+         *
+         * Earlier #207 source also let Begin author success/failure-specific later-State admission.
+         * The current Family deliberately does not carry that result grammar. Begin authors only
+         * Effect + overlap meaning; provider/runtime results are interpreted by their rightful
+         * boundary and already-semantic truth re-enters through [observe].
          */
         @ConsistentCopyVisibility
         data class Begin<
@@ -382,7 +406,7 @@ abstract class VexFamily<
                 null,
         )
 
-    /** Author an independent runtime consequence without starting it during [act]. */
+    /** Author a consequence where every accepted occurrence remains independently meaningful. */
     protected fun begin(
         effect:
             FamilyEffect,
@@ -395,7 +419,7 @@ abstract class VexFamily<
                 effect,
         )
 
-    /** Author Earliest overlap semantics for this Act; execution remains deferred to the caller. */
+    /** Author a relationship where one unfinished earliest consequence is already sufficient. */
     protected fun beginEarliest(
         effect:
             FamilyEffect,
@@ -408,7 +432,7 @@ abstract class VexFamily<
                 effect,
         )
 
-    /** Author Latest overlap semantics for this Act; execution remains deferred to the caller. */
+    /** Author a relationship where the newest accepted consequence supersedes unfinished predecessors. */
     protected fun beginLatest(
         effect:
             FamilyEffect,
@@ -421,7 +445,7 @@ abstract class VexFamily<
                 effect,
         )
 
-    /** Author Queued overlap semantics for this Act; execution remains deferred to the caller. */
+    /** Author a relationship where every accepted consequence remains meaningful in arrival order. */
     protected fun beginQueued(
         effect:
             FamilyEffect,
