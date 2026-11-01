@@ -15,8 +15,24 @@ import com.vextreme.vexlife.android.ui.ThemeModeStore
 /**
  * Android process-lifetime composition root.
  *
- * The Application owns application-lifetime construction. Feature/UI consumers never resolve
- * dependencies from this object directly; narrower composition roots receive concrete dependencies.
+ * WHAT THIS IS
+ * VexApplication anchors dependencies whose rightful lifetime is the Android process and creates the
+ * parent [VexDependencyFactory] used by narrower composition roots.
+ *
+ * WHAT IT RELATES TO
+ * [VexApplicationDependencyModule] declares application-lifetime providers such as repositories,
+ * Blueprint registry, and ThemeMode Store. A ViewModel/session composition root creates a child
+ * factory and receives/reuses those concrete parent-lifetime objects.
+ *
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * Android already supplies one process host. Reusing that host as the outer composition boundary
+ * gives application-lifetime objects a visible owner without hiding access behind globals or asking
+ * feature/UI code to construct process dependencies itself.
+ *
+ * RESPONSIBILITY FENCE
+ * VexApplication is not a service locator, Family/runtime owner, VexExecutionRoot, Logger/history
+ * owner, or feature semantic registry. Ordinary feature/UI consumers must not reach into it to
+ * resolve dependencies; narrower composition roots receive concrete dependencies explicitly.
  */
 class VexApplication :
     Application() {
@@ -49,8 +65,18 @@ class VexApplication :
 /**
  * Readable application-lifetime provider declarations.
  *
+ * WHAT THIS IS / RELATES TO
+ * This module declares which process-lifetime objects exist and which prerequisites construct them.
+ * [VexDependencyFactory] owns graph traversal, memoization, and lifetime reuse; the module itself
+ * owns no runtime behavior.
+ *
+ * WHY THIS SHAPE EXISTS
  * The Android Application is an already-existing host object, so its provider publishes that exact
  * instance into the graph rather than pretending the dependency factory constructed Android itself.
+ *
+ * RESPONSIBILITY FENCE
+ * Do not move session/ViewModel-lifetime objects into this module for convenience and do not treat
+ * this provider grouping as permission for application-global access from ordinary feature code.
  */
 internal class VexApplicationDependencyModule(
     application:
