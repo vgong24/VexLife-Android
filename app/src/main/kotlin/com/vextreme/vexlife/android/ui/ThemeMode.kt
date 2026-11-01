@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.behavior.VexFamily
 import com.vextreme.vexlife.android.runtime.VexFamilyStoreBinding
+import kotlin.reflect.KClass
 
 /**
  * Android realization of the ThemeMode semantic State domain.
@@ -17,7 +18,10 @@ internal typealias ThemeModeStoreBinding =
         ThemeModeFamily,
         ThemeMode,
         ThemeModeFamily.Control,
-        ThemeModeFamily.Effect
+        ThemeModeFamily.Effect,
+        KClass<
+            out ThemeModeFamily.Control
+        >
     >
 
 internal enum class ThemeMode :

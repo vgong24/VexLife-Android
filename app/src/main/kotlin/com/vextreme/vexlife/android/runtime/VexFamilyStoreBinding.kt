@@ -9,7 +9,6 @@ import com.vextreme.vexlife.android.dependency.VexDependencyProvider
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
-import kotlin.reflect.KClass
 import kotlin.reflect.KFunction0
 import kotlin.reflect.KSuspendFunction1
 import kotlinx.coroutines.Job
@@ -34,6 +33,7 @@ internal class VexFamilyStoreBinding<
     FamilyState,
     FamilyControl,
     FamilyEffect,
+    RelationshipKey : Any,
 >(
     val family:
         Family,
@@ -51,6 +51,8 @@ internal class VexFamilyStoreBinding<
         VexLogger.Sink.None,
     private val approach:
         VexExecution.Approach,
+    private val relationshipKey:
+        (FamilyControl) -> RelationshipKey,
     private val admitObservation:
         (FamilyState) -> Boolean,
 ) where
@@ -65,7 +67,7 @@ internal class VexFamilyStoreBinding<
     FamilyEffect : VexFamily.Effect<Family> {
     private val execution =
         StoreExecution<
-            FamilyControl
+            RelationshipKey
         >(
             executionRoot,
         )
@@ -192,8 +194,10 @@ internal class VexFamilyStoreBinding<
             family.currentState::class
 
         execution.realize(
-            control =
-                control,
+            relationshipKey =
+                relationshipKey(
+                    control,
+                ),
             approach =
                 approach,
             operation =
@@ -298,7 +302,7 @@ internal class VexFamilyStoreBinding<
     }
 
     private class StoreExecution<
-        Control : VexFamily.Control<*>,
+        RelationshipKey : Any,
     >(
         root:
             VexExecutionRoot,
@@ -306,15 +310,17 @@ internal class VexFamilyStoreBinding<
         VexExecution(
             root,
         ) {
-        private data class ControlRelationshipId(
-            val controlType:
-                KClass<*>,
+        private data class StoreRelationshipId<
+            RelationshipKey : Any,
+        >(
+            val key:
+                RelationshipKey,
         ) :
             RelationshipId
 
         fun <Effect, State> realize(
-            control:
-                Control,
+            relationshipKey:
+                RelationshipKey,
             approach:
                 Approach,
             operation:
@@ -333,9 +339,9 @@ internal class VexFamilyStoreBinding<
         ):
             Job {
             val relationshipId =
-                ControlRelationshipId(
-                    controlType =
-                        control::class,
+                StoreRelationshipId(
+                    key =
+                        relationshipKey,
                 )
 
             return when (approach) {
@@ -435,6 +441,7 @@ internal fun <
     FamilyControl,
     FamilyEffect,
     Store,
+    RelationshipKey : Any,
 > vexFamilyStoreBindingProvider(
     readableName:
         String,
@@ -448,6 +455,8 @@ internal fun <
         VexDependencyProvider<VexLogger>,
     approach:
         VexExecution.Approach,
+    relationshipKey:
+        (FamilyControl) -> RelationshipKey,
     admitObservation:
         (FamilyState) -> Boolean,
 ):
@@ -456,7 +465,8 @@ internal fun <
             Family,
             FamilyState,
             FamilyControl,
-            FamilyEffect
+            FamilyEffect,
+            RelationshipKey
         >
     > where
     Family : VexFamily<
@@ -505,6 +515,8 @@ internal fun <
                     .sink,
             approach =
                 approach,
+            relationshipKey =
+                relationshipKey,
             admitObservation =
                 admitObservation,
         )

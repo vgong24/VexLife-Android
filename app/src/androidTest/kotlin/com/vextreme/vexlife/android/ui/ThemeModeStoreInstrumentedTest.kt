@@ -80,6 +80,9 @@ class ThemeModeStoreInstrumentedTest {
                 store = recreatedStore,
                 approach =
                     VexExecution.Approach.Latest,
+                relationshipKey = { control ->
+                    control::class
+                },
                 admitObservation = { state ->
                     state != ThemeMode.NotSet
                 },

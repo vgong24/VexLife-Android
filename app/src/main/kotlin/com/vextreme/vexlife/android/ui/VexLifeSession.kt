@@ -187,6 +187,9 @@ private fun directSessionComponents(
                 logger.sink,
             approach =
                 VexExecution.Approach.Latest,
+            relationshipKey = { control ->
+                control::class
+            },
             admitObservation = { state ->
                 state !=
                     ThemeMode.NotSet
@@ -410,6 +413,9 @@ internal class VexLifeSessionDependencyModule(
                 logger,
             approach =
                 VexExecution.Approach.Latest,
+            relationshipKey = { control ->
+                control::class
+            },
             admitObservation = { state ->
                 state !=
                     ThemeMode.NotSet

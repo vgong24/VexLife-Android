@@ -32,6 +32,9 @@ class ThemeModePersistenceTest {
                 store = store,
                 approach =
                     VexExecution.Approach.Latest,
+                relationshipKey = { control ->
+                    control::class
+                },
                 admitObservation = { state ->
                     state != ThemeMode.NotSet
                 },
@@ -93,6 +96,9 @@ class ThemeModePersistenceTest {
                 store = store,
                 approach =
                     VexExecution.Approach.Latest,
+                relationshipKey = { control ->
+                    control::class
+                },
                 admitObservation = { state ->
                     state != ThemeMode.NotSet
                 },
@@ -142,6 +148,9 @@ class ThemeModePersistenceTest {
                 store = store,
                 approach =
                     VexExecution.Approach.Latest,
+                relationshipKey = { control ->
+                    control::class
+                },
                 admitObservation = { state ->
                     state != ThemeMode.NotSet
                 },
