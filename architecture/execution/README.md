@@ -91,6 +91,27 @@ VexExecution.observe(
 The direct surface retains owner-scoped custody internally. owner is the already-existing live scope,
 not another semantic ID.
 
+## Choose by meaning before choosing a code shape
+
+Do not begin with "which Execution class should I create?". First identify what is already true:
+
+~~~text
+Does semantic/domain structure already define a maintained relationship?
+    -> consume its RelationshipId + authored Approach
+
+Is the exact callable / Flow source itself the local work being controlled?
+    -> source-addressed launch / observation may be sufficient
+
+Does an existing Session/service/domain owner already own the operation and its lifetime?
+    -> keep the operation there; use VexExecution for custody
+
+Is there a genuinely distinct sustained execution responsibility with its own lifetime/work set?
+    -> a concrete VexExecution owner may be earned
+~~~
+
+These routes intentionally produce different Kotlin shapes while preserving the same responsibility
+law. Similar syntax is not evidence that two meanings should share another abstraction, and different
+syntax is not evidence that the meanings are unrelated.
 ### Finite work
 
 ~~~text
