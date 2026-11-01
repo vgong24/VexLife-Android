@@ -30,11 +30,29 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 /**
- * One in-process VexLife app session composed from explicit live relationships.
+ * One ViewModel/configuration-lifetime VexLife session composed from explicit live objects.
  *
- * Production receives every session-owned object from [VexLifeSessionDependencyModule]. The
- * repository/test convenience constructor remains below for previews/tests that intentionally
- * construct an isolated session without impersonating Android Application/ViewModel lifetime.
+ * WHAT THIS IS
+ * VexLifeSession is the assembled session surface consumed by the UI after construction. It groups
+ * already-built repositories, Logger, Family/runtime, Relay projection, actions, and VexRuntime that
+ * belong to the same session lifetime.
+ *
+ * WHAT IT RELATES TO
+ * Production construction is declared by [VexLifeSessionDependencyModule] and memoized by the child
+ * VexDependencyFactory owned from the ViewModel. Application-lifetime prerequisites come from the
+ * VexApplication parent factory. The direct constructor below exists only for deterministic
+ * previews/tests/alternate repository environments.
+ *
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * Android can rebuild Activity/Compose surfaces while the logical app session should retain current
+ * navigation, presentation, Logger session, execution roots, and feature runtimes. A ViewModel-owned
+ * session makes that lifetime explicit without turning Composables into construction owners.
+ *
+ * RESPONSIBILITY FENCE
+ * This class is not a service locator or a second dependency graph. Do not add hidden resolve/get
+ * behavior, duplicate provider construction, or move Family/Execution/Logger meaning into this
+ * aggregate. New objects belong here only when they are genuinely session-owned and are constructed
+ * by the rightful composition module.
  */
 internal class VexLifeSession internal constructor(
     val repositories:
@@ -348,8 +366,21 @@ private fun toggleThemeMode(
 /**
  * ViewModel/session-lifetime dependency declarations.
  *
- * This graph exposes the actual production composition rather than hiding Logger/ThemeMode runtime
- * and Relay construction inside one session constructor.
+ * WHAT THIS IS / RELATES TO
+ * This module declares the child-lifetime graph layered on application-lifetime providers:
+ * VexExecutionRoot, Logger persistence, VexLogger, ThemeMode Family/runtime, Relay owners/projection,
+ * app actions, VexRuntime, and the assembled VexLifeSession.
+ *
+ * WHY THIS SHAPE EXISTS
+ * Keeping these prerequisites as explicit provider edges makes startup/lifetime composition readable
+ * and lets the child VexDependencyFactory memoize each session object exactly once without hiding
+ * construction inside the session constructor.
+ *
+ * RESPONSIBILITY FENCE
+ * The module declares construction only. It must not become semantic Family policy, execution
+ * identity, Logger chronology, Relay processing, or an ambient dependency API. Do not move
+ * application-lifetime providers here merely because a session consumes them, and do not create a
+ * parallel construction path for production objects already declared in this graph.
  */
 internal class VexLifeSessionDependencyModule(
     applicationDependencies:
@@ -1001,10 +1032,17 @@ internal class VexLifeSessionDependencyModule(
 }
 
 /**
- * Android configuration-lifetime owner for [VexLifeSession].
+ * Android configuration-lifetime host for [VexLifeSession] and its child dependency lifetime.
  *
- * Activity rotation/recreation receives the same ViewModel instance, so the active Screen, open
- * modal, Gallery selection and logger session do not restart merely because Android rebuilt the UI.
+ * WHAT IT RELATES TO / WHY IT EXISTS
+ * Activity rotation/recreation receives the same ViewModel instance, so active Screen/presentation,
+ * Logger session, feature runtimes, and the session VexExecutionRoot survive UI reconstruction while
+ * still ending when the ViewModel lifetime ends.
+ *
+ * RESPONSIBILITY FENCE
+ * The ViewModel hosts lifetime and resolves declared session roots; it is not a semantic Family,
+ * service locator for Composables, Logger owner of truth, or substitute for VexExecution. Feature/UI
+ * code should consume [session] rather than resolving arbitrary providers from this host.
  */
 internal class VexLifeViewModel(
     application:
