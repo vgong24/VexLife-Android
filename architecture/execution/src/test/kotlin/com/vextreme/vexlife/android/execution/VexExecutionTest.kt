@@ -142,6 +142,12 @@ class VexExecutionTest {
             }
     }
 
+    private data class DirectRelationship(
+        val value:
+            String,
+    ) :
+        VexExecution.RelationshipId
+
     private data class HandoffCapture(
         val workerThread: CompletableDeferred<String>,
         val providerThread: CompletableDeferred<String>,
@@ -692,6 +698,93 @@ class VexExecutionTest {
                 providerDispatcher.close()
                 workerExecutor.shutdownNow()
                 providerExecutor.shutdownNow()
+            }
+        }
+
+    @Test
+    fun directLatestUsesOwnerScopedFoundationWithoutAFeatureExecutionSubclass() =
+        runBlocking {
+            val root =
+                VexExecutionRoot()
+            val repository =
+                TestRepository()
+            val owner =
+                Any()
+            val relationship =
+                DirectRelationship(
+                    "save",
+                )
+
+            try {
+                VexExecution.beginLatest(
+                    executionRoot =
+                        root,
+                    owner =
+                        owner,
+                    relationshipId =
+                        relationship,
+                    operation =
+                        repository::latestWork,
+                    argument =
+                        "A",
+                )
+
+                withTimeout(
+                    2_000,
+                ) {
+                    while (
+                        repository.latestStarted !=
+                        listOf(
+                            "A",
+                        )
+                    ) {
+                        kotlinx.coroutines.yield()
+                    }
+                }
+
+                val latest =
+                    VexExecution.beginLatest(
+                        executionRoot =
+                            root,
+                        owner =
+                            owner,
+                        relationshipId =
+                            relationship,
+                        operation =
+                            repository::latestWork,
+                        argument =
+                            "B",
+                    )
+
+                withTimeout(
+                    2_000,
+                ) {
+                    repository.latestCleanupStarted.await()
+                }
+
+                assertEquals(
+                    listOf(
+                        "A",
+                    ),
+                    repository.latestStarted,
+                )
+
+                repository.latestCleanupRelease.complete(
+                    Unit,
+                )
+                latest.join()
+
+                assertEquals(
+                    listOf(
+                        "A",
+                        "B",
+                    ),
+                    repository.latestStarted,
+                )
+            } finally {
+                root.joinStopAll(
+                    "test complete",
+                )
             }
         }
 
