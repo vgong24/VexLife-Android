@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.execution
 
+import java.util.IdentityHashMap
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineName
@@ -77,6 +78,37 @@ class VexExecutionRoot(
                 ),
         )
 
+    /*
+     * Direct VexExecution entry points need the same owner-scoped custody that subclasses receive
+     * without forcing every semantic/runtime owner to invent a matching <Feature>Execution class.
+     *
+     * IdentityHashMap is intentional: the already-existing live owner object is the scope. This map
+     * is foundation plumbing only; it is not a second semantic identity registry.
+     */
+    private val directExecutions =
+        IdentityHashMap<
+            Any,
+            DirectExecution
+        >()
+
+    internal fun directExecution(
+        owner:
+            Any,
+    ):
+        VexExecution =
+        synchronized(
+            lock,
+        ) {
+            directExecutions
+                .getOrPut(
+                    owner,
+                ) {
+                    DirectExecution(
+                        this,
+                    )
+                }
+        }
+
     /**
      * Create one lazy managed Job after verifying the shared lifetime still accepts work.
      *
@@ -142,6 +174,21 @@ class VexExecutionRoot(
         )
         parentJob.join()
     }
+
+    /**
+     * Foundation-owned implementation used only by VexExecution's direct reusable entry points.
+     *
+     * It exists so owner-scoped Job/Relationship custody remains exactly the same whether a caller
+     * extends VexExecution for a genuinely sustained execution owner or calls the reusable
+     * VexExecution.begin*/observe surface directly. Product code must not name or construct this.
+     */
+    private class DirectExecution(
+        root:
+            VexExecutionRoot,
+    ) :
+        VexExecution(
+            root,
+        )
 }
 
 // [VXG RealForever]
