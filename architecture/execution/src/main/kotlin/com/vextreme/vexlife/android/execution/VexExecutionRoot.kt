@@ -80,11 +80,12 @@ class VexExecutionRoot(
         )
 
     /*
-     * Direct VexExecution entry points need the same owner-scoped custody that subclasses receive
-     * without forcing every semantic/runtime owner to invent a matching <Feature>Execution class.
+     * Direct VexExecution entry points preserve owner-scoped custody for an already-existing live
+     * owner whose lifetime is bounded by this root.
      *
-     * IdentityHashMap is intentional: the already-existing live owner object is the scope. This map
-     * is foundation plumbing only; it is not a second semantic identity registry.
+     * IdentityHashMap is intentional: that live owner object is the scope. Callers reuse the same
+     * stable owner for related execution; ephemeral Control/request objects are not execution owners.
+     * This map is foundation plumbing only, not semantic identity.
      */
     private val directExecutions =
         IdentityHashMap<
@@ -100,6 +101,13 @@ class VexExecutionRoot(
         synchronized(
             lock,
         ) {
+            check(
+                acceptingWork &&
+                    parentJob.isActive,
+            ) {
+                "VexExecutionRoot is stopped and cannot accept a direct execution owner"
+            }
+
             directExecutions
                 .getOrPut(
                     owner,
