@@ -37,8 +37,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * Family owns semantic RelationshipId composition because that identity is an invisible consequence
  * of the already-authored live Family + Control (+ typed ResourceId when needed). It does NOT own
  * VexExecution Job custody, Store/provider access, VexLogger, dependency resolution, lifecycle, or
- * presentation mechanics. Do not create a second State holder, runtime/binding object, or
- * <Feature>Execution mirror merely to restate an Act's already-authored consequence.
+ * presentation mechanics. The consequence's feature/domain meaning remains on the semantic owner;
+ * VexExecution contributes custody/overlap mechanics without acquiring a peer feature vocabulary.
  */
 abstract class VexFamily<
     Family,
