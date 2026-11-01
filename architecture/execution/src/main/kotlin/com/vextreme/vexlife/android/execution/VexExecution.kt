@@ -19,17 +19,35 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 
 /**
- * Owner of managed coroutine work for one runtime/store/session responsibility.
+ * Active asynchronous-work owner for one concrete runtime responsibility.
  *
- * Permanent active-work law:
+ * WHAT THIS IS
+ * VexExecution owns current Job custody, overlap behavior, local source-addressed control, and
+ * relationship-addressed cancellation for work admitted by one live execution owner.
+ *
+ * WHAT IT RELATES TO
+ * [VexExecutionRoot] supplies the shared coroutine lifetime. A rightful semantic/runtime owner
+ * supplies [RelationshipId] when work belongs to a maintained semantic relationship. Source-
+ * addressed helpers may accept exact callable/Flow references when the source itself is the narrow
+ * local address. Completed historical meaning belongs to VexLogger, not Execution.
+ *
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * The permanent active-work law is:
  *
  *     RelationshipId -> actual Job(s)
  *
- * The Job is the runtime occurrence. Execution does not mint a second public InstanceId, SourceRef,
- * Handle, completed Snapshot/history registry, or root-level active-execution truth.
+ * The actual Job is the runtime occurrence. This keeps present custody inspectable without minting
+ * a second public InstanceId, SourceRef, Handle, Snapshot/history registry, or root-level duplicate
+ * active-execution truth. The two authoring styles are intentionally distinct: source-addressed
+ * helpers answer "this exact local source"; relationship-addressed helpers answer "this semantic
+ * relationship".
  *
- * Callable references remain a private convenience index for launchOnce / Flow observation /
- * source-addressed cancellation. They are not semantic identity.
+ * RESPONSIBILITY FENCE
+ * Do not derive semantic identity from callable names, operation payload, Logger coordinates,
+ * dependency providers, or Job occurrence. Do not add a peer RelationshipKey/Coordinate/OwnerToken
+ * around RelationshipId. Do not make VexExecution a history owner, dependency container, provider
+ * adapter, or semantic decision engine. Callable references are local execution convenience only
+ * and must not be generalized into reflection-driven architecture.
  */
 abstract class VexExecution protected constructor(
     private val executionRoot:
@@ -51,10 +69,21 @@ abstract class VexExecution protected constructor(
     annotation class RelationshipFoundationApi
 
     /**
-     * Active semantic work identity supplied by the rightful owner.
+     * The one maintained-work address supplied by the rightful semantic/runtime owner.
      *
-     * Execution coordinates this identity; it does not derive it from callable names, argument bags,
-     * Logger IDs, dependency IDs, or occurrence tokens.
+     * WHAT IT RELATES TO
+     * RelationshipId is the key for the canonical RelationshipId -> Job(s) active-custody map.
+     * Earliest / Latest / Queued and cancelActiveRelationship(...) all address that same map.
+     *
+     * WHY IT EXISTS
+     * It preserves the already-authored semantic distinction that says which active work belongs
+     * together while leaving each actual Job as the private runtime occurrence.
+     *
+     * RESPONSIBILITY FENCE
+     * Execution coordinates this identity; it does not invent it from callable names, argument bags,
+     * arbitrary payload, Logger IDs, dependency IDs, or occurrence tokens. Do not wrap it in another
+     * RelationshipKey/Coordinate, author a parallel registry, or persist it as a generic trace ID.
+     * The smallest rightful owner should derive it from semantic structure that already exists.
      */
     @RelationshipFoundationApi
     interface RelationshipId
