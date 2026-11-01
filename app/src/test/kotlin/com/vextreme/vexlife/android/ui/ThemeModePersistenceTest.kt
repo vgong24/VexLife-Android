@@ -1,6 +1,7 @@
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
@@ -158,6 +159,103 @@ class ThemeModePersistenceTest {
         } finally {
             root.forceStopAll()
         }
+    }
+
+    @Test
+    fun successfulSaveFactPrecedesResultStateAdmission() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            ResultOnlyThemeModeStore()
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
+            )
+        val logger =
+            VexLogger()
+        val runtime =
+            ThemeModeRuntime(
+                family =
+                    family,
+                executionRoot =
+                    root,
+                store =
+                    store,
+                logger =
+                    logger.sink,
+            )
+
+        try {
+            assertTrue(
+                runtime.activate(
+                    ThemeModeFamily.Control.Select(
+                        ThemeMode.Dark,
+                    ),
+                ),
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    family.states.first { state ->
+                        state ==
+                            ThemeMode.Dark
+                    }
+                }
+            }
+
+            val actions =
+                logger.history.value
+                    .map {
+                        it.action
+                    }
+
+            assertTrue(
+                actions.indexOf(
+                    "EffectSucceeded",
+                ) <
+                    actions.lastIndexOf(
+                        "StateAdmitted",
+                    ),
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    private class ResultOnlyThemeModeStore :
+        ThemeModeStore {
+        private val mutableState =
+            MutableStateFlow(
+                ThemeMode.NotSet,
+            )
+
+        override val states:
+            Flow<ThemeMode> =
+            mutableState
+
+        override suspend fun get():
+            ThemeMode =
+            mutableState.value
+
+        override suspend fun save(
+            state:
+                ThemeMode,
+        ):
+            ThemeModeStore.Result =
+            ThemeModeStore.Result.Success(
+                observedState =
+                    state,
+            )
+
+        override suspend fun forget():
+            ThemeModeStore.Result =
+            ThemeModeStore.Result.Success(
+                observedState =
+                    ThemeMode.NotSet,
+            )
     }
 
     @Test

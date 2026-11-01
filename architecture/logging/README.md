@@ -77,6 +77,11 @@ Rightful owners submit already-accepted facts through VexLogger.Sink. The Logger
 carries only the fact coordinate, action, and bounded owner-formed detail; it does not infer meaning
 from Kotlin callables or create another semantic hierarchy.
 
+`detailsJson` is not a generic metadata bag. It may carry only bounded detail that the producer
+already owns as part of that accepted/observed fact. It must not be used to copy dependency graphs,
+execution identity, Blueprint topology, arbitrary object dumps, or expected future results into
+Logger.
+
 ~~~text
 semantic owner
     -> Event.Semantic(ControlAccepted / StateAdmitted)
@@ -181,6 +186,7 @@ Production chronology records accepted/observed facts.
 ~~~text
 request Dark
 Save succeeded
+Dark outside State observed
 Dark presentation arrived
 ~~~
 
@@ -189,6 +195,7 @@ is different from:
 ~~~text
 request Dark
 Save succeeded
+Dark outside State observed
 Light presentation remained
 ~~~
 

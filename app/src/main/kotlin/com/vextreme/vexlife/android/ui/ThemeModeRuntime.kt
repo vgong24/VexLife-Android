@@ -185,9 +185,6 @@ internal class ThemeModeRuntime(
             onResult = { result ->
                 when (result) {
                     is ThemeModeStore.Result.Success -> {
-                        observe(
-                            result.observedState,
-                        )
                         record(
                             VexLogger.Event.Runtime(
                                 subjectRef =
@@ -199,6 +196,9 @@ internal class ThemeModeRuntime(
                                         effect,
                                     ),
                             ),
+                        )
+                        observe(
+                            result.observedState,
                         )
                     }
 
