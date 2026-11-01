@@ -186,11 +186,11 @@ merely because a runtime composes them:
 VexFamily
 -> State / Control / Act / Effect semantics only
 
-Typed Family/Store binding or concrete runtime owner
+Concrete feature runtime owner
 -> explicit Family
+-> exact outside-truth Store/provider as required
 -> explicit VexExecution
 -> explicit VexLogger.Sink
--> provider/Store as actually required
 
 VexExecution != VexFamily child
 VexLogger    != VexFamily child

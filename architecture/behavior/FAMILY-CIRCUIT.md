@@ -11,7 +11,7 @@
 The current direct Family is deliberately semantic-only.
 
 ~~~text
-caller / Family-Store binding
+caller / concrete feature runtime
 -> Family.activate(Control)
 -> concrete Family.act(CURRENT State, Control)
 -> Act?
@@ -20,7 +20,7 @@ caller / Family-Store binding
 -> immediate State admission
 -> Act returned to caller
 
-Family/Store binding
+concrete feature runtime
 -> realizes Effect
 -> reconciles provider/runtime truth
 -> Family.observe(already-semantic State)
@@ -114,7 +114,7 @@ Control.Select(Dark)
 -> immediate ThemeMode.Dark semantic admission
 -> Effect.Save(Dark)
 
-VexFamilyStoreBinding<ThemeModeFamily,...>
+ThemeModeRuntime
 -> realizes Save
 -> Store/runtime result
 -> VexLogger accepted/observed facts
@@ -149,7 +149,7 @@ The refined direct Family does not author execution identity.
 Family
     Control / State / Act / Effect meaning
 
-Family/Store runtime binding
+concrete feature runtime
     knows the accepted Control
     knows the Effect it must realize
     derives the smallest lawful active-work RelationshipId
@@ -165,7 +165,7 @@ generic <Feature>Connection abstraction.
 For ThemeMode the current runtime law is:
 
 ~~~text
-one live typed ThemeMode Family/Store binding owner
+one live ThemeModeRuntime owner
 + Control.Select kind
 -> RelationshipId
 
@@ -175,8 +175,8 @@ selected Light / Dark
 ~~~
 
 A Family with a real repeated domain resource may contribute that typed ResourceId through its
-Control/domain vocabulary, but the runtime bridge—not pure Family—owns the decision that the
-coordinate is required for active execution.
+Control/domain vocabulary, but the concrete runtime—not pure Family—owns whether that already-earned
+identity is required to form its active execution RelationshipId.
 
 ## Store boundary
 
@@ -207,6 +207,8 @@ Store
     = the Family-facing capability that obtains, observes, or changes outside truth
 ~~~
 
+This is a semantic boundary description, not a requirement for one universal Store interface.
+
 Family itself remains semantic and does not receive Store/provider mechanics directly.
 
 ~~~text
@@ -215,22 +217,35 @@ Family
     -> Act
     -> optional Effect
 
-typed Family/Store runtime binding
+concrete feature runtime
     -> realizes Effect through Store under rightful VexExecution custody
     -> admits accepted/observed facts to VexLogger
     -> reconciles already-semantic outside truth back through Family.observe(State)
 ~~~
 
-The binding must preserve exact Family kinship. A Store/runtime belonging to another Family must not
-be composable merely because its methods happen to have compatible Kotlin signatures.
+The concrete runtime must preserve exact Family/Store kinship. A Store/runtime belonging to another
+Family must not become composable merely because its methods happen to have compatible Kotlin
+signatures.
 
-ThemeMode now uses the reusable VexFamilyStoreBinding directly. There is no ThemeMode-specific runtime bridge class. The feature declares its exact ThemeModeFamily + ThemeModeStore
-relationship once; standard Execution/Logger/lifetime mechanics are derived by the binding provider.
-The feature must explicitly supply overlap approach, typed execution RelationshipCoordinate, and outside-State
-admission policy; the binding does not guess those decisions.
+ThemeMode uses one concrete ThemeModeRuntime. Its current policy is authored once at that rightful
+owner rather than supplied as generic construction arguments:
 
-Do not infer Store by class name, reflection, package scanning, or naming convention. Declare the
-Family/Store relationship once; mechanically derive only what that declaration actually implies.
+~~~text
+Control.Select
+-> one Latest RelationshipId
+
+Light / Dark
+-> operation payload
+-> not execution identity
+
+Store observation NotSet
+-> outside truth
+-> not effective ThemeMode admission
+~~~
+
+Do not infer Store or execution identity from class names, reflection, package scanning, naming
+convention, or arbitrary Control payload. Do not extract a universal runtime bridge from this one
+patient zero; a second real Family must first demonstrate the exact repeated law.
 
 ## Logger boundary
 
@@ -240,7 +255,7 @@ Family does not receive VexLogger.
 Family.activate(Control)
 -> returns accepted semantic Act
 
-Family/Store binding boundary
+concrete feature runtime boundary
 -> knows which semantic/runtime fact became true
 -> VexLogger.Sink
 -> one chronology
@@ -256,8 +271,8 @@ Family does not implement Injectable/build/container mechanics.
 ~~~text
 provider declaration
 -> constructs Family
--> constructs typed Family/Store binding from Family + Store + standard runtime dependencies
--> consumer receives Family or the typed binding only when activation is required
+-> constructs concrete feature runtime from Family + Store + standard runtime dependencies
+-> consumer receives Family or the concrete runtime only when activation is required
 ~~~
 
 The dependency system can construct a Family without the Family knowing a dependency system exists.
@@ -276,7 +291,7 @@ VexLifeViewModel/session lifetime
     VexLogger
         |
         v
-    VexFamilyStoreBinding<ThemeModeFamily,...>
+    ThemeModeRuntime
         |
         +-> Family
         +-> Store
@@ -284,7 +299,7 @@ VexLifeViewModel/session lifetime
         +-> Logger Sink
 
 Debug Menu action
--> Family/Store binding.activate(Control.Select)
+-> concrete feature runtime.activate(Control.Select)
 -> Family semantic Act
 -> Save runtime Job
 -> accepted/observed Logger chronology
@@ -295,7 +310,7 @@ dependency-factory construction.
 
 ## Compound / Relay remains separate
 
-Direct Family/Store runtime binding is not a replacement for Compound Relay.
+Direct Family concrete runtime is not a replacement for Compound Relay.
 
 ~~~text
 Direct Family

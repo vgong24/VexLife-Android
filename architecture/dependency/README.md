@@ -70,62 +70,55 @@ ordinary feature/UI consumer
     does not call global get<T>()
 ~~~
 
-## Typed Family composition
+## Concrete Family runtime composition
 
-Repeated Family construction should not require every feature author to remember and duplicate the
-same provider scaffolding.
+The dependency system may construct a pure Family and its concrete runtime without making the Family
+know that dependency construction exists.
 
-The intended direction is:
+The current ThemeMode patient zero is deliberately explicit:
 
 ~~~text
-one explicit typed Family binding
-    -> exact Family
-    -> exact Family-facing Store when outside truth exists
-    -> feature-specific Store prerequisites
-
-architecture derives standard mechanics
-    -> rightful VexExecutionRoot
-    -> VexLogger/Sink
-    -> dependency-first construction
-    -> memoization/lifetime reuse
-    -> Family/runtime kinship
-
-ordinary feature author
-    -> declares the truthful feature-specific relationship once
-    -> does not hand-author ThemeModeFamilyProvider + ThemeModeRuntimeProvider + repeated standard roots
+ThemeModeFamily provider
+ThemeModeStore provider
+VexExecutionRoot provider
+VexLogger provider
+        \
+         -> ThemeModeRuntime provider
+              -> one session-lifetime runtime object
 ~~~
+
+ThemeModeRuntime owns its feature policy directly:
+
+~~~text
+Control.Select
+-> one Latest RelationshipId
+
+Light / Dark
+-> operation payload
+-> not execution identity
+
+Store observation NotSet
+-> outside truth
+-> not effective ThemeMode admission
+~~~
+
+The dependency graph constructs and reuses those objects; it does not invent semantic or execution
+identity for them.
 
 Permanent:
 
 ~~~text
-DECLARE ONCE; DERIVE MECHANICALLY; NEVER GUESS.
+CONSTRUCT EXPLICITLY; REUSE AT THE RIGHTFUL LIFETIME; NEVER GUESS.
 
 automatic construction = allowed
 automatic semantic inference = not allowed
+dependency identity != execution RelationshipId
 reflection/name/package scanning = not architecture authority
 ~~~
 
-A Store is the Family-facing outside-truth capability. It may be temporary, local, remote, service,
-repository, platform, or a composition of those mechanics. Store is not synonymous with persistence.
-
-The dependency system may supply standard runtime architecture dependencies automatically only after
-the typed Family binding establishes the relationship. Feature-specific prerequisites remain explicit.
-
-A Family/Store binding must also declare, rather than inherit, its runtime policy:
-
-~~~text
-execution overlap approach
-typed RelationshipCoordinate
-outside-State admission predicate
-~~~
-
-These are feature meaning/custody decisions, not DI defaults.
-
-A concrete <FeatureName>Connection is not part of the Family pattern. Store may depend directly on
-the actual SDK/service/platform object it needs. If a separate lower-level session/adapter object is
-required for concrete lifecycle/protocol correctness, name it after that real system and inject it as
-an ordinary Store dependency. Cross-Family composition belongs to Relay/convergence, not dependency
-construction.
+A concrete Store may use temporary, local, remote, service, repository, or platform mechanics. That
+does not by itself earn a universal Store hierarchy or generic Family runtime layer. Reusable runtime
+machinery should be extracted only after another real Family demonstrates the same invariant.
 
 ## Provider declaration boilerplate
 

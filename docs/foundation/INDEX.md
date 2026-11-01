@@ -39,7 +39,7 @@ Family.activate(Control)
 -> immediate semantic State admission
 -> Act returned
 
-Family/Store binding
+concrete feature runtime
 -> realizes Effect
 -> reports accepted/observed facts
 -> Family.observe(already-semantic outside truth)
@@ -65,15 +65,17 @@ ThemeMode is the PR #209 patient zero:
 Control.Select(mode)
 -> Effect.Save(mode)
 
-VexFamilyStoreBinding
+ThemeModeRuntime
+-> private Select RelationshipId
 -> VexExecution RelationshipId -> actual Job(s)
 -> ThemeModeStore
 -> VexLogger chronology
 ~~~
 
 Execution identity is therefore no longer authored inside pure Family merely because a Control caused
-runtime work. The concrete Family/Store binding owns the smallest active-work relationship it actually
-needs while Family remains semantic-only.
+runtime work. ThemeModeRuntime owns the one active-work relationship ThemeMode actually needs while
+Family remains semantic-only. No intermediate identity/key abstraction is authored between Control
+meaning and VexExecution.RelationshipId.
 
 Exact repository-owned Gradle/JVM proof is pending on the current #209 candidate. The prior #193 proof
 remains valid evidence for its accepted historical tree; it is not proof for this new refinement.
@@ -391,11 +393,12 @@ composition, action wiring, Runtime and Session instead of hiding their construc
 opaque Session provider. Preview/test direct construction remains an explicit alternate fixture
 route.
 
-Current refinement direction is to reduce provider/feature-name duplication rather than normalize it:
-Store means the Family-facing outside-truth boundary (temporary/local/remote/service/platform as
-needed); one typed Family/Store binding should declare the feature relationship once while dependency
-construction derives standard Execution/Logger/lifetime mechanics. Store may depend directly on the
-actual SDK/service/platform object it needs; there is no generic feature Connection layer.
+Current refinement keeps construction reusable without generalizing feature runtime meaning from one
+patient zero. ThemeModeFamily, ThemeModeStore, VexExecutionRoot and VexLogger are explicit
+prerequisites of one concrete ThemeModeRuntime provider. ThemeModeRuntime owns Select=Latest,
+Light/Dark as payload, and NotSet observation admission once for both production and fixture
+construction. There is no generic feature Connection layer or universal Family runtime bridge in the
+candidate.
 
 VexLifeRelayGraph is now a projection-only session graph. Events and Conversation Relays are
 independently provided/activated nodes with their own readable prerequisite closures; the graph only
