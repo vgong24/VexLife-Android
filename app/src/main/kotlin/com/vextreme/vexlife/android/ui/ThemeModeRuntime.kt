@@ -6,8 +6,6 @@ import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty0
-import kotlin.reflect.KSuspendFunction1
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 
@@ -33,15 +31,15 @@ internal class ThemeModeRuntime(
 ) {
     private val execution =
         ThemeModeExecution(
-            executionRoot,
+            root =
+                executionRoot,
+            store =
+                store,
         )
 
     init {
         execution.observeStore(
-            source =
-                store::states,
-            onEach =
-                ::observe,
+            ::observe,
         )
     }
 
@@ -159,13 +157,9 @@ internal class ThemeModeRuntime(
         effect:
             ThemeModeFamily.Effect.Save,
     ) {
-        val operation =
-            store::save
         execution.saveLatest(
             control =
                 control,
-            operation =
-                operation,
             mode =
                 effect.mode,
             beforeOperation = {
@@ -353,6 +347,8 @@ internal class ThemeModeRuntime(
     private class ThemeModeExecution(
         root:
             VexExecutionRoot,
+        private val store:
+            ThemeModeStore,
     ) :
         VexExecution(
             root,
@@ -404,11 +400,6 @@ internal class ThemeModeRuntime(
         fun saveLatest(
             control:
                 ThemeModeFamily.Control,
-            operation:
-                KSuspendFunction1<
-                    ThemeMode,
-                    ThemeModeStore.Result
-                >,
             mode:
                 ThemeMode,
             beforeOperation:
@@ -425,7 +416,7 @@ internal class ThemeModeRuntime(
                         control,
                     ),
                 operation =
-                    operation,
+                    store::save,
                 argument =
                     mode,
                 beforeOperation =
@@ -437,16 +428,12 @@ internal class ThemeModeRuntime(
             )
 
         fun observeStore(
-            source:
-                KProperty0<
-                    Flow<ThemeMode>
-                >,
             onEach:
                 suspend (ThemeMode) -> Unit,
         ) {
             launchForCollect(
                 source =
-                    source,
+                    store::states,
                 onEach =
                     onEach,
             )
