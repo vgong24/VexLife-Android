@@ -132,9 +132,10 @@ internal data class VexMapsDistributionLegWork(
  * active relationship: the admitted preparation snapshot, derived Plan, expected Navigation leg,
  * async attempt/failure state and the bounded Control feedback needed to advance the delivery route.
  *
- * This existing Session also owns the async work it authors, so it inherits VexExecution directly
- * instead of duplicating every Session verb through a paired VexMapsDistributionExecution mirror.
- * VexExecution contributes custody mechanics only; addStop/prepare/leg meaning stays here.
+ * This existing Session also owns the async work it authors, so VexExecution contributes custody
+ * mechanics directly here. Domain/session verbs such as addStop, prepare and leg advancement stay
+ * on the Session that owns their meaning; execution mechanics must not grow a peer feature API that
+ * restates those verbs.
  */
 internal class VexMapsDistributionSession(
     private val repository:
