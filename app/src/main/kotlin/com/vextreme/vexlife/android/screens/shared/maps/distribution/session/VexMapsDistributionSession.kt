@@ -306,7 +306,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun addStopForExecution(
+    private suspend fun addStopForExecution(
         work:
             VexMapsDistributionAddStopWork,
     ) {
@@ -349,7 +349,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun removeStopForExecution(
+    private suspend fun removeStopForExecution(
         stopRef: String,
     ) {
         runCatching {
@@ -382,7 +382,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun setReturnToStartForExecution(
+    private suspend fun setReturnToStartForExecution(
         enabled: Boolean,
     ) {
         runCatching {
@@ -504,7 +504,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun prepareForExecution(
+    private suspend fun prepareForExecution(
         work:
             VexMapsDistributionPreparationWork,
     ) {
@@ -885,7 +885,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun clearDraftForExecution() {
+    private suspend fun clearDraftForExecution() {
         runCatching {
             repository.clearDraft()
         }.onSuccess {
@@ -901,7 +901,7 @@ internal class VexMapsDistributionSession(
         }
     }
 
-    internal suspend fun restoreDraftForExecution() {
+    private suspend fun restoreDraftForExecution() {
         runCatching {
             repository.loadDraft()
         }.onSuccess {
@@ -1200,15 +1200,15 @@ internal class VexMapsDistributionSession(
                 null
         }
 
-    internal fun modeDeliveryRouteOutputsForExecution():
+    private fun modeDeliveryRouteOutputsForExecution():
         Flow<com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteOutput> =
         modeDeliveryRouteRelay.outputStates
 
-    internal fun navigationOutputsForExecution():
+    private fun navigationOutputsForExecution():
         Flow<VexMapsDeliveryRouteNavigationOutput> =
         navigationRelay.outputStates
 
-    internal fun acceptModeDeliveryRouteOutput(
+    private fun acceptModeDeliveryRouteOutput(
         output:
             com.vextreme.vexlife.android.screens.shared.maps.distribution.convergence.VexMapsDistributionModeDeliveryRouteOutput,
     ) {
@@ -1220,7 +1220,7 @@ internal class VexMapsDistributionSession(
             }
     }
 
-    internal fun acceptNavigationOutput(
+    private fun acceptNavigationOutput(
         output:
             VexMapsDeliveryRouteNavigationOutput,
     ) {
@@ -1441,7 +1441,7 @@ internal class VexMapsDistributionSession(
         )
     }
 
-    internal suspend fun prepareLegForExecution(
+    private suspend fun prepareLegForExecution(
         work:
             VexMapsDistributionLegWork,
     ) {
