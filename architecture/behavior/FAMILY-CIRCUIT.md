@@ -136,7 +136,7 @@ Control.Select(Dark)
 
 realization boundary
 -> Family.relationshipId(Control.Select)
--> VexExecution.beginLatest
+-> VexExecution.begin(approach = Act.Begin.approach)
 -> ThemeModeStore.save(Dark)
 -> current Logger facts
 -> observed ThemeMode truth
@@ -306,8 +306,9 @@ Debug Menu action
 -> Act
    -> immediate State?
    -> beginLatest(Effect.Save)
--> VexExecution.beginLatest(
+-> VexExecution.begin(
        owner = same live Family,
+       approach = Act.Begin.approach,
        relationshipId = Family.relationshipId(Control.Select)
    )
 -> ThemeModeStore
@@ -315,7 +316,8 @@ Debug Menu action
 -> Family.observeStoredThemeMode(...)
 ~~~
 
-There is no separate feature runtime/execution owner between the authored Act and VexExecution.
+The already-authored Act relationship flows directly into VexExecution custody; feature meaning
+remains in ThemeModeFamily and its realization functions.
 
 ## Compound / Relay remains separate
 
