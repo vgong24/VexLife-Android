@@ -5,10 +5,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Live semantic Family for one State / Control / Effect vocabulary.
+ * Semantic owner for one exact State / Control / Effect vocabulary.
  *
- * Family owns semantic meaning and current State. It does not own provider, persistence, coroutine,
- * logging, or lifecycle mechanics.
+ * WHAT THIS IS
+ * Family answers one question: what does this Control mean against exact CURRENT semantic State?
+ * It owns that meaning and the one current semantic State holder.
+ *
+ * WHAT IT RELATES TO
+ * A concrete feature runtime may call [activate], realize the returned [Act.effect] through its
+ * Store/provider boundary, report accepted/observed facts to VexLogger, and later return already-
+ * reconciled semantic reality through [observe]. Dependency construction may create a Family, but
+ * Family does not know that a dependency system exists.
+ *
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * Keeping State + Control -> Act in one synchronous semantic owner prevents provider mechanics,
+ * coroutine timing, persistence, logging, and UI presentation from becoming alternate places where
+ * product meaning is decided. Effect is returned rather than executed so requested transformation
+ * remains distinct from resulting truth.
  *
  * Core loop:
  *
@@ -16,9 +29,11 @@ import kotlinx.coroutines.flow.asStateFlow
  *     -> Act?
  *     -> admitted State? + Effect?
  *
- * The admitted State is applied synchronously by [activate]. The typed Family/Store runtime binding may then
- * realize the returned Effect. Runtime/provider truth may later return as an already-semantic State
- * through [observe].
+ * RESPONSIBILITY FENCE
+ * Do not move Store/provider access, VexExecution, RelationshipId construction, VexLogger, dependency
+ * resolution, lifecycle ownership, or presentation mechanics into Family. Do not create a second
+ * State holder or generic runtime/binding layer that restates this semantic owner. A reusable layer
+ * is earned only by repeated real consumers, not by making this patient-zero shape universal.
  */
 abstract class VexFamily<
     Family,
@@ -66,7 +81,7 @@ abstract class VexFamily<
     /**
      * Runtime transformation requested by a lawful Act.
      *
-     * Effect is not resulting truth. The Family/Store runtime binding may attempt the Effect; observed reality
+     * Effect is not resulting truth. A concrete feature runtime may attempt the Effect; observed reality
      * comes back separately as State.
      */
     interface Effect<
@@ -334,7 +349,7 @@ abstract class VexFamily<
      *     -> admit immediate State when present
      *     -> return Act
      *
-     * Family never realizes [Act.effect]. The Family/Store runtime binding owns that work.
+     * Family never realizes [Act.effect]. A concrete feature runtime owns that work.
      */
     fun activate(
         control:
