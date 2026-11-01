@@ -702,7 +702,7 @@ class VexExecutionTest {
         }
 
     @Test
-    fun directLatestUsesOwnerScopedFoundationWithoutAFeatureExecutionSubclass() =
+    fun directAuthoredLatestRetainsOwnerScopedCustody() =
         runBlocking {
             val root =
                 VexExecutionRoot()
@@ -745,11 +745,13 @@ class VexExecutionTest {
                 }
 
                 val latest =
-                    VexExecution.beginLatest(
+                    VexExecution.begin(
                         executionRoot =
                             root,
                         owner =
                             owner,
+                        approach =
+                            VexExecution.Approach.Latest,
                         relationshipId =
                             relationship,
                         operation =
