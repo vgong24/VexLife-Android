@@ -8,21 +8,26 @@
 > immediately, and what runtime transformation may be requested without making Family own execution,
 > persistence, logging, dependency construction, or provider mechanics?
 
-The current direct Family is deliberately semantic-only.
+The current direct Family keeps semantic resolution pure while authoring the execution relationship
+as inert Act data at the same place the consequence is understood.
 
 ~~~text
-caller / concrete feature runtime
+caller
 -> Family.activate(Control)
 -> concrete Family.act(CURRENT State, Control)
 -> Act?
    -> admitted State?
-   -> Effect?
+   -> Begin?
+      -> Effect
+      -> Independent / Earliest / Latest / Queued
 -> immediate State admission
--> Act returned to caller
+-> Act returned
 
-concrete feature runtime
--> realizes Effect
--> reconciles provider/runtime truth
+later realization boundary
+-> Act.Begin + Family.relationshipId(Control)
+-> VexExecution
+-> Store/provider work
+-> observed truth
 -> Family.observe(already-semantic State)
 ~~~
 
@@ -42,12 +47,16 @@ Control
 Act
     lawful result of exact CURRENT State + Control
 
+Act.Begin
+    inert authored execution consequence
+    Effect + overlap Approach
+
 Effect
     requested runtime transformation
     != resulting truth
 ~~~
 
-A concrete Family owns its vocabulary and native Kotlin relationship:
+A concrete Family owns the relationship in ordinary Kotlin:
 
 ~~~kotlin
 override fun act(
@@ -56,22 +65,28 @@ override fun act(
 ): VexFamily.Act<ThemeMode, Effect>? =
     when (control) {
         is Control.Select -> {
-            val effect = Effect.Save(control.mode)
+            val save =
+                beginLatest(
+                    Effect.Save(
+                        control.mode,
+                    ),
+                )
 
             if (currentState == control.mode) {
-                stay(effect)
+                stay(save)
             } else {
                 admit(
                     state = control.mode,
-                    effect = effect,
+                    begin = save,
                 )
             }
         }
     }
 ~~~
 
-There is no Acts table, custom rule builder, execution trigger DSL, Store callback, or Logger call
-inside this semantic decision.
+begin / beginEarliest / beginLatest / beginQueued do not launch work inside act(...).
+isAvailable(...) can inspect the same relationship without starting a Job, calling a Store, or
+emitting Logger facts.
 
 ## State ownership
 
@@ -94,7 +109,7 @@ The caller of observe(...) must already own provider/repository interpretation, 
 and construction of the truthful semantic State. Family does not become a provider adapter merely
 because it can admit observed truth.
 
-## Act / Effect boundary
+## Act / Effect / execution relationship
 
 ~~~text
 CURRENT State + Control
@@ -102,22 +117,29 @@ CURRENT State + Control
 
 Act
 -> optional admitted State
--> optional Effect
+-> optional Begin
+
+Begin
+-> Effect
+-> Approach
 ~~~
 
-Effect is a request, not proof of a result.
+Approach is authored here because overlap is part of the consequence relationship, not because
+Family owns coroutine execution.
 
 For ThemeMode:
 
 ~~~text
 Control.Select(Dark)
 -> immediate ThemeMode.Dark semantic admission
--> Effect.Save(Dark)
+-> beginLatest(Effect.Save(Dark))
 
-ThemeModeRuntime
--> realizes Save
--> Store/runtime result
--> VexLogger accepted/observed facts
+realization boundary
+-> Family.relationshipId(Control.Select)
+-> VexExecution.beginLatest
+-> ThemeModeStore.save(Dark)
+-> current Logger facts
+-> observed ThemeMode truth
 ~~~
 
 Selecting the already-current mode may still lawfully return Save because explicit durable selection
@@ -141,42 +163,30 @@ State snapshot
 
 DisplayState is derived interpretation, not another truth owner.
 
-## Runtime relationship identity belongs outside Family
+## Execution relationship identity
 
-The refined direct Family does not author execution identity.
-
-~~~text
-Family
-    Control / State / Act / Effect meaning
-
-concrete feature runtime
-    knows the accepted Control
-    knows the Effect it must realize
-    derives the smallest lawful active-work RelationshipId
-    asks VexExecution to own Job custody
-~~~
-
-Connection is not a Vex core Family layer. Store may depend directly on third-party SDK/service
-objects. When a lower-level session/adapter object is genuinely required for protocol lifecycle,
-threading, authentication, reconnect, callback registration, or shared teardown correctness, name
-that object after the concrete system it owns (for example Media3Session) rather than introducing a
-generic <Feature>Connection abstraction.
-
-For ThemeMode the current runtime law is:
+Family owns the semantic composition of the maintained-work address because the identity is already
+present in its authored vocabulary:
 
 ~~~text
-one live ThemeModeRuntime owner
-+ already-authored Control.Select kind/name
--> mechanically derived RelationshipId
-
-selected Light / Dark
--> operation payload
--> not another active-work identity
+live Family instance
++ Control kind/name
++ optional typed Control.ResourceId
+-> VexExecution.RelationshipId
 ~~~
 
-A Family with a real repeated domain resource may contribute that typed ResourceId through its
-Control/domain vocabulary, but the concrete runtime—not pure Family—owns whether that already-earned
-identity is required to form its active execution RelationshipId.
+The full Control payload is not automatically identity. ThemeMode Light/Dark remains Select payload,
+so both requests share the same Select relationship and Latest supersedes the earlier Save.
+
+VexExecution owns only active Job custody and overlap mechanics:
+
+~~~text
+RelationshipId -> actual Job(s)
+~~~
+
+Do not insert another owner merely to translate a feature verb into launch/begin. If an existing
+Session, Family realization boundary, or lifecycle owner already knows the work, keep that meaning
+there and use VexExecution as the execution connective tissue.
 
 ## Store boundary
 
@@ -217,7 +227,7 @@ Family
     -> Act
     -> optional Effect
 
-concrete feature runtime
+realization boundary
     -> realizes Effect through Store under rightful VexExecution custody
     -> admits accepted/observed facts to VexLogger
     -> reconciles already-semantic outside truth back through Family.observe(State)
@@ -227,7 +237,7 @@ The concrete runtime must preserve exact Family/Store kinship. A Store/runtime b
 Family must not become composable merely because its methods happen to have compatible Kotlin
 signatures.
 
-ThemeMode uses one concrete ThemeModeRuntime. Its current policy is authored once at that rightful
+ThemeMode uses one concrete ThemeMode realization boundary. Its current policy is authored once at that rightful
 owner rather than supplied as generic construction arguments:
 
 ~~~text
@@ -255,7 +265,7 @@ Family does not receive VexLogger.
 Family.activate(Control)
 -> returns accepted semantic Act
 
-concrete feature runtime boundary
+realization boundary boundary
 -> knows which semantic/runtime fact became true
 -> VexLogger.Sink
 -> one chronology
@@ -271,42 +281,41 @@ Family does not implement Injectable/build/container mechanics.
 ~~~text
 provider declaration
 -> constructs Family
--> constructs concrete feature runtime from Family + Store + standard runtime dependencies
--> consumer receives Family or the concrete runtime only when activation is required
+-> supplies Store / VexExecutionRoot / Logger to the existing realization callsite
+-> consumer receives Family
 ~~~
 
-The dependency system can construct a Family without the Family knowing a dependency system exists.
+Dependency construction does not earn a separate runtime/execution wrapper object. It wires the
+objects that already own meaning and lifetime.
 
 ## ThemeMode patient zero
 
 Current production relationship on PR #209:
 
 ~~~text
-VexApplication dependency lifetime
+VexApplication lifetime
     ThemeModeStore
 
 VexLifeViewModel/session lifetime
     ThemeModeFamily
     VexExecutionRoot
     VexLogger
-        |
-        v
-    ThemeModeRuntime
-        |
-        +-> Family
-        +-> Store
-        +-> VexExecution
-        +-> Logger Sink
 
 Debug Menu action
--> concrete feature runtime.activate(Control.Select)
--> Family semantic Act
--> Save runtime Job
+-> ThemeModeFamily.activate(Control.Select)
+-> Act
+   -> immediate State?
+   -> beginLatest(Effect.Save)
+-> VexExecution.beginLatest(
+       owner = same live Family,
+       relationshipId = Family.relationshipId(Control.Select)
+   )
+-> ThemeModeStore
 -> accepted/observed Logger chronology
+-> Family.observeStoredThemeMode(...)
 ~~~
 
-The Family itself remains reusable and testable without Android Store, Execution, Logger, or
-dependency-factory construction.
+There is no separate feature runtime/execution owner between the authored Act and VexExecution.
 
 ## Compound / Relay remains separate
 
@@ -331,7 +340,7 @@ Focused Family tests protect:
 - exact State/Control kinship;
 - pure act resolution;
 - immediate State admission;
-- Effect return without realization;
+- inert Begin/Effect return without execution during act resolution;
 - availability without side effect;
 - already-semantic observe(...);
 - exact Projection/DisplayState pairing;
