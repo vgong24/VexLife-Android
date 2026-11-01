@@ -166,8 +166,8 @@ For ThemeMode the current runtime law is:
 
 ~~~text
 one live ThemeModeRuntime owner
-+ Control.Select kind
--> RelationshipId
++ already-authored Control.Select kind/name
+-> mechanically derived RelationshipId
 
 selected Light / Dark
 -> operation payload
@@ -232,7 +232,7 @@ owner rather than supplied as generic construction arguments:
 
 ~~~text
 Control.Select
--> one Latest RelationshipId
+-> kind/name mechanically derives one Latest RelationshipId
 
 Light / Dark
 -> operation payload

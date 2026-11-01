@@ -66,16 +66,16 @@ Control.Select(mode)
 -> Effect.Save(mode)
 
 ThemeModeRuntime
--> private Select RelationshipId
+-> Control.Select kind mechanically derives RelationshipId
 -> VexExecution RelationshipId -> actual Job(s)
 -> ThemeModeStore
 -> VexLogger chronology
 ~~~
 
 Execution identity is therefore no longer authored inside pure Family merely because a Control caused
-runtime work. ThemeModeRuntime owns the one active-work relationship ThemeMode actually needs while
-Family remains semantic-only. No intermediate identity/key abstraction is authored between Control
-meaning and VexExecution.RelationshipId.
+runtime work. ThemeModeRuntime mechanically derives the active-work RelationshipId from the already-authored
+Control kind while Family remains semantic-only. No intermediate identity/key abstraction or
+second relationship declaration is authored between Control meaning and VexExecution.RelationshipId.
 
 Exact repository-owned Gradle/JVM proof is pending on the current #209 candidate. The prior #193 proof
 remains valid evidence for its accepted historical tree; it is not proof for this new refinement.

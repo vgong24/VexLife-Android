@@ -5,6 +5,7 @@ package com.vextreme.vexlife.android.ui
 import com.vextreme.vexlife.android.execution.VexExecution
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty0
 import kotlin.reflect.KSuspendFunction1
 import kotlinx.coroutines.Job
@@ -83,9 +84,14 @@ internal class ThemeModeRuntime(
         }
 
         act.effect
-            ?.let(
-                ::realize,
-            )
+            ?.let { effect ->
+                realize(
+                    control =
+                        control,
+                    effect =
+                        effect,
+                )
+            }
 
         return true
     }
@@ -126,18 +132,25 @@ internal class ThemeModeRuntime(
     }
 
     private fun realize(
+        control:
+            ThemeModeFamily.Control,
         effect:
             ThemeModeFamily.Effect,
     ) {
         when (effect) {
             is ThemeModeFamily.Effect.Save ->
                 saveLatest(
-                    effect,
+                    control =
+                        control,
+                    effect =
+                        effect,
                 )
         }
     }
 
     private fun saveLatest(
+        control:
+            ThemeModeFamily.Control,
         effect:
             ThemeModeFamily.Effect.Save,
     ) {
@@ -147,6 +160,8 @@ internal class ThemeModeRuntime(
             family.currentState::class
 
         execution.saveLatest(
+            control =
+                control,
             operation =
                 operation,
             mode =
@@ -255,15 +270,52 @@ internal class ThemeModeRuntime(
             root,
         ) {
         /**
-         * One private active-work address for ThemeMode Select.
+         * Private execution address mechanically derived from the already-authored Control.
          *
-         * This is the VexExecution RelationshipId. The enclosing VexExecution object already scopes
-         * this address to one live runtime owner.
+         * The enclosing VexExecution object supplies the live runtime-owner scope. Control kind/name
+         * supplies the semantic relationship distinction. Ordinary Control payload does not
+         * participate.
          */
-        private data object SelectRelationshipId :
+        private data class ControlRelationshipId(
+            val controlType:
+                KClass<
+                    out ThemeModeFamily.Control
+                >,
+            val controlName:
+                String,
+        ) :
             RelationshipId
 
+        private fun relationshipId(
+            control:
+                ThemeModeFamily.Control,
+        ):
+            RelationshipId {
+            val controlType =
+                control::class
+            val controlName =
+                (
+                    control as?
+                        Enum<*>
+                )
+                    ?.name
+                    ?: requireNotNull(
+                        controlType.simpleName,
+                    ) {
+                        "ThemeMode Control requires a named class or enum entry"
+                    }
+
+            return ControlRelationshipId(
+                controlType =
+                    controlType,
+                controlName =
+                    controlName,
+            )
+        }
+
         fun saveLatest(
+            control:
+                ThemeModeFamily.Control,
             operation:
                 KSuspendFunction1<
                     ThemeMode,
@@ -281,7 +333,9 @@ internal class ThemeModeRuntime(
             Job =
             beginLatest(
                 relationshipId =
-                    SelectRelationshipId,
+                    relationshipId(
+                        control,
+                    ),
                 operation =
                     operation,
                 argument =
