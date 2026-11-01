@@ -125,17 +125,22 @@ class ThemeModeTest {
                     ThemeMode.Light,
             )
 
-        assertEquals(
-            family.relationshipId(
+        val dark =
+            family.activate(
                 ThemeModeFamily.Control.Select(
                     ThemeMode.Dark,
                 ),
-            ),
-            family.relationshipId(
+            )
+        val light =
+            family.activate(
                 ThemeModeFamily.Control.Select(
                     ThemeMode.Light,
                 ),
-            ),
+            )
+
+        assertEquals(
+            dark?.relationshipId,
+            light?.relationshipId,
         )
     }
 
