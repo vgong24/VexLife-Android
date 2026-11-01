@@ -42,7 +42,7 @@ Family.activate(Control)
 -> Act returned
 
 realization boundary
--> Family.relationshipId(Control)
+-> Act.relationshipId
 -> VexExecution begin/observe foundation
 -> provider / Store
 -> observed State
@@ -54,7 +54,7 @@ Permanent candidate boundary:
 VexFamily
     owns State / Control / Act / Begin / Effect
     owns current semantic State
-    owns semantic composition of RelationshipId from Family + Control (+ typed ResourceId)
+    binds maintained RelationshipId onto the accepted Act from Family + Control (+ typed ResourceId)
 
 VexExecution
     owns Job custody / overlap / source observation
@@ -70,7 +70,7 @@ ThemeMode is the PR #209 patient zero:
 ~~~text
 Control.Select(mode)
 -> beginLatest(Effect.Save(mode))
--> Family.relationshipId(Select)
+-> Act.relationshipId
 -> VexExecution.begin(approach = Act.Begin.approach)
 -> ThemeModeStore
 -> VexLogger chronology
