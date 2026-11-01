@@ -13,8 +13,24 @@ import kotlinx.coroutines.async
 /**
  * Shared coroutine lifetime for one bounded runtime/session/service tree.
  *
- * The root owns terminal admission + shutdown only. Active semantic relationships belong to each
- * live [VexExecution] owner, not to a second root-level execution registry.
+ * WHAT THIS IS
+ * VexExecutionRoot owns the shared SupervisorJob/scope boundary, admission while that lifetime is
+ * alive, and terminal shutdown of the complete tree.
+ *
+ * WHAT IT RELATES TO
+ * One root may host several sibling [VexExecution] owners. Those owners retain their own Job and
+ * RelationshipId custody; the root only creates Jobs inside the shared lifetime and can terminate
+ * the whole tree when the rightful lifetime owner ends.
+ *
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * A shared root prevents each feature from inventing an uncontained/global coroutine scope while
+ * preserving sibling failure isolation and one explicit terminal lifetime boundary.
+ *
+ * RESPONSIBILITY FENCE
+ * Do not move RelationshipId maps, per-feature active-work registries, semantic state, Logger
+ * history, dependency resolution, provider retry policy, or feature cancellation policy into the
+ * root. Stopping one VexExecution owner must not become root shutdown; root shutdown is reserved for
+ * the owner of the entire shared lifetime.
  */
 class VexExecutionRoot(
     dispatcher:
