@@ -716,11 +716,13 @@ class VexExecutionTest {
                 )
 
             try {
-                VexExecution.beginLatest(
+                VexExecution.begin(
                     executionRoot =
                         root,
                     owner =
                         owner,
+                    approach =
+                        VexExecution.Approach.Latest,
                     relationshipId =
                         relationship,
                     operation =
