@@ -19,19 +19,20 @@ import kotlinx.coroutines.async
  * alive, and terminal shutdown of the complete tree.
  *
  * WHAT IT RELATES TO
- * One root may host several sibling [VexExecution] owners. Those owners retain their own Job and
- * RelationshipId custody; the root only creates Jobs inside the shared lifetime and can terminate
- * the whole tree when the rightful lifetime owner ends.
+ * One root may host several sibling [VexExecution] owners. For direct VexExecution entry points it
+ * also retains the foundation-owned execution scope associated with the already-existing live owner
+ * object. RelationshipId -> Job(s) custody still lives inside VexExecution, not in another semantic
+ * root registry.
  *
  * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
  * A shared root prevents each feature from inventing an uncontained/global coroutine scope while
  * preserving sibling failure isolation and one explicit terminal lifetime boundary.
  *
  * RESPONSIBILITY FENCE
- * Do not move RelationshipId maps, per-feature active-work registries, semantic state, Logger
- * history, dependency resolution, provider retry policy, or feature cancellation policy into the
- * root. Stopping one VexExecution owner must not become root shutdown; root shutdown is reserved for
- * the owner of the entire shared lifetime.
+ * Do not move semantic RelationshipId composition, feature verbs, semantic State, Logger history,
+ * dependency resolution, provider retry policy, or feature cancellation policy into the root.
+ * Direct-owner retention exists only to preserve VexExecution custody without requiring a wrapper
+ * class. Root shutdown remains reserved for the owner of the entire shared lifetime.
  */
 class VexExecutionRoot(
     dispatcher:
@@ -155,6 +156,7 @@ class VexExecutionRoot(
         ) {
             acceptingWork =
                 false
+            directExecutions.clear()
         }
 
         parentJob.cancel(
