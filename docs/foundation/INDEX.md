@@ -35,26 +35,32 @@ Family.activate(Control)
 -> concrete Family.act(CURRENT State, Control)
 -> Act?
    -> admitted State?
-   -> Effect?
+   -> Begin?
+      -> Effect
+      -> Independent / Earliest / Latest / Queued
 -> immediate semantic State admission
 -> Act returned
 
-concrete feature runtime
--> realizes Effect
--> reports accepted/observed facts
--> Family.observe(already-semantic outside truth)
+realization boundary
+-> Family.relationshipId(Control)
+-> VexExecution begin/observe foundation
+-> provider / Store
+-> observed State
 ~~~
 
 Permanent candidate boundary:
 
 ~~~text
 VexFamily
-    owns State / Control / Act / Effect
-    owns current semantic State + bounded DisplayState/Projection
+    owns State / Control / Act / Begin / Effect
+    owns current semantic State
+    owns semantic composition of RelationshipId from Family + Control (+ typed ResourceId)
+
+VexExecution
+    owns Job custody / overlap / source observation
 
 VexFamily
-    does NOT own Store
-    does NOT own VexExecution
+    does NOT own Store/provider mechanics
     does NOT own VexLogger
     does NOT own dependency construction
 ~~~
@@ -63,26 +69,22 @@ ThemeMode is the PR #209 patient zero:
 
 ~~~text
 Control.Select(mode)
--> Effect.Save(mode)
-
-ThemeModeRuntime
--> Control.Select kind mechanically derives RelationshipId
--> VexExecution RelationshipId -> actual Job(s)
+-> beginLatest(Effect.Save(mode))
+-> Family.relationshipId(Select)
+-> VexExecution.beginLatest
 -> ThemeModeStore
 -> VexLogger chronology
 ~~~
 
-Execution identity is therefore no longer authored inside pure Family merely because a Control caused
-runtime work. ThemeModeRuntime mechanically derives the active-work RelationshipId from the already-authored
-Control kind while Family remains semantic-only. No intermediate identity/key abstraction or
-second relationship declaration is authored between Control meaning and VexExecution.RelationshipId.
+No feature-specific runtime/execution wrapper is required to translate Save into beginLatest. The
+authored relationship itself connects the semantic consequence to the reusable execution foundation.
 
 Exact repository-owned Gradle/JVM proof is pending on the current #209 candidate. The prior #193 proof
 remains valid evidence for its accepted historical tree; it is not proof for this new refinement.
 
 Compound/Relay remains a separate semantic owner for multi-truth convergence.
 
-<!-- [VXG RealForever][FOUNDATION][FAMILY][PURE-SCAE] -->
+<!-- [VXG RealForever][FOUNDATION][FAMILY][DIRECT-ACT-EXECUTION-RELATIONSHIP] -->
 
 
 ## Foundation establishment criteria
