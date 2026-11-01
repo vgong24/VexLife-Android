@@ -1275,7 +1275,7 @@ abstract class VexExecution protected constructor(
      *
      * These exist specifically so a semantic/runtime owner that already has the rightful
      * RelationshipId or exact observed source does NOT need to manufacture a matching
-     * <Feature>Execution class merely to reach begin*/observe.
+     * <Feature>Execution class merely to reach begin/observe.
      *
      * [owner] is the already-existing live object whose execution custody must stay isolated from
      * sibling owners sharing the same [VexExecutionRoot]. It is scope, not semantic identity.
