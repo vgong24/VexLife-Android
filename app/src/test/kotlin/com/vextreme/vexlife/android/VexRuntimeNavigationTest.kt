@@ -42,7 +42,7 @@ class VexRuntimeNavigationTest {
         )
 
     @Test
-    fun navigationInteractionAndObservedArrivalAreSeparateFacts() {
+    fun navigationInteractionAndCurrentScreenChangeAreSeparateFacts() {
         val logger =
             VexLogger()
         val runtime =
@@ -67,7 +67,7 @@ class VexRuntimeNavigationTest {
                 records.lastIndex -
                     1
             ]
-        val arrival =
+        val navigation =
             records.last()
 
         assertEquals(
@@ -78,16 +78,16 @@ class VexRuntimeNavigationTest {
             interaction.screenAfterId,
         )
         assertEquals(
-            VexLogKind.Presentation,
-            arrival.kind,
+            VexLogKind.Navigation,
+            navigation.kind,
         )
         assertEquals(
             HomeScreen.screenId,
-            arrival.screenBeforeId,
+            navigation.screenBeforeId,
         )
         assertEquals(
             DebugMenuScreen.screenId,
-            arrival.screenAfterId,
+            navigation.screenAfterId,
         )
     }
 
@@ -299,7 +299,7 @@ class VexRuntimeNavigationTest {
                 records.lastIndex -
                     1
             ]
-        val arrival =
+        val navigation =
             records.last()
 
         assertEquals(
@@ -320,24 +320,24 @@ class VexRuntimeNavigationTest {
         )
 
         assertEquals(
-            VexLogKind.Presentation,
-            arrival.kind,
+            VexLogKind.Navigation,
+            navigation.kind,
         )
         assertEquals(
             VexMapsScreen.screenId,
-            arrival.subjectRef,
+            navigation.subjectRef,
         )
         assertEquals(
-            "Arrived",
-            arrival.action,
+            "CurrentScreenChanged",
+            navigation.action,
         )
         assertEquals(
             HomeScreen.screenId,
-            arrival.screenBeforeId,
+            navigation.screenBeforeId,
         )
         assertEquals(
             VexMapsScreen.screenId,
-            arrival.screenAfterId,
+            navigation.screenAfterId,
         )
     }
 

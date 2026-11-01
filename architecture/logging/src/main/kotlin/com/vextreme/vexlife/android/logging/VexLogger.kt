@@ -18,7 +18,7 @@ enum class VexLogKind {
     Interaction,
     DynamicInteraction,
     Gesture,
-    Presentation,
+    Navigation,
     Semantic,
     Runtime,
     Diagnostic,
@@ -255,7 +255,7 @@ class VexLogger(
      * logger or pretending list position is identity.
      */
     /**
-     * screenAfter, when supplied, is an already-observed Screen rather than an intended target.
+     * screenAfter, when supplied, is an already-already-observed navigation result rather than an intended target.
      */
     fun recordInteractionRef(
         subjectRef: String,
@@ -325,7 +325,7 @@ class VexLogger(
 
     /**
      * screenAfter, when supplied, is an already-observed result. VexRuntime records Back before
-     * mutation and emits Screen observation separately after navigation actually changes.
+     * mutation and emits navigation change separately after navigation actually changes.
      */
     fun recordBack(
         screenBefore: ScreenElement,
@@ -344,7 +344,7 @@ class VexLogger(
      * Record an actual Screen transition after the navigation/presentation owner reports the new
      * current Screen. This is observation, not an intended destination.
      */
-    fun recordScreenObserved(
+    fun recordNavigationChanged(
         screenBefore:
             ScreenElement,
         screenAfter:
@@ -354,16 +354,16 @@ class VexLogger(
             screenBefore.screenId !=
                 screenAfter.screenId,
         ) {
-            "observed Screen transition requires distinct before/after Screens"
+            "current navigation Screen change requires distinct before/after Screens"
         }
 
         append(
             kind =
-                VexLogKind.Presentation,
+                VexLogKind.Navigation,
             subjectRef =
                 screenAfter.screenId,
             action =
-                "Arrived",
+                "CurrentScreenChanged",
             screenBeforeId =
                 screenBefore.screenId,
             screenAfterId =

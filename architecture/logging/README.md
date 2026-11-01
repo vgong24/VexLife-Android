@@ -58,7 +58,7 @@ UI/runtime
     Interaction
     DynamicInteraction
     Gesture
-    Presentation / Screen Arrived
+    Navigation / CurrentScreenChanged
 
 Family/semantic boundary
     ControlAccepted
@@ -210,12 +210,15 @@ DebugMenu Clicked
     screenAfter  = null
 
 navigation owner applies the request
-    -> current Screen actually becomes DebugMenu
+    -> current navigation Screen becomes DebugMenu
 
-DebugMenu Arrived
+DebugMenu CurrentScreenChanged
     screenBefore = Home
     screenAfter  = DebugMenu
 ~~~
+
+This second fact proves navigation-owner truth, not rendered pixels. A future presentation owner may
+add an actual visual/presentation observation when it can truthfully observe that separate fact.
 
 Pager gestures may carry before/after on the gesture record because the callback fires only after the
 pager has actually settled. Intended targets calculated before mutation do not qualify.

@@ -45,7 +45,7 @@ class VexLoggerTest {
             DebugButton,
             Home,
         )
-        logger.recordScreenObserved(
+        logger.recordNavigationChanged(
             Home,
             DebugMenu,
         )
@@ -69,7 +69,7 @@ class VexLoggerTest {
     }
 
     @Test
-    fun interactionDoesNotClaimDestinationBeforeScreenObservation() {
+    fun interactionDoesNotClaimDestinationBeforeNavigationChanges() {
         val logger =
             VexLogger()
 
@@ -89,28 +89,28 @@ class VexLoggerTest {
             interaction.screenAfterId,
         )
 
-        logger.recordScreenObserved(
+        logger.recordNavigationChanged(
             screenBefore =
                 Home,
             screenAfter =
                 DebugMenu,
         )
 
-        val observed =
+        val navigation =
             logger.history.value
                 .last()
 
         assertEquals(
-            VexLogKind.Presentation,
-            observed.kind,
+            VexLogKind.Navigation,
+            navigation.kind,
         )
         assertEquals(
             Home.screenId,
-            observed.screenBeforeId,
+            navigation.screenBeforeId,
         )
         assertEquals(
             DebugMenu.screenId,
-            observed.screenAfterId,
+            navigation.screenAfterId,
         )
     }
 
@@ -151,7 +151,7 @@ class VexLoggerTest {
             DebugButton,
             Home,
         )
-        logger.recordScreenObserved(
+        logger.recordNavigationChanged(
             Home,
             DebugMenu,
         )

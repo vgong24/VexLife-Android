@@ -374,7 +374,7 @@ class VexRuntime(
             navigation.push(
                 screen,
             )
-            logger.recordScreenObserved(
+            logger.recordNavigationChanged(
                 screenBefore =
                     before,
                 screenAfter =
@@ -611,7 +611,7 @@ class VexRuntime(
             currentScreen.screenId !=
             before.screenId
         ) {
-            logger.recordScreenObserved(
+            logger.recordNavigationChanged(
                 screenBefore =
                     before,
                 screenAfter =
@@ -677,7 +677,7 @@ class VexRuntime(
                     currentScreen.screenId !=
                     before.screenId
                 ) {
-                    logger.recordScreenObserved(
+                    logger.recordNavigationChanged(
                         screenBefore =
                             before,
                         screenAfter =
