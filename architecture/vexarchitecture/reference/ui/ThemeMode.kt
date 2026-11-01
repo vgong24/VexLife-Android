@@ -25,7 +25,8 @@ internal enum class ThemeMode :
  * than making today's two-state Switch the semantic contract. A target may realize Light/Dark with
  * a toggle, segmented control, menu, or another presentation without changing this relationship.
  *
- * The selected mode is Control payload. Runtime Save ordering belongs outside this semantic Family.
+ * The selected mode is Control payload. The Act authors Save as Latest here because overlap is part
+ * of the Select consequence relationship; VexExecution later realizes that authored consequence.
  */
 internal class ThemeModeFamily(
     initialState:
@@ -151,6 +152,30 @@ internal class ThemeModeFamily(
             currentProjection
                 .displayState
 
+    /**
+     * Reconcile already-observed durable ThemeMode truth into the one Family State holder.
+     *
+     * NotSet means no explicit durable selection and therefore does not replace the currently
+     * effective ThemeMode. This method owns that ThemeMode-specific interpretation; observation
+     * lifetime belongs to VexExecution.
+     */
+    fun observeStoredThemeMode(
+        observed:
+            ThemeMode,
+    ):
+        ThemeMode {
+        if (
+            observed ==
+            ThemeMode.NotSet
+        ) {
+            return currentState
+        }
+
+        return observe(
+            observed,
+        )
+    }
+
     override fun act(
         currentState:
             ThemeMode,
@@ -173,8 +198,10 @@ internal class ThemeModeFamily(
                     ThemeMode.NotSet ->
                         admit(
                             control.mode,
-                            effect =
-                                effect,
+                            begin =
+                                beginLatest(
+                                    effect,
+                                ),
                         )
 
                     ThemeMode.Light,
@@ -188,8 +215,9 @@ internal class ThemeModeFamily(
                              * same State does not erase the Effect.
                              */
                             stay(
-                                effect =
+                                beginLatest(
                                     effect,
+                                ),
                             )
                         } else {
                             admit(
