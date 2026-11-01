@@ -70,55 +70,46 @@ ordinary feature/UI consumer
     does not call global get<T>()
 ~~~
 
-## Concrete Family runtime composition
+## Family composition without a wrapper node
 
-The dependency system may construct a pure Family and its concrete runtime without making the Family
-know that dependency construction exists.
+The dependency system constructs and reuses the objects that already own meaning or lifetime. It
+does not create a peer object merely to bridge Family to VexExecution.
 
-The current ThemeMode patient zero is deliberately explicit:
+ThemeMode currently composes:
 
 ~~~text
-ThemeModeFamily provider
-ThemeModeStore provider
-VexExecutionRoot provider
-VexLogger provider
+ThemeModeStore provider      # application lifetime
+VexExecutionRoot provider    # session lifetime
+VexLogger provider           # session lifetime
         \
-         -> ThemeModeRuntime provider
-              -> one session-lifetime runtime object
+         -> ThemeModeFamily provider
+              starts Store observation through direct VexExecution.observe
+
+AppActions provider
+    receives ThemeModeFamily + ThemeModeStore + VexExecutionRoot + VexLogger
+    invokes the Family-authored Act consequence directly
 ~~~
-
-ThemeModeRuntime owns its feature policy directly:
-
-~~~text
-Control.Select
--> one Latest RelationshipId
-
-Light / Dark
--> operation payload
--> not execution identity
-
-Store observation NotSet
--> outside truth
--> not effective ThemeMode admission
-~~~
-
-The dependency graph constructs and reuses those objects; it does not invent semantic or execution
-identity for them.
 
 Permanent:
 
 ~~~text
 CONSTRUCT EXPLICITLY; REUSE AT THE RIGHTFUL LIFETIME; NEVER GUESS.
 
-automatic construction = allowed
-automatic semantic inference = not allowed
+dependency graph
+    constructs / memoizes
+
+Family
+    authors State / Control / Act / Begin / Effect relationship
+
+VexExecution
+    owns active Job custody
+
 dependency identity != execution RelationshipId
 reflection/name/package scanning = not architecture authority
 ~~~
 
-A concrete Store may use temporary, local, remote, service, repository, or platform mechanics. That
-does not by itself earn a universal Store hierarchy or generic Family runtime layer. Reusable runtime
-machinery should be extracted only after another real Family demonstrates the same invariant.
+A provider node is earned by a real lifetime/construction relationship, not because two existing
+objects need a named bridge between them.
 
 ## Provider declaration boilerplate
 
