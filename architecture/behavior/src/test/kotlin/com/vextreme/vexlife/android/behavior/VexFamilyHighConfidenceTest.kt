@@ -99,10 +99,11 @@ class VexFamilyHighConfidenceTest {
 
                 is Control.Save ->
                     stay(
-                        effect =
+                        begin(
                             Effect.Save(
                                 value = control.value,
                             ),
+                        ),
                     )
             }
     }
