@@ -1,6 +1,9 @@
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.behavior.VexFamily
+import com.vextreme.vexlife.android.execution.VexExecution
+import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.logging.VexLogger
 
 /**
  * Android realization of the ThemeMode semantic State domain.
@@ -222,8 +225,10 @@ internal class ThemeModeFamily(
                         } else {
                             admit(
                                 control.mode,
-                                effect =
-                                    effect,
+                                begin =
+                                    beginLatest(
+                                        effect,
+                                    ),
                             )
                         }
                 }
@@ -231,3 +236,358 @@ internal class ThemeModeFamily(
         }
 
 }
+
+/**
+ * Realize one accepted ThemeMode Act without inserting a runtime/execution wrapper class.
+ *
+ * ThemeModeFamily already authored the semantic Effect and its execution Approach. This boundary
+ * hands that exact relationship to VexExecution, reports facts that become true, and returns
+ * observed Store truth to the same Family.
+ */
+internal fun activateThemeMode(
+    family:
+        ThemeModeFamily,
+    control:
+        ThemeModeFamily.Control,
+    store:
+        ThemeModeStore,
+    executionRoot:
+        VexExecutionRoot,
+    logger:
+        VexLogger,
+):
+    Boolean {
+    val before =
+        family.currentState
+    val act =
+        family.activate(
+            control,
+        )
+            ?: return false
+
+    recordThemeModeFact(
+        logger =
+            logger,
+        event =
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    THEME_MODE_FAMILY_SUBJECT,
+                action =
+                    "ControlAccepted",
+                detailsJson =
+                    themeModeControlDetails(
+                        control =
+                            control,
+                        currentState =
+                            before,
+                    ),
+            ),
+    )
+
+    val admitted =
+        family.currentState
+    if (
+        admitted !=
+        before
+    ) {
+        recordThemeModeStateChange(
+            logger =
+                logger,
+            before =
+                before,
+            after =
+                admitted,
+        )
+    }
+
+    val begin =
+        act.begin
+            ?: return true
+
+    when (
+        val effect =
+            begin.effect
+    ) {
+        is ThemeModeFamily.Effect.Save -> {
+            check(
+                begin.approach ==
+                    VexExecution.Approach.Latest,
+            ) {
+                "ThemeMode Select Save must remain Latest as authored by ThemeModeFamily"
+            }
+
+            VexExecution.beginLatest(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    family,
+                relationshipId =
+                    family.relationshipId(
+                        control,
+                    ),
+                operation =
+                    store::save,
+                argument =
+                    effect.mode,
+                beforeOperation = {
+                    recordThemeModeFact(
+                        logger =
+                            logger,
+                        event =
+                            VexLogger.Event.Runtime(
+                                subjectRef =
+                                    THEME_MODE_FAMILY_SUBJECT,
+                                action =
+                                    "EffectRequested",
+                                detailsJson =
+                                    themeModeSaveDetails(
+                                        effect,
+                                    ),
+                            ),
+                    )
+                },
+                onResult = { result ->
+                    when (
+                        result
+                    ) {
+                        is ThemeModeStore.Result.Success -> {
+                            recordThemeModeFact(
+                                logger =
+                                    logger,
+                                event =
+                                    VexLogger.Event.Runtime(
+                                        subjectRef =
+                                            THEME_MODE_FAMILY_SUBJECT,
+                                        action =
+                                            "EffectSucceeded",
+                                        detailsJson =
+                                            themeModeSaveDetails(
+                                                effect,
+                                            ),
+                                    ),
+                            )
+                            observeThemeModeState(
+                                family =
+                                    family,
+                                observed =
+                                    result.observedState,
+                                logger =
+                                    logger,
+                            )
+                        }
+
+                        is ThemeModeStore.Result.Failure ->
+                            recordThemeModeFact(
+                                logger =
+                                    logger,
+                                event =
+                                    VexLogger.Event.Runtime(
+                                        subjectRef =
+                                            THEME_MODE_FAMILY_SUBJECT,
+                                        action =
+                                            "EffectFailed",
+                                        detailsJson =
+                                            themeModeSaveDetails(
+                                                effect =
+                                                    effect,
+                                                failure =
+                                                    result.cause,
+                                            ),
+                                    ),
+                            )
+                    }
+                },
+                onFailure = { failure ->
+                    recordThemeModeFact(
+                        logger =
+                            logger,
+                        event =
+                            VexLogger.Event.Runtime(
+                                subjectRef =
+                                    THEME_MODE_FAMILY_SUBJECT,
+                                action =
+                                    "EffectFailed",
+                                detailsJson =
+                                    themeModeSaveDetails(
+                                        effect =
+                                            effect,
+                                        failure =
+                                            failure,
+                                    ),
+                            ),
+                    )
+                },
+            )
+        }
+    }
+
+    return true
+}
+
+/**
+ * Maintain the exact Store source observation under the same live Family execution scope.
+ *
+ * The source reference is appropriate here because the question is exactly "is this Store source
+ * already observed?". No ThemeModeRuntime/ThemeModeExecution identity is introduced.
+ */
+internal fun observeThemeModeStore(
+    family:
+        ThemeModeFamily,
+    store:
+        ThemeModeStore,
+    executionRoot:
+        VexExecutionRoot,
+    logger:
+        VexLogger,
+) {
+    VexExecution.observe(
+        executionRoot =
+            executionRoot,
+        owner =
+            family,
+        source =
+            store::states,
+    ) { observed ->
+        observeThemeModeState(
+            family =
+                family,
+            observed =
+                observed,
+            logger =
+                logger,
+        )
+    }
+}
+
+private fun observeThemeModeState(
+    family:
+        ThemeModeFamily,
+    observed:
+        ThemeMode,
+    logger:
+        VexLogger,
+) {
+    val before =
+        family.currentState
+    val after =
+        family.observeStoredThemeMode(
+            observed,
+        )
+
+    if (
+        after !=
+        before
+    ) {
+        recordThemeModeStateChange(
+            logger =
+                logger,
+            before =
+                before,
+            after =
+                after,
+        )
+    }
+}
+
+private fun recordThemeModeStateChange(
+    logger:
+        VexLogger,
+    before:
+        ThemeMode,
+    after:
+        ThemeMode,
+) {
+    recordThemeModeFact(
+        logger =
+            logger,
+        event =
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    THEME_MODE_FAMILY_SUBJECT,
+                action =
+                    "StateAdmitted",
+                detailsJson =
+                    "{\"fromState\":\"" +
+                        before.name +
+                        "\",\"toState\":\"" +
+                        after.name +
+                        "\"}",
+            ),
+    )
+}
+
+private fun themeModeControlDetails(
+    control:
+        ThemeModeFamily.Control,
+    currentState:
+        ThemeMode,
+):
+    String =
+    when (
+        control
+    ) {
+        is ThemeModeFamily.Control.Select ->
+            "{\"control\":\"Select\",\"mode\":\"" +
+                control.mode.name +
+                "\",\"currentState\":\"" +
+                currentState.name +
+                "\"}"
+    }
+
+private fun themeModeSaveDetails(
+    effect:
+        ThemeModeFamily.Effect.Save,
+    failure:
+        Throwable? =
+        null,
+):
+    String =
+    buildString {
+        append(
+            "{\"effect\":\"Save\",\"mode\":\"",
+        )
+        append(
+            effect.mode.name,
+        )
+        append(
+            "\"",
+        )
+        failure
+            ?.let { cause ->
+                append(
+                    ",\"failure\":\"",
+                )
+                append(
+                    cause::class.qualifiedName
+                        ?: cause::class.simpleName
+                        ?: "Throwable",
+                )
+                append(
+                    "\"",
+                )
+            }
+        append(
+            "}",
+        )
+    }
+
+private fun recordThemeModeFact(
+    logger:
+        VexLogger,
+    event:
+        VexLogger.Event,
+) {
+    try {
+        logger.sink.record(
+            event,
+        )
+    } catch (_: Throwable) {
+        // Observation failure never becomes ThemeMode semantic/runtime authority.
+    }
+}
+
+private const val THEME_MODE_FAMILY_SUBJECT =
+    "family.ThemeModeFamily"
+
+
+// [VXG RealForever]
