@@ -1273,23 +1273,12 @@ abstract class VexExecution protected constructor(
     /**
      * Direct reusable foundation entry points.
      *
-     * These exist specifically so a semantic/runtime owner that already has the rightful
-     * RelationshipId or exact observed source does NOT need to manufacture a matching
-     * <Feature>Execution class merely to reach begin/observe.
+     * These preserve execution custody for an already-existing semantic/runtime owner while keeping
+     * feature/domain meaning on that owner.
      *
-     * [owner] is the already-existing live object whose execution custody must stay isolated from
-     * sibling owners sharing the same [VexExecutionRoot]. It is scope, not semantic identity.
-     *
-     * Feature/domain verbs stay with their rightful owner:
-     *
-     *     owner.addStop(...)
-     *         -> VexExecution.begin/...
-     *
-     * not:
-     *
-     *     owner.addStop(...)
-     *         -> AddStopExecution.addStop(...)
-     *         -> launch(...)
+     * [owner] is the stable live object whose work must remain isolated from sibling owners sharing
+     * the same [VexExecutionRoot]. Reuse that owner across related calls; do not use ephemeral
+     * Control/request values as execution scope. RelationshipId remains semantic work identity.
      */
     companion object {
         fun <Value, Source : Flow<Value>> observe(
@@ -1358,6 +1347,126 @@ abstract class VexExecution protected constructor(
                     onFailure =
                         onFailure,
                 )
+
+        /**
+         * Consume an already-authored overlap Approach without making the feature translate that
+         * relationship into a second choice of execution API.
+         *
+         * Independent ignores [relationshipId]. Earliest / Latest / Queued require it and all use
+         * the same canonical RelationshipId -> Job(s) custody.
+         */
+        @RelationshipFoundationApi
+        fun <Argument, Result> begin(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            approach:
+                Approach,
+            relationshipId:
+                RelationshipId?,
+            operation:
+                KSuspendFunction1<
+                    Argument,
+                    Result
+                >,
+            argument:
+                Argument,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job {
+            val execution =
+                executionRoot
+                    .directExecution(
+                        owner,
+                    )
+
+            return when (
+                approach
+            ) {
+                Approach.Independent ->
+                    execution.begin(
+                        operation =
+                            operation,
+                        argument =
+                            argument,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+
+                Approach.Earliest ->
+                    execution.beginEarliest(
+                        relationshipId =
+                            requireNotNull(
+                                relationshipId,
+                            ) {
+                                "Earliest execution requires RelationshipId"
+                            },
+                        operation =
+                            operation,
+                        argument =
+                            argument,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+
+                Approach.Latest ->
+                    execution.beginLatest(
+                        relationshipId =
+                            requireNotNull(
+                                relationshipId,
+                            ) {
+                                "Latest execution requires RelationshipId"
+                            },
+                        operation =
+                            operation,
+                        argument =
+                            argument,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+
+                Approach.Queued ->
+                    execution.beginQueued(
+                        relationshipId =
+                            requireNotNull(
+                                relationshipId,
+                            ) {
+                                "Queued execution requires RelationshipId"
+                            },
+                        operation =
+                            operation,
+                        argument =
+                            argument,
+                        beforeOperation =
+                            beforeOperation,
+                        onResult =
+                            onResult,
+                        onFailure =
+                            onFailure,
+                    )
+            }
+        }
 
         @RelationshipFoundationApi
         fun <Argument, Result> beginEarliest(
