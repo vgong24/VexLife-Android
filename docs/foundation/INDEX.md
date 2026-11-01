@@ -386,9 +386,20 @@ Provider declaration object identity is the construction coordinate; class/name 
 label. The factory is accessible at composition roots/provider construction only. Ordinary feature/UI
 consumers receive concrete dependencies and do not call an ambient get<T>() service locator.
 
-The production session graph now exposes Logger, ThemeMode Family/Connection, Relays, action wiring,
-Runtime and Session instead of hiding their construction inside one opaque Session provider.
-Preview/test direct construction remains an explicit alternate fixture route.
+The production session graph now exposes Logger, ThemeMode Family/runtime realization, Relay
+composition, action wiring, Runtime and Session instead of hiding their construction inside one
+opaque Session provider. Preview/test direct construction remains an explicit alternate fixture
+route.
+
+Current refinement direction is to reduce provider/feature-name duplication rather than normalize it:
+Store means the Family-facing outside-truth boundary (temporary/local/remote/service/platform as
+needed); one typed Family/Store binding should declare the feature relationship once while dependency
+construction derives standard Execution/Logger/lifetime mechanics. A feature-specific Connection is
+not mandatory and survives only for a genuinely distinct live provider/protocol/session boundary.
+
+VexLifeRelays is likewise an interim eager composition holder. The accepted direction is
+VexLifeRelayGraph: independently provided Relay owners remain individually readable/lazy while the
+session graph projects which Relay nodes participate in the VexLife lifetime.
 
 ## Logger traceability refinement
 

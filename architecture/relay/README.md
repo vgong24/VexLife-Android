@@ -20,6 +20,39 @@ normalized external feed, stable dynamic list identity, acknowledgement/defer/su
 attention availability, anchored overlay rendering, deterministic Journey signals, and ScreenCrawler
 selection. Those feature concerns remain outside this module rather than accreting into Relay itself.
 
+## Connection is not cross-Family communication
+
+"Connection" names a concrete reality/protocol boundary when one is genuinely present; it is not a
+paired link between two Families.
+
+~~~text
+Family
+    semantic meaning
+
+Store / concrete Connection when earned
+    outside-truth or live provider/session mechanics
+
+Relay / convergence
+    independently owned truths
+    -> one coherent relationship truth
+~~~
+
+Therefore:
+
+~~~text
+Family A does NOT need Connection A<->B
+Family B does NOT need a counter Connection B<->A
+~~~
+
+When independently-owned Families/current truths must influence one another, convergence is the
+rightful composition context. A convergence owner may request another Family through that Family's
+public Control/Port, but it must not bypass the target semantic owner and invoke a foreign Effect
+directly.
+
+A session-level VexLifeRelayGraph may project which independently-owned Relay nodes are active in the
+VexLife lifetime. That graph is composition/discoverability, not a mega-Relay and not the constructor
+that hides each Relay's own prerequisites.
+
 ## Developer shape
 
 One truth:

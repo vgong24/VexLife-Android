@@ -149,12 +149,17 @@ The refined direct Family does not author execution identity.
 Family
     Control / State / Act / Effect meaning
 
-Connection/runtime
+Family/Store runtime binding
     knows the accepted Control
     knows the Effect it must realize
     derives the smallest lawful active-work RelationshipId
     asks VexExecution to own Job custody
 ~~~
+
+"Connection" is not a mandatory Family layer. Use that name only when a concrete live protocol,
+provider session, bound service, socket/controller relationship, or similarly distinct reality
+boundary is itself worth naming. It does not mean Family-to-Family communication and does not imply a
+matching "counter connection".
 
 For ThemeMode the current runtime law is:
 
@@ -174,23 +179,56 @@ coordinate is required for active execution.
 
 ## Store boundary
 
-Store/persistence is not a VexFamily child in the refined direct Family.
+Store means the **Family-facing outside-truth boundary**, not "database" or "persistence".
+
+A Store may realize any combination of:
 
 ~~~text
-ThemeModeStore
-    durable Android truth/mechanics
-
-ThemeModeConnection
-    observes Store
-    realizes Effect.Save
-    reconciles stored ThemeMode into semantic State
-
-ThemeModeFamily
-    never receives Store
+temporary / in-memory truth
+cache
+local persistence
+service/backend fetches
+network mutations
+repository/database access
+platform APIs
+observable provider state
 ~~~
 
-A Store interface belongs with the feature/runtime boundary that consumes it. Do not add a generic
-Family Store hierarchy merely because one Family currently persists State.
+Permanent:
+
+~~~text
+STORE != DATABASE
+STORE != PERSISTENCE
+STORE != CACHE
+STORE != NETWORK CLIENT
+
+Store
+    = the Family-facing capability that obtains, observes, or changes outside truth
+~~~
+
+Family itself remains semantic and does not receive Store/provider mechanics directly.
+
+~~~text
+Family
+    Control + CURRENT State
+    -> Act
+    -> optional Effect
+
+typed Family/Store runtime binding
+    -> realizes Effect through Store under rightful VexExecution custody
+    -> admits accepted/observed facts to VexLogger
+    -> reconciles already-semantic outside truth back through Family.observe(State)
+~~~
+
+The binding must preserve exact Family kinship. A Store/runtime belonging to another Family must not
+be composable merely because its methods happen to have compatible Kotlin signatures.
+
+ThemeMode currently carries a feature-specific ThemeModeConnection while this binding law is being
+proved. That class is an interim realization, not evidence that every Family requires a
+<FeatureName>Connection layer.
+
+Do not infer Store by class name, reflection, package scanning, or naming convention. Declare the
+Family/Store relationship once; mechanically derive only what that declaration actually implies.
 
 ## Logger boundary
 
@@ -255,7 +293,7 @@ dependency-factory construction.
 
 ## Compound / Relay remains separate
 
-Direct Family is not a replacement for Compound Relay.
+Direct Family/Store runtime binding is not a replacement for Compound Relay.
 
 ~~~text
 Direct Family
