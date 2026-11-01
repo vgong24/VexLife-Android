@@ -41,7 +41,14 @@ class VexLoggerTest {
         logger.appOpened(Home)
 
         now = now.plusSeconds(120)
-        logger.recordInteraction(DebugButton, Home, DebugMenu)
+        logger.recordInteraction(
+            DebugButton,
+            Home,
+        )
+        logger.recordScreenObserved(
+            Home,
+            DebugMenu,
+        )
 
         now = now.plusSeconds(60)
         logger.recordInteraction(ResetButton, DebugMenu)
@@ -59,6 +66,52 @@ class VexLoggerTest {
         assertFalse(text.contains("ScreenAppeared"))
         assertFalse(text.contains("ScreenDisappeared"))
         assertFalse(text.contains("| 120 sec"))
+    }
+
+    @Test
+    fun interactionDoesNotClaimDestinationBeforeScreenObservation() {
+        val logger =
+            VexLogger()
+
+        logger.recordInteraction(
+            element =
+                DebugButton,
+            screenBefore =
+                Home,
+        )
+
+        val interaction =
+            logger.history.value
+                .single()
+
+        assertEquals(
+            null,
+            interaction.screenAfterId,
+        )
+
+        logger.recordScreenObserved(
+            screenBefore =
+                Home,
+            screenAfter =
+                DebugMenu,
+        )
+
+        val observed =
+            logger.history.value
+                .last()
+
+        assertEquals(
+            VexLogKind.Presentation,
+            observed.kind,
+        )
+        assertEquals(
+            Home.screenId,
+            observed.screenBeforeId,
+        )
+        assertEquals(
+            DebugMenu.screenId,
+            observed.screenAfterId,
+        )
     }
 
     @Test
@@ -94,7 +147,14 @@ class VexLoggerTest {
 
         logger.appOpened(Home)
         now = now.plusSeconds(12)
-        logger.recordInteraction(DebugButton, Home, DebugMenu)
+        logger.recordInteraction(
+            DebugButton,
+            Home,
+        )
+        logger.recordScreenObserved(
+            Home,
+            DebugMenu,
+        )
         now = now.plusSeconds(7)
         logger.recordInteraction(ResetButton, DebugMenu)
 

@@ -58,6 +58,7 @@ UI/runtime
     Interaction
     DynamicInteraction
     Gesture
+    Presentation / Screen Arrived
 
 Family/semantic boundary
     ControlAccepted
@@ -193,6 +194,24 @@ Light presentation remained
 
 A future debug surface may compare expected vs actual, but an expected destination/result must not be
 stored as though it was already observed.
+
+For navigation, production records the request and observation separately:
+
+~~~text
+DebugMenu Clicked
+    screenBefore = Home
+    screenAfter  = null
+
+navigation owner applies the request
+    -> current Screen actually becomes DebugMenu
+
+DebugMenu Arrived
+    screenBefore = Home
+    screenAfter  = DebugMenu
+~~~
+
+Pager gestures may carry before/after on the gesture record because the callback fires only after the
+pager has actually settled. Intended targets calculated before mutation do not qualify.
 
 ## Chronology before correlation identity
 

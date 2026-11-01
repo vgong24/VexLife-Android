@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android
 
+import com.vextreme.vexlife.android.logging.VexLogKind
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.elements.FormSubmission
 import com.vextreme.vexlife.android.elements.navigation.NavigationTrail
@@ -39,6 +40,56 @@ class VexRuntimeNavigationTest {
             primaryScreens = AppScreens.primary,
             currentAppActions = { appActions },
         )
+
+    @Test
+    fun navigationInteractionAndObservedArrivalAreSeparateFacts() {
+        val logger =
+            VexLogger()
+        val runtime =
+            runtime(
+                logger =
+                    logger,
+            )
+
+        runtime.activate(
+            AppShell.Elements.DebugMenu,
+        )
+
+        assertSame(
+            DebugMenuScreen,
+            runtime.currentScreen,
+        )
+
+        val records =
+            logger.history.value
+        val interaction =
+            records[
+                records.lastIndex -
+                    1
+            ]
+        val arrival =
+            records.last()
+
+        assertEquals(
+            VexLogKind.Interaction,
+            interaction.kind,
+        )
+        assertNull(
+            interaction.screenAfterId,
+        )
+        assertEquals(
+            VexLogKind.Presentation,
+            arrival.kind,
+        )
+        assertEquals(
+            HomeScreen.screenId,
+            arrival.screenBeforeId,
+        )
+        assertEquals(
+            DebugMenuScreen.screenId,
+            arrival.screenAfterId,
+        )
+    }
 
     @Test
     fun primaryScreensArePeersNotAStack() {
@@ -241,24 +292,52 @@ class VexRuntimeNavigationTest {
             runtime.currentScreen,
         )
 
-        val record =
-            logger.history.value.last()
+        val records =
+            logger.history.value
+        val request =
+            records[
+                records.lastIndex -
+                    1
+            ]
+        val arrival =
+            records.last()
+
         assertEquals(
             MainActivity
                 .VEXMAPS_NAVIGATION_NOTIFICATION_REF,
-            record.subjectRef,
+            request.subjectRef,
         )
         assertEquals(
             "Opened",
-            record.action,
+            request.action,
         )
         assertEquals(
             HomeScreen.screenId,
-            record.screenBeforeId,
+            request.screenBeforeId,
+        )
+        assertNull(
+            request.screenAfterId,
+        )
+
+        assertEquals(
+            VexLogKind.Presentation,
+            arrival.kind,
         )
         assertEquals(
             VexMapsScreen.screenId,
-            record.screenAfterId,
+            arrival.subjectRef,
+        )
+        assertEquals(
+            "Arrived",
+            arrival.action,
+        )
+        assertEquals(
+            HomeScreen.screenId,
+            arrival.screenBeforeId,
+        )
+        assertEquals(
+            VexMapsScreen.screenId,
+            arrival.screenAfterId,
         )
     }
 

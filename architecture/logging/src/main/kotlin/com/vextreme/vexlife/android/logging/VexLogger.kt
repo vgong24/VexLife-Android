@@ -18,6 +18,7 @@ enum class VexLogKind {
     Interaction,
     DynamicInteraction,
     Gesture,
+    Presentation,
     Semantic,
     Runtime,
     Diagnostic,
@@ -228,6 +229,10 @@ class VexLogger(
         )
     }
 
+    /**
+     * screenAfter, when supplied by a direct Logger caller, must already be observed truth. Product
+     * action code should normally record the interaction first and report Screen arrival separately.
+     */
     fun recordInteraction(
         element: UIElement,
         screenBefore: ScreenElement,
@@ -248,6 +253,9 @@ class VexLogger(
      * Dynamic repeated elements use a stable semantic ref even though they cannot all be members of
      * the static UI registry. This records that already-formed identity without creating a second
      * logger or pretending list position is identity.
+     */
+    /**
+     * screenAfter, when supplied, is an already-observed Screen rather than an intended target.
      */
     fun recordInteractionRef(
         subjectRef: String,
@@ -315,6 +323,10 @@ class VexLogger(
         )
     }
 
+    /**
+     * screenAfter, when supplied, is an already-observed result. VexRuntime records Back before
+     * mutation and emits Screen observation separately after navigation actually changes.
+     */
     fun recordBack(
         screenBefore: ScreenElement,
         screenAfter: ScreenElement? = null,
@@ -325,6 +337,37 @@ class VexLogger(
             action = "Back",
             screenBeforeId = screenBefore.screenId,
             screenAfterId = screenAfter?.screenId,
+        )
+    }
+
+    /**
+     * Record an actual Screen transition after the navigation/presentation owner reports the new
+     * current Screen. This is observation, not an intended destination.
+     */
+    fun recordScreenObserved(
+        screenBefore:
+            ScreenElement,
+        screenAfter:
+            ScreenElement,
+    ) {
+        require(
+            screenBefore.screenId !=
+                screenAfter.screenId,
+        ) {
+            "observed Screen transition requires distinct before/after Screens"
+        }
+
+        append(
+            kind =
+                VexLogKind.Presentation,
+            subjectRef =
+                screenAfter.screenId,
+            action =
+                "Arrived",
+            screenBeforeId =
+                screenBefore.screenId,
+            screenAfterId =
+                screenAfter.screenId,
         )
     }
 
