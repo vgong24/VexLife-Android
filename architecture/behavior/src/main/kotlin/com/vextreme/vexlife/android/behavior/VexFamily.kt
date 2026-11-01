@@ -31,7 +31,8 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  *     Control + CURRENT State
  *     -> Act?
- *     -> admitted State? + Effect?
+ *     -> admitted State? + Begin?
+ *        -> Effect + execution Approach
  *
  * RESPONSIBILITY FENCE
  * Family owns semantic RelationshipId composition because that identity is an invisible consequence
@@ -222,6 +223,16 @@ abstract class VexFamily<
             State?,
         val begin:
             Begin<Effect>?,
+        /**
+         * Accepted maintained-work identity mechanically bound by [activate] from the triggering
+         * live Family + Control (+ typed ResourceId when required).
+         *
+         * null means this Act has no maintained execution relationship (no Begin or Independent).
+         * Realization consumes this coordinate; callers do not reconstruct it from Control.
+         */
+        val relationshipId:
+            VexExecution.RelationshipId? =
+            null,
     ) {
         val effect:
             Effect?
@@ -347,6 +358,8 @@ abstract class VexFamily<
                 null,
             begin =
                 begin,
+            relationshipId =
+                null,
         )
 
     protected fun admit(
@@ -365,6 +378,8 @@ abstract class VexFamily<
                 state,
             begin =
                 begin,
+            relationshipId =
+                null,
         )
 
     /** Author an independent runtime consequence without starting it during [act]. */
@@ -516,8 +531,9 @@ abstract class VexFamily<
      * Ordering is part of the semantic contract:
      *
      *     act(CURRENT State, Control)
+     *     -> bind maintained RelationshipId when Begin requires one
      *     -> admit immediate State when present
-     *     -> return Act, including any authored Begin
+     *     -> return accepted Act
      *
      * Family never realizes [Act.begin]. The caller hands that consequence to VexExecution after
      * activation; this keeps availability/act resolution side-effect free.
@@ -542,12 +558,38 @@ abstract class VexFamily<
                 )
                     ?: return null
 
-            resolved.admittedState
+            val accepted =
+                when (
+                    resolved.begin
+                        ?.approach
+                ) {
+                    VexExecution.Approach.Earliest,
+                    VexExecution.Approach.Latest,
+                    VexExecution.Approach.Queued,
+                    ->
+                        Act(
+                            admittedState =
+                                resolved.admittedState,
+                            begin =
+                                resolved.begin,
+                            relationshipId =
+                                relationshipId(
+                                    control,
+                                ),
+                        )
+
+                    VexExecution.Approach.Independent,
+                    null,
+                    ->
+                        resolved
+                }
+
+            accepted.admittedState
                 ?.let(
                     ::setCurrentStateLocked,
                 )
 
-            resolved
+            accepted
         }
 
     /**
@@ -559,10 +601,10 @@ abstract class VexFamily<
      *     + Control kind/name
      *     + optional typed Control.ResourceId
      *
-     * Ordinary Control payload is not identity. Callers pass this value to VexExecution when
-     * realizing [Act.begin]; they must not build a second feature relationship key beside it.
+     * Ordinary Control payload is not identity. [activate] binds this coordinate onto the accepted
+     * Act so realization consumes the authored relationship without reconstructing Control identity.
      */
-    fun relationshipId(
+    private fun relationshipId(
         control:
             FamilyControl,
     ):
