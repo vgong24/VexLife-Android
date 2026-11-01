@@ -1,5 +1,8 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.ui
 
+import com.vextreme.vexlife.android.execution.VexExecution
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -89,6 +92,11 @@ class ThemeModeTest {
             ),
             darkAct?.effect,
         )
+        assertEquals(
+            VexExecution.Approach.Latest,
+            darkAct?.begin
+                ?.approach,
+        )
 
         val sameAct =
             family.activate(
@@ -106,6 +114,28 @@ class ThemeModeTest {
                 ThemeMode.Dark,
             ),
             sameAct?.effect,
+        )
+    }
+
+    @Test
+    fun selectPayloadDoesNotBecomeFamilyExecutionRelationshipIdentity() {
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
+            )
+
+        assertEquals(
+            family.relationshipId(
+                ThemeModeFamily.Control.Select(
+                    ThemeMode.Dark,
+                ),
+            ),
+            family.relationshipId(
+                ThemeModeFamily.Control.Select(
+                    ThemeMode.Light,
+                ),
+            ),
         )
     }
 
