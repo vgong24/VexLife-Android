@@ -5,23 +5,19 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VexLoggerStructuredEventTest {
-    private class ExampleFamily
-    private class ExampleControl
-    private class ExampleState
-
     @Test
-    fun structuredSinkFeedsTheSameChronologyWithoutAnotherLoggerRoot() {
+    fun semanticFactFeedsTheSameChronologyWithoutAnotherLoggerRoot() {
         val logger =
             VexLogger()
 
         logger.sink.record(
-            VexLogger.Event.Family.ControlAccepted(
-                family =
-                    ExampleFamily::class,
-                control =
-                    ExampleControl::class,
-                currentState =
-                    ExampleState::class,
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    "family.example",
+                action =
+                    "ControlAccepted",
+                detailsJson =
+                    "{\"control\":\"Select\",\"mode\":\"Dark\"}",
             ),
         )
 
@@ -34,20 +30,62 @@ class VexLoggerStructuredEventTest {
             record.kind,
         )
         assertEquals(
+            "family.example",
+            record.subjectRef,
+        )
+        assertEquals(
             "ControlAccepted",
             record.action,
         )
         assertTrue(
-            record.subjectRef
-                .startsWith(
-                    "family.",
+            record.detailsJson
+                .orEmpty()
+                .contains(
+                    "\"mode\":\"Dark\"",
+                ),
+        )
+    }
+
+    @Test
+    fun runtimeFactCarriesMeaningfulOwnerDetailInsteadOfCallableIdentity() {
+        val logger =
+            VexLogger()
+
+        logger.sink.record(
+            VexLogger.Event.Runtime(
+                subjectRef =
+                    "family.example",
+                action =
+                    "EffectRequested",
+                detailsJson =
+                    "{\"effect\":\"Save\",\"mode\":\"Dark\"}",
+            ),
+        )
+
+        val record =
+            logger.history.value
+                .single()
+
+        assertEquals(
+            VexLogKind.Runtime,
+            record.kind,
+        )
+        assertEquals(
+            "EffectRequested",
+            record.action,
+        )
+        assertTrue(
+            record.detailsJson
+                .orEmpty()
+                .contains(
+                    "\"effect\":\"Save\"",
                 ),
         )
         assertTrue(
             record.detailsJson
                 .orEmpty()
                 .contains(
-                    "ExampleControl",
+                    "\"mode\":\"Dark\"",
                 ),
         )
     }

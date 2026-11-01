@@ -59,13 +59,18 @@ internal class ThemeModeRuntime(
                 ?: return false
 
         record(
-            VexLogger.Event.Family.ControlAccepted(
-                family =
-                    family::class,
-                control =
-                    control::class,
-                currentState =
-                    before::class,
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    familySubjectRef,
+                action =
+                    "ControlAccepted",
+                detailsJson =
+                    controlAcceptedDetails(
+                        control =
+                            control,
+                        currentState =
+                            before,
+                    ),
             ),
         )
 
@@ -156,9 +161,6 @@ internal class ThemeModeRuntime(
     ) {
         val operation =
             store::save
-        val operationState =
-            family.currentState::class
-
         execution.saveLatest(
             control =
                 control,
@@ -168,13 +170,15 @@ internal class ThemeModeRuntime(
                 effect.mode,
             beforeOperation = {
                 record(
-                    VexLogger.Event.Family.OperationBegan(
-                        family =
-                            family::class,
-                        operation =
-                            operation,
-                        state =
-                            operationState,
+                    VexLogger.Event.Runtime(
+                        subjectRef =
+                            familySubjectRef,
+                        action =
+                            "EffectRequested",
+                        detailsJson =
+                            saveEffectDetails(
+                                effect,
+                            ),
                     ),
                 )
             },
@@ -185,46 +189,51 @@ internal class ThemeModeRuntime(
                             result.observedState,
                         )
                         record(
-                            VexLogger.Event.Family.OperationSuccess(
-                                family =
-                                    family::class,
-                                operation =
-                                    operation,
-                                state =
-                                    operationState,
+                            VexLogger.Event.Runtime(
+                                subjectRef =
+                                    familySubjectRef,
+                                action =
+                                    "EffectSucceeded",
+                                detailsJson =
+                                    saveEffectDetails(
+                                        effect,
+                                    ),
                             ),
                         )
                     }
 
                     is ThemeModeStore.Result.Failure ->
                         record(
-                            VexLogger.Event.Family.OperationFailure(
-                                family =
-                                    family::class,
-                                operation =
-                                    operation,
-                                state =
-                                    operationState,
-                                failure =
-                                    result.cause
-                                        ?.let { cause ->
-                                            cause::class
-                                        },
+                            VexLogger.Event.Runtime(
+                                subjectRef =
+                                    familySubjectRef,
+                                action =
+                                    "EffectFailed",
+                                detailsJson =
+                                    saveEffectDetails(
+                                        effect =
+                                            effect,
+                                        failure =
+                                            result.cause,
+                                    ),
                             ),
                         )
                 }
             },
             onFailure = { failure ->
                 record(
-                    VexLogger.Event.Family.OperationFailure(
-                        family =
-                            family::class,
-                        operation =
-                            operation,
-                        state =
-                            operationState,
-                        failure =
-                            failure::class,
+                    VexLogger.Event.Runtime(
+                        subjectRef =
+                            familySubjectRef,
+                        action =
+                            "EffectFailed",
+                        detailsJson =
+                            saveEffectDetails(
+                                effect =
+                                    effect,
+                                failure =
+                                    failure,
+                            ),
                     ),
                 )
             },
@@ -238,16 +247,95 @@ internal class ThemeModeRuntime(
             ThemeMode,
     ) {
         record(
-            VexLogger.Event.Family.StateAdmitted(
-                family =
-                    family::class,
-                fromState =
-                    before::class,
-                toState =
-                    after::class,
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    familySubjectRef,
+                action =
+                    "StateAdmitted",
+                detailsJson =
+                    stateAdmittedDetails(
+                        before =
+                            before,
+                        after =
+                            after,
+                    ),
             ),
         )
     }
+
+    private val familySubjectRef:
+        String =
+        "family." +
+            requireNotNull(
+                family::class.qualifiedName
+                    ?: family::class.simpleName,
+            )
+
+    private fun controlAcceptedDetails(
+        control:
+            ThemeModeFamily.Control,
+        currentState:
+            ThemeMode,
+    ):
+        String =
+        when (control) {
+            is ThemeModeFamily.Control.Select ->
+                "{\"control\":\"Select\",\"mode\":\"" +
+                    control.mode.name +
+                    "\",\"currentState\":\"" +
+                    currentState.name +
+                    "\"}"
+        }
+
+    private fun stateAdmittedDetails(
+        before:
+            ThemeMode,
+        after:
+            ThemeMode,
+    ):
+        String =
+        "{\"fromState\":\"" +
+            before.name +
+            "\",\"toState\":\"" +
+            after.name +
+            "\"}"
+
+    private fun saveEffectDetails(
+        effect:
+            ThemeModeFamily.Effect.Save,
+        failure:
+            Throwable? =
+            null,
+    ):
+        String =
+        buildString {
+            append(
+                "{\"effect\":\"Save\",\"mode\":\"",
+            )
+            append(
+                effect.mode.name,
+            )
+            append(
+                "\"",
+            )
+            failure
+                ?.let { cause ->
+                    append(
+                        ",\"failure\":\"",
+                    )
+                    append(
+                        cause::class.qualifiedName
+                            ?: cause::class.simpleName
+                            ?: "Throwable",
+                    )
+                    append(
+                        "\"",
+                    )
+                }
+            append(
+                "}",
+            )
+        }
 
     private fun record(
         event:

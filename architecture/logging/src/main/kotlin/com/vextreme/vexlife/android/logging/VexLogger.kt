@@ -12,8 +12,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.reflect.KCallable
-import kotlin.reflect.KClass
 
 enum class VexLogKind {
     AppOpened,
@@ -128,70 +126,41 @@ class VexLogger(
         )
 
     /**
-     * Structured events owned by the VexLogger root.
+     * Already-accepted facts from rightful owners.
+     *
+     * Logger does not infer semantic/runtime meaning from Kotlin callables or class names. The
+     * producer supplies the fact coordinate, action, and bounded detail that became true at its
+     * boundary; Logger only orders and projects it.
      */
     sealed interface Event {
-        /**
-         * Family-specific accepted facts. Family is a child namespace under the Logger event tree,
-         * not another logger root.
-         */
-        sealed interface Family :
-            Event {
-            val family:
-                KClass<*>
+        val subjectRef:
+            String
+        val action:
+            String
+        val detailsJson:
+            String?
 
-            data class ControlAccepted(
-                override val family:
-                    KClass<*>,
-                val control:
-                    KClass<*>,
-                val currentState:
-                    KClass<*>,
-            ) :
-                Family
+        data class Semantic(
+            override val subjectRef:
+                String,
+            override val action:
+                String,
+            override val detailsJson:
+                String? =
+                null,
+        ) :
+            Event
 
-            data class StateAdmitted(
-                override val family:
-                    KClass<*>,
-                val fromState:
-                    KClass<*>,
-                val toState:
-                    KClass<*>,
-            ) :
-                Family
-
-            data class OperationBegan(
-                override val family:
-                    KClass<*>,
-                val operation:
-                    KCallable<*>,
-                val state:
-                    KClass<*>?,
-            ) :
-                Family
-
-            data class OperationSuccess(
-                override val family:
-                    KClass<*>,
-                val operation:
-                    KCallable<*>,
-                val state:
-                    KClass<*>?,
-            ) :
-                Family
-
-            data class OperationFailure(
-                override val family:
-                    KClass<*>,
-                val operation:
-                    KCallable<*>,
-                val state:
-                    KClass<*>?,
-                val failure:
-                    KClass<out Throwable>?,
-            ) :
-                Family
-        }
+        data class Runtime(
+            override val subjectRef:
+                String,
+            override val action:
+                String,
+            override val detailsJson:
+                String? =
+                null,
+        ) :
+            Event
     }
 
     private val lock = Any()
@@ -209,110 +178,42 @@ class VexLogger(
 
     /**
      * Record one already-accepted/observed structured fact.
-     *
-     * Event fields remain owned by their source boundary. Logger only places them in chronology.
      */
     fun record(
-        event: Event,
+        event:
+            Event,
     ) {
         when (event) {
-            is Event.Family.ControlAccepted ->
+            is Event.Semantic ->
                 append(
-                    kind = VexLogKind.Semantic,
+                    kind =
+                        VexLogKind.Semantic,
                     subjectRef =
-                        familyRef(
-                            event.family,
-                        ),
-                    action = "ControlAccepted",
-                    screenBeforeId = null,
-                    screenAfterId = null,
+                        event.subjectRef,
+                    action =
+                        event.action,
+                    screenBeforeId =
+                        null,
+                    screenAfterId =
+                        null,
                     detailsJson =
-                        "{\"control\":\"" +
-                            event.control
-                                .readableClassName() +
-                            "\",\"currentState\":\"" +
-                            event.currentState
-                                .readableClassName() +
-                            "\"}",
+                        event.detailsJson,
                 )
 
-            is Event.Family.StateAdmitted ->
+            is Event.Runtime ->
                 append(
-                    kind = VexLogKind.Semantic,
+                    kind =
+                        VexLogKind.Runtime,
                     subjectRef =
-                        familyRef(
-                            event.family,
-                        ),
-                    action = "StateAdmitted",
-                    screenBeforeId = null,
-                    screenAfterId = null,
+                        event.subjectRef,
+                    action =
+                        event.action,
+                    screenBeforeId =
+                        null,
+                    screenAfterId =
+                        null,
                     detailsJson =
-                        "{\"fromState\":\"" +
-                            event.fromState
-                                .readableClassName() +
-                            "\",\"toState\":\"" +
-                            event.toState
-                                .readableClassName() +
-                            "\"}",
-                )
-
-            is Event.Family.OperationBegan ->
-                append(
-                    kind = VexLogKind.Runtime,
-                    subjectRef =
-                        familyRef(
-                            event.family,
-                        ),
-                    action = "OperationRequested",
-                    screenBeforeId = null,
-                    screenAfterId = null,
-                    detailsJson =
-                        operationDetails(
-                            operation =
-                                event.operation,
-                            state =
-                                event.state,
-                        ),
-                )
-
-            is Event.Family.OperationSuccess ->
-                append(
-                    kind = VexLogKind.Runtime,
-                    subjectRef =
-                        familyRef(
-                            event.family,
-                        ),
-                    action = "OperationSucceeded",
-                    screenBeforeId = null,
-                    screenAfterId = null,
-                    detailsJson =
-                        operationDetails(
-                            operation =
-                                event.operation,
-                            state =
-                                event.state,
-                        ),
-                )
-
-            is Event.Family.OperationFailure ->
-                append(
-                    kind = VexLogKind.Runtime,
-                    subjectRef =
-                        familyRef(
-                            event.family,
-                        ),
-                    action = "OperationFailed",
-                    screenBeforeId = null,
-                    screenAfterId = null,
-                    detailsJson =
-                        operationDetails(
-                            operation =
-                                event.operation,
-                            state =
-                                event.state,
-                            failure =
-                                event.failure,
-                        ),
+                        event.detailsJson,
                 )
         }
     }
@@ -932,70 +833,6 @@ class VexLogger(
                 }
 
 
-        private fun familyRef(
-            family:
-                KClass<*>,
-        ):
-            String =
-            "family." +
-                family.readableClassName()
 
-        private fun operationDetails(
-            operation:
-                KCallable<*>,
-            state:
-                KClass<*>?,
-            failure:
-                KClass<out Throwable>? =
-                null,
-        ):
-            String =
-            buildString {
-                append(
-                    "{\"operation\":\"",
-                )
-                append(
-                    operation.name,
-                )
-                append(
-                    "\"",
-                )
-
-                state
-                    ?.let {
-                        append(
-                            ",\"state\":\"",
-                        )
-                        append(
-                            it.readableClassName(),
-                        )
-                        append(
-                            "\"",
-                        )
-                    }
-
-                failure
-                    ?.let {
-                        append(
-                            ",\"failure\":\"",
-                        )
-                        append(
-                            it.readableClassName(),
-                        )
-                        append(
-                            "\"",
-                        )
-                    }
-
-                append(
-                    "}",
-                )
-            }
-
-        private fun KClass<*>.readableClassName():
-            String =
-            qualifiedName
-                ?: simpleName
-                ?: "anonymous"
     }
 }

@@ -64,31 +64,31 @@ Family/semantic boundary
     StateAdmitted
 
 runtime/provider boundary
-    OperationRequested
-    OperationSucceeded
-    OperationFailed
+    EffectRequested
+    EffectSucceeded
+    EffectFailed
 
 architecture diagnostics
     BlueprintMappingMissing
 ~~~
 
-Structured VexLogger.Event values enter the same VexLogRecord chronology through logger.sink.
-There is no parallel FamilyLogger, ExecutionLogger, trace bus, or completed-execution history.
+Rightful owners submit already-accepted facts through VexLogger.Sink. The Logger event envelope
+carries only the fact coordinate, action, and bounded owner-formed detail; it does not infer meaning
+from Kotlin callables or create another semantic hierarchy.
 
 ~~~text
-VexLogger
--> Sink
--> Event
-   -> Family
-      -> ControlAccepted
-      -> StateAdmitted
-      -> OperationBegan
-      -> OperationSuccess
-      -> OperationFailure
+semantic owner
+    -> Event.Semantic(ControlAccepted / StateAdmitted)
+
+runtime/provider owner
+    -> Event.Runtime(EffectRequested / EffectSucceeded / EffectFailed)
+
+-> one VexLogger chronology
 ~~~
 
-A consuming Family/Store binding or other runtime owner keeps the Sink private. Pure semantic decision code such as
-VexFamily.act(...) does not receive Logger.
+There is no parallel FamilyLogger, ExecutionLogger, trace bus, completed-execution history, or
+callable-derived operation identity. Pure semantic decision code such as VexFamily.act(...) does not
+receive Logger.
 
 ## Stable coordinate -> readable fields
 
