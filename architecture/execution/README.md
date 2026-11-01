@@ -84,8 +84,36 @@ launch(callable)
     each returned Job is the occurrence
 ~~~
 
-Callable identity is private execution convenience for source-addressed cancellation/duplicate
-protection. It is not semantic identity and is not exported as a durable/source protocol.
+The callable-reference style is deliberate **only** for source-addressed work. It keeps the exact
+thing being invoked and the narrow local source address as one authoring expression:
+
+~~~kotlin
+launchOnce(repository::refresh)
+~~~
+
+rather than duplicating it:
+
+~~~kotlin
+launchOnce(RefreshKey) {
+    repository.refresh()
+}
+~~~
+
+The callable is therefore private execution convenience for source duplicate/control behavior. This
+does **not** establish a repository-wide "reflection pattern". Do not use Kotlin class/member scanning,
+callable names, reflected class names, annotations, or runtime discovery to invent semantic,
+dependency, Logger, protocol, or RelationshipId meaning.
+
+~~~text
+CALLABLE REFERENCE
+    may be exact local source/work
+
+CALLABLE NAME / REFLECTED TYPE NAME
+    readable diagnostic text at most
+    != semantic identity
+    != durable identity
+    != RelationshipId
+~~~
 
 ### Maintained observation
 
@@ -114,6 +142,30 @@ The rightful semantic/runtime owner supplies RelationshipId.
 
 ~~~text
 RelationshipId -> actual Job(s)
+~~~
+
+This is intentionally different from source-addressed work. For Earliest / Latest / Queued,
+RelationshipId is the one semantic coordination address. The operation function may still be passed
+to the current engine so it can invoke the work and perform local implementation bookkeeping, but
+that callable must never be interpreted as a peer relationship identity.
+
+~~~text
+SOURCE-ADDRESSED
+    launchOnce(source)
+    launch(source)
+    launchForCollect(source)
+    forceStop(source)
+    joinStop(source)
+
+    source reference is the narrow local address
+
+RELATIONSHIP-ADDRESSED
+    RelationshipId
+    -> Earliest / Latest / Queued
+    -> Job(s)
+
+    callable is work to invoke
+    callable != another RelationshipId
 ~~~
 
 Only identity-bearing semantic coordinates belong in that ID. Ordinary operation payload does not
@@ -183,6 +235,10 @@ This remains private/protected convenience inside the execution owner. The calla
 cross-feature semantic RelationshipId.
 
 When a real semantic relationship exists, prefer RelationshipId.
+
+Do not "standardize" these two styles into one universal abstraction merely for consistency. Their
+different authoring forms preserve different meanings: one addresses an exact local source; the
+other addresses an already-authored semantic relationship.
 
 ## Structured work and provider handoff
 

@@ -121,6 +121,27 @@ abstract class VexExecution protected constructor(
                 ?: this::class.simpleName
                 ?: "VexExecution"
 
+    /**
+     * Source-addressed finite work.
+     *
+     * The callable-reference style is deliberate here: the exact source supplied by the author is
+     * both the operation Vex invokes and the narrow local address used for duplicate/source control
+     * inside this VexExecution owner. This avoids a second manually-authored key beside the work.
+     *
+     * Do not generalize this into reflection-driven architecture. This API does not authorize class
+     * scanning, member discovery, callable-name semantic IDs, durable protocol IDs, Logger identity,
+     * dependency identity, or RelationshipId construction.
+     *
+     * Mapping:
+     *
+     *     exact callable source
+     *         -> local source-addressed Job custody
+     *
+     * not:
+     *
+     *     callable
+     *         -> semantic relationship identity
+     */
     protected fun <Result> launchOnce(
         action:
             KSuspendFunction0<Result>,
@@ -175,6 +196,11 @@ abstract class VexExecution protected constructor(
             )
         }
 
+    /**
+     * Independent source work uses the same exact callable-reference convenience as [launchOnce],
+     * but every invocation is intentionally a distinct Job occurrence. The callable is a local
+     * source coordinate only; it does not become semantic or durable identity.
+     */
     protected fun <Result> launch(
         action:
             KSuspendFunction0<Result>,
@@ -230,7 +256,22 @@ abstract class VexExecution protected constructor(
         }
 
     /**
-     * One maintained Flow observation for this source inside this exact execution owner.
+     * One maintained Flow observation for this exact source inside this exact execution owner.
+     *
+     * The function/property reference is intentional because the source itself is the thing being
+     * observed and the local question is "is this exact source already under observation?". A lambda
+     * plus a separately-authored key would duplicate that relationship and could drift.
+     *
+     * This is source-addressed observation only. It must not be extrapolated into reflection-based
+     * dependency discovery, semantic Control identity, RelationshipId, Logger identity, or a general
+     * Vex convention that Kotlin names define architecture.
+     *
+     * Mapping:
+     *
+     *     exact Flow source
+     *         -> one active observation Job in this owner
+     *
+     * Source/subscription failure may use the configured bounded recovery mechanic when explicitly
      *
      * Source/subscription failure may use the configured bounded recovery mechanic when explicitly
      * enabled. Failure thrown while consuming a valid emitted value is downstream failure and is
@@ -548,6 +589,28 @@ abstract class VexExecution protected constructor(
             )
         }
 
+    /**
+     * Relationship-addressed maintained work.
+     *
+     * RelationshipId is the semantic/coordination address. The operation callable is supplied only
+     * because the engine must invoke the work and currently keeps narrow local source bookkeeping.
+     * It is NOT another relationship key and must not be exported, persisted, logged, compared, or
+     * scaled into a second identity system.
+     *
+     * If a future implementation can remove callable bookkeeping here without losing a demonstrated
+     * execution requirement, RelationshipId remains the architecture and the callable bookkeeping is
+     * the thing to subtract.
+     *
+     * Mapping:
+     *
+     *     RelationshipId
+     *         -> actual maintained Job(s)
+     *
+     * never:
+     *
+     *     RelationshipId + callable
+     *         -> two peer identities for the same relationship
+     */
     @RelationshipFoundationApi
     protected fun <Argument, Result> beginEarliest(
         relationshipId:

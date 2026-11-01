@@ -397,6 +397,13 @@ internal class ThemeModeRuntime(
             )
         }
 
+        /**
+         * ThemeMode Save is relationship-addressed, not callable-addressed.
+         *
+         * relationshipId(control) supplies the Select relationship. store::save is passed only as
+         * the concrete operation VexExecution invokes. Do not derive ThemeMode relationship meaning
+         * from the Store method, method name, or callable identity.
+         */
         fun saveLatest(
             control:
                 ThemeModeFamily.Control,
@@ -427,6 +434,11 @@ internal class ThemeModeRuntime(
                     onFailure,
             )
 
+        /**
+         * Store observation is source-addressed: store::states is itself the exact Flow source whose
+         * single active observation this execution owner maintains. This is why the source-reference
+         * style is appropriate here while ThemeMode Save uses Control-derived RelationshipId.
+         */
         fun observeStore(
             onEach:
                 suspend (ThemeMode) -> Unit,
