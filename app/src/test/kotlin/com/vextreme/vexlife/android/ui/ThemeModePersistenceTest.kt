@@ -27,19 +27,34 @@ class ThemeModePersistenceTest {
                 initialState =
                     ThemeMode.Dark,
             )
-        val runtime =
-            ThemeModeRuntime(
-                family = family,
-                executionRoot = root,
-                store = store,
-            )
+        val logger =
+            VexLogger()
+        observeThemeModeStore(
+            family =
+                family,
+            store =
+                store,
+            executionRoot =
+                root,
+            logger =
+                logger,
+        )
 
         try {
             assertTrue(
-                runtime.activate(
-                    ThemeModeFamily.Control.Select(
-                        ThemeMode.Dark,
-                    ),
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeMode.Dark,
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
                 ),
             )
 
@@ -84,10 +99,15 @@ class ThemeModePersistenceTest {
             )
 
         try {
-            ThemeModeRuntime(
-                family = family,
-                executionRoot = root,
-                store = store,
+            observeThemeModeStore(
+                family =
+                    family,
+                store =
+                    store,
+                executionRoot =
+                    root,
+                logger =
+                    VexLogger(),
             )
 
             runBlocking {
@@ -128,10 +148,15 @@ class ThemeModePersistenceTest {
             )
 
         try {
-            ThemeModeRuntime(
-                family = family,
-                executionRoot = root,
-                store = store,
+            observeThemeModeStore(
+                family =
+                    family,
+                store =
+                    store,
+                executionRoot =
+                    root,
+                logger =
+                    VexLogger(),
             )
 
             store.emit(
@@ -174,24 +199,32 @@ class ThemeModePersistenceTest {
             )
         val logger =
             VexLogger()
-        val runtime =
-            ThemeModeRuntime(
-                family =
-                    family,
-                executionRoot =
-                    root,
-                store =
-                    store,
-                logger =
-                    logger.sink,
-            )
+        observeThemeModeStore(
+            family =
+                family,
+            store =
+                store,
+            executionRoot =
+                root,
+            logger =
+                logger,
+        )
 
         try {
             assertTrue(
-                runtime.activate(
-                    ThemeModeFamily.Control.Select(
-                        ThemeMode.Dark,
-                    ),
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeMode.Dark,
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
                 ),
             )
 
@@ -269,22 +302,34 @@ class ThemeModePersistenceTest {
                 initialState =
                     ThemeMode.Light,
             )
-        val runtime =
-            ThemeModeRuntime(
-                family =
-                    family,
-                executionRoot =
-                    root,
-                store =
-                    store,
-            )
+        val logger =
+            VexLogger()
+        observeThemeModeStore(
+            family =
+                family,
+            store =
+                store,
+            executionRoot =
+                root,
+            logger =
+                logger,
+        )
 
         try {
             assertTrue(
-                runtime.activate(
-                    ThemeModeFamily.Control.Select(
-                        ThemeMode.Dark,
-                    ),
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeMode.Dark,
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
                 ),
             )
 
@@ -297,10 +342,19 @@ class ThemeModePersistenceTest {
             }
 
             assertTrue(
-                runtime.activate(
-                    ThemeModeFamily.Control.Select(
-                        ThemeMode.Light,
-                    ),
+                activateThemeMode(
+                    family =
+                        family,
+                    control =
+                        ThemeModeFamily.Control.Select(
+                            ThemeMode.Light,
+                        ),
+                    store =
+                        store,
+                    executionRoot =
+                        root,
+                    logger =
+                        logger,
                 ),
             )
 
