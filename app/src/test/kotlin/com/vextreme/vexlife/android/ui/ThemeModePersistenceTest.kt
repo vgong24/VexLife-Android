@@ -85,7 +85,7 @@ class ThemeModePersistenceTest {
     }
 
     @Test
-    fun durableSelectionObservationRestoresCurrentThroughTheRuntime() {
+    fun durableSelectionObservationRestoresCurrentThroughTheFamily() {
         val root =
             VexExecutionRoot()
         val store =
