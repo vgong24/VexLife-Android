@@ -1,3 +1,5 @@
+@file:OptIn(com.vextreme.vexlife.android.execution.VexExecution.RelationshipFoundationApi::class)
+
 package com.vextreme.vexlife.android.ui
 
 import android.app.Application
@@ -34,7 +36,7 @@ import kotlinx.coroutines.Dispatchers
  *
  * WHAT THIS IS
  * VexLifeSession is the assembled session surface consumed by the UI after construction. It groups
- * already-built repositories, Logger, Family/runtime, Relay projection, actions, and VexRuntime that
+ * already-built repositories, Logger, Family, Relay projection, actions, and VexRuntime that
  * belong to the same session lifetime.
  *
  * WHAT IT RELATES TO
@@ -45,7 +47,7 @@ import kotlinx.coroutines.Dispatchers
  *
  * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
  * Android can rebuild Activity/Compose surfaces while the logical app session should retain current
- * navigation, presentation, Logger session, execution roots, and feature runtimes. A ViewModel-owned
+ * navigation, presentation, Logger session and execution roots. A ViewModel-owned
  * session makes that lifetime explicit without turning Composables into construction owners.
  *
  * RESPONSIBILITY FENCE
@@ -65,8 +67,6 @@ internal class VexLifeSession internal constructor(
         VexLogger,
     val themeModeFamily:
         ThemeModeFamily,
-    private val themeModeRuntime:
-        ThemeModeRuntime,
     val relayGraph:
         VexLifeRelayGraph,
     val appActions:
@@ -125,8 +125,6 @@ internal class VexLifeSession internal constructor(
                 components.logger,
             themeModeFamily =
                 components.themeModeFamily,
-            themeModeRuntime =
-                components.themeModeRuntime,
             relayGraph =
                 components.relayGraph,
             appActions =
@@ -147,8 +145,6 @@ private data class VexLifeSessionComponents(
         VexLogger,
     val themeModeFamily:
         ThemeModeFamily,
-    val themeModeRuntime:
-        ThemeModeRuntime,
     val relayGraph:
         VexLifeRelayGraph,
     val appActions:
@@ -184,25 +180,26 @@ private fun directSessionComponents(
             blueprintRegistry =
                 AppScreens.registry,
         )
+    val resolvedThemeModeStore =
+        themeModeStore
+            ?: InMemoryThemeModeStore(
+                initialThemeMode,
+            )
     val themeModeFamily =
         ThemeModeFamily(
             initialState =
                 initialThemeMode,
         )
-    val themeModeRuntime =
-        ThemeModeRuntime(
-            family =
-                themeModeFamily,
-            executionRoot =
-                executionRoot,
-            store =
-                themeModeStore
-                    ?: InMemoryThemeModeStore(
-                        initialThemeMode,
-                    ),
-            logger =
-                logger.sink,
-        )
+    observeThemeModeStore(
+        family =
+            themeModeFamily,
+        store =
+            resolvedThemeModeStore,
+        executionRoot =
+            executionRoot,
+        logger =
+            logger,
+    )
     val relayGraph =
         directRelayGraph(
             repositories =
@@ -220,8 +217,12 @@ private fun directSessionComponents(
                 logger,
             logPersistence =
                 logPersistence,
-            themeModeRuntime =
-                themeModeRuntime,
+            themeModeFamily =
+                themeModeFamily,
+            themeModeStore =
+                resolvedThemeModeStore,
+            executionRoot =
+                executionRoot,
         )
     val runtime =
         VexRuntime(
@@ -249,8 +250,6 @@ private fun directSessionComponents(
             logger,
         themeModeFamily =
             themeModeFamily,
-        themeModeRuntime =
-            themeModeRuntime,
         relayGraph =
             relayGraph,
         appActions =
@@ -314,8 +313,12 @@ private fun createAppActions(
         VexLogger,
     logPersistence:
         LogHistoryPersistenceQueue,
-    themeModeRuntime:
-        ThemeModeRuntime,
+    themeModeFamily:
+        ThemeModeFamily,
+    themeModeStore:
+        ThemeModeStore,
+    executionRoot:
+        VexExecutionRoot,
 ):
     AppActionRegistrations =
     AppScreens.appActionRegistrations(
@@ -330,19 +333,29 @@ private fun createAppActions(
                 logPersistence,
             toggleDarkMode = {
                 toggleThemeMode(
-                    binding =
-                        themeModeRuntime,
+                    family =
+                        themeModeFamily,
+                    store =
+                        themeModeStore,
+                    executionRoot =
+                        executionRoot,
+                    logger =
+                        logger,
                 )
             },
         ),
     )
 
 private fun toggleThemeMode(
-    binding:
-        ThemeModeRuntime,
+    family:
+        ThemeModeFamily,
+    store:
+        ThemeModeStore,
+    executionRoot:
+        VexExecutionRoot,
+    logger:
+        VexLogger,
 ) {
-    val family =
-        binding.family
     val selectedMode =
         when (
             family.currentState
@@ -356,19 +369,374 @@ private fun toggleThemeMode(
                 ThemeMode.Light
         }
 
-    binding.activate(
-        ThemeModeFamily.Control.Select(
-            selectedMode,
-        ),
+    activateThemeMode(
+        family =
+            family,
+        control =
+            ThemeModeFamily.Control.Select(
+                selectedMode,
+            ),
+        store =
+            store,
+        executionRoot =
+            executionRoot,
+        logger =
+            logger,
     )
 }
+
+/**
+ * ThemeMode Act realization stays beside the existing app action that invokes it.
+ *
+ * The Family already authored Effect.Save + Latest. This function does not invent another runtime
+ * or execution vocabulary; it only hands that authored relationship to the reusable VexExecution
+ * foundation and reports the facts that become true at this boundary.
+ */
+private fun activateThemeMode(
+    family:
+        ThemeModeFamily,
+    control:
+        ThemeModeFamily.Control,
+    store:
+        ThemeModeStore,
+    executionRoot:
+        VexExecutionRoot,
+    logger:
+        VexLogger,
+):
+    Boolean {
+    val before =
+        family.currentState
+    val act =
+        family.activate(
+            control,
+        )
+            ?: return false
+
+    recordThemeModeFact(
+        logger =
+            logger,
+        event =
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    THEME_MODE_FAMILY_SUBJECT,
+                action =
+                    "ControlAccepted",
+                detailsJson =
+                    themeModeControlDetails(
+                        control =
+                            control,
+                        currentState =
+                            before,
+                    ),
+            ),
+    )
+
+    val admitted =
+        family.currentState
+    if (
+        admitted !=
+        before
+    ) {
+        recordThemeModeStateChange(
+            logger =
+                logger,
+            before =
+                before,
+            after =
+                admitted,
+        )
+    }
+
+    val begin =
+        act.begin
+            ?: return true
+
+    when (
+        val effect =
+            begin.effect
+    ) {
+        is ThemeModeFamily.Effect.Save -> {
+            check(
+                begin.approach ==
+                    VexExecution.Approach.Latest,
+            ) {
+                "ThemeMode Select Save must remain Latest as authored by ThemeModeFamily"
+            }
+
+            VexExecution.beginLatest(
+                executionRoot =
+                    executionRoot,
+                owner =
+                    family,
+                relationshipId =
+                    family.relationshipId(
+                        control,
+                    ),
+                operation =
+                    store::save,
+                argument =
+                    effect.mode,
+                beforeOperation = {
+                    recordThemeModeFact(
+                        logger =
+                            logger,
+                        event =
+                            VexLogger.Event.Runtime(
+                                subjectRef =
+                                    THEME_MODE_FAMILY_SUBJECT,
+                                action =
+                                    "EffectRequested",
+                                detailsJson =
+                                    themeModeSaveDetails(
+                                        effect,
+                                    ),
+                            ),
+                    )
+                },
+                onResult = { result ->
+                    when (
+                        result
+                    ) {
+                        is ThemeModeStore.Result.Success -> {
+                            recordThemeModeFact(
+                                logger =
+                                    logger,
+                                event =
+                                    VexLogger.Event.Runtime(
+                                        subjectRef =
+                                            THEME_MODE_FAMILY_SUBJECT,
+                                        action =
+                                            "EffectSucceeded",
+                                        detailsJson =
+                                            themeModeSaveDetails(
+                                                effect,
+                                            ),
+                                    ),
+                            )
+                            observeThemeModeState(
+                                family =
+                                    family,
+                                observed =
+                                    result.observedState,
+                                logger =
+                                    logger,
+                            )
+                        }
+
+                        is ThemeModeStore.Result.Failure ->
+                            recordThemeModeFact(
+                                logger =
+                                    logger,
+                                event =
+                                    VexLogger.Event.Runtime(
+                                        subjectRef =
+                                            THEME_MODE_FAMILY_SUBJECT,
+                                        action =
+                                            "EffectFailed",
+                                        detailsJson =
+                                            themeModeSaveDetails(
+                                                effect =
+                                                    effect,
+                                                failure =
+                                                    result.cause,
+                                            ),
+                                    ),
+                            )
+                    }
+                },
+                onFailure = { failure ->
+                    recordThemeModeFact(
+                        logger =
+                            logger,
+                        event =
+                            VexLogger.Event.Runtime(
+                                subjectRef =
+                                    THEME_MODE_FAMILY_SUBJECT,
+                                action =
+                                    "EffectFailed",
+                                detailsJson =
+                                    themeModeSaveDetails(
+                                        effect =
+                                            effect,
+                                        failure =
+                                            failure,
+                                    ),
+                            ),
+                    )
+                },
+            )
+        }
+    }
+
+    return true
+}
+
+private fun observeThemeModeStore(
+    family:
+        ThemeModeFamily,
+    store:
+        ThemeModeStore,
+    executionRoot:
+        VexExecutionRoot,
+    logger:
+        VexLogger,
+) {
+    VexExecution.observe(
+        executionRoot =
+            executionRoot,
+        owner =
+            family,
+        source =
+            store::states,
+    ) { observed ->
+        observeThemeModeState(
+            family =
+                family,
+            observed =
+                observed,
+            logger =
+                logger,
+        )
+    }
+}
+
+private fun observeThemeModeState(
+    family:
+        ThemeModeFamily,
+    observed:
+        ThemeMode,
+    logger:
+        VexLogger,
+) {
+    val before =
+        family.currentState
+    val after =
+        family.observeStoredThemeMode(
+            observed,
+        )
+
+    if (
+        after !=
+        before
+    ) {
+        recordThemeModeStateChange(
+            logger =
+                logger,
+            before =
+                before,
+            after =
+                after,
+        )
+    }
+}
+
+private fun recordThemeModeStateChange(
+    logger:
+        VexLogger,
+    before:
+        ThemeMode,
+    after:
+        ThemeMode,
+) {
+    recordThemeModeFact(
+        logger =
+            logger,
+        event =
+            VexLogger.Event.Semantic(
+                subjectRef =
+                    THEME_MODE_FAMILY_SUBJECT,
+                action =
+                    "StateAdmitted",
+                detailsJson =
+                    "{\"fromState\":\"" +
+                        before.name +
+                        "\",\"toState\":\"" +
+                        after.name +
+                        "\"}",
+            ),
+    )
+}
+
+private fun themeModeControlDetails(
+    control:
+        ThemeModeFamily.Control,
+    currentState:
+        ThemeMode,
+):
+    String =
+    when (
+        control
+    ) {
+        is ThemeModeFamily.Control.Select ->
+            "{\"control\":\"Select\",\"mode\":\"" +
+                control.mode.name +
+                "\",\"currentState\":\"" +
+                currentState.name +
+                "\"}"
+    }
+
+private fun themeModeSaveDetails(
+    effect:
+        ThemeModeFamily.Effect.Save,
+    failure:
+        Throwable? =
+        null,
+):
+    String =
+    buildString {
+        append(
+            "{\"effect\":\"Save\",\"mode\":\"",
+        )
+        append(
+            effect.mode.name,
+        )
+        append(
+            "\"",
+        )
+        failure
+            ?.let { cause ->
+                append(
+                    ",\"failure\":\"",
+                )
+                append(
+                    cause::class.qualifiedName
+                        ?: cause::class.simpleName
+                        ?: "Throwable",
+                )
+                append(
+                    "\"",
+                )
+            }
+        append(
+            "}",
+        )
+    }
+
+private fun recordThemeModeFact(
+    logger:
+        VexLogger,
+    event:
+        VexLogger.Event,
+) {
+    try {
+        logger.sink.record(
+            event,
+        )
+    } catch (_: Throwable) {
+        // Observation failure never becomes ThemeMode semantic/runtime authority.
+    }
+}
+
+private const val THEME_MODE_FAMILY_SUBJECT =
+    "family.ThemeModeFamily"
 
 /**
  * ViewModel/session-lifetime dependency declarations.
  *
  * WHAT THIS IS / RELATES TO
  * This module declares the child-lifetime graph layered on application-lifetime providers:
- * VexExecutionRoot, Logger persistence, VexLogger, ThemeMode Family/runtime, Relay owners/projection,
+ * VexExecutionRoot, Logger persistence, VexLogger, ThemeMode Family, Relay owners/projection,
  * app actions, VexRuntime, and the assembled VexLifeSession.
  *
  * WHY THIS SHAPE EXISTS
@@ -417,41 +785,15 @@ internal class VexLifeSessionDependencyModule(
 
     val themeModeFamily =
         ThemeModeFamilyProvider(
-            initialThemeMode,
+            initialThemeMode =
+                initialThemeMode,
+            store =
+                applicationDependencies.themeModeStore,
+            executionRoot =
+                executionRoot,
+            logger =
+                logger,
         )
-
-    val themeModeRuntime =
-        VexDependencyProvider.named(
-            readableName =
-                "ThemeModeRuntime",
-            dependencies =
-                listOf(
-                    themeModeFamily,
-                    applicationDependencies.themeModeStore,
-                    executionRoot,
-                    logger,
-                ),
-        ) { dependencies: VexDependencyBuildScope ->
-            ThemeModeRuntime(
-                family =
-                    dependencies.require(
-                        themeModeFamily,
-                    ),
-                store =
-                    dependencies.require(
-                        applicationDependencies.themeModeStore,
-                    ),
-                executionRoot =
-                    dependencies.require(
-                        executionRoot,
-                    ),
-                logger =
-                    dependencies.require(
-                        logger,
-                    )
-                        .sink,
-            )
-        }
 
     val eventsRelay =
         EventsRelayProvider(
@@ -487,8 +829,12 @@ internal class VexLifeSessionDependencyModule(
                 logger,
             logPersistence =
                 logPersistence,
-            themeModeRuntime =
-                themeModeRuntime,
+            themeModeFamily =
+                themeModeFamily,
+            themeModeStore =
+                applicationDependencies.themeModeStore,
+            executionRoot =
+                executionRoot,
         )
 
     val runtime =
@@ -513,8 +859,6 @@ internal class VexLifeSessionDependencyModule(
                 logger,
             themeModeFamily =
                 themeModeFamily,
-            themeModeRuntime =
-                themeModeRuntime,
             relayGraph =
                 relayGraph,
             appActions =
@@ -549,7 +893,6 @@ internal class VexLifeSessionDependencyModule(
             logPersistence,
             logger,
             themeModeFamily,
-            themeModeRuntime,
             eventsRelay,
             conversationRelay,
             relayGraph,
@@ -650,17 +993,51 @@ internal class VexLifeSessionDependencyModule(
     internal class ThemeModeFamilyProvider(
         private val initialThemeMode:
             ThemeMode,
+        private val store:
+            VexDependencyProvider<ThemeModeStore>,
+        private val executionRoot:
+            VexDependencyProvider<VexExecutionRoot>,
+        private val logger:
+            VexDependencyProvider<VexLogger>,
     ) :
-        VexDependencyProvider<ThemeModeFamily>() {
+        VexDependencyProvider<ThemeModeFamily>(
+            dependencies =
+                listOf(
+                    store,
+                    executionRoot,
+                    logger,
+                ),
+        ) {
         override fun create(
             dependencies:
                 VexDependencyBuildScope,
         ):
-            ThemeModeFamily =
-            ThemeModeFamily(
-                initialState =
-                    initialThemeMode,
+            ThemeModeFamily {
+            val family =
+                ThemeModeFamily(
+                    initialState =
+                        initialThemeMode,
+                )
+
+            observeThemeModeStore(
+                family =
+                    family,
+                store =
+                    dependencies.require(
+                        store,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                logger =
+                    dependencies.require(
+                        logger,
+                    ),
             )
+
+            return family
+        }
     }
 
     internal class EventsRelayProvider(
@@ -787,8 +1164,12 @@ internal class VexLifeSessionDependencyModule(
             VexDependencyProvider<VexLogger>,
         private val logPersistence:
             VexDependencyProvider<LogHistoryPersistenceQueue>,
-        private val themeModeRuntime:
-            VexDependencyProvider<ThemeModeRuntime>,
+        private val themeModeFamily:
+            VexDependencyProvider<ThemeModeFamily>,
+        private val themeModeStore:
+            VexDependencyProvider<ThemeModeStore>,
+        private val executionRoot:
+            VexDependencyProvider<VexExecutionRoot>,
     ) :
         VexDependencyProvider<AppActionRegistrations>(
             dependencies =
@@ -797,7 +1178,9 @@ internal class VexLifeSessionDependencyModule(
                     scope,
                     logger,
                     logPersistence,
-                    themeModeRuntime,
+                    themeModeFamily,
+                    themeModeStore,
+                    executionRoot,
                 ),
         ) {
         override fun create(
@@ -822,9 +1205,17 @@ internal class VexLifeSessionDependencyModule(
                     dependencies.require(
                         logPersistence,
                     ),
-                themeModeRuntime =
+                themeModeFamily =
                     dependencies.require(
-                        themeModeRuntime,
+                        themeModeFamily,
+                    ),
+                themeModeStore =
+                    dependencies.require(
+                        themeModeStore,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
                     ),
             )
     }
@@ -886,8 +1277,6 @@ internal class VexLifeSessionDependencyModule(
             VexDependencyProvider<VexLogger>,
         private val themeModeFamily:
             VexDependencyProvider<ThemeModeFamily>,
-        private val themeModeRuntime:
-            VexDependencyProvider<ThemeModeRuntime>,
         private val relayGraph:
             VexDependencyProvider<VexLifeRelayGraph>,
         private val appActions:
@@ -903,7 +1292,6 @@ internal class VexLifeSessionDependencyModule(
                     logPersistence,
                     logger,
                     themeModeFamily,
-                    themeModeRuntime,
                     relayGraph,
                     appActions,
                     runtime,
@@ -934,10 +1322,6 @@ internal class VexLifeSessionDependencyModule(
                 themeModeFamily =
                     dependencies.require(
                         themeModeFamily,
-                    ),
-                themeModeRuntime =
-                    dependencies.require(
-                        themeModeRuntime,
                     ),
                 relayGraph =
                     dependencies.require(
