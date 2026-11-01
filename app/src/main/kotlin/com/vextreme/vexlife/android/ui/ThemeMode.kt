@@ -319,9 +319,7 @@ internal fun activateThemeMode(
                 approach =
                     begin.approach,
                 relationshipId =
-                    family.relationshipId(
-                        control,
-                    ),
+                    act.relationshipId,
                 operation =
                     store::save,
                 argument =
