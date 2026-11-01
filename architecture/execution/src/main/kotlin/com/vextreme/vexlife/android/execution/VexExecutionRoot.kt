@@ -180,7 +180,7 @@ class VexExecutionRoot(
      *
      * It exists so owner-scoped Job/Relationship custody remains exactly the same whether a caller
      * extends VexExecution for a genuinely sustained execution owner or calls the reusable
-     * VexExecution.begin*/observe surface directly. Product code must not name or construct this.
+     * VexExecution.begin/observe surface directly. Product code must not name or construct this.
      */
     private class DirectExecution(
         root:
