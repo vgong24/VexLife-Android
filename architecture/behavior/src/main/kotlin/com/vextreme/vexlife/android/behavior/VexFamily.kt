@@ -153,6 +153,7 @@ abstract class VexFamily<
      * [admittedState] is immediate semantic State meaning.
      * [effect] is the optional runtime transformation request to realize after that admission.
      */
+    @ConsistentCopyVisibility
     data class Act<
         State : VexFamily.State<*>,
         Effect : VexFamily.Effect<*>,
