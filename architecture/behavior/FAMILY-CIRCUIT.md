@@ -127,6 +127,24 @@ Begin
 Approach is authored here because overlap is part of the consequence relationship, not because
 Family owns coroutine execution.
 
+Approach is not inferred from whether the Act stays in the same State or admits a new State:
+
+~~~text
+State admission question
+    stay / admit
+    = what semantic State becomes current now?
+
+Execution overlap question
+    Independent / Earliest / Latest / Queued
+    = how do unfinished consequences of this same relationship coexist?
+
+These are independent axes.
+~~~
+
+ThemeMode happens to use admit(...) + Latest when changing Light/Dark and stay(...) + Latest when
+re-selecting the already-current mode. That is evidence that Latest belongs to the Select/Save
+overlap meaning, not to "State changed" or "State stayed".
+
 For ThemeMode:
 
 ~~~text
@@ -145,6 +163,29 @@ realization boundary
 Selecting the already-current mode may still lawfully return Save because explicit durable selection
 is a runtime consequence even when semantic State does not change.
 
+## #207 result-admission distinction
+
+#207 carried a richer Begin grammar where execution Success / Failure could directly author a later
+State decision, including a decision against exact CURRENT State.
+
+The current direct Family intentionally keeps a smaller relationship:
+
+~~~text
+Act.Begin
+    Effect
+    Approach
+    accepted maintained RelationshipId
+
+provider/runtime result
+    -> rightful result/provider interpretation
+    -> already-semantic State
+    -> Family.observe(State)
+~~~
+
+This subtraction prevents a generic execution-result grammar from becoming a second place where
+feature State meaning is authored. It does not remove currentness requirements: when a feature
+needs stale-result gating or reconciliation, that meaning remains with the feature/provider boundary
+that knows what "still current" means.
 ## Display interpretation
 
 Family owns the bounded outward interpretation of its own State:
@@ -225,7 +266,8 @@ Family itself remains semantic and does not receive Store/provider mechanics dir
 Family
     Control + CURRENT State
     -> Act
-    -> optional Effect
+    -> optional Begin
+       -> Effect + Approach
 
 realization boundary
     -> realizes Effect through Store under rightful VexExecution custody
@@ -242,7 +284,8 @@ owner rather than supplied as generic construction arguments:
 
 ~~~text
 Control.Select
--> kind/name mechanically derives one Latest RelationshipId
+-> accepted Act carries one Select RelationshipId
+-> beginLatest authors the overlap Approach
 
 Light / Dark
 -> operation payload
@@ -265,7 +308,7 @@ Family does not receive VexLogger.
 Family.activate(Control)
 -> returns accepted semantic Act
 
-realization boundary boundary
+realization boundary
 -> knows which semantic/runtime fact became true
 -> VexLogger.Sink
 -> one chronology
@@ -319,6 +362,37 @@ Debug Menu action
 The already-authored Act relationship flows directly into VexExecution custody; feature meaning
 remains in ThemeModeFamily and its realization functions.
 
+## Same meaning law across different implementations
+
+The repository now shows the same ownership law through several different implementation shapes:
+
+~~~text
+ThemeMode direct Family
+    semantic relationship itself needs maintained overlap
+    -> Act authors Latest
+    -> VexExecution owns Job custody
+
+VexStream Playback / Queue / Repeat
+    semantic Behavior resolves Effect
+    provider operation is immediate
+    -> existing Connection realizes Effect directly
+    -> no async execution machinery is added merely for symmetry
+
+VexMaps Distribution Session
+    existing Session already owns the domain operation and async lifetime
+    -> Session uses VexExecution custody directly
+    -> domain verbs remain on Session
+~~~
+
+The reusable idea is therefore not a Kotlin shape. It is:
+
+~~~text
+meaning stays with the owner that can answer the semantic/domain question
+execution contributes only the lifetime / overlap mechanics actually required by that meaning
+provider observation returns through the owner that can interpret what became true
+~~~
+
+This is the level at which sibling architectures should be compared and abstracted.
 ## Compound / Relay remains separate
 
 Direct Family concrete runtime is not a replacement for Compound Relay.
