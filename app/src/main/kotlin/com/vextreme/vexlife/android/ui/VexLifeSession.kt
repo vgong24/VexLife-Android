@@ -1075,7 +1075,7 @@ internal class VexLifeSessionDependencyModule(
  *
  * WHAT IT RELATES TO / WHY IT EXISTS
  * Activity rotation/recreation receives the same ViewModel instance, so active Screen/presentation,
- * Logger session, feature runtimes, and the session VexExecutionRoot survive UI reconstruction while
+ * Logger session and the session VexExecutionRoot survive UI reconstruction while
  * still ending when the ViewModel lifetime ends.
  *
  * RESPONSIBILITY FENCE
