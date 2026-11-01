@@ -120,8 +120,9 @@ abstract class VexFamily<
     /**
      * Runtime transformation requested by a lawful Act.
      *
-     * Effect is not resulting truth. A concrete feature runtime may attempt the Effect; observed reality
-     * comes back separately as State.
+     * Effect is not resulting truth. [Act.Begin] may author how that Effect overlaps with other
+     * active work; the later realization boundary attempts it and observed reality comes back
+     * separately as State.
      */
     interface Effect<
         Family,
