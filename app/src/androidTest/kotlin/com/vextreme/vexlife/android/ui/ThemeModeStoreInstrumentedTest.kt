@@ -3,6 +3,7 @@ package com.vextreme.vexlife.android.ui
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import com.vextreme.vexlife.android.logging.VexLogger
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -73,10 +74,15 @@ class ThemeModeStoreInstrumentedTest {
                         ThemeMode.Dark,
                 )
 
-            ThemeModeRuntime(
-                family = recreatedFamily,
-                executionRoot = root,
-                store = recreatedStore,
+            observeThemeModeStore(
+                family =
+                    recreatedFamily,
+                store =
+                    recreatedStore,
+                executionRoot =
+                    root,
+                logger =
+                    VexLogger(),
             )
 
             runBlocking {
