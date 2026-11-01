@@ -111,6 +111,16 @@ repository, platform, or a composition of those mechanics. Store is not synonymo
 The dependency system may supply standard runtime architecture dependencies automatically only after
 the typed Family binding establishes the relationship. Feature-specific prerequisites remain explicit.
 
+A Family/Store binding must also declare, rather than inherit, its runtime policy:
+
+~~~text
+execution overlap approach
+typed RelationshipKey
+outside-State admission predicate
+~~~
+
+These are feature meaning/custody decisions, not DI defaults.
+
 A concrete <FeatureName>Connection is not part of the Family pattern. Store may depend directly on
 the actual SDK/service/platform object it needs. If a separate lower-level session/adapter object is
 required for concrete lifecycle/protocol correctness, name it after that real system and inject it as

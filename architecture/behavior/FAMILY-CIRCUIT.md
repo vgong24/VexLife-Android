@@ -226,6 +226,8 @@ be composable merely because its methods happen to have compatible Kotlin signat
 
 ThemeMode now uses the reusable VexFamilyStoreBinding directly. There is no ThemeMode-specific runtime bridge class. The feature declares its exact ThemeModeFamily + ThemeModeStore
 relationship once; standard Execution/Logger/lifetime mechanics are derived by the binding provider.
+The feature must explicitly supply overlap approach, typed execution RelationshipKey, and outside-State
+admission policy; the binding does not guess those decisions.
 
 Do not infer Store by class name, reflection, package scanning, or naming convention. Declare the
 Family/Store relationship once; mechanically derive only what that declaration actually implies.

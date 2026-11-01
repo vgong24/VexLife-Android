@@ -24,9 +24,10 @@ import kotlinx.coroutines.flow.Flow
  * composition root supplies the exact typed Family and Store once; standard Execution/Logger
  * mechanics are then derived mechanically.
  *
- * The current reusable relationship identity is Control kind. Families that require an additional
- * typed resource coordinate for concurrent work must keep that specialized execution boundary until
- * repeated pressure earns a truthful generic extension.
+ * Runtime policy is explicit at construction: overlap approach, typed execution relationship key,
+ * and outside-State admission are all required. ThemeMode uses Control kind as its key; another
+ * Family may supply a typed composite key such as Control kind + ResourceId without changing this
+ * binding or inventing another feature-specific runtime layer.
  */
 internal class VexFamilyStoreBinding<
     Family,
