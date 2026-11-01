@@ -301,8 +301,6 @@ abstract class VexExecution protected constructor(
      *         -> one active observation Job in this owner
      *
      * Source/subscription failure may use the configured bounded recovery mechanic when explicitly
-     *
-     * Source/subscription failure may use the configured bounded recovery mechanic when explicitly
      * enabled. Failure thrown while consuming a valid emitted value is downstream failure and is
      * never auto-restarted.
      */
@@ -1270,6 +1268,231 @@ abstract class VexExecution protected constructor(
         onResult(
             result,
         )
+    }
+
+    /**
+     * Direct reusable foundation entry points.
+     *
+     * These exist specifically so a semantic/runtime owner that already has the rightful
+     * RelationshipId or exact observed source does NOT need to manufacture a matching
+     * <Feature>Execution class merely to reach begin*/observe.
+     *
+     * [owner] is the already-existing live object whose execution custody must stay isolated from
+     * sibling owners sharing the same [VexExecutionRoot]. It is scope, not semantic identity.
+     *
+     * Feature/domain verbs stay with their rightful owner:
+     *
+     *     owner.addStop(...)
+     *         -> VexExecution.begin/...
+     *
+     * not:
+     *
+     *     owner.addStop(...)
+     *         -> AddStopExecution.addStop(...)
+     *         -> launch(...)
+     */
+    companion object {
+        fun <Value, Source : Flow<Value>> observe(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            source:
+                KProperty0<Source>,
+            restartOnSourceFailure:
+                Boolean =
+                true,
+            onEach:
+                suspend (Value) -> Unit,
+        ):
+            Job =
+            executionRoot
+                .directExecution(
+                    owner,
+                )
+                .launchForCollect(
+                    source =
+                        source,
+                    restartOnSourceFailure =
+                        restartOnSourceFailure,
+                    onEach =
+                        onEach,
+                )
+
+        fun <Argument, Result> begin(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            operation:
+                KSuspendFunction1<
+                    Argument,
+                    Result
+                >,
+            argument:
+                Argument,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job =
+            executionRoot
+                .directExecution(
+                    owner,
+                )
+                .begin(
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+
+        @RelationshipFoundationApi
+        fun <Argument, Result> beginEarliest(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            relationshipId:
+                RelationshipId,
+            operation:
+                KSuspendFunction1<
+                    Argument,
+                    Result
+                >,
+            argument:
+                Argument,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job =
+            executionRoot
+                .directExecution(
+                    owner,
+                )
+                .beginEarliest(
+                    relationshipId =
+                        relationshipId,
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+
+        @RelationshipFoundationApi
+        fun <Argument, Result> beginLatest(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            relationshipId:
+                RelationshipId,
+            operation:
+                KSuspendFunction1<
+                    Argument,
+                    Result
+                >,
+            argument:
+                Argument,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job =
+            executionRoot
+                .directExecution(
+                    owner,
+                )
+                .beginLatest(
+                    relationshipId =
+                        relationshipId,
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
+
+        @RelationshipFoundationApi
+        fun <Argument, Result> beginQueued(
+            executionRoot:
+                VexExecutionRoot,
+            owner:
+                Any,
+            relationshipId:
+                RelationshipId,
+            operation:
+                KSuspendFunction1<
+                    Argument,
+                    Result
+                >,
+            argument:
+                Argument,
+            beforeOperation:
+                () -> Unit =
+                {},
+            onResult:
+                (Result) -> Unit =
+                {},
+            onFailure:
+                (Throwable) -> Unit =
+                {},
+        ):
+            Job =
+            executionRoot
+                .directExecution(
+                    owner,
+                )
+                .beginQueued(
+                    relationshipId =
+                        relationshipId,
+                    operation =
+                        operation,
+                    argument =
+                        argument,
+                    beforeOperation =
+                        beforeOperation,
+                    onResult =
+                        onResult,
+                    onFailure =
+                        onFailure,
+                )
     }
 
     private class SourceFailure(
