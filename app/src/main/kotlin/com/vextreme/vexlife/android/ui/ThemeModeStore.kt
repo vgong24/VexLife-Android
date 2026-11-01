@@ -2,46 +2,63 @@ package com.vextreme.vexlife.android.ui
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.vextreme.vexlife.android.behavior.VexStore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 
 /**
- * Android-local durable realization of ThemeMode explicit selection.
+ * Family-facing outside-truth boundary for ThemeMode.
  *
- * Durable selection is runtime/platform truth owned outside [ThemeModeFamily]. The semantic Family
- * never receives this Store and never performs persistence itself.
+ * Store is intentionally broader than persistence. This concrete contract currently supports
+ * durable Android selection plus observation/fetch semantics; tests/previews may use the in-memory
+ * realization below without changing the Family relationship.
  */
-internal interface ThemeModeStore {
-    val observableState: Flow<ThemeMode>
+internal interface ThemeModeStore :
+    VexStore<
+        ThemeModeFamily,
+        ThemeMode,
+        ThemeModeFamily.Control,
+        ThemeModeFamily.Effect
+    > {
+    override val states:
+        Flow<ThemeMode>
 
-    suspend fun get(): ThemeMode
+    suspend fun get():
+        ThemeMode
 
     suspend fun save(
-        state: ThemeMode,
-    ): WriteResult
+        state:
+            ThemeMode,
+    ):
+        VexStore.Result<ThemeMode>
 
-    suspend fun forget(): WriteResult
+    suspend fun forget():
+        VexStore.Result<ThemeMode>
 
-    sealed interface WriteResult {
-        data object Success :
-            WriteResult
-
-        data class Failure(
-            val cause: Throwable? = null,
-        ) :
-            WriteResult
-    }
+    override suspend fun realize(
+        effect:
+            ThemeModeFamily.Effect,
+    ):
+        VexStore.Result<ThemeMode> =
+        when (effect) {
+            is ThemeModeFamily.Effect.Save ->
+                save(
+                    effect.mode,
+                )
+        }
 }
 
 /**
  * Android SharedPreferences realization of [ThemeModeStore].
  *
- * SharedPreferences is platform storage mechanics, not ThemeMode semantic meaning. Listener lifetime
- * is active only while [observableState] is collected by the runtime Connection.
+ * SharedPreferences is implementation mechanics under Store; neither the semantic Family nor the
+ * Family/Store binding needs to know this platform detail exists.
  */
 internal class SharedPreferencesThemeModeStore(
-    context: Context,
+    context:
+        Context,
 ) :
     ThemeModeStore {
     private val preferences:
@@ -53,7 +70,7 @@ internal class SharedPreferencesThemeModeStore(
                 Context.MODE_PRIVATE,
             )
 
-    override val observableState:
+    override val states:
         Flow<ThemeMode> =
         callbackFlow {
             val listener =
@@ -94,10 +111,10 @@ internal class SharedPreferencesThemeModeStore(
         state:
             ThemeMode,
     ):
-        ThemeModeStore.WriteResult =
+        VexStore.Result<ThemeMode> =
         when (state) {
             ThemeMode.NotSet ->
-                ThemeModeStore.WriteResult.Failure(
+                VexStore.Result.Failure(
                     IllegalArgumentException(
                         "ThemeMode.NotSet is absence of an explicit durable selection; use forget()",
                     ),
@@ -106,25 +123,31 @@ internal class SharedPreferencesThemeModeStore(
             ThemeMode.Light,
             ThemeMode.Dark ->
                 write(
-                    preferences
-                        .edit()
-                        .putString(
-                            KEY_THEME_MODE,
-                            storedValueFor(
-                                state,
+                    editor =
+                        preferences
+                            .edit()
+                            .putString(
+                                KEY_THEME_MODE,
+                                storedValueFor(
+                                    state,
+                                ),
                             ),
-                        ),
+                    observedState =
+                        state,
                 )
         }
 
     override suspend fun forget():
-        ThemeModeStore.WriteResult =
+        VexStore.Result<ThemeMode> =
         write(
-            preferences
-                .edit()
-                .remove(
-                    KEY_THEME_MODE,
-                ),
+            editor =
+                preferences
+                    .edit()
+                    .remove(
+                        KEY_THEME_MODE,
+                    ),
+            observedState =
+                ThemeMode.NotSet,
         )
 
     private fun readCurrent():
@@ -166,14 +189,19 @@ internal class SharedPreferencesThemeModeStore(
     private fun write(
         editor:
             SharedPreferences.Editor,
+        observedState:
+            ThemeMode,
     ):
-        ThemeModeStore.WriteResult =
+        VexStore.Result<ThemeMode> =
         if (
             editor.commit()
         ) {
-            ThemeModeStore.WriteResult.Success
+            VexStore.Result.Success(
+                observedState =
+                    observedState,
+            )
         } else {
-            ThemeModeStore.WriteResult.Failure()
+            VexStore.Result.Failure()
         }
 
     private companion object {
@@ -185,6 +213,62 @@ internal class SharedPreferencesThemeModeStore(
             "LIGHT"
         const val STORED_DARK =
             "DARK"
+    }
+}
+
+/**
+ * Temporary Store realization for previews/tests that intentionally have no Android persistence.
+ */
+internal class InMemoryThemeModeStore(
+    initialState:
+        ThemeMode,
+) :
+    ThemeModeStore {
+    private val mutableState =
+        MutableStateFlow(
+            initialState,
+        )
+
+    override val states:
+        Flow<ThemeMode> =
+        mutableState
+
+    override suspend fun get():
+        ThemeMode =
+        mutableState.value
+
+    override suspend fun save(
+        state:
+            ThemeMode,
+    ):
+        VexStore.Result<ThemeMode> {
+        if (
+            state ==
+            ThemeMode.NotSet
+        ) {
+            return VexStore.Result.Failure(
+                IllegalArgumentException(
+                    "ThemeMode.NotSet is absence of an explicit selection; use forget()",
+                ),
+            )
+        }
+
+        mutableState.value =
+            state
+        return VexStore.Result.Success(
+            observedState =
+                state,
+        )
+    }
+
+    override suspend fun forget():
+        VexStore.Result<ThemeMode> {
+        mutableState.value =
+            ThemeMode.NotSet
+        return VexStore.Result.Success(
+            observedState =
+                ThemeMode.NotSet,
+        )
     }
 }
 

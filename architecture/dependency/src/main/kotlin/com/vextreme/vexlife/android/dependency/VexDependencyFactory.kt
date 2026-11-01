@@ -20,16 +20,20 @@ abstract class VexDependencyProvider<
             VexDependencyProvider<*>
         > =
         emptyList(),
+    private val declaredReadableName:
+        String? =
+        null,
 ) {
     val readableName:
         String
         get() =
-            requireNotNull(
-                this::class.qualifiedName
-                    ?: this::class.simpleName,
-            ) {
-                "VexDependencyProvider must have a readable named declaration"
-            }
+            declaredReadableName
+                ?: requireNotNull(
+                    this::class.qualifiedName
+                        ?: this::class.simpleName,
+                ) {
+                    "VexDependencyProvider must have a readable named declaration"
+                }
 
     protected abstract fun create(
         dependencies:
@@ -45,6 +49,50 @@ abstract class VexDependencyProvider<
         create(
             dependencies,
         )
+
+    companion object {
+        /**
+         * Explicit provider declaration without a one-off subclass.
+         *
+         * This removes naming boilerplate while preserving the same source-readable prerequisite
+         * graph, object-identity construction coordinate, and narrow build scope.
+         */
+        fun <Value : Any> named(
+            readableName:
+                String,
+            dependencies:
+                List<
+                    VexDependencyProvider<*>
+                > =
+                emptyList(),
+            build:
+                (VexDependencyBuildScope) -> Value,
+        ):
+            VexDependencyProvider<Value> {
+            require(
+                readableName.isNotBlank(),
+            ) {
+                "Named dependency provider requires a non-blank readable name"
+            }
+
+            return object :
+                VexDependencyProvider<Value>(
+                    dependencies =
+                        dependencies,
+                    declaredReadableName =
+                        readableName,
+                ) {
+                override fun create(
+                    dependencies:
+                        VexDependencyBuildScope,
+                ):
+                    Value =
+                    build(
+                        dependencies,
+                    )
+            }
+        }
+    }
 }
 
 /**

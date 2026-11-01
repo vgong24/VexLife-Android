@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vextreme.vexlife.android.VexApplication
 import com.vextreme.vexlife.android.VexApplicationDependencyModule
+import com.vextreme.vexlife.android.conversation.VexConversationHybridRelay
 import com.vextreme.vexlife.android.data.AppRepositories
 import com.vextreme.vexlife.android.data.loghistory.LogHistoryPersistenceQueue
 import com.vextreme.vexlife.android.data.vexstream.VexStreamHubState
@@ -20,8 +21,10 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
+import com.vextreme.vexlife.android.runtime.vexFamilyStoreBindingProvider
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.ScreenActionContext
+import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRelay
 import com.vextreme.vexlife.android.screens.primary.home.HomeScreen
 import com.vextreme.vexlife.android.widget.vexstream.updateVexStreamPlaybackWidgets
 import kotlinx.coroutines.CoroutineScope
@@ -45,10 +48,10 @@ internal class VexLifeSession internal constructor(
         VexLogger,
     val themeModeFamily:
         ThemeModeFamily,
-    private val themeModeConnection:
-        ThemeModeConnection,
-    val relays:
-        VexLifeRelays,
+    private val themeModeBinding:
+        ThemeModeStoreBinding,
+    val relayGraph:
+        VexLifeRelayGraph,
     val appActions:
         AppActionRegistrations,
     val runtime:
@@ -105,10 +108,10 @@ internal class VexLifeSession internal constructor(
                 components.logger,
             themeModeFamily =
                 components.themeModeFamily,
-            themeModeConnection =
-                components.themeModeConnection,
-            relays =
-                components.relays,
+            themeModeBinding =
+                components.themeModeBinding,
+            relayGraph =
+                components.relayGraph,
             appActions =
                 components.appActions,
             runtime =
@@ -127,10 +130,10 @@ private data class VexLifeSessionComponents(
         VexLogger,
     val themeModeFamily:
         ThemeModeFamily,
-    val themeModeConnection:
-        ThemeModeConnection,
-    val relays:
-        VexLifeRelays,
+    val themeModeBinding:
+        ThemeModeStoreBinding,
+    val relayGraph:
+        VexLifeRelayGraph,
     val appActions:
         AppActionRegistrations,
     val runtime:
@@ -169,19 +172,26 @@ private fun directSessionComponents(
             initialState =
                 initialThemeMode,
         )
-    val themeModeConnection =
-        ThemeModeConnection(
+    val themeModeBinding =
+        ThemeModeStoreBinding(
             family =
                 themeModeFamily,
             executionRoot =
                 executionRoot,
             store =
-                themeModeStore,
+                themeModeStore
+                    ?: InMemoryThemeModeStore(
+                        initialThemeMode,
+                    ),
             logger =
                 logger.sink,
+            admitObservation = { state ->
+                state !=
+                    ThemeMode.NotSet
+            },
         )
-    val relays =
-        VexLifeRelays.create(
+    val relayGraph =
+        directRelayGraph(
             repositories =
                 repositories,
             scope =
@@ -197,10 +207,8 @@ private fun directSessionComponents(
                 logger,
             logPersistence =
                 logPersistence,
-            themeModeFamily =
-                themeModeFamily,
-            themeModeConnection =
-                themeModeConnection,
+            themeModeBinding =
+                themeModeBinding,
         )
     val runtime =
         VexRuntime(
@@ -228,14 +236,59 @@ private fun directSessionComponents(
             logger,
         themeModeFamily =
             themeModeFamily,
-        themeModeConnection =
-            themeModeConnection,
-        relays =
-            relays,
+        themeModeBinding =
+            themeModeBinding,
+        relayGraph =
+            relayGraph,
         appActions =
             appActions,
         runtime =
             runtime,
+    )
+}
+
+private fun directRelayGraph(
+    repositories:
+        AppRepositories,
+    scope:
+        CoroutineScope,
+):
+    VexLifeRelayGraph {
+    val events =
+        EventsConvergenceRelay(
+            eventsRepository =
+                repositories.events,
+            attentionPreferences =
+                repositories.eventsAttention,
+            attentionLab =
+                repositories.eventsAttentionLab,
+            userProfile =
+                repositories.userProfile,
+        )
+            .also { relay ->
+                relay.activate(
+                    scope,
+                )
+            }
+
+    val conversation =
+        VexConversationHybridRelay(
+            conversationRepository =
+                repositories.conversation,
+            conversationLab =
+                null,
+        )
+            .also { relay ->
+                relay.activate(
+                    scope,
+                )
+            }
+
+    return VexLifeRelayGraph(
+        events =
+            events,
+        conversation =
+            conversation,
     )
 }
 
@@ -248,10 +301,8 @@ private fun createAppActions(
         VexLogger,
     logPersistence:
         LogHistoryPersistenceQueue,
-    themeModeFamily:
-        ThemeModeFamily,
-    themeModeConnection:
-        ThemeModeConnection,
+    themeModeBinding:
+        ThemeModeStoreBinding,
 ):
     AppActionRegistrations =
     AppScreens.appActionRegistrations(
@@ -266,21 +317,19 @@ private fun createAppActions(
                 logPersistence,
             toggleDarkMode = {
                 toggleThemeMode(
-                    family =
-                        themeModeFamily,
-                    connection =
-                        themeModeConnection,
+                    binding =
+                        themeModeBinding,
                 )
             },
         ),
     )
 
 private fun toggleThemeMode(
-    family:
-        ThemeModeFamily,
-    connection:
-        ThemeModeConnection,
+    binding:
+        ThemeModeStoreBinding,
 ) {
+    val family =
+        binding.family
     val selectedMode =
         when (
             family.currentState
@@ -294,7 +343,7 @@ private fun toggleThemeMode(
                 ThemeMode.Light
         }
 
-    connection.activate(
+    binding.activate(
         ThemeModeFamily.Control.Select(
             selectedMode,
         ),
@@ -304,8 +353,8 @@ private fun toggleThemeMode(
 /**
  * ViewModel/session-lifetime dependency declarations.
  *
- * This graph exposes the actual production composition rather than hiding Logger/Family/Connection
- * construction inside one session constructor.
+ * This graph exposes the actual production composition rather than hiding Logger/Family/Store binding
+ * and Relay construction inside one session constructor.
  */
 internal class VexLifeSessionDependencyModule(
     applicationDependencies:
@@ -345,24 +394,46 @@ internal class VexLifeSessionDependencyModule(
             initialThemeMode,
         )
 
-    val themeModeConnection =
-        ThemeModeConnectionProvider(
+    val themeModeBinding =
+        vexFamilyStoreBindingProvider(
+            readableName =
+                "ThemeModeFamilyStoreBinding",
             family =
                 themeModeFamily,
-            executionRoot =
-                executionRoot,
             store =
                 applicationDependencies.themeModeStore,
+            executionRoot =
+                executionRoot,
             logger =
                 logger,
+            admitObservation = { state ->
+                state !=
+                    ThemeMode.NotSet
+            },
         )
 
-    val relays =
-        RelaysProvider(
+    val eventsRelay =
+        EventsRelayProvider(
             repositories =
                 applicationDependencies.repositories,
             scope =
                 sessionScope,
+        )
+
+    val conversationRelay =
+        ConversationRelayProvider(
+            repositories =
+                applicationDependencies.repositories,
+            scope =
+                sessionScope,
+        )
+
+    val relayGraph =
+        RelayGraphProvider(
+            events =
+                eventsRelay,
+            conversation =
+                conversationRelay,
         )
 
     val appActions =
@@ -375,10 +446,8 @@ internal class VexLifeSessionDependencyModule(
                 logger,
             logPersistence =
                 logPersistence,
-            themeModeFamily =
-                themeModeFamily,
-            themeModeConnection =
-                themeModeConnection,
+            themeModeBinding =
+                themeModeBinding,
         )
 
     val runtime =
@@ -403,10 +472,10 @@ internal class VexLifeSessionDependencyModule(
                 logger,
             themeModeFamily =
                 themeModeFamily,
-            themeModeConnection =
-                themeModeConnection,
-            relays =
-                relays,
+            themeModeBinding =
+                themeModeBinding,
+            relayGraph =
+                relayGraph,
             appActions =
                 appActions,
             runtime =
@@ -439,8 +508,10 @@ internal class VexLifeSessionDependencyModule(
             logPersistence,
             logger,
             themeModeFamily,
-            themeModeConnection,
-            relays,
+            themeModeBinding,
+            eventsRelay,
+            conversationRelay,
+            relayGraph,
             appActions,
             runtime,
             session,
@@ -551,58 +622,13 @@ internal class VexLifeSessionDependencyModule(
             )
     }
 
-    internal class ThemeModeConnectionProvider(
-        private val family:
-            VexDependencyProvider<ThemeModeFamily>,
-        private val executionRoot:
-            VexDependencyProvider<VexExecutionRoot>,
-        private val store:
-            VexDependencyProvider<ThemeModeStore>,
-        private val logger:
-            VexDependencyProvider<VexLogger>,
-    ) :
-        VexDependencyProvider<ThemeModeConnection>(
-            dependencies =
-                listOf(
-                    family,
-                    executionRoot,
-                    store,
-                    logger,
-                ),
-        ) {
-        override fun create(
-            dependencies:
-                VexDependencyBuildScope,
-        ):
-            ThemeModeConnection =
-            ThemeModeConnection(
-                family =
-                    dependencies.require(
-                        family,
-                    ),
-                executionRoot =
-                    dependencies.require(
-                        executionRoot,
-                    ),
-                store =
-                    dependencies.require(
-                        store,
-                    ),
-                logger =
-                    dependencies.require(
-                        logger,
-                    )
-                        .sink,
-            )
-    }
-
-    internal class RelaysProvider(
+    internal class EventsRelayProvider(
         private val repositories:
             VexDependencyProvider<AppRepositories>,
         private val scope:
             VexDependencyProvider<CoroutineScope>,
     ) :
-        VexDependencyProvider<VexLifeRelays>(
+        VexDependencyProvider<EventsConvergenceRelay>(
             dependencies =
                 listOf(
                     repositories,
@@ -613,15 +639,100 @@ internal class VexLifeSessionDependencyModule(
             dependencies:
                 VexDependencyBuildScope,
         ):
-            VexLifeRelays =
-            VexLifeRelays.create(
-                repositories =
+            EventsConvergenceRelay =
+            EventsConvergenceRelay(
+                eventsRepository =
                     dependencies.require(
                         repositories,
-                    ),
-                scope =
+                    )
+                        .events,
+                attentionPreferences =
                     dependencies.require(
-                        scope,
+                        repositories,
+                    )
+                        .eventsAttention,
+                attentionLab =
+                    dependencies.require(
+                        repositories,
+                    )
+                        .eventsAttentionLab,
+                userProfile =
+                    dependencies.require(
+                        repositories,
+                    )
+                        .userProfile,
+            )
+                .also { relay ->
+                    relay.activate(
+                        dependencies.require(
+                            scope,
+                        ),
+                    )
+                }
+    }
+
+    internal class ConversationRelayProvider(
+        private val repositories:
+            VexDependencyProvider<AppRepositories>,
+        private val scope:
+            VexDependencyProvider<CoroutineScope>,
+    ) :
+        VexDependencyProvider<VexConversationHybridRelay>(
+            dependencies =
+                listOf(
+                    repositories,
+                    scope,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexConversationHybridRelay =
+            VexConversationHybridRelay(
+                conversationRepository =
+                    dependencies.require(
+                        repositories,
+                    )
+                        .conversation,
+                conversationLab =
+                    null,
+            )
+                .also { relay ->
+                    relay.activate(
+                        dependencies.require(
+                            scope,
+                        ),
+                    )
+                }
+    }
+
+    internal class RelayGraphProvider(
+        private val events:
+            VexDependencyProvider<EventsConvergenceRelay>,
+        private val conversation:
+            VexDependencyProvider<VexConversationHybridRelay>,
+    ) :
+        VexDependencyProvider<VexLifeRelayGraph>(
+            dependencies =
+                listOf(
+                    events,
+                    conversation,
+                ),
+        ) {
+        override fun create(
+            dependencies:
+                VexDependencyBuildScope,
+        ):
+            VexLifeRelayGraph =
+            VexLifeRelayGraph(
+                events =
+                    dependencies.require(
+                        events,
+                    ),
+                conversation =
+                    dependencies.require(
+                        conversation,
                     ),
             )
     }
@@ -635,10 +746,8 @@ internal class VexLifeSessionDependencyModule(
             VexDependencyProvider<VexLogger>,
         private val logPersistence:
             VexDependencyProvider<LogHistoryPersistenceQueue>,
-        private val themeModeFamily:
-            VexDependencyProvider<ThemeModeFamily>,
-        private val themeModeConnection:
-            VexDependencyProvider<ThemeModeConnection>,
+        private val themeModeBinding:
+            VexDependencyProvider<ThemeModeStoreBinding>,
     ) :
         VexDependencyProvider<AppActionRegistrations>(
             dependencies =
@@ -647,8 +756,7 @@ internal class VexLifeSessionDependencyModule(
                     scope,
                     logger,
                     logPersistence,
-                    themeModeFamily,
-                    themeModeConnection,
+                    themeModeBinding,
                 ),
         ) {
         override fun create(
@@ -673,13 +781,9 @@ internal class VexLifeSessionDependencyModule(
                     dependencies.require(
                         logPersistence,
                     ),
-                themeModeFamily =
+                themeModeBinding =
                     dependencies.require(
-                        themeModeFamily,
-                    ),
-                themeModeConnection =
-                    dependencies.require(
-                        themeModeConnection,
+                        themeModeBinding,
                     ),
             )
     }
@@ -741,10 +845,10 @@ internal class VexLifeSessionDependencyModule(
             VexDependencyProvider<VexLogger>,
         private val themeModeFamily:
             VexDependencyProvider<ThemeModeFamily>,
-        private val themeModeConnection:
-            VexDependencyProvider<ThemeModeConnection>,
-        private val relays:
-            VexDependencyProvider<VexLifeRelays>,
+        private val themeModeBinding:
+            VexDependencyProvider<ThemeModeStoreBinding>,
+        private val relayGraph:
+            VexDependencyProvider<VexLifeRelayGraph>,
         private val appActions:
             VexDependencyProvider<AppActionRegistrations>,
         private val runtime:
@@ -758,8 +862,8 @@ internal class VexLifeSessionDependencyModule(
                     logPersistence,
                     logger,
                     themeModeFamily,
-                    themeModeConnection,
-                    relays,
+                    themeModeBinding,
+                    relayGraph,
                     appActions,
                     runtime,
                 ),
@@ -790,13 +894,13 @@ internal class VexLifeSessionDependencyModule(
                     dependencies.require(
                         themeModeFamily,
                     ),
-                themeModeConnection =
+                themeModeBinding =
                     dependencies.require(
-                        themeModeConnection,
+                        themeModeBinding,
                     ),
-                relays =
+                relayGraph =
                     dependencies.require(
-                        relays,
+                        relayGraph,
                     ),
                 appActions =
                     dependencies.require(

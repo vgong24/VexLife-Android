@@ -2,6 +2,7 @@ package com.vextreme.vexlife.android.ui
 
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
+import com.vextreme.vexlife.android.behavior.VexStore
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -28,7 +29,7 @@ class ThemeModeStoreInstrumentedTest {
         clearStore()
 
     @Test
-    fun sharedPreferencesSelectionSurvivesFreshStoreFamilyAndConnectionConstruction() {
+    fun sharedPreferencesSelectionSurvivesFreshStoreFamilyAndBindingConstruction() {
         val firstStore =
             SharedPreferencesThemeModeStore(
                 context,
@@ -36,7 +37,7 @@ class ThemeModeStoreInstrumentedTest {
 
         runBlocking {
             assertEquals(
-                ThemeModeStore.WriteResult.Success,
+                VexStore.Result.Success(observedState = ThemeMode.Light),
                 firstStore.save(
                     ThemeMode.Light,
                 ),
@@ -73,10 +74,13 @@ class ThemeModeStoreInstrumentedTest {
                         ThemeMode.Dark,
                 )
 
-            ThemeModeConnection(
+            ThemeModeStoreBinding(
                 family = recreatedFamily,
                 executionRoot = root,
                 store = recreatedStore,
+                admitObservation = { state ->
+                    state != ThemeMode.NotSet
+                },
             )
 
             runBlocking {
@@ -118,11 +122,11 @@ class ThemeModeStoreInstrumentedTest {
 
             assertTrue(
                 invalidSave is
-                    ThemeModeStore.WriteResult.Failure,
+                    VexStore.Result.Failure,
             )
 
             assertEquals(
-                ThemeModeStore.WriteResult.Success,
+                VexStore.Result.Success(observedState = ThemeMode.Dark),
                 store.save(
                     ThemeMode.Dark,
                 ),
@@ -133,7 +137,7 @@ class ThemeModeStoreInstrumentedTest {
             )
 
             assertEquals(
-                ThemeModeStore.WriteResult.Success,
+                VexStore.Result.Success(observedState = ThemeMode.NotSet),
                 store.forget(),
             )
             assertEquals(

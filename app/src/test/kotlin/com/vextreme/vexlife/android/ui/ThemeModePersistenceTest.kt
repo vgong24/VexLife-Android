@@ -1,5 +1,6 @@
 package com.vextreme.vexlife.android.ui
 
+import com.vextreme.vexlife.android.behavior.VexStore
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,16 +25,19 @@ class ThemeModePersistenceTest {
                 initialState =
                     ThemeMode.Dark,
             )
-        val connection =
-            ThemeModeConnection(
+        val binding =
+            ThemeModeStoreBinding(
                 family = family,
                 executionRoot = root,
                 store = store,
+                admitObservation = { state ->
+                    state != ThemeMode.NotSet
+                },
             )
 
         try {
             assertTrue(
-                connection.activate(
+                binding.activate(
                     ThemeModeFamily.Control.Select(
                         ThemeMode.Dark,
                     ),
@@ -44,7 +48,7 @@ class ThemeModePersistenceTest {
                 withTimeout(
                     5_000,
                 ) {
-                    store.observableState.first { state ->
+                    store.states.first { state ->
                         state ==
                             ThemeMode.Dark
                     }
@@ -67,7 +71,7 @@ class ThemeModePersistenceTest {
     }
 
     @Test
-    fun durableSelectionObservationRestoresCurrentThroughTheConnection() {
+    fun durableSelectionObservationRestoresCurrentThroughTheBinding() {
         val root =
             VexExecutionRoot()
         val store =
@@ -81,10 +85,13 @@ class ThemeModePersistenceTest {
             )
 
         try {
-            ThemeModeConnection(
+            ThemeModeStoreBinding(
                 family = family,
                 executionRoot = root,
                 store = store,
+                admitObservation = { state ->
+                    state != ThemeMode.NotSet
+                },
             )
 
             runBlocking {
@@ -125,10 +132,13 @@ class ThemeModePersistenceTest {
             )
 
         try {
-            ThemeModeConnection(
+            ThemeModeStoreBinding(
                 family = family,
                 executionRoot = root,
                 store = store,
+                admitObservation = { state ->
+                    state != ThemeMode.NotSet
+                },
             )
 
             store.emit(
@@ -171,7 +181,7 @@ class ThemeModePersistenceTest {
         val savedStates =
             mutableListOf<ThemeMode>()
 
-        override val observableState:
+        override val states:
             Flow<ThemeMode> =
             mutableState
 
@@ -183,19 +193,25 @@ class ThemeModePersistenceTest {
             state:
                 ThemeMode,
         ):
-            ThemeModeStore.WriteResult {
+            VexStore.Result<ThemeMode> {
             savedStates +=
                 state
             mutableState.value =
                 state
-            return ThemeModeStore.WriteResult.Success
+            return VexStore.Result.Success(
+                observedState =
+                    state,
+            )
         }
 
         override suspend fun forget():
-            ThemeModeStore.WriteResult {
+            VexStore.Result<ThemeMode> {
             mutableState.value =
                 ThemeMode.NotSet
-            return ThemeModeStore.WriteResult.Success
+            return VexStore.Result.Success(
+                observedState =
+                    ThemeMode.NotSet,
+            )
         }
 
         fun emit(
