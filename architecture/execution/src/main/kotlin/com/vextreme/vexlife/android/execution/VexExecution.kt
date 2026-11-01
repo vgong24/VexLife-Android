@@ -465,9 +465,9 @@ abstract class VexExecution protected constructor(
                 ),
             )
         }
-        jobs.forEach(
-            Job::join,
-        )
+        jobs.forEach { job ->
+            job.join()
+        }
         return true
     }
 
@@ -718,9 +718,9 @@ abstract class VexExecution protected constructor(
                     action,
             )
         }
-            .also(
-                Job::start,
-            )
+            .also { job ->
+                job.start()
+            }
 
     private fun <Value> launchObservation(
         sourceKey:
@@ -769,9 +769,9 @@ abstract class VexExecution protected constructor(
                     job
             }
         }
-            .also(
-                Job::start,
-            )
+            .also { job ->
+                job.start()
+            }
 
     private fun admitSourceJobLocked(
         source:
