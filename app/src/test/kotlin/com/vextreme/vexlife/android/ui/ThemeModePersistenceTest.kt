@@ -15,6 +15,42 @@ import org.junit.Test
 
 class ThemeModePersistenceTest {
     @Test
+    fun saveMethodConsumesModeParameterAndOwnsTheConcreteStoreCall() {
+        val store =
+            RecordingThemeModeStore(
+                ThemeMode.NotSet,
+            )
+        val method =
+            ThemeModeFamily.Act.Method.Save(
+                store,
+            )
+
+        val result =
+            runBlocking {
+                method(
+                    ThemeModeFamily.Act.Parameter.Mode(
+                        mode =
+                            ThemeMode.Dark,
+                    ),
+                )
+            }
+
+        assertEquals(
+            ThemeModeStore.Result.Success(
+                observedState =
+                    ThemeMode.Dark,
+            ),
+            result,
+        )
+        assertEquals(
+            listOf(
+                ThemeMode.Dark,
+            ),
+            store.savedStates,
+        )
+    }
+
+    @Test
     fun explicitSelectionPersistsEvenWhenTheSelectedModeIsAlreadyCurrent() {
         val root =
             VexExecutionRoot()

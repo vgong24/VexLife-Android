@@ -234,6 +234,48 @@ abstract class VexFamily<
             VexExecution.RelationshipId? =
             null,
     ) {
+        /**
+         * Family-bound semantic input accepted by an executable [Method].
+         *
+         * Parameter names what the input IS inside one Family's Act vocabulary; it does not mirror
+         * the Method name or erase the value into an untyped argument bag.
+         */
+        interface Parameter<
+            Family,
+        > where
+            Family : VexFamily<
+                Family,
+                *,
+                *,
+                *
+            >
+
+        /**
+         * Semantically-addressed executable function for one Act vocabulary.
+         *
+         * A Method owns the concrete call it performs. [Input] preserves the Family-bound semantic
+         * input type and [Output] is the truthful return type of that call. VexExecution remains the
+         * owner of Job custody / overlap / cancellation; Method is not another runtime/executor.
+         */
+        interface Method<
+            Family,
+            in Input,
+            out Output,
+        > where
+            Family : VexFamily<
+                Family,
+                *,
+                *,
+                *
+            >,
+            Input : Parameter<Family> {
+            suspend operator fun invoke(
+                parameter:
+                    Input,
+            ):
+                Output
+        }
+
         val effect:
             Effect?
             get() =

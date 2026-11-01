@@ -79,6 +79,56 @@ internal class ThemeModeFamily(
             Effect
     }
 
+    /**
+     * Executable continuation vocabulary belonging to ThemeMode Acts.
+     *
+     * Parameter names semantic input independently from the Method that consumes it: Mode is the
+     * input meaning; Save is the operation. Method.Save contains the concrete Store call instead of
+     * making realization reconstruct `store::save + mode` as loose execution arguments.
+     *
+     * This patient zero deliberately does not yet decide whether Parameter ultimately remains
+     * Act-scoped or earns promotion to Family-scoped vocabulary through State/Control/Convergence
+     * pressure. Keep that question open until another real relationship requires it.
+     */
+    object Act {
+        sealed interface Parameter :
+            VexFamily.Act.Parameter<ThemeModeFamily> {
+            data class Mode(
+                val mode:
+                    ThemeMode,
+            ) :
+                Parameter
+        }
+
+        sealed class Method<
+            in Input : Parameter,
+            out Output,
+        > :
+            VexFamily.Act.Method<
+                ThemeModeFamily,
+                Input,
+                Output
+            > {
+            class Save(
+                private val store:
+                    ThemeModeStore,
+            ) :
+                Method<
+                    Parameter.Mode,
+                    ThemeModeStore.Result
+                >() {
+                override suspend operator fun invoke(
+                    parameter:
+                        Parameter.Mode,
+                ):
+                    ThemeModeStore.Result =
+                    store.save(
+                        parameter.mode,
+                    )
+            }
+        }
+    }
+
     sealed interface DisplayState :
         VexFamily.DisplayState<
             ThemeModeFamily,
@@ -311,6 +361,16 @@ internal fun activateThemeMode(
             begin.effect
     ) {
         is ThemeModeFamily.Effect.Save -> {
+            val parameter =
+                ThemeModeFamily.Act.Parameter.Mode(
+                    mode =
+                        effect.mode,
+                )
+            val method =
+                ThemeModeFamily.Act.Method.Save(
+                    store,
+                )
+
             VexExecution.begin(
                 executionRoot =
                     executionRoot,
@@ -321,9 +381,9 @@ internal fun activateThemeMode(
                 relationshipId =
                     act.relationshipId,
                 operation =
-                    store::save,
+                    method::invoke,
                 argument =
-                    effect.mode,
+                    parameter,
                 beforeOperation = {
                     recordThemeModeFact(
                         logger =
