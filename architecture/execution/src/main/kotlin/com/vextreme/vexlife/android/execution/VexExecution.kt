@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 
 /**
- * Owner of managed coroutine work for one runtime/Connection/session responsibility.
+ * Owner of managed coroutine work for one runtime/store/session responsibility.
  *
  * Permanent active-work law:
  *

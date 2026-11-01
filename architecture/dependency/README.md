@@ -111,9 +111,11 @@ repository, platform, or a composition of those mechanics. Store is not synonymo
 The dependency system may supply standard runtime architecture dependencies automatically only after
 the typed Family binding establishes the relationship. Feature-specific prerequisites remain explicit.
 
-A concrete <FeatureName>Connection is not required merely because a Family has outside truth. Reserve
-Connection for a genuinely distinct live protocol/session/provider boundary. Cross-Family composition
-belongs to Relay/convergence, not dependency construction.
+A concrete <FeatureName>Connection is not part of the Family pattern. Store may depend directly on
+the actual SDK/service/platform object it needs. If a separate lower-level session/adapter object is
+required for concrete lifecycle/protocol correctness, name it after that real system and inject it as
+an ordinary Store dependency. Cross-Family composition belongs to Relay/convergence, not dependency
+construction.
 
 ## Provider declaration boilerplate
 

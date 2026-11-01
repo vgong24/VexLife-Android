@@ -20,38 +20,32 @@ normalized external feed, stable dynamic list identity, acknowledgement/defer/su
 attention availability, anchored overlay rendering, deterministic Journey signals, and ScreenCrawler
 selection. Those feature concerns remain outside this module rather than accreting into Relay itself.
 
-## Connection is not cross-Family communication
+## Cross-Family communication is convergence, not adapter wiring
 
-"Connection" names a concrete reality/protocol boundary when one is genuinely present; it is not a
-paired link between two Families.
+Store-facing SDK/service/session mechanics are implementation topology beneath Store; they are not a
+Family-to-Family link and they do not require a paired/counter object.
 
 ~~~text
 Family
     semantic meaning
 
-Store / concrete Connection when earned
-    outside-truth or live provider/session mechanics
+Store
+    outside-truth boundary
+    -> may directly consume SDK/service/platform/session dependencies
 
 Relay / convergence
     independently owned truths
     -> one coherent relationship truth
 ~~~
 
-Therefore:
+Therefore a Family never needs an A<->B "Connection" merely because another Family participates in
+its product context. When independently-owned Families/current truths must influence one another,
+convergence is the rightful composition context. A convergence owner may request another Family
+through that Family's public Control/Port, but it must not bypass the target semantic owner and invoke
+a foreign Effect directly.
 
-~~~text
-Family A does NOT need Connection A<->B
-Family B does NOT need a counter Connection B<->A
-~~~
-
-When independently-owned Families/current truths must influence one another, convergence is the
-rightful composition context. A convergence owner may request another Family through that Family's
-public Control/Port, but it must not bypass the target semantic owner and invoke a foreign Effect
-directly.
-
-A session-level VexLifeRelayGraph may project which independently-owned Relay nodes are active in the
-VexLife lifetime. That graph is composition/discoverability, not a mega-Relay and not the constructor
-that hides each Relay's own prerequisites.
+VexLifeRelayGraph is the session-level projection of which independently-owned Relay nodes are alive.
+The graph does not construct, activate, or semantically own those Relays.
 
 ## Developer shape
 

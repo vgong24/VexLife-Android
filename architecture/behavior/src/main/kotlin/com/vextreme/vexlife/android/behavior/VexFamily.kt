@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *     -> Act?
  *     -> admitted State? + Effect?
  *
- * The admitted State is applied synchronously by [activate]. A concrete Connection/runtime may then
+ * The admitted State is applied synchronously by [activate]. The typed Family/Store runtime binding may then
  * realize the returned Effect. Runtime/provider truth may later return as an already-semantic State
  * through [observe].
  */
@@ -66,7 +66,7 @@ abstract class VexFamily<
     /**
      * Runtime transformation requested by a lawful Act.
      *
-     * Effect is not resulting truth. A Connection/runtime may attempt the Effect; observed reality
+     * Effect is not resulting truth. The Family/Store runtime binding may attempt the Effect; observed reality
      * comes back separately as State.
      */
     interface Effect<
@@ -334,7 +334,7 @@ abstract class VexFamily<
      *     -> admit immediate State when present
      *     -> return Act
      *
-     * Family never realizes [Act.effect]. The concrete Connection/runtime owns that work.
+     * Family never realizes [Act.effect]. The Family/Store runtime binding owns that work.
      */
     fun activate(
         control:

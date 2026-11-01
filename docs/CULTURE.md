@@ -186,7 +186,7 @@ merely because a runtime composes them:
 VexFamily
 -> State / Control / Act / Effect semantics only
 
-Concrete Connection/runtime
+Typed Family/Store binding or concrete runtime owner
 -> explicit Family
 -> explicit VexExecution
 -> explicit VexLogger.Sink

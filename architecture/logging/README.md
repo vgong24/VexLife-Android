@@ -87,7 +87,7 @@ VexLogger
       -> OperationFailure
 ~~~
 
-A consuming runtime/Connection keeps the Sink private. Pure semantic decision code such as
+A consuming Family/Store binding or other runtime owner keeps the Sink private. Pure semantic decision code such as
 VexFamily.act(...) does not receive Logger.
 
 ## Stable coordinate -> readable fields

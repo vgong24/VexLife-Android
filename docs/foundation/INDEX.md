@@ -39,7 +39,7 @@ Family.activate(Control)
 -> immediate semantic State admission
 -> Act returned
 
-Connection/runtime
+Family/Store binding
 -> realizes Effect
 -> reports accepted/observed facts
 -> Family.observe(already-semantic outside truth)
@@ -65,14 +65,14 @@ ThemeMode is the PR #209 patient zero:
 Control.Select(mode)
 -> Effect.Save(mode)
 
-ThemeModeConnection
+VexFamilyStoreBinding
 -> VexExecution RelationshipId -> actual Job(s)
 -> ThemeModeStore
 -> VexLogger chronology
 ~~~
 
 Execution identity is therefore no longer authored inside pure Family merely because a Control caused
-runtime work. The concrete Connection/runtime owns the smallest active-work relationship it actually
+runtime work. The concrete Family/Store binding owns the smallest active-work relationship it actually
 needs while Family remains semantic-only.
 
 Exact repository-owned Gradle/JVM proof is pending on the current #209 candidate. The prior #193 proof
@@ -394,12 +394,12 @@ route.
 Current refinement direction is to reduce provider/feature-name duplication rather than normalize it:
 Store means the Family-facing outside-truth boundary (temporary/local/remote/service/platform as
 needed); one typed Family/Store binding should declare the feature relationship once while dependency
-construction derives standard Execution/Logger/lifetime mechanics. A feature-specific Connection is
-not mandatory and survives only for a genuinely distinct live provider/protocol/session boundary.
+construction derives standard Execution/Logger/lifetime mechanics. Store may depend directly on the
+actual SDK/service/platform object it needs; there is no generic feature Connection layer.
 
-VexLifeRelays is likewise an interim eager composition holder. The accepted direction is
-VexLifeRelayGraph: independently provided Relay owners remain individually readable/lazy while the
-session graph projects which Relay nodes participate in the VexLife lifetime.
+VexLifeRelayGraph is now a projection-only session graph. Events and Conversation Relays are
+independently provided/activated nodes with their own readable prerequisite closures; the graph only
+projects which Relay owners participate in the VexLife lifetime.
 
 ## Logger traceability refinement
 

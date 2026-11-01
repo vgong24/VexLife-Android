@@ -11,7 +11,7 @@
 The current direct Family is deliberately semantic-only.
 
 ~~~text
-caller / Connection
+caller / Family-Store binding
 -> Family.activate(Control)
 -> concrete Family.act(CURRENT State, Control)
 -> Act?
@@ -20,7 +20,7 @@ caller / Connection
 -> immediate State admission
 -> Act returned to caller
 
-Connection/runtime
+Family/Store binding
 -> realizes Effect
 -> reconciles provider/runtime truth
 -> Family.observe(already-semantic State)
@@ -114,7 +114,7 @@ Control.Select(Dark)
 -> immediate ThemeMode.Dark semantic admission
 -> Effect.Save(Dark)
 
-ThemeModeConnection
+VexFamilyStoreBinding<ThemeModeFamily,...>
 -> realizes Save
 -> Store/runtime result
 -> VexLogger accepted/observed facts
@@ -156,15 +156,16 @@ Family/Store runtime binding
     asks VexExecution to own Job custody
 ~~~
 
-"Connection" is not a mandatory Family layer. Use that name only when a concrete live protocol,
-provider session, bound service, socket/controller relationship, or similarly distinct reality
-boundary is itself worth naming. It does not mean Family-to-Family communication and does not imply a
-matching "counter connection".
+Connection is not a Vex core Family layer. Store may depend directly on third-party SDK/service
+objects. When a lower-level session/adapter object is genuinely required for protocol lifecycle,
+threading, authentication, reconnect, callback registration, or shared teardown correctness, name
+that object after the concrete system it owns (for example Media3Session) rather than introducing a
+generic <Feature>Connection abstraction.
 
 For ThemeMode the current runtime law is:
 
 ~~~text
-one live ThemeModeConnection / ThemeModeExecution owner
+one live typed ThemeMode Family/Store binding owner
 + Control.Select kind
 -> RelationshipId
 
@@ -223,9 +224,8 @@ typed Family/Store runtime binding
 The binding must preserve exact Family kinship. A Store/runtime belonging to another Family must not
 be composable merely because its methods happen to have compatible Kotlin signatures.
 
-ThemeMode currently carries a feature-specific ThemeModeConnection while this binding law is being
-proved. That class is an interim realization, not evidence that every Family requires a
-<FeatureName>Connection layer.
+ThemeMode now uses the reusable VexFamilyStoreBinding directly. There is no ThemeMode-specific runtime bridge class. The feature declares its exact ThemeModeFamily + ThemeModeStore
+relationship once; standard Execution/Logger/lifetime mechanics are derived by the binding provider.
 
 Do not infer Store by class name, reflection, package scanning, or naming convention. Declare the
 Family/Store relationship once; mechanically derive only what that declaration actually implies.
@@ -238,7 +238,7 @@ Family does not receive VexLogger.
 Family.activate(Control)
 -> returns accepted semantic Act
 
-Connection/runtime boundary
+Family/Store binding boundary
 -> knows which semantic/runtime fact became true
 -> VexLogger.Sink
 -> one chronology
@@ -254,8 +254,8 @@ Family does not implement Injectable/build/container mechanics.
 ~~~text
 provider declaration
 -> constructs Family
--> constructs Connection with Family + runtime dependencies
--> explicit consumer receives Family / Connection as appropriate
+-> constructs typed Family/Store binding from Family + Store + standard runtime dependencies
+-> consumer receives Family or the typed binding only when activation is required
 ~~~
 
 The dependency system can construct a Family without the Family knowing a dependency system exists.
@@ -274,7 +274,7 @@ VexLifeViewModel/session lifetime
     VexLogger
         |
         v
-    ThemeModeConnection
+    VexFamilyStoreBinding<ThemeModeFamily,...>
         |
         +-> Family
         +-> Store
@@ -282,7 +282,7 @@ VexLifeViewModel/session lifetime
         +-> Logger Sink
 
 Debug Menu action
--> Connection.activate(Control.Select)
+-> Family/Store binding.activate(Control.Select)
 -> Family semantic Act
 -> Save runtime Job
 -> accepted/observed Logger chronology

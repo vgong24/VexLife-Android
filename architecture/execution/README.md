@@ -243,7 +243,7 @@ meaningful accepted/observed failure facts to VexLogger when that history is req
 
 PR #209 exercises the refined execution law through:
 
-- ThemeMode Save: Control.Select kind -> Connection-owned RelationshipId -> Latest Job;
+- ThemeMode Save: Control.Select kind -> Family/Store binding-owned RelationshipId -> Latest Job;
 - VexMaps Distribution maintained observations + finite operations;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;
