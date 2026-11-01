@@ -1,8 +1,6 @@
 package com.vextreme.vexlife.android.ui
 
 import com.vextreme.vexlife.android.behavior.VexFamily
-import com.vextreme.vexlife.android.runtime.VexFamilyStoreBinding
-import kotlin.reflect.KClass
 
 /**
  * Android realization of the ThemeMode semantic State domain.
@@ -13,17 +11,6 @@ import kotlin.reflect.KClass
  * [NotSet] preserves the explicit distinction that no effective ThemeMode has yet been resolved.
  * It is not null, not persistence failure, and not silently equivalent to [Light] or [Dark].
  */
-internal typealias ThemeModeStoreBinding =
-    VexFamilyStoreBinding<
-        ThemeModeFamily,
-        ThemeMode,
-        ThemeModeFamily.Control,
-        ThemeModeFamily.Effect,
-        KClass<
-            out ThemeModeFamily.Control
-        >
-    >
-
 internal enum class ThemeMode :
     VexFamily.State<ThemeModeFamily> {
     NotSet,

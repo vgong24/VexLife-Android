@@ -21,7 +21,6 @@ import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import com.vextreme.vexlife.android.logging.VexLogger
 import com.vextreme.vexlife.android.runtime.AppActionRegistrations
 import com.vextreme.vexlife.android.runtime.VexRuntime
-import com.vextreme.vexlife.android.runtime.vexFamilyStoreBindingProvider
 import com.vextreme.vexlife.android.screens.AppScreens
 import com.vextreme.vexlife.android.screens.ScreenActionContext
 import com.vextreme.vexlife.android.screens.primary.events.EventsConvergenceRelay
@@ -48,8 +47,8 @@ internal class VexLifeSession internal constructor(
         VexLogger,
     val themeModeFamily:
         ThemeModeFamily,
-    private val themeModeBinding:
-        ThemeModeStoreBinding,
+    private val themeModeRuntime:
+        ThemeModeRuntime,
     val relayGraph:
         VexLifeRelayGraph,
     val appActions:
@@ -108,8 +107,8 @@ internal class VexLifeSession internal constructor(
                 components.logger,
             themeModeFamily =
                 components.themeModeFamily,
-            themeModeBinding =
-                components.themeModeBinding,
+            themeModeRuntime =
+                components.themeModeRuntime,
             relayGraph =
                 components.relayGraph,
             appActions =
@@ -130,8 +129,8 @@ private data class VexLifeSessionComponents(
         VexLogger,
     val themeModeFamily:
         ThemeModeFamily,
-    val themeModeBinding:
-        ThemeModeStoreBinding,
+    val themeModeRuntime:
+        ThemeModeRuntime,
     val relayGraph:
         VexLifeRelayGraph,
     val appActions:
@@ -172,8 +171,8 @@ private fun directSessionComponents(
             initialState =
                 initialThemeMode,
         )
-    val themeModeBinding =
-        ThemeModeStoreBinding(
+    val themeModeRuntime =
+        ThemeModeRuntime(
             family =
                 themeModeFamily,
             executionRoot =
@@ -185,15 +184,6 @@ private fun directSessionComponents(
                     ),
             logger =
                 logger.sink,
-            approach =
-                VexExecution.Approach.Latest,
-            relationshipCoordinate = { control ->
-                control::class
-            },
-            admitObservation = { state ->
-                state !=
-                    ThemeMode.NotSet
-            },
         )
     val relayGraph =
         directRelayGraph(
@@ -212,8 +202,8 @@ private fun directSessionComponents(
                 logger,
             logPersistence =
                 logPersistence,
-            themeModeBinding =
-                themeModeBinding,
+            themeModeRuntime =
+                themeModeRuntime,
         )
     val runtime =
         VexRuntime(
@@ -241,8 +231,8 @@ private fun directSessionComponents(
             logger,
         themeModeFamily =
             themeModeFamily,
-        themeModeBinding =
-            themeModeBinding,
+        themeModeRuntime =
+            themeModeRuntime,
         relayGraph =
             relayGraph,
         appActions =
@@ -306,8 +296,8 @@ private fun createAppActions(
         VexLogger,
     logPersistence:
         LogHistoryPersistenceQueue,
-    themeModeBinding:
-        ThemeModeStoreBinding,
+    themeModeRuntime:
+        ThemeModeRuntime,
 ):
     AppActionRegistrations =
     AppScreens.appActionRegistrations(
@@ -323,7 +313,7 @@ private fun createAppActions(
             toggleDarkMode = {
                 toggleThemeMode(
                     binding =
-                        themeModeBinding,
+                        themeModeRuntime,
                 )
             },
         ),
@@ -331,7 +321,7 @@ private fun createAppActions(
 
 private fun toggleThemeMode(
     binding:
-        ThemeModeStoreBinding,
+        ThemeModeRuntime,
 ) {
     val family =
         binding.family
@@ -358,7 +348,7 @@ private fun toggleThemeMode(
 /**
  * ViewModel/session-lifetime dependency declarations.
  *
- * This graph exposes the actual production composition rather than hiding Logger/Family/Store binding
+ * This graph exposes the actual production composition rather than hiding Logger/ThemeMode runtime
  * and Relay construction inside one session constructor.
  */
 internal class VexLifeSessionDependencyModule(
@@ -399,28 +389,38 @@ internal class VexLifeSessionDependencyModule(
             initialThemeMode,
         )
 
-    val themeModeBinding =
-        vexFamilyStoreBindingProvider(
+    val themeModeRuntime =
+        VexDependencyProvider.named(
             readableName =
-                "ThemeModeFamilyStoreBinding",
-            family =
-                themeModeFamily,
-            store =
-                applicationDependencies.themeModeStore,
-            executionRoot =
-                executionRoot,
-            logger =
-                logger,
-            approach =
-                VexExecution.Approach.Latest,
-            relationshipCoordinate = { control ->
-                control::class
-            },
-            admitObservation = { state ->
-                state !=
-                    ThemeMode.NotSet
-            },
-        )
+                "ThemeModeRuntime",
+            dependencies =
+                listOf(
+                    themeModeFamily,
+                    applicationDependencies.themeModeStore,
+                    executionRoot,
+                    logger,
+                ),
+        ) { dependencies: VexDependencyBuildScope ->
+            ThemeModeRuntime(
+                family =
+                    dependencies.require(
+                        themeModeFamily,
+                    ),
+                store =
+                    dependencies.require(
+                        applicationDependencies.themeModeStore,
+                    ),
+                executionRoot =
+                    dependencies.require(
+                        executionRoot,
+                    ),
+                logger =
+                    dependencies.require(
+                        logger,
+                    )
+                        .sink,
+            )
+        }
 
     val eventsRelay =
         EventsRelayProvider(
@@ -456,8 +456,8 @@ internal class VexLifeSessionDependencyModule(
                 logger,
             logPersistence =
                 logPersistence,
-            themeModeBinding =
-                themeModeBinding,
+            themeModeRuntime =
+                themeModeRuntime,
         )
 
     val runtime =
@@ -482,8 +482,8 @@ internal class VexLifeSessionDependencyModule(
                 logger,
             themeModeFamily =
                 themeModeFamily,
-            themeModeBinding =
-                themeModeBinding,
+            themeModeRuntime =
+                themeModeRuntime,
             relayGraph =
                 relayGraph,
             appActions =
@@ -518,7 +518,7 @@ internal class VexLifeSessionDependencyModule(
             logPersistence,
             logger,
             themeModeFamily,
-            themeModeBinding,
+            themeModeRuntime,
             eventsRelay,
             conversationRelay,
             relayGraph,
@@ -756,8 +756,8 @@ internal class VexLifeSessionDependencyModule(
             VexDependencyProvider<VexLogger>,
         private val logPersistence:
             VexDependencyProvider<LogHistoryPersistenceQueue>,
-        private val themeModeBinding:
-            VexDependencyProvider<ThemeModeStoreBinding>,
+        private val themeModeRuntime:
+            VexDependencyProvider<ThemeModeRuntime>,
     ) :
         VexDependencyProvider<AppActionRegistrations>(
             dependencies =
@@ -766,7 +766,7 @@ internal class VexLifeSessionDependencyModule(
                     scope,
                     logger,
                     logPersistence,
-                    themeModeBinding,
+                    themeModeRuntime,
                 ),
         ) {
         override fun create(
@@ -791,9 +791,9 @@ internal class VexLifeSessionDependencyModule(
                     dependencies.require(
                         logPersistence,
                     ),
-                themeModeBinding =
+                themeModeRuntime =
                     dependencies.require(
-                        themeModeBinding,
+                        themeModeRuntime,
                     ),
             )
     }
@@ -855,8 +855,8 @@ internal class VexLifeSessionDependencyModule(
             VexDependencyProvider<VexLogger>,
         private val themeModeFamily:
             VexDependencyProvider<ThemeModeFamily>,
-        private val themeModeBinding:
-            VexDependencyProvider<ThemeModeStoreBinding>,
+        private val themeModeRuntime:
+            VexDependencyProvider<ThemeModeRuntime>,
         private val relayGraph:
             VexDependencyProvider<VexLifeRelayGraph>,
         private val appActions:
@@ -872,7 +872,7 @@ internal class VexLifeSessionDependencyModule(
                     logPersistence,
                     logger,
                     themeModeFamily,
-                    themeModeBinding,
+                    themeModeRuntime,
                     relayGraph,
                     appActions,
                     runtime,
@@ -904,9 +904,9 @@ internal class VexLifeSessionDependencyModule(
                     dependencies.require(
                         themeModeFamily,
                     ),
-                themeModeBinding =
+                themeModeRuntime =
                     dependencies.require(
-                        themeModeBinding,
+                        themeModeRuntime,
                     ),
                 relayGraph =
                     dependencies.require(

@@ -1,7 +1,8 @@
 package com.vextreme.vexlife.android.ui
 
-import com.vextreme.vexlife.android.behavior.VexStore
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -25,24 +26,16 @@ class ThemeModePersistenceTest {
                 initialState =
                     ThemeMode.Dark,
             )
-        val binding =
-            ThemeModeStoreBinding(
+        val runtime =
+            ThemeModeRuntime(
                 family = family,
                 executionRoot = root,
                 store = store,
-                approach =
-                    VexExecution.Approach.Latest,
-                relationshipCoordinate = { control ->
-                    control::class
-                },
-                admitObservation = { state ->
-                    state != ThemeMode.NotSet
-                },
             )
 
         try {
             assertTrue(
-                binding.activate(
+                runtime.activate(
                     ThemeModeFamily.Control.Select(
                         ThemeMode.Dark,
                     ),
@@ -76,7 +69,7 @@ class ThemeModePersistenceTest {
     }
 
     @Test
-    fun durableSelectionObservationRestoresCurrentThroughTheBinding() {
+    fun durableSelectionObservationRestoresCurrentThroughTheRuntime() {
         val root =
             VexExecutionRoot()
         val store =
@@ -90,18 +83,10 @@ class ThemeModePersistenceTest {
             )
 
         try {
-            ThemeModeStoreBinding(
+            ThemeModeRuntime(
                 family = family,
                 executionRoot = root,
                 store = store,
-                approach =
-                    VexExecution.Approach.Latest,
-                relationshipCoordinate = { control ->
-                    control::class
-                },
-                admitObservation = { state ->
-                    state != ThemeMode.NotSet
-                },
             )
 
             runBlocking {
@@ -142,18 +127,10 @@ class ThemeModePersistenceTest {
             )
 
         try {
-            ThemeModeStoreBinding(
+            ThemeModeRuntime(
                 family = family,
                 executionRoot = root,
                 store = store,
-                approach =
-                    VexExecution.Approach.Latest,
-                relationshipCoordinate = { control ->
-                    control::class
-                },
-                admitObservation = { state ->
-                    state != ThemeMode.NotSet
-                },
             )
 
             store.emit(
@@ -183,6 +160,138 @@ class ThemeModePersistenceTest {
         }
     }
 
+    @Test
+    fun selectPayloadDoesNotCreateAnotherExecutionRelationship() {
+        val root =
+            VexExecutionRoot()
+        val store =
+            LatestThemeModeStore()
+        val family =
+            ThemeModeFamily(
+                initialState =
+                    ThemeMode.Light,
+            )
+        val runtime =
+            ThemeModeRuntime(
+                family =
+                    family,
+                executionRoot =
+                    root,
+                store =
+                    store,
+            )
+
+        try {
+            assertTrue(
+                runtime.activate(
+                    ThemeModeFamily.Control.Select(
+                        ThemeMode.Dark,
+                    ),
+                ),
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    store.firstSaveStarted.await()
+                }
+            }
+
+            assertTrue(
+                runtime.activate(
+                    ThemeModeFamily.Control.Select(
+                        ThemeMode.Light,
+                    ),
+                ),
+            )
+
+            runBlocking {
+                withTimeout(
+                    5_000,
+                ) {
+                    store.firstSaveCancelled.await()
+                    store.latestSaveCompleted.await()
+                }
+            }
+
+            assertEquals(
+                listOf(
+                    ThemeMode.Light,
+                ),
+                store.completedSaves,
+            )
+        } finally {
+            root.forceStopAll()
+        }
+    }
+
+    private class LatestThemeModeStore :
+        ThemeModeStore {
+        private val mutableState =
+            MutableStateFlow(
+                ThemeMode.Light,
+            )
+
+        val firstSaveStarted =
+            CompletableDeferred<Unit>()
+        val firstSaveCancelled =
+            CompletableDeferred<Unit>()
+        val latestSaveCompleted =
+            CompletableDeferred<Unit>()
+        val completedSaves =
+            mutableListOf<ThemeMode>()
+
+        override val states:
+            Flow<ThemeMode> =
+            mutableState
+
+        override suspend fun get():
+            ThemeMode =
+            mutableState.value
+
+        override suspend fun save(
+            state:
+                ThemeMode,
+        ):
+            ThemeModeStore.Result {
+            if (
+                state ==
+                ThemeMode.Dark
+            ) {
+                firstSaveStarted.complete(
+                    Unit,
+                )
+                try {
+                    awaitCancellation()
+                } finally {
+                    firstSaveCancelled.complete(
+                        Unit,
+                    )
+                }
+            }
+
+            completedSaves +=
+                state
+            mutableState.value =
+                state
+            latestSaveCompleted.complete(
+                Unit,
+            )
+            return ThemeModeStore.Result.Success(
+                observedState =
+                    state,
+            )
+        }
+
+        override suspend fun forget():
+            ThemeModeStore.Result =
+            ThemeModeStore.Result.Success(
+                observedState =
+                    ThemeMode.NotSet,
+            )
+    }
+
     private class RecordingThemeModeStore(
         initialState:
             ThemeMode,
@@ -208,22 +317,22 @@ class ThemeModePersistenceTest {
             state:
                 ThemeMode,
         ):
-            VexStore.Result<ThemeMode> {
+            ThemeModeStore.Result {
             savedStates +=
                 state
             mutableState.value =
                 state
-            return VexStore.Result.Success(
+            return ThemeModeStore.Result.Success(
                 observedState =
                     state,
             )
         }
 
         override suspend fun forget():
-            VexStore.Result<ThemeMode> {
+            ThemeModeStore.Result {
             mutableState.value =
                 ThemeMode.NotSet
-            return VexStore.Result.Success(
+            return ThemeModeStore.Result.Success(
                 observedState =
                     ThemeMode.NotSet,
             )

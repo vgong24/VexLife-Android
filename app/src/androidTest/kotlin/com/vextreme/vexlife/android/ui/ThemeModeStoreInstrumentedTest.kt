@@ -2,7 +2,6 @@ package com.vextreme.vexlife.android.ui
 
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
-import com.vextreme.vexlife.android.behavior.VexStore
 import com.vextreme.vexlife.android.execution.VexExecutionRoot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -29,7 +28,7 @@ class ThemeModeStoreInstrumentedTest {
         clearStore()
 
     @Test
-    fun sharedPreferencesSelectionSurvivesFreshStoreFamilyAndBindingConstruction() {
+    fun sharedPreferencesSelectionSurvivesFreshStoreFamilyAndRuntimeConstruction() {
         val firstStore =
             SharedPreferencesThemeModeStore(
                 context,
@@ -37,7 +36,7 @@ class ThemeModeStoreInstrumentedTest {
 
         runBlocking {
             assertEquals(
-                VexStore.Result.Success(observedState = ThemeMode.Light),
+                ThemeModeStore.Result.Success(observedState = ThemeMode.Light),
                 firstStore.save(
                     ThemeMode.Light,
                 ),
@@ -74,18 +73,10 @@ class ThemeModeStoreInstrumentedTest {
                         ThemeMode.Dark,
                 )
 
-            ThemeModeStoreBinding(
+            ThemeModeRuntime(
                 family = recreatedFamily,
                 executionRoot = root,
                 store = recreatedStore,
-                approach =
-                    VexExecution.Approach.Latest,
-                relationshipCoordinate = { control ->
-                    control::class
-                },
-                admitObservation = { state ->
-                    state != ThemeMode.NotSet
-                },
             )
 
             runBlocking {
@@ -127,11 +118,11 @@ class ThemeModeStoreInstrumentedTest {
 
             assertTrue(
                 invalidSave is
-                    VexStore.Result.Failure,
+                    ThemeModeStore.Result.Failure,
             )
 
             assertEquals(
-                VexStore.Result.Success(observedState = ThemeMode.Dark),
+                ThemeModeStore.Result.Success(observedState = ThemeMode.Dark),
                 store.save(
                     ThemeMode.Dark,
                 ),
@@ -142,7 +133,7 @@ class ThemeModeStoreInstrumentedTest {
             )
 
             assertEquals(
-                VexStore.Result.Success(observedState = ThemeMode.NotSet),
+                ThemeModeStore.Result.Success(observedState = ThemeMode.NotSet),
                 store.forget(),
             )
             assertEquals(
