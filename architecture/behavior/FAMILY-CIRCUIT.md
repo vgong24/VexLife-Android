@@ -24,7 +24,7 @@ caller
 -> Act returned
 
 later realization boundary
--> Act.Begin + Family.relationshipId(Control)
+-> Act.Begin + Act.relationshipId
 -> VexExecution
 -> Store/provider work
 -> observed truth
@@ -135,7 +135,7 @@ Control.Select(Dark)
 -> beginLatest(Effect.Save(Dark))
 
 realization boundary
--> Family.relationshipId(Control.Select)
+-> Act.relationshipId
 -> VexExecution.begin(approach = Act.Begin.approach)
 -> ThemeModeStore.save(Dark)
 -> current Logger facts
@@ -309,7 +309,7 @@ Debug Menu action
 -> VexExecution.begin(
        owner = same live Family,
        approach = Act.Begin.approach,
-       relationshipId = Family.relationshipId(Control.Select)
+       relationshipId = Act.relationshipId
    )
 -> ThemeModeStore
 -> accepted/observed Logger chronology
