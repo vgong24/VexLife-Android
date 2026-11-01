@@ -311,18 +311,13 @@ internal fun activateThemeMode(
             begin.effect
     ) {
         is ThemeModeFamily.Effect.Save -> {
-            check(
-                begin.approach ==
-                    VexExecution.Approach.Latest,
-            ) {
-                "ThemeMode Select Save must remain Latest as authored by ThemeModeFamily"
-            }
-
-            VexExecution.beginLatest(
+            VexExecution.begin(
                 executionRoot =
                     executionRoot,
                 owner =
                     family,
+                approach =
+                    begin.approach,
                 relationshipId =
                     family.relationshipId(
                         control,
