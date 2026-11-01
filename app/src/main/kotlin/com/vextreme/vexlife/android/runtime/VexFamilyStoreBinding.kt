@@ -34,7 +34,7 @@ internal class VexFamilyStoreBinding<
     FamilyState,
     FamilyControl,
     FamilyEffect,
-    RelationshipKey : Any,
+    RelationshipCoordinate : Any,
 >(
     val family:
         Family,
@@ -52,8 +52,8 @@ internal class VexFamilyStoreBinding<
         VexLogger.Sink.None,
     private val approach:
         VexExecution.Approach,
-    private val relationshipKey:
-        (FamilyControl) -> RelationshipKey,
+    private val relationshipCoordinate:
+        (FamilyControl) -> RelationshipCoordinate,
     private val admitObservation:
         (FamilyState) -> Boolean,
 ) where
@@ -68,7 +68,7 @@ internal class VexFamilyStoreBinding<
     FamilyEffect : VexFamily.Effect<Family> {
     private val execution =
         StoreExecution<
-            RelationshipKey
+            RelationshipCoordinate
         >(
             executionRoot,
         )
@@ -195,8 +195,8 @@ internal class VexFamilyStoreBinding<
             family.currentState::class
 
         execution.realize(
-            relationshipKey =
-                relationshipKey(
+            relationshipCoordinate =
+                relationshipCoordinate(
                     control,
                 ),
             approach =
@@ -303,7 +303,7 @@ internal class VexFamilyStoreBinding<
     }
 
     private class StoreExecution<
-        RelationshipKey : Any,
+        RelationshipCoordinate : Any,
     >(
         root:
             VexExecutionRoot,
@@ -312,16 +312,16 @@ internal class VexFamilyStoreBinding<
             root,
         ) {
         private data class StoreRelationshipId<
-            RelationshipKey : Any,
+            RelationshipCoordinate : Any,
         >(
             val key:
-                RelationshipKey,
+                RelationshipCoordinate,
         ) :
             RelationshipId
 
         fun <Effect, State> realize(
-            relationshipKey:
-                RelationshipKey,
+            relationshipCoordinate:
+                RelationshipCoordinate,
             approach:
                 Approach,
             operation:
@@ -342,7 +342,7 @@ internal class VexFamilyStoreBinding<
             val relationshipId =
                 StoreRelationshipId(
                     key =
-                        relationshipKey,
+                        relationshipCoordinate,
                 )
 
             return when (approach) {
@@ -442,7 +442,7 @@ internal fun <
     FamilyControl,
     FamilyEffect,
     Store,
-    RelationshipKey : Any,
+    RelationshipCoordinate : Any,
 > vexFamilyStoreBindingProvider(
     readableName:
         String,
@@ -456,8 +456,8 @@ internal fun <
         VexDependencyProvider<VexLogger>,
     approach:
         VexExecution.Approach,
-    relationshipKey:
-        (FamilyControl) -> RelationshipKey,
+    relationshipCoordinate:
+        (FamilyControl) -> RelationshipCoordinate,
     admitObservation:
         (FamilyState) -> Boolean,
 ):
@@ -467,7 +467,7 @@ internal fun <
             FamilyState,
             FamilyControl,
             FamilyEffect,
-            RelationshipKey
+            RelationshipCoordinate
         >
     > where
     Family : VexFamily<
@@ -516,8 +516,8 @@ internal fun <
                     .sink,
             approach =
                 approach,
-            relationshipKey =
-                relationshipKey,
+            relationshipCoordinate =
+                relationshipCoordinate,
             admitObservation =
                 admitObservation,
         )

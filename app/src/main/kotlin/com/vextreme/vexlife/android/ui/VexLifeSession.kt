@@ -187,7 +187,7 @@ private fun directSessionComponents(
                 logger.sink,
             approach =
                 VexExecution.Approach.Latest,
-            relationshipKey = { control ->
+            relationshipCoordinate = { control ->
                 control::class
             },
             admitObservation = { state ->
@@ -413,7 +413,7 @@ internal class VexLifeSessionDependencyModule(
                 logger,
             approach =
                 VexExecution.Approach.Latest,
-            relationshipKey = { control ->
+            relationshipCoordinate = { control ->
                 control::class
             },
             admitObservation = { state ->

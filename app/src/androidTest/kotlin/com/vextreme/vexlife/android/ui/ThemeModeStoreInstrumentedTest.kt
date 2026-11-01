@@ -80,7 +80,7 @@ class ThemeModeStoreInstrumentedTest {
                 store = recreatedStore,
                 approach =
                     VexExecution.Approach.Latest,
-                relationshipKey = { control ->
+                relationshipCoordinate = { control ->
                     control::class
                 },
                 admitObservation = { state ->

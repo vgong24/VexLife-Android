@@ -115,7 +115,7 @@ A Family/Store binding must also declare, rather than inherit, its runtime polic
 
 ~~~text
 execution overlap approach
-typed RelationshipKey
+typed RelationshipCoordinate
 outside-State admission predicate
 ~~~
 

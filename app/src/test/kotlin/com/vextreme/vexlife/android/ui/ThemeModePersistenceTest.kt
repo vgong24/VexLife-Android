@@ -32,7 +32,7 @@ class ThemeModePersistenceTest {
                 store = store,
                 approach =
                     VexExecution.Approach.Latest,
-                relationshipKey = { control ->
+                relationshipCoordinate = { control ->
                     control::class
                 },
                 admitObservation = { state ->
@@ -96,7 +96,7 @@ class ThemeModePersistenceTest {
                 store = store,
                 approach =
                     VexExecution.Approach.Latest,
-                relationshipKey = { control ->
+                relationshipCoordinate = { control ->
                     control::class
                 },
                 admitObservation = { state ->
@@ -148,7 +148,7 @@ class ThemeModePersistenceTest {
                 store = store,
                 approach =
                     VexExecution.Approach.Latest,
-                relationshipKey = { control ->
+                relationshipCoordinate = { control ->
                     control::class
                 },
                 admitObservation = { state ->
