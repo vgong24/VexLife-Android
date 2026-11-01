@@ -71,13 +71,13 @@ ThemeMode is the PR #209 patient zero:
 Control.Select(mode)
 -> beginLatest(Effect.Save(mode))
 -> Family.relationshipId(Select)
--> VexExecution.beginLatest
+-> VexExecution.begin(approach = Act.Begin.approach)
 -> ThemeModeStore
 -> VexLogger chronology
 ~~~
 
-No feature-specific runtime/execution wrapper is required to translate Save into beginLatest. The
-authored relationship itself connects the semantic consequence to the reusable execution foundation.
+The Act-authored Approach and Family-authored RelationshipId are consumed directly by the reusable
+execution foundation; execution adds custody rather than another feature/domain decision.
 
 Exact repository-owned Gradle/JVM proof is pending on the current #209 candidate. The prior #193 proof
 remains valid evidence for its accepted historical tree; it is not proof for this new refinement.
