@@ -50,28 +50,45 @@ root-level activeExecutions projection.
 
 ## Authoring surface
 
-A concrete execution owner extends VexExecution.
+There are two truthful entry shapes.
+
+A class that genuinely owns a sustained body of source-addressed async work may extend VexExecution:
 
 ~~~kotlin
-internal class ThingExecution(
+internal class ThingSession(
     root: VexExecutionRoot,
-    private val repository: ThingRepository,
 ) : VexExecution(root) {
-    fun start() {
-        launchForCollect(
-            repository::states,
-        ) { state ->
-            accept(state)
-        }
-    }
-
     fun refresh() {
         launchOnce(
-            repository::refresh,
+            ::refreshForExecution,
         )
     }
 }
 ~~~
+
+An already-existing semantic/runtime owner does not need a paired execution wrapper merely to reach
+relationship or observation mechanics:
+
+~~~kotlin
+VexExecution.beginLatest(
+    executionRoot = root,
+    owner = family,
+    relationshipId = family.relationshipId(control),
+    operation = store::save,
+    argument = effect.mode,
+)
+
+VexExecution.observe(
+    executionRoot = root,
+    owner = family,
+    source = store::states,
+) { observed ->
+    ...
+}
+~~~
+
+The direct surface retains owner-scoped custody internally. owner is the already-existing live scope,
+not another semantic ID.
 
 ### Finite work
 
@@ -299,8 +316,8 @@ meaningful accepted/observed failure facts to VexLogger when that history is req
 
 PR #209 exercises the refined execution law through:
 
-- ThemeMode Save: Control.Select kind -> Family/Store binding-owned RelationshipId -> Latest Job;
-- VexMaps Distribution maintained observations + finite operations;
+- ThemeMode Save: Family-authored Control.Select RelationshipId + beginLatest -> direct VexExecution -> Latest Job;
+- VexMaps Distribution Session directly inherits VexExecution for async work the Session itself owns; no paired mirror API;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;
 - owner-scoped shutdown while a root may host sibling owners.
