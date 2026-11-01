@@ -240,7 +240,7 @@ internal class ThemeModeFamily(
 }
 
 /**
- * Realize one accepted ThemeMode Act without inserting a runtime/execution wrapper class.
+ * Realize one accepted ThemeMode Act from its already-authored relationship.
  *
  * ThemeModeFamily already authored the semantic Effect and its execution Approach. This boundary
  * hands that exact relationship to VexExecution, reports facts that become true, and returns
@@ -430,7 +430,8 @@ internal fun activateThemeMode(
  * Maintain the exact Store source observation under the same live Family execution scope.
  *
  * The source reference is appropriate here because the question is exactly "is this Store source
- * already observed?". No ThemeModeRuntime/ThemeModeExecution identity is introduced.
+ * already observed?". Observation custody adds no second semantic owner or feature execution
+ * vocabulary.
  */
 internal fun observeThemeModeStore(
     family:
