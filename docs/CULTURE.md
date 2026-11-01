@@ -179,15 +179,22 @@ VexFamily + VexDisplayState + VexDisplayStateEmpty
 A dependency earns its own `Vex<Root>` only when it owns a distinct reusable responsibility that
 can be understood and contracted independently of the consumer. For example, execution custody or
 logging may be independent roots when their contracts stand on their own. Consumption does not
-collapse those roots into one tree:
+collapse those roots into one tree, and a pure semantic root does not absorb independent mechanics
+merely because a runtime composes them:
 
 ```text
 VexFamily
--> explicit dependency on VexExecution
--> explicit dependency on VexLogger
+-> State / Control / Act / Effect semantics only
+
+Concrete Connection/runtime
+-> explicit Family
+-> explicit VexExecution
+-> explicit VexLogger.Sink
+-> provider/Store as actually required
 
 VexExecution != VexFamily child
 VexLogger    != VexFamily child
+Dependency construction != Family semantics
 ```
 
 When two roots interact, make the root-to-root boundary explicit. Do not extract a free-floating

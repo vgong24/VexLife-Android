@@ -1,31 +1,83 @@
-# Logging
+# VexLogger — chronological traceability + readable interpretation
 
 [VXG RealForever]
 
-This module records a small, readable UI action history for the Android construction practicum.
+## Human question
 
-It does not own navigation, Screen state, application state, database policy, or network delivery.
-The app may project accepted VexLogRecord values into a repository/persistence adapter; that adapter
-remains downstream and cannot change whether the diagnostic record or product action was accepted.
+> What accepted or observed facts happened, in what order, and how can a human/debug surface interpret
+> their stable coordinates without turning Logger into another semantic, UI-topology, execution, or
+> persistence owner?
+
+VexLogger is the one chronological traceability root.
 
 ~~~text
-runtime owner decides what happened
--> VexLogger records the accepted fact in sequence
--> screenScopes derives Screen visit ranges
--> readable history projects those scopes
+rightful owner accepts / observes fact
+-> VexLogger chronology
+-> downstream projections:
+     Logcat
+     LogHistory persistence
+     Debug Log History
+     later VexSync / VexBoard / server interpretation
 ~~~
 
-## Rooted structured event boundary
+Logger failure cannot rewrite the product fact it observed.
 
-`VexLogger` is the logging root. Foundations that need to report accepted structured facts depend
-on a child contract of that root rather than creating another `Vex*Logger` peer:
+## Ownership
+
+VexLogger owns:
+
+~~~text
+accepted / observed fact chronology
+fact ordering
+stable fact coordinates
+diagnostic visibility when expected interpretation is missing
+~~~
+
+It does not own:
+
+~~~text
+Family State / Control / Act / Effect meaning
+RelationshipId meaning
+active Job custody
+Blueprint placement
+navigation/presentation truth
+content/resource mapping
+provider success policy
+database/network delivery
+~~~
+
+Those owners form the facts. Logger records them.
+
+## One chronology, many fact producers
+
+The same Logger receives facts from different rightful boundaries:
+
+~~~text
+UI/runtime
+    AppOpened
+    Interaction
+    DynamicInteraction
+    Gesture
+
+Family/semantic boundary
+    ControlAccepted
+    StateAdmitted
+
+runtime/provider boundary
+    OperationRequested
+    OperationSucceeded
+    OperationFailed
+
+architecture diagnostics
+    BlueprintMappingMissing
+~~~
+
+Structured VexLogger.Event values enter the same VexLogRecord chronology through logger.sink.
+There is no parallel FamilyLogger, ExecutionLogger, trace bus, or completed-execution history.
 
 ~~~text
 VexLogger
 -> Sink
-   -> None
-
-VexLogger
 -> Event
    -> Family
       -> ControlAccepted
@@ -35,99 +87,187 @@ VexLogger
       -> OperationFailure
 ~~~
 
-A `VexLogger.Sink` decides how structured foundation events are projected. Family events do not
-automatically become canonical UI-history `VexLogRecord` entries; this preserves the distinction
-between the logger root and its current UI-history projection.
+A consuming runtime/Connection keeps the Sink private. Pure semantic decision code such as
+VexFamily.act(...) does not receive Logger.
 
-A consuming foundation should keep its logger dependency private and report only facts it has
-actually accepted. Concrete semantic decision functions should not gain logging capability merely
-because their parent uses the logger.
+## Stable coordinate -> readable fields
 
-## Readable protocol
-
-The readable projection groups events by semantic Screen rather than repeating the Screen on every
-record:
+The stored interaction fact keeps its compact stable coordinate:
 
 ~~~text
----HomeScreen---
-[6:51:00PM Oct 10, 2026]
-App Opened
-
-[6:53:00PM Oct 10, 2026]
-DebugMenu Clicked
-
-[Duration: 120 seconds]
-
----DebugMenuScreen---
-[6:54:00PM Oct 10, 2026]
-Reset Clicked
+subjectRef = element.debug-menu.body.dark-mode
 ~~~
 
-A transition event belongs to the Screen where the action occurred. The destination Screen scope
-begins at the same transition timestamp. Duration is therefore one Screen entry -> exit range, not a
-duplicate duration beside every event.
+Logger does not parse dot-separated text to rediscover architecture.
 
-The canonical record still retains stable subject refs and before/after Screen IDs, so the readable
-projection can be regenerated/reinterpreted without making the formatted text the source of truth.
+When the matching UIBlueprintRegistry is available:
 
+~~~text
+subjectRef
+-> UIBlueprintRegistry
+-> owner Screen
+-> parent / placement path
+-> element kind
+-> declared UI intent
+~~~
 
-## Logcat developer projection
+The Debug Log History surface derives fields such as:
 
-Every accepted canonical `VexLogRecord` is also projected to Android Logcat under one stable tag:
+~~~text
+fact.kind = Interaction
+fact.action = Clicked
+source.ref = element.debug-menu.body.dark-mode
+source.resolution = RESOLVED
+source.screen = screen.debug-menu
+source.kind = Toggle
+source.path = element.debug-menu.body -> element.debug-menu.body.dark-mode
+source.intent = Invoke(action.toggle-dark-mode)
+~~~
+
+Those fields are a read-time interpretation of the current matching map, not a second metadata
+registry copied into every log record.
+
+## Static vs runtime UI coordinates
+
+Two lawful element.* shapes exist.
+
+### Static Blueprint element
+
+~~~text
+registered elementId
+-> registry resolves structure
+-> RESOLVED
+~~~
+
+If a normal static interaction uses an element.* ref that the supplied registry cannot resolve:
+
+~~~text
+Interaction
+-> Diagnostic / BlueprintMappingMissing
+~~~
+
+The missing expected interpretation becomes observable instead of silently degrading to unknown.
+
+### Intentional runtime instance
+
+Repeated provider/domain data cannot all be permanent static Blueprint members.
+
+Examples include:
+
+~~~text
+one Events row
+one VexStream track row/menu occurrence
+one dynamic collection/queue instance
+~~~
+
+Those facts enter through recordRuntimeInteractionRef(...) and use:
+
+~~~text
+kind = DynamicInteraction
+resolution = RUNTIME_ELEMENT
+~~~
+
+A lawful runtime coordinate is therefore not misreported as missing Blueprint architecture.
+
+Where a runtime instance also has a registered static action element, that static declaration remains
+the owner of action/placement meaning; the runtime coordinate carries only the exact presented
+instance identity.
+
+## Expectation is not observation
+
+Production chronology records accepted/observed facts.
+
+~~~text
+request Dark
+Save succeeded
+Dark presentation arrived
+~~~
+
+is different from:
+
+~~~text
+request Dark
+Save succeeded
+Light presentation remained
+~~~
+
+A future debug surface may compare expected vs actual, but an expected destination/result must not be
+stored as though it was already observed.
+
+## Chronology before correlation identity
+
+Prefer:
+
+~~~text
+rightful semantic identity
++ RelationshipId while active
++ ordered Logger facts
+~~~
+
+before inventing another occurrence/correlation ID.
+
+The actual Job is the runtime occurrence while active. Completed history belongs here, not in
+VexExecution.
+
+## Persistence and projections
+
+The current app projects accepted VexLogRecord values downstream:
 
 ~~~text
 VexLogger
+-> LogHistoryPersistenceQueue
+-> LogHistoryRepository
+-> Room / in-memory implementation
+
+VexLogger
+-> VexLogcat
+
+VexLogger + matching Blueprint registry
+-> structured Debug Log History
 ~~~
 
-Android Studio filter:
+Persistence/Logcat/debug failure is non-authoritative.
 
-~~~text
-tag:VexLogger
-~~~
-
-ADB filter:
-
-~~~bash
-adb logcat -s VexLogger:I '*:S'
-~~~
-
-Example:
-
-~~~text
-seq=7 kind=Interaction subject=element.user-profile.body.profile.actions.save action=Submitted before=screen.user-profile after=- section=2 delta=3s details={"name":"Victor"}
-~~~
-
-Logcat is not canonical history and is not durable evidence. It is a live developer/debugging surface.
-The in-memory `VexLogRecord` sequence remains canonical for the logger session; persistent LogHistory
-remains a downstream repository projection. Logcat and repository persistence are failure-isolated so
-one diagnostic surface cannot suppress the other.
+The current Room record retains historical fields such as sequence, duration, screen-before/after and
+section. PR #209 does not perform a database migration merely to remove legacy columns. The stable
+architecture remains: primary accepted/observed facts first; derived narration should not become new
+upstream truth simply because persistence currently stores it.
 
 ## Form submissions
 
 Draft typing is not logged.
 
-At an explicit submit boundary, one record may contain the immutable submitted snapshot as JSON:
+An explicit submit boundary may carry one immutable submitted snapshot:
 
 ~~~text
-[10:05:18PM Oct 10, 2026]
 Save Submitted
 {
   "element.user-profile.body.profile.display-name": "Victor"
 }
 ~~~
 
-Stable element refs are used as JSON keys rather than localized labels. This captures what was
-actually submitted without recording keystroke order.
+Stable element refs remain the keys instead of localized labels.
 
-## Session boundaries
+## Session boundary
 
-A new AppOpened record starts a new readable Screen scope. The formatter does not invent a duration
-across time when the previous process was not observed ending.
+VexLifeSession owns one live Logger for the current in-process app session. Android configuration
+recreation reuses that session through VexLifeViewModel; it does not create a second AppOpened merely
+because Compose rebuilt.
 
-Activity/configuration recreation is now handled above this module by the ViewModel-owned VexLife
-session, so rotation should not create a second AppOpened merely because the UI was rebuilt.
+Durable history remains a downstream repository projection.
 
-Durable/local history is projected through the app-level Data/Repository foundation; VexLogger itself
-remains independent of Room.
+## Proof
+
+Focused Logger source tests protect:
+
+- ordinary chronological UI history;
+- downstream observer failure isolation;
+- Blueprint field resolution from stable IDs;
+- missing static mapping diagnostics;
+- runtime-element distinction;
+- structured semantic/runtime events entering the same chronology.
+
+Repository-owned Gradle/JVM proof is still required on the exact PR #209 candidate before this
+refinement may claim proven integration.
 
 <!-- [VXG RealForever][VEXLIFE-ANDROID][LOGGING] -->

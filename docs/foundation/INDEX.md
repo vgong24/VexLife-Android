@@ -25,45 +25,62 @@ architecture/behavior/src/main/.../VexFamily.kt
 architecture/behavior/src/test/.../VexFamilyHighConfidenceTest.kt
 ~~~
 
-Current call graph:
+PR #193 remains accepted lineage for the earlier direct Family refinement. PR #209 is a deliberate
+subtractive candidate on top of the #207/#208 architecture review and is **not yet accepted**.
+
+Current candidate call graph:
 
 ~~~text
-Family.activate(control)
--> concrete Family.act(currentState, control)
--> native when(currentState)
--> native when(control)
--> stay / admit / optional begin
--> StateRelay / execution
+Family.activate(Control)
+-> concrete Family.act(CURRENT State, Control)
+-> Act?
+   -> admitted State?
+   -> Effect?
+-> immediate semantic State admission
+-> Act returned
+
+Connection/runtime
+-> realizes Effect
+-> reports accepted/observed facts
+-> Family.observe(already-semantic outside truth)
 ~~~
 
-The current candidate deliberately has no VexActs/VexActsBuilder/rule table, hidden operator invoke,
-or custom state/on traversal helpers. StateRelay remains the one live semantic State holder.
-
-Current PR #193 refinement also keeps execution identity inside the typed Family boundary:
+Permanent candidate boundary:
 
 ~~~text
-Control<Family>
--> Control kind/name included automatically
--> optional Control.Resource<Family, ExactId>
--> exact ResourceId object retained
--> Family-owned RelationshipId
--> Begin chooses Approach only
--> VexExecution coordinates that RelationshipId
+VexFamily
+    owns State / Control / Act / Effect
+    owns current semantic State + bounded DisplayState/Projection
+
+VexFamily
+    does NOT own Store
+    does NOT own VexExecution
+    does NOT own VexLogger
+    does NOT own dependency construction
 ~~~
 
-There is no arbitrary Begin trigger/argument identity surface. This refinement is accepted on main
-through [PR #193](https://github.com/vgong24/VexLife-Android/pull/193) after exact-head
-repository-owned `vexVerifyJvm` proof and Independent Assurance. That acceptance does not claim
-device/Journey/ScreenCrawler or lived-product proof for the Direct Family foundation.
-
-Compound/process integration remains separate and open:
+ThemeMode is the PR #209 patient zero:
 
 ~~~text
-InputState -> process(InputState) -> OutputState
-OutputState -> ??? -> Family.currentState
+Control.Select(mode)
+-> Effect.Save(mode)
+
+ThemeModeConnection
+-> VexExecution RelationshipId -> actual Job(s)
+-> ThemeModeStore
+-> VexLogger chronology
 ~~~
 
-<!-- [VXG RealForever][FOUNDATION][FAMILY][NATIVE-TRAVERSAL] -->
+Execution identity is therefore no longer authored inside pure Family merely because a Control caused
+runtime work. The concrete Connection/runtime owns the smallest active-work relationship it actually
+needs while Family remains semantic-only.
+
+Exact repository-owned Gradle/JVM proof is pending on the current #209 candidate. The prior #193 proof
+remains valid evidence for its accepted historical tree; it is not proof for this new refinement.
+
+Compound/Relay remains a separate semantic owner for multi-truth convergence.
+
+<!-- [VXG RealForever][FOUNDATION][FAMILY][PURE-SCAE] -->
 
 
 ## Foundation establishment criteria
@@ -181,7 +198,9 @@ This checkpoint establishes a stable standalone Android base: repository-owned G
 | F1_UI_BLUEPRINT_HOME | element cells + placement + first Home practicum | **MERGED / LIVED DEVICE RUN OBSERVED / AGGREGATE TEST PROOF PENDING** | Make UI identity, placement, intent, navigation and diagnostics human-perceivable before feature depth | aggregate Gradle proof + clean rerun before any formal foundation checkpoint |
 | VEX_COMPOSE | VexModifier root + inherited custom-Compose identity + sanctioned cells | **ACCEPTED ON MAIN / PR #88 / A013 LOCAL + PHYSICAL DEVICE PASS / ADVISORY MIGRATION ACTIVE** | Make custom Compose inherit the same semantic lattice as ScreenBlueprint so product UI cannot silently fall back to detached primitive code | migrate one real consumer at a time; preserve exact runtime identities; keep raw-Compose findings advisory until replacements are earned |
 | ANDROID_WIDGET_SURFACE | Glance App Widget projection/callback boundary | **DRAFT CANDIDATE / SOURCE PROOF PENDING** | Let home-screen widgets consume feature-owned projections and return stable interaction identity without becoming product State or Effect owners | prove :architecture:widget + aggregate local build, then pressure with the compact VexStream playback patient zero |
-| EXECUTION_BRIDGE | VexExecution + source-referenced coroutine ownership | **ACCEPTED ON MAIN / PR #87 / EXACT MODULE + `vexVerifyJvm` PASS** | Put coroutine execution behind one compiler-visible meta-pattern with keyed custody, bounded collection recovery, and exact stop/join control | first production consumer + owner-bound shutdown proof; do not enlarge the kernel from infrastructure-only speculation |
+| EXECUTION_BRIDGE | VexExecution owner + RelationshipId -> actual Job(s) custody | **ACCEPTED BASE ON MAIN / PR #87; PR #209 REFINEMENT DRAFT / PROOF PENDING** | Keep asynchronous work under explicit runtime owners while making the actual Job the occurrence and removing parallel InstanceId/SourceRef/Handle/history architecture | exact #209 `vexVerifyLocal` + review owner isolation / overlap / recovery behavior |
+| READABLE_DEPENDENCY_TOPOLOGY | lazy prerequisite construction + lifetime memoization | **PR #209 DRAFT / PROOF PENDING** | Make production construction order, reuse and lifetime relationships inspectable without reflection/service-locator lookup or another identity namespace | exact #209 `vexVerifyLocal` + source review of application/session graph |
+| LOGGER_TRACEABILITY | one chronology + Blueprint-derived readable interpretation | **PR #209 REFINEMENT DRAFT / PROOF PENDING** | Let UI/semantic/runtime facts share one chronology and resolve stable UI coordinates through the existing Blueprint registry while exposing missing mappings | exact #209 `vexVerifyLocal` + Debug Log lived review |
 | BODY_SEMANTIC_BLUEPRINT | first-principle purpose -> primitive -> relationship -> form orientation | **DOCUMENTATION FOUNDATION / NO NEW RUNTIME CONTRACT** | Let a fresh human/AI recognize reusable semantic roles across differently named domains without turning the map into one class hierarchy | pressure the map against live feature/foundation examples; promote a primitive to a type/interface only when addressability or an executable invariant earns it |
 | BEHAVIOR_BLUEPRINT_EXPERIMENT | family-bound relational Behavior foundation | **ACCEPTED ON MAIN / PR #82 + #85 / EXACT `vexVerifyLocal` PASS / VEXSTREAM PLAYBACK CONSUMER CURRENT** | Preserve lawful Control + current State -> Act and current State + Act -> Effect + admitted State relationships while deriving reusable projections without a second UI state table | extend from independent real behavioral questions; keep runtime request payloads and generic Experience abstraction held until repeated consumers earn them |
 | DATA_REPOSITORY | domain repositories + Room local persistence + reusable data fixtures | **MERGED / LIVED PARTIAL / INTEGRATION PROOF PENDING** | Let screens observe data without knowing DAO/storage/backend details; first consumer is Log History | aggregate unit/build + Room migration/integration proof + clean lived rerun |
@@ -297,26 +316,96 @@ Entry:
 ### Intention
 
 A developer should not decide coroutine ownership ad hoc from whichever Screen, repository, Service,
-or callback happens to need asynchronous work. The execution foundation makes that role explicit:
+or callback needs asynchronous work.
 
-```text
-FeatureExecution : VexExecution
--> launchOnce(callable)
--> launchForCollect(flowProvider)
--> private ordered Job custody
--> forceStop / joinStop
-```
+PR #209 refines the accepted execution base to the smaller current law:
 
-The actual `VexCoroutineLauncher` remains internal foundation machinery. Source callables supply both
-the executed function and the source-derived runtime ref, avoiding a parallel hand-maintained ID
-catalog. `launchOnce` never silently retries finite operations; sustained Flow collection owns a
-bounded recovery path where requested. Cancellation is terminal and exact root shutdown closes work
-admission before cancelling the supervised tree.
+~~~text
+VexExecutionRoot
+    shared coroutine tree
+    terminal shutdown
 
-This candidate is intentionally not yet wired through Relay/Maps/VexStream. PR #77 independently
-identified continuous dependency collector death/restart as execution-lifetime work, while current
-main still contains repeated raw `CoroutineScope`/Job ownership in app/runtime surfaces. Those are
-real consumers, but migration follows only after this kernel passes repository-native Gradle proof.
+one VexExecution owner
+    ordinary owned Jobs
+    maintained active relationships:
+        RelationshipId -> actual Job(s)
+
+Job
+    runtime occurrence
+
+VexLogger
+    history / chronology
+~~~
+
+The candidate removes the earlier public InstanceId / SourceRef / Handle / root execution-registry
+architecture while preserving the real behaviors discovered by those earlier implementations:
+launchOnce duplicate protection, independent finite work, maintained Flow observation, Earliest /
+Latest / Queued overlap, source-vs-downstream failure distinction, bounded source recovery, structured
+child lifetime, provider handoff, exact relationship cancellation and terminal root shutdown.
+
+Owner-scoped stop/join is now distinct from root shutdown, so sibling VexExecution owners sharing one
+root do not terminate one another.
+
+ThemeMode, VexMaps Distribution/search, and VexStream roots provide current production pressure.
+Exact-head repository-owned proof is pending for PR #209.
+
+## Readable dependency topology candidate
+
+Entry:
+[`architecture/dependency/README.md`](../../architecture/dependency/README.md)
+
+### Intention
+
+Production construction should answer, from source:
+
+~~~text
+what provider exists?
+what prerequisites does it require?
+what lifetime owns/reuses it?
+what requested root caused it to be built?
+what consumer receives the concrete object?
+~~~
+
+PR #209 adds one deliberately small construction kernel:
+
+~~~text
+provider declarations
+-> explicit prerequisite graph
+-> lazy dependency-first resolution
+-> one memoized instance per factory lifetime
+
+VexApplication factory
+-> application/process lifetime
+
+VexLifeViewModel child factory
+-> session/configuration lifetime
+-> reuses parent providers
+~~~
+
+Provider declaration object identity is the construction coordinate; class/name is only a readable
+label. The factory is accessible at composition roots/provider construction only. Ordinary feature/UI
+consumers receive concrete dependencies and do not call an ambient get<T>() service locator.
+
+The production session graph now exposes Logger, ThemeMode Family/Connection, Relays, action wiring,
+Runtime and Session instead of hiding their construction inside one opaque Session provider.
+Preview/test direct construction remains an explicit alternate fixture route.
+
+## Logger traceability refinement
+
+Entry:
+[`architecture/logging/README.md`](../../architecture/logging/README.md)
+
+### Intention
+
+VexLogger owns chronology, not semantic/UI/execution truth.
+
+PR #209 connects UI interactions, structured semantic/runtime facts and architecture diagnostics into
+one chronology, while UIBlueprintRegistry remains the owner used to resolve stable element IDs into
+Screen / path / kind / declared-intent fields.
+
+Intentional dynamic runtime element coordinates remain distinct from static Blueprint omissions.
+Missing expected static interpretation emits an observable BlueprintMappingMissing diagnostic rather
+than silently becoming unknown.
 
 ## Behavior Blueprint experiment
 
