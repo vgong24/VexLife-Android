@@ -3,14 +3,22 @@ package com.vextreme.vexlife.android.dependency
 import java.util.IdentityHashMap
 
 /**
- * One readable construction declaration.
+ * One explicit construction declaration in the readable dependency graph.
  *
- * Provider object identity is the construction coordinate. The class name is only a human-readable
- * label; two provider instances of the same class remain distinct declarations when a real graph
- * needs them.
+ * WHAT THIS IS / RELATES TO
+ * A provider declares the prerequisites needed to construct one Value. [VexDependencyFactory] owns
+ * traversal, prerequisite ordering, memoization, cycle detection, and lifetime reuse. The created
+ * Value receives concrete dependencies and does not need to know the factory exists.
  *
- * Dependencies are explicit provider relationships. The object being constructed does not need to
- * know VexDependencyFactory exists.
+ * WHY THIS SHAPE EXISTS
+ * Provider object identity is the construction coordinate, while [readableName] is only a human
+ * label. This lets two differently configured declarations use the same provider class without
+ * inventing a global qualifier/string-ID system or discovering relationships through reflection.
+ *
+ * RESPONSIBILITY FENCE
+ * Providers declare construction only. Do not make providers semantic owners, execution
+ * RelationshipIds, Logger/trace identities, lifecycle managers, or service locators. Do not infer
+ * prerequisites by scanning constructors/classes/packages; relationships remain explicit source.
  */
 abstract class VexDependencyProvider<
     Value : Any,
@@ -192,14 +200,27 @@ class VexDependencyModule private constructor(
 }
 
 /**
- * One dependency lifetime / memoization owner.
+ * Construction-graph and memoization owner for one explicit dependency lifetime.
  *
- * Resolution is lazy: only requested roots and their declared prerequisites are built. Prerequisites
- * are resolved first, then the provider is built once and memoized for this exact factory lifetime.
+ * WHAT THIS IS
+ * VexDependencyFactory resolves requested provider roots, recursively builds declared prerequisites
+ * first, and memoizes one built Value per provider declaration for this exact factory lifetime.
  *
- * A child factory may consume parent providers but cannot shadow the same provider declaration.
- * This gives application/session/etc. composition explicit lifetime boundaries without a global
- * service locator.
+ * WHAT IT RELATES TO
+ * [VexDependencyModule] groups visible declarations; [VexDependencyProvider] declares prerequisites;
+ * [VexDependencyBuildScope] exposes only already-declared prerequisite Values during construction.
+ * Child factories may reuse parent-lifetime providers while owning only their newly declared nodes.
+ *
+ * WHAT IT ADDRESSES / WHY THIS SHAPE EXISTS
+ * It makes construction order, reuse, and lifetime boundaries readable without ambient get<T>(),
+ * constructor scanning, reflection-driven DI, or a global service locator. Lazy resolution builds
+ * only the prerequisite closure of roots the composition owner actually requests.
+ *
+ * RESPONSIBILITY FENCE
+ * The factory constructs/reuses objects; it does not infer semantic Family meaning, own
+ * RelationshipId/Job custody, become Logger/history, decide provider business policy, or provide
+ * hidden dependency lookup to ordinary feature/UI code. Dependency provider identity must never be
+ * reused as execution, semantic, UI, or trace identity merely because all are "IDs".
  */
 class VexDependencyFactory(
     modules:
@@ -476,7 +497,10 @@ class VexDependencyFactory(
 }
 
 /**
- * Read-only projection of the declared construction topology.
+ * Read-only human/debug projection of declared construction topology.
+ *
+ * Provider/prerequisite Strings are readable labels only. This projection must not be fed back into
+ * construction as identity or treated as a second dependency registry.
  */
 data class VexDependencyRelationship(
     val provider:
