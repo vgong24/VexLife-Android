@@ -66,13 +66,14 @@ internal class ThingSession(
 }
 ~~~
 
-An already-existing semantic/runtime owner does not need a paired execution wrapper merely to reach
-relationship or observation mechanics:
+When an already-existing semantic/runtime owner authors the work, direct entry preserves that
+ownership while VexExecution supplies custody:
 
 ~~~kotlin
-VexExecution.beginLatest(
+VexExecution.begin(
     executionRoot = root,
     owner = family,
+    approach = act.begin.approach,
     relationshipId = family.relationshipId(control),
     operation = store::save,
     argument = effect.mode,
@@ -316,7 +317,7 @@ meaningful accepted/observed failure facts to VexLogger when that history is req
 
 PR #209 exercises the refined execution law through:
 
-- ThemeMode Save: Family-authored Control.Select RelationshipId + beginLatest -> direct VexExecution -> Latest Job;
+- ThemeMode Save: Family-authored Control.Select RelationshipId + Act.Begin Approach -> direct VexExecution -> Job custody;
 - VexMaps Distribution Session directly inherits VexExecution for async work the Session itself owns; no paired mirror API;
 - VexMaps destination/place search source-addressed replacement;
 - VexStream application/session and service execution roots;
