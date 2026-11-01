@@ -229,52 +229,66 @@ class VexLogger(
         )
     }
 
-    /**
-     * screenAfter, when supplied by a direct Logger caller, must already be observed truth. Product
-     * action code should normally record the interaction first and report Screen arrival separately.
-     */
     fun recordInteraction(
-        element: UIElement,
-        screenBefore: ScreenElement,
-        screenAfter: ScreenElement? = null,
-        action: String = "Clicked",
-        detailsJson: String? = null,
+        element:
+            UIElement,
+        screen:
+            ScreenElement,
+        action:
+            String =
+            "Clicked",
+        detailsJson:
+            String? =
+            null,
     ) {
         recordInteractionRef(
-            subjectRef = element.elementId,
-            screenBefore = screenBefore,
-            screenAfter = screenAfter,
-            action = action,
-            detailsJson = detailsJson,
+            subjectRef =
+                element.elementId,
+            screen =
+                screen,
+            action =
+                action,
+            detailsJson =
+                detailsJson,
         )
     }
 
     /**
      * Dynamic repeated elements use a stable semantic ref even though they cannot all be members of
-     * the static UI registry. This records that already-formed identity without creating a second
-     * logger or pretending list position is identity.
-     */
-    /**
-     * screenAfter, when supplied, is an already-already-observed navigation result rather than an intended target.
+     * the static UI registry. [screen] is the Screen current when the fact is recorded; intended
+     * destinations are not accepted by this production API.
      */
     fun recordInteractionRef(
-        subjectRef: String,
-        screenBefore: ScreenElement,
-        screenAfter: ScreenElement? = null,
-        action: String = "Clicked",
-        detailsJson: String? = null,
+        subjectRef:
+            String,
+        screen:
+            ScreenElement,
+        action:
+            String =
+            "Clicked",
+        detailsJson:
+            String? =
+            null,
     ) {
-        require(subjectRef.isNotBlank()) {
+        require(
+            subjectRef.isNotBlank(),
+        ) {
             "interaction subjectRef must not be blank"
         }
 
         append(
-            kind = VexLogKind.Interaction,
-            subjectRef = subjectRef,
-            action = action,
-            screenBeforeId = screenBefore.screenId,
-            screenAfterId = screenAfter?.screenId,
-            detailsJson = detailsJson,
+            kind =
+                VexLogKind.Interaction,
+            subjectRef =
+                subjectRef,
+            action =
+                action,
+            screenBeforeId =
+                screen.screenId,
+            screenAfterId =
+                null,
+            detailsJson =
+                detailsJson,
         )
 
         if (
@@ -289,11 +303,16 @@ class VexLogger(
                 null
         ) {
             append(
-                kind = VexLogKind.Diagnostic,
-                subjectRef = subjectRef,
-                action = "BlueprintMappingMissing",
-                screenBeforeId = screenBefore.screenId,
-                screenAfterId = null,
+                kind =
+                    VexLogKind.Diagnostic,
+                subjectRef =
+                    subjectRef,
+                action =
+                    "BlueprintMappingMissing",
+                screenBeforeId =
+                    screen.screenId,
+                screenAfterId =
+                    null,
             )
         }
     }
@@ -306,9 +325,13 @@ class VexLogger(
      * rows/actions from being reported as missing architecture.
      */
     fun recordRuntimeInteractionRef(
-        subjectRef: String,
-        screenBefore: ScreenElement,
-        action: String = "Clicked",
+        subjectRef:
+            String,
+        screen:
+            ScreenElement,
+        action:
+            String =
+            "Clicked",
     ) {
         require(subjectRef.isNotBlank()) {
             "runtime interaction subjectRef must not be blank"
@@ -318,69 +341,71 @@ class VexLogger(
             kind = VexLogKind.DynamicInteraction,
             subjectRef = subjectRef,
             action = action,
-            screenBeforeId = screenBefore.screenId,
+            screenBeforeId = screen.screenId,
             screenAfterId = null,
         )
     }
 
-    /**
-     * screenAfter, when supplied, is an already-observed result. VexRuntime records Back before
-     * mutation and emits navigation change separately after navigation actually changes.
-     */
     fun recordBack(
-        screenBefore: ScreenElement,
-        screenAfter: ScreenElement? = null,
+        screen:
+            ScreenElement,
     ) {
         append(
-            kind = VexLogKind.Gesture,
-            subjectRef = "system.back",
-            action = "Back",
-            screenBeforeId = screenBefore.screenId,
-            screenAfterId = screenAfter?.screenId,
+            kind =
+                VexLogKind.Gesture,
+            subjectRef =
+                "system.back",
+            action =
+                "Back",
+            screenBeforeId =
+                screen.screenId,
+            screenAfterId =
+                null,
         )
     }
 
     /**
-     * Record an actual Screen transition after the navigation/presentation owner reports the new
-     * current Screen. This is observation, not an intended destination.
+     * Record only the Screen that navigation reports as current after mutation.
+     *
+     * A prior/expected Screen is deliberately absent. Debug/test layers may derive A -> B from
+     * chronological facts when they need that interpretation.
      */
-    fun recordNavigationChanged(
-        screenBefore:
-            ScreenElement,
-        screenAfter:
+    fun recordNavigationCurrent(
+        screen:
             ScreenElement,
     ) {
-        require(
-            screenBefore.screenId !=
-                screenAfter.screenId,
-        ) {
-            "current navigation Screen change requires distinct before/after Screens"
-        }
-
         append(
             kind =
                 VexLogKind.Navigation,
             subjectRef =
-                screenAfter.screenId,
+                screen.screenId,
             action =
-                "CurrentScreenChanged",
+                "CurrentScreen",
             screenBeforeId =
-                screenBefore.screenId,
+                null,
             screenAfterId =
-                screenAfter.screenId,
+                screen.screenId,
         )
     }
 
+    /**
+     * Pager callbacks arrive only after settlement, so the current Screen itself is the fact.
+     */
     fun recordScreenGesture(
-        screenBefore: ScreenElement,
-        screenAfter: ScreenElement,
+        screen:
+            ScreenElement,
     ) {
         append(
-            kind = VexLogKind.Gesture,
-            subjectRef = "presentation.screen-pager",
-            action = "Swiped",
-            screenBeforeId = screenBefore.screenId,
-            screenAfterId = screenAfter.screenId,
+            kind =
+                VexLogKind.Gesture,
+            subjectRef =
+                "presentation.screen-pager",
+            action =
+                "Swiped",
+            screenBeforeId =
+                null,
+            screenAfterId =
+                screen.screenId,
         )
     }
 

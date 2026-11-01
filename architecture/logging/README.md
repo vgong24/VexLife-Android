@@ -58,7 +58,7 @@ UI/runtime
     Interaction
     DynamicInteraction
     Gesture
-    Navigation / CurrentScreenChanged
+    Navigation / CurrentScreen
 
 Family/semantic boundary
     ControlAccepted
@@ -202,26 +202,28 @@ Light presentation remained
 A future debug surface may compare expected vs actual, but an expected destination/result must not be
 stored as though it was already observed.
 
-For navigation, production records the request and observation separately:
+For navigation, production records only what is current at each boundary:
 
 ~~~text
 DebugMenu Clicked
-    screenBefore = Home
-    screenAfter  = null
+    current Screen = Home
 
 navigation owner applies the request
     -> current navigation Screen becomes DebugMenu
 
-DebugMenu CurrentScreenChanged
-    screenBefore = Home
-    screenAfter  = DebugMenu
+DebugMenu CurrentScreen
+    current Screen = DebugMenu
 ~~~
 
-This second fact proves navigation-owner truth, not rendered pixels. A future presentation owner may
-add an actual visual/presentation observation when it can truthfully observe that separate fact.
+Chronology is sufficient for tests/debug projections to derive Home -> DebugMenu when that
+interpretation is useful. Production does not store an expected destination or a redundant
+before/after transition pair.
 
-Pager gestures may carry before/after on the gesture record because the callback fires only after the
-pager has actually settled. Intended targets calculated before mutation do not qualify.
+The navigation fact proves navigation-owner truth, not rendered pixels. A future presentation owner
+may add an actual visual observation only when it can truthfully observe that separate fact.
+
+Pager settlement likewise records only the Screen that is current when the settled callback fires;
+the prior Screen remains derivable from chronology.
 
 ## Chronology before correlation identity
 
@@ -257,10 +259,10 @@ VexLogger + matching Blueprint registry
 
 Persistence/Logcat/debug failure is non-authoritative.
 
-The current Room record retains historical fields such as sequence, duration, screen-before/after and
-section. PR #209 does not perform a database migration merely to remove legacy columns. The stable
-architecture remains: primary accepted/observed facts first; derived narration should not become new
-upstream truth simply because persistence currently stores it.
+The current Room schema retains legacy physical columns such as sequence, duration,
+screen-before/after and section. PR #209 does not perform a database migration merely to remove
+those columns. Current production facts populate only the Screen coordinate that is current at the
+fact boundary; before/after transition interpretation belongs downstream in test/debug projection.
 
 ## Form submissions
 

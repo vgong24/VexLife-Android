@@ -42,7 +42,7 @@ class VexRuntimeNavigationTest {
         )
 
     @Test
-    fun navigationInteractionAndCurrentScreenChangeAreSeparateFacts() {
+    fun navigationInteractionAndCurrentScreenFactAreSeparate() {
         val logger =
             VexLogger()
         val runtime =
@@ -81,8 +81,7 @@ class VexRuntimeNavigationTest {
             VexLogKind.Navigation,
             navigation.kind,
         )
-        assertEquals(
-            HomeScreen.screenId,
+        assertNull(
             navigation.screenBeforeId,
         )
         assertEquals(
@@ -328,11 +327,10 @@ class VexRuntimeNavigationTest {
             navigation.subjectRef,
         )
         assertEquals(
-            "CurrentScreenChanged",
+            "CurrentScreen",
             navigation.action,
         )
-        assertEquals(
-            HomeScreen.screenId,
+        assertNull(
             navigation.screenBeforeId,
         )
         assertEquals(

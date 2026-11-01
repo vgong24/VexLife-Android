@@ -359,7 +359,7 @@ class VexRuntime(
         logger.recordInteractionRef(
             subjectRef =
                 subjectRef,
-            screenBefore =
+            screen =
                 before,
             action =
                 "Opened",
@@ -374,11 +374,8 @@ class VexRuntime(
             navigation.push(
                 screen,
             )
-            logger.recordNavigationChanged(
-                screenBefore =
-                    before,
-                screenAfter =
-                    currentScreen,
+            logger.recordNavigationCurrent(
+                currentScreen,
             )
         }
     }
@@ -397,7 +394,7 @@ class VexRuntime(
 
         logger.recordInteraction(
             element = element,
-            screenBefore = currentScreen,
+            screen = currentScreen,
             action = "Dismissed",
         )
         presentation.close(element)
@@ -420,7 +417,7 @@ class VexRuntime(
 
         logger.recordRuntimeInteractionRef(
             subjectRef = subjectRef,
-            screenBefore = currentScreen,
+            screen = currentScreen,
             action = action,
         )
     }
@@ -453,7 +450,7 @@ class VexRuntime(
 
         logger.recordRuntimeInteractionRef(
             subjectRef = subjectRef,
-            screenBefore = before,
+            screen = before,
             action = "Clicked",
         )
 
@@ -516,7 +513,7 @@ class VexRuntime(
         logger.recordInteraction(
             element =
                 uiElement,
-            screenBefore =
+            screen =
                 before,
             action =
                 logAction,
@@ -545,10 +542,7 @@ class VexRuntime(
             target,
         )
         logger.recordScreenGesture(
-            screenBefore =
-                before,
-            screenAfter =
-                currentScreen,
+            currentScreen,
         )
     }
 
@@ -584,8 +578,7 @@ class VexRuntime(
 
         if (logEvent) {
             logger.recordBack(
-                screenBefore =
-                    before,
+                before,
             )
         }
 
@@ -611,11 +604,8 @@ class VexRuntime(
             currentScreen.screenId !=
             before.screenId
         ) {
-            logger.recordNavigationChanged(
-                screenBefore =
-                    before,
-                screenAfter =
-                    currentScreen,
+            logger.recordNavigationCurrent(
+                currentScreen,
             )
         }
 
@@ -677,11 +667,8 @@ class VexRuntime(
                     currentScreen.screenId !=
                     before.screenId
                 ) {
-                    logger.recordNavigationChanged(
-                        screenBefore =
-                            before,
-                        screenAfter =
-                            currentScreen,
+                    logger.recordNavigationCurrent(
+                        currentScreen,
                     )
                 }
             }
