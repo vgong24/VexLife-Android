@@ -50,12 +50,9 @@ internal class VexFamilyStoreBinding<
         VexLogger.Sink =
         VexLogger.Sink.None,
     private val approach:
-        VexExecution.Approach =
-        VexExecution.Approach.Latest,
+        VexExecution.Approach,
     private val admitObservation:
-        (FamilyState) -> Boolean = {
-            true
-        },
+        (FamilyState) -> Boolean,
 ) where
     Family : VexFamily<
         Family,
@@ -450,12 +447,9 @@ internal fun <
     logger:
         VexDependencyProvider<VexLogger>,
     approach:
-        VexExecution.Approach =
-        VexExecution.Approach.Latest,
+        VexExecution.Approach,
     admitObservation:
-        (FamilyState) -> Boolean = {
-            true
-        },
+        (FamilyState) -> Boolean,
 ):
     VexDependencyProvider<
         VexFamilyStoreBinding<

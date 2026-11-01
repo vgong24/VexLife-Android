@@ -78,6 +78,8 @@ class ThemeModeStoreInstrumentedTest {
                 family = recreatedFamily,
                 executionRoot = root,
                 store = recreatedStore,
+                approach =
+                    VexExecution.Approach.Latest,
                 admitObservation = { state ->
                     state != ThemeMode.NotSet
                 },

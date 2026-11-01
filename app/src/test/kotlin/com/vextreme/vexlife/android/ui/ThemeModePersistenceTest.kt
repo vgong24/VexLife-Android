@@ -30,6 +30,8 @@ class ThemeModePersistenceTest {
                 family = family,
                 executionRoot = root,
                 store = store,
+                approach =
+                    VexExecution.Approach.Latest,
                 admitObservation = { state ->
                     state != ThemeMode.NotSet
                 },
@@ -89,6 +91,8 @@ class ThemeModePersistenceTest {
                 family = family,
                 executionRoot = root,
                 store = store,
+                approach =
+                    VexExecution.Approach.Latest,
                 admitObservation = { state ->
                     state != ThemeMode.NotSet
                 },
@@ -136,6 +140,8 @@ class ThemeModePersistenceTest {
                 family = family,
                 executionRoot = root,
                 store = store,
+                approach =
+                    VexExecution.Approach.Latest,
                 admitObservation = { state ->
                     state != ThemeMode.NotSet
                 },

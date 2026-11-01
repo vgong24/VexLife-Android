@@ -326,6 +326,67 @@ class VexDependencyFactoryTest {
     }
 
     @Test
+    fun namedProviderKeepsReadableIdentityAndExplicitPrerequisitesWithoutSubclassBoilerplate() {
+        val leaf =
+            VexDependencyProvider.named(
+                readableName =
+                    "test.leaf",
+            ) {
+                Leaf(
+                    value =
+                        "leaf",
+                )
+            }
+        val root =
+            VexDependencyProvider.named(
+                readableName =
+                    "test.root",
+                dependencies =
+                    listOf(
+                        leaf,
+                    ),
+            ) { dependencies ->
+                Root(
+                    leaf =
+                        dependencies.require(
+                            leaf,
+                        ),
+                )
+            }
+        val factory =
+            VexDependencyFactory(
+                modules =
+                    listOf(
+                        VexDependencyModule.of(
+                            leaf,
+                            root,
+                        ),
+                    ),
+            )
+
+        val resolved =
+            factory.resolve(
+                root,
+            )
+
+        assertEquals(
+            "leaf",
+            resolved.leaf.value,
+        )
+        assertEquals(
+            listOf(
+                "test.leaf",
+            ),
+            factory.relationships()
+                .single {
+                    it.provider ==
+                        "test.root"
+                }
+                .prerequisites,
+        )
+    }
+
+    @Test
     fun cycleFailsClosedBeforeConstruction() {
         val cycle =
             mutableListOf<

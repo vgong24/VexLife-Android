@@ -35,8 +35,6 @@ interface VexStore<
      */
     val states:
         Flow<FamilyState>?
-        get() =
-            null
 
     /**
      * Realize one Effect against outside truth.
